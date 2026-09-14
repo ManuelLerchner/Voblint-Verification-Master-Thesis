@@ -125,7 +125,7 @@ def test_dot_carries_the_click_hooks(report):
 
 
 def test_states_stay_out_of_node_labels(report):
-    """A label carrying a state is the failure --dot-full has and this does
+    """A label carrying a state is the failure --dot has and this does
     not; it is what makes a product domain's graph unreadable."""
     dot = (report / "dot" / FIXTURE.name / "main.dot").read_text()
     for line in dot.splitlines():

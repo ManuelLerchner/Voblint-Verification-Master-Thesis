@@ -352,7 +352,7 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 lemma sign_nest_cinit_le_cinit_sign_st:
   "cinit_stores sign_nest_gs \<subseteq> sign_nest_gamma (Lifted cinit_sign_st) Bot"
   by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_sign_st_for)
+                 fun_of_initial_resolved_st_q)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved

@@ -8,10 +8,10 @@
 // 06-unreachable_dead_branch_entry_state.vimp and 11-graph-snapshot/
 // 05-expanded_mixed_dead_live_check.vimp already cover, where one side
 // contributes Dead (the aggregation's identity element) rather than a
-// second, conflicting Decided verdict. The collapsed/text-report surface
-// can only print one verdict per source check, so UNKNOWN is not a failure
-// of precision here -- it is the sound answer once two live contexts
-// genuinely disagree.'s per-context clusters
+// second, conflicting Decided verdict. The text report prints one verdict
+// per source check, so UNKNOWN is not a failure of precision here -- it is
+// the sound answer once two live contexts genuinely disagree. The graph
+// keeps the two apart in its per-context clusters.
 // still show the individual PROVED/REFUTED verdicts underneath.
 // EXPECT-GRAPH-BEGIN
 // clusters:

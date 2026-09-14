@@ -12,7 +12,7 @@
 // unknown widens [0,0] against that to [0,+inf], and side-effected
 // unknowns only ever grow -- narrowing at the loop head later cuts the
 // call site back to i = [0,8], but f's entry keeps j = [0,+inf] (measured
-// with --dot-full: call site i = [0,8], entry_f j = [0,+inf]). f then
+// with --dot: call site i = [0,8], entry_f j = [0,+inf]). f then
 // returns [1,+inf], the back-edge carries [2,+inf], and the head cannot
 // narrow below +inf, leaving i = [10,+inf] with parity Even after the
 // loop: parity alone cannot single out 10. Distinct from 03-procedures/

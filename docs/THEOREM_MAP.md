@@ -91,22 +91,17 @@ those at each policy's default in
 The split is by discipline, not by argument: the two files prove the same thing
 and the first imports the second.
 
-Six of them reach the endpoint by a different presentation. Interval at `Join`,
-`PerOrigin` and `WarrowPerOrigin` under either context policy routes to
-`verdict_report_answer`, which looks like a different output path but is not: its
-argument is a `(pp * exp * contextual_verdict) list`, and each of the six is
-`routed_dg_pipeline.verdict_report`, which is *defined* as
-`classify_checks_verdicts (prog_cfg p) (result gs p) classify`. Point, check
-expression and verdict all survive, so the rows are exactly what the contextual
-endpoint reads; `out_checks_of_verdict_report_answer` is the one-line bridge that
-says so.
+Interval at `Join`, `PerOrigin` and `WarrowPerOrigin` under either context
+policy is no exception: each branch of `plan_answer` binds that discipline's
+`routed_dg_pipeline.result` table and hands it to the same
+`entry_state_output_of`/`cs_output_of` builder every other contextual plan uses,
+so `out_checks_of_entry_state_output`/`out_checks_of_cs_output` cover them
+without a separate bridge.
 
 **Rejected** -- every remaining combination answers
 `Unsupported_Configuration`, and there is nothing to prove.
 
-Nothing row-producing remains. Closing the last six was registry and generator
-work -- widen Interval's contextual solver lists, name the per-discipline
-re-exports, regenerate -- followed by six ordinary instantiations.
+Every accepted combination is row-producing through one of the three builders.
 
 ## Dead rows
 

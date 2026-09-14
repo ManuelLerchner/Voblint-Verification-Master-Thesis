@@ -1856,3 +1856,105 @@ enter_frame_for_mono
 enter_ci_for_mono
 tf_abs_mono
 congruence_classify_less_unknown
+
+# --- Duplicated C-initial lookup lemmas (2026-09-14) ---
+# Each restated the already-[simp] lookup_cinit_<domain>_st verbatim, same
+# proof, with no consumer. The surviving fun_of_st_cinit_<domain>_st_for ext
+# forms are used and stay.
+lookup_cinit_sign_st_for
+lookup_cinit_ivl_st_for
+lookup_cinit_parity_st_for
+lookup_cinit_congruence_st_for
+
+# --- Scoped executable/abstract agreement family, never consumed (2026-09-14) ---
+# Twenty lemmas across Sign/Interval/Parity stating per-edge-shape agreement
+# between the executable step and the abstract step on a node's own scope.
+# Written for placement-style consumers that were never built: no theory
+# outside the three declaring exec theories ever cited one, and Congruence and
+# Int ship the same pipeline without them. The unscoped commutation theorems
+# (<domain>_tf_st_for_commute) are what the pipeline actually uses.
+ivl_bfilter_st_for_less_var_lit_agree
+ivl_branch_st_for_less_var_lit_agree
+ivl_enter_st_for_singleton_agree
+ivl_tf_st_for_assign_agree
+ivl_tf_st_for_assume_agree
+ivl_tf_st_for_assume_not_agree
+ivl_tf_st_for_assume_not_var_lit_agree
+ivl_tf_st_for_assume_var_lit_agree
+ivl_tf_st_for_branch_agree
+ivl_tf_st_for_nop_agree
+ivl_tf_st_for_ret_none_agree
+ivl_tf_st_for_ret_some_agree
+parity_tf_st_for_assign_agree
+parity_tf_st_for_assume_agree
+parity_tf_st_for_assume_not_agree
+parity_tf_st_for_nop_agree
+parity_tf_st_for_ret_none_agree
+sign_tf_st_for_assign_agree
+sign_tf_st_for_nop_agree
+sign_tf_st_for_ret_none_agree
+
+# --- Unused ext-form seed readbacks (2026-09-14) ---
+# Pointwise ext restatements of the [simp] lookup lemmas with no citation; the
+# _for variants that consumers actually cite stay.
+fun_of_st_top_sign_st
+fun_of_st_top_ivl_st
+fun_of_st_top_parity_st
+fun_of_st_top_congruence_st
+fun_of_st_top_int_dom_st
+fun_of_st_cinit_sign_st
+fun_of_st_cinit_ivl_st
+fun_of_st_cinit_parity_st
+fun_of_st_cinit_congruence_st
+
+# --- Collapsed graph rendering and its capability tables (2026-09-14) ---
+# Graphs are always contextual: a context-free run is the one-unit-context case
+# of View_Contexts. The collapsed views, their annotation selector, the report
+# answers no plan reached, and the per-domain dispatchers that still encoded the
+# old support table all went with it.
+View_Checks
+View_States
+View_Checked_States
+view_annotation
+collapsed_output
+verdict_report_answer
+verdict_report_answer_sound
+verdict_report_answer_check_sites
+out_checks_of_verdict_report_answer
+table_report_answer
+table_report_answer_sound
+table_report_answer_check_sites
+out_checks_of_table_report_answer
+out_diagnostics_of_table_report_answer
+entry_state_ctx_export_auto
+entry_state_ctx_graph_snapshot_auto
+cs_ctx_export_auto
+cs_ctx_graph_snapshot_auto
+
+# --- Per-domain initial-state constructions (2026-09-14) ---
+# Every domain's C-initial state is initial_resolved_st_q at its whole-value
+# element and its abstraction of zero, read back once by
+# lookup_initial_resolved_st_q; cinit_<domain>_st survives as an abbreviation.
+# The whole-value states had no consumer outside two examples.
+top_sign_st
+top_ivl_st
+top_parity_st
+top_congruence_st
+top_int_dom_st
+lookup_top_sign_st
+lookup_top_ivl_st
+lookup_top_parity_st
+lookup_top_congruence_st
+lookup_top_int_dom_st
+lookup_cinit_sign_st
+lookup_cinit_ivl_st
+lookup_cinit_parity_st
+lookup_cinit_congruence_st
+lookup_cinit_int_dom_st_for
+fun_of_st_cinit_sign_st_for
+fun_of_st_cinit_ivl_st_for
+fun_of_st_cinit_parity_st_for
+fun_of_st_cinit_congruence_st_for
+fun_of_st_cinit_int_dom_st_for
+top_congruence_st_def
+cinit_congruence_st_def

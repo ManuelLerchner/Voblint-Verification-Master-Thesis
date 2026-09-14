@@ -397,6 +397,7 @@ where
      \<lparr> local_of = id,
        route = (\<lambda>_ _ _ d.
          case d of Bot \<Rightarrow> None | Lifted _ \<Rightarrow> Some ()),
+       is_dead_local = (\<lambda>d. case d of Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False),
        context_key = (\<lambda>_. STR ''unit''),
        show_context = (\<lambda>_. STR ''unit''),
        locals_for_pp = (\<lambda>v.

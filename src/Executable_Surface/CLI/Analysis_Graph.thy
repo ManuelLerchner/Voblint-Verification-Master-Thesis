@@ -201,6 +201,8 @@ record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"
   route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx option"
 
+  is_dead_local :: "'d \<Rightarrow> bool"
+
   context_key :: "'ctx \<Rightarrow> String.literal"
   show_context :: "'ctx \<Rightarrow> String.literal"
 

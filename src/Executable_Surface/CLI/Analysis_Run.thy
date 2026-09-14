@@ -30,21 +30,18 @@ subsection \<open>What a caller asks to see\<close>
 text \<open>
   Which analysis runs and which drawing of its result comes back are separate
   questions, and \<^type>\<open>analysis_config\<close> deliberately answers only the first.
-  This is the second: the same solved table renders five ways, and picking one
-  is a presentation choice that changes no verdict.
+  This is the second, and it has two answers: the check column on its own, or
+  that column beside a drawing of the solved graph. Picking one is a
+  presentation choice that changes no verdict.
 
-  \<open>View_Contexts\<close> is the exception that proves the split. It draws one node per
-  \<^term>\<open>(v, ctx)\<close> pair instead of joining the contexts covering a point, so it
-  needs a context policy to have produced more than one --- and a configuration
-  that cannot serve it is refused rather than quietly answered with the joined
-  picture.
+  \<open>View_Contexts\<close> draws one node per \<^term>\<open>(v, ctx)\<close> pair. A context-free run is
+  not a different drawing discipline but the degenerate case of this one: its
+  result table has the single unit context, so it renders through the same
+  builder rather than through a separate joined picture.
 \<close>
 
 datatype output_view =
     View_Report
-  | View_Checks
-  | View_States
-  | View_Checked_States
   | View_Contexts
 
 text \<open>
@@ -157,43 +154,12 @@ definition check_rows_of ::
 subsection \<open>One solved table, drawn as asked\<close>
 
 text \<open>
-  The collapsed views differ only in what hangs on the nodes of one graph, so
-  the view selects an annotation and nothing else. The exported graph and its
-  canonical text are two readings of that same annotated graph rather than two
-  renderings, which is what keeps a caller wanting both from paying for two.
-\<close>
-
-definition view_annotation ::
-    "output_view \<Rightarrow> imp_prog \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
-       \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list \<Rightarrow> pp \<Rightarrow> graph_node_annotation option" where
-  "view_annotation view p env rows =
-     (case view of
-        View_States \<Rightarrow> point_node_annotation (program_vars p) env
-      | View_Checked_States \<Rightarrow>
-          full_state_checked_node_annotation (program_vars p) env (decided_verdicts rows)
-      | View_Contexts \<Rightarrow>
-          full_state_checked_node_annotation (program_vars p) env (decided_verdicts rows)
-      | _ \<Rightarrow>
-          verdict_state_report_node_annotation (report_vars rows)
-            (map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, env v)) rows))"
-
-definition collapsed_output ::
-    "output_view \<Rightarrow> imp_prog \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
-       \<Rightarrow> (pp \<times> exp \<times> check_result lifted) list
-       \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> analysis_output" where
-  "collapsed_output view p env rows globals =
-     (let ann = view_annotation view p env rows
-      in Analysis_Output
-           (Some (raw_cfg_export (prog_table p) (prog_procs p) ann))
-           (Some (raw_cfg_canonical_text (prog_table p) (prog_procs p) ann))
-           (check_rows_of env rows)
-           globals [])"
-
-text \<open>
-  The check column with nothing drawn beside it. A verdict-report route reaches
-  this with no table behind it, so its rows carry no state to slice --- the
-  verdicts are what that route publishes, and the empty slice says so rather
-  than inventing one.
+  Both views share the check column, the solved globals and the diagnostics; they
+  differ only in whether a drawing sits beside them. The per-context drawing
+  cannot be assembled from a per-point annotation --- its nodes are
+  \<^term>\<open>(v, ctx)\<close> pairs --- so it arrives already built from the contextual
+  builder, and the exported graph and its canonical text are two readings of that
+  one graph.
 \<close>
 
 definition report_output ::
@@ -201,25 +167,6 @@ definition report_output ::
        \<Rightarrow> (String.literal \<times> String.literal list) list \<Rightarrow> analysis_output" where
   "report_output env rows globals =
      Analysis_Output None None (check_rows_of env rows) globals []"
-
-text \<open>
-  A report-only answer remains useful for consumers that deliberately request no
-  drawing. The supported contextual plans below no longer use this fallback:
-  each already has the solved result table needed to render its own contexts.
-\<close>
-
-definition verdict_report_answer ::
-    "output_view \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list \<Rightarrow> analysis_answer" where
-  "verdict_report_answer view rows =
-     (case view of
-        View_Report \<Rightarrow> Analysed (report_output (\<lambda>_. Bot) rows [])
-      | _ \<Rightarrow> Unsupported_Configuration)"
-
-text \<open>
-  The per-context drawing cannot be assembled from an annotation: its nodes are
-  \<^term>\<open>(v, ctx)\<close> pairs, so the graph comes from the contextual builder already
-  and only the columns beside it are shared.
-\<close>
 
 definition contextual_output ::
     "export_graph \<Rightarrow> String.literal \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state lifted)
@@ -264,25 +211,19 @@ definition flat_output_of ::
           env = project_env into r;
           rows = flat_rows_of classify bot_state r p
       in case view of
-           View_Report \<Rightarrow>
-             Analysed (finish (report_output env rows globals))
-        | View_Contexts \<Rightarrow>
-            Analysed
-              (finish
-                (contextual_output
-                  (unit_ctx_export_of into r rows p)
-                  (unit_ctx_graph_snapshot_of into r rows p)
-                  env rows globals))
-         | _ \<Rightarrow>
-             Analysed (finish (collapsed_output view p env rows globals)))"
+           View_Contexts \<Rightarrow>
+             Analysed (finish (contextual_output
+                         (unit_ctx_export_of into r rows p)
+                         (unit_ctx_graph_snapshot_of into r rows p)
+                         env rows globals))
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals)))"
 
 text \<open>
-  A contextual route answers every view. The collapsed ones read the table
-  through \<^const>\<open>project_joined_env\<close>, which joins the contexts covering a point
-  before the renderer sees them; \<open>View_Contexts\<close> keeps them apart and takes its
-  graph from the builder that draws one node per activation. That builder is
-  named inside the branch rather than passed in, so a collapsed rendering never
-  pays to construct a graph it will not show.
+  A contextual route reads its check column through \<^const>\<open>project_joined_env\<close>,
+  which joins the contexts covering a point: one row per source check has one
+  state slice to show. The drawing keeps the contexts apart and comes from the
+  builder that draws one node per activation, named inside the branch so a
+  report-only answer never pays to construct a graph it will not show.
 \<close>
 
 definition entry_state_output_of ::
@@ -301,8 +242,7 @@ definition entry_state_output_of ::
                          (entry_state_ctx_export_of enter into classify r p)
                          (entry_state_ctx_graph_snapshot_of enter into classify r p)
                          env rows globals))
-         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
-         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals)))"
 
 definition cs_output_of ::
     "output_view \<Rightarrow> ('a::semilattice_sup \<Rightarrow> abstract_value)
@@ -319,8 +259,7 @@ definition cs_output_of ::
              Analysed (finish (contextual_output (cs_ctx_export_of into classify r k p)
                          (cs_ctx_graph_snapshot_of into classify r k p)
                          env rows globals))
-         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals))
-         | _ \<Rightarrow> Analysed (finish (collapsed_output view p env rows globals)))"
+         | View_Report \<Rightarrow> Analysed (finish (report_output env rows globals)))"
 
 subsection \<open>One plan, one run\<close>
 
@@ -331,23 +270,11 @@ text \<open>
   that binding. That is what stops a graph being drawn from one solve while the
   checks beside it come from another.
 
-  Every supported contextual plan below now feeds its solved table through the
-  same context-aware output builder, independent of solver discipline. Graph consumers
-  use \<open>View_Contexts\<close> uniformly: a context-free result is its single unit context,
-  while entry-state and call-string results keep every covered context separate.
-  \<^const>\<open>Unsupported_Configuration\<close> therefore remains only for genuinely
-  unsupported plan pairings.
+  Every supported plan feeds its solved table through one of three builders,
+  one per context policy, and every builder answers both views the same way.
+  \<^const>\<open>Unsupported_Configuration\<close> is reserved for plan pairings with no
+  solved table at all.
 \<close>
-
-definition table_report_answer ::
-    "output_view \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> imp_prog \<Rightarrow> analysis_answer" where
-  "table_report_answer view r classify p =
-     (case view of
-        View_Report \<Rightarrow> Analysed
-          (with_diagnostics (arithmetic_diagnostics (prog_cfg p) r classify)
-            (report_output (\<lambda>_. Bot) (classify_checks_verdicts (prog_cfg p) r classify) []))
-      | _ \<Rightarrow> Unsupported_Configuration)"
 
 definition plan_answer :: "analysis_plan \<Rightarrow> output_view \<Rightarrow> imp_prog \<Rightarrow> analysis_answer" where
   "plan_answer pl view p =

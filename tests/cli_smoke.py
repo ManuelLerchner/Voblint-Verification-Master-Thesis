@@ -31,10 +31,12 @@ CASES = [
     ("unrecognized argument is rejected", ["--analysis", "sign", "--bogus-flag", SANITY_FILE], 1, "unrecognized argument"),
     ("unreadable file is reported, not crashed", ["--analysis", "sign", MISSING_FILE], 1, "cannot read"),
     (
-        "unknown --context-graph value is rejected",
-        ["--analysis", "interval", "--context", "entry-state", "--context-graph", "nonsense", SANITY_FILE],
+        # --context-graph was removed with the collapsed rendering it selected;
+        # graphs are always contextual, so the spelling is now just unknown.
+        "retired --context-graph is rejected as unrecognized",
+        ["--analysis", "interval", "--context", "entry-state", "--context-graph", "expanded", SANITY_FILE],
         1,
-        "unknown --context-graph value",
+        "unrecognized argument",
     ),
     (
         "--context call-string without --context-depth is rejected",
@@ -87,8 +89,8 @@ CASES = [
     (
         # --html writes a directory, the other renderings write one document to
         # stdout; asking for both is a contradiction about where output goes.
-        "--html combined with --dot-full is rejected",
-        ["--analysis", "sign", "--html", "--dot-full", SANITY_FILE],
+        "--html combined with --dot is rejected",
+        ["--analysis", "sign", "--html", "--dot", SANITY_FILE],
         1,
         "--html cannot be combined with",
     ),
@@ -207,7 +209,7 @@ CASES = [
     ),
     (
         "sign + entry-state + --dot renders sign, not interval",
-        ["--analysis", "sign", "--context", "entry-state", "--dot-full", SANITY_FILE],
+        ["--analysis", "sign", "--context", "entry-state", "--dot", SANITY_FILE],
         0,
         "digraph",
     ),

@@ -65,7 +65,7 @@ lemma out_checks_of_flat_output:
            = check_rows_of (project_env into r) (classify_checks_verdicts (prog_cfg p) r classify)"
   using assms
   by (cases view)
-     (auto simp: flat_output_of_def contextual_output_def collapsed_output_def report_output_def Let_def
+     (auto simp: flat_output_of_def contextual_output_def report_output_def Let_def
       flat_rows_of_eq_classify_checks_verdicts)
 
 lemma out_checks_of_entry_state_output:
@@ -74,9 +74,7 @@ lemma out_checks_of_entry_state_output:
            = check_rows_of (project_joined_env into r)
                (classify_checks_verdicts (prog_cfg p) r classify)"
   using assms
-  by (cases view)
-     (auto simp: entry_state_output_of_def contextual_output_def report_output_def
-        collapsed_output_def Let_def)
+  by (cases view) (auto simp: entry_state_output_of_def contextual_output_def report_output_def Let_def)
 
 lemma out_checks_of_cs_output:
   assumes "cs_output_of view into classify r k p = Analysed out"
@@ -84,29 +82,7 @@ lemma out_checks_of_cs_output:
            = check_rows_of (project_joined_env into r)
                (classify_checks_verdicts (prog_cfg p) r classify)"
   using assms
-  by (cases view)
-     (auto simp: cs_output_of_def contextual_output_def report_output_def
-        collapsed_output_def Let_def)
-
-text \<open>
-  \<^const>\<open>verdict_report_answer\<close> looks like a different output path and is not
-  one: its argument is already the contextual verdict report, so the rows it
-  renders are the same \<^const>\<open>classify_checks_verdicts\<close> the other builders call
-  internally. Only the state column differs, and no theorem reads it.
-\<close>
-
-lemma out_checks_of_table_report_answer:
-  assumes "table_report_answer view r classify p = Analysed out"
-  shows "out_checks out =
-    check_rows_of (\<lambda>_. Bot) (classify_checks_verdicts (prog_cfg p) r classify)"
-  using assms unfolding table_report_answer_def report_output_def
-  by (auto split: output_view.splits)
-
-lemma out_checks_of_verdict_report_answer:
-  assumes "verdict_report_answer view rows = Analysed out"
-  shows "out_checks out = check_rows_of (\<lambda>_. Bot) rows"
-  using assms unfolding verdict_report_answer_def report_output_def
-  by (auto split: output_view.splits)
+  by (cases view) (auto simp: cs_output_of_def contextual_output_def report_output_def Let_def)
 
 text \<open>
   Where a report has rows: one per compiled \<^const>\<open>EA_Check\<close> edge, at that edge's
@@ -147,16 +123,6 @@ lemma cs_output_check_sites:
   "cs_output_of view into classify r k p = Analysed out \<Longrightarrow>
    map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
   by (simp add: out_checks_of_cs_output check_rows_of_sites)
-
-lemma table_report_answer_check_sites:
-  "table_report_answer view r classify p = Analysed out \<Longrightarrow>
-   map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
-  by (simp add: out_checks_of_table_report_answer check_rows_of_sites)
-
-lemma verdict_report_answer_check_sites:
-  "verdict_report_answer view (classify_checks_verdicts (prog_cfg p) r classify) = Analysed out
-   \<Longrightarrow> map (\<lambda>row. (row_point row, row_exp row)) (out_checks out) = check_sites (prog_cfg p)"
-  by (simp add: out_checks_of_verdict_report_answer check_rows_of_sites)
 
 subsection \<open>What a row claims at the point it was printed for\<close>
 
@@ -311,27 +277,19 @@ lemma out_diagnostics_of_flat_output:
   "flat_output_of view into classify bot_state r globals p = Analysed out \<Longrightarrow>
    out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
   by (cases view)
-    (auto simp: flat_output_of_def report_output_def contextual_output_def
-      collapsed_output_def Let_def)
+    (auto simp: flat_output_of_def report_output_def contextual_output_def Let_def)
 
 lemma out_diagnostics_of_entry_state_output:
   "entry_state_output_of view enter into classify r p = Analysed out \<Longrightarrow>
    out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
   by (cases view)
-    (auto simp: entry_state_output_of_def report_output_def collapsed_output_def
-      contextual_output_def Let_def)
+    (auto simp: entry_state_output_of_def report_output_def contextual_output_def Let_def)
 
 lemma out_diagnostics_of_cs_output:
   "cs_output_of view into classify r k p = Analysed out \<Longrightarrow>
    out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
   by (cases view)
-    (auto simp: cs_output_of_def report_output_def collapsed_output_def
-      contextual_output_def Let_def)
-
-lemma out_diagnostics_of_table_report_answer:
-  "table_report_answer view r classify p = Analysed out \<Longrightarrow>
-   out_diagnostics out = arithmetic_diagnostics (prog_cfg p) r classify"
-  by (cases view) (auto simp: table_report_answer_def report_output_def)
+    (auto simp: cs_output_of_def report_output_def contextual_output_def Let_def)
 
 definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
   "arithmetic_safe_at g v s \<longleftrightarrow>

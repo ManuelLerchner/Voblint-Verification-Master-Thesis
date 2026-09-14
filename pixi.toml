@@ -244,7 +244,7 @@ verification-surface-check = { cmd = "python3 scripts/check_verification_surface
 # Supported local verification gate. GitHub CI invokes the same named leaf
 # tasks in separately scheduled jobs; verification-surface-check prevents drift.
 # This only resolves from the default environment, which composes every feature.
-# Supported local verification gate. Keep this deliberately fail-fast:
+# Keep it deliberately fail-fast:
 #
 #   1. pure/static repository checks
 #   2. cheap generated/frontend/CLI checks

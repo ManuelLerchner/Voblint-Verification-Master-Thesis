@@ -26,10 +26,9 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int|parity|congruence \
-   [--context none|entry-state|call-string] \
-   [--context-depth K] [--context-graph expanded] [--dot] \
-   [--timeout SECONDS] FILE.vimp\n\
+  "voblint --analysis sign|interval|int|parity|congruence [--context \
+   none|entry-state|call-string] [--context-depth K] [--dot] [--timeout \
+   SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence[,...]\n\
@@ -57,8 +56,8 @@ let usage =
   \                             context per callee regardless of call\n\
   \                             site). entry-state re-analyzes each\n\
   \                             callee per distinct entered-argument context,\n\
-  \                             including under --dot/--dot-full/\n\
-  \                             --graph-snapshot, which always draw the\n\
+  \                             including under --dot/--graph-snapshot,\n\
+  \                             which always draw the\n\
   \                             covered contexts separately.\n\
   \                             call-string re-analyzes each callee per\n\
   \                             distinct bounded call history (requires\n\
@@ -76,13 +75,6 @@ let usage =
   \                             positive use as a public value and is\n\
   \                             rejected rather than silently treated as\n\
   \                             --context none).\n\
-  \  --context-graph expanded    Compatibility spelling for the canonical graph\n\
-  \                             rendering. All graph outputs are contextual:\n\
-  \                             --context none has one unit context, while\n\
-  \                             entry-state and call-string draw one node per\n\
-  \                             (point, context) pair. collapsed is rejected;\n\
-  \                             joining contexts for presentation would hide\n\
-  \                             distinctions the analysis deliberately keeps.\n\
   \  --solver join|per-origin|warrow|warrow-per-origin\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
@@ -97,16 +89,16 @@ let usage =
   \  --dot                      Emit the canonical contextual GraphViz .dot CFG\n\
   \                             instead of the textual check report. Every local\n\
   \                             node carries its own context state and checks.\n\
-  \  --dot-full                 Compatibility alias for --dot; contextual graphs\n\
-  \                             already annotate every node with its state.\n\
-  \  --html                     Write a browsable HTML result directory (default:\n\
+  \  --html                     Write a browsable HTML result directory \
+   (default:\n\
   \                             build/report/)\n\
   \                             (abstract states live in per-node documents, so\n\
-  \                             the CFG stays readable where --dot-full does\n\
+  \                             the CFG stays readable where --dot does\n\
   \                             not). Needs `dot` on PATH for the graph pane,\n\
   \                             and the vendor/g2html submodule for the\n\
   \                             frontend. Serve it and open index.xml:\n\
-  \                               python3 -m http.server --directory build/report 8080\n\
+  \                               python3 -m http.server --directory \
+   build/report 8080\n\
   \  --html-out DIR             Write that directory to DIR instead. Implies\n\
   \                             --html.\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
@@ -133,7 +125,8 @@ let usage =
   \  machine-checked Isabelle/HOL proof."
 
 let node_label = function
-  | Voblint_CLI.Generated.Statement n -> "pp" ^ Z.to_string (Voblint_CLI.Generated.integer_of_nat n)
+  | Voblint_CLI.Generated.Statement n ->
+      "pp" ^ Z.to_string (Voblint_CLI.Generated.integer_of_nat n)
   | Voblint_CLI.Generated.FunctionEntry s -> "entry_" ^ s
   | Voblint_CLI.Generated.FunctionResult s -> "result_" ^ s
 
@@ -145,9 +138,10 @@ let verdict_label = function
 let diagnostic_location positions diagnostic =
   match Voblint_CLI.Generated.diagnostic_point diagnostic with
   | Voblint_CLI.Generated.Statement n ->
-    let index = Z.to_int (Voblint_CLI.Generated.integer_of_nat n) in
-    Option.map (fun (line, column, _, _) -> (line, column))
-      (List.assoc_opt index positions)
+      let index = Z.to_int (Voblint_CLI.Generated.integer_of_nat n) in
+      Option.map
+        (fun (line, column, _, _) -> (line, column))
+        (List.assoc_opt index positions)
   | _ -> None
 
 let diagnostic_severity diagnostic =
@@ -158,14 +152,15 @@ let diagnostic_severity diagnostic =
 let print_diagnostics path analysis positions diagnostics =
   List.iter
     (fun diagnostic ->
-       let location =
-         match diagnostic_location positions diagnostic with
-         | Some (line, column) -> Printf.sprintf "%d:%d" line column
-         | None -> node_label (Voblint_CLI.Generated.diagnostic_point diagnostic)
-       in
-       Printf.eprintf "%s:%s: %s: %s [%s]\n" path location
-         (diagnostic_severity diagnostic)
-         (Voblint_CLI.Generated.diagnostic_message diagnostic) analysis)
+      let location =
+        match diagnostic_location positions diagnostic with
+        | Some (line, column) -> Printf.sprintf "%d:%d" line column
+        | None -> node_label (Voblint_CLI.Generated.diagnostic_point diagnostic)
+      in
+      Printf.eprintf "%s:%s: %s: %s [%s]\n" path location
+        (diagnostic_severity diagnostic)
+        (Voblint_CLI.Generated.diagnostic_message diagnostic)
+        analysis)
     diagnostics
 
 (* Pairs each check row with the source position of the __voblint_check that
@@ -179,7 +174,8 @@ let paired_checks (rows : Voblint_CLI.Generated.check_row list)
   if List.length rows <> List.length check_positions then
     failwith
       (Printf.sprintf "verdict/position mismatch: %d verdicts for %d checks"
-         (List.length rows) (List.length check_positions));
+         (List.length rows)
+         (List.length check_positions));
   List.combine rows check_positions
 
 (* A row's verdict is lifted, and Bot is the proved-unreachable case: no
@@ -194,46 +190,70 @@ let render_table title headers rows =
   if rows = [] then Buffer.add_string buf "None\n"
   else begin
     let widths = Array.of_list (List.map String.length headers) in
-    List.iter (List.iteri (fun i cell -> widths.(i) <- max widths.(i) (String.length cell))) rows;
+    List.iter
+      (List.iteri (fun i cell ->
+           widths.(i) <- max widths.(i) (String.length cell)))
+      rows;
     let add_row cells =
       let last = List.length cells - 1 in
-      List.iteri (fun i cell ->
-        Buffer.add_string buf cell;
-        if i < last then Buffer.add_string buf (String.make (widths.(i) - String.length cell + 2) ' ')) cells;
+      List.iteri
+        (fun i cell ->
+          Buffer.add_string buf cell;
+          if i < last then
+            Buffer.add_string buf
+              (String.make (widths.(i) - String.length cell + 2) ' '))
+        cells;
       Buffer.add_char buf '\n'
     in
     add_row headers;
-    add_row (Array.to_list (Array.map (fun width -> String.make width '-') widths));
+    add_row
+      (Array.to_list (Array.map (fun width -> String.make width '-') widths));
     List.iter add_row rows
   end;
   Buffer.contents buf
 
 let render_report path analysis positions out check_positions =
   let diagnostics =
-    List.map (fun diagnostic ->
-      let location = match diagnostic_location positions diagnostic with
-        | Some (line, column) -> Printf.sprintf "%d:%d" line column
-        | None -> "-"
-      in
-      [location; node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
-       String.uppercase_ascii (diagnostic_severity diagnostic);
-       Voblint_CLI.Generated.diagnostic_message diagnostic])
+    List.map
+      (fun diagnostic ->
+        let location =
+          match diagnostic_location positions diagnostic with
+          | Some (line, column) -> Printf.sprintf "%d:%d" line column
+          | None -> "-"
+        in
+        [
+          location;
+          node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
+          String.uppercase_ascii (diagnostic_severity diagnostic);
+          Voblint_CLI.Generated.diagnostic_message diagnostic;
+        ])
       (Voblint_CLI.Generated.out_diagnostics out)
   in
   let checks =
-    List.map (fun (row, (line, col)) ->
-      let label, state = match Voblint_CLI.Generated.row_verdict row with
-        | Voblint_CLI.Generated.Bot -> "DEAD", ""
-        | Voblint_CLI.Generated.Lifted v -> verdict_label v, Voblint_CLI.Generated.row_state row
-      in
-      [Printf.sprintf "%d:%d" line col;
-       node_label (Voblint_CLI.Generated.row_point row);
-       Voblint_CLI.Generated.row_condition row; label; state])
+    List.map
+      (fun (row, (line, col)) ->
+        let label, state =
+          match Voblint_CLI.Generated.row_verdict row with
+          | Voblint_CLI.Generated.Bot -> ("DEAD", "")
+          | Voblint_CLI.Generated.Lifted v ->
+              (verdict_label v, Voblint_CLI.Generated.row_state row)
+        in
+        [
+          Printf.sprintf "%d:%d" line col;
+          node_label (Voblint_CLI.Generated.row_point row);
+          Voblint_CLI.Generated.row_condition row;
+          label;
+          state;
+        ])
       (paired_checks (Voblint_CLI.Generated.out_checks out) check_positions)
   in
   Printf.sprintf "%s [%s]\n\n%s\n%s" path analysis
-    (render_table "Arithmetic diagnostics" ["Location"; "Point"; "Severity"; "Message"] diagnostics)
-    (render_table "Assertion checks" ["Location"; "Point"; "Condition"; "Verdict"; "State"] checks)
+    (render_table "Arithmetic diagnostics"
+       [ "Location"; "Point"; "Severity"; "Message" ]
+       diagnostics)
+    (render_table "Assertion checks"
+       [ "Location"; "Point"; "Condition"; "Verdict"; "State" ]
+       checks)
 
 (* Names the analysis in the report's own <analysis name="..."> element, so a
    node document says which domain produced the state it shows. *)
@@ -252,29 +272,34 @@ let rec mkdir_p dir =
 
 let rec rm_rf path =
   match Sys.is_directory path with
-  | true ->
-    Array.iter (fun n -> rm_rf (Filename.concat path n)) (Sys.readdir path);
-    (try Unix.rmdir path with Unix.Unix_error _ -> ())
-  | false -> (try Sys.remove path with Sys_error _ -> ())
+  | true -> (
+      Array.iter (fun n -> rm_rf (Filename.concat path n)) (Sys.readdir path);
+      try Unix.rmdir path with Unix.Unix_error _ -> ())
+  | false -> ( try Sys.remove path with Sys_error _ -> ())
   | exception Sys_error _ -> ()
 
 let frontend_dir () =
   match Sys.getenv_opt "VOBLINT_FRONTEND" with
   | Some d -> Some d
   | None ->
-    let candidate =
-      Filename.concat
-        (Filename.dirname (Filename.dirname Sys.executable_name))
-        (Filename.concat "vendor" (Filename.concat "g2html" "resources"))
-    in
-    if Sys.file_exists candidate && Sys.is_directory candidate then Some candidate else None
+      let candidate =
+        Filename.concat
+          (Filename.dirname (Filename.dirname Sys.executable_name))
+          (Filename.concat "vendor" (Filename.concat "g2html" "resources"))
+      in
+      if Sys.file_exists candidate && Sys.is_directory candidate then
+        Some candidate
+      else None
 
 (* The entries --html owns, and so is free to replace on every run. *)
 let owned_entries = [ "nodes"; "files"; "dot"; "cfgs"; "warn"; "index.xml" ]
 
 let rec has_regular_file path =
   match Sys.is_directory path with
-  | true -> Array.exists (fun n -> has_regular_file (Filename.concat path n)) (Sys.readdir path)
+  | true ->
+      Array.exists
+        (fun n -> has_regular_file (Filename.concat path n))
+        (Sys.readdir path)
   | false -> true
   | exception Sys_error _ -> false
 
@@ -299,16 +324,16 @@ let check_report_dir dir =
     let owned n = List.mem n owned_entries || List.mem n assets in
     match
       List.filter
-        (fun n -> not (owned n) && has_regular_file (Filename.concat dir n))
+        (fun n -> (not (owned n)) && has_regular_file (Filename.concat dir n))
         (Array.to_list (Sys.readdir dir))
     with
     | [] -> ()
     | n :: _ ->
-      Printf.eprintf
-        "voblint: refusing to write a report into %s: it holds %s, which is not \
-         voblint output\n"
-        dir n;
-      exit 5
+        Printf.eprintf
+          "voblint: refusing to write a report into %s: it holds %s, which is \
+           not voblint output\n"
+          dir n;
+        exit 5
   end
 
 (* Every run rewrites the report entries and the copied frontend assets, so
@@ -332,11 +357,11 @@ let copy_file src dst =
   Fun.protect
     ~finally:(fun () -> close_in ic)
     (fun () ->
-       let n = in_channel_length ic in
-       let data = really_input_string ic n in
-       let oc = open_out_bin dst in
-       output_string oc data;
-       close_out oc)
+      let n = in_channel_length ic in
+      let data = really_input_string ic n in
+      let oc = open_out_bin dst in
+      output_string oc data;
+      close_out oc)
 
 (* The frontend is g2html's resources/, copied in verbatim. Its location is
    resolved relative to the binary so a built tree works in place; an explicit
@@ -372,85 +397,104 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
   Fun.protect
     ~finally:(fun () -> try Sys.remove tmp with Sys_error _ -> ())
     (fun () ->
-       match Unix.fork () with
-       | 0 ->
-         (* Child: never returns to the caller. *)
-         let exit_code =
-           try
-             let oc = open_out tmp in
-             (match f () with
-              | Ok_text s -> output_string oc "T\n"; output_string oc s
-              | Ok_dot s -> output_string oc "D\n"; output_string oc s
-              | Ok_graph s -> output_string oc "G\n"; output_string oc s
-              | Ok_report s -> output_string oc "R\n"; output_string oc s
+      match Unix.fork () with
+      | 0 ->
+          (* Child: never returns to the caller. *)
+          let exit_code =
+            try
+              let oc = open_out tmp in
+              (match f () with
+              | Ok_text s ->
+                  output_string oc "T\n";
+                  output_string oc s
+              | Ok_dot s ->
+                  output_string oc "D\n";
+                  output_string oc s
+              | Ok_graph s ->
+                  output_string oc "G\n";
+                  output_string oc s
+              | Ok_report s ->
+                  output_string oc "R\n";
+                  output_string oc s
               | Malformed -> output_string oc "M\n"
               | Unsupported_config -> output_string oc "U\n");
-             close_out oc;
-             0
-           with e ->
-             let oc = open_out tmp in
-             output_string oc ("E\n" ^ Printexc.to_string e);
-             close_out oc;
-             1
-         in
-         exit exit_code
-       | pid ->
-         let deadline = Unix.gettimeofday () +. timeout in
-         let rec wait_loop () =
-           match Unix.waitpid [ Unix.WNOHANG ] pid with
-           | 0, _ ->
-             if Unix.gettimeofday () > deadline then begin
-               (try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ());
-               ignore (Unix.waitpid [] pid);
-               Error (Printf.sprintf "analysis did not finish within %.0fs (killed)" timeout)
-             end else begin
-               ignore (Unix.select [] [] [] 0.05);
-               wait_loop ()
-             end
-           | _, Unix.WEXITED 0 ->
-             let ic = open_in tmp in
-             let n = in_channel_length ic in
-             let contents = really_input_string ic n in
-             close_in ic;
-             (match String.index_opt contents '\n' with
-              | Some i ->
-                let tag = String.sub contents 0 i in
-                let body = String.sub contents (i + 1) (String.length contents - i - 1) in
-                (match tag with
-                 | "T" -> Ok (Ok_text body)
-                 | "D" -> Ok (Ok_dot body)
-                 | "G" -> Ok (Ok_graph body)
-                 | "R" -> Ok (Ok_report body)
-                 | "M" -> Ok Malformed
-                 | "U" -> Ok Unsupported_config
-                 | _ -> Error body)
-              | None -> Error "analysis subprocess produced no output")
-           | _, Unix.WEXITED code ->
-             (* The child records its exception under an "E" tag before
+              close_out oc;
+              0
+            with e ->
+              let oc = open_out tmp in
+              output_string oc ("E\n" ^ Printexc.to_string e);
+              close_out oc;
+              1
+          in
+          exit exit_code
+      | pid ->
+          let deadline = Unix.gettimeofday () +. timeout in
+          let rec wait_loop () =
+            match Unix.waitpid [ Unix.WNOHANG ] pid with
+            | 0, _ ->
+                if Unix.gettimeofday () > deadline then begin
+                  (try Unix.kill pid Sys.sigkill with Unix.Unix_error _ -> ());
+                  ignore (Unix.waitpid [] pid);
+                  Error
+                    (Printf.sprintf
+                       "analysis did not finish within %.0fs (killed)" timeout)
+                end
+                else begin
+                  ignore (Unix.select [] [] [] 0.05);
+                  wait_loop ()
+                end
+            | _, Unix.WEXITED 0 -> (
+                let ic = open_in tmp in
+                let n = in_channel_length ic in
+                let contents = really_input_string ic n in
+                close_in ic;
+                match String.index_opt contents '\n' with
+                | Some i -> (
+                    let tag = String.sub contents 0 i in
+                    let body =
+                      String.sub contents (i + 1)
+                        (String.length contents - i - 1)
+                    in
+                    match tag with
+                    | "T" -> Ok (Ok_text body)
+                    | "D" -> Ok (Ok_dot body)
+                    | "G" -> Ok (Ok_graph body)
+                    | "R" -> Ok (Ok_report body)
+                    | "M" -> Ok Malformed
+                    | "U" -> Ok Unsupported_config
+                    | _ -> Error body)
+                | None -> Error "analysis subprocess produced no output")
+            | _, Unix.WEXITED code ->
+                (* The child records its exception under an "E" tag before
                 exiting non-zero; surface it instead of only the code. *)
-             let detail =
-               try
-                 let ic = open_in tmp in
-                 let n = in_channel_length ic in
-                 let contents = really_input_string ic n in
-                 close_in ic;
-                 (match String.index_opt contents '\n' with
-                  | Some i when String.sub contents 0 i = "E" ->
-                    ": " ^ String.sub contents (i + 1) (String.length contents - i - 1)
-                  | _ -> "")
-               with Sys_error _ | End_of_file -> ""
-             in
-             Error (Printf.sprintf "analysis subprocess exited with code %d%s" code detail)
-           | _, (Unix.WSIGNALED s | Unix.WSTOPPED s) ->
-             Error (Printf.sprintf "analysis subprocess terminated by signal %d" s)
-         in
-         wait_loop ())
+                let detail =
+                  try
+                    let ic = open_in tmp in
+                    let n = in_channel_length ic in
+                    let contents = really_input_string ic n in
+                    close_in ic;
+                    match String.index_opt contents '\n' with
+                    | Some i when String.sub contents 0 i = "E" ->
+                        ": "
+                        ^ String.sub contents (i + 1)
+                            (String.length contents - i - 1)
+                    | _ -> ""
+                  with Sys_error _ | End_of_file -> ""
+                in
+                Error
+                  (Printf.sprintf "analysis subprocess exited with code %d%s"
+                     code detail)
+            | _, (Unix.WSIGNALED s | Unix.WSTOPPED s) ->
+                Error
+                  (Printf.sprintf "analysis subprocess terminated by signal %d"
+                     s)
+          in
+          wait_loop ())
 
 (* Unset means "whatever the configuration supports": a context-sensitive run
    is asked for because the contexts matter, so drawing them is the useful
    default, and joining them away is the thing to opt into. An explicit choice
    is still honoured -- and still rejected where it cannot be served. *)
-type context_graph_mode = Collapsed | Expanded
 
 (* --context/--context-depth are two independent flags that can arrive in
    either order, but Ctx_CallString needs the depth at construction time --
@@ -466,10 +510,8 @@ let () =
   let analyses = ref [] in
   let context_kind = ref CK_None in
   let context_depth = ref None in
-  let context_graph = ref None in
   let solver = ref None in
   let dot = ref false in
-  let dot_full = ref false in
   let graph_snapshot = ref false in
   let html = ref false in
   (* Generated report output stays under build/; --html-out is the override.
@@ -481,69 +523,91 @@ let () =
   let file = ref None in
   let rec parse_args = function
     | [] -> ()
-    | "--help" :: _ -> print_endline usage; exit 0
+    | "--help" :: _ ->
+        print_endline usage;
+        exit 0
     | "--analysis" :: v :: rest ->
-      (* A comma list asks one report to carry several domains side by side.
+        (* A comma list asks one report to carry several domains side by side.
          The head stays the analysis every other output path means by
          "--analysis", so a single name behaves exactly as before. *)
-      let kind_of name =
-        match name with
-        | "sign" -> Voblint_CLI.Generated.Sign_Analysis
-        | "interval" -> Voblint_CLI.Generated.Interval_Analysis
-        | "int" -> Voblint_CLI.Generated.Int_Analysis
-        | "parity" -> Voblint_CLI.Generated.Parity_Analysis
-        | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
-        | _ -> prerr_endline ("unknown --analysis value: " ^ name); exit 1
-      in
-      let names = String.split_on_char ',' v |> List.filter (fun n -> n <> "") in
-      if names = [] then begin
-        prerr_endline "voblint: --analysis expects at least one domain";
-        exit 1
-      end;
-      analyses := List.map kind_of names;
-      analysis := Some (List.hd !analyses);
-      parse_args rest
+        let kind_of name =
+          match name with
+          | "sign" -> Voblint_CLI.Generated.Sign_Analysis
+          | "interval" -> Voblint_CLI.Generated.Interval_Analysis
+          | "int" -> Voblint_CLI.Generated.Int_Analysis
+          | "parity" -> Voblint_CLI.Generated.Parity_Analysis
+          | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
+          | _ ->
+              prerr_endline ("unknown --analysis value: " ^ name);
+              exit 1
+        in
+        let names =
+          String.split_on_char ',' v |> List.filter (fun n -> n <> "")
+        in
+        if names = [] then begin
+          prerr_endline "voblint: --analysis expects at least one domain";
+          exit 1
+        end;
+        analyses := List.map kind_of names;
+        analysis := Some (List.hd !analyses);
+        parse_args rest
     | "--context" :: v :: rest ->
-      (match v with
-       | "none" -> context_kind := CK_None
-       | "entry-state" -> context_kind := CK_EntryState
-       | "call-string" -> context_kind := CK_CallString
-       | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
-      parse_args rest
+        (match v with
+        | "none" -> context_kind := CK_None
+        | "entry-state" -> context_kind := CK_EntryState
+        | "call-string" -> context_kind := CK_CallString
+        | _ ->
+            prerr_endline ("unknown --context value: " ^ v);
+            exit 1);
+        parse_args rest
     | "--context-depth" :: v :: rest ->
-      (try context_depth := Some (int_of_string v)
-       with _ -> prerr_endline ("--context-depth expects an integer: " ^ v); exit 1);
-      parse_args rest
-    | "--context-graph" :: v :: rest ->
-      (match v with
-       | "expanded" -> context_graph := Some Expanded
-       | "collapsed" ->
-         prerr_endline
-           "voblint: --context-graph collapsed is no longer supported; graphs are always contextual";
-         exit 1
-       | _ -> prerr_endline ("unknown --context-graph value: " ^ v); exit 1);
-      parse_args rest
+        (try context_depth := Some (int_of_string v)
+         with _ ->
+           prerr_endline ("--context-depth expects an integer: " ^ v);
+           exit 1);
+        parse_args rest
     | "--solver" :: v :: rest ->
-      (match v with
-       | "join" -> solver := Some Voblint_CLI.Generated.Solver_Join
-       | "per-origin" -> solver := Some Voblint_CLI.Generated.Solver_PerOrigin
-       | "warrow" -> solver := Some Voblint_CLI.Generated.Solver_Warrow
-       | "warrow-per-origin" ->
-         solver := Some Voblint_CLI.Generated.Solver_WarrowPerOrigin
-       | _ -> prerr_endline ("unknown --solver value: " ^ v); exit 1);
-      parse_args rest
-    | "--dot" :: rest -> dot := true; parse_args rest
-    | "--dot-full" :: rest -> dot_full := true; parse_args rest
-    | "--graph-snapshot" :: rest -> graph_snapshot := true; parse_args rest
-    | "--html" :: rest -> html := true; parse_args rest
-    | "--html-out" :: v :: rest -> html := true; html_dir := v; parse_args rest
-    | [ "--html-out" ] -> prerr_endline "voblint: --html-out expects a directory"; exit 1
-    | "--parse-only" :: rest -> parse_only := true; parse_args rest
+        (match v with
+        | "join" -> solver := Some Voblint_CLI.Generated.Solver_Join
+        | "per-origin" -> solver := Some Voblint_CLI.Generated.Solver_PerOrigin
+        | "warrow" -> solver := Some Voblint_CLI.Generated.Solver_Warrow
+        | "warrow-per-origin" ->
+            solver := Some Voblint_CLI.Generated.Solver_WarrowPerOrigin
+        | _ ->
+            prerr_endline ("unknown --solver value: " ^ v);
+            exit 1);
+        parse_args rest
+    | "--dot" :: rest ->
+        dot := true;
+        parse_args rest
+    | "--graph-snapshot" :: rest ->
+        graph_snapshot := true;
+        parse_args rest
+    | "--html" :: rest ->
+        html := true;
+        parse_args rest
+    | "--html-out" :: v :: rest ->
+        html := true;
+        html_dir := v;
+        parse_args rest
+    | [ "--html-out" ] ->
+        prerr_endline "voblint: --html-out expects a directory";
+        exit 1
+    | "--parse-only" :: rest ->
+        parse_only := true;
+        parse_args rest
     | "--timeout" :: v :: rest ->
-      (try timeout := float_of_string v with _ -> prerr_endline "--timeout expects a number"; exit 1);
-      parse_args rest
-    | f :: rest when String.length f > 0 && f.[0] <> '-' -> file := Some f; parse_args rest
-    | arg :: _ -> prerr_endline ("unrecognized argument: " ^ arg); exit 1
+        (try timeout := float_of_string v
+         with _ ->
+           prerr_endline "--timeout expects a number";
+           exit 1);
+        parse_args rest
+    | f :: rest when String.length f > 0 && f.[0] <> '-' ->
+        file := Some f;
+        parse_args rest
+    | arg :: _ ->
+        prerr_endline ("unrecognized argument: " ^ arg);
+        exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
   (* --context-depth is only meaningful paired with --context call-string --
@@ -555,20 +619,28 @@ let () =
      then rejected the ordinary way, as an unsupported configuration -- no
      second k >= 1 check here). *)
   let context =
-    match !context_kind, !context_depth with
+    match (!context_kind, !context_depth) with
     | CK_None, None -> Voblint_CLI.Generated.Ctx_None
     | CK_EntryState, None -> Voblint_CLI.Generated.Ctx_EntryState
     | CK_CallString, Some k ->
-      Voblint_CLI.Generated.Ctx_CallString (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
+        Voblint_CLI.Generated.Ctx_CallString
+          (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
     | CK_CallString, None ->
-      prerr_endline "voblint: --context call-string requires --context-depth K"; exit 1
+        prerr_endline
+          "voblint: --context call-string requires --context-depth K";
+        exit 1
     | (CK_None | CK_EntryState), Some _ ->
-      prerr_endline "voblint: --context-depth is only valid with --context call-string"; exit 1
+        prerr_endline
+          "voblint: --context-depth is only valid with --context call-string";
+        exit 1
   in
   let path =
     match !file with
     | Some p -> p
-    | None -> prerr_endline "missing FILE.vimp"; prerr_endline usage; exit 1
+    | None ->
+        prerr_endline "missing FILE.vimp";
+        prerr_endline usage;
+        exit 1
   in
   let src =
     try
@@ -577,7 +649,9 @@ let () =
       let s = really_input_string ic n in
       close_in ic;
       s
-    with Sys_error msg -> prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg); exit 1
+    with Sys_error msg ->
+      prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
+      exit 1
   in
   let prog, check_positions, stmt_positions =
     try Vimp_frontend.program path src
@@ -590,24 +664,16 @@ let () =
     match !analysis with
     | Some k -> k
     | None ->
-      prerr_endline "missing --analysis sign|interval|int|parity|congruence";
-      prerr_endline usage;
-      exit 1
+        prerr_endline "missing --analysis sign|interval|int|parity|congruence";
+        prerr_endline usage;
+        exit 1
   in
-  (* Graph output has one canonical shape: one node per (point, context). The
-     context-insensitive analysis is the degenerate one-context case. Keep the
-     old expanded spelling as a compatibility no-op, but reject collapsed rather
-     than silently joining away distinctions the analysis preserved. *)
-  if !context_graph = Some Collapsed then begin
-    prerr_endline
-      "voblint: --context-graph collapsed is no longer supported; graphs are always contextual";
-    exit 1
-  end;
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
      combination to silently resolve. *)
-  if !html && (!dot || !dot_full || !graph_snapshot) then begin
-    prerr_endline "voblint: --html cannot be combined with --dot/--dot-full/--graph-snapshot";
+  if !html && (!dot || !graph_snapshot) then begin
+    prerr_endline
+      "voblint: --html cannot be combined with --dot/--graph-snapshot";
     exit 1
   end;
   (* Several domains in one report means several solves feeding one set of node
@@ -630,22 +696,19 @@ let () =
   let output_for k view =
     match Voblint_CLI.Generated.run_voblint k !solver context view prog with
     | Voblint_CLI.Generated.Malformed_Program -> raise (Answered Malformed)
-    | Voblint_CLI.Generated.Unsupported_Configuration -> raise (Answered Unsupported_config)
+    | Voblint_CLI.Generated.Unsupported_Configuration ->
+        raise (Answered Unsupported_config)
     | Voblint_CLI.Generated.Analysed out ->
-      if !html || !dot || !dot_full || !graph_snapshot then
-        print_diagnostics path (analysis_label k) stmt_positions
-        (Voblint_CLI.Generated.out_diagnostics out);
-      out
+        if !html || !dot || !graph_snapshot then
+          print_diagnostics path (analysis_label k) stmt_positions
+            (Voblint_CLI.Generated.out_diagnostics out);
+        out
   in
   (* Every graph consumer asks for the same contextual view. Ctx_None is not
      a separate drawing discipline: its result table simply has the one unit
-     context. --dot-full is therefore a compatibility alias for --dot. *)
-  let graph_view ~full:_ =
-    Voblint_CLI.Generated.View_Contexts
-  in
-  let html_view =
-    Voblint_CLI.Generated.View_Contexts
-  in
+     context. *)
+  let graph_view = Voblint_CLI.Generated.View_Contexts in
+  let html_view = Voblint_CLI.Generated.View_Contexts in
   let report_view = Voblint_CLI.Generated.View_Report in
   (* Checked here, not inside the contained child: a refusal to write into the
      given directory is an argument error the user should see as one, not as a
@@ -654,151 +717,177 @@ let () =
   if !html then check_report_dir !html_dir;
   match
     run_contained ~timeout:!timeout (fun () ->
-      try
-        if !html then
-          let dir = !html_dir in
-          (* Everything a report browser reads back is one solve per domain:
+        try
+          if !html then (
+            let dir = !html_dir in
+            (* Everything a report browser reads back is one solve per domain:
              the graph it draws, the states in its node documents, the check
              column beside the source and the solved globals all come off the
              same result, under the same view. *)
-          let payload_for k =
-            let out = output_for k html_view in
-            ( drawing (Voblint_CLI.Generated.out_graph out),
-              Voblint_CLI.Generated.out_checks out,
-              Voblint_CLI.Generated.out_globals out,
-              Voblint_CLI.Generated.out_diagnostics out )
-          in
-          let payloads = List.map (fun k -> (analysis_label k, payload_for k)) !analyses in
-          let graphs = List.map (fun (label, (g, _, _, _)) -> (label, g)) payloads in
-          let globals =
-            List.filter_map
-              (fun (label, (_, _, gvs, _)) -> if gvs = [] then None else Some (label, gvs))
-              payloads
-          in
-          (* The source view's inline annotations need a verdict *and* a
+            let payload_for k =
+              let out = output_for k html_view in
+              ( drawing (Voblint_CLI.Generated.out_graph out),
+                Voblint_CLI.Generated.out_checks out,
+                Voblint_CLI.Generated.out_globals out,
+                Voblint_CLI.Generated.out_diagnostics out )
+            in
+            let payloads =
+              List.map (fun k -> (analysis_label k, payload_for k)) !analyses
+            in
+            let graphs =
+              List.map (fun (label, (g, _, _, _)) -> (label, g)) payloads
+            in
+            let globals =
+              List.filter_map
+                (fun (label, (_, _, gvs, _)) ->
+                  if gvs = [] then None else Some (label, gvs))
+                payloads
+            in
+            (* The source view's inline annotations need a verdict *and* a
              position, and only the parser knows positions -- it notes each
              __voblint_check token as it consumes one, in the same order the
              check column lists them. The head of --analysis is the domain the
              text report would print, so its verdicts are the ones annotated
              here. Unreachable checks are dropped, matching what the text
              report's DEAD label says without a verdict to show. *)
-          let checks =
-            match payloads with
-            | (_, (_, rows, _, _)) :: _ ->
-              List.filter_map
-                (fun (row, (line, column)) ->
-                   match Voblint_CLI.Generated.row_verdict row with
-                   | Voblint_CLI.Generated.Bot -> None
-                   | Voblint_CLI.Generated.Lifted v ->
-                     Some
-                       { Html_report.line;
-                         column;
-                         verdict = verdict_label v;
-                          cond = Voblint_CLI.Generated.row_condition row;
-                          message = None })
-                (paired_checks rows check_positions)
-            | [] ->
-              (* --analysis names at least one domain or the run never got
+            let checks =
+              match payloads with
+              | (_, (_, rows, _, _)) :: _ ->
+                  List.filter_map
+                    (fun (row, (line, column)) ->
+                      match Voblint_CLI.Generated.row_verdict row with
+                      | Voblint_CLI.Generated.Bot -> None
+                      | Voblint_CLI.Generated.Lifted v ->
+                          Some
+                            {
+                              Html_report.line;
+                              column;
+                              verdict = verdict_label v;
+                              cond = Voblint_CLI.Generated.row_condition row;
+                              message = None;
+                            })
+                    (paired_checks rows check_positions)
+              | [] ->
+                  (* --analysis names at least one domain or the run never got
                  here, so an empty list would mean a report with no findings
                  beside its graph. *)
-              failwith "no --analysis domain to report"
-          in
-          let diagnostics =
-            List.concat_map
-              (fun (label, (_, _, _, diagnostics)) ->
-                 List.map
-                   (fun diagnostic ->
+                  failwith "no --analysis domain to report"
+            in
+            let diagnostics =
+              List.concat_map
+                (fun (label, (_, _, _, diagnostics)) ->
+                  List.map
+                    (fun diagnostic ->
                       let line, column =
                         Option.value ~default:(0, 0)
                           (diagnostic_location stmt_positions diagnostic)
                       in
-                      { Html_report.line;
+                      {
+                        Html_report.line;
                         column;
                         verdict = diagnostic_severity diagnostic;
                         cond = "";
-                        message = Some
-                          (Voblint_CLI.Generated.diagnostic_message diagnostic
-                           ^ " [" ^ label ^ "]") })
-                   diagnostics)
-              payloads
-          in
-          let checks = checks @ diagnostics in
-          let files, nodes, dead =
-            Html_report.emit ~graphs ~source_file:(Filename.basename path) ~source_text:src
-              ~fn:"main" ~checks ~positions:stmt_positions
-              ~globals
-          in
-          clear_report_dir dir;
-          List.iter (fun (f : Html_report.file) -> write_report_file dir f) files;
-          Ok_report
-            (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead)
-        else if !graph_snapshot then
-          Ok_graph
-            (drawing
-               (Voblint_CLI.Generated.out_snapshot
-                  (output_for kind (graph_view ~full:!dot_full))))
-        else if !dot_full || !dot then
-          Ok_dot
-            (Dot_render.render
-               (drawing
-                  (Voblint_CLI.Generated.out_graph
-                     (output_for kind (graph_view ~full:!dot_full)))))
-        else
-          Ok_text
-            (render_report path (analysis_label kind) stmt_positions
-               (output_for kind report_view) check_positions)
-      with Answered o -> o)
+                        message =
+                          Some
+                            (Voblint_CLI.Generated.diagnostic_message diagnostic
+                            ^ " [" ^ label ^ "]");
+                      })
+                    diagnostics)
+                payloads
+            in
+            let checks = checks @ diagnostics in
+            let files, nodes, dead =
+              Html_report.emit ~graphs ~source_file:(Filename.basename path)
+                ~source_text:src ~fn:"main" ~checks ~positions:stmt_positions
+                ~globals
+            in
+            clear_report_dir dir;
+            List.iter
+              (fun (f : Html_report.file) -> write_report_file dir f)
+              files;
+            Ok_report (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead))
+          else if !graph_snapshot then
+            Ok_graph
+              (drawing
+                 (Voblint_CLI.Generated.out_snapshot
+                    (output_for kind graph_view)))
+          else if !dot then
+            Ok_dot
+              (Dot_render.render
+                 (drawing
+                    (Voblint_CLI.Generated.out_graph
+                       (output_for kind graph_view))))
+          else
+            Ok_text
+              (render_report path (analysis_label kind) stmt_positions
+                 (output_for kind report_view)
+                 check_positions)
+        with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s
   | Ok (Ok_graph s) -> print_string s
   | Ok (Ok_report s) ->
-    (* Post-processing runs here, not in the contained child: the analysis is
+      (* Post-processing runs here, not in the contained child: the analysis is
        what needs a timeout, and a killed child should not take the asset copy
        and the graphviz call down with it. *)
-    let dir = !html_dir in
-    (match frontend_dir () with
-     | None ->
-       prerr_endline
-         "voblint: frontend assets not found -- run: git submodule update --init vendor/g2html";
-       exit 5
-     | Some assets ->
-       Array.iter
-         (fun name ->
-            let src = Filename.concat assets name in
-            if not (Sys.is_directory src) then copy_file src (Filename.concat dir name))
-         (Sys.readdir assets));
-    let seg = Html_report.xmlify (Filename.basename path) in
-    let dot_file = Filename.concat dir (Filename.concat "dot" (Filename.concat seg "main.dot")) in
-    let svg_dir = Filename.concat dir (Filename.concat "cfgs" seg) in
-    mkdir_p svg_dir;
-    let svg_file = Filename.concat svg_dir "main.svg" in
-    let cmd = Filename.quote_command "dot" [ "-Tsvg"; dot_file; "-o"; svg_file ] in
-    (* Without a working graphviz the report still carries every node document;
+      let dir = !html_dir in
+      (match frontend_dir () with
+      | None ->
+          prerr_endline
+            "voblint: frontend assets not found -- run: git submodule update \
+             --init vendor/g2html";
+          exit 5
+      | Some assets ->
+          Array.iter
+            (fun name ->
+              let src = Filename.concat assets name in
+              if not (Sys.is_directory src) then
+                copy_file src (Filename.concat dir name))
+            (Sys.readdir assets));
+      let seg = Html_report.xmlify (Filename.basename path) in
+      let dot_file =
+        Filename.concat dir
+          (Filename.concat "dot" (Filename.concat seg "main.dot"))
+      in
+      let svg_dir = Filename.concat dir (Filename.concat "cfgs" seg) in
+      mkdir_p svg_dir;
+      let svg_file = Filename.concat svg_dir "main.svg" in
+      let cmd =
+        Filename.quote_command "dot" [ "-Tsvg"; dot_file; "-o"; svg_file ]
+      in
+      (* Without a working graphviz the report still carries every node document;
        only the graph pane is empty. Say so and carry on rather than fail. *)
-    (match Unix.system (cmd ^ " 2>/dev/null") with
-     | Unix.WEXITED 0 -> ()
-     | _ ->
-       prerr_endline
-         "voblint: `dot -Tsvg` failed or is missing -- wrote dot/ but no cfgs/*.svg, \
-          so the CFG pane will be empty");
-    print_string s;
-    (* The entry point is index.xml, not an .html file, and it renders only when
+      (match Unix.system (cmd ^ " 2>/dev/null") with
+      | Unix.WEXITED 0 -> ()
+      | _ ->
+          prerr_endline
+            "voblint: `dot -Tsvg` failed or is missing -- wrote dot/ but no \
+             cfgs/*.svg, so the CFG pane will be empty");
+      print_string s;
+      (* The entry point is index.xml, not an .html file, and it renders only when
        served: browsers refuse to apply its stylesheet over file://. Saying so
        here is cheaper than the reader concluding nothing was written. *)
-    Printf.printf
-      "wrote %s/\n\
-       The entry point is %s/index.xml -- an .html file to open directly does not\n\
-       exist, and file:// will not render it. Serve the directory first:\n\
-      \  python3 -m http.server --directory %s 8080\n\
-       then open http://localhost:8080/index.xml (or use `pixi run html-report-serve`,\n\
-       which serves and opens it for you).\n\
-       Needs a browser that still applies XSLT: Chrome removes it in M155/M158\n\
-       (November 2026), and this frontend uses it for the entry point and for\n\
-       every pane. See README.md for the migration routes.\n"
-      dir dir dir
-  | Ok Malformed -> Printf.eprintf "%s: program is not well-formed\n" path; exit 4
+      Printf.printf
+        "wrote %s/\n\
+         The entry point is %s/index.xml -- an .html file to open directly \
+         does not\n\
+         exist, and file:// will not render it. Serve the directory first:\n\
+        \  python3 -m http.server --directory %s 8080\n\
+         then open http://localhost:8080/index.xml (or use `pixi run \
+         html-report-serve`,\n\
+         which serves and opens it for you).\n\
+         Needs a browser that still applies XSLT: Chrome removes it in M155/M158\n\
+         (November 2026), and this frontend uses it for the entry point and for\n\
+         every pane. See README.md for the migration routes.\n"
+        dir dir dir
+  | Ok Malformed ->
+      Printf.eprintf "%s: program is not well-formed\n" path;
+      exit 4
   | Ok Unsupported_config ->
-    prerr_endline "voblint: unsupported --analysis/--context/--solver combination";
-    exit 1
-  | Error msg -> Printf.eprintf "voblint: %s\n" msg; exit 3
+      prerr_endline
+        "voblint: unsupported --analysis/--context/--solver combination";
+      exit 1
+  | Error msg ->
+      Printf.eprintf "voblint: %s\n" msg;
+      exit 3

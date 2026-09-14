@@ -12,7 +12,7 @@
 
    Abstract states live in nodes/<id>.xml, never in DOT node labels. That
    separation is the point: a product domain's state makes a CFG node
-   unreadably wide when inlined, and unreadable is what --dot-full is.
+   unreadably wide when inlined.
 
    Everything here is built from the export_graph the Isabelle side returns,
    so nothing re-derives the CFG or parses a rendered rendering back. *)
@@ -25,24 +25,25 @@ let escape s =
   let buf = Buffer.create (String.length s + 16) in
   String.iter
     (fun ch ->
-       Buffer.add_string buf
-         (match ch with
-          | '&' -> "&amp;"
-          | '<' -> "&lt;"
-          | '>' -> "&gt;"
-          | '"' -> "&quot;"
-          | '\'' -> "&apos;"
-          | c -> String.make 1 c))
+      Buffer.add_string buf
+        (match ch with
+        | '&' -> "&amp;"
+        | '<' -> "&lt;"
+        | '>' -> "&gt;"
+        | '"' -> "&quot;"
+        | '\'' -> "&apos;"
+        | c -> String.make 1 c))
     s;
   Buffer.contents buf
 
 (* goblint's xsltResultOutput.xmlify_file_name: a file name doubles as a
    directory name under dot/ and cfgs/, so its separators are escaped. *)
-let xmlify name =
-  String.concat "%2F" (String.split_on_char '/' name)
+let xmlify name = String.concat "%2F" (String.split_on_char '/' name)
 
 let is_ident_char c =
-  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+  (c >= 'a' && c <= 'z')
+  || (c >= 'A' && c <= 'Z')
+  || (c >= '0' && c <= '9')
   || c = '_' || c = '#' || c = '\''
 
 (* A node's content line is either "<var>=<value>", written by state_line, or
@@ -53,10 +54,10 @@ let split_binding line =
   match String.index_opt line '=' with
   | None -> None
   | Some i ->
-    let name = String.sub line 0 i in
-    if name <> "" && String.for_all is_ident_char name then
-      Some (name, String.sub line (i + 1) (String.length line - i - 1))
-    else None
+      let name = String.sub line 0 i in
+      if name <> "" && String.for_all is_ident_char name then
+        Some (name, String.sub line (i + 1) (String.length line - i - 1))
+      else None
 
 (* A product domain renders one variable as "sign=Top, ivl=[-inf,+inf],
    parity=Top, congruence==0 (mod 1)". Splitting it into components gives
@@ -67,12 +68,18 @@ let split_components value =
   let n = String.length value in
   let starts_binding i =
     let j = ref i in
-    while !j < n && is_ident_char value.[!j] do incr j done;
+    while !j < n && is_ident_char value.[!j] do
+      incr j
+    done;
     !j > i && !j < n && value.[!j] = '='
   in
   let parts = ref [] and start = ref 0 and i = ref 0 in
   while !i < n do
-    if !i + 1 < n && value.[!i] = ',' && value.[!i + 1] = ' ' && starts_binding (!i + 2)
+    if
+      !i + 1 < n
+      && value.[!i] = ','
+      && value.[!i + 1] = ' '
+      && starts_binding (!i + 2)
     then begin
       parts := String.sub value !start (!i - !start) :: !parts;
       i := !i + 2;
@@ -85,7 +92,8 @@ let split_components value =
   let split p =
     match String.index_opt p '=' with
     | None -> None
-    | Some k -> Some (String.sub p 0 k, String.sub p (k + 1) (String.length p - k - 1))
+    | Some k ->
+        Some (String.sub p 0 k, String.sub p (k + 1) (String.length p - k - 1))
   in
   let split_parts = List.map split parts in
   if List.length parts > 1 && List.for_all (fun x -> x <> None) split_parts then
@@ -99,10 +107,7 @@ let status_note = function
   | C.NS_Unreachable -> "dead"
   | C.NS_Plain | C.NS_Exit -> ""
 
-let is_dead node =
-  (* Context views carry dead non-check points as a state note; only checks
-     necessarily have a finding annotation. Both describe the same bottom state. *)
-  C.xn_status node = Some C.NS_Unreachable || List.mem "unreachable" (C.xn_lines node)
+let is_dead node = C.xn_status node = Some C.NS_Unreachable
 
 (* Which source position a node came from, when it came from one at all.
 
@@ -115,9 +120,12 @@ let node_line positions node =
   let l = C.xn_label node in
   let n = String.length l in
   if n > 2 && l.[0] = 'p' && l.[1] = 'p' then
-    Option.bind (int_of_string_opt (String.sub l 2 (n - 2)))
+    Option.bind
+      (int_of_string_opt (String.sub l 2 (n - 2)))
       (fun i ->
-         Option.map (fun (a, b, c, d) -> (a, b, c, d, i)) (List.assoc_opt i positions))
+        Option.map
+          (fun (a, b, c, d) -> (a, b, c, d, i))
+          (List.assoc_opt i positions))
   else None
 
 (* <map> is alternating <key>/value siblings, <analysis name=> wraps one
@@ -129,29 +137,33 @@ let state_map node =
   let bindings, notes =
     List.partition_map
       (fun line ->
-         match split_binding line with
-         | Some (k, v) -> Left (k, v)
-         | None -> Right line)
+        match split_binding line with
+        | Some (k, v) -> Left (k, v)
+        | None -> Right line)
       (C.xn_lines node)
   in
   Buffer.add_string buf "<map>\n";
   List.iter
     (fun (var, value) ->
-       Buffer.add_string buf (Printf.sprintf "<key>%s</key>\n" (escape var));
-       match split_components value with
-       | Some comps ->
-         Buffer.add_string buf "<value><map>";
-         List.iter
-           (fun (k, v) ->
+      Buffer.add_string buf (Printf.sprintf "<key>%s</key>\n" (escape var));
+      match split_components value with
+      | Some comps ->
+          Buffer.add_string buf "<value><map>";
+          List.iter
+            (fun (k, v) ->
               Buffer.add_string buf
-                (Printf.sprintf "<key>%s</key><value>%s</value>" (escape k) (escape v)))
-           comps;
-         Buffer.add_string buf "</map></value>\n"
-       | None -> Buffer.add_string buf (Printf.sprintf "<value>%s</value>\n" (escape value)))
+                (Printf.sprintf "<key>%s</key><value>%s</value>" (escape k)
+                   (escape v)))
+            comps;
+          Buffer.add_string buf "</map></value>\n"
+      | None ->
+          Buffer.add_string buf
+            (Printf.sprintf "<value>%s</value>\n" (escape value)))
     bindings;
   Buffer.add_string buf "</map>";
   let notes =
-    notes @ (match C.xn_status node with Some s -> [ status_note s ] | None -> [])
+    notes
+    @ match C.xn_status node with Some s -> [ status_note s ] | None -> []
   in
   (Buffer.contents buf, List.filter (fun s -> s <> "") notes)
 
@@ -166,7 +178,9 @@ let node_xml ~source_file ~fn ~loc ~blocks =
   let notes =
     List.concat_map
       (fun (name, (_, notes)) ->
-         List.map (fun n -> if List.length blocks > 1 then name ^ ": " ^ n else n) notes)
+        List.map
+          (fun n -> if List.length blocks > 1 then name ^ ": " ^ n else n)
+          notes)
       rendered
   in
   let note_xml =
@@ -175,15 +189,18 @@ let node_xml ~source_file ~fn ~loc ~blocks =
       Printf.sprintf
         "<analysis name=\"status\"><value><set>%s</set></value></analysis>\n"
         (String.concat ""
-           (List.map (fun n -> Printf.sprintf "<value>%s</value>" (escape n)) notes))
+           (List.map
+              (fun n -> Printf.sprintf "<value>%s</value>" (escape n))
+              notes))
   in
   let node = primary in
   let analyses =
     String.concat ""
       (List.map
          (fun (name, (body, _)) ->
-            Printf.sprintf "<analysis name=\"%s\"><value>\n%s\n</value></analysis>\n"
-              (escape name) body)
+           Printf.sprintf
+             "<analysis name=\"%s\"><value>\n%s\n</value></analysis>\n"
+             (escape name) body)
          rendered)
   in
   (* The command's own span, both ends recorded by the parser. order is
@@ -192,20 +209,22 @@ let node_xml ~source_file ~fn ~loc ~blocks =
      no command behind it -- an entry, an exit, a global -- reports zero
      throughout, which is what goblint emits for a location it does not have. *)
   let line, column, end_line, end_column, order =
-    match loc with Some (l, c, el, ec, o) -> (l, c, el, ec, o) | None -> (0, 0, 0, 0, 0)
+    match loc with
+    | Some (l, c, el, ec, o) -> (l, c, el, ec, o)
+    | None -> (0, 0, 0, 0, 0)
   in
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../node.xsl\"?>\n\
-     <loc><call id=\"%s\" file=\"%s\" fun=\"%s\" line=\"%d\" order=\"%d\" column=\"%d\" \
-     endLine=\"%d\" endColumn=\"%d\" synthetic=\"false\">\n\
-     <context><analysis name=\"program point\"><value>%s</value></analysis></context>\n\
+     <loc><call id=\"%s\" file=\"%s\" fun=\"%s\" line=\"%d\" order=\"%d\" \
+     column=\"%d\" endLine=\"%d\" endColumn=\"%d\" synthetic=\"false\">\n\
+     <context><analysis name=\"program \
+     point\"><value>%s</value></analysis></context>\n\
      <path>\n\
-     %s%s\
-     </path>\n\
+     %s%s</path>\n\
      </call></loc>\n"
-    (escape (C.xn_id node)) (escape source_file) (escape fn) line order column end_line
-    end_column
+    (escape (C.xn_id node))
+    (escape source_file) (escape fn) line order column end_line end_column
     (escape (C.xn_label node))
     note_xml analyses
 
@@ -213,10 +232,14 @@ let index_xml ~source_file ~fns =
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"report.xsl\"?>\n\
-     <report><file name=\"%s\">\n%s\n</file></report>\n"
+     <report><file name=\"%s\">\n\
+     %s\n\
+     </file></report>\n"
     (escape source_file)
     (String.concat "\n"
-       (List.map (fun f -> Printf.sprintf "<function name=\"%s\"/>" (escape f)) fns))
+       (List.map
+          (fun f -> Printf.sprintf "<function name=\"%s\"/>" (escape f))
+          fns))
 
 (* goblint's globals pane shows the solution of its global constraint system --
    GHT.iter over every GVar, unfiltered. Ours holds the two kinds a routed D/G
@@ -237,31 +260,32 @@ let globals_xml ~blocks =
     let bindings, notes =
       List.partition_map
         (fun line ->
-           match split_binding line with
-           | Some (k, v) -> Left (k, v)
-           | None -> Right line)
+          match split_binding line with
+          | Some (k, v) -> Left (k, v)
+          | None -> Right line)
         lines
     in
     if bindings = [] then
       Printf.sprintf "<value>%s</value>"
-        (escape (if notes = [] then "\xe2\x88\x85" else String.concat ", " notes))
+        (escape
+           (if notes = [] then "\xe2\x88\x85" else String.concat ", " notes))
     else
       "<value><map>"
       ^ String.concat ""
           (List.map
              (fun (var, value) ->
-                Printf.sprintf "<key>%s</key><value>%s</value>" (escape var)
-                  (match split_components value with
-                   | Some comps ->
+               Printf.sprintf "<key>%s</key><value>%s</value>" (escape var)
+                 (match split_components value with
+                 | Some comps ->
                      "<map>"
                      ^ String.concat ""
                          (List.map
                             (fun (k, c) ->
-                               Printf.sprintf "<key>%s</key><value>%s</value>" (escape k)
-                                 (escape c))
+                              Printf.sprintf "<key>%s</key><value>%s</value>"
+                                (escape k) (escape c))
                             comps)
                      ^ "</map>"
-                   | None -> escape value))
+                 | None -> escape value))
              bindings)
       ^ "</map></value>"
   in
@@ -269,23 +293,25 @@ let globals_xml ~blocks =
   let row key =
     match
       List.filter_map
-        (fun (name, gvs) -> Option.map (fun l -> (name, l)) (List.assoc_opt key gvs))
+        (fun (name, gvs) ->
+          Option.map (fun l -> (name, l)) (List.assoc_opt key gvs))
         blocks
     with
     | [] -> ""
     | per_domain ->
-      Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape key)
-        (String.concat ""
-           (List.map
-              (fun (name, lines) ->
-                 Printf.sprintf "<analysis name=\"%s\">%s</analysis>" (escape name)
-                   (state_xml lines))
-              per_domain))
+        Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape key)
+          (String.concat ""
+             (List.map
+                (fun (name, lines) ->
+                  Printf.sprintf "<analysis name=\"%s\">%s</analysis>"
+                    (escape name) (state_xml lines))
+                per_domain))
   in
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../globals.xsl\"?>\n\
-     <globs>\n%s</globs>\n"
+     <globs>\n\
+     %s</globs>\n"
     (String.concat "" (List.map row keys))
 
 (* One check's source-level finding. Positions come from the parser, which
@@ -308,11 +334,12 @@ let kw_declaration = [ "fun"; "global" ]
 let kw_special = [ "__voblint_check" ]
 let kw_literal = [ "true"; "false" ]
 
-let is_ident_start c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c = '_'
+let is_ident_start c =
+  (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c = '_'
+
 let is_ident_rest c = is_ident_start c || (c >= '0' && c <= '9') || c = '\''
 let is_digit c = c >= '0' && c <= '9'
 let is_op c = String.contains ":+-*<=&|!{}();," c
-
 let sht cls text = Printf.sprintf "<sht type=\"%s\">%s</sht>" cls (escape text)
 
 (* Highlights one source line. VIMP has no multi-line construct -- comments run
@@ -330,7 +357,9 @@ let highlight_line line =
     end
     else if is_ident_start c then begin
       let j = ref !i in
-      while !j < n && is_ident_rest line.[!j] do incr j done;
+      while !j < n && is_ident_rest line.[!j] do
+        incr j
+      done;
       let word = String.sub line !i (!j - !i) in
       let cls =
         if List.mem word kw_special then Some "sp"
@@ -340,19 +369,23 @@ let highlight_line line =
         else None
       in
       (match cls with
-       | Some cls -> Buffer.add_string buf (sht cls word)
-       | None -> Buffer.add_string buf (escape word));
+      | Some cls -> Buffer.add_string buf (sht cls word)
+      | None -> Buffer.add_string buf (escape word));
       i := !j
     end
     else if is_digit c then begin
       let j = ref !i in
-      while !j < n && is_digit line.[!j] do incr j done;
+      while !j < n && is_digit line.[!j] do
+        incr j
+      done;
       Buffer.add_string buf (sht "nr" (String.sub line !i (!j - !i)));
       i := !j
     end
     else if is_op c then begin
       let j = ref !i in
-      while !j < n && is_op line.[!j] do incr j done;
+      while !j < n && is_op line.[!j] do
+        incr j
+      done;
       Buffer.add_string buf (sht "op" (String.sub line !i (!j - !i)));
       i := !j
     end
@@ -365,7 +398,7 @@ let highlight_line line =
 
 (* Goblint's own phrasing, because this renders in Goblint's own frontend. *)
 let warn_text c =
-  match c.message, c.verdict with
+  match (c.message, c.verdict) with
   | Some message, _ -> message
   | None, "PROVED" -> Printf.sprintf "Assertion \"%s\" will succeed" c.cond
   | None, "REFUTED" -> Printf.sprintf "Assertion \"%s\" will fail" c.cond
@@ -375,8 +408,10 @@ let warn_xml ~source_file c =
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../warn.xsl\"?>\n\
-     <warning>\n<text file=\"%s\" line=\"%d\" column=\"%d\">%s</text></warning>\n"
-    (escape source_file) c.line c.column (escape (warn_text c))
+     <warning>\n\
+     <text file=\"%s\" line=\"%d\" column=\"%d\">%s</text></warning>\n"
+    (escape source_file) c.line c.column
+    (escape (warn_text c))
 
 (* file.xsl splices ns/wrn straight into an onclick="select_line(nr,ns,wrn)"
    attribute, so they have to read as JS array literals -- and script.js builds
@@ -402,56 +437,63 @@ let file_xml ~source_text ~checks ~line_nodes ~dead_lines =
   let body =
     List.mapi
       (fun i line ->
-         let nr = i + 1 in
-         (* warnN.xml is numbered by the check's position in the report, so
+        let nr = i + 1 in
+        (* warnN.xml is numbered by the check's position in the report, so
             the index is taken before filtering to this line. *)
-         let here =
-           checks
-           |> List.mapi (fun k c -> (k + 1, c))
-           |> List.filter (fun (_, c) -> c.line = nr)
-         in
-         let wrn =
-           if here = [] then "[]"
-           else
-             "["
-             ^ String.concat ","
-                 (List.map (fun (k, _) -> Printf.sprintf "&quot;warn%d&quot;" k) here)
-             ^ "]"
-         in
-         let ns =
-           match List.assoc_opt nr line_nodes with
-           | None | Some [] -> "[]"
-           | Some ids ->
-             "["
-             ^ String.concat ","
-                 (List.map (fun id -> Printf.sprintf "&quot;%s&quot;" (escape id)) ids)
-             ^ "]"
-         in
-         let ded = if List.mem nr dead_lines then "true" else "false" in
-         Printf.sprintf "<ln nr=\"%d\" ns=\"%s\" wrn=\"%s\" ded=\"%s\">%s</ln>" nr ns wrn ded
-           (highlight_line line))
+        let here =
+          checks
+          |> List.mapi (fun k c -> (k + 1, c))
+          |> List.filter (fun (_, c) -> c.line = nr)
+        in
+        let wrn =
+          if here = [] then "[]"
+          else
+            "["
+            ^ String.concat ","
+                (List.map
+                   (fun (k, _) -> Printf.sprintf "&quot;warn%d&quot;" k)
+                   here)
+            ^ "]"
+        in
+        let ns =
+          match List.assoc_opt nr line_nodes with
+          | None | Some [] -> "[]"
+          | Some ids ->
+              "["
+              ^ String.concat ","
+                  (List.map
+                     (fun id -> Printf.sprintf "&quot;%s&quot;" (escape id))
+                     ids)
+              ^ "]"
+        in
+        let ded = if List.mem nr dead_lines then "true" else "false" in
+        Printf.sprintf "<ln nr=\"%d\" ns=\"%s\" wrn=\"%s\" ded=\"%s\">%s</ln>"
+          nr ns wrn ded (highlight_line line))
       lines
   in
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../file.xsl\"?>\n\
-     <file>\n%s\n</file>\n"
+     <file>\n\
+     %s\n\
+     </file>\n"
     (String.concat "\n" body)
 
 (* Fill colour by finding, not by structural role: this graph exists to be
    read for verdicts. Dead nodes take goblint's own orange (cfgTools'
    fprint_fundec_html_dot paints unreachable nodes that colour). *)
 let node_fill node =
-  if is_dead node then "orange" else
-  match C.xn_status node with
-  | Some C.NS_Proved -> "#cdebc5"
-  | Some C.NS_Refuted -> "#f5b8b8"
-  | Some C.NS_Unknown -> "#e8e8e8"
-  | Some C.NS_Unreachable -> "orange"
-  | _ ->
-    (match C.xn_kind node with
-     | C.XN_Entry | C.XN_ProcEntry | C.XN_Exit | C.XN_ProcExit -> "#eef2f7"
-     | _ -> "white")
+  if is_dead node then "orange"
+  else
+    match C.xn_status node with
+    | Some C.NS_Proved -> "#cdebc5"
+    | Some C.NS_Refuted -> "#f5b8b8"
+    | Some C.NS_Unknown -> "#e8e8e8"
+    | Some C.NS_Unreachable -> "orange"
+    | _ -> (
+        match C.xn_kind node with
+        | C.XN_Entry | C.XN_ProcEntry | C.XN_Exit | C.XN_ProcExit -> "#eef2f7"
+        | _ -> "white")
 
 let node_shape node =
   match C.xn_kind node with
@@ -464,13 +506,16 @@ let source_fragment lines (line, column, end_line, end_column, _) =
   if line < 1 || end_line < line || end_line > Array.length lines then None
   else
     let pieces =
-      List.init (end_line - line + 1)
+      List.init
+        (end_line - line + 1)
         (fun i ->
-           let text = lines.(line + i - 1) in
-           let first = if i = 0 then column - 1 else 0 in
-           let last = if line + i = end_line then end_column - 1 else String.length text in
-           if first < 0 || last < first || last > String.length text then None
-           else Some (String.trim (String.sub text first (last - first))))
+          let text = lines.(line + i - 1) in
+          let first = if i = 0 then column - 1 else 0 in
+          let last =
+            if line + i = end_line then end_column - 1 else String.length text
+          in
+          if first < 0 || last < first || last > String.length text then None
+          else Some (String.trim (String.sub text first (last - first))))
     in
     if List.exists Option.is_none pieces then None
     else Some (String.concat " " (List.filter_map Fun.id pieces))
@@ -487,30 +532,35 @@ let html_dot ~source_text ~positions graph =
   let routed_calls = Hashtbl.create 32 in
   List.iter
     (fun e ->
-       match C.xe_kind e with
-       | C.XE_CallToReturn -> Hashtbl.replace call_sites (C.xe_src e) ()
-       | C.XE_Enter -> Hashtbl.replace routed_calls (C.xe_src e) ()
-       | _ -> ())
+      match C.xe_kind e with
+      | C.XE_CallToReturn -> Hashtbl.replace call_sites (C.xe_src e) ()
+      | C.XE_Enter -> Hashtbl.replace routed_calls (C.xe_src e) ()
+      | _ -> ())
     (C.xg_edges graph);
   let source_lines = Array.of_list (String.split_on_char '\n' source_text) in
   let node_label node =
     let name = C.xn_label node in
-    if not (Hashtbl.mem call_sites (C.xn_id node))
-       || Hashtbl.mem routed_calls (C.xn_id node) then dot_escape name
+    if
+      (not (Hashtbl.mem call_sites (C.xn_id node)))
+      || Hashtbl.mem routed_calls (C.xn_id node)
+    then dot_escape name
     else
-      match Option.bind (node_line positions node) (source_fragment source_lines) with
+      match
+        Option.bind (node_line positions node) (source_fragment source_lines)
+      with
       | None | Some "" -> dot_escape name
       | Some call -> dot_escape name ^ "\\n" ^ dot_escape call
   in
   let buf = Buffer.create 4096 in
   Buffer.add_string buf "digraph AnalysisCFG {\n";
   Buffer.add_string buf
-    "  graph [rankdir=TB,newrank=true,splines=polyline,nodesep=0.4,ranksep=0.5,\
-     fontname=\"Menlo\"];\n";
+    "  graph \
+     [rankdir=TB,newrank=true,splines=polyline,nodesep=0.4,ranksep=0.5,fontname=\"Menlo\"];\n";
   Buffer.add_string buf
-    "  node [shape=box,style=filled,fillcolor=white,fontname=\"Menlo\",fontsize=11,\
-     id=\"\\N\",URL=\"javascript:show_info('\\N');\"];\n";
-  Buffer.add_string buf "  edge [fontname=\"Menlo\",fontsize=9,arrowsize=0.7];\n";
+    "  node \
+     [shape=box,style=filled,fillcolor=white,fontname=\"Menlo\",fontsize=11,id=\"\\N\",URL=\"javascript:show_info('\\N');\"];\n";
+  Buffer.add_string buf
+    "  edge [fontname=\"Menlo\",fontsize=9,arrowsize=0.7];\n";
   let is_source_node id =
     match Hashtbl.find_opt by_id id with
     | Some node -> C.xn_kind node = C.XN_Source
@@ -518,47 +568,49 @@ let html_dot ~source_text ~positions graph =
   in
   List.iter
     (fun cluster ->
-       let visible_nodes =
-         List.filter (fun nid -> not (is_source_node nid)) (C.xc_nodes cluster)
-       in
-       if visible_nodes <> [] then begin
-         Buffer.add_string buf (Printf.sprintf "  subgraph %s {\n" (C.xc_id cluster));
-         Buffer.add_string buf
-           (Printf.sprintf "    label=\"%s\";\n" (dot_escape (C.xc_label cluster)));
-         Buffer.add_string buf "    style=rounded; color=gray70;\n";
-         List.iter
-           (fun nid ->
-              match Hashtbl.find_opt by_id nid with
-              | None -> ()
-              | Some node ->
+      let visible_nodes =
+        List.filter (fun nid -> not (is_source_node nid)) (C.xc_nodes cluster)
+      in
+      if visible_nodes <> [] then begin
+        Buffer.add_string buf
+          (Printf.sprintf "  subgraph %s {\n" (C.xc_id cluster));
+        Buffer.add_string buf
+          (Printf.sprintf "    label=\"%s\";\n"
+             (dot_escape (C.xc_label cluster)));
+        Buffer.add_string buf "    style=rounded; color=gray70;\n";
+        List.iter
+          (fun nid ->
+            match Hashtbl.find_opt by_id nid with
+            | None -> ()
+            | Some node ->
                 Buffer.add_string buf
-                  (Printf.sprintf "    %s [%s,fillcolor=\"%s\",label=\"%s\"];\n" nid
-                     (node_shape node) (node_fill node)
-                     (node_label node)))
-           visible_nodes;
-         Buffer.add_string buf "  }\n"
-       end)
+                  (Printf.sprintf "    %s [%s,fillcolor=\"%s\",label=\"%s\"];\n"
+                     nid (node_shape node) (node_fill node) (node_label node)))
+          visible_nodes;
+        Buffer.add_string buf "  }\n"
+      end)
     (C.xg_clusters graph);
   List.iter
     (fun e ->
-       if not (is_source_node (C.xe_src e) || is_source_node (C.xe_dst e)) then begin
-         let label =
-           match C.xe_kind e with
-           | C.XE_Enter -> "call " ^ C.xe_label e
-           | C.XE_Combine ->
-             if C.xe_label e = "" then "resume" else "resume / " ^ C.xe_label e
-           | C.XE_CallToReturn -> "continuation"
-           | C.XE_GlobalRead -> "read global"
-           | C.XE_GlobalWrite -> "write global"
-           | C.XE_Intra -> C.xe_label e
-         in
-         let style =
-           if C.xe_kind e = C.XE_CallToReturn then "style=dashed,color=gray40," else ""
-         in
-         Buffer.add_string buf
-           (Printf.sprintf "  %s -> %s [%slabel=\"%s\"];\n" (C.xe_src e) (C.xe_dst e) style
-              (dot_escape label))
-       end)
+      if not (is_source_node (C.xe_src e) || is_source_node (C.xe_dst e)) then begin
+        let label =
+          match C.xe_kind e with
+          | C.XE_Enter -> "call " ^ C.xe_label e
+          | C.XE_Combine ->
+              if C.xe_label e = "" then "resume" else "resume / " ^ C.xe_label e
+          | C.XE_CallToReturn -> "continuation"
+          | C.XE_GlobalRead -> "read global"
+          | C.XE_GlobalWrite -> "write global"
+          | C.XE_Intra -> C.xe_label e
+        in
+        let style =
+          if C.xe_kind e = C.XE_CallToReturn then "style=dashed,color=gray40,"
+          else ""
+        in
+        Buffer.add_string buf
+          (Printf.sprintf "  %s -> %s [%slabel=\"%s\"];\n" (C.xe_src e)
+             (C.xe_dst e) style (dot_escape label))
+      end)
     (C.xg_edges graph);
   Buffer.add_string buf "}\n";
   Buffer.contents buf
@@ -573,24 +625,29 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
   let index =
     List.map
       (fun (name, g) ->
-         let by_id = Hashtbl.create 64 in
-         List.iter (fun n -> Hashtbl.replace by_id (C.xn_id n) n) (C.xg_nodes g);
-         (name, by_id))
+        let by_id = Hashtbl.create 64 in
+        List.iter (fun n -> Hashtbl.replace by_id (C.xn_id n) n) (C.xg_nodes g);
+        (name, by_id))
       graphs
   in
-  let nodes = List.filter (fun n -> C.xn_kind n <> C.XN_Source) (C.xg_nodes graph) in
+  let nodes =
+    List.filter (fun n -> C.xn_kind n <> C.XN_Source) (C.xg_nodes graph)
+  in
   let node_files =
     List.map
       (fun node ->
-         let id = C.xn_id node in
-         let blocks =
-           List.filter_map
-             (fun (name, by_id) ->
-                Option.map (fun n -> (name, n)) (Hashtbl.find_opt by_id id))
-             index
-         in
-         { path = Printf.sprintf "nodes/%s.xml" id;
-           content = node_xml ~source_file ~fn ~loc:(node_line positions node) ~blocks })
+        let id = C.xn_id node in
+        let blocks =
+          List.filter_map
+            (fun (name, by_id) ->
+              Option.map (fun n -> (name, n)) (Hashtbl.find_opt by_id id))
+            index
+        in
+        {
+          path = Printf.sprintf "nodes/%s.xml" id;
+          content =
+            node_xml ~source_file ~fn ~loc:(node_line positions node) ~blocks;
+        })
       nodes
   in
   let dead = List.length (List.filter is_dead nodes) in
@@ -599,18 +656,25 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
   let line_nodes = Hashtbl.create 64 in
   List.iter
     (fun node ->
-       match node_line positions node with
-       | None -> ()
-       | Some (l, _, _, _, _) ->
-         Hashtbl.replace line_nodes l (C.xn_id node :: Option.value ~default:[] (Hashtbl.find_opt line_nodes l)))
+      match node_line positions node with
+      | None -> ()
+      | Some (l, _, _, _, _) ->
+          Hashtbl.replace line_nodes l
+            (C.xn_id node
+            :: Option.value ~default:[] (Hashtbl.find_opt line_nodes l)))
     nodes;
-  let line_nodes = Hashtbl.fold (fun l ids acc -> (l, List.rev ids) :: acc) line_nodes [] in
+  let line_nodes =
+    Hashtbl.fold (fun l ids acc -> (l, List.rev ids) :: acc) line_nodes []
+  in
   let dead_lines =
     List.filter_map
       (fun (l, ids) ->
-         if List.for_all (fun id -> List.exists (fun n -> C.xn_id n = id && is_dead n) nodes) ids
-         then Some l
-         else None)
+        if
+          List.for_all
+            (fun id -> List.exists (fun n -> C.xn_id n = id && is_dead n) nodes)
+            ids
+        then Some l
+        else None)
       line_nodes
   in
   (* One graph per run covers the whole program -- procedures are clusters in it,
@@ -618,14 +682,21 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
      function whose own graph does not exist. *)
   ( { path = "index.xml"; content = index_xml ~source_file ~fns:[ fn ] }
     :: { path = "nodes/globals.xml"; content = globals_xml ~blocks:globals }
-    :: { path = Printf.sprintf "files/%s.xml" seg; content = file_xml ~source_text ~checks ~line_nodes ~dead_lines }
-    :: { path = Printf.sprintf "dot/%s/%s.dot" seg fn;
-         content = html_dot ~source_text ~positions graph }
+    :: {
+         path = Printf.sprintf "files/%s.xml" seg;
+         content = file_xml ~source_text ~checks ~line_nodes ~dead_lines;
+       }
+    :: {
+         path = Printf.sprintf "dot/%s/%s.dot" seg fn;
+         content = html_dot ~source_text ~positions graph;
+       }
     :: (node_files
-        @ List.mapi
-            (fun k c ->
-               { path = Printf.sprintf "warn/warn%d.xml" (k + 1);
-                 content = warn_xml ~source_file c })
-            checks),
+       @ List.mapi
+           (fun k c ->
+             {
+               path = Printf.sprintf "warn/warn%d.xml" (k + 1);
+               content = warn_xml ~source_file c;
+             })
+           checks),
     List.length nodes,
     dead )

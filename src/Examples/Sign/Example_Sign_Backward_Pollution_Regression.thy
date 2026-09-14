@@ -113,7 +113,7 @@ text \<open>
 \<close>
 
 lemma bfilter_sign_exec_pollution_fixed:
-  "bfilter_sign_st_lift (\<lambda>_. False) x_or_y_contradiction True (Lifted top_sign_st) = Bot"
+  "bfilter_sign_st_lift (\<lambda>_. False) x_or_y_contradiction True (Lifted (initial_resolved_st_q STop STop)) = Bot"
   unfolding x_or_y_contradiction_def x_eq_0_and_1_def y_eq_0_and_1_def by eval
 
 subsection \<open>The semantic branch operation inherits the fix\<close>

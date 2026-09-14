@@ -379,6 +379,20 @@ function clearGraph() {
   graphPanel.hidden = true;
 }
 
+/*
+ * A graph that failed to render is a different outcome from an analysis that
+ * failed: the analysis result is valid and already displayed, and the graph
+ * panel carries its own message. Tagging the rethrow lets run()'s outer catch
+ * keep that message instead of clearing it and reporting an analysis failure.
+ */
+class GraphRenderError extends Error {
+  constructor(message, options) {
+    super(message, options);
+
+    this.name = "GraphRenderError";
+  }
+}
+
 function showGraphMessage(message, kind = "") {
   const row = document.createElement("p");
 
@@ -528,7 +542,11 @@ async function renderGraph(dot, runGeneration) {
       return;
     }
 
-    showGraphMessage(error instanceof Error ? `Graph rendering failed: ${error.message}` : `Graph rendering failed: ${String(error)}`, "error");
+    const detail = error instanceof Error ? error.message : String(error);
+
+    showGraphMessage(`Graph rendering failed: ${detail}`, "error");
+
+    throw new GraphRenderError(`Graph rendering failed: ${detail}`, { cause: error });
   }
 }
 
@@ -865,6 +883,19 @@ async function run() {
     }
   } catch (error) {
     if (runGeneration === analysisRunGeneration) {
+      /*
+       * A render failure leaves the analysis result and the graph panel's own
+       * message standing; only an analysis failure clears the graph and
+       * replaces the results with the error text.
+       */
+      if (error instanceof GraphRenderError) {
+        showStatus(`${configurationLabel(configuration)} · graph rendering failed`, "error");
+
+        console.error(error);
+
+        return;
+      }
+
       clearGraph();
 
       showStatus("Browser analysis failed.", "error");

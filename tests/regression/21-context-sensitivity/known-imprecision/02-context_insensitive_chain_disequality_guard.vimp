@@ -5,7 +5,7 @@
 // Same program as precision/04-function_chain_self_recursive_tail.vimp;
 // every concrete result is 3. Under --context none each procedure has one
 // activation shared by all its call sites, so h's entry is seeded by the
-// join of every argument reaching it; --dot-full shows that entry as
+// join of every argument reaching it; --dot shows that entry as
 // i=[0,+inf] (the upper bound widened, the lower bound 0 kept). The loss
 // is downstream of the seed: Interval's guard refinement for (i != 0)
 // cannot strip the endpoint 0 from [0,+inf], the following (i <= 0) arm

@@ -18,50 +18,8 @@ text \<open>
   holds the single integer \<open>0\<close>, every local is unconstrained.
 \<close>
 
-text \<open>
-  \<^type>\<open>congruence\<close> is a \<^theory_text>\<open>typedef\<close> over the normalized representation, not a
-  datatype, so \<^theory_text>\<open>lift_definition\<close> into \<^type>\<open>resolved_st_q\<close> descends through
-  both quotients at once and lands on the raw pair type. These two states are
-  therefore built the way \<^const>\<open>bot\<close> is at this type: an explicit
-  \<^const>\<open>Abs_resolved_st\<close> of a triple, with no override entries.
-\<close>
-
-definition top_congruence_st :: "congruence resolved_st_q" where
-  "top_congruence_st = Abs_resolved_st (top, top, [])"
-
-lemma lookup_top_congruence_st [simp]:
-  "fun_of_resolved_st_q_for gs top_congruence_st x = top"
-  unfolding fun_of_resolved_st_q_for_def top_congruence_st_def
-  by (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_top_congruence_st:
-  "fun_of_resolved_st_q_for gs top_congruence_st = (\<lambda>_. top)"
-  by (rule ext) simp
-
-definition cinit_congruence_st :: "congruence resolved_st_q" where
-  "cinit_congruence_st = Abs_resolved_st (top, congruence_of_int 0, [])"
-
-lemma lookup_cinit_congruence_st [simp]:
-  "fun_of_resolved_st_q_for gs cinit_congruence_st x =
-   (if gs x then congruence_of_int 0 else top)"
-  unfolding fun_of_resolved_st_q_for_def cinit_congruence_st_def
-  by (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_congruence_st:
-  "fun_of_resolved_st_q_for gs cinit_congruence_st =
-   (\<lambda>x. if gs x then congruence_of_int 0 else top)"
-  by (rule ext) simp
-
-lemma lookup_cinit_congruence_st_for:
-  "fun_of_resolved_st_q_for gs cinit_congruence_st x =
-   (if gs x then congruence_of_int 0 else top)"
-  unfolding fun_of_resolved_st_q_for_def cinit_congruence_st_def
-  by (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_congruence_st_for:
-  "fun_of_resolved_st_q_for gs cinit_congruence_st =
-   (\<lambda>x. if gs x then congruence_of_int 0 else top)"
-  by (rule ext) simp
+abbreviation cinit_congruence_st :: "congruence resolved_st_q" where
+  "cinit_congruence_st \<equiv> initial_resolved_st_q top (congruence_of_int 0)"
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 

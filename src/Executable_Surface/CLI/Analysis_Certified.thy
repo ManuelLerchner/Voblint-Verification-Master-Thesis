@@ -222,25 +222,6 @@ lemma cs_output_sound:
   by (rule sound_table.output_sound_at [OF assms(2) out_checks_of_cs_output [OF assms(1)]
           out_diagnostics_of_cs_output [OF assms(1)] assms(3)])
 
-lemma table_report_answer_sound:
-  assumes "table_report_answer view r classify p = Analysed out"
-      and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at out v s \<and> diagnostics_sound_at out p v s"
-  by (rule sound_table.output_sound_at
-        [OF assms(2) out_checks_of_table_report_answer [OF assms(1)]
-          out_diagnostics_of_table_report_answer [OF assms(1)] assms(3)])
-
-lemma verdict_report_answer_sound:
-  assumes "verdict_report_answer view (classify_checks_verdicts (prog_cfg p) r classify)
-             = Analysed out"
-      and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at out v s"
-  by (rule sound_table.sound_at
-        [OF assms(2) out_checks_of_verdict_report_answer [OF assms(1)] assms(3)])
 
 text \<open>
   One line per plan the resolver can return. A pairing it rejects never reaches
@@ -529,8 +510,7 @@ lemma plan_answer_check_sites:
   by (cases pl)
      (auto simp: plan_answer_def plan_answer_report_defs Let_def
         split: solver_choice.splits prod.splits
-        dest!: flat_output_check_sites entry_state_output_check_sites cs_output_check_sites
-          verdict_report_answer_check_sites table_report_answer_check_sites)
+        dest!: flat_output_check_sites entry_state_output_check_sites cs_output_check_sites)
 
 text \<open>
   The same claim read through \<^const>\<open>run_voblint\<close>: an \<^const>\<open>Analysed\<close>

@@ -1,19 +1,20 @@
 // PARAM: --analysis sign --context entry-state
-// Regression for a silent wrong-output bug: the collapsed entry-state
-// GraphViz renderers took only an imp_prog and hard-wired Interval's own
-// result table, so --analysis sign --context entry-state --graph-snapshot
-// rendered Interval's states under a Sign banner -- node labels read
-// a=[9,9] rather than a=Positive. The four collapsed renderers now take an
-// analysis_domain and read the selected domain's own entry-state table.
-// This fixture pins that the rendering is Sign's: the labels below are
-// Sign values, and no interval notation appears anywhere in the graph.
-// Collapsed rendering is domain-generic because lookup_joined_state joins
-// a point's covered contexts away before the renderer sees them, leaving
-// an ordinary per-node abs_state that projects into abstract_value -- the
-// same projection the monovariant renderer already used. --context-graph
-// collapsed is explicit here because an entry-state run is drawn expanded
-// by default; 14-expanded_sign_own_domain.vimp pins that rendering, and the
-// pair together keep both renderers reading the selected domain's table.
+// Regression for a silent wrong-output bug: the entry-state GraphViz
+// renderers took only an imp_prog and hard-wired Interval's own result
+// table, so --analysis sign --context entry-state --graph-snapshot rendered
+// Interval's states under a Sign banner -- node labels read a=[9,9] rather
+// than a=Positive. The renderers now take an analysis_domain and read the
+// selected domain's own entry-state table. This fixture pins that the
+// rendering is Sign's: the labels below are Sign values, and no interval
+// notation appears anywhere in the graph.
+// The routing decision behind the enter edges is callee_ctx_of, taken once
+// for every domain from the solved result table; before that it existed
+// only as an Interval-typed mirror and every other domain was rejected
+// outright.
+// Sign gives square one context, not two: the entry-state context is the
+// tuple of formals' abstract values, and 3 and 4 are both Positive, so the
+// two call sites route to the same activation. 15-expanded_int_own_domain
+// is the same program under Int, where they do not.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

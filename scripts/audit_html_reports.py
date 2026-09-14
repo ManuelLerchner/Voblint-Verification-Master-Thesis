@@ -52,7 +52,7 @@ SHT_TYPES = {"nr", "pp", "tk", "sk", "op", "sp", "cm", "st"}
 
 # Flags that decide what gets written, not how the analysis runs. --html
 # replaces them, so they are dropped from the fixture's own PARAM line.
-OUTPUT_FLAGS = {"--dot", "--dot-full", "--graph-snapshot", "--parse-only"}
+OUTPUT_FLAGS = {"--dot", "--graph-snapshot", "--parse-only"}
 
 # tests/run.py's own rule: a fixture with no inline verdict documents a
 # rejection rather than a report, so there is no report here to audit.
@@ -144,7 +144,7 @@ def live_check_lines(out: Path, source_text: str) -> set[int]:
             # is absent from the canonical contextual graph rather than being
             # materialized as a synthetic Bot node.
             if re.search(r"//.*\bNOWARN\b", text_line):
-                 continue
+                continue
             if not dead_at(nr, m.start() + 1):
                 live.add(nr)
                 break

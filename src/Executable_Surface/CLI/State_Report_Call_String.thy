@@ -73,6 +73,7 @@ where
   "cs_ctx_graph_config p k =
     \<lparr> local_of = id,
       route = (\<lambda>u ctx ca d. cs_graph_route k u ctx ca d),
+      is_dead_local = (\<lambda>d. case d of Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False),
       context_key = cs_context_key,
       show_context = cs_show_context,
       locals_for_pp = (\<lambda>v.
@@ -160,7 +161,7 @@ where
       ctx_seed_globals into cs_context_key cs_show_context r p)"
 
 text \<open>
-  Each dispatcher below takes the \<^typ>\<open>solver_choice\<close> its caller's plan resolved
+  The dispatcher below takes the \<^typ>\<open>solver_choice\<close> its caller's plan resolved
   to, rather than reading whichever table its domain happens to publish first.
   The two differ: Int's call-string route publishes an always-join table and a
   warrowing one, and warrowing is the discipline \<open>resolve_analysis_config\<close>
@@ -172,64 +173,6 @@ text \<open>
   seeds from, and \<open>resolve_analysis_config\<close> rejects those pairings before a
   renderer runs.
 \<close>
-
-definition cs_ctx_export_auto ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> export_graph option"
-where
-  "cs_ctx_export_auto kind sc k p =
-     (case (kind, sc) of
-        (Sign_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_sign_call_string_result k p
-           in Some (cs_ctx_export_of SignValue sign_classify_check r k p))
-      | (Sign_Analysis, _) \<Rightarrow> None
-      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_interval_call_string_result k p
-           in Some (cs_ctx_export_of IntervalValue interval_classify_check r k p))
-      | (Interval_Analysis, _) \<Rightarrow> None
-      | (Int_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_int_call_string_result k p
-           in Some (cs_ctx_export_of IntDomValue int_classify_check r k p))
-      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_int_call_string_result_warrow k p
-           in Some (cs_ctx_export_of IntDomValue int_classify_check r k p))
-      | (Int_Analysis, _) \<Rightarrow> None
-      | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_parity_call_string_result k p
-           in Some (cs_ctx_export_of ParityValue parity_classify_check r k p))
-      | (Parity_Analysis, _) \<Rightarrow> None
-      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_congruence_call_string_result k p
-           in Some (cs_ctx_export_of CongruenceValue congruence_classify_check r k p))
-      | (Congruence_Analysis, _) \<Rightarrow> None)"
-
-definition cs_ctx_graph_snapshot_auto ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal option"
-where
-  "cs_ctx_graph_snapshot_auto kind sc k p =
-     (case (kind, sc) of
-        (Sign_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_sign_call_string_result k p
-           in Some (cs_ctx_graph_snapshot_of SignValue sign_classify_check r k p))
-      | (Sign_Analysis, _) \<Rightarrow> None
-      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_interval_call_string_result k p
-           in Some (cs_ctx_graph_snapshot_of IntervalValue interval_classify_check r k p))
-      | (Interval_Analysis, _) \<Rightarrow> None
-      | (Int_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_int_call_string_result k p
-           in Some (cs_ctx_graph_snapshot_of IntDomValue int_classify_check r k p))
-      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_int_call_string_result_warrow k p
-           in Some (cs_ctx_graph_snapshot_of IntDomValue int_classify_check r k p))
-      | (Int_Analysis, _) \<Rightarrow> None
-      | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_parity_call_string_result k p
-           in Some (cs_ctx_graph_snapshot_of ParityValue parity_classify_check r k p))
-      | (Parity_Analysis, _) \<Rightarrow> None
-      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_congruence_call_string_result k p
-           in Some (cs_ctx_graph_snapshot_of CongruenceValue congruence_classify_check r k p))
-      | (Congruence_Analysis, _) \<Rightarrow> None)"
 
 definition cs_ctx_checked_payload_auto ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> nat \<Rightarrow> imp_prog

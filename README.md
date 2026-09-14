@@ -43,9 +43,8 @@ $ pixi run voblint --analysis interval tests/regression/02-control-flow/precisio
 ```
 
 `--dot` renders the same solved CFG as GraphViz instead: the source sits beside
-the graph, each check node carries its verdict and the state it was decided on,
-and dead nodes are shaded. `--dot-full` puts every node's own state on the graph
-rather than only the check nodes; under a context policy each context gets its
+the graph, every node carries its procedure-local state, check nodes carry their
+verdict, and dead nodes are shaded. Under a context policy each context gets its
 own cluster (see the gallery below).
 
 ```bash
@@ -456,8 +455,8 @@ question.
         <img src="docs/images/report-context-interval.png" width="420" alt="Interval analysis with entry-state contexts: three call sites drawn as three clusters">
       </a>
       <br><b>Context-sensitive Interval</b>
-      <br><sub><code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument context. Several concrete arguments can share one, and the solver may revisit a context. <code>--context-graph expanded</code> draws each as its own cluster: <code>[5,5]</code>, <code>[4,4]</code> and <code>[19,19]</code>, the last read from a global at the call site, instead of one cluster holding their join.</sub>
-      <br><sub><a href="tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp"><code>04-expanded_three_contexts.vimp</code></a> &middot; <code>--context entry-state --context-graph expanded --html</code></sub>
+      <br><sub><code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument context. Several concrete arguments can share one, and the solver may revisit a context. The graph draws each as its own cluster: <code>[5,5]</code>, <code>[4,4]</code> and <code>[19,19]</code>, the last read from a global at the call site, instead of one cluster holding their join.</sub>
+      <br><sub><a href="tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp"><code>04-expanded_three_contexts.vimp</code></a> &middot; <code>--context entry-state --html</code></sub>
     </td>
   </tr>
   <tr>

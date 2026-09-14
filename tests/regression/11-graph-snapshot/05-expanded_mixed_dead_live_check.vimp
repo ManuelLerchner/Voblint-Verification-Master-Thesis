@@ -1,12 +1,11 @@
-// PARAM: --analysis interval --context entry-state --dot-full
+// PARAM: --analysis interval --context entry-state --dot
 // The same source check renders differently in each of f's two entry-state
 // contexts: under n=[1,1] the guard n<2 is live and the check is decided
 // (PROVED); under n=[5,5] the same guard is false, so the check's own node is
-// unreachable and renders [dead] instead of a verdict. This is the case
-// exists for: collapsed mode has exactly one CFG
-// node for that check and can show only one verdict there, so the dead
-// activation would otherwise disappear into (or be shadowed by) the live
-// one -- expanded keeps both, one cluster per context.
+// unreachable and renders [dead] instead of a verdict. This is what
+// per-context rendering exists for: a single shared CFG node for that check
+// could show only one verdict, so the dead activation would disappear into
+// (or be shadowed by) the live one. One cluster per context keeps both.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

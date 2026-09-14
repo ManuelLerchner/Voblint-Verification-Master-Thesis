@@ -9,7 +9,7 @@ not here.
 ```text
 voblint --analysis sign|interval|int|parity|congruence[,...]
         [--context none|entry-state|call-string] [--context-depth K]
-        [--dot | --dot-full | --graph-snapshot | --html | --html-out DIR]
+        [--dot | --graph-snapshot | --html | --html-out DIR]
         [--solver join|per-origin|warrow|warrow-per-origin]
         [--timeout SECONDS] FILE.vimp
 voblint --parse-only FILE.vimp
@@ -37,21 +37,25 @@ voblint --help
   [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the exact shape.
 - `--context-depth K` bounds the call string. Valid only with `--context
   call-string`; `K = 0` is rejected rather than treated as `--context none`.
-- `--dot` / `--dot-full` / `--graph-snapshot` pick an output mode in place of
-  the default plain-text check report: `--dot` annotates check nodes only,
-  `--dot-full` annotates every node with its computed abstract state,
-  `--graph-snapshot` emits a deterministic, DOT-free textual snapshot (used
-  as the regression corpus's structural oracle, see `tests/run.py`). `--html`
-  writes a browsable result directory instead (see `docs/HTML_REPORT.md`).
+- `--dot` / `--graph-snapshot` pick an output mode in place of the default
+  plain-text check report. Both draw the one contextual graph: one node per
+  `(pp, ctx)`, each carrying its procedure-local state (formals, locals, return
+  slot) and its check findings; a context-free run has the single unit
+  context. Declared globals are not repeated per node (see
+  [`docs/CHECK_ARCHITECTURE.md`](CHECK_ARCHITECTURE.md) for what the HTML
+  report's globals pane shows today). `--graph-snapshot`
+  emits a deterministic, DOT-free textual form of that graph (the regression
+  corpus's structural oracle, see `tests/run.py`). `--html` writes a browsable
+  result directory instead (see `docs/HTML_REPORT.md`).
 - `--solver join|per-origin|warrow|warrow-per-origin` bypasses the domain's
   production solver choice to exercise the vendored solver's update-rule
   discipline directly (experimental). Which disciplines a domain accepts at
   each context is the resolver's table (`Config_Tables.thy`): `interval` takes
   all four everywhere; `int` all four at `--context none` and `join`/`warrow`
   at the two context modes; `sign`, `parity` and `congruence` take `join`
-  everywhere and `per-origin` at `--context none` only. The text report and
-  `--html` display a chosen discipline; `--dot`/`--dot-full`/`--graph-snapshot`
-  do not, and `--html` with `--solver` requires `--context none`.
+  everywhere and `per-origin` at `--context none` only. Every output mode
+  renders the table the chosen discipline solved, contextual graphs included;
+  `--html` with `--solver` requires `--context none`.
 - `--parse-only` parses and exits without running any analysis. A
   syntactically valid but ill-formed program still exits 0 here; the full run
   rejects it with exit 4.
@@ -70,6 +74,8 @@ imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
 Voblint_CLI.Generated.run_voblint domain solver context view prog
+    |                                  <- view is View_Report (checks only) or
+    |                                     View_Contexts (checks plus the graph)
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
@@ -79,7 +85,7 @@ Voblint_CLI.Generated.run_voblint domain solver context view prog
 Malformed_Program | Unsupported_Configuration | Analysed out
     |
     v
-out_checks (text report) / out_graph (--dot, --dot-full, --html)
+out_checks (text report) / out_graph (--dot, --html)
                          / out_snapshot (--graph-snapshot)
     -> DOT and HTML drawn by cli/dot_render.ml and cli/html_report.ml,
        all sourced from the one solve that produced `out` (never a second)

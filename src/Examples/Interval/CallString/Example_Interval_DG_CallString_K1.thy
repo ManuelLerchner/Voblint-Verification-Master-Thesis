@@ -381,7 +381,7 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 lemma nest_cinit_le_cinit_ivl_st:
   "cinit_stores nest_gs \<subseteq> nest_gamma (Lifted cinit_ivl_st) Bot"
   by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_ivl_st_for)
+                 fun_of_initial_resolved_st_q)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved

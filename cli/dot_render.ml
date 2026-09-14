@@ -66,16 +66,10 @@ let structural_attrs node =
    Only an actual semantic status overrides the node's structural appearance.
    Plain state annotations and absent annotations share the same structural
    style. *)
-let is_dead node =
-  C.xn_status node = Some C.NS_Unreachable
-  || List.mem "unreachable" (C.xn_lines node)
-
 let node_attrs node =
-  if is_dead node then style_of_status C.NS_Unreachable
-  else
-    match C.xn_status node with
-    | None | Some C.NS_Plain -> structural_attrs node
-    | Some status -> style_of_status status
+  match C.xn_status node with
+  | None | Some C.NS_Plain -> structural_attrs node
+  | Some status -> style_of_status status
 
 (* xe_label carries the edge's content without the wording that names its role
    -- "f(x)", not "call f(x)" -- so the phrasing below is this renderer's.

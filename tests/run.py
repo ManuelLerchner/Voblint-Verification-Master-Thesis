@@ -449,9 +449,9 @@ def render_line(line: str) -> str:
 def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
     """Checks (or, under --update-graphs, regenerates) path's EXPECT-GRAPH
     block, if it has one, against a live --graph-snapshot run under args.
-    Shared by both check_case's report-based cases and its --dot/--dot-full
-    smoke cases: graph_snapshot_args preserves --dot-full unchanged (it only
-    strips --dot/--graph-snapshot), so a --dot-full fixture's block is
+    Shared by both check_case's report-based cases and its --dot/--dot
+    smoke cases: graph_snapshot_args preserves --dot unchanged (it only
+    strips --dot/--graph-snapshot), so a --dot fixture's block is
     checked against full_state_graph_snapshot_auto and a plain fixture's
     against state_report_graph_snapshot_auto -- entirely decided by args,
     with no separate marker convention needed."""
@@ -519,7 +519,7 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     except ValueError as error:
         return False, [f"FAIL {cmd}: {error}"]
 
-    if "--dot" in args or "--dot-full" in args:
+    if "--dot" in args or "--dot" in args:
         result = run_voblint(args, path)
         if result.returncode != 0 or not result.stdout.startswith("digraph AnalysisCFG"):
             lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")
@@ -644,9 +644,9 @@ def lint_case(path: Path) -> list[str]:
 
     # A case with no verdicts at all is a parse-rejection fixture (checked
     # for a structured error, not a report -- see check_case), and a --dot/
-    # --dot-full case checks DOT shape, not verdicts: neither kind's
+    # --dot case checks DOT shape, not verdicts: neither kind's
     # __voblint_check lines are meant to carry one.
-    if (expected or arithmetic is not None) and "--dot" not in args and "--dot-full" not in args:
+    if (expected or arithmetic is not None) and "--dot" not in args and "--dot" not in args:
         for line_no, line in enumerate(src_lines, start=1):
             if not CHECK_LINE_RE.search(line):
                 continue

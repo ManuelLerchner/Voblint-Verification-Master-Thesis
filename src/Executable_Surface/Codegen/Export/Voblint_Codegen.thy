@@ -126,7 +126,7 @@ export_code
   Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis
   Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
   Ctx_None Ctx_EntryState Ctx_CallString
-  View_Report View_Checks View_States View_Checked_States View_Contexts
+  View_Report View_Contexts
 
   \<comment> \<open>Answer: the three outcomes, then the readers of a successful one\<close>
   Malformed_Program Unsupported_Configuration Analysed

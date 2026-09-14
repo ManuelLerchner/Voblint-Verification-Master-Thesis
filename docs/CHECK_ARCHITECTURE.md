@@ -232,13 +232,13 @@ Interval example additionally demonstrates a precision gain: a bound Interval pr
 outright (`x < 11` after narrowing `x` to `[1,9]`) that Sign's `SPos`
 alone cannot.
 
-## Contextual result and GraphViz presentation (collapsed vs. expanded)
+## Contextual result and GraphViz presentation
 
-The pipeline above is per-node and context-independent. A context-sensitive
-analysis -- `--context entry-state` or `--context call-string` -- produces a
-canonical, contextual `analysis_result` instead, and everything downstream of
-the solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
-table, never the raw solver map:
+Every analysis produces one canonical, contextual `analysis_result`: a table
+from `(pp, ctx)` to `Lifted abs_state | Bot`. A context-free run
+(`--context none`) is not a special case -- its table has the single unit
+context. Everything downstream of the solver reads that one table, never the
+raw solver map:
 
 ```text
                        verified solver
@@ -247,52 +247,56 @@ table, never the raw solver map:
                       analysis_result
                (pp, ctx) -> Lifted abs_state | Bot
                              |
-           +-----------------+-----------------+
-           |                 |                 |
-           v                 v                 v
-     contextual        collapsed graph    expanded graph
-       checks         (Analysis_Graph_Build, both modes)
-  (aggregate_        one node per pp,     one node per (pp, ctx),
-   verdicts)         contextual states    states never joined
-                       joined for
-                        rendering
-           |                 |                 |
-           +-----------------+-----------------+
+                +------------+------------+
+                |                         |
+                v                         v
+         contextual checks         contextual graph
+       (aggregate_verdicts)    one node per (pp, ctx),
+                                states never joined
+                |                         |
+                +------------+------------+
                              |
                              v
                         CLI (voblint)
 ```
 
-`lookup_context`/`contexts_at` are the only reads either graph mode
-performs against the result. Collapsed and expanded are **the same
-canonical `analysis_result`, rendered two ways** -- not two analyses, and
-not two solves: `analysis_graph_config.route` (partial -- `None` on an
+`lookup_context`/`contexts_at` are the only reads the graph builder performs
+against the result. `analysis_graph_config.route` (partial -- `None` on an
 unreachable caller or an entered-bottom callee frame, never a real `'ctx`
-value doubling as a sentinel) decides what edges to draw, `context_key`
-decides presentation order, and `node_annotation` reads the context, but
-none of that changes what the solver computed.
+value doubling as a sentinel) decides which edges to draw, `context_key`
+decides presentation order, and `node_annotation` attaches check findings. None
+of that changes what the solver computed.
+
+A node whose solved state is `Bot` carries `NS_Unreachable` as its structural
+status, set once in `export_node_of` from the config's `is_dead_local`. Renderers
+read that constructor; they never infer deadness from label text.
+
+### What a node shows, and where globals go
+
+A graph node's state lines are the enclosing procedure's formals, its locals,
+and its return slot, identically for `--context none`, `entry-state` and
+`call-string`. Declared globals are **not** repeated in node labels.
+
+`out_globals` is not yet one contract. Plans whose solver returns its global
+unknowns render those (the shared `Global` store and each `enter f` activation
+entry); plans that return only a result table reconstruct `enter f @ ctx` rows
+from the `FunctionEntry` contexts instead. Neither is "the solved value of each
+declared global", and the two differ in shape across solver choices, so the
+browser playground does not display them. Replacing both with one structured
+globals field is part of moving presentation out of Isabelle.
 
 ### CLI contract
 
 ```text
 --context none|entry-state|call-string  context sensitivity (analysis-level)
+--dot | --graph-snapshot | --html       what to render from the one result
 ```
 
-`--context-graph` only selects how an already-computed contextual result
-is drawn under `--dot`/`--dot-full`/`--graph-snapshot`/`--html`; it never
-affects analysis precision, the solver, or which contexts get computed.
-`collapsed` joins every context's state per CFG node for rendering.
-`expanded` draws one node per `(pp, ctx)` pair instead, so a check that is
-`Dead` in one context and `Decided` in another -- or two live contexts
-that disagree on the same check's verdict -- stays visible as distinct
-nodes rather than collapsing into one rendering. That is why `expanded`
-is the default under `--context entry-state`, for every domain: a run
-that paid for per-context precision should not have it joined away in the
-picture. See
-`tests/regression/11-graph-snapshot/06-collapsed_three_contexts.vimp`
-through `09-expanded_dead_route.vimp` for worked collapsed/expanded pairs.
-`--context-graph expanded` without `--context entry-state` is a CLI
-error, not a silent fallback to collapsed.
+There is exactly one graph rendering. A check that is `Dead` in one context and
+`Decided` in another -- or two live contexts that disagree on the same check --
+stays visible as distinct nodes. See `tests/regression/11-graph-snapshot/`
+(`04-expanded_three_contexts.vimp` through `09-expanded_dead_route.vimp`) for
+worked examples.
 
 ## Known limitations (not yet addressed)
 

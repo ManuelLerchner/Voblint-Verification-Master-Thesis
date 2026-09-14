@@ -9,46 +9,10 @@ section \<open>Sign per-domain seam: executable transfer mirror and commutation\
 
 instance sign :: bounded_warrowing ..
 
-text \<open>
-  \<open>afilter_sign_st\<close> / \<open>bfilter_sign_st\<close> commute with the abstract filters
-  through @{const fun_of_resolved_st_q_for}; the generic executable mirror
-  provides the shared induction.
-\<close>
+text \<open>The state a run starts in: a declared global holds \<open>SZero\<close>, a local \<open>STop\<close>.\<close>
 
-lift_definition top_sign_st :: "sign resolved_st_q" is "(STop, STop, [])" .
-
-lemma lookup_top_sign_st [simp]:
-  "fun_of_resolved_st_q_for gs top_sign_st x = STop"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_top_sign_st:
-  "fun_of_resolved_st_q_for gs top_sign_st = (\<lambda>_. STop)"
-  by (rule ext) simp
-
-lift_definition cinit_sign_st :: "sign resolved_st_q" is "(STop, SZero, [])" .
-
-lemma lookup_cinit_sign_st [simp]:
-  "fun_of_resolved_st_q_for gs cinit_sign_st x =
-   (if gs x then SZero else STop)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_sign_st:
-  "fun_of_resolved_st_q_for gs cinit_sign_st =
-   (\<lambda>x. if gs x then SZero else STop)"
-  by (rule ext) simp
-
-lemma lookup_cinit_sign_st_for:
-  "fun_of_resolved_st_q_for gs cinit_sign_st x =
-   (if gs x then SZero else STop)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_sign_st_for:
-  "fun_of_resolved_st_q_for gs cinit_sign_st =
-   (\<lambda>x. if gs x then SZero else STop)"
-  by (rule ext) simp
+abbreviation cinit_sign_st :: "sign resolved_st_q" where
+  "cinit_sign_st \<equiv> initial_resolved_st_q STop SZero"
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
@@ -87,59 +51,6 @@ definition sign_tf_st_for ::
 
 lemmas sign_tf_st_for_simps [simp] =
   generic_tf_st_for.simps [of sign_ops, folded sign_tf_st_for_def]
-
-text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
-  \<open>ivl_tf_st_for_nop_agree\<close>/\<open>ivl_tf_st_for_assign_agree\<close> for the interval
-  domain: given only scoped input agreement (and, for a write, that the
-  written expression's value already agrees), the executable step agrees
-  with the abstract step at every location the scope covers.\<close>
-
-lemma sign_tf_st_for_nop_agree:
-  fixes s_exec :: "sign resolved_st_q" and s_abs :: "sign abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (sign_tf_st_for gs EA_Nop s_exec) location =
-      sign_tf_abs EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: sign_tf.op_defs)
-
-lemma sign_tf_st_for_assign_agree:
-  fixes y :: vname and a :: exp
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and val_agree: "aval_sign a (fun_of_resolved_st_q_for gs s_exec) = aval_sign a s_abs"
-    and location_in: "location \<in> universe"
-    and canonical: "location = location_of gs (location_vname location)"
-  shows
-    "lookup_resolved_st_q (sign_tf_st_for gs (EA_Assign y a) s_exec) location =
-      sign_tf_abs (EA_Assign y a) s_abs (location_vname location)"
-proof (cases "location_vname location = y")
-  case True
-  then have "location = location_of gs y" using canonical by simp
-  then show ?thesis using val_agree True by (simp add: sign_tf.op_defs)
-next
-  case False
-  have neq: "location \<noteq> location_of gs y"
-  proof
-    assume eq: "location = location_of gs y"
-    have "location_vname location = y" using eq by (simp add: location_of_def)
-    with False show False by simp
-  qed
-  show ?thesis
-    using agree[OF location_in] neq False by (simp add: sign_tf.op_defs)
-qed
-
-lemma sign_tf_st_for_ret_none_agree:
-  fixes s_exec :: "sign resolved_st_q" and s_abs :: "sign abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (sign_tf_st_for gs (EA_Ret None p) s_exec) location =
-      sign_tf_abs (EA_Ret None p) s_abs (location_vname location)"
-  using sign_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: sign_tf.op_defs)
 
 subsection \<open>Classifier-parametric commutation\<close>
 

@@ -238,7 +238,9 @@ definition export_node_of ::
          status =
            (case n of
               LocalNode p ctx \<Rightarrow>
-                map_option annotation_status (node_annotation cfg p ctx)
+                if is_dead_local cfg (local_of cfg (sol (Inl (p, ctx))))
+                then Some NS_Unreachable
+                else map_option annotation_status (node_annotation cfg p ctx)
             | _ \<Rightarrow> None);
          named =
            (case n of
@@ -318,6 +320,7 @@ definition raw_cfg_graph_config ::
   "raw_cfg_graph_config \<Pi> ps annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
+      is_dead_local = (\<lambda>_. False),
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. STR ''unit''),
       locals_for_pp = (\<lambda>_. []),

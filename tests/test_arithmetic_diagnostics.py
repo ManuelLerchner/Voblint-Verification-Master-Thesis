@@ -175,7 +175,7 @@ def test_html_arithmetic_warning_links_to_source(tmp_path):
     assert warning_docs[0].stem in line.get("wrn", "")
 
 
-@pytest.mark.parametrize("view, prefix", [("--dot", "digraph AnalysisCFG"), ("--dot-full", "digraph AnalysisCFG"), ("--graph-snapshot", "clusters:")])
+@pytest.mark.parametrize("view, prefix", [("--dot", "digraph AnalysisCFG"), ("--dot", "digraph AnalysisCFG"), ("--graph-snapshot", "clusters:")])
 def test_graph_stdout_stays_free_of_diagnostics(tmp_path, view, prefix):
     proc, findings = run_program(tmp_path, "fun main() { x = 10 / 0; }\n", view)
     assert len(findings) == 1

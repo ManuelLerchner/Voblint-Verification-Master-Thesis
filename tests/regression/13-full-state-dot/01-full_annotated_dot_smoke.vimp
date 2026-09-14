@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --dot-full
+// PARAM: --analysis interval --dot
 // Every CFG node carries its own computed abstract state here, not just
 // check nodes -- full_state_export_auto (State_Report_Graph.thy) reads the
 // solved state at every pp, unlike

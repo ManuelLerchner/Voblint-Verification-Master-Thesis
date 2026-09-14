@@ -20,31 +20,12 @@ text \<open>
   inside one function.
 \<close>
 
-subsection \<open>Top and C-initial executable states\<close>
+subsection \<open>The state a run starts in\<close>
 
-lift_definition top_int_dom_st :: "int_dom resolved_st_q" is "(top, top, [])" .
+text \<open>A declared global holds the abstraction of \<open>0\<close>, a local the whole-value element.\<close>
 
-lemma lookup_top_int_dom_st [simp]:
-  "fun_of_resolved_st_q_for gs top_int_dom_st x = top"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_top_int_dom_st:
-  "fun_of_resolved_st_q_for gs top_int_dom_st = (\<lambda>_. top)"
-  by (rule ext) simp
-
-lift_definition cinit_int_dom_st :: "int_dom resolved_st_q" is "(top, int_dom_of_int 0, [])" .
-
-lemma lookup_cinit_int_dom_st_for [simp]:
-  "fun_of_resolved_st_q_for gs cinit_int_dom_st x =
-   (if gs x then int_dom_of_int 0 else top)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_int_dom_st_for:
-  "fun_of_resolved_st_q_for gs cinit_int_dom_st =
-   (\<lambda>x. if gs x then int_dom_of_int 0 else top)"
-  by (rule ext) simp
+abbreviation cinit_int_dom_st :: "int_dom resolved_st_q" where
+  "cinit_int_dom_st \<equiv> initial_resolved_st_q top (int_dom_of_int 0)"
 
 subsection \<open>The primitive bundle, per refinement mode\<close>
 

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --dot-full
+// PARAM: --analysis interval --dot
 // Monovariant counterpart of 06-reachability/precision/06-unreachable_dead_
 // branch_entry_state.vimp: the same infeasible branch, rendered through the
 // context-insensitive full-state graph (no --context flag) instead of the

@@ -83,7 +83,8 @@ definition demo_ivl_eqs ::
   "demo_ivl_eqs =
      compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
        (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs))
-       demo_cfg top_ivl_st (restrict_global_resolved_q top_ivl_st)"
+       demo_cfg (initial_resolved_st_q ivl_top ivl_top)
+       (restrict_global_resolved_q (initial_resolved_st_q ivl_top ivl_top))"
 
 definition demo_ivl_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where

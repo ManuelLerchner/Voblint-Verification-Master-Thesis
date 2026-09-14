@@ -1,4 +1,4 @@
-// PARAM: --analysis sign --dot-full
+// PARAM: --analysis sign --dot
 // The only non-Interval case in this group: full-state rendering has to read
 // the solved table through whichever domain's own value constructor is in
 // play, so this pins that the Sign adapter reaches the same per-node

@@ -101,8 +101,7 @@ module Generated : sig
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type 'a cfg_ext
   type check_row
-  type output_view = View_Report | View_Checks | View_States |
-    View_Checked_States | View_Contexts
+  type output_view = View_Report | View_Contexts
   type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
     NS_Unreachable | NS_Exit
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
@@ -3591,8 +3590,7 @@ type ('a, 'b, 'c, 'd) state_ext =
     'a set * (('a, 'b) sum, ('a list)) fmap * 'a set * (('a, 'b) sum -> 'c) *
       'd;;
 
-type output_view = View_Report | View_Checks | View_States | View_Checked_States
-  | View_Contexts;;
+type output_view = View_Report | View_Contexts;;
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
@@ -3770,8 +3768,8 @@ type 'a procedure_scope_ext =
 type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
   Analysis_graph_config_ext of
     ('c -> 'd) * (cfg_node -> 'a -> call_action -> 'd -> 'a option) *
-      ('a -> string) * ('a -> string) * (cfg_node -> string list) *
-      (cfg_node -> string option) * string list *
+      ('d -> bool) * ('a -> string) * ('a -> string) *
+      (cfg_node -> string list) * (cfg_node -> string option) * string list *
       (cfg_node -> 'a -> string list -> 'd -> string list) *
       (cfg_node -> 'a -> string -> 'd -> string list) *
       ('b -> string list -> 'c -> string list) * ('b -> string) * ('b -> bool) *
@@ -5540,8 +5538,6 @@ let rec min _A a b = (if less_eq _A a b then a else b);;
 
 let rec parity_lt uu uv = None;;
 
-let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
-
 let rec combine_env gs s t = (fun n -> (if gs n then t n else s n));;
 
 let rec enter_frame gs reset_val s = combine_env gs (fun _ -> reset_val) s;;
@@ -6557,6 +6553,9 @@ let rec result (_A1, _A2) _B
       (solution (_A1, _A2) _B tf_st enter_st init_st gk0 seed route root_ctx
         solve gs p);;
 
+let rec initial_resolved_st_q _A
+  local_value global_value = Abs_resolved_st (local_value, (global_value, []));;
+
 let rec enter_frame_D_resolved _A
   top_val s =
     (let (_, (dg, ps)) = s in
@@ -6936,15 +6935,13 @@ let rec generic_tf_st_for _A
 
 let rec ivl_tf_st_for x = generic_tf_st_for bot_ivl ivl_ops x;;
 
-let cinit_ivl_st : ivl resolved_st_q
-  = Abs_resolved_st
-      (Ivl (MinInf, PlusInf), (Ivl (Fin zero_inta, Fin zero_inta), []));;
-
 let rec analyse_interval_call_string_result_for
   k gs p =
     result (executable_domain_ivl, equal_ivl) equal_call_string_gk ivl_tf_st_for
-      ivl_enter_st_for cinit_ivl_st Global (fun a b -> Seed (a, b))
-      (fun _ -> cs_route k) []
+      ivl_enter_st_for
+      (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+        (Ivl (Fin zero_inta, Fin zero_inta)))
+      Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
       (tD_side_warrowing_apinis_Interp_solve
         (equal_prod equal_cfg_node (equal_list equal_cfg_node))
         equal_call_string_gk
@@ -7838,11 +7835,6 @@ let rec int_tf_st_for
     | Refine_Once, gs -> int_tf_st_once_for gs
     | Refine_Fixpoint, gs -> int_tf_st_fixpoint_for gs;;
 
-let cinit_int_dom_st : unit int_dom_ext resolved_st_q
-  = Abs_resolved_st
-      (top_int_dom_exta int_dom_record_lattice_unit,
-        (int_dom_of_int zero_inta, []));;
-
 let rec analyse_int_entry_state_result_for_warrow
   gs p =
     result
@@ -7850,7 +7842,10 @@ let rec analyse_int_entry_state_result_for_warrow
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit (equal_list (equal_int_dom_ext equal_unit)))
       (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint)
-      cinit_int_dom_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
       (exec_formals_route (bot_int_dom_ext int_dom_record_lattice_unit)) []
       (tD_side_warrowing_apinis_Interp_solve
         (equal_prod equal_cfg_node (equal_list (equal_int_dom_ext equal_unit)))
@@ -7894,8 +7889,11 @@ let rec analyse_int_call_string_result_for_warrow
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       equal_call_string_gk (int_tf_st_for Refine_Fixpoint)
-      (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st Global
-      (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+      (int_dom_enter_st_for Refine_Fixpoint)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
       (tD_side_warrowing_apinis_Interp_solve
         (equal_prod equal_cfg_node (equal_list equal_cfg_node))
         equal_call_string_gk
@@ -8130,9 +8128,6 @@ let rec congruence_enter_st_for
 let rec congruence_tf_st_for
   x = generic_tf_st_for bot_congruence congruence_ops x;;
 
-let cinit_congruence_st : congruence resolved_st_q
-  = Abs_resolved_st (top_congruencea, (congruence_of_int zero_inta, []));;
-
 let rec congruence_entry_state_equations
   gs p =
     compiled_routed_eqs_for
@@ -8243,7 +8238,10 @@ let rec congruence_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_congruence_st)
+      (prog_cfg p)
+      (Lifted
+        (initial_resolved_st_q bot_congruence top_congruencea
+          (congruence_of_int zero_inta)))
       (bot_lifteda
         (semilattice_sup_resolved_st_q
           bounded_semilattice_sup_bot_congruence));;
@@ -8422,8 +8420,9 @@ let rec analyse_congruence_entry_state_result
 let rec analyse_congruence_call_string_result
   k p = result (executable_domain_congruence, equal_congruence)
           equal_call_string_gk congruence_tf_st_for congruence_enter_st_for
-          cinit_congruence_st Global (fun a b -> Seed (a, b))
-          (fun _ -> cs_route k) []
+          (initial_resolved_st_q bot_congruence top_congruencea
+            (congruence_of_int zero_inta))
+          Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
           (tD_side_always_join_Interp_solve
             (equal_prod equal_cfg_node (equal_list equal_cfg_node))
             equal_call_string_gk
@@ -8614,8 +8613,11 @@ let rec congruence_po_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_congruence))))
       (equations (executable_domain_congruence, equal_congruence)
         (equal_routed_gk equal_unit equal_unit) congruence_tf_st_for
-        congruence_enter_st_for cinit_congruence_st (Analysis_Global ())
-        (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) gs p)
+        congruence_enter_st_for
+        (initial_resolved_st_q bot_congruence top_congruencea
+          (congruence_of_int zero_inta))
+        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+        (fun _ -> route_unit) gs p)
       (congruence_po_root_query p);;
 
 let rec congruence_po_result
@@ -8732,7 +8734,10 @@ let rec entry_state_eqs_prog
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_ivl_st)
+      (prog_cfg p)
+      (Lifted
+        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+          (Ivl (Fin zero_inta, Fin zero_inta))))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl));;
 
@@ -8778,8 +8783,12 @@ let rec int_conf_sol_prog_warrow
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit equal_unit) (int_tf_st_for mode)
-      (int_dom_enter_st_for mode) cinit_int_dom_st (Analysis_Global ())
-      (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
+      (int_dom_enter_st_for mode)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (fun _ -> route_unit) ()
       (tD_side_warrowing_apinis_Interp_solve
         (equal_prod equal_cfg_node equal_unit)
         (equal_routed_gk equal_unit equal_unit)
@@ -8959,7 +8968,10 @@ let rec congruence_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_congruence_st)
+      (prog_cfg p)
+      (Lifted
+        (initial_resolved_st_q bot_congruence top_congruencea
+          (congruence_of_int zero_inta)))
       (bot_lifteda
         (semilattice_sup_resolved_st_q
           bounded_semilattice_sup_bot_congruence));;
@@ -9032,7 +9044,9 @@ let rec interval_po_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
       (equations (executable_domain_ivl, equal_ivl)
         (equal_routed_gk equal_unit equal_unit) ivl_tf_st_for ivl_enter_st_for
-        cinit_ivl_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+          (Ivl (Fin zero_inta, Fin zero_inta)))
+        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
         (fun _ -> route_unit) gs p)
       (interval_po_root_query p);;
 
@@ -9188,9 +9202,6 @@ let rec parity_enter_st_for x = generic_enter_st_for bot_parity parity_ops x;;
 
 let rec parity_tf_st_for x = generic_tf_st_for bot_parity parity_ops x;;
 
-let cinit_parity_st : parity resolved_st_q
-  = Abs_resolved_st (PTop, (PEven, []));;
-
 let rec parity_entry_state_equations
   gs p =
     compiled_routed_eqs_for
@@ -9295,7 +9306,7 @@ let rec parity_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_parity_st)
+      (prog_cfg p) (Lifted (initial_resolved_st_q bot_parity PTop PEven))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity));;
 
@@ -9337,7 +9348,8 @@ let rec analyse_parity_entry_state_result
 
 let rec analyse_parity_call_string_result
   k p = result (executable_domain_parity, equal_parity) equal_call_string_gk
-          parity_tf_st_for parity_enter_st_for cinit_parity_st Global
+          parity_tf_st_for parity_enter_st_for
+          (initial_resolved_st_q bot_parity PTop PEven) Global
           (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
           (tD_side_always_join_Interp_solve
             (equal_prod equal_cfg_node (equal_list equal_cfg_node))
@@ -9468,7 +9480,10 @@ let rec interval_td_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_ivl_st)
+      (prog_cfg p)
+      (Lifted
+        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+          (Ivl (Fin zero_inta, Fin zero_inta))))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl));;
 
@@ -9540,8 +9555,9 @@ let rec parity_po_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_parity))))
       (equations (executable_domain_parity, equal_parity)
         (equal_routed_gk equal_unit equal_unit) parity_tf_st_for
-        parity_enter_st_for cinit_parity_st (Analysis_Global ())
-        (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) gs p)
+        parity_enter_st_for (initial_resolved_st_q bot_parity PTop PEven)
+        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+        (fun _ -> route_unit) gs p)
       (parity_po_root_query p);;
 
 let rec parity_po_result
@@ -9662,7 +9678,7 @@ let rec sign_entry_state_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_sign_st)
+      (prog_cfg p) (Lifted (initial_resolved_st_q bot_sign STop SZero))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign));;
 
@@ -9704,7 +9720,8 @@ let rec analyse_sign_entry_state_result
 
 let rec analyse_sign_call_string_result
   k p = result (executable_domain_sign, equal_sign) equal_call_string_gk
-          sign_tf_st_for sign_enter_st_for cinit_sign_st Global
+          sign_tf_st_for sign_enter_st_for
+          (initial_resolved_st_q bot_sign STop SZero) Global
           (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
           (tD_side_always_join_Interp_solve
             (equal_prod equal_cfg_node (equal_list equal_cfg_node))
@@ -9802,7 +9819,9 @@ let rec interval_join_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
       (equations (executable_domain_ivl, equal_ivl)
         (equal_routed_gk equal_unit equal_unit) ivl_tf_st_for ivl_enter_st_for
-        cinit_ivl_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+          (Ivl (Fin zero_inta, Fin zero_inta)))
+        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
         (fun _ -> route_unit) gs p)
       (interval_join_root_query p);;
 
@@ -9920,7 +9939,7 @@ let rec parity_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_parity_st)
+      (prog_cfg p) (Lifted (initial_resolved_st_q bot_parity PTop PEven))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity));;
 
@@ -9993,7 +10012,9 @@ let rec interval_wpo_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
       (equations (executable_domain_ivl, equal_ivl)
         (equal_routed_gk equal_unit equal_unit) ivl_tf_st_for ivl_enter_st_for
-        cinit_ivl_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+          (Ivl (Fin zero_inta, Fin zero_inta)))
+        (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
         (fun _ -> route_unit) gs p)
       (interval_wpo_root_query p);;
 
@@ -10014,7 +10035,10 @@ let rec analyse_int_entry_state_result_for
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit (equal_list (equal_int_dom_ext equal_unit)))
       (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint)
-      cinit_int_dom_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
       (exec_formals_route (bot_int_dom_ext int_dom_record_lattice_unit)) []
       (tD_side_always_join_Interp_solve
         (equal_prod equal_cfg_node (equal_list (equal_int_dom_ext equal_unit)))
@@ -10058,8 +10082,11 @@ let rec analyse_int_call_string_result_for
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       equal_call_string_gk (int_tf_st_for Refine_Fixpoint)
-      (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st Global
-      (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+      (int_dom_enter_st_for Refine_Fixpoint)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
       (tD_side_always_join_Interp_solve
         (equal_prod equal_cfg_node (equal_list equal_cfg_node))
         equal_call_string_gk
@@ -10125,8 +10152,8 @@ let rec sign_po_solution
             (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
       (equations (executable_domain_sign, equal_sign)
         (equal_routed_gk equal_unit equal_unit) sign_tf_st_for sign_enter_st_for
-        cinit_sign_st (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-        (fun _ -> route_unit) gs p)
+        (initial_resolved_st_q bot_sign STop SZero) (Analysis_Global ())
+        (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) gs p)
       (sign_po_root_query p);;
 
 let rec sign_po_result
@@ -10183,8 +10210,12 @@ let rec analyse_int_per_origin_result_for
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit equal_unit) (int_tf_st_for mode)
-      (int_dom_enter_st_for mode) cinit_int_dom_st (Analysis_Global ())
-      (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
+      (int_dom_enter_st_for mode)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (fun _ -> route_unit) ()
       (tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
         (equal_routed_gk equal_unit equal_unit)
         ((equal_dg_state
@@ -10326,7 +10357,7 @@ let rec sign_unit_equations
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               (fun _ -> local_combine_transfer (fun d _ -> d)),
                               ()))))))))))))
-      (prog_cfg p) (Lifted cinit_sign_st)
+      (prog_cfg p) (Lifted (initial_resolved_st_q bot_sign STop SZero))
       (bot_lifteda
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign));;
 
@@ -10502,8 +10533,12 @@ let rec analyse_int_join_result_for
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit equal_unit) (int_tf_st_for mode)
-      (int_dom_enter_st_for mode) cinit_int_dom_st (Analysis_Global ())
-      (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
+      (int_dom_enter_st_for mode)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (fun _ -> route_unit) ()
       (tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
         (equal_routed_gk equal_unit equal_unit)
         ((equal_dg_state
@@ -10542,15 +10577,15 @@ let rec analyse_int_join_result
 let rec node_annotation_update
   node_annotationa
     (Analysis_graph_config_ext
-      (local_of, route, context_key, show_context, locals_for_pp,
+      (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
         return_slot_for_pp, globals_to_show, show_local, format_return,
         show_global, show_global_key, is_shared_global, show_internal_globals,
         owner_of, cluster_label, source_text, node_annotation, more))
     = Analysis_graph_config_ext
-        (local_of, route, context_key, show_context, locals_for_pp,
-          return_slot_for_pp, globals_to_show, show_local, format_return,
-          show_global, show_global_key, is_shared_global, show_internal_globals,
-          owner_of, cluster_label, source_text,
+        (local_of, route, is_dead_local, context_key, show_context,
+          locals_for_pp, return_slot_for_pp, globals_to_show, show_local,
+          format_return, show_global, show_global_key, is_shared_global,
+          show_internal_globals, owner_of, cluster_label, source_text,
           node_annotationa node_annotation, more);;
 
 let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
@@ -10850,7 +10885,9 @@ let rec ctx_key_of
 let rec entry_state_ctx_graph_config _A
   enter into p =
     Analysis_graph_config_ext
-      (id, entry_state_ctx_route _A enter p, ctx_key_of into, ctx_show_of into,
+      (id, entry_state_ctx_route _A enter p,
+        (fun a -> (match a with Bot -> true | Lifted _ -> false)),
+        ctx_key_of into, ctx_show_of into,
         (fun v ->
           (let sc =
              compiled_procedure_scope (declared_global p) (prog_table p)
@@ -10887,7 +10924,7 @@ let rec entry_state_ctx_annotated_config (_A1, _A2)
 
 let rec owner_of
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -10979,7 +11016,7 @@ let rec canonical_edge_kind_text
 
 let rec return_slot_for_pp
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -10989,7 +11026,7 @@ let rec annotation_lines (Node_Annotation (x1, x2)) = x1;;
 
 let rec show_global_key
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -10997,7 +11034,7 @@ let rec show_global_key
 
 let rec node_annotation
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11005,7 +11042,7 @@ let rec node_annotation
 
 let rec globals_to_show
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11013,7 +11050,7 @@ let rec globals_to_show
 
 let rec locals_for_pp
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11021,7 +11058,7 @@ let rec locals_for_pp
 
 let rec format_return
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11029,7 +11066,7 @@ let rec format_return
 
 let rec show_global
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11037,7 +11074,7 @@ let rec show_global
 
 let rec show_local
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11045,7 +11082,7 @@ let rec show_local
 
 let rec local_of
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11169,7 +11206,7 @@ let rec analysis_graph_to_canonical_text _A _B
 
 let rec context_key
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11241,7 +11278,7 @@ let rec analysis_global_cluster
 
 let rec route
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11275,7 +11312,7 @@ let rec analysis_combine_edges _A
 
 let rec source_text
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11286,7 +11323,7 @@ let rec analysis_source_nodes
 
 let rec show_internal_globals
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11294,7 +11331,7 @@ let rec show_internal_globals
 
 let rec is_shared_global
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11415,7 +11452,7 @@ let rec export_edge_label
 
 let rec cluster_label
   (Analysis_graph_config_ext
-    (local_of, route, context_key, show_context, locals_for_pp,
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
       return_slot_for_pp, globals_to_show, show_local, format_return,
       show_global, show_global_key, is_shared_global, show_internal_globals,
       owner_of, cluster_label, source_text, node_annotation, more))
@@ -11436,6 +11473,14 @@ let rec export_cluster_of _A _B
         ());;
 
 let rec annotation_status (Node_Annotation (x1, x2)) = x2;;
+
+let rec is_dead_local
+  (Analysis_graph_config_ext
+    (local_of, route, is_dead_local, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
+    = is_dead_local;;
 
 let rec entry_proc_exit
   g = (match cfg_entry g with Statement a -> Statement a
@@ -11470,7 +11515,9 @@ let rec export_node_of _A _B
      let status =
        (match n
          with LocalNode (p, ctx) ->
-           map_option annotation_status (node_annotation cfg p ctx)
+           (if is_dead_local cfg (local_of cfg (sol (Inl (p, ctx))))
+             then Some NS_Unreachable
+             else map_option annotation_status (node_annotation cfg p ctx))
          | GlobalNode _ -> None | SourceNode _ -> None)
        in
      let named =
@@ -11673,114 +11720,6 @@ let rec with_diagnostics
   ds (Analysis_Output (g, snap, rows, globals, old)) =
     Analysis_Output (g, snap, rows, globals, ds);;
 
-let rec contextual_analysis_canonical_text _A _B
-  cfg g domain sol =
-    analysis_graph_to_canonical_text _A _B cfg g sol
-      (build_analysis_graph _A _B cfg g domain sol);;
-
-let rec raw_cfg_graph_config
-  pi ps annotate =
-    Analysis_graph_config_ext
-      (id, (fun _ _ _ _ -> Some ()), (fun _ -> "unit"), (fun _ -> "unit"),
-        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
-        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> ""), (fun _ -> false),
-        false, compiled_owner_of pi ps, (fun owner _ -> owner ^ " / unit"),
-        Some (pretty_string_of_program pi ps (main_body pi) []),
-        (fun p _ -> annotate p), ());;
-
-let rec raw_cfg_canonical_text
-  pi ps annotate =
-    (let g = compile_prog pi ps in
-     let cfg = raw_cfg_graph_config pi ps annotate in
-     let domain = contextual_graph_domain g (fun _ -> [()]) in
-      contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
-        (fun _ -> ()));;
-
-let rec contextual_analysis_export _A _B
-  cfg g domain sol =
-    analysis_graph_to_export _A _B cfg g sol
-      (build_analysis_graph _A _B cfg g domain sol);;
-
-let rec raw_cfg_export
-  pi ps annotate =
-    (let g = compile_prog pi ps in
-     let cfg = raw_cfg_graph_config pi ps annotate in
-     let domain = contextual_graph_domain g (fun _ -> [()]) in
-      contextual_analysis_export equal_unit equal_unit cfg g domain
-        (fun _ -> ()));;
-
-let rec verdict_state_report_node_annotation
-  vars report v =
-    (match find (fun entry -> equal_cfg_nodea (fst entry) v) report
-      with None -> None
-      | Some (_, (cnd, (verdict, st))) ->
-        Some (match (verdict, st) with (Bot, _) -> dead_check_annotation cnd
-               | (Lifted _, Bot) -> dead_check_annotation cnd
-               | (Lifted res, Lifted f) ->
-                 (let Node_Annotation (check_lines, a) =
-                    check_result_annotation res cnd in
-                   Node_Annotation
-                     (check_lines @ map (state_line f) vars, a))));;
-
-let unreachable_state_annotation : graph_node_annotation
-  = Node_Annotation (["unreachable"], NS_Unreachable);;
-
-let rec full_state_checked_node_annotation
-  vars env verdicts v =
-    (match env v with Bot -> Some unreachable_state_annotation
-      | Lifted st ->
-        (let lines = map (state_line st) vars in
-          (match find (fun entry -> equal_cfg_nodea (fst entry) v) verdicts
-            with None -> Some (Node_Annotation (lines, NS_Plain))
-            | Some (_, (cnd, res)) ->
-              (let Node_Annotation (check_lines, status) =
-                 check_result_annotation res cnd in
-                Some (Node_Annotation (check_lines @ lines, status))))));;
-
-let rec point_node_annotation
-  vars env v =
-    (match env v with Bot -> Some unreachable_state_annotation
-      | Lifted st ->
-        Some (Node_Annotation (map (state_line st) vars, NS_Plain)));;
-
-let rec decided_verdicts
-  x = map_filter
-        (fun a ->
-          (match a with (_, (_, Bot)) -> None
-            | (v, (cnd, Lifted res)) -> Some (v, (cnd, res))))
-        x;;
-
-let rec report_vars
-  report =
-    sorted_list_of_set (equal_literal, linorder_literal)
-      (sup_seta equal_literal
-        (image (fun (_, (c, _)) -> exp_vnames c) (Set report)));;
-
-let rec view_annotation
-  view p env rows =
-    (match view
-      with View_Report ->
-        verdict_state_report_node_annotation (report_vars rows)
-          (map (fun (v, (cnd, verdict)) -> (v, (cnd, (verdict, env v)))) rows)
-      | View_Checks ->
-        verdict_state_report_node_annotation (report_vars rows)
-          (map (fun (v, (cnd, verdict)) -> (v, (cnd, (verdict, env v)))) rows)
-      | View_States -> point_node_annotation (program_vars p) env
-      | View_Checked_States ->
-        full_state_checked_node_annotation (program_vars p) env
-          (decided_verdicts rows)
-      | View_Contexts ->
-        full_state_checked_node_annotation (program_vars p) env
-          (decided_verdicts rows));;
-
-let rec collapsed_output
-  view p env rows globals =
-    (let ann = view_annotation view p env rows in
-      Analysis_Output
-        (Some (raw_cfg_export (prog_table p) (prog_procs p) ann),
-          Some (raw_cfg_canonical_text (prog_table p) (prog_procs p) ann),
-          check_rows_of env rows, globals, []));;
-
 let rec report_output
   env rows globals =
     Analysis_Output (None, None, check_rows_of env rows, globals, []);;
@@ -11805,12 +11744,6 @@ let rec entry_state_output_of (_A1, _A2)
        in
       (match view
         with View_Report -> Analysed (finish (report_output env rows globals))
-        | View_Checks ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_Checked_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
           Analysed
             (finish
@@ -11883,8 +11816,12 @@ let rec analyse_int_wpo_result_for
       ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
         (equal_int_dom_ext equal_unit))
       (equal_routed_gk equal_unit equal_unit) (int_tf_st_for mode)
-      (int_dom_enter_st_for mode) cinit_int_dom_st (Analysis_Global ())
-      (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
+      (int_dom_enter_st_for mode)
+      (initial_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit)
+        (top_int_dom_exta int_dom_record_lattice_unit)
+        (int_dom_of_int zero_inta))
+      (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+      (fun _ -> route_unit) ()
       (tD_side_warrowing_per_origin_Interp_solve
         (equal_prod equal_cfg_node equal_unit)
         (equal_routed_gk equal_unit equal_unit)
@@ -11990,6 +11927,7 @@ let rec unit_ctx_graph_config
   p rows =
     Analysis_graph_config_ext
       (id, (fun _ _ _ a -> (match a with Bot -> None | Lifted _ -> Some ())),
+        (fun a -> (match a with Bot -> true | Lifted _ -> false)),
         (fun _ -> "unit"), (fun _ -> "unit"),
         (fun v ->
           (let sc =
@@ -12081,12 +12019,6 @@ let rec flat_output_of
      let rows = flat_rows_of classify bot_state r p in
       (match view
         with View_Report -> Analysed (finish (report_output env rows globals))
-        | View_Checks ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_Checked_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
           Analysed
             (finish
@@ -12122,7 +12054,9 @@ let rec cs_context_key ctx = cs_show_context ctx;;
 
 let rec cs_ctx_graph_config
   p k = Analysis_graph_config_ext
-          (id, cs_graph_route k, cs_context_key, cs_show_context,
+          (id, cs_graph_route k,
+            (fun a -> (match a with Bot -> true | Lifted _ -> false)),
+            cs_context_key, cs_show_context,
             (fun v ->
               (let sc =
                  compiled_procedure_scope (declared_global p) (prog_table p)
@@ -12206,12 +12140,6 @@ let rec cs_output_of _A
        in
       (match view
         with View_Report -> Analysed (finish (report_output env rows globals))
-        | View_Checks ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
-        | View_Checked_States ->
-          Analysed (finish (collapsed_output view p env rows globals))
         | View_Contexts ->
           Analysed
             (finish
@@ -12281,8 +12209,11 @@ let rec plan_answer
           enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
-            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
-            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+            (exec_formals_route bot_ivl) []
             (tD_side_always_join_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_ivl))
               (equal_routed_gk equal_unit (equal_list equal_ivl))
@@ -12314,8 +12245,11 @@ let rec plan_answer
           enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
-            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
-            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+            (exec_formals_route bot_ivl) []
             (tD_side_per_origin_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_ivl))
               (equal_routed_gk equal_unit (equal_list equal_ivl))
@@ -12351,8 +12285,11 @@ let rec plan_answer
           enter_ivl_for (fun a -> IntervalValue a) interval_classify_check
           (result (executable_domain_ivl, equal_ivl)
             (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
-            ivl_enter_st_for cinit_ivl_st (Analysis_Global ())
-            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_ivl) []
+            ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
+            (exec_formals_route bot_ivl) []
             (tD_side_warrowing_per_origin_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_ivl))
               (equal_routed_gk equal_unit (equal_list equal_ivl))
@@ -12383,8 +12320,10 @@ let rec plan_answer
         cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
           interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
-            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
-            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            ivl_tf_st_for ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
             (tD_side_always_join_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_cfg_node))
               equal_call_string_gk
@@ -12415,8 +12354,10 @@ let rec plan_answer
         cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
           interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
-            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
-            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            ivl_tf_st_for ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
             (tD_side_per_origin_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_cfg_node))
               equal_call_string_gk
@@ -12450,8 +12391,10 @@ let rec plan_answer
         cs_output_of semilattice_sup_ivl view (fun a -> IntervalValue a)
           interval_classify_check
           (result (executable_domain_ivl, equal_ivl) equal_call_string_gk
-            ivl_tf_st_for ivl_enter_st_for cinit_ivl_st Global
-            (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
+            ivl_tf_st_for ivl_enter_st_for
+            (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+              (Ivl (Fin zero_inta, Fin zero_inta)))
+            Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
             (tD_side_warrowing_per_origin_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_cfg_node))
               equal_call_string_gk

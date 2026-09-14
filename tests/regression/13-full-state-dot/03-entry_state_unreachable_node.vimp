@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --dot-full
+// PARAM: --analysis interval --context entry-state --dot
 // Entry-state full-state rendering of a node no execution reaches, the
 // counterpart of 02-entry_state_context_join.vimp's join case. f is called
 // twice, so its body carries two entry-state contexts ([5,5] and [7,7]), and

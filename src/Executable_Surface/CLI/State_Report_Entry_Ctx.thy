@@ -68,6 +68,7 @@ definition entry_state_ctx_graph_config ::
   "entry_state_ctx_graph_config enter into p =
     \<lparr> local_of = id,
       route = entry_state_ctx_route enter p,
+      is_dead_local = (\<lambda>d. case d of Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False),
       context_key = ctx_key_of into,
       show_context = ctx_show_of into,
       locals_for_pp = (\<lambda>v.
@@ -186,72 +187,5 @@ definition entry_state_ctx_graph_snapshot_of ::
           sol = entry_state_ctx_sol r
       in analysis_graph_to_canonical_text cfg g sol
            (build_analysis_graph cfg g (contextual_result_domain base g r) sol))"
-
-subsection \<open>The expanded rendering, per domain\<close>
-
-text \<open>
-  Each row names one domain's entry transfer, its injection into
-  \<^typ>\<open>abstract_value\<close>, its classifier and the table the requested discipline
-  solved. \<^const>\<open>None\<close> marks a pairing whose entry-state route publishes a
-  verdict report and no result table: there is nothing to draw one node per
-  activation \<^emph>\<open>from\<close>, and the resolver rejects those pairings before a renderer
-  runs.
-\<close>
-
-definition entry_state_ctx_export_auto ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> export_graph option" where
-  "entry_state_ctx_export_auto kind sc p =
-     (case (kind, sc) of
-        (Sign_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_export_of enter_sign_for SignValue sign_classify_check
-                  (analyse_sign_entry_state_result p) p)
-      | (Sign_Analysis, _) \<Rightarrow> None
-      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (entry_state_ctx_export_of enter_ivl_for IntervalValue interval_classify_check
-                  (analyse_interval_entry_state_result p) p)
-      | (Interval_Analysis, _) \<Rightarrow> None
-      | (Int_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_export_of (enter_int_dom_for Refine_Fixpoint) IntDomValue
-                  int_classify_check (analyse_int_entry_state_result p) p)
-      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (entry_state_ctx_export_of (enter_int_dom_for Refine_Fixpoint) IntDomValue
-                  int_classify_check (analyse_int_entry_state_result_warrow p) p)
-      | (Int_Analysis, _) \<Rightarrow> None
-      | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_export_of enter_parity_for ParityValue parity_classify_check
-                  (analyse_parity_entry_state_result p) p)
-      | (Parity_Analysis, _) \<Rightarrow> None
-      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_export_of enter_congruence_for CongruenceValue
-                  congruence_classify_check (analyse_congruence_entry_state_result p) p)
-      | (Congruence_Analysis, _) \<Rightarrow> None)"
-
-definition entry_state_ctx_graph_snapshot_auto ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> String.literal option" where
-  "entry_state_ctx_graph_snapshot_auto kind sc p =
-     (case (kind, sc) of
-        (Sign_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of enter_sign_for SignValue sign_classify_check
-                  (analyse_sign_entry_state_result p) p)
-      | (Sign_Analysis, _) \<Rightarrow> None
-      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of enter_ivl_for IntervalValue
-                  interval_classify_check (analyse_interval_entry_state_result p) p)
-      | (Interval_Analysis, _) \<Rightarrow> None
-      | (Int_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of (enter_int_dom_for Refine_Fixpoint) IntDomValue
-                  int_classify_check (analyse_int_entry_state_result p) p)
-      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of (enter_int_dom_for Refine_Fixpoint) IntDomValue
-                  int_classify_check (analyse_int_entry_state_result_warrow p) p)
-      | (Int_Analysis, _) \<Rightarrow> None
-      | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of enter_parity_for ParityValue
-                  parity_classify_check (analyse_parity_entry_state_result p) p)
-      | (Parity_Analysis, _) \<Rightarrow> None
-      | (Congruence_Analysis, Solver_Join) \<Rightarrow>
-          Some (entry_state_ctx_graph_snapshot_of enter_congruence_for CongruenceValue
-                  congruence_classify_check (analyse_congruence_entry_state_result p) p)
-      | (Congruence_Analysis, _) \<Rightarrow> None)"
 
 end

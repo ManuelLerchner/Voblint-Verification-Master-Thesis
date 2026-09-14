@@ -1,9 +1,8 @@
 // PARAM: --analysis int --context entry-state
-// The Int sibling of 14-expanded_sign_own_domain.vimp, and the reason the
-// expanded rendering is worth having: Int separates square(3) from square(4)
-// into two activations, so the graph carries two square clusters whose
-// states differ. The collapsed view of this same program joins them into one
-// box and reports the join -- see 11-entry_state_int_own_domain.vimp.
+// The Int sibling of 10-entry_state_sign_own_domain.vimp, and the reason
+// per-context rendering is worth having: Int separates square(3) from
+// square(4) into two activations, so the graph carries two square clusters
+// whose states differ, rather than one box reporting their join.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

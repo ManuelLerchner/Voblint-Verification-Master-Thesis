@@ -482,7 +482,7 @@ proof (rule CollectI, rule allI)
   show "ov_caller_store y
           \<in> gamma (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)) y)"
     by (cases "y = STR ''x''")
-       (simp_all add: fun_of_st_cinit_sign_st_for gamma_sign_top ov_caller_store_def)
+       (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
 qed
 
 lemma ov_alt1_route:
@@ -551,7 +551,7 @@ proof (rule CollectI, rule allI)
   show "ov_caller_store y
           \<in> gamma (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := STop)) y)"
     by (cases "y = STR ''x''")
-       (simp_all add: fun_of_st_cinit_sign_st_for gamma_sign_top ov_caller_store_def)
+       (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
 qed
 
 lemma ov_entry1_covered:
@@ -569,7 +569,7 @@ proof (rule CollectI, rule allI)
                     (STR ''a'' := SPos)) y)"
     by (cases "y = STR ''a''")
        (simp_all add: call_enter_CallEdge ov_caller_store_def gamma_sign_top
-                       fun_of_st_cinit_sign_st_for)
+                      fun_of_initial_resolved_st_q)
 qed
 
 lemma ov_entry2_covered:
@@ -588,7 +588,7 @@ proof (rule CollectI, rule allI)
                     (STR ''a'' := STop)) y)"
     by (cases "y = STR ''a''")
        (simp_all add: call_enter_CallEdge ov_caller_store_def gamma_sign_top
-                       fun_of_st_cinit_sign_st_for)
+                      fun_of_initial_resolved_st_q)
 qed
 
 lemma ov_alt2_route:
