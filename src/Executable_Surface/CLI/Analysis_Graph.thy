@@ -315,7 +315,7 @@ text \<open>
 \<close>
 
 definition ordered_by_key ::
-  "('a \<Rightarrow> String.literal) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
+  "('a \<Rightarrow> 'k::linorder) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
   "ordered_by_key key S =
     map
       (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S))

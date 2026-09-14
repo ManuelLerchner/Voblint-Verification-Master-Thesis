@@ -122,6 +122,156 @@ datatype analysis_answer =
   | Unsupported_Configuration
   | Analysed analysis_output
 
+subsection \<open>The result a run hands back, as data\<close>
+
+text \<open>
+  Everything a consumer reads back from one solve, with no rendering in it. Points
+  are CFG nodes of \<open>res_cfg\<close>, contexts are indices into \<open>res_contexts\<close>, and every
+  abstract value is the type parameter \<open>'v\<close>: \<^typ>\<open>abstract_value\<close> where a theorem
+  reads the result, \<^typ>\<open>String.literal\<close> after \<open>map_run_result\<close> has applied
+  each domain's own rendering. Context identity is the index, never a rendering, so
+  a consumer never has to infer which states belong together from displayed text.
+
+  A route lists every callee context a call enters from one caller context: an
+  entry specification may offer several alternatives, and each may land in its own
+  context. The empty list is a call the caller context does not take.
+\<close>
+
+datatype 'v analysis_context =
+    Context_Unit
+  | Context_Entry "'v list"
+  | Context_Call_String "pp list"
+
+record 'v result_state =
+  state_point :: pp
+  state_context :: nat
+  state_value :: "(vname \<times> 'v) list lifted"
+
+record call_route =
+  route_point :: pp
+  route_context :: nat
+  route_callee :: pname
+  route_targets :: "nat list"
+
+record result_check =
+  check_point :: pp
+  check_exp :: exp
+  check_verdict :: contextual_verdict
+
+record 'v result_global =
+  global_var :: vname
+  global_val :: 'v
+
+record 'v run_result =
+  res_cfg :: cfg
+  res_contexts :: "'v analysis_context list"
+  res_states :: "'v result_state list"
+  res_routes :: "call_route list"
+  res_checks :: "result_check list"
+  res_globals :: "'v result_global list"
+  res_diagnostics :: "arithmetic_diagnostic list"
+
+text \<open>
+  The one transformation presentation may apply to a result, spelled out field by
+  field: every abstract value, wherever it sits, and nothing else. Points, context
+  indices, routes, checks and diagnostics pass through untouched.
+\<close>
+
+fun map_analysis_context :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_context \<Rightarrow> 'w analysis_context"
+where
+  "map_analysis_context f Context_Unit = Context_Unit"
+| "map_analysis_context f (Context_Entry vs) = Context_Entry (map f vs)"
+| "map_analysis_context f (Context_Call_String us) = Context_Call_String us"
+
+definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_state \<Rightarrow> 'w result_state" where
+  "map_result_state f st =
+     \<lparr> state_point = state_point st,
+       state_context = state_context st,
+       state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st) \<rparr>"
+
+definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
+  "map_result_global f g = \<lparr> global_var = global_var g, global_val = f (global_val g) \<rparr>"
+
+definition map_run_result :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v run_result \<Rightarrow> 'w run_result" where
+  "map_run_result f res =
+     \<lparr> res_cfg = res_cfg res,
+       res_contexts = map (map_analysis_context f) (res_contexts res),
+       res_states = map (map_result_state f) (res_states res),
+       res_routes = res_routes res,
+       res_checks = res_checks res,
+       res_globals = map (map_result_global f) (res_globals res),
+       res_diagnostics = res_diagnostics res \<rparr>"
+
+lemma map_run_result_structure [simp]:
+  "res_cfg (map_run_result f res) = res_cfg res"
+  "length (res_contexts (map_run_result f res)) = length (res_contexts res)"
+  "res_routes (map_run_result f res) = res_routes res"
+  "res_checks (map_run_result f res) = res_checks res"
+  "res_diagnostics (map_run_result f res) = res_diagnostics res"
+  "map (\<lambda>st. (state_point st, state_context st)) (res_states (map_run_result f res))
+     = map (\<lambda>st. (state_point st, state_context st)) (res_states res)"
+  by (simp_all add: map_run_result_def map_result_state_def comp_def)
+
+subsection \<open>One builder for every context policy\<close>
+
+text \<open>
+  A result is built the same way whatever the context policy: list the contexts the
+  table covers, file every covered \<open>(point, context)\<close> state under its context's
+  index, ask the policy which contexts each live call enters, and take the check and
+  diagnostic columns off the same table. The policy contributes only three things:
+  how its contexts are ordered (\<open>ctx_key\<close>, injective), how a context reads as data
+  (\<open>ctx_view\<close>), and which contexts a call enters from a caller state
+  (\<open>targets\<close>, the routing the equation system itself applies).
+\<close>
+
+fun callee_of_entry :: "cfg_node \<Rightarrow> pname" where
+  "callee_of_entry (FunctionEntry p) = p"
+| "callee_of_entry _ = STR ''''"
+
+definition context_indices :: "(nat \<times> 'c) list \<Rightarrow> 'c \<Rightarrow> nat list" where
+  "context_indices indexed ctx = map fst (filter (\<lambda>(i, ctx'). ctx' = ctx) indexed)"
+
+definition run_result_of ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
+       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'c list)
+       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> ('c, 'a abs_state) analysis_result
+       \<Rightarrow> abstract_value result_global list \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
+  "run_result_of into ctx_key ctx_view targets classify r globals p =
+     (let g = prog_cfg p;
+          vars = program_vars p;
+          ctxs = ordered_by_key ctx_key (snd ` result_keys r);
+          indexed = enumerate 0 ctxs;
+          state_at = (\<lambda>i ctx v.
+            \<lparr> state_point = v, state_context = i,
+              state_value = map_lift (\<lambda>st. map (\<lambda>x. (x, into (st x))) vars)
+                              (lookup_context r v ctx) \<rparr>);
+          route_at = (\<lambda>u ca ce i ctx.
+            \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
+              route_targets =
+                (case lookup_context r u ctx of
+                   Bot \<Rightarrow> []
+                 | Lifted st \<Rightarrow>
+                     remdups (concat (map (context_indices indexed)
+                       (targets u ctx ca (callee_of_entry ce) st)))) \<rparr>)
+      in \<lparr> res_cfg = g,
+           res_contexts = map ctx_view ctxs,
+           res_states =
+             concat (map (\<lambda>(i, ctx).
+                            map (state_at i ctx)
+                              (filter (\<lambda>v. (v, ctx) \<in> result_keys r) (cfg_node_list g)))
+                       indexed),
+           res_routes =
+             concat (map (\<lambda>(u, ca, ce, after).
+                            map (\<lambda>(i, ctx). route_at u ca ce i ctx)
+                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_keys r) indexed))
+                       (cfg_calls_list g)),
+           res_checks =
+             map (\<lambda>(v, cnd, verdict).
+                    \<lparr> check_point = v, check_exp = cnd, check_verdict = verdict \<rparr>)
+                 (classify_checks_verdicts g r classify),
+           res_globals = globals,
+           res_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
+
 subsection \<open>A check, rendered\<close>
 
 text \<open>
