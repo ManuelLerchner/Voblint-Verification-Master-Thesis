@@ -49,6 +49,6 @@ rule token = parse
   | ";"                 { SEMI }
   | ","                 { COMMA }
   | ident_start ident_char* as s  { IDENT s }
-  | digit+ as s                   { INT (int_of_string s) }
+  | digit+ as s                   { INT (Z.of_string s) }
   | eof                           { EOF }
   | _ as c  { error lexbuf (Printf.sprintf "unexpected character %C" c) }

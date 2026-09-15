@@ -32,7 +32,7 @@ HEADER = (
 # -- `special: name` productions, keyed by that name (not by production
 # name -- manifests/vimp-grammar.yaml's header comment explains what each covers). ---
 SPECIAL_ACTIONS = {
-    "integer_literal": "Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int v0))",
+    "integer_literal": "Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer v0)",
     "unary_minus": """\
 match v1 with
       | Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer z) ->
@@ -125,7 +125,7 @@ rule token = parse
 {keyword_rules}
 {punct_rules}
   | ident_start ident_char* as s  {{ IDENT s }}
-  | digit+ as s                   {{ INT (int_of_string s) }}
+  | digit+ as s                   {{ INT (Z.of_string s) }}
   | eof                           {{ EOF }}
   | _ as c  {{ error lexbuf (Printf.sprintf "unexpected character %C" c) }}
 '''
@@ -159,7 +159,7 @@ def type_decls() -> str:
 
 def token_decls(g: dict) -> str:
     names = list(g["keywords"].values()) + list(g["punctuation"].values()) + ["EOF"]
-    lines = ["%token <string> IDENT", "%token <int> INT"]
+    lines = ["%token <string> IDENT", "%token <Z.t> INT"]
     lines += [f"%token {n}" for n in names]
     return "\n".join(lines)
 

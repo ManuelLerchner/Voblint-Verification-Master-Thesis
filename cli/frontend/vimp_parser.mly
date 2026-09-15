@@ -17,7 +17,7 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %}
 
 %token <string> IDENT
-%token <int> INT
+%token <Z.t> INT
 %token GLOBAL
 %token FUN
 %token SKIP
@@ -80,7 +80,7 @@ exp:
   | v0 = IDENT
       { Voblint_CLI.Generated.V v0 }
   | v0 = INT
-      { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int v0)) }
+      { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer v0) }
   | v0 = MINUS v1 = exp %prec UMINUS
       { match v1 with
       | Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer z) ->
