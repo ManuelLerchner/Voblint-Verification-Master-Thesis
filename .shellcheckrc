@@ -1,0 +1,7 @@
+# Follow `source "$SCRIPT_DIR/..."` relative to the sourcing script.
+source-path=SCRIPTDIR
+external-sources=true
+
+# shellcheck 0.11.0 reports SC2218 for any function called inside a pipeline,
+# even when the definition precedes the call.
+disable=SC2218

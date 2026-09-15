@@ -1,0 +1,3 @@
+codegen/generated/**
+cli/frontend/vimp_printer.ml
+vendor/**

@@ -1,0 +1,24 @@
+[files]
+extend-exclude = [
+  "*.thy",
+  "*.vimp",
+  "pixi.lock",
+  "codegen/generated/",
+  "docs/generated/",
+  "docs/history/",
+  "thesis/shared/generated/",
+  "thesis/lib/isabelle-symbols.typ",
+  "vendor/",
+]
+
+[default]
+# The thesis carries a German title alongside the English one.
+extend-ignore-re = ["title-de: .*"]
+
+[default.extend-words]
+# Isabelle's theorem keyword and antiquotation.
+thm = "thm"
+# The TD solver's set of stable unknowns.
+stabl = "stabl"
+# g2html's dead-line attribute in the report XML.
+ded = "ded"

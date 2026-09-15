@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # every assignment here is read by the sourcing script
 # Sourced (not executed) by the other scripts/mk/*.sh to resolve and check
 # ISABELLE/AFP with the same defaults and error message the old Makefile
 # used. Sets ISABELLE, AFP, REPO_ROOT, TD_DIR in the caller's shell.

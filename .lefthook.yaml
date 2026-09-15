@@ -90,6 +90,75 @@ pre-commit:
               - "**/*.yml"
             run: pixi run verification-surface-check
 
+          # ----------------------------------------------------------------
+          # Formatting and linting
+          #
+          # Ruff takes the staged files; the other tools are fast enough to
+          # check their whole scope, which also catches a config change.
+          # ----------------------------------------------------------------
+
+          - name: python-format
+            glob: "**/*.py"
+            run: pixi run python-format-check -- {staged_files}
+
+          - name: python-lint
+            glob: "**/*.py"
+            run: pixi run python-lint -- {staged_files}
+
+          - name: ocaml-format
+            glob:
+              - "**/*.ml"
+              - "**/*.mli"
+              - "**/dune"
+              - "dune-project"
+              - ".ocamlformat"
+              - ".ocamlformat-ignore"
+            run: pixi run ocaml-format-check
+
+          - name: opam-lint
+            glob: "*.opam"
+            run: pixi run opam-lint
+
+          - name: shell-lint
+            glob:
+              - "**/*.sh"
+              - ".shellcheckrc"
+            run: pixi run shell-lint
+
+          - name: actions-lint
+            glob:
+              - ".github/**/*.yml"
+              - ".github/**/*.yaml"
+            run: pixi run actions-lint
+
+          - name: typst-format
+            glob: "**/*.typ"
+            run: pixi run typst-format-check
+
+          - name: markdown-lint
+            glob:
+              - "**/*.md"
+              - ".markdownlint-cli2.yaml"
+            run: pixi run markdown-lint
+
+          - name: spelling
+            glob:
+              - "**/*.{md,typ,py,ml,mli,sh,toml,yaml,yml}"
+              - "_typos.toml"
+            run: pixi run spelling-check
+
+          - name: toml-format
+            glob:
+              - "**/*.toml"
+            run: pixi run toml-format-check
+
+          - name: pages-lint
+            glob:
+              - "pages/**/*.js"
+              - "pages/**/*.css"
+              - "biome.jsonc"
+            run: pixi run pages-lint
+
           - name: isabelle-ascii
             glob: "**/*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}

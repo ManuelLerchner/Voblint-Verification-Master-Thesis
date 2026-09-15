@@ -10,7 +10,7 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
 LINTER_DIR="${LINTER_DIR:-/tmp/isabelle-linter}"
-SESSIONS="$(bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sessions.sh" | tr '\n' ' ')"
+read -ra SESSIONS <<<"$(bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sessions.sh" | tr '\n' ' ')"
 
 # Install only when the tool is missing. Registering a second copy alongside a
 # hand-installed one makes every later `isabelle` invocation die with
@@ -33,4 +33,4 @@ case "$linter_help" in
     "$ISABELLE" components -u "$LINTER_DIR/linter_base"
     ;;
 esac
-"$ISABELLE" lint -v -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" -o lint_bundles=default,afp_mandatory -f error $SESSIONS
+"$ISABELLE" lint -v -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" -o lint_bundles=default,afp_mandatory -f error "${SESSIONS[@]}"

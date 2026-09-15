@@ -23,6 +23,8 @@ depends: [
   "wasm_of_ocaml-compiler" {>= "6.4.1" & build}
   # Zarith runtime primitives for browser targets.
   "zarith_stubs_js" {build}
+  # `pixi run ocaml-format-check`; must match the version in .ocamlformat.
+  "ocamlformat" {with-test & = "0.29.0"}
 ]
 
 # v0.17.0 does not contain the wasm_of_ocaml runtime declaration.
