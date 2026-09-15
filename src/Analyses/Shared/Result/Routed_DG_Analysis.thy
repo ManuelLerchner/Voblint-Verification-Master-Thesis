@@ -546,7 +546,7 @@ lemma pp_buffered:
 theorem pp_routed:
   assumes solves: "terminates pgs p"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) (route pgs)
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) (route pgs)
         (\<lambda>ctx' src a. dg_spec_edge_tree (analysis_spec pgs p) a src (\<lambda>_. gk0))
         (routed_call_tree (analysis_spec pgs p) gk0 seed
            (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))

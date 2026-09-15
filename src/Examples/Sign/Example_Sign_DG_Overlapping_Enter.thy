@@ -159,7 +159,7 @@ definition ov_eqs ::
   "(pp \<times> sign list, (unit, sign list) routed_gk,
     (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "ov_eqs =
-     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
        (\<lambda>ctx' src a. dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
@@ -418,7 +418,7 @@ definition ov_empty_eqs ::
   "(pp \<times> sign list, (unit, sign list) routed_gk,
     (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "ov_empty_eqs =
-     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
        (\<lambda>ctx' src a. dg_spec_edge_tree ov_empty_spec a src (\<lambda>_. Analysis_Global ()))
        (routed_call_tree ov_empty_spec (Analysis_Global ()) Activation_Seed
@@ -706,7 +706,7 @@ text \<open>The buffered post-solution reconciled with the unbuffered generator 
 
 lemma ov_pp_routed:
   "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Analysis_Global ())
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
         (exec_formals_route ov_gs)
         (\<lambda>ctx' src a. dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
         (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
