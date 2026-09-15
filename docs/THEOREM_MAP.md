@@ -25,18 +25,16 @@ The *context* axis is not, and the closing note says where it stops.
 | The solved reader and the published result table describe the same stores | [`Voblint_Result.Routed_DG_Analysis:routed_dg_analysis.gamma_reader_eq_lookup`](../src/Analyses/Shared/Result/Routed_DG_Analysis.thy) | Rewrites a reader-shaped bound into `lookup_context` of the table a caller reads, with no coverage premise. |
 | The context buckets exhaust the context-insensitive collector | [`Voblint_CFG.LTR_Collect:ltr_collect_eq_Union_activation_of_has_context`](../src/Program_Model/CFG/Collecting/LTR_Collect.thy), [`Voblint_CFG.LTR_Collect:ltr_collect_eq_Union_activation_of_fun`](../src/Program_Model/CFG/Collecting/LTR_Collect.thy), [`Voblint_CFG.LTR_Abstract:ltr_coverage.ltr_collect_eq_Union_activation_collect`](../src/Program_Model/CFG/Collecting/LTR_Abstract.thy) | Unconditional for a functional route such as call strings; earned from context totality for a relational one. |
 | A per-context bound extends to arbitrary source executions | [`Voblint_Result.Source_Activation_Sound:source_sound_from_collecting_cap`](../src/Analyses/Shared/Result/Source_Activation_Sound.thy) | Domain-free and policy-free: it consumes an `activation_collect` bound and a context witness. `source_activation_sound` in the same theory instantiates it generically, and [`Voblint_Examples_Interval.Example_Interval_Source_Ctx:twice_source_ctx_run_sound`](../src/Examples/Interval/Ctx/Example_Interval_Source_Ctx.thy) for one fixed program. |
-| The runtime dispatcher preserves each domain's proved and refuted verdicts | [`Voblint_CLI.Analyse_Dispatch:analyse_proved_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy), [`Voblint_CLI.Analyse_Dispatch:analyse_refuted_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy) | Covers all five selectable domains through the exported `analyse` function, which takes a domain and a program and no context. |
-| A certified dispatcher result is sound along arbitrary source executions | [`Voblint_CLI.Analyse_Dispatch:analyse_source_sound`](../src/Executable_Surface/CLI/Analyse_Dispatch.thy) | The verdict-list layer beneath the entry point, at the unit context `analyse_certified` names a solve for. |
-| A certified run of the exported entry point over-approximates the concrete run | [`Voblint_CLI.Analysis_Certified:run_voblint_source_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | Endpoint over `run_voblint`, the one operation code generation exports, at `Ctx_None` and the default discipline: the abstract state at the reached node contains the concrete store, no check listed there is dead, and every decided one holds. |
+| Every configuration's result is sound at every collected store | [`Voblint_CLI.Analysis_Certified:analysis_result_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy), [`Voblint_CLI.Analysis_Certified:run_voblint_sound_at`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | Over `config_terminates D rule ctx p`, so for every domain, global update rule and context policy: at a store `ltr_collect` admits at a point, the table covers it (`analysis_result_covers`), no check listed there is dead, every decided one holds, and a point without a diagnostic divides by no zero. The first states it over the typed `analysis_result`, the second over `run_voblint`, the one operation code generation exports. |
 | The same, at a context-sensitive configuration | [`Voblint_CLI.Analysis_Run_Sound:sound_table_of_activation`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy), [`Voblint_CLI.Analysis_Run_Sound:sound_table.source_sound`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy) | Stated once over an arbitrary context policy: the first turns a routed bound on every `activation_collect` bucket into a `sound_table`, the second places a source run in it; each domain and policy instantiates the pair in one `*_table` lemma. The store sits in the table entry filed under at least one context its own call history is admitted at -- exactly one for a call string, possibly several under entry-state routing -- and quantifying over every solved context would be false. |
-| Any accepted configuration's answer over-approximates the concrete run | [`Voblint_CLI.Analysis_Certified:run_voblint_certified_source_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The headline: the domain, solver discipline and context policy are arguments. Legality and well-formedness are not premises, since an unsupported pairing answers `Unsupported_Configuration` and a malformed program `Malformed_Program`. |
+| Any accepted configuration's answer over-approximates the concrete run | [`Voblint_CLI.Analysis_Certified:run_voblint_certified_source_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The headline: the domain, global update rule and context policy are arguments, and every combination is answered. Well-formedness is not a premise, since a malformed program answers `Malformed_Program`; termination is, as `config_terminates`. |
 | A run about to execute a check finds a sound listed check for it | [`Voblint_CLI.Analysis_Certified:run_voblint_check_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The reader-facing form of the headline, with no `csim` in the statement. The check is existential and sits at a node the store reaches; it cannot be unique, since a source state does not determine its node. |
 | The result lists one check per compiled check | [`Voblint_CLI.Analysis_Certified:run_voblint_check_sites`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | At every configuration, the checks' `(check_point, check_exp)` pairs are the `EA_Check` edges of the compiled graph, in graph order. Pairing checks with source positions is done by `cli/render/render_text.ml` and is not proved. |
 | A listed check is correct at the node it was listed for | [`Voblint_CLI.Analysis_Run_Sound:ctx_checks_sound_at`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy) | The endpoint's check claim without the source run, so the node is the caller's rather than the simulation's. What a caller supplies instead is a store the collecting semantics admits there. |
-| That headline is non-vacuous | [`Voblint_Examples.Example_End_To_End_Certificate:certificate_demo_source_certified`](../src/Examples/Capstone/Example_End_To_End_Certificate.thy) | One program at `Int` + `Ctx_CallString 1` + explicit `Solver_Join`. `certificate_demo_full_certificate` names every witness the generic theorem leaves existential: the returned answer, its single `PROVED` check, the completed source run, the collecting-semantics membership at `Statement 4`, `analysis_result_covers` and `checks_sound_at` there, and the check's own truth. Well-formedness, termination, coverage and the answer are discharged by evaluation. |
+| That headline is non-vacuous | [`Voblint_Examples.Example_End_To_End_Certificate:certificate_demo_source_certified`](../src/Examples/Capstone/Example_End_To_End_Certificate.thy) | One program at `Int` + `Ctx_CallString 1` + `Globals_Join`. `certificate_demo_full_certificate` names every witness the generic theorem leaves existential: the returned answer, its single `PROVED` check, the completed source run, the collecting-semantics membership at `Statement 4`, `analysis_result_covers` and `checks_sound_at` there, and the check's own truth. Well-formedness, termination, coverage and the answer are discharged by evaluation. |
 
-The `analyse` and `run_voblint` rows prove partial correctness. Solver termination and
-required key coverage remain explicit per-program premises; parsing, code
+The `run_voblint` rows prove partial correctness. Solver termination remains an
+explicit per-program premise; parsing, code
 generation, the OCaml compiler, and the handwritten CLI are outside the proved
 chain.
 
@@ -60,48 +58,26 @@ node was solved at would be false.
 
 ## Configuration coverage of the source-level endpoint
 
-`run_voblint` takes a domain, an optional solver and a context policy. Not every
-combination is a candidate for the source-level theorem, and the reason differs
-per cell. A program that fails the well-formedness check answers
-`Malformed_Program` before any configuration is consulted; beyond that, two
-outcomes exist.
+`run_voblint` takes a domain, a global update rule and a context policy. A
+program that fails the well-formedness check answers `Malformed_Program` before
+any configuration is consulted; every other combination is check-producing.
+`analysis_result` hands the table of the domain's rule-parametric registration to
+`unit_run_result`, `entry_state_run_result` or `call_string_run_result`, so
+`res_checks` is `result_checks_of (classify_checks_verdicts ...)` and the
+endpoint's check argument applies: 5 domains x 4 rules x 3 context policies, the
+call string at every bound `k`, `k = 0` included.
 
-**Check-producing** -- `plan_result` hands the table to `unit_run_result`,
-`entry_state_run_result` or `call_string_run_result`, so `res_checks` is
-`result_checks_of (classify_checks_verdicts ...)` and the endpoint's check
-argument applies. 32 configurations:
-
-| Context | Sign | Parity | Congruence | Interval | Int |
-| --- | --- | --- | --- | --- | --- |
-| `Ctx_None` | Join*, PerOrigin+ | Join*, PerOrigin+ | Join*, PerOrigin+ | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+, PerOrigin+, WPO+ |
-| `Ctx_EntryState` | Join* | Join* | Join* | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+ |
-| `Ctx_CallString k` | Join* | Join* | Join* | Warrow*, Join+, PerOrigin+, WPO+ | Warrow*, Join+ |
-
-`*` marks the discipline `None` selects; `+` marks a cell reached only by naming
-a solver. Every one of the 32 carries the source-level theorem. Each cell is one
-`*_table` lemma instantiating `sound_table`: the unit cells through
-`sound_table_of_unit`, whose per-node bound each alternate discipline supplies
-from its own `unit_dg_analysis` registration, the contextual ones through
-`sound_table_of_activation`.
-
-The contextual cells at a named discipline live in
-[`Voblint_CLI.Analysis_Run_Solver_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Solver_Sound.thy),
-those at each policy's default in
-[`Voblint_CLI.Analysis_Run_Ctx_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy).
-The split is by discipline, not by argument: the two files prove the same thing
-and the first imports the second.
-
-Interval at `Join`, `PerOrigin` and `WarrowPerOrigin` under either context
-policy is no exception: each branch of `plan_result` binds that discipline's
-`routed_dg_pipeline.result` table and hands it to the same
-`entry_state_run_result`/`call_string_run_result` builder every other contextual
-plan uses, so `entry_state_run_result_sound`/`call_string_run_result_sound` cover
-them without a separate bridge.
-
-**Rejected** -- every remaining combination answers
-`Unsupported_Configuration`, and there is nothing to prove.
-
-Every accepted combination is check-producing through one of the three builders.
+Every combination carries the source-level theorem. Each (domain, context policy)
+pair is one `*_table` lemma over an arbitrary rule `r`, instantiating
+`sound_table`: the unit ones (`sign_rule_table`, ...) in
+[`Voblint_CLI.Analysis_Run_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
+through `sound_table_of_unit`, whose per-node bound each `<d>_rule` registration
+supplies as a `unit_dg_analysis` instance; the contextual ones
+(`sign_es_rule_table`, `sign_cs_rule_table`, ...) in
+[`Voblint_CLI.Analysis_Run_Ctx_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy)
+through `sound_table_of_activation`. `entry_state_run_result_sound` and
+`call_string_run_result_sound` then cover every contextual combination without
+a separate bridge.
 
 ## Dead checks
 

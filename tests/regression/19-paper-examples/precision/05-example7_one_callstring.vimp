@@ -45,18 +45,18 @@
 //       x=[6,6]
 //       y=[20,20]
 //   main_pp2_ctx0: pp2
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   main_pp3_ctx0: pp3
 //       x=[6,6]
-//       y=[-inf,+inf]
+//       y=⊤
 //   main_pp4_ctx0: pp4 [proved]
 //       x=[6,6]
 //       y=[20,20]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   f_exit_f_ctx0: exit_f
 //       p=[3,3]
 //   f_pp0_ctx0: pp0

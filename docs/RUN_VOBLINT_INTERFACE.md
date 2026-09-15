@@ -16,7 +16,7 @@ new domain would touch OCaml.
 ## The boundary
 
 ```text
-analyse_program : analysis_domain => globals_rule option => context_mode => imp_prog
+analyse_program : analysis_domain => globals_rule => context_mode => imp_prog
                => abstract_value analysis_answer            (typed, verified)
 
 run_voblint     = map_analysis_answer show_abstract_value o analyse_program
@@ -169,11 +169,12 @@ cover:
 
 ## One dispatcher
 
-The generated `Dispatch_Tables.thy` (`analyse`, `analyse_with_solver`,
-`analyse_with_state`, `analyse_with_state_default`) is a second dispatcher beside
-`plan_result`/`run_voblint`, with its own consumers in the domain `*_Checks` and
-`*_Entry` theories. `analyse_program` replaces both; the generator emits only the
-per-plan table that feeds it.
+`analyse_program` is the only dispatcher. Its `analysis_result` reads one
+rule-parametric registration per domain and context policy, which the generator
+emits from `manifests/analyses.yaml`: `<d>_rule` and `<d>_es_rule` for `r`,
+`<d>_cs_rule` for `k r`. The per-discipline registrations (`sign_join`,
+`interval_es_po`, ...) remain in the domain theories for their `*_Checks` and
+`*_Entry` consumers; `run_voblint` does not reach them.
 
 ## Steps
 
@@ -184,7 +185,7 @@ per-plan table that feeds it.
    routes from the routed enter results.
 2. Component lemmas, `sound_analysis_result_at`, `analyse_program_sound`, and
    the existential `run_voblint_sound`.
-3. Fold `Dispatch_Tables`' dispatcher into `analyse_program`; update the generator.
+3. Fold every dispatcher into `analyse_program`; update the generator (done).
 4. OCaml `Voblint_api` over `Generated`: grammar-generated `exp`/program printer,
    verdict/status/diagnostic names, `is_dead`.
 5. OCaml `Graph` builder from `res_cfg`, `res_states`, `res_routes`, with
@@ -199,10 +200,10 @@ per-plan table that feeds it.
    `analysis_output` and `check_row`. The endpoint theorems quantify over
    `run_voblint`'s structured result.
 8. Regenerate every `EXPECT-GRAPH` oracle in the new format.
-9. Rename the solver selector to `--globals`: it chooses the side-effect update
-   rule only; loop heads are always widened and narrowed (the `is_point` branch of
-   `TD_side_upd_rule.thy`).
+9. Select the side-effect update rule with `--globals` (`globals_rule`, done): it
+   chooses only how a global unknown is updated; loop heads are always widened and
+   narrowed (the `is_point` branch of `TD_side_upd_rule.thy`).
 10. Single-route audit over every domain x globals rule x context, including the
-    manifest's `legacy:` spellings and `plan_result_report_defs`.
+    manifest's `legacy:` spellings.
 11. Website: introduction, domain/globals/context explainers, globals placement,
     inline editor annotations.

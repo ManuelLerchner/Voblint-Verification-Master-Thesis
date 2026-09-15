@@ -50,7 +50,7 @@ self.onmessage = async (event) => {
 
     const result = self.Voblint_run(
       request.analysis,
-      request.solver,
+      request.globals,
       request.context,
       request.contextDepth,
       request.source,

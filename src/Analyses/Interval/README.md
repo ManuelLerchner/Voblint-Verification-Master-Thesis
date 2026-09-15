@@ -19,8 +19,8 @@ Executable witnesses live under
 | `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
-| `generated/Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system. Generated |
-| `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, each registered at all four disciplines with Apinis warrowing as the default. Generated from `manifests/analyses.yaml`; see below |
+| `generated/Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system, plus `interval_rule`, which takes the rule as a parameter and is what `run_voblint` reads. Generated |
+| `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, each registered at all four disciplines with Apinis warrowing as the default, and once more at any rule (`interval_es_rule`, `interval_cs_rule`). Generated from `manifests/analyses.yaml`; see below |
 | `Interval_Analyses.thy` | the presentation routing this domain publishes on top of them — the one part of Interval's contextual surface that is not derivable |
 | `Interval_Solver_Analyses.thy` | the verdict reports of those two contextual configurations at the always-join, per-origin and warrowing-per-origin disciplines |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
@@ -65,5 +65,5 @@ properties of the shared assembly rather than of this domain.
 
 The context-insensitive run is neither of these: it is `Interval_Assembly`'s
 `global_interpretation` of the same assembly at the unit context, at Apinis
-warrowing, which is Interval's production default because always-join has no
-termination guarantee on this lattice.
+warrowing. That registration owns Interval's unsuffixed names because always-join
+has no termination guarantee on this lattice.

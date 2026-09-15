@@ -5,6 +5,7 @@ theory Interval_Assembly
     Interval_Sound
     "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "TD.TD_side_upd_rule"
 begin
 
@@ -18,7 +19,7 @@ text \<open>
 
   Interval at the context-insensitive route: 4 instances of \<^locale>\<open>unit_dg_analysis\<close>, one
   per published solver discipline (\<open>warrowing_apinis\<close>, \<open>always_join\<close>, \<open>per_origin\<close>,
-  \<open>warrowing_per_origin\<close>), the first being the production default. The equation system,
+  \<open>warrowing_per_origin\<close>), the first owning the unsuffixed names. The equation system,
   the solve, the reader, the result table, the report and every soundness endpoint come
   from that locale; this theory only names Interval's own implementation and facts and
   chooses the disciplines.
@@ -270,5 +271,54 @@ lemma interval_wpo_equations_eq: "interval_wpo_asm.equations = interval_td_equat
   by (rule ext)+
      (simp add: interval_wpo_asm.equations_def interval_warrow_asm.equations_def
         interval_wpo_asm.analysis_spec_def interval_warrow_asm.analysis_spec_def)
+
+subsection \<open>Any global update rule\<close>
+
+text \<open>
+  The same assembly with the rule that merges side-effected globals left as a
+  parameter, so one registration serves every discipline.
+\<close>
+
+global_interpretation interval_rule: unit_dg_analysis
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+    bot interval_classify_check
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    enter_ivl_ci_for event_ivl "TD_side_rule_Interp_solve_c r"
+  for r
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
+  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
 
 end

@@ -39,10 +39,9 @@ text \<open>
   handwritten re-export layer in between that could reinterpret a constructor or a
   conversion.
 
-  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which consults
-  \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality.
-  The typed and config-level dispatchers (\<open>analyse\<close>, \<open>analyse_config\<close>,
-  \<open>analyse_with_solver\<close>, ...) are not roots: nothing handwritten calls them.
+  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks
+  well-formedness and runs the requested domain, update rule and context policy. Every
+  combination is answered, so the CLI never decides legality.
 
   The last group of roots is there for signature visibility rather than for dispatch.
   A constant the serializer does not consider public is emitted but left out of the
@@ -86,14 +85,16 @@ text \<open>
   \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
-  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s three cases, which a caller must tell apart,
+  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s two cases, which a caller must tell apart,
     and the readers of a successful one: contexts, states, routes, checks, globals and
     diagnostics. The records reach OCaml abstract, readable only through their
     selectors, so a field added later cannot break a consumer that matched on field
-    order.
+    order. \<^const>\<open>map_analysis_answer\<close> is the one rewrite of an answer: the CLI
+    applies it to decode the ASCII symbol tokens in every rendered value.
 
-  \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which solver discipline,
-    which context policy. A caller constructs these, so their constructors are public.
+  \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which rule merges
+    side-effected globals, which context policy. A caller constructs these, so their
+    constructors are public.
 
   \<^item> \<^bold>\<open>Program.\<close> What the frontend builds an \<^type>\<open>imp_prog\<close> out of: the command
     and expression constructors, the program builder, and the numeral and character
@@ -111,7 +112,7 @@ export_code
   run_voblint
 
   \<comment> \<open>Result: answers, contexts, states, routes, checks, globals, diagnostics\<close>
-  Malformed_Program Unsupported_Configuration Analysed
+  Malformed_Program Analysed map_analysis_answer
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics
@@ -123,9 +124,9 @@ export_code
   Bot Lifted
   cfg_entry cfg_node_list
 
-  \<comment> \<open>Ask: domain, solver, context\<close>
+  \<comment> \<open>Ask: domain, global update rule, context\<close>
   Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis
-  Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin
+  Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin
   Ctx_None Ctx_EntryState Ctx_CallString
 
   \<comment> \<open>Program: what the frontend builds an input out of\<close>

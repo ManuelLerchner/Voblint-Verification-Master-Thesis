@@ -26,13 +26,12 @@ text \<open>
   one would be. The \<open>vars_cover\<close> readings, which a caller can discharge \<^theory_text>\<open>by eval\<close>,
   follow each discipline that publishes them.
 
-  No per-domain \<^theory_text>\<open>export_code\<close> here: a caller reaches the generic, already-sound report
-  through the unified dispatcher \<open>analyse\<close>, which is the one thing exported to OCaml. A
-  second, domain-specific export module would be a parallel, redundant API surface for
-  the same computation.
+  No per-domain \<^theory_text>\<open>export_code\<close> here: a caller reaches every solved table through
+  \<open>run_voblint\<close>, which is the one thing exported to OCaml. A second, domain-specific
+  export module would be a parallel, redundant API surface for the same computation.
 \<close>
 
-subsection \<open>Apinis warrowing: the production default\<close>
+subsection \<open>Apinis warrowing\<close>
 
 lemma interval_td_state_at_eq:
   "interval_td_state_at gs p v
@@ -271,10 +270,9 @@ corollary analyse_interval_completed_run_sound:
 section \<open>Solver-choice soundness: the sibling update rules\<close>
 
 text \<open>
-  The siblings \<open>analyse_with_solver\<close> compares against the production default. Each
-  reads its own instance's solved table, and each proves the same statements by the
-  same route --- the update rule is a parameter of \<^locale>\<open>unit_dg_analysis\<close>, so nothing
-  below re-derives node soundness.
+  The sibling disciplines beside the first. Each reads its own instance's solved table,
+  and each proves the same statements by the same route --- the update rule is a
+  parameter of \<^locale>\<open>unit_dg_analysis\<close>, so nothing below re-derives node soundness.
 \<close>
 
 subsection \<open>Always join\<close>

@@ -16,19 +16,19 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
 | `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
-| `generated/Sign_Assembly.thy` | two `global_interpretation`s of the shared `unit_dg_analysis`, `sign_join` (always-join, production) and `sign_po_asm` (per-origin): Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
-| `generated/Sign_Analyses.thy` | the call-string and entry-state routed configurations — the two the assembly does not cover, because each routes calls to more than one context; see below |
+| `generated/Sign_Assembly.thy` | three `global_interpretation`s of the shared `unit_dg_analysis`, `sign_join` (always-join, production), `sign_po_asm` (per-origin) and `sign_rule` (any global update rule, the one `run_voblint` reads): Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
+| `generated/Sign_Analyses.thy` | the call-string and entry-state routed configurations — the two the assembly does not cover, because each routes calls to more than one context — at always-join and at any global update rule (`sign_es_rule`, `sign_cs_rule`); see below |
 | `generated/Sign_Checks.thy` | the public runtime API: bindings onto the assembly, plus the per-origin solver sibling |
 | `generated/Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from the `sign_join` instance's own endpoints |
 
 The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
 from `manifests/analyses.yaml`; edit those, not the theories.
 
-`Sign_Entry` is what `analyse` dispatches to, and it lives here rather than in
-`Voblint_CLI` because nothing in it needs to see another domain: it depends on
-Sign and on the `unit_dg_analysis` endpoints of `Voblint_Result`, both of which
-this session already has. The
-dispatcher restates its theorems over `analyse`; it does not prove them.
+`Sign_Entry` lives here rather than in `Voblint_CLI` because nothing in it needs
+to see another domain: it depends on Sign and on the `unit_dg_analysis` endpoints
+of `Voblint_Result`, both of which this session already has. `run_voblint` does
+not reach it: it reads `sign_rule`, `sign_es_rule` and `sign_cs_rule`, whose
+published facts `Voblint_CLI`'s table lemmas cite.
 
 ## The two contextual configurations
 
@@ -63,16 +63,16 @@ it is why the executable route and its abstract counterpart
 The context-insensitive run is neither of these: it is `Sign_Assembly`'s
 `global_interpretation` of the same assembly at the unit context.
 
-## Why Sign publishes no warrowing discipline
+## Why Sign registers no warrowing discipline of its own
 
-Sign publishes `Solver_Join` and `Solver_PerOrigin`, and no warrowing route at
-either the unit or a contextual context. The seven-element lattice has finite
-height, so every ascending chain stabilises after a bounded number of steps and
-widening has nothing to accelerate — a warrowing rule would be mechanically
-available and would buy no termination that the plain join does not already
-give. The resolver follows proved capability, so it answers `None` there rather
-than offering a route with no solved table or soundness corollary behind it.
-This is the same reasoning Parity records for its own two disciplines; Interval
+Sign's per-discipline registrations are always-join and per-origin, with no
+warrowing one at either the unit or a contextual context. The seven-element
+lattice has finite height, so every ascending chain stabilises after a bounded
+number of steps and widening has nothing to accelerate — a warrowing rule buys no
+termination that the plain join does not already give. A caller may still select
+one: `sign_rule`, `sign_es_rule` and `sign_cs_rule` take the global update rule as
+a parameter, so `--globals warrow` solves and is sound at Sign like every other
+rule. This is the same reasoning Parity records for its own two disciplines; Interval
 and the Int product are the domains where widening earns its keep, because
 their carriers admit unbounded ascending chains.
 

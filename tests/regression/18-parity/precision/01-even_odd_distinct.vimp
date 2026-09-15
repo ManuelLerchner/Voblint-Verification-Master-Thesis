@@ -9,11 +9,9 @@
 // domain evaluates each operand independently, so n+n would be Top+Top=Top
 // (it cannot see the two operands are the same value), while 2*n is Even
 // from the literal's own parity alone.
-// This exercises the full public path: AnalysisConfig resolves
-// --analysis parity to Plan_Parity Solver_Join, Analyse_Dispatch routes it
-// to analyse_parity_report, and that report reads the routed-unit solved
-// AnalysisResult through lookup_context -- the same generic pipeline the
-// other domains use, with no Parity-specific result or report
+// This exercises the full public path: run_voblint answers
+// --analysis parity from the routed-unit solved result -- the same generic
+// pipeline the other domains use, with no Parity-specific result or report
 // construction anywhere in it.
 fun main() {
   n = __voblint_nondet_int();

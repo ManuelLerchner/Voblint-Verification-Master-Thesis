@@ -51,18 +51,18 @@
 //       a=[5,5]
 //       b=[7,7]
 //   main_pp6_ctx0: pp6
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //   main_pp7_ctx0: pp7
 //       a=[5,5]
-//       b=[-inf,+inf]
+//       b=⊤
 //   main_pp8_ctx0: pp8 [proved]
 //       a=[5,5]
 //       b=[7,7]
 //       check a == 5
 //   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //   f_pp1_ctx0: pp1 [unreachable]
 //       unreachable
 //       check n == 99 [dead]

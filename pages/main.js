@@ -32,13 +32,13 @@ let pendingAnalysis = null;
 const editorMount = query("#program-editor");
 
 const analysisSelect = query("#analysis-select");
-const solverSelect = query("#solver-select");
+const globalsSelect = query("#globals-select");
 const contextSelect = query("#context-select");
 
 const contextDepthInput = query("#context-depth");
 const contextDepthGroup = query("#context-depth-group");
 
-const solverHelp = query("#solver-help");
+const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
 const runButtonIcon = query("#run-analysis-icon");
@@ -72,7 +72,7 @@ const rawMounts = {
 
 /*
  * Every editor feature on one screen, at the page's default configuration
- * (Interval, Default solver, call string k=1):
+ * (Interval, Warrowing, call string k=1):
  *
  *   i == 5 and hits == 8 PROVED, i < 5 REFUTED, a == 2 UNKNOWN,
  *   10 / (a - 2) a possible division by zero, record(100) DEAD,
@@ -84,7 +84,7 @@ const rawMounts = {
  * sensitivity, hits == 8 is lost as well.
  */
 const initialProgram = `// Move the cursor, hover the badges, click the graph.
-// Then try: solver "Warrowing per origin", call-string depth k=2, context None.
+// Then try: globals "Warrow per origin", call-string depth k=2, context None.
 global hits;
 
 fun record(amount) {
@@ -350,16 +350,14 @@ function renderRawCall(raw) {
   const parts = [callPart("run_voblint", "fn")];
 
   if (!input) {
-    parts.push(callPart(" kind solver ctx p", "arg"), callPart(" \u27f9 ", "arrow"), callPart("?", "arg"));
+    parts.push(callPart(" kind rule ctx p", "arg"), callPart(" \u27f9 ", "arrow"), callPart("?", "arg"));
     rawResultCall.replaceChildren(...parts);
     rawResultCall.title = rawResultCall.textContent;
     return;
   }
 
-  const solver = input.solver === null ? "None" : `(Some ${constructorTerm(input.solver)})`;
-
   parts.push(
-    callPart(` ${constructorTerm(input.kind)} ${solver} ${constructorTerm(input.ctx)} `, "arg"),
+    callPart(` ${constructorTerm(input.kind)} ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `, "arg"),
     callPart("p", "program"),
     callPart(" \u27f9 ", "arrow"),
   );
@@ -1748,33 +1746,31 @@ function updateContextControls() {
   contextDepthInput.disabled = !usesCallString;
 }
 
-function updateSolverHelp() {
+function updateGlobalsHelp() {
   const descriptions = {
-    default: "Use Voblint's production solver for this domain and context.",
+    join: "Join every value side-effected into a global.",
 
-    join: "Always join updates. Explicit solver override.",
+    "per-origin": "Keep side-effected values separate by origin before joining them.",
 
-    "per-origin": "Keep contributions separate by origin before combining them.",
+    warrow: "Widen, then narrow, every value side-effected into a global.",
 
-    warrow: "Use widening followed by narrowing.",
-
-    "warrow-per-origin": "Apply widening and narrowing separately to per-origin contributions.",
+    "warrow-per-origin": "Widen and narrow side-effected values separately per origin.",
   };
 
-  solverHelp.textContent = descriptions[solverSelect.value] ?? "";
+  globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
 }
 
 function readConfiguration() {
   const analysis = analysisSelect.value;
 
-  const solver = solverSelect.value;
+  const globals = globalsSelect.value;
 
   const context = contextSelect.value;
 
-  const allowedSolvers = new Set(["default", "join", "per-origin", "warrow", "warrow-per-origin"]);
+  const allowedGlobals = new Set(["join", "per-origin", "warrow", "warrow-per-origin"]);
 
-  if (!allowedSolvers.has(solver)) {
-    throw new Error(`Unknown solver: ${solver}`);
+  if (!allowedGlobals.has(globals)) {
+    throw new Error(`Unknown globals rule: ${globals}`);
   }
 
   const allowedContexts = new Set(["none", "entry-state", "call-string"]);
@@ -1788,14 +1784,14 @@ function readConfiguration() {
   if (context === "call-string") {
     contextDepth = Number.parseInt(contextDepthInput.value, 10);
 
-    if (!Number.isInteger(contextDepth) || contextDepth < 1) {
-      throw new Error("Call-string depth must be an integer of at least 1.");
+    if (!Number.isInteger(contextDepth) || contextDepth < 0) {
+      throw new Error("Call-string depth must be a non-negative integer.");
     }
   }
 
   return {
     analysis,
-    solver,
+    globals,
     context,
     contextDepth,
   };
@@ -1806,7 +1802,7 @@ function selectedLabel(select) {
 }
 
 function configurationLabel(configuration) {
-  const parts = [selectedLabel(analysisSelect), selectedLabel(solverSelect), selectedLabel(contextSelect)];
+  const parts = [selectedLabel(analysisSelect), selectedLabel(globalsSelect), selectedLabel(contextSelect)];
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
@@ -1988,7 +1984,7 @@ function runAnalysisInWorker(configuration, source) {
         type: "run",
         id,
         analysis: configuration.analysis,
-        solver: configuration.solver,
+        globals: configuration.globals,
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         source,
@@ -2051,7 +2047,7 @@ async function run() {
      * The browser adapter takes FIVE arguments:
      *
      *   analysis
-     *   solver
+     *   globals rule
      *   context
      *   context depth
      *   source
@@ -2203,11 +2199,11 @@ valueHintsToggle.addEventListener("change", () => {
 
 contextSelect.addEventListener("change", updateContextControls);
 
-for (const control of [analysisSelect, solverSelect, contextSelect, contextDepthInput]) {
+for (const control of [analysisSelect, globalsSelect, contextSelect, contextDepthInput]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-solverSelect.addEventListener("change", updateSolverHelp);
+globalsSelect.addEventListener("change", updateGlobalsHelp);
 
 graphZoomIn.addEventListener("click", zoomGraphIn);
 
@@ -2236,7 +2232,7 @@ graph.addEventListener(
 );
 
 updateContextControls();
-updateSolverHelp();
+updateGlobalsHelp();
 renderRawCall(null);
 renderInspector();
 updateZoomResetLabel();

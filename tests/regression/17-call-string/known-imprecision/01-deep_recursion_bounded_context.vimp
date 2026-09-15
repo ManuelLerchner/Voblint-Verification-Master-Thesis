@@ -46,51 +46,51 @@
 //
 // nodes:
 //   main_pp7_ctx0: pp7
-//       r=[-inf,+inf]
+//       r=⊤
 //   main_exit_main_ctx0: exit_main
-//       r=[-inf,+inf]
+//       r=⊤
 //   main_pp5_ctx0: pp5
-//       r=[-inf,+inf]
+//       r=⊤
 //   main_pp6_ctx0: pp6 [unknown]
-//       r=[-inf,+inf]
+//       r=⊤
 //       check 0 < r
 //   main_entry_main_ctx0: entry_main
-//       r=[-inf,+inf]
+//       r=⊤
 //   fact_pp1_ctx0: pp1
 //       n=[1,1]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_exit_fact_ctx0: exit_fact
 //       n=[1,49]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp0_ctx0: pp0
 //       n=[1,49]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp2_ctx0: pp2
 //       n=[2,49]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp3_ctx0: pp3
 //       n=[2,49]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_entry_fact_ctx0: entry_fact
 //       n=[1,49]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //   fact_exit_fact_ctx1: exit_fact
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp0_ctx1: pp0
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp2_ctx1: pp2
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_pp3_ctx1: pp3
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //   fact_entry_fact_ctx1: entry_fact
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=⊤
 //
 // edges:
 //   fact_pp0_ctx0 -> fact_pp1_ctx0: [n < 2]

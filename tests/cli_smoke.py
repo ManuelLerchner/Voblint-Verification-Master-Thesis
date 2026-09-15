@@ -45,9 +45,7 @@ CASES = [
         "--context call-string requires --context-depth K",
     ),
     (
-        # The default resolves to what the configuration supports; only an
-        # explicit request for something unsupported is an error.
-        "entry-state with sign still runs",
+        "entry-state with sign runs",
         ["--analysis", "sign", "--context", "entry-state", "--graph-snapshot", SANITY_FILE],
         0,
         "",
@@ -95,10 +93,8 @@ CASES = [
         "--html cannot be combined with",
     ),
     (
-        # Every solver route already solves a state table; --html reads the one
-        # the requested discipline produced.
-        "--html with an explicit --solver is accepted",
-        ["--analysis", "interval", "--solver", "warrow", "--html-out", "/tmp/voblint-smoke-solver", SANITY_FILE],
+        "--html with an explicit --globals is accepted",
+        ["--analysis", "interval", "--globals", "warrow", "--html-out", "/tmp/voblint-smoke-solver", SANITY_FILE],
         0,
         "node(s)",
     ),
@@ -115,10 +111,29 @@ CASES = [
         "--context-depth is only valid with --context call-string",
     ),
     (
-        "--context-depth 0 is rejected",
+        # A call string that keeps no call site is one shared context per callee.
+        "--context-depth 0 is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "0", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "negative --context-depth is rejected",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "-1", SANITY_FILE],
         1,
-        "unsupported --analysis/--context/--solver combination",
+        "--context-depth must not be negative",
+    ),
+    (
+        "unknown --globals value is rejected",
+        ["--analysis", "sign", "--globals", "bogus", SANITY_FILE],
+        1,
+        "unknown --globals value",
+    ),
+    (
+        "retired --solver is rejected as unrecognized",
+        ["--analysis", "sign", "--solver", "join", SANITY_FILE],
+        1,
+        "unrecognized argument",
     ),
     (
         "sign + call-string is accepted",
@@ -133,47 +148,44 @@ CASES = [
         "",
     ),
     (
-        "explicit --solver warrow with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "warrow", SANITY_FILE],
+        "explicit --globals warrow with --context call-string is accepted",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--globals", "warrow", SANITY_FILE],
         0,
         "",
     ),
     (
-        "explicit --solver join with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        "explicit --globals join with --context call-string is accepted",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--globals", "join", SANITY_FILE],
         0,
         "",
     ),
     (
-        "explicit --solver per-origin with --context entry-state is accepted",
-        ["--analysis", "interval", "--context", "entry-state", "--solver", "per-origin", SANITY_FILE],
+        "explicit --globals per-origin with --context entry-state is accepted",
+        ["--analysis", "interval", "--context", "entry-state", "--globals", "per-origin", SANITY_FILE],
         0,
         "",
     ),
     (
-        "sign + explicit --solver join with --context call-string is accepted",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        "sign + explicit --globals join with --context call-string is accepted",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--globals", "join", SANITY_FILE],
         0,
         "",
     ),
     (
-        "sign + explicit --solver per-origin with --context call-string is still rejected",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "per-origin", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "sign + explicit --globals warrow-per-origin with --context call-string is accepted",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--globals", "warrow-per-origin", SANITY_FILE],
+        0,
+        "",
     ),
     (
-        # Sign is a finite-height lattice with no widen instance, so warrowing
-        # has nothing to accelerate and the combination is refused up front
-        # rather than silently falling back to join.
-        "sign + --solver warrow is rejected",
-        ["--analysis", "sign", "--solver", "warrow", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "sign + --globals warrow is accepted",
+        ["--analysis", "sign", "--globals", "warrow", SANITY_FILE],
+        0,
+        "",
     ),
     (
-        "sign + --solver join is accepted",
-        ["--analysis", "sign", "--solver", "join", SANITY_FILE],
+        "sign + --globals join is accepted",
+        ["--analysis", "sign", "--globals", "join", SANITY_FILE],
         0,
         "",
     ),
@@ -184,16 +196,16 @@ CASES = [
         "",
     ),
     (
-        "parity + explicit --solver per-origin is accepted",
-        ["--analysis", "parity", "--solver", "per-origin", SANITY_FILE],
+        "parity + explicit --globals per-origin is accepted",
+        ["--analysis", "parity", "--globals", "per-origin", SANITY_FILE],
         0,
         "",
     ),
     (
-        "parity + --solver warrow is rejected",
-        ["--analysis", "parity", "--solver", "warrow", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "parity + --globals warrow is accepted",
+        ["--analysis", "parity", "--globals", "warrow", SANITY_FILE],
+        0,
+        "",
     ),
     (
         "parity + entry-state is accepted",

@@ -23,7 +23,7 @@
 // every other variable and is analyzed flow-sensitively through calls (see
 // 04-globals/precision/02-global_var.vimp). So g == 42 and h == 1 exactly,
 // and the paper's imprecision has no occasion to arise. This program also
-// answers identically under all four of --solver
+// answers identically under all four of --globals
 // join|per-origin|warrow|warrow-per-origin: nothing about a `global` here
 // exercises the update rule at all. The unknown that does is a procedure's
 // FunctionEntry seed, written once per call site, and on it the paper's

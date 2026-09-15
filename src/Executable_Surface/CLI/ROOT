@@ -2,8 +2,8 @@ chapter Voblint
 
 session Voblint_CLI in "." = "Voblint_Analysis_Int" +
   description
-    "Production CLI-facing surface: the AnalysisConfig-driven dispatcher over
-     the five domains' entry points, and the structured run_voblint result,
+    "Production CLI-facing surface: run_voblint over the five domains, every
+     global update rule and every context policy, with its soundness theorems,
      independent of the demonstration and regression theories in
      Voblint_Examples"
   sessions
@@ -12,18 +12,10 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
     "HOL-Library"
-  directories
-    "generated"
   theories
     Analysis_Config
     Dispatch_Carrier
-    Config_Tables
-    Dispatch_Tables
-    Analyse_Dispatch
-    Dispatch_Config
-
     Analysis_Run
     Analysis_Run_Sound
     Analysis_Run_Ctx_Sound
-    Analysis_Run_Solver_Sound
     Analysis_Certified

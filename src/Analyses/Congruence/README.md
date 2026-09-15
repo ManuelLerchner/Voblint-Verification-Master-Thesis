@@ -67,8 +67,8 @@ terminates without acceleration.
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline |
-| `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as two interpretations of the shared routed assembly. Generated from `manifests/analyses.yaml`; see below |
+| `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline, plus `congruence_rule` at any global update rule |
+| `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as interpretations of the shared routed assembly at always-join and at any global update rule (`congruence_es_rule`, `congruence_cs_rule`). Generated from `manifests/analyses.yaml`; see below |
 | `generated/Congruence_Checks.thy` | generated: the names a caller outside the session uses, as abbreviations for the assembly's own |
 | `generated/Congruence_Entry.thy` | generated: the codegen endpoint over an arbitrary `imp_prog`, and its production soundness under four coverage assumptions |
 

@@ -1,5 +1,5 @@
-// PARAM: --analysis interval --context call-string --context-depth 2 --solver join
-// Same program as 02-depth2_separates_shared_callee.vimp, explicit --solver
+// PARAM: --analysis interval --context call-string --context-depth 2 --globals join
+// Same program as 02-depth2_separates_shared_callee.vimp, explicit --globals
 // join instead of call-string's implicit Warrow default -- valid because
 // the routed call-string equation system is solved under every
 // discipline exactly like the flat one. This routing depth crosses no unbounded loop, so join

@@ -4,26 +4,19 @@ theory Example_Analysis_Dispatch_Regression
 begin
 
 text \<open>
-  One \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close> verdict carried all the way to a
-  closed semantic theorem. \<open>dispatch_demo_first_check_certified\<close> is the point of
-  this theory: a concrete \<^const>\<open>Check_Proved\<close> entry that \<^const>\<open>analyse\<close>
-  actually returns, with every hypothesis of \<open>analyse_interval_proved_sound\<close>
-  discharged rather than assumed --- well-formedness, solver termination, node
-  coverage, and the report membership itself.
-
-  The CLI dispatch regression groups pin verdicts across globals, calls,
-  repeated call sites, and every selectable domain. They run the generated
-  analyzer directly. What stays here is what a verdict fixture cannot express:
-  the semantic proof.
+  \<^const>\<open>run_voblint\<close> on one small program, at every axis a caller chooses: the
+  domain, the rule that merges contributions to side-effected globals, and the context
+  policy. The CLI regression groups pin verdicts across globals, calls, repeated call
+  sites and every selectable domain by running the generated analyzer; what stays here
+  pins the operation Isabelle exports, by evaluation. The certified reading of such an
+  answer is \<open>Example_End_To_End_Certificate\<close>.
 \<close>
 
-subsection \<open>A program whose first check is certified\<close>
+subsection \<open>One program, two verdicts\<close>
 
 text \<open>
   \<open>y := 1\<close> then check \<open>0 < y\<close> (holds), then \<open>y := 0 - 1\<close> and check \<open>0 < y\<close>
-  again (fails): Interval's numeric bounds settle both checks precisely. The
-  computed report below is what the certified theorem reads its membership
-  hypothesis off, so it is load-bearing, not a verdict witness of its own.
+  again (fails): Interval's numeric bounds settle both checks precisely.
 \<close>
 
 definition dispatch_demo_prog :: imp_prog where
@@ -38,28 +31,45 @@ definition dispatch_demo_prog :: imp_prog where
        }
      }"
 
+definition dispatch_demo_checks where
+  "dispatch_demo_checks D rule ctx =
+     (case run_voblint D rule ctx dispatch_demo_prog of
+        Analysed res \<Rightarrow> Some (map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk))
+                                 (res_checks res))
+      | Malformed_Program \<Rightarrow> None)"
+
 lemma dispatch_demo_interval_precise:
-  "analyse Interval_Analysis dispatch_demo_prog =
-     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
-      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
+  "dispatch_demo_checks Interval_Analysis Globals_Warrow Ctx_None =
+     Some [(Statement 1, Less (N 0) (V (STR ''y'')), Lifted Check_Proved),
+           (Statement 3, Less (N 0) (V (STR ''y'')), Lifted Check_Refuted)]"
   by eval
 
 text \<open>
-  The call-string dispatcher reads the table its caller's plan named, not whichever
-  one its domain publishes first. Int is where that is observable: its call-string
-  route publishes an always-join table and a warrowing one, and the two rows below
-  are the two solves. A dispatcher keyed on the domain alone answered the join row
-  for both, while the text report answered from warrowing --- which is the
-  discipline \<^const>\<open>resolve_analysis_config\<close> defaults that pairing to.
+  The rule is an argument of the solve, not of the report: a program with no side-effected
+  global reaches the same verdicts under every rule, at every context policy, including a
+  call string of length zero.
 \<close>
 
-lemma dispatch_demo_call_string_reads_the_named_discipline:
-  "(case run_voblint Int_Analysis (Some Solver_Warrow) (Ctx_CallString 1) dispatch_demo_prog of
+lemma dispatch_demo_rule_invariant:
+  "\<forall>rule \<in> {Globals_Join, Globals_Per_Origin, Globals_Warrow, Globals_Warrow_Per_Origin}.
+     \<forall>ctx \<in> {Ctx_None, Ctx_EntryState, Ctx_CallString 0, Ctx_CallString 1}.
+       dispatch_demo_checks Interval_Analysis rule ctx =
+         dispatch_demo_checks Interval_Analysis Globals_Warrow Ctx_None"
+  by eval
+
+text \<open>
+  The call-string plan reads the table its rule names, not whichever one its domain
+  publishes first. Int is where that is observable: its call-string route publishes an
+  always-join table and a warrowing one, and the two rows below are the two solves.
+\<close>
+
+lemma dispatch_demo_call_string_reads_the_named_rule:
+  "(case run_voblint Int_Analysis Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
           = analyse_int_call_string_report_warrow 1 dispatch_demo_prog
     | _ \<Rightarrow> False)"
-  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) dispatch_demo_prog of
+  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
           = analyse_int_call_string_report 1 dispatch_demo_prog
@@ -68,13 +78,11 @@ lemma dispatch_demo_call_string_reads_the_named_discipline:
 
 text \<open>
   The public entry point at an entry-state configuration. Its check column and its
-  states come off one solved table: before this the graph, the verdicts and the seed
-  listing each named an analyser of their own, so a report browser solved the same
-  equation system three times and the columns agreed only by construction.
+  states come off one solved table.
 \<close>
 
 lemma dispatch_demo_run_voblint_entry_state:
-  "(case run_voblint Interval_Analysis None Ctx_EntryState dispatch_demo_prog of
+  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
@@ -83,145 +91,11 @@ lemma dispatch_demo_run_voblint_entry_state:
     | _ \<Rightarrow> False)"
   by eval
 
-text \<open>
-  The same program at a context-free configuration reaches the same two verdicts
-  through an entirely different plan --- a flat equation system, no activation keys
-  --- which is what makes the pair worth stating: the entry point's answer is the
-  analysis's, not the dispatcher's.
-\<close>
-
 lemma dispatch_demo_run_voblint_flat:
-  "(case run_voblint Interval_Analysis None Ctx_None dispatch_demo_prog of
-      Analysed res \<Rightarrow>
-        map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
-          [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
-        \<and> res_contexts res = [Context_Unit]
+  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_None dispatch_demo_prog of
+      Analysed res \<Rightarrow> res_contexts res = [Context_Unit]
     | _ \<Rightarrow> False)"
   by eval
-
-
-
-text \<open>
-  Structural facts about the compiled CFG, computed rather than asserted: the intra edges (there
-  are no calls in this program) and the exit node --- the ingredients \<open>cfg_reaches_intra\<close> below
-  chains into the first check's reachability to \<open>cfg_exit\<close>.
-\<close>
-
-lemma dispatch_demo_intra_eval:
-  "intra (prog_cfg dispatch_demo_prog) =
-     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
-      (Statement 0, EA_Assign (STR ''y'') (N 1), Statement 1),
-      (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
-      (Statement 2, EA_Assign (STR ''y'') (Minus (N 0) (N 1)), Statement 3),
-      (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
-      (Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
-  unfolding prog_cfg_def by eval
-
-lemma dispatch_demo_exit_eval:
-  "cfg_exit (prog_cfg dispatch_demo_prog) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by (simp add: prog_main_name_def)
-
-text \<open>Structural reachability of the first check node to the exit --- a fact about the CFG's
-  shape, following the same \<open>cfg_reaches_intra\<close>/\<open>cfg_reaches_trans\<close> chaining the
-  store-only check examples use.\<close>
-
-lemma dispatch_demo_statement1_reaches_exit:
-  "cfg_reaches (prog_cfg dispatch_demo_prog) (Statement 1)
-     (cfg_exit (prog_cfg dispatch_demo_prog))"
-proof -
-  have r1: "cfg_reaches (prog_cfg dispatch_demo_prog) (Statement 1) (Statement 2)"
-    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
-  have r2: "cfg_reaches (prog_cfg dispatch_demo_prog) (Statement 2) (Statement 3)"
-    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
-  have r3: "cfg_reaches (prog_cfg dispatch_demo_prog) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
-  have r4: "cfg_reaches (prog_cfg dispatch_demo_prog) (Statement 4)
-              (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
-  show ?thesis
-    unfolding dispatch_demo_exit_eval
-    using r1 r2 r3 r4 cfg_reaches_trans by blast
-qed
-
-text \<open>
-  Solver termination is reflected from the same executable solve the report above is read
-  from; coverage is decided by \<^const>\<open>vars_cover_exec\<close> over the two edge enumerations, and
-  \<open>interval_conf_vars_cover_prog_of_exec\<close>
-  (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Entry\<close>) transports that decision to the
-  \<^const>\<open>vars_cover\<close> the corollary asks for.
-\<close>
-
-lemma dispatch_demo_terminates:
-  "interval_conf_terminates_prog_warrow (declared_global dispatch_demo_prog) dispatch_demo_prog"
-  by (rule interval_conf_terminates_prog_warrow_via_solve_c) eval
-
-lemma dispatch_demo_vars_cover_exec:
-  "vars_cover_exec (prog_cfg dispatch_demo_prog)
-     (fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog)
-             dispatch_demo_prog))"
-  by eval
-
-text \<open>
-  The end-to-end witness: not just that the soundness machinery \<^emph>\<open>could\<close> certify a runtime
-  verdict, but that it does, for one concrete program and node, with every hypothesis of
-  \<open>analyse_interval_proved_sound\<close> actually discharged rather than left open. \<open>solve\<close>
-  reflects the same \<open>eval\<close> witness \<open>dispatch_demo_interval_precise\<close> already computes the report
-  from; \<open>cover\<close> is decided by evaluation and transported; \<open>mem\<close> reads off
-  \<open>dispatch_demo_interval_precise\<close>. No assumption remains: this is a closed theorem about a
-  concrete \<open>Check_Proved\<close> value \<open>analyse\<close> actually returns.
-\<close>
-
-theorem dispatch_demo_first_check_certified:
-  "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg dispatch_demo_prog)
-           (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
-     truthy (aval (Less (N 0) (V (STR ''y''))) s)"
-proof (rule analyse_interval_proved_sound)
-  show
-    "interval_conf_terminates_prog_warrow (declared_global dispatch_demo_prog)
-       dispatch_demo_prog"
-    by (rule dispatch_demo_terminates)
-  show "vars_cover (prog_cfg dispatch_demo_prog)
-          (fst (interval_conf_sol_prog_warrow (declared_global dispatch_demo_prog)
-                  dispatch_demo_prog))"
-    by (rule interval_conf_vars_cover_prog_of_exec[OF dispatch_demo_vars_cover_exec])
-  show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved)
-          \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
-    unfolding dispatch_demo_interval_precise by simp
-qed
-
-subsection \<open>The pipeline theorem on a concrete program\<close>
-
-text \<open>
-  \<open>analyse_source_sound\<close> (\<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>) reads the
-  report and a source run together, and leaves exactly one per-program
-  hypothesis: \<^const>\<open>analyse_certified\<close>. Discharging it here, by evaluation on
-  \<open>dispatch_demo_prog\<close>, shows the hypothesis is satisfiable and not a premise no
-  program meets --- what is left in the theorem below is the source run itself.
-\<close>
-
-lemma dispatch_demo_reserved: "reserved_ret_var (declared_global dispatch_demo_prog)"
-  unfolding reserved_ret_var_def dispatch_demo_prog_def by (simp add: ret_var_def)
-
-lemma dispatch_demo_certified: "analyse_certified Interval_Analysis dispatch_demo_prog"
-  by (simp add: dispatch_demo_terminates
-        interval_conf_vars_cover_prog_of_exec[OF dispatch_demo_vars_cover_exec])
-
-lemma dispatch_demo_wf:
-  "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
-     (prog_procs dispatch_demo_prog)"
-  by (auto simp: wf_compile_input_simps dispatch_demo_prog_def split: if_splits)
-
-theorem dispatch_demo_source_certified:
-  assumes s0: "s0 \<in> cinit_stores (declared_global dispatch_demo_prog)"
-    and run: "star (pstep (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog))
-                (main_body (prog_table dispatch_demo_prog), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. csim (prog_table dispatch_demo_prog) (prog_cfg dispatch_demo_prog)
-                   (residual, s, frs) (v, s, stk)
-                 \<and> (\<forall>c. (v, c, Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)
-                        \<longrightarrow> truthy (aval c s))
-                 \<and> (\<forall>c. (v, c, Check_Refuted) \<in> set (analyse Interval_Analysis dispatch_demo_prog)
-                        \<longrightarrow> \<not> truthy (aval c s))"
-  by (rule analyse_source_sound[OF dispatch_demo_wf dispatch_demo_certified s0 run])
 
 end
 

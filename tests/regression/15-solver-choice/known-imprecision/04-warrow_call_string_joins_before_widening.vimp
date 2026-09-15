@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --solver warrow --context call-string --context-depth 1
+// PARAM: --analysis interval --globals warrow --context call-string --context-depth 1
 // n is concretely 1 or 2, so n < 10 holds -- but Apinis warrowing under a
 // depth-1 call string cannot establish it. Mechanism: depth 1 keeps only the
 // innermost call site, so both activations of q enter p at the single
@@ -11,7 +11,7 @@
 // through the context lifter's collapse rather than two direct call sites.
 //
 // 15-solver-choice/precision/07-warrow_per_origin_call_string.vimp is the
-// same program under --solver warrow-per-origin and answers PROVED.
+// same program under --globals warrow-per-origin and answers PROVED.
 fun p(n) {
   __voblint_check(n < 10); // UNKNOWN
 }

@@ -299,14 +299,9 @@ def test_node_documents_carry_a_source_position(report):
             assert i + 1 in placed, f"no node carries the check on line {i + 1}"
 
 
-def test_explicit_solver_still_annotates_the_source(tmp_path):
-    """An explicit --solver used to render states with no findings beside them.
-
-    The graph and the inline annotations are two readings of one solved table,
-    and for a chosen discipline that is the table the discipline produced. The
-    verdicts were never missing, only unpublished: before, the source view fell
-    back to no annotations at all whenever --solver named anything but the
-    domain's default.
+def test_explicit_globals_rule_still_annotates_the_source(tmp_path):
+    """The graph and the inline annotations are two readings of one solved table,
+    so a non-default --globals rule annotates the source like the default does.
     """
     out = tmp_path / "result"
     proc = subprocess.run(
@@ -314,7 +309,7 @@ def test_explicit_solver_still_annotates_the_source(tmp_path):
             str(VOBLINT),
             "--analysis",
             "interval",
-            "--solver",
+            "--globals",
             "per-origin",
             "--html-out",
             str(out),
@@ -325,7 +320,7 @@ def test_explicit_solver_still_annotates_the_source(tmp_path):
     )
     assert proc.returncode == 0, proc.stderr
     warns = sorted((out / "warn").glob("warn*.xml"))
-    assert warns, "an explicit --solver emitted no warning documents"
+    assert warns, "an explicit --globals emitted no warning documents"
     line = int(ET.parse(warns[0]).getroot().find("text").get("line"))
     source = FIXTURE.read_text().splitlines()
     assert "__voblint_check" in source[line - 1], (

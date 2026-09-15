@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generates the analysis registration theories from manifests/analyses.yaml.
 
-Six kinds of output, one registry:
+Four kinds of output, one registry:
 
   src/Analyses/<Domain>/generated/<Domain>_Assembly.thy   the unit-context
       instances, one `global_interpretation` of `unit_dg_analysis` per
@@ -16,10 +16,6 @@ Six kinds of output, one registry:
       production soundness: each discipline's endpoints, read through the
       equation that renames the assembly's state reader to the published result
       table
-  src/Executable_Surface/CLI/generated/Dispatch_Tables.thy   `analyse` and the
-      three domain/solver tables beside it
-  src/Executable_Surface/CLI/generated/Config_Tables.thy     the resolver over
-      domain, solver and context
 
 Every output lives under `generated/`, so the path itself says the file is not
 hand-editable. Nothing downstream sees that: an import names a theory, never a
@@ -115,6 +111,7 @@ CONTEXT_ORDER = ["none", "entry_state", "call_string"]
 
 ASSEMBLY_IMPORTS = ['"Voblint_Result.Unit_DG_Analysis"',
                     '"Voblint_Solver.TD_Solver_Bridge"',
+                    '"Voblint_Solver.Globals_Rule"',
                     '"TD.TD_side_upd_rule"']
 
 GENERATED_NOTICE = (
@@ -141,14 +138,11 @@ class Domain:
         self.routes = entry["routes"]
         self.default = self.routes[0]
         self.has_assembly = entry.get("assembly", True)
-        # Adoption is registry data, like `cli_adopted`: an output is compared
+        # Adoption is registry data: an output is compared
         # by the drift gate only once the tree actually carries it, so a commit
         # that adds the generator does not demand files a later commit adds.
         self.adopted = entry.get("adopted", False)
-        self.contexts = entry.get("contexts", {})
-        # What the theory layer registers, as opposed to what the CLI resolves.
-        # A domain may register a context it does not expose, so the two can
-        # come apart and the emitter must read only this.
+        # The contextual registrations the theory layer carries.
         regs = dict(entry.get("registrations", {}))
         # Domain-level, not per context: which pinned role arguments a
         # contextual registration leaves free. The unit registration cannot --
@@ -198,8 +192,6 @@ class Domain:
         self.path = f"src/Analyses/{self.name}/generated/{self.theory}.thy"
         self.ctx_path = (f"src/Analyses/{self.name}/generated/"
                          f"{self.ctx_theory}.thy")
-        self.constructor = f"{self.name}_Analysis"
-        self.plan = f"Plan_{self.name}"
 
     def imports(self):
         own = [f"{self.name}_Classify", f"{self.name}_Transfer",
@@ -449,28 +441,47 @@ def statement(text, indent="  "):
     return [f'{indent}"{lhs} =', f'{indent}     {rhs}"']
 
 
-def interpretation(dom, route, solvers):
-    """One `global_interpretation`, with the same twelve discharges every time."""
+RULE_INTERP = "TD_side_rule_Interp"
+
+
+def solver_terms(interp, gk, vt, rule):
+    """The three solver arguments of a registration: solve, its domain, and its
+    executable form. A rule-parametric registration applies each to the rule."""
+    dom_term = (f'    "{interp}.solve_dom TYPE({gk})',
+                f"       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state)"
+                f'{" r" if rule else ""}"')
+    if rule:
+        return f'    "{interp}_solve r"', dom_term, f'"{interp}_solve_c r"'
+    return f"    {interp}_solve", dom_term, f"{interp}_solve_c"
+
+
+def interpretation(dom, route, solvers, rule=False):
+    """One `global_interpretation`, with the same twelve discharges every time.
+
+    With `rule`, the registration takes the global update rule as a parameter
+    instead of one fixed discipline, and publishes no names of its own."""
     f = dom.facts()
-    interp = solvers[route]["interp"]
-    binder, prefix = dom.binder(route), dom.prefix(route)
-    binds = DEFINES_FULL if route == dom.default else DEFINES_SIBLING
+    interp = RULE_INTERP if rule else solvers[route]["interp"]
+    if rule:
+        binder, prefix, binds = f"{dom.name.lower()}_rule", None, []
+    else:
+        binder, prefix = dom.binder(route), dom.prefix(route)
+        binds = DEFINES_FULL if route == dom.default else DEFINES_SIBLING
 
     term = {k: role_term(v) for k, v in f.items()}
+    solve, dom_term, solve_c = solver_terms(
+        interp, "(unit, unit) routed_gk", dom.value_type, rule)
     out = [
         f"global_interpretation {binder}: unit_dg_analysis",
         f"    {term['tf_st']} {term['enter_st']} {term['init_st']}",
-        f"    {interp}_solve",
-        f'    "{interp}.solve_dom TYPE((unit, unit) routed_gk)',
-        f"       TYPE(({dom.value_type} exec_dg_st lifted,"
-        f" {dom.value_type} exec_dg_st lifted) dg_state)\"",
+        solve, *dom_term,
         f"    bot {term['classifier']}",
     ]
     # The operations. The two-line split reads best and is what a domain with
     # bare names gets; a domain that configures its operations has quoted, longer
     # roles, so fall back to packing at the layout limit.
     step = [term[k] for k in ["skip", "assign", "special", "branch", "body", "return"]]
-    tail = [term["enter_ci"], term["event"], f"{interp}_solve_c"]
+    tail = [term["enter_ci"], term["event"], solve_c]
     pair = ["    " + " ".join(step), "    " + " ".join(tail)]
     if all(symbol_len(l) <= MAX_LINE for l in pair):
         out += pair
@@ -482,9 +493,10 @@ def interpretation(dom, route, solvers):
                 line = "   "
             line = f"{line} {op}"
         out.append(line)
-    out += [
-        "  defines",
-    ]
+    if rule:
+        out.append("  for r")
+    if binds:
+        out.append("  defines")
     for i, (published, const) in enumerate(binds):
         out.append(f"    {'' if i == 0 else 'and '}{prefix}_{published}"
                    f" = {binder}.{const}")
@@ -676,7 +688,7 @@ def context_binders(dom, ctx):
     return binders
 
 
-def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
+def contextual_interpretation(dom, ctx, route, solvers, generalize=None, rule=False):
     """One contextual interpretation of `routed_dg_analysis`.
 
     The unit registration interprets `unit_dg_analysis`, which fixes the
@@ -687,8 +699,9 @@ def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
     """
     f = dom.facts()
     p = CONTEXT_PARAMS[ctx]
-    interp = solvers[route]["interp"]
-    binder = dom.ctx_binder(ctx, route)
+    interp = RULE_INTERP if rule else solvers[route]["interp"]
+    binder = (f"{dom.name.lower()}_{p['binder_suffix']}_rule" if rule
+              else dom.ctx_binder(ctx, route))
     term = {k: role_term(v, generalize) for k, v in f.items()}
     vt = dom.value_type
     # A `global_interpretation` cannot leave a parameter free, so any
@@ -696,21 +709,24 @@ def contextual_interpretation(dom, ctx, route, solvers, generalize=None):
     # `context fixes` block and publishes by direct application rather than by
     # `defines` renaming. A call-string bound is always such a parameter; a
     # domain that generalises a pinned configuration argument adds its own.
-    fixed = bool(context_binders(dom, ctx))
+    fixed = bool(context_binders(dom, ctx)) and not rule
+    solve, dom_term, solve_c = solver_terms(interp, p["gk"](vt), vt, rule)
     out = [
         f"{'' if fixed else 'global_'}interpretation {binder}: routed_dg_analysis",
         f"    {term['tf_st']} {term['enter_st']} {term['init_st']}",
         f"    {p['global']} {p['seed']} {p['route']} {p['root_ctx']}",
-        f"    {interp}_solve",
-        f'    "{interp}.solve_dom TYPE({p["gk"](vt)})',
-        f"       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state)\"",
+        solve, *dom_term,
         f"    bot {term['classifier']}",
     ]
     out += pack_operands([
         [term[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
         [term["enter_ci"], term["event"], p["route_abs"]],
-        [f"{interp}_solve_c"],
+        [solve_c],
     ])
+    if rule:
+        out.append("  for k r" if ctx == "call_string" else "  for r")
+        out += obligations(f, interp, ROUTED_HEADER, p["case4"])
+        return out
     # The published names are route-wide, not per-discipline, so only the
     # registration that owns the unsuffixed binder may claim them; a second
     # discipline repeating the block would be a duplicate definition. The others
@@ -921,6 +937,8 @@ def render_contextual(dom, solvers):
         imports = [f"{dom.name}_{t}"
                    for t in ["Sound", "Assembly", "Classify", "Transfer", "Exec"]
                    ] + CONTEXTUAL_IMPORTS
+    if '"Voblint_Solver.Globals_Rule"' not in imports:
+        imports = list(imports) + ['"Voblint_Solver.Globals_Rule"']
     out += [f"    {i}" for i in imports] + ["begin", ""]
     out += text_block(GENERATED_NOTICE) + [""]
     for ctx in CONTEXT_ORDER:
@@ -975,6 +993,13 @@ def render_contextual(dom, solvers):
         if not binders:
             for solver in reg["solvers"]:
                 out += soundness_lemmas(dom, ctx, solver, solvers)
+    out += [f"section \\<open>{dom.name} at any global update rule\\<close>", ""]
+    out += text_block(
+        "Each context once more, with the rule that merges side-effected globals left\n"
+        "as a parameter, so one registration serves every discipline.") + [""]
+    for ctx in CONTEXT_ORDER:
+        if dom.registrations.get(ctx):
+            out += contextual_interpretation(dom, ctx, None, solvers, rule=True) + [""]
     out.append("end")
     return "\n".join(out) + "\n"
 
@@ -996,7 +1021,7 @@ def assembly_header(dom):
     return f"""
 {dom.name} at the context-insensitive route: {len(dom.routes)} {plural} of
 \\<^locale>\\<open>unit_dg_analysis\\<close>, one per published solver discipline
-({routes}), the first being the production default. The equation system, the
+({routes}), the first owning the unsuffixed names. The equation system, the
 solve, the reader, the result table, the report and every soundness endpoint
 come from that locale; this theory only names {dom.name}'s own implementation
 and facts and chooses the disciplines.
@@ -1037,6 +1062,12 @@ def render_assembly(dom, solvers):
             "identical system. Stated, not asserted.") + [""]
         for route in siblings:
             out += equations_eq_lemma(dom, route) + [""]
+
+    out += ["subsection \\<open>Any global update rule\\<close>", ""]
+    out += text_block(
+        "The same assembly with the rule that merges side-effected globals left as a\n"
+        "parameter, so one registration serves every discipline.") + [""]
+    out += interpretation(dom, dom.default, solvers, rule=True) + [""]
 
     out.append("end")
     return "\n".join(out) + "\n"
@@ -1349,16 +1380,15 @@ below is exactly as applicable as an unconditional one would be. The
 \\<open>vars_cover\\<close> readings, which a caller can discharge
 \\<^theory_text>\\<open>by eval\\<close>, follow each discipline that publishes them.
 
-No per-domain \\<^theory_text>\\<open>export_code\\<close> here: a caller reaches the
-generic, already-sound report through the unified dispatcher \\<open>analyse\\<close>,
-which is the one thing exported to OCaml. A second, domain-specific export
-module would be a parallel, redundant API surface for the same computation.
+No per-domain \\<^theory_text>\\<open>export_code\\<close> here: a caller reaches every
+solved table through \\<open>run_voblint\\<close>, which is the one thing exported to OCaml.
+A second, domain-specific export module would be a parallel, redundant API surface
+for the same computation.
 """
 
 
 SIBLING_TEXT = """
-The siblings \\<open>analyse_with_solver\\<close> compares against the production
-default. Each reads its own instance's solved table, and each proves the same
+The sibling disciplines beside the first. Each reads its own instance's solved table, and each proves the same
 statements by the same route --- the update rule is a parameter of
 \\<^locale>\\<open>unit_dg_analysis\\<close>, so nothing below re-derives node soundness.
 """
@@ -1390,7 +1420,7 @@ def render_entry(dom, solvers):
                     " rules\\<close>", ""]
             out += text_block(fill(SIBLING_TEXT)) + [""]
         out += [f"subsection \\<open>{title}"
-                f"{': the production default' if i == 0 else ''}\\<close>", ""]
+                f"\\<close>", ""]
         out += entry_state_at(dom, route, names) + [""]
         out += entry_discipline(dom, route, names)
         if full:
@@ -1607,7 +1637,7 @@ both from solving twice.
 
 def REPORT_TEXT(dom, result_for):
     return f"""
-The report the exported \\<open>analyse\\<close> API dispatches to. It reads its per-node
+The production discipline's report. It reads its per-node
 state through \\<^const>\\<open>{result_for}\\<close>'s
 \\<^type>\\<open>analysis_result\\<close> table --- \\<^const>\\<open>lookup_context\\<close>, not
 a raw solver-environment lookup --- so a \\<^const>\\<open>Lifted\\<close> point classifies
@@ -1642,11 +1672,11 @@ here says that entry point returns on every input.
 def sibling_text(dom, eq_lemma, rule, production):
     return f"""
 The same equation system solved under the {rule} update rule instead of the
-{production} rule production uses, so \\<open>analyse_with_solver\\<close> can compare
-solver choices on one system (\\<open>{eq_lemma}\\<close> is what makes "one system" a
+{production} rule of the unsuffixed names, so solver choices can be compared on one
+system (\\<open>{eq_lemma}\\<close> is what makes "one system" a
 theorem rather than a claim). These are bindings onto the assembly's own
 instance for this rule, so the sibling carries the same soundness endpoints the
-default does --- the update rule is a parameter of the assembly, not a reason to
+first does --- the update rule is a parameter of the assembly, not a reason to
 leave it.
 """
 
@@ -1719,168 +1749,6 @@ def render_checks(dom, solvers):
 
 # --- The dispatcher's tables -------------------------------------------------
 
-def render_cli(doms, solvers, cli):
-    ctor = {k: v["constructor"] for k, v in solvers.items()}
-
-    out = [f"theory {cli['theory']}", "  imports"]
-    out += [f"    {imp}" for imp in cli["imports"]]
-    out += ["begin", "",
-            "section \\<open>The dispatcher's domain and solver tables\\<close>", ""]
-    out += text_block(GENERATED_NOTICE + """
-A pairing of domain and solver discipline is supported exactly when the registry
-publishes a route for it, and answers \\<^const>\\<open>None\\<close> otherwise. The four
-tables below are that one list, read four ways; keeping them in step is what the
-generator is for.
-""") + [""]
-
-    out += ["fun analyse :: \"analysis_domain \\<Rightarrow> imp_prog"
-            " \\<Rightarrow> check_report_entry list\" where"]
-    for i, d in enumerate(doms):
-        out += equation(f"analyse {d.constructor} p", f"{d.report(d.default)} p", i > 0)
-    out.append("")
-
-    out += ["fun analyse_with_solver ::",
-            "    \"analysis_domain \\<Rightarrow> solver_choice \\<Rightarrow> imp_prog",
-            "       \\<Rightarrow> check_report_entry list option\" where"]
-    first = True
-    for d in doms:
-        for route in SOLVER_ORDER:
-            body = f"Some ({d.report(route)} p)" if route in d.routes else "None"
-            out += equation(f"analyse_with_solver {d.constructor} {ctor[route]} p",
-                            body, not first)
-            first = False
-    out.append("")
-
-    for d in doms:
-        out += [f"lemma analyse_with_solver_{d.name.lower()}_default:"]
-        out += statement(f"analyse_with_solver {d.constructor} {ctor[d.default]} p"
-                         f" = Some (analyse {d.constructor} p)")
-        out += ["  by simp", ""]
-
-    out += ["fun analyse_with_state ::",
-            "    \"analysis_domain \\<Rightarrow> solver_choice \\<Rightarrow> imp_prog",
-            "       \\<Rightarrow> (pp \\<times> exp \\<times> check_result \\<times> bool",
-            "             \\<times> abstract_value abs_state) list option\" where"]
-    first = True
-    for d in doms:
-        for route in SOLVER_ORDER:
-            body = (f"Some (tag_states {d.tag} ({d.report(route, True)} p))"
-                    if route in d.routes else "None")
-            out += equation(f"analyse_with_state {d.constructor} {ctor[route]} p",
-                            body, not first)
-            first = False
-    out.append("")
-
-    out += ["lemma analyse_with_state_some_iff_with_solver:",
-            "  \"(analyse_with_state d s p = None) = (analyse_with_solver d s p = None)\"",
-            "  by (cases d; cases s) simp_all", ""]
-
-    out += ["fun analyse_with_state_default ::",
-            "    \"analysis_domain \\<Rightarrow> imp_prog",
-            "       \\<Rightarrow> (pp \\<times> exp \\<times> check_result \\<times> bool",
-            "             \\<times> abstract_value abs_state) list\" where"]
-    for i, d in enumerate(doms):
-        out += equation(f"analyse_with_state_default {d.constructor} p",
-                        f"tag_states {d.tag} ({d.report(d.default, True)} p)", i > 0)
-    out.append("")
-
-    out += ["lemma analyse_with_state_default_eq:"]
-    for d in doms:
-        out += statement(f"analyse_with_state {d.constructor} {ctor[d.default]} p"
-                         f" = Some (analyse_with_state_default {d.constructor} p)")
-    out += ["  by simp_all", "", "end"]
-    return "\n".join(out) + "\n"
-
-
-# --- The resolver ------------------------------------------------------------
-
-def resolver_equation(dom, ctx, solver_pat, plan, bar):
-    ctx_term, _ = CONTEXT_TERMS[ctx]
-    lead = "| " if bar else "  "
-    pat = (f"\\<lparr> cfg_domain = {dom.constructor}, cfg_solver = {solver_pat},"
-           f" cfg_context = {ctx_term} \\<rparr>")
-    head = f"resolve_analysis_config {pat}"
-    one = f'{lead}"{head} = {plan}"'
-    if symbol_len(one) <= MAX_LINE:
-        return [one]
-    if symbol_len(f'{lead}"{head}') <= MAX_LINE:
-        return [f'{lead}"{head}', f'     = {plan}"']
-    if symbol_len(f"     {pat}") <= MAX_LINE:
-        return [f'{lead}"resolve_analysis_config', f"     {pat}", f'     = {plan}"']
-    fields, _, ctx_field = pat.rpartition(", cfg_context")
-    return [f'{lead}"resolve_analysis_config', f"     {fields},",
-            f"        cfg_context{ctx_field}", f'     = {plan}"']
-
-
-def render_config(doms, solvers, cfg):
-    ctor = {k: v["constructor"] for k, v in solvers.items()}
-
-    out = [f"theory {cfg['theory']}", "  imports"]
-    out += [f"    {imp}" for imp in cfg["imports"]]
-    out += ["begin", "", "section \\<open>The resolver's support matrix\\<close>", ""]
-    out += text_block(GENERATED_NOTICE + """
-One table over domain, solver and context. A cell is supported when the registry
-publishes a route there: at \\<^const>\\<open>Ctx_None\\<close> that means a published
-report, at the two context modes a routed instance. \\<^const>\\<open>None\\<close>
-everywhere else, and an unsupported cell is a missing proof, never a missing
-case.
-
-The same list decides \\<open>analyse_with_solver\\<close>, so the two cannot disagree
-about what is supported.
-
-A call-string cell carries the shortest bound its domain publishes, and the
-resolver rejects anything below it: every domain sets that to 1 today, so
-\\<open>k = 0\\<close> answers \\<^const>\\<open>None\\<close>. That is a usability decision
-rather than a soundness one. \\<open>cs_route\\<close> at \\<open>k = 0\\<close> routes every
-activation to the context \\<^term>\\<open>[]\\<close>, as well-defined and as finite as
-any other bound, and it is not \\<^const>\\<open>Ctx_None\\<close> in disguise: the
-equation system stays call-string keyed, and the published result carries
-call-string contexts, all of them empty. Lowering the bound is a real
-behaviour change, not a relaxation of a check.
-""") + [""]
-
-    out += ["fun resolve_analysis_config ::",
-            "    \"analysis_config \\<Rightarrow> analysis_plan option\" where"]
-    first = True
-    for dom in doms:
-        support = {"none": (set(dom.routes), dom.default, 0)}
-        for name, spec in dom.contexts.items():
-            support[name] = (set(spec["solvers"]), spec["default"],
-                             spec.get("min_bound", 0))
-        for ctx in CONTEXT_ORDER:
-            allowed, default, min_bound = support.get(ctx, (set(), None, 0))
-            plan_ctor = dom.plan + CONTEXT_TERMS[ctx][1]
-            arg = " k" if ctx == "call_string" else ""
-
-            def plan(route):
-                p = f"Some ({plan_ctor} {route}{arg})"
-                if ctx == "call_string" and min_bound:
-                    # `k = 0` at the usual bound of one: the shape the
-                    # handwritten resolver already uses, and on `nat` the same
-                    # test as `k < 1`.
-                    guard = "k = 0" if min_bound == 1 else f"k < {min_bound}"
-                    return f"(if {guard} then None else {p})"
-                return p
-            if not allowed:
-                out += resolver_equation(dom, ctx, "_", "None", not first)
-                first = False
-                continue
-            out += resolver_equation(dom, ctx, "None", plan(ctor[default]), not first)
-            first = False
-            if allowed == set(ctor):
-                out += resolver_equation(dom, ctx, "Some s", plan("s"), True)
-                continue
-            for route in SOLVER_ORDER:
-                body = plan(ctor[route]) if route in allowed else "None"
-                out += resolver_equation(dom, ctx, f"Some {ctor[route]}", body, True)
-    out.append("")
-
-    out += ["definition valid_analysis_config :: \"analysis_config \\<Rightarrow> bool\" where",
-            "  \"valid_analysis_config cfg = (resolve_analysis_config cfg \\<noteq> None)\"",
-            "", "end"]
-    return "\n".join(out) + "\n"
-
-
 def validate(manifest, doms):
     """Reject a registry that is duplicated, incomplete, or names an unknown
     solver. Layout is the generator's business; this checks the policy."""
@@ -1909,23 +1777,6 @@ def validate(manifest, doms):
         for route in d.routes:
             if route not in solvers:
                 problems.append(f"{d.name}: unknown solver {route}")
-        for name, spec in d.contexts.items():
-            if name not in CONTEXT_TERMS or name == "none":
-                problems.append(f"{d.name}: unknown context {name}")
-                continue
-            if spec["default"] not in spec["solvers"]:
-                problems.append(f"{d.name}/{name}: default solver is not supported")
-            for route in spec["solvers"]:
-                if route not in solvers:
-                    problems.append(f"{d.name}/{name}: unknown solver {route}")
-            bound = spec.get("min_bound", 0)
-            if isinstance(bound, bool) or not isinstance(bound, int) or bound < 0:
-                problems.append(f"{d.name}/{name}: min_bound must be a non-negative"
-                                " integer; it is the shortest bound the domain"
-                                " publishes, and the generator emits its guard")
-            elif bound and name != "call_string":
-                problems.append(f"{d.name}/{name}: min_bound is meaningful only for"
-                                " a bounded context")
         FACT_ROLES = {"transfer_sound", "tf_commute", "tf_abs_def",
                       "enter_commute", "init_gamma", "classifier"}
         for role, value in d.legacy.get("facts", {}).items():
@@ -2004,13 +1855,6 @@ def main():
     doms = [Domain(e) for e in manifest["domains"]]
     validate(manifest, doms)
 
-    cli = {"theory": "Dispatch_Tables",
-           "path": "src/Executable_Surface/CLI/generated/Dispatch_Tables.thy",
-           "imports": ["Analysis_Config", "Dispatch_Carrier"]}
-    cfg = {"theory": "Config_Tables",
-           "path": "src/Executable_Surface/CLI/generated/Config_Tables.thy",
-           "imports": ["Analysis_Config"]}
-
     rendered = []
     for d in doms:
         if d.has_assembly:
@@ -2026,14 +1870,6 @@ def main():
                              d.entry_adopted))
     targets = [(path, text) for path, text, adopted in rendered if adopted]
     unadopted = [(path, text) for path, text, adopted in rendered if not adopted]
-    cli_targets = [(cli["path"], render_cli(doms, solvers, cli)),
-                   (cfg["path"], render_config(doms, solvers, cfg))]
-    # An unadopted output is a preview: renderable on demand, never written into
-    # the tree and never demanded by the drift check.
-    if manifest.get("cli_adopted"):
-        targets += cli_targets
-    else:
-        unadopted += cli_targets
 
     if args.out:
         targets += unadopted

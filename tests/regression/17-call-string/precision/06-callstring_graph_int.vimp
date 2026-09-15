@@ -37,64 +37,64 @@
 //
 // nodes:
 //   main_pp8_ctx0: pp8 [proved]
-//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
-//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       x=6
+//       y=20
 //       check y == 20
 //   main_pp9_ctx0: pp9
-//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
-//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       x=6
+//       y=20
 //   main_exit_main_ctx0: exit_main
-//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
-//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       x=6
+//       y=20
 //   main_pp5_ctx0: pp5
-//       x=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
-//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       x=⊤
+//       y=⊤
 //   main_pp6_ctx0: pp6
-//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
-//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       x=6
+//       y=⊤
 //   main_pp7_ctx0: pp7 [proved]
-//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
-//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       x=6
+//       y=20
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
-//       x=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
-//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       x=⊤
+//       y=⊤
 //   g_exit_g_ctx0: exit_g
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       p=3
 //   g_pp0_ctx0: pp0
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       p=3
 //   g_entry_g_ctx0: entry_g
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       p=3
 //   g_exit_g_ctx1: exit_g
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       p=10
 //   g_pp0_ctx1: pp0
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       p=10
 //   g_entry_g_ctx1: entry_g
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       p=10
 //   f_exit_f_ctx0: exit_f
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
-//       t=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       p=3
+//       t=6
 //   f_pp2_ctx0: pp2
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
-//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       p=3
+//       t=⊤
 //   f_pp3_ctx0: pp3
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
-//       t=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       p=3
+//       t=6
 //   f_entry_f_ctx0: entry_f
-//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
-//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       p=3
+//       t=⊤
 //   f_exit_f_ctx1: exit_f
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
-//       t=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       p=10
+//       t=20
 //   f_pp2_ctx1: pp2
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
-//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       p=10
+//       t=⊤
 //   f_pp3_ctx1: pp3
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
-//       t=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       p=10
+//       t=20
 //   f_entry_f_ctx1: entry_f
-//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
-//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       p=10
+//       t=⊤
 //
 // edges:
 //   g_pp0_ctx0 -> g_exit_g_ctx0: return p + p

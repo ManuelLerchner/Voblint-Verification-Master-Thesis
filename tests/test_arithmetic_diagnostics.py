@@ -139,12 +139,12 @@ def test_return_expression_is_inspected(tmp_path):
 
 
 @pytest.mark.parametrize("context_args", [("--context", "entry-state"), ("--context", "call-string", "--context-depth", "1")])
-@pytest.mark.parametrize("solver", ["join", "per-origin", "warrow", "warrow-per-origin"])
-def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(tmp_path, context_args, solver):
+@pytest.mark.parametrize("rule", ["join", "per-origin", "warrow", "warrow-per-origin"])
+def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(tmp_path, context_args, rule):
     _, findings = run_program(
         tmp_path,
         "fun f(n) { return 10 / n; }\nfun main() { x = f(0); y = f(2); }\n",
-        *context_args, "--solver", solver,
+        *context_args, "--globals", rule,
     )
     assert len(findings) == 1
     assert findings[0].group(4, 5) == ("warning", "possible division by zero")

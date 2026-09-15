@@ -34,58 +34,58 @@
 //
 // nodes:
 //   main_pp8_ctx0: pp8 [unknown]
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[6,+∞]
+//       y=[6,+∞]
 //       check y == 20
 //   main_pp9_ctx0: pp9
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[6,+∞]
+//       y=[6,+∞]
 //   main_exit_main_ctx0: exit_main
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[6,+∞]
+//       y=[6,+∞]
 //   main_pp5_ctx0: pp5
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   main_pp6_ctx0: pp6
-//       x=[6,+inf]
-//       y=[-inf,+inf]
+//       x=[6,+∞]
+//       y=⊤
 //   main_pp7_ctx0: pp7 [unknown]
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[6,+∞]
+//       y=[6,+∞]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   g_exit_g_ctx0: exit_g
-//       p=[3,+inf]
+//       p=[3,+∞]
 //   g_pp0_ctx0: pp0
-//       p=[3,+inf]
+//       p=[3,+∞]
 //   g_entry_g_ctx0: entry_g
-//       p=[3,+inf]
+//       p=[3,+∞]
 //   f_exit_f_ctx0: exit_f
 //       p=[3,3]
-//       t=[6,+inf]
+//       t=[6,+∞]
 //   f_pp2_ctx0: pp2
 //       p=[3,3]
-//       t=[-inf,+inf]
+//       t=⊤
 //   f_pp3_ctx0: pp3
 //       p=[3,3]
-//       t=[6,+inf]
+//       t=[6,+∞]
 //   f_entry_f_ctx0: entry_f
 //       p=[3,3]
-//       t=[-inf,+inf]
+//       t=⊤
 //   f_exit_f_ctx1: exit_f
 //       p=[10,10]
-//       t=[6,+inf]
+//       t=[6,+∞]
 //   f_pp2_ctx1: pp2
 //       p=[10,10]
-//       t=[-inf,+inf]
+//       t=⊤
 //   f_pp3_ctx1: pp3
 //       p=[10,10]
-//       t=[6,+inf]
+//       t=[6,+∞]
 //   f_entry_f_ctx1: entry_f
 //       p=[10,10]
-//       t=[-inf,+inf]
+//       t=⊤
 //
 // edges:
 //   g_pp0_ctx0 -> g_exit_g_ctx0: return p + p

@@ -1,204 +1,109 @@
 theory Analysis_Certified
-  imports Analysis_Run_Solver_Sound
+  imports Analysis_Run_Ctx_Sound
 begin
 
 section \<open>One soundness statement over every configuration the CLI answers\<close>
 
 text \<open>
-  The tables so far are one per configuration: a domain, a solver discipline and
-  a context policy, each with its own \<open>sound_table\<close> instance. This theory states
-  the result once, for an arbitrary configuration, over \<^const>\<open>run_voblint\<close>
-  alone.
+  The tables so far are one per domain and context policy, each over any global update
+  rule. This theory states the result once, for an arbitrary configuration, over
+  \<^const>\<open>run_voblint\<close> alone.
 
-  The case split lives in functions over \<^typ>\<open>analysis_plan\<close>, the one thing
-  \<^const>\<open>resolve_analysis_config\<close> resolves a legal configuration to.
-  \<open>plan_terminates\<close> names the one per-program fact a plan needs --- its solver
-  run completed --- and \<open>plan_covers\<close> names the table it built. Both are
-  functions for the reason \<^const>\<open>analyse_state_covers\<close> already is: an abstract
-  state's type is the domain's own carrier, so nothing polymorphic can hold all
-  five. Indexing by plan rather than by configuration means the resolver's legality
-  table and its defaults are consulted, not restated: a configuration owes what its
-  plan owes.
+  The case split lives in two functions over the configuration: \<open>config_terminates\<close>
+  names the one per-program fact a configuration needs --- its solver run completed ---
+  and \<open>analysis_result_covers\<close> names the table it built. Both are functions for the
+  reason a table is: an abstract state's type is the domain's own carrier, so nothing
+  polymorphic can hold all five.
 
   Coverage of the solve is not a premise: the keys of a terminating solve that a run
   can reach are closed on their own, which \<^theory>\<open>Voblint_Result.Routed_Live_Keys\<close>
-  proves from what the generated equations read.  Neither is configuration legality
-  --- an unsupported pairing answers \<^const>\<open>Unsupported_Configuration\<close> --- nor
-  well-formedness: a malformed program answers \<^const>\<open>Malformed_Program\<close>.
+  proves from what the generated equations read. Nor is well-formedness: a malformed
+  program answers \<^const>\<open>Malformed_Program\<close>.
 \<close>
 
-subsection \<open>What a plan owes, and what its table claims\<close>
+subsection \<open>What a configuration owes, and what its table claims\<close>
 
-fun plan_terminates :: "analysis_plan \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "plan_terminates (Plan_Sign Solver_Join) p = sign_join.terminates (declared_global p) p"
-| "plan_terminates (Plan_Sign Solver_PerOrigin) p = sign_po_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval Solver_Warrow) p =
-     interval_warrow_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval Solver_Join) p =
-     interval_join_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval Solver_PerOrigin) p =
-     interval_po_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval Solver_WarrowPerOrigin) p =
-     interval_wpo_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Int Solver_Warrow) p = int_warrow_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Int Solver_Join) p = int_join_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Int Solver_PerOrigin) p = int_po_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Int Solver_WarrowPerOrigin) p =
-     int_wpo_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Parity Solver_Join) p = parity_join.terminates (declared_global p) p"
-| "plan_terminates (Plan_Parity Solver_PerOrigin) p =
-     parity_po_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Congruence Solver_Join) p =
-     congruence_join.terminates (declared_global p) p"
-| "plan_terminates (Plan_Congruence Solver_PerOrigin) p =
-     congruence_po_asm.terminates (declared_global p) p"
-| "plan_terminates (Plan_Sign_EntryState Solver_Join) p =
-     sign_entry_state_terminates_for (declared_global p) p"
-| "plan_terminates (Plan_Interval_EntryState Solver_Warrow) p =
-     entry_state_terminates_prog (declared_global p) p"
-| "plan_terminates (Plan_Interval_EntryState Solver_Join) p =
-     interval_es_join.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval_EntryState Solver_PerOrigin) p =
-     interval_es_po.terminates (declared_global p) p"
-| "plan_terminates (Plan_Interval_EntryState Solver_WarrowPerOrigin) p =
-     interval_es_wpo.terminates (declared_global p) p"
-| "plan_terminates (Plan_Int_EntryState Solver_Join) p =
-     int_es_join_terminates (declared_global p) p"
-| "plan_terminates (Plan_Int_EntryState Solver_Warrow) p = int_es_terminates (declared_global p) p"
-| "plan_terminates (Plan_Parity_EntryState Solver_Join) p =
-     parity_entry_state_terminates_for (declared_global p) p"
-| "plan_terminates (Plan_Congruence_EntryState Solver_Join) p =
-     congruence_entry_state_terminates_for (declared_global p) p"
-| "plan_terminates (Plan_Sign_CallString Solver_Join k) p =
-     sign_cs_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Interval_CallString Solver_Warrow k) p =
-     interval_cs_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Interval_CallString Solver_Join k) p =
-     interval_cs_join_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Interval_CallString Solver_PerOrigin k) p =
-     interval_cs_po_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Interval_CallString Solver_WarrowPerOrigin k) p =
-     interval_cs_wpo_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Int_CallString Solver_Join k) p =
-     int_cs_join_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Int_CallString Solver_Warrow k) p =
-     int_cs_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Parity_CallString Solver_Join k) p =
-     parity_cs_terminates k (declared_global p) p"
-| "plan_terminates (Plan_Congruence_CallString Solver_Join k) p =
-     congruence_cs_terminates k (declared_global p) p"
-| "plan_terminates _ p = False"
+fun config_terminates ::
+    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "config_terminates Sign_Analysis r Ctx_None p = sign_rule.terminates r (declared_global p) p"
+| "config_terminates Sign_Analysis r Ctx_EntryState p =
+     sign_es_rule.terminates r (declared_global p) p"
+| "config_terminates Sign_Analysis r (Ctx_CallString k) p =
+     sign_cs_rule.terminates k r (declared_global p) p"
+| "config_terminates Interval_Analysis r Ctx_None p =
+     interval_rule.terminates r (declared_global p) p"
+| "config_terminates Interval_Analysis r Ctx_EntryState p =
+     interval_es_rule.terminates r (declared_global p) p"
+| "config_terminates Interval_Analysis r (Ctx_CallString k) p =
+     interval_cs_rule.terminates k r (declared_global p) p"
+| "config_terminates Int_Analysis r Ctx_None p = int_rule.terminates r (declared_global p) p"
+| "config_terminates Int_Analysis r Ctx_EntryState p =
+     int_es_rule.terminates r (declared_global p) p"
+| "config_terminates Int_Analysis r (Ctx_CallString k) p =
+     int_cs_rule.terminates k r (declared_global p) p"
+| "config_terminates Parity_Analysis r Ctx_None p =
+     parity_rule.terminates r (declared_global p) p"
+| "config_terminates Parity_Analysis r Ctx_EntryState p =
+     parity_es_rule.terminates r (declared_global p) p"
+| "config_terminates Parity_Analysis r (Ctx_CallString k) p =
+     parity_cs_rule.terminates k r (declared_global p) p"
+| "config_terminates Congruence_Analysis r Ctx_None p =
+     congruence_rule.terminates r (declared_global p) p"
+| "config_terminates Congruence_Analysis r Ctx_EntryState p =
+     congruence_es_rule.terminates r (declared_global p) p"
+| "config_terminates Congruence_Analysis r (Ctx_CallString k) p =
+     congruence_cs_rule.terminates k r (declared_global p) p"
 
-fun plan_covers :: "analysis_plan \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
-  "plan_covers (Plan_Sign Solver_Join) p = table_covers (analyse_sign_result p)"
-| "plan_covers (Plan_Sign Solver_PerOrigin) p =
-     table_covers (analyse_sign_result_per_origin p)"
-| "plan_covers (Plan_Interval Solver_Warrow) p = table_covers (analyse_interval_result p)"
-| "plan_covers (Plan_Interval Solver_Join) p = table_covers (analyse_interval_result_join p)"
-| "plan_covers (Plan_Interval Solver_PerOrigin) p =
-     table_covers (analyse_interval_result_per_origin p)"
-| "plan_covers (Plan_Interval Solver_WarrowPerOrigin) p =
-     table_covers (analyse_interval_result_wpo p)"
-| "plan_covers (Plan_Int Solver_Warrow) p = table_covers (analyse_int_result p)"
-| "plan_covers (Plan_Int Solver_Join) p = table_covers (analyse_int_join_result p)"
-| "plan_covers (Plan_Int Solver_PerOrigin) p = table_covers (analyse_int_per_origin_result p)"
-| "plan_covers (Plan_Int Solver_WarrowPerOrigin) p = table_covers (analyse_int_wpo_result p)"
-| "plan_covers (Plan_Parity Solver_Join) p = table_covers (analyse_parity_result p)"
-| "plan_covers (Plan_Parity Solver_PerOrigin) p =
-     table_covers (analyse_parity_result_per_origin p)"
-| "plan_covers (Plan_Congruence Solver_Join) p = table_covers (analyse_congruence_result p)"
-| "plan_covers (Plan_Congruence Solver_PerOrigin) p =
-     table_covers (analyse_congruence_result_per_origin p)"
-| "plan_covers (Plan_Sign_EntryState Solver_Join) p =
-     table_covers (analyse_sign_entry_state_result p)"
-| "plan_covers (Plan_Interval_EntryState Solver_Warrow) p =
-     table_covers (analyse_interval_entry_state_result p)"
-| "plan_covers (Plan_Interval_EntryState Solver_Join) p =
-     table_covers (interval_es_join.result (declared_global p) p)"
-| "plan_covers (Plan_Interval_EntryState Solver_PerOrigin) p =
-     table_covers (interval_es_po.result (declared_global p) p)"
-| "plan_covers (Plan_Interval_EntryState Solver_WarrowPerOrigin) p =
-     table_covers (interval_es_wpo.result (declared_global p) p)"
-| "plan_covers (Plan_Int_EntryState Solver_Join) p =
-     table_covers (analyse_int_entry_state_result p)"
-| "plan_covers (Plan_Int_EntryState Solver_Warrow) p =
-     table_covers (analyse_int_entry_state_result_warrow p)"
-| "plan_covers (Plan_Parity_EntryState Solver_Join) p =
-     table_covers (analyse_parity_entry_state_result p)"
-| "plan_covers (Plan_Congruence_EntryState Solver_Join) p =
-     table_covers (analyse_congruence_entry_state_result p)"
-| "plan_covers (Plan_Sign_CallString Solver_Join k) p =
-     table_covers (analyse_sign_call_string_result k p)"
-| "plan_covers (Plan_Interval_CallString Solver_Warrow k) p =
-     table_covers (analyse_interval_call_string_result k p)"
-| "plan_covers (Plan_Interval_CallString Solver_Join k) p =
-     table_covers (interval_cs_join_result k (declared_global p) p)"
-| "plan_covers (Plan_Interval_CallString Solver_PerOrigin k) p =
-     table_covers (interval_cs_po_result k (declared_global p) p)"
-| "plan_covers (Plan_Interval_CallString Solver_WarrowPerOrigin k) p =
-     table_covers (interval_cs_wpo_result k (declared_global p) p)"
-| "plan_covers (Plan_Int_CallString Solver_Join k) p =
-     table_covers (analyse_int_call_string_result k p)"
-| "plan_covers (Plan_Int_CallString Solver_Warrow k) p =
-     table_covers (analyse_int_call_string_result_warrow k p)"
-| "plan_covers (Plan_Parity_CallString Solver_Join k) p =
-     table_covers (analyse_parity_call_string_result k p)"
-| "plan_covers (Plan_Congruence_CallString Solver_Join k) p =
-     table_covers (analyse_congruence_call_string_result k p)"
-| "plan_covers _ p = (\<lambda>_ _. False)"
-
-definition config_terminates ::
-    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "config_terminates D solver ctx p =
-     (case resolve_analysis_config (mk_analysis_config D solver ctx) of
-        None \<Rightarrow> False
-      | Some pl \<Rightarrow> plan_terminates pl p)"
-
-definition analysis_result_covers ::
-    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode
-       \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
-  "analysis_result_covers D solver ctx p v s =
-     (case resolve_analysis_config (mk_analysis_config D solver ctx) of
-        None \<Rightarrow> False
-      | Some pl \<Rightarrow> plan_covers pl p v s)"
+fun analysis_result_covers ::
+    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store
+       \<Rightarrow> bool" where
+  "analysis_result_covers Sign_Analysis r Ctx_None p =
+     table_covers (sign_rule.result r (declared_global p) p)"
+| "analysis_result_covers Sign_Analysis r Ctx_EntryState p =
+     table_covers (sign_es_rule.result r (declared_global p) p)"
+| "analysis_result_covers Sign_Analysis r (Ctx_CallString k) p =
+     table_covers (sign_cs_rule.result k r (declared_global p) p)"
+| "analysis_result_covers Interval_Analysis r Ctx_None p =
+     table_covers (interval_rule.result r (declared_global p) p)"
+| "analysis_result_covers Interval_Analysis r Ctx_EntryState p =
+     table_covers (interval_es_rule.result r (declared_global p) p)"
+| "analysis_result_covers Interval_Analysis r (Ctx_CallString k) p =
+     table_covers (interval_cs_rule.result k r (declared_global p) p)"
+| "analysis_result_covers Int_Analysis r Ctx_None p =
+     table_covers (int_rule.result r (declared_global p) p)"
+| "analysis_result_covers Int_Analysis r Ctx_EntryState p =
+     table_covers (int_es_rule.result r (declared_global p) p)"
+| "analysis_result_covers Int_Analysis r (Ctx_CallString k) p =
+     table_covers (int_cs_rule.result k r (declared_global p) p)"
+| "analysis_result_covers Parity_Analysis r Ctx_None p =
+     table_covers (parity_rule.result r (declared_global p) p)"
+| "analysis_result_covers Parity_Analysis r Ctx_EntryState p =
+     table_covers (parity_es_rule.result r (declared_global p) p)"
+| "analysis_result_covers Parity_Analysis r (Ctx_CallString k) p =
+     table_covers (parity_cs_rule.result k r (declared_global p) p)"
+| "analysis_result_covers Congruence_Analysis r Ctx_None p =
+     table_covers (congruence_rule.result r (declared_global p) p)"
+| "analysis_result_covers Congruence_Analysis r Ctx_EntryState p =
+     table_covers (congruence_es_rule.result r (declared_global p) p)"
+| "analysis_result_covers Congruence_Analysis r (Ctx_CallString k) p =
+     table_covers (congruence_cs_rule.result k r (declared_global p) p)"
 
 lemma analyse_program_AnalysedE [elim]:
-  assumes "analyse_program D solver ctx p = Analysed res"
-  obtains pl where "wf_program_compile_input_exec p"
-    and "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
-    and "plan_result pl p = Some res"
-  using assms unfolding analyse_program_def by (auto split: if_splits option.splits)
+  assumes "analyse_program D rule ctx p = Analysed res"
+  obtains "wf_program_compile_input_exec p" and "res = analysis_result D rule ctx p"
+  using assms unfolding analyse_program_def by (auto split: if_splits)
 
 lemma run_voblint_AnalysedE [elim]:
-  assumes "run_voblint D solver ctx p = Analysed res"
-  obtains typed where "analyse_program D solver ctx p = Analysed typed"
-    and "res = map_run_result string_of_abstract_value typed"
-  using assms unfolding run_voblint_def
-  by (cases "analyse_program D solver ctx p") auto
+  assumes "run_voblint D rule ctx p = Analysed res"
+  obtains "wf_program_compile_input_exec p"
+    and "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+  using assms unfolding run_voblint_def analyse_program_def by (auto split: if_splits)
 
-text \<open>
-  What a plan's result unfolds to: its builder applied to its own table, with the
-  plan's functions read at the same plan.
-\<close>
-
-lemmas plan_result_report_defs =
-  analyse_interval_entry_state_join_def analyse_interval_entry_state_per_origin_def
-  analyse_interval_entry_state_wpo_def interval_es_join.verdict_report_def
-  interval_es_po.verdict_report_def interval_es_wpo.verdict_report_def
-  analyse_interval_call_string_report_join_def
-  analyse_interval_call_string_report_per_origin_def
-  analyse_interval_call_string_report_wpo_def routed_dg_pipeline.verdict_report_def
-
-lemmas plan_result_unfold =
-  plan_terminates.simps plan_covers.simps plan_result_def
-  analysis_plan.case solver_choice.case Let_def plan_result_report_defs
-
-subsection \<open>Every plan's result is sound at every collected store\<close>
+subsection \<open>Every configuration's result is sound at every collected store\<close>
 
 text \<open>
   The three builders a result comes from, each read at one store the collecting
-  semantics admits. The table premise comes before the store so that a caller can
-  leave both as subgoals.
+  semantics admits.
 \<close>
 
 lemma run_result_sound:
@@ -210,359 +115,140 @@ lemma run_result_sound:
   by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) (simp_all add: assms(1))
 
 lemma unit_run_result_sound:
-  assumes "Some (unit_run_result into enter classify r p) = Some res"
-      and "sound_table p r classify"
+  assumes "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
-  using assms(1) unfolding unit_run_result_def option.inject
-  by (rule run_result_sound [OF sym assms(2,3)])
+  shows "table_covers r v s
+         \<and> checks_sound_at (unit_run_result into enter classify r p) v s
+         \<and> diagnostics_sound_at (unit_run_result into enter classify r p) p v s"
+  unfolding unit_run_result_def by (rule run_result_sound [OF refl assms])
 
 lemma entry_state_run_result_sound:
-  assumes "Some (entry_state_run_result into enter classify r p) = Some res"
-      and "sound_table p r classify"
+  assumes "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
-  using assms(1) unfolding entry_state_run_result_def option.inject
-  by (rule run_result_sound [OF sym assms(2,3)])
+  shows "table_covers r v s
+         \<and> checks_sound_at (entry_state_run_result into enter classify r p) v s
+         \<and> diagnostics_sound_at (entry_state_run_result into enter classify r p) p v s"
+  unfolding entry_state_run_result_def by (rule run_result_sound [OF refl assms])
 
 lemma call_string_run_result_sound:
-  assumes "Some (call_string_run_result into enter classify r k p) = Some res"
-      and "sound_table p r classify"
+  assumes "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
-  shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
-  using assms(1) unfolding call_string_run_result_def option.inject
-  by (rule run_result_sound [OF sym assms(2,3)])
+  shows "table_covers r v s
+         \<and> checks_sound_at (call_string_run_result into enter classify r k p) v s
+         \<and> diagnostics_sound_at (call_string_run_result into enter classify r k p) p v s"
+  unfolding call_string_run_result_def by (rule run_result_sound [OF refl assms])
 
 text \<open>
-  One line per plan the resolver can return. A pairing it rejects never reaches
-  here; a plan \<^const>\<open>plan_result\<close> refuses has no result, which the closing method
-  of each case dismisses. Every table asks for well-formedness and termination,
-  and for nothing else.
+  One line per domain and context policy. Every table asks for well-formedness and
+  termination, and for nothing else.
 \<close>
 
-lemma plan_result_sound:
+lemma analysis_result_sound:
   assumes wf: "wf_program_compile_input p"
-      and terminates: "plan_terminates pl p"
-      and ans: "plan_result pl p = Some res"
+      and terminates: "config_terminates D rule ctx p"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
-  shows "plan_covers pl p v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
-proof (cases pl)
-  case (Plan_Sign sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Sign Solver_Join plan_result_unfold
-        fst_analyse_sign_ctx_solved_for analyse_sign_result_def [symmetric]
-      by - (rule unit_run_result_sound [OF _ sign_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Sign Solver_PerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ sign_po_table])
-  qed (use ans in \<open>simp_all add: Plan_Sign plan_result_def\<close>)
+  shows "analysis_result_covers D rule ctx p v s
+         \<and> checks_sound_at (analysis_result D rule ctx p) v s
+         \<and> diagnostics_sound_at (analysis_result D rule ctx p) p v s"
+  using terminates
+proof (cases D; cases ctx)
+  assume "D = Sign_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
+  then show ?thesis by (simp add: unit_run_result_sound [OF sign_rule_table [OF wf] mem])
 next
-  case (Plan_Interval sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval Solver_Warrow plan_result_unfold
-        fst_analyse_interval_ctx_solved_for analyse_interval_result_def [symmetric]
-      by - (rule unit_run_result_sound [OF _ interval_table])
-  next
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval Solver_Join plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ interval_join_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval Solver_PerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ interval_po_table])
-  next
-    case Solver_WarrowPerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval Solver_WarrowPerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ interval_wpo_table])
-  qed
+  assume "D = Sign_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: entry_state_run_result_sound [OF sign_es_rule_table [OF wf] mem])
 next
-  case (Plan_Int sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int Solver_Warrow plan_result_unfold
-        fst_analyse_int_ctx_solved_warrow_for analyse_int_result_for_def [symmetric]
-        analyse_int_result_def [symmetric]
-      by - (rule unit_run_result_sound [OF _ int_table])
-  next
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int Solver_Join plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ int_join_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int Solver_PerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ int_po_table])
-  next
-    case Solver_WarrowPerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int Solver_WarrowPerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ int_wpo_table])
-  qed
+  fix k assume "D = Sign_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: call_string_run_result_sound [OF sign_cs_rule_table [OF wf] mem])
 next
-  case (Plan_Parity sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Parity Solver_Join plan_result_unfold
-        fst_analyse_parity_ctx_solved_for analyse_parity_result_def [symmetric]
-      by - (rule unit_run_result_sound [OF _ parity_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Parity Solver_PerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ parity_po_table])
-  qed (use ans in \<open>simp_all add: Plan_Parity plan_result_def\<close>)
+  assume "D = Interval_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
+  then show ?thesis by (simp add: unit_run_result_sound [OF interval_rule_table [OF wf] mem])
 next
-  case (Plan_Congruence sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Congruence Solver_Join plan_result_unfold
-        fst_analyse_congruence_ctx_solved_for analyse_congruence_result_def [symmetric]
-      by - (rule unit_run_result_sound [OF _ congruence_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Congruence Solver_PerOrigin plan_result_unfold
-      by - (rule unit_run_result_sound [OF _ congruence_po_table])
-  qed (use ans in \<open>simp_all add: Plan_Congruence plan_result_def\<close>)
+  assume "D = Interval_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: entry_state_run_result_sound [OF interval_es_rule_table [OF wf] mem])
 next
-  case (Plan_Sign_EntryState sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Sign_EntryState Solver_Join plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ sign_es_table])
-  qed (use ans in \<open>simp_all add: Plan_Sign_EntryState plan_result_def\<close>)
+  fix k
+  assume "D = Interval_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: call_string_run_result_sound [OF interval_cs_rule_table [OF wf] mem])
 next
-  case (Plan_Interval_EntryState sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_EntryState Solver_Warrow plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ interval_es_table])
-  next
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_EntryState Solver_Join plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ interval_es_join_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_EntryState Solver_PerOrigin plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ interval_es_po_table])
-  next
-    case Solver_WarrowPerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_EntryState Solver_WarrowPerOrigin plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ interval_es_wpo_table])
-  qed
+  assume "D = Int_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
+  then show ?thesis by (simp add: unit_run_result_sound [OF int_rule_table [OF wf] mem])
 next
-  case (Plan_Int_EntryState sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int_EntryState Solver_Join plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ int_es_join_table])
-  next
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int_EntryState Solver_Warrow plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ int_es_table])
-  qed (use ans in \<open>simp_all add: Plan_Int_EntryState plan_result_def\<close>)
+  assume "D = Int_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: entry_state_run_result_sound [OF int_es_rule_table [OF wf] mem])
 next
-  case (Plan_Parity_EntryState sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Parity_EntryState Solver_Join plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ parity_es_table])
-  qed (use ans in \<open>simp_all add: Plan_Parity_EntryState plan_result_def\<close>)
+  fix k assume "D = Int_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: call_string_run_result_sound [OF int_cs_rule_table [OF wf] mem])
 next
-  case (Plan_Congruence_EntryState sc)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Congruence_EntryState Solver_Join plan_result_unfold
-      by - (rule entry_state_run_result_sound [OF _ congruence_es_table])
-  qed (use ans in \<open>simp_all add: Plan_Congruence_EntryState plan_result_def\<close>)
+  assume "D = Parity_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
+  then show ?thesis by (simp add: unit_run_result_sound [OF parity_rule_table [OF wf] mem])
 next
-  case (Plan_Sign_CallString sc k)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Sign_CallString Solver_Join plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ sign_cs_table])
-  qed (use ans in \<open>simp_all add: Plan_Sign_CallString plan_result_def\<close>)
+  assume "D = Parity_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: entry_state_run_result_sound [OF parity_es_rule_table [OF wf] mem])
 next
-  case (Plan_Interval_CallString sc k)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_CallString Solver_Warrow plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ interval_cs_table])
-  next
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_CallString Solver_Join plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ interval_cs_join_table])
-  next
-    case Solver_PerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_CallString Solver_PerOrigin plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ interval_cs_po_table])
-  next
-    case Solver_WarrowPerOrigin
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Interval_CallString Solver_WarrowPerOrigin plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ interval_cs_wpo_table])
-  qed
+  fix k assume "D = Parity_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: call_string_run_result_sound [OF parity_cs_rule_table [OF wf] mem])
 next
-  case (Plan_Int_CallString sc k)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int_CallString Solver_Join plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ int_cs_join_table])
-  next
-    case Solver_Warrow
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Int_CallString Solver_Warrow plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ int_cs_table])
-  qed (use ans in \<open>simp_all add: Plan_Int_CallString plan_result_def\<close>)
+  assume "D = Congruence_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: unit_run_result_sound [OF congruence_rule_table [OF wf] mem])
 next
-  case (Plan_Parity_CallString sc k)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Parity_CallString Solver_Join plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ parity_cs_table])
-  qed (use ans in \<open>simp_all add: Plan_Parity_CallString plan_result_def\<close>)
+  assume "D = Congruence_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: entry_state_run_result_sound [OF congruence_es_rule_table [OF wf] mem])
 next
-  case (Plan_Congruence_CallString sc k)
-  show ?thesis
-  proof (cases sc)
-    case Solver_Join
-    show ?thesis
-      using wf terminates ans mem
-      unfolding Plan_Congruence_CallString Solver_Join plan_result_unfold
-      by - (rule call_string_run_result_sound [OF _ congruence_cs_table])
-  qed (use ans in \<open>simp_all add: Plan_Congruence_CallString plan_result_def\<close>)
+  fix k
+  assume "D = Congruence_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
+  then show ?thesis
+    by (simp add: call_string_run_result_sound [OF congruence_cs_rule_table [OF wf] mem])
 qed
 
 text \<open>
-  Which checks a result lists does not depend on the table behind it: every plan's
-  check column has one entry per compiled check, whatever it concluded there.
+  Which checks a result lists does not depend on the table behind it: every
+  configuration's check column has one entry per compiled check, whatever it concluded.
 \<close>
 
-lemma plan_result_check_sites:
-  assumes "plan_result pl p = Some res"
-  shows "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks res)
-           = check_sites (prog_cfg p)"
-  using assms
-  by (cases pl)
-     (auto simp: plan_result_def run_result_builder_defs result_checks_of_sites
-        split: solver_choice.splits)
+lemma analysis_result_check_sites:
+  "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks (analysis_result D rule ctx p))
+     = check_sites (prog_cfg p)"
+  by (cases D; cases ctx) (simp_all add: run_result_builder_defs result_checks_of_sites)
 
 text \<open>
-  The same claims read through \<^const>\<open>run_voblint\<close>: an analysed answer names the
-  plan and was only given for a well-formed program, the configuration's termination
-  is its plan's, and rendering abstract values changes neither the check column nor
-  the diagnostics.
+  The same claims read through \<^const>\<open>run_voblint\<close>: an analysed answer was only
+  given for a well-formed program, and rendering abstract values changes neither the
+  check column nor the diagnostics.
 \<close>
 
-lemma run_voblint_analysed_plan:
-  assumes "run_voblint D solver ctx p = Analysed res"
-  obtains pl typed where "wf_program_compile_input_exec p"
-    and "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
-    and "plan_result pl p = Some typed"
-    and "res = map_run_result string_of_abstract_value typed"
-  using assms by (elim run_voblint_AnalysedE analyse_program_AnalysedE) blast
-
 lemma run_voblint_sound_at:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
-  shows "analysis_result_covers D solver ctx p v s \<and> checks_sound_at res v s
+  shows "analysis_result_covers D rule ctx p v s \<and> checks_sound_at res v s
            \<and> diagnostics_sound_at res p v s"
 proof -
-  from ans obtain pl typed
-    where wfx: "wf_program_compile_input_exec p"
-      and pl: "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
-      and pres: "plan_result pl p = Some typed"
-      and res: "res = map_run_result string_of_abstract_value typed"
-    by (rule run_voblint_analysed_plan)
-  from terminates have "plan_terminates pl p"
-    unfolding config_terminates_def pl option.case .
-  from plan_result_sound [OF wf_program_compile_input_exec_sound [OF wfx] this pres mem]
-  show ?thesis
-    unfolding analysis_result_covers_def pl option.case res map_run_result_sound_at .
+  from ans have wfx: "wf_program_compile_input_exec p"
+    and res: "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+    by blast+
+  from analysis_result_sound [OF wf_program_compile_input_exec_sound [OF wfx] terminates mem]
+  show ?thesis unfolding res map_run_result_sound_at .
 qed
 
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates D solver ctx p"
-    and ans: "run_voblint D solver ctx p = Analysed res"
+  assumes terminates: "config_terminates D rule ctx p"
+    and ans: "run_voblint D rule ctx p = Analysed res"
     and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
       (cinit_stores (declared_global p)) v"
     and absent: "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
@@ -571,8 +257,8 @@ theorem run_voblint_arithmetic_safe:
   unfolding diagnostics_sound_at_def by blast
 
 corollary run_voblint_arithmetic_intra_safe:
-  assumes "config_terminates D solver ctx p"
-    and "run_voblint D solver ctx p = Analysed res"
+  assumes "config_terminates D rule ctx p"
+    and "run_voblint D rule ctx p = Analysed res"
     and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
       (cinit_stores (declared_global p)) v"
     and "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
@@ -591,25 +277,23 @@ text \<open>
 \<close>
 
 corollary run_voblint_check_sites:
-  assumes "run_voblint D solver ctx p = Analysed res"
+  assumes "run_voblint D rule ctx p = Analysed res"
   shows "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"
 proof -
-  from assms obtain pl typed
-    where "plan_result pl p = Some typed"
-      and res: "res = map_run_result string_of_abstract_value typed"
-    by (rule run_voblint_analysed_plan)
-  from plan_result_check_sites [OF this(1)] show ?thesis by (simp add: res)
+  from assms have "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+    by blast
+  then show ?thesis by (simp add: analysis_result_check_sites)
 qed
 
 subsection \<open>The endpoint\<close>
 
 text \<open>
-  Run the source program, stop wherever you like, and ask any accepted
-  configuration for a result: there is a graph node and frame stack for where you
-  stopped, the store in your hands is one the collecting semantics really admits
-  there, the table that configuration built describes it, and every check listed
-  there holds of it, with none there marked unreachable.
+  Run the source program, stop wherever you like, and ask any configuration for a
+  result: there is a graph node and frame stack for where you stopped, the store in
+  your hands is one the collecting semantics really admits there, the table that
+  configuration built describes it, and every check listed there holds of it, with none
+  there marked unreachable.
 \<close>
 
 theorem run_voblint_certified_source_sound:
@@ -617,16 +301,16 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 \<in> cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
   shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               \<and> analysis_result_covers D solver ctx p v s
+               \<and> analysis_result_covers D rule ctx p v s
                \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
-  from ans have "wf_program_compile_input_exec p" by (rule run_voblint_analysed_plan)
+  from ans have "wf_program_compile_input_exec p" by (rule run_voblint_AnalysedE)
   from source_reaches_ltr_collect
          [OF wf_program_compile_input_exec_sound [OF this] s0 run]
   obtain v stk
@@ -653,8 +337,8 @@ theorem run_voblint_check_sound:
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some e"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
   shows "\<exists>c \<in> set (res_checks res). check_exp c = e
            \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
@@ -679,14 +363,14 @@ qed
 
 text \<open>
   What a dead check claims, stated at the point rather than at a run, and for every
-  accepted configuration. The endpoint above is existential in its witness, so
-  reading it backwards does not follow from it; this is proved forwards instead,
-  from the claim at every collected store.
+  configuration. The endpoint above is existential in its witness, so reading it
+  backwards does not follow from it; this is proved forwards instead, from the claim at
+  every collected store.
 \<close>
 
 corollary run_voblint_dead_check_unreached:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
       and listed: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
@@ -698,58 +382,6 @@ proof (rule equals0I)
   from run_voblint_sound_at [OF terminates ans this]
   have "checks_sound_at res (check_point chk) s" by blast
   with listed dead show False unfolding checks_sound_at_def by blast
-qed
-
-text \<open>
-  The same endpoint at a domain's default configuration, in the vocabulary
-  \<^const>\<open>analyse\<close> speaks: at the unit context a table covering a store is the one
-  entry describing it.
-\<close>
-
-lemma table_covers_unit_iff:
-  fixes r :: "(unit, 'a::sound_domain abs_state) analysis_result"
-  shows "table_covers r v s \<longleftrightarrow> s \<in> gamma_point (lookup_context r v ())"
-proof
-  assume "table_covers r v s"
-  then obtain c st where "lookup_context r v c = Lifted st" and "s \<in> \<lbrakk>st\<rbrakk>"
-    unfolding table_covers_def by blast
-  then show "s \<in> gamma_point (lookup_context r v ())" by (cases c) simp
-next
-  assume "s \<in> gamma_point (lookup_context r v ())"
-  then show "table_covers r v s"
-    by (cases "lookup_context r v ()") (simp_all add: table_coversI)
-qed
-
-corollary run_voblint_source_sound:
-  fixes p :: imp_prog and s0 s :: store
-  assumes terminates: "config_terminates D None Ctx_None p"
-      and s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and ans: "run_voblint D None Ctx_None p = Analysed res"
-  shows "\<exists>v stk.
-           csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-         \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) v
-         \<and> analyse_state_covers D p v s
-         \<and> (\<forall>c \<in> set (res_checks res). check_point c = v \<longrightarrow>
-              (check_verdict c = Lifted Check_Proved \<longrightarrow> truthy (aval (check_exp c) s))
-            \<and> (check_verdict c = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (check_exp c) s))
-            \<and> check_verdict c \<noteq> Bot)"
-proof -
-  from run_voblint_certified_source_sound [OF s0 run terminates ans]
-  obtain v stk
-    where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
-      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                      (cinit_stores (declared_global p)) v"
-      and cov: "analysis_result_covers D None Ctx_None p v s"
-      and chk: "checks_sound_at res v s"
-    by blast
-  from cov have "analyse_state_covers D p v s"
-    by (cases D)
-       (simp_all add: analysis_result_covers_def mk_analysis_config_def table_covers_unit_iff)
-  with m mem chk show ?thesis
-    unfolding checks_sound_at_def by blast
 qed
 
 end

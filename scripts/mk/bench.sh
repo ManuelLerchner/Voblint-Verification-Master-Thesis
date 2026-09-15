@@ -44,7 +44,7 @@ while [ "$i" -lt "$n" ]; do
     --plot) plot=1 ;;
     --plot=*) plot=1; plot_out="${arg#--plot=}" ;;
     --analysis) i=$((i + 1)); domains="${args[$i]:-}" ;;
-    --context | --context-depth | --solver | --timeout | --html-out)
+    --context | --context-depth | --globals | --timeout | --html-out)
       passthrough+=("$arg" "${args[$((i + 1))]:-}"); i=$((i + 1)) ;;
     -*) passthrough+=("$arg") ;;
     *) file="$arg" ;;

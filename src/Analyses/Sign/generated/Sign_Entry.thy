@@ -26,13 +26,12 @@ text \<open>
   \<open>vars_cover\<close> readings, which a caller can discharge \<^theory_text>\<open>by eval\<close>, follow each
   discipline that publishes them.
 
-  No per-domain \<^theory_text>\<open>export_code\<close> here: a caller reaches the generic, already-sound report
-  through the unified dispatcher \<open>analyse\<close>, which is the one thing exported to OCaml. A
-  second, domain-specific export module would be a parallel, redundant API surface for
-  the same computation.
+  No per-domain \<^theory_text>\<open>export_code\<close> here: a caller reaches every solved table through
+  \<open>run_voblint\<close>, which is the one thing exported to OCaml. A second, domain-specific
+  export module would be a parallel, redundant API surface for the same computation.
 \<close>
 
-subsection \<open>Always join: the production default\<close>
+subsection \<open>Always join\<close>
 
 lemma sign_unit_state_at_eq:
   "sign_unit_state_at gs p v

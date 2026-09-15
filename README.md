@@ -165,7 +165,7 @@ threads to procedure activations.
 The headline theorem is
 [`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy).
 It ranges over the same `run_voblint` entry point exported to OCaml and over
-every accepted domain, solver discipline, and context policy:
+every domain, global update rule, and context policy:
 
 ```isabelle
 theorem run_voblint_certified_source_sound:
@@ -173,12 +173,12 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers D solver ctx p v s
+               ∧ analysis_result_covers D rule ctx p v s
                ∧ checks_sound_at res v s"
 ```
 
@@ -187,7 +187,7 @@ theorem run_voblint_certified_source_sound:
 | `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
 | `run` | An arbitrary finite VIMP execution prefix from `main`, with the residual command, current store, and pending caller frames made explicit. Source termination is not required. |
 | `terminates` | The selected verified-solver run terminates for this program. This is the sole analyzer-side proof obligation. |
-| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed res`. It therefore supplies configuration legality and well-formedness. |
+| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed res`. It therefore supplies well-formedness. |
 
 The conclusion supplies a CFG node `v` and matching call stack `stk`:
 
@@ -199,30 +199,29 @@ The conclusion supplies a CFG node `v` and matching call stack `stk`:
 | `checks_sound_at res v s` | No check listed at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
 
 `config_terminates` and `analysis_result_covers` dispatch over the selected
-plan. They cannot store every domain behind one polymorphic abstract-state
+configuration. They cannot store every domain behind one polymorphic abstract-state
 value because each domain has its own carrier type. “Certified” names the
 theorem; the CLI returns a report, not a proof certificate.
 
-The theorem covers every row-producing configuration:
+The theorem covers every configuration:
 
 ```text
 D      in {Sign, Interval, Parity, Congruence, Int}
-ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
-solver = None, or any discipline accepted for that domain and policy
+rule   in {Globals_Join, Globals_Per_Origin, Globals_Warrow, Globals_Warrow_Per_Origin}
+ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}   (k = 0 included)
 ```
 
-There are 32 accepted plans. `None` selects a domain's default discipline;
-naming another accepted discipline changes how the equations are solved, not
-the guarantee. Unsupported combinations return `Unsupported_Configuration`;
-ill-formed programs return `Malformed_Program`.
+The rule selects how the solver merges a value side-effected into a global
+unknown; it changes how the equations are solved, not the guarantee. Every
+combination is analysed; ill-formed programs return `Malformed_Program`.
 
-All 32 plans discharge the same [`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
-interface. `Analysis_Run_Sound` establishes the generic endpoint,
-`Analysis_Run_Ctx_Sound` lifts contextual results through
-[`sound_table_of_activation`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy),
-and `Analysis_Run_Solver_Sound` registers explicitly selected disciplines. A
-new supported discipline therefore needs an analysis registration and
-instantiation, not new source-level reasoning.
+Every configuration discharges the same [`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
+interface, through one table lemma per domain and context policy that holds for
+any rule. `Analysis_Run_Sound` establishes the generic endpoint and the
+context-free tables, and `Analysis_Run_Ctx_Sound` lifts contextual results through
+[`sound_table_of_activation`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy).
+A new domain therefore needs its rule-parametric registrations and table lemmas,
+not new source-level reasoning.
 
 ### Checks and dead code
 
@@ -241,8 +240,8 @@ theorem run_voblint_check_sound:
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some e"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
   shows "∃c ∈ set (res_checks res). check_exp c = e
            ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
@@ -262,8 +261,8 @@ collecting semantics.
 
 ```isabelle
 corollary run_voblint_dead_check_unreached:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
       and listed: "chk ∈ set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
@@ -288,7 +287,7 @@ by order; that pairing is outside the proof.
 connects the returned diagnostics to concrete divisors. For a terminating,
 accepted analysis, absence of a diagnostic at a reachable point guarantees
 that every divisor in that point's expressions is nonzero in every store
-collected there. It covers the same domain, solver, and context configurations
+collected there. It covers the same domain, rule, and context configurations
 as the other CLI soundness endpoints.
 
 <details>
@@ -296,8 +295,8 @@ as the other CLI soundness endpoints.
 
 ```isabelle
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx p = Analysed res"
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
       and reachable: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
       and quiet: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
@@ -406,8 +405,7 @@ per-configuration statements remain in
 [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md). The README keeps the three
 configuration-generic, reader-facing results above.
 
-Those lower layers retain the same content in more specialized forms: the
-context-free dispatcher states verdict soundness over its verdict list; each
+Those lower layers retain the same content in more specialized forms: each
 domain states source and completed-run soundness over its own result table; and
 the domain-free source bridge turns any `ltr_collect` bound into a source-run
 claim. New domains reuse that source reasoning.
@@ -415,8 +413,7 @@ claim. New domains reuse that source reasoning.
 <details>
 <summary>Lower-level API ladder</summary>
 
-`analyse_certified` packages the context-free analysis obligations. Domains
-expose `analyse_<domain>_source_sound` and
+Domains expose `analyse_<domain>_source_sound` and
 `analyse_<domain>_completed_run_sound`; the domain-independent
 `source_sound_from_ltr_collecting_cap` turns any `ltr_collect` bound into a
 source-execution claim.
@@ -426,7 +423,7 @@ source-execution claim.
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
 shows the headline is non-vacuous. It evaluates well-formedness, solver
 termination, and the answer for one program using the `Int` product, a
-length-one call string, and an explicit always-join solver. It also constructs
+length-one call string, and the always-join global update rule. It also constructs
 the source run through both calls and its check. Its full certificate names the
 returned answer, the `PROVED` check, the completed run, collection at `Statement
 4`, result coverage, check soundness, and the checked condition's truth.
@@ -485,22 +482,20 @@ component *plus* cross-component reduction, not a better interval transfer
 
 ## Domains and configurations
 
-| Domain | `--analysis` | Result table | Default solver | Context policies |
-| --- | --- | --- | --- | --- |
-| Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
-| Interval | `interval` | `analyse_interval_result` | warrowing | `none`, `entry-state`, `call-string` |
-| Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
-| Congruence | `congruence` | `analyse_congruence_result` | join | `none`, `entry-state`, `call-string` |
-| Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
+| Domain | `--analysis` | Registrations `run_voblint` reads | Context policies |
+| --- | --- | --- | --- |
+| Sign | `sign` | `sign_rule`, `sign_es_rule`, `sign_cs_rule` | `none`, `entry-state`, `call-string` |
+| Interval | `interval` | `interval_rule`, `interval_es_rule`, `interval_cs_rule` | `none`, `entry-state`, `call-string` |
+| Parity | `parity` | `parity_rule`, `parity_es_rule`, `parity_cs_rule` | `none`, `entry-state`, `call-string` |
+| Congruence | `congruence` | `congruence_rule`, `congruence_es_rule`, `congruence_cs_rule` | `none`, `entry-state`, `call-string` |
+| Int (Sign × Interval × Parity × Congruence) | `int` | `int_rule`, `int_es_rule`, `int_cs_rule` | `none`, `entry-state`, `call-string` |
 
 Every domain supplies a `widen` operator; Sign and Parity are finite lattices
-with `widen = sup`. What only Interval and the `int` product have is a solved
-table and a soundness corollary behind the widening rules, so the other
-`Solver_Warrow` pairings stay unsupported rather than being exposed on the
-strength of the instance alone. Unsupported `(domain, solver)` and
-`(domain, context)` pairings are rejected explicitly, answering `None` at
-[`resolve_analysis_config`](src/Executable_Surface/CLI/Analysis_Config.thy) rather
-than falling back silently.
+with `widen = sup`. Each registration takes the global update rule as a
+parameter, so every domain answers every `--globals` rule
+(`join`, `per-origin`, `warrow`, `warrow-per-origin`) at every context policy.
+The CLI defaults to `warrow` for every domain; `run_voblint` itself has no
+default.
 
 ## The generic D/G framework
 
@@ -550,7 +545,7 @@ and [`docs/ANALYSIS_ASSEMBLY_GENERATION.md`](docs/ANALYSIS_ASSEMBLY_GENERATION.m
 | `src/Abstract_Interpreter/Framework` | Generic D/G specifications, routing, constraints, results |
 | `src/Abstract_Interpreter/Exec` | Executable finite states and their refinement |
 | `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`, which also hold the domain-independent end-to-end endpoints (`source_reaches_ltr_collect`, `unit_dg_analysis`); each selectable domain owns its `<Domain>_Entry.thy` |
-| `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
+| `src/Executable_Surface/CLI` | `run_voblint` and its soundness theorems; the one layer that sees every domain |
 | `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
 | `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
 | `manifests/` | Canonical YAML inputs for analysis registration and VIMP grammar generation |

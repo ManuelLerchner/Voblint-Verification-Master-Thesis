@@ -10,7 +10,7 @@
 // that the loop head was narrowed, not merely widened and joined.
 //
 // Solver-invariant: 15/16/17 in this directory are the same program under
-// --solver join/per-origin/warrow-per-origin and agree on both verdicts,
+// --globals join/per-origin/warrow-per-origin and agree on both verdicts,
 // the NOWARN included.
 global g;
 fun main() {

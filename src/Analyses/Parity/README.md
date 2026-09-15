@@ -27,7 +27,7 @@ Parity_Domain      the lattice, order, and its concretization
   -> Parity_Classify                    classification of one check condition
   -> generated/Parity_Assembly          the context-insensitive route, as one
                                         interpretation of the shared unit_dg_analysis
-                                        per solver discipline
+                                        per solver discipline, and one at any rule
   -> generated/Parity_Analyses          the call-string and entry-state policies
                                         (see below)
   -> generated/Parity_Checks            the published result table and report
@@ -37,9 +37,9 @@ Parity_Domain      the lattice, order, and its concretization
 The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
 from `manifests/analyses.yaml`.
 
-`Parity_Assembly` holds two `global_interpretation`s of `unit_dg_analysis`
-(`Shared/Result/Unit_DG_Analysis.thy`): `parity_join` (always-join, production)
-and `parity_po_asm` (per-origin). Each takes the same ten facts — its transfer
+`Parity_Assembly` holds three `global_interpretation`s of `unit_dg_analysis`
+(`Shared/Result/Unit_DG_Analysis.thy`): `parity_join` (always-join, production),
+`parity_po_asm` (per-origin) and `parity_rule` (any global update rule). Each takes the same ten facts — its transfer
 contract, two commutation laws, the solver contract, the classifier contract and
 the initial-state contract — and gets back the equation system, the solve, the
 reader, the result table, the report and every soundness endpoint. Nothing in
@@ -78,12 +78,12 @@ activation-indexed soundness endpoint — for every domain at every policy. Pari
 supplies its own implementation and facts, the routing functions, the solver,
 and the published names. Nothing else.
 
-Both are selectable from the CLI at `Solver_Join`: `--context entry-state` and
-`--context call-string --context-depth K` for `K >= 1`. `Solver_PerOrigin` is
-available at the unit context only, and `Solver_Warrow` at none of the three —
-`parity` is a finite lattice whose `warrowing` instance sets `widen = sup`, so
-the rule is mechanically available, but no solved table or soundness corollary
-stands behind it and the resolver follows proved capability.
+Both are selectable from the CLI at every `--globals` rule: `--context entry-state`
+and `--context call-string --context-depth K` for any `K >= 0`. `run_voblint` reads
+`parity_es_rule` and `parity_cs_rule`, which take the global update rule as a
+parameter. The per-discipline registrations stay at always-join: `parity` is a
+finite lattice whose `warrowing` instance sets `widen = sup`, so a warrowing rule
+buys no termination the join lacks.
 
 A call string is the last `k` call sites on the stack, so a procedure entered
 from two places is analysed twice rather than once at the join. `cs_route`

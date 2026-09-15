@@ -112,13 +112,12 @@
           </div>
 
           <div class="control-group">
-            <label for="solver-select">Solver discipline</label>
-            <select id="solver-select">
-              <option value="default" selected>Default</option>
+            <label for="globals-select" title="How the solver merges a value side-effected into a global">Globals</label>
+            <select id="globals-select">
               <option value="join">Join</option>
-              <option value="per-origin">Per origin</option>
-              <option value="warrow">Warrowing</option>
-              <option value="warrow-per-origin">Warrowing per origin</option>
+              <option value="per-origin">Join per origin</option>
+              <option value="warrow" selected>Warrow</option>
+              <option value="warrow-per-origin">Warrow per origin</option>
             </select>
           </div>
 
@@ -138,7 +137,7 @@
             <input
               id="context-depth"
               type="number"
-              min="1"
+              min="0"
               step="1"
               value="1"
               inputmode="numeric"
@@ -173,7 +172,7 @@
             </span>
           </div>
 
-          <p class="control-help" id="solver-help"></p>
+          <p class="control-help" id="globals-help"></p>
         </div>
 
         <details id="raw-result" class="raw-result">
@@ -312,9 +311,9 @@
       </div>
 
       <p class="notice">
-        Unsupported domain, solver, and context combinations are rejected rather
-        than silently falling back to another configuration. A successful browser
-        run therefore reflects the configuration shown above.
+        Every domain, globals rule, and context combination runs exactly as
+        selected: the solver warrows locals at loop heads under every rule, and the
+        rule only decides how side-effected globals are merged.
       </p>
     </section>
 
@@ -343,8 +342,8 @@ Proof:      source execution -&gt; activation-local traces (valid_ltr)
       <p class="body-copy">
         The headline theorem,
         <code>run_voblint_certified_source_sound</code>, ranges over the same
-        <code>run_voblint</code> entry point exported to OCaml and over each accepted
-        domain, solver discipline, and context policy. For a modeled source execution,
+        <code>run_voblint</code> entry point exported to OCaml and over each
+        domain, globals rule, and context policy. For a modeled source execution,
         it supplies a matching CFG node and call stack with the following guarantees.
       </p>
 

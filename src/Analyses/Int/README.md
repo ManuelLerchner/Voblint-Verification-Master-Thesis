@@ -34,7 +34,7 @@ Int_Refinement_Control  the three refine modes
   -> Int_Solver_Analyses                             their reports at Apinis warrowing
   -> Int_Classify                                    check discharge
   -> generated/Int_Assembly                          the unit-context route, four
-                                                     disciplines, mode pinned
+                                                     disciplines and int_rule, mode pinned
   -> Int_Checks                                      the published names and the report
   -> Int_Entry                                       the production endpoint, and its
                                                      soundness at int_dom
@@ -42,7 +42,7 @@ Int_Refinement_Control  the three refine modes
 
 At the unit context Int publishes all four disciplines, as Interval does: its
 Interval component has infinite ascending chains, so a loop-carried value needs
-Apinis warrowing to terminate, and that is the production default.
+Apinis warrowing to terminate, and that registration owns the unsuffixed names.
 
 Public result and report entry points select `Refine_Fixpoint` with Apinis
 warrowing. Lower runtime layers retain the mode parameter for comparisons and

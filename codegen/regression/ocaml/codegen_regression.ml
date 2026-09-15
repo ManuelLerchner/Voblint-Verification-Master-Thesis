@@ -169,17 +169,13 @@ let rec show_exp_compact = function
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
 
 (* One analysis run, reduced to the column this driver compares: the check
-   point, the condition, and the lifted verdict. A refusal is not an outcome to
-   compare against -- every configuration named here is one the analyzer
-   supports, so an answer other than `Analysed` is a defect in the export
-   rather than a failed expectation. *)
+   point, the condition, and the lifted verdict. Every program here is
+   well-formed, so `Malformed_Program` is a defect in the export rather than a
+   failed expectation. *)
 let report domain prog =
-  match run_voblint domain None Ctx_None prog with
+  match run_voblint domain Globals_Warrow Ctx_None prog with
   | Malformed_Program ->
     print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
-    exit 1
-  | Unsupported_Configuration ->
-    print_endline ("FAIL " ^ domain_label domain ^ ": unsupported configuration");
     exit 1
   | Analysed res ->
     List.map

@@ -86,19 +86,20 @@ agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 `activation_collect_dg_sound` (`Routed_Context.thy`) proves collecting
 soundness from any valuation satisfying it, without asking how it was computed.
 
-The four update rules of `solver_choice` (always-join, per-origin, Apinis
-warrowing, warrowing-per-origin) are vendored rules, and widening is a type-class
+The four update rules of `globals_rule` (always-join, per-origin, Apinis
+warrowing, warrowing-per-origin) are vendored rules, selected through one
+`TD_side_rule_Interp` interpretation (`Globals_Rule.thy`), and widening is a type-class
 instance of the vendored `widening` class, so there is no refinement gap at the
 solver layer beyond ordinary code-generation trust.
 
 ## 5. Soundness endpoints
 
 The chain ends at `run_voblint_certified_source_sound` (`Analysis_Certified.thy`):
-for every configuration the dispatcher answers, a source run's
+for every domain, global update rule and context policy, a source run's
 store lies in the analysis result at a genuinely reachable node, and every
 definite verdict listed there holds for that store.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
-point is unreachable, at every configuration. The caller owes `config_terminates D solver ctx p` -- the
+point is unreachable, at every configuration. The caller owes `config_terminates D rule ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:
 `live_keys_cover` (`Routed_Live_Keys.thy`) proves it from termination. The
@@ -110,8 +111,8 @@ One `export_code` declaration (`Voblint_Codegen.thy`) targets OCaml with
 `module_name Generated file_prefix "Voblint_CLI"`, landing at
 `codegen/generated/ml/Voblint_CLI.ml`. Its operation is `run_voblint`; the other
 roots are the constructors and selectors a caller needs to build a program, ask
-for a configuration and read the answer. All five domains, the four solver
-choices and the three context modes are reachable through `run_voblint`.
+for a configuration and read the answer. All five domains, the four global
+update rules and the three context modes are reachable through `run_voblint`.
 `codegen-regression` and `cli-build` compile and link the output through Dune.
 
 No `code_printing`, `code_datatype`, `code_reserved` or `code_abbrev` appears in
@@ -140,7 +141,8 @@ the snapshot and globals strings -- is presentation with no theorem about it.
 
 ## 8. What may be claimed
 
-Proved, for every row-producing configuration (all 32, `docs/THEOREM_MAP.md`):
+Proved, for every configuration `run_voblint` answers (every domain, rule and
+context policy, `docs/THEOREM_MAP.md`):
 if `config_terminates` holds for the program, every modeled source
 execution is over-approximated at a reachable node, and every `PROVED` or
 `REFUTED` row printed there is correct for that execution.

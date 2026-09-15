@@ -1,7 +1,7 @@
-// PARAM: --analysis interval --solver warrow
-// Same program as 01-interval_join.vimp, solved with Interval's production
-// default solver (Solver_Warrow) instead of join -- confirms --solver warrow
-// reproduces the plain default CLI invocation's verdict.
+// PARAM: --analysis interval --globals warrow
+// Same program as 01-interval_join.vimp, solved with the warrowing globals
+// rule instead of join -- confirms --globals warrow reproduces the plain
+// default CLI invocation's verdict.
 fun main() {
   x = 5;
   __voblint_check(0 < x); // PROVED

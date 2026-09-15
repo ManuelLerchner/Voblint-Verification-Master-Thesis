@@ -146,8 +146,7 @@ definition analyse_int_per_origin_result ::
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
 text \<open>
-  \<open>analyse_int_report_for\<close> is the report function the exported \<open>analyse\<close> API dispatches
-  to for \<open>Int_Analysis\<close> (see \<open>Analyse_Dispatch\<close>, CLI session, downstream), fixed at
+  \<open>analyse_int_report_for\<close> is Int's flat check report, fixed at
   \<open>prog_main_name\<close> and reading its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close> at that \<open>mode\<close> via \<^const>\<open>lookup_context\<close> --
   the same routed producer \<^const>\<open>analyse_int_result_for\<close> pins at
@@ -168,8 +167,7 @@ definition analyse_int_report_for ::
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close>
-  like \<^const>\<open>analyse_int_result\<close>: this is the report the production \<open>analyse\<close>
-  API reaches, matching \<open>analyse_interval_report\<close>'s shape.
+  like \<^const>\<open>analyse_int_result\<close>, matching \<open>analyse_interval_report\<close>'s shape.
 \<close>
 
 definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -204,7 +202,7 @@ subsection \<open>Solver-choice variants: always-join and per-origin update rule
 text \<open>
   \<open>analyse_int_report_join_for\<close>'s sibling relationship to \<^const>\<open>analyse_int_report\<close>
   mirrors \<^const>\<open>analyse_int_join_result\<close>'s to \<^const>\<open>analyse_int_result\<close>: this route
-  exists so \<open>analyse_with_solver\<close> can compare update rules on the identical equation
+  exists to compare update rules on the identical equation
   system, mirroring \<open>Interval_Checks.analyse_interval_report_join_for\<close>/
   \<open>Sign_Checks.analyse_sign_report_for\<close>'s own always-join default. The CLI does not
   expose refinement mode as a separate axis, so this convenience instance stays pinned

@@ -198,10 +198,9 @@ subsection \<open>Executable code generation\<close>
 
 text \<open>
   No per-domain \<open>export_code\<close> here.  External callers reach the Interval
-  analysis through the unified dispatcher \<open>analyse\<close> (\<open>Analyse_Dispatch\<close>,
-  which routes \<open>Interval_Analysis\<close> to \<open>analyse_interval_report\<close>); a
-  second, domain-specific export module would just be a parallel, redundant
-  API surface for the same computation.
+  analysis through the one exported entry point \<open>run_voblint\<close> at
+  \<open>Interval_Analysis\<close>; a second, domain-specific export module would just
+  be a parallel, redundant API surface for the same computation.
 \<close>
 
 end

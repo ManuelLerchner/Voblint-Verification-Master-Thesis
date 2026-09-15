@@ -1,5 +1,15 @@
 theory Analysis_Run
-  imports Dispatch_Config Arithmetic_Diagnostics
+  imports
+    Analysis_Config
+    Dispatch_Carrier
+    Arithmetic_Diagnostics
+    Voblint_Analysis_Sign.Sign_Analyses
+    Voblint_Analysis_Interval.Interval_Analyses
+    Voblint_Analysis_Int.Int_Analyses
+    Voblint_Analysis_Parity.Parity_Analyses
+    Voblint_Analysis_Congruence.Congruence_Analyses
+    "HOL-Library.Code_Target_Numeral"
+    "HOL-Library.Code_Abstract_Char"
 begin
 
 section \<open>Running one configuration once\<close>
@@ -12,12 +22,8 @@ text \<open>
   every rendering of them --- text, graphs, report pages --- is built outside this
   development from that one result.
 
-  Nothing outside this theory decides which analyser runs.
-  \<^const>\<open>resolve_analysis_config\<close> answers that once, as an
-  \<^type>\<open>analysis_plan\<close>, and every branch below reads the table that plan names ---
-  domain, context policy and solver discipline together. A dispatcher keyed on
-  fewer of those axes silently answered from a neighbouring discipline's solve
-  wherever a domain publishes more than one.
+  Nothing outside this theory decides which analyser runs: every branch below reads
+  the one table its domain, context policy and global update rule name together.
 \<close>
 
 
@@ -289,168 +295,82 @@ definition call_string_run_result ::
      run_result_of into (\<lambda>ctx. Key_List (map Key_Node ctx)) Context_Call_String
        (entered_targets enter (\<lambda>u ctx _ _. take k (u # ctx)) p) classify r [] p"
 
-subsection \<open>One plan, one typed result\<close>
+subsection \<open>One configuration, one typed result\<close>
 
 text \<open>
-  Each branch names the one table its plan resolved to and hands it to the builder of
-  that plan's context policy, together with the domain's tag and entry transfer.
-  \<^const>\<open>None\<close> is a pairing with no solved table.
+  Each branch names the one table its domain and context policy solve under the
+  chosen global update rule, and hands it to the builder of that context policy
+  together with the domain's tag and entry transfer. Every combination has a table.
 \<close>
 
-definition plan_result :: "analysis_plan \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result option" where
-  "plan_result pl p =
-     (case pl of
-        Plan_Sign Solver_Join \<Rightarrow>
-          Some (unit_run_result SignValue enter_sign_for sign_classify_check
-                  (fst (analyse_sign_ctx_solved_for (declared_global p) p)) p)
-      | Plan_Sign Solver_PerOrigin \<Rightarrow>
-          Some (unit_run_result SignValue enter_sign_for sign_classify_check
-                  (analyse_sign_result_per_origin p) p)
-      | Plan_Sign _ \<Rightarrow> None
-      | Plan_Interval Solver_Warrow \<Rightarrow>
-          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (fst (analyse_interval_ctx_solved_for (declared_global p) p)) p)
-      | Plan_Interval Solver_Join \<Rightarrow>
-          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (analyse_interval_result_join p) p)
-      | Plan_Interval Solver_PerOrigin \<Rightarrow>
-          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (analyse_interval_result_per_origin p) p)
-      | Plan_Interval Solver_WarrowPerOrigin \<Rightarrow>
-          Some (unit_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (analyse_interval_result_wpo p) p)
-      | Plan_Int Solver_Warrow \<Rightarrow>
-          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-                  (fst (analyse_int_ctx_solved_warrow_for Refine_Fixpoint (declared_global p) p)) p)
-      | Plan_Int Solver_Join \<Rightarrow>
-          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-                  (analyse_int_join_result p) p)
-      | Plan_Int Solver_PerOrigin \<Rightarrow>
-          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-                  (analyse_int_per_origin_result p) p)
-      | Plan_Int Solver_WarrowPerOrigin \<Rightarrow>
-          Some (unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-                  (analyse_int_wpo_result p) p)
-      | Plan_Parity Solver_Join \<Rightarrow>
-          Some (unit_run_result ParityValue enter_parity_for parity_classify_check
-                  (fst (analyse_parity_ctx_solved_for (declared_global p) p)) p)
-      | Plan_Parity Solver_PerOrigin \<Rightarrow>
-          Some (unit_run_result ParityValue enter_parity_for parity_classify_check
-                  (analyse_parity_result_per_origin p) p)
-      | Plan_Parity _ \<Rightarrow> None
-      | Plan_Congruence Solver_Join \<Rightarrow>
-          Some (unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
-                  (fst (analyse_congruence_ctx_solved_for (declared_global p) p)) p)
-      | Plan_Congruence Solver_PerOrigin \<Rightarrow>
-          Some (unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
-                  (analyse_congruence_result_per_origin p) p)
-      | Plan_Congruence _ \<Rightarrow> None
-      | Plan_Sign_EntryState Solver_Join \<Rightarrow>
-          Some (entry_state_run_result SignValue enter_sign_for sign_classify_check
-                  (analyse_sign_entry_state_result p) p)
-      | Plan_Sign_EntryState _ \<Rightarrow> None
-      | Plan_Interval_EntryState Solver_Warrow \<Rightarrow>
-          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (analyse_interval_entry_state_result p) p)
-      | Plan_Interval_EntryState Solver_Join \<Rightarrow>
-          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    (Analysis_Global ()) Activation_Seed exec_formals_route []
-                    TD_side_always_join_Interp_solve (declared_global p) p) p)
-      | Plan_Interval_EntryState Solver_PerOrigin \<Rightarrow>
-          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    (Analysis_Global ()) Activation_Seed exec_formals_route []
-                    TD_side_per_origin_Interp_solve (declared_global p) p) p)
-      | Plan_Interval_EntryState Solver_WarrowPerOrigin \<Rightarrow>
-          Some (entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    (Analysis_Global ()) Activation_Seed exec_formals_route []
-                    TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) p)
-      | Plan_Int_EntryState Solver_Join \<Rightarrow>
-          Some (entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
-                  int_classify_check (analyse_int_entry_state_result p) p)
-      | Plan_Int_EntryState Solver_Warrow \<Rightarrow>
-          Some (entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
-                  int_classify_check (analyse_int_entry_state_result_warrow p) p)
-      | Plan_Int_EntryState _ \<Rightarrow> None
-      | Plan_Parity_EntryState Solver_Join \<Rightarrow>
-          Some (entry_state_run_result ParityValue enter_parity_for parity_classify_check
-                  (analyse_parity_entry_state_result p) p)
-      | Plan_Parity_EntryState _ \<Rightarrow> None
-      | Plan_Congruence_EntryState Solver_Join \<Rightarrow>
-          Some (entry_state_run_result CongruenceValue enter_congruence_for
-                  congruence_classify_check (analyse_congruence_entry_state_result p) p)
-      | Plan_Congruence_EntryState _ \<Rightarrow> None
-      | Plan_Sign_CallString Solver_Join k \<Rightarrow>
-          Some (call_string_run_result SignValue enter_sign_for sign_classify_check
-                  (analyse_sign_call_string_result k p) k p)
-      | Plan_Sign_CallString _ _ \<Rightarrow> None
-      | Plan_Interval_CallString Solver_Warrow k \<Rightarrow>
-          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (analyse_interval_call_string_result k p) k p)
-      | Plan_Interval_CallString Solver_Join k \<Rightarrow>
-          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-                    TD_side_always_join_Interp_solve (declared_global p) p) k p)
-      | Plan_Interval_CallString Solver_PerOrigin k \<Rightarrow>
-          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-                    TD_side_per_origin_Interp_solve (declared_global p) p) k p)
-      | Plan_Interval_CallString Solver_WarrowPerOrigin k \<Rightarrow>
-          Some (call_string_run_result IntervalValue enter_ivl_for interval_classify_check
-                  (routed_dg_pipeline.result ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-                    Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-                    TD_side_warrowing_per_origin_Interp_solve (declared_global p) p) k p)
-      | Plan_Int_CallString Solver_Join k \<Rightarrow>
-          Some (call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
-                  int_classify_check (analyse_int_call_string_result k p) k p)
-      | Plan_Int_CallString Solver_Warrow k \<Rightarrow>
-          Some (call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint)
-                  int_classify_check (analyse_int_call_string_result_warrow k p) k p)
-      | Plan_Int_CallString _ _ \<Rightarrow> None
-      | Plan_Parity_CallString Solver_Join k \<Rightarrow>
-          Some (call_string_run_result ParityValue enter_parity_for parity_classify_check
-                  (analyse_parity_call_string_result k p) k p)
-      | Plan_Parity_CallString _ _ \<Rightarrow> None
-      | Plan_Congruence_CallString Solver_Join k \<Rightarrow>
-          Some (call_string_run_result CongruenceValue enter_congruence_for
-                  congruence_classify_check (analyse_congruence_call_string_result k p) k p)
-      | Plan_Congruence_CallString _ _ \<Rightarrow> None)"
+fun analysis_result ::
+    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
+       \<Rightarrow> abstract_value run_result" where
+  "analysis_result Sign_Analysis r Ctx_None p =
+     unit_run_result SignValue enter_sign_for sign_classify_check
+       (sign_rule.result r (declared_global p) p) p"
+| "analysis_result Sign_Analysis r Ctx_EntryState p =
+     entry_state_run_result SignValue enter_sign_for sign_classify_check
+       (sign_es_rule.result r (declared_global p) p) p"
+| "analysis_result Sign_Analysis r (Ctx_CallString k) p =
+     call_string_run_result SignValue enter_sign_for sign_classify_check
+       (sign_cs_rule.result k r (declared_global p) p) k p"
+| "analysis_result Interval_Analysis r Ctx_None p =
+     unit_run_result IntervalValue enter_ivl_for interval_classify_check
+       (interval_rule.result r (declared_global p) p) p"
+| "analysis_result Interval_Analysis r Ctx_EntryState p =
+     entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
+       (interval_es_rule.result r (declared_global p) p) p"
+| "analysis_result Interval_Analysis r (Ctx_CallString k) p =
+     call_string_run_result IntervalValue enter_ivl_for interval_classify_check
+       (interval_cs_rule.result k r (declared_global p) p) k p"
+| "analysis_result Int_Analysis r Ctx_None p =
+     unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+       (int_rule.result r (declared_global p) p) p"
+| "analysis_result Int_Analysis r Ctx_EntryState p =
+     entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+       (int_es_rule.result r (declared_global p) p) p"
+| "analysis_result Int_Analysis r (Ctx_CallString k) p =
+     call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
+       (int_cs_rule.result k r (declared_global p) p) k p"
+| "analysis_result Parity_Analysis r Ctx_None p =
+     unit_run_result ParityValue enter_parity_for parity_classify_check
+       (parity_rule.result r (declared_global p) p) p"
+| "analysis_result Parity_Analysis r Ctx_EntryState p =
+     entry_state_run_result ParityValue enter_parity_for parity_classify_check
+       (parity_es_rule.result r (declared_global p) p) p"
+| "analysis_result Parity_Analysis r (Ctx_CallString k) p =
+     call_string_run_result ParityValue enter_parity_for parity_classify_check
+       (parity_cs_rule.result k r (declared_global p) p) k p"
+| "analysis_result Congruence_Analysis r Ctx_None p =
+     unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
+       (congruence_rule.result r (declared_global p) p) p"
+| "analysis_result Congruence_Analysis r Ctx_EntryState p =
+     entry_state_run_result CongruenceValue enter_congruence_for congruence_classify_check
+       (congruence_es_rule.result r (declared_global p) p) p"
+| "analysis_result Congruence_Analysis r (Ctx_CallString k) p =
+     call_string_run_result CongruenceValue enter_congruence_for congruence_classify_check
+       (congruence_cs_rule.result k r (declared_global p) p) k p"
 
 subsection \<open>The public operation\<close>
 
 text \<open>
-  Three answers, because a caller has three genuinely different things to do.
-  A malformed program was never analysed; an unsupported configuration names a
-  pairing this build publishes no route for; and the third carries a result.
-  Collapsing the first two into one \<^const>\<open>None\<close> would leave the CLI unable to say
-  which of them happened, which is the distinction its exit codes are built on.
+  Two answers: a malformed program was never analysed, and every well-formed one is.
 \<close>
 
 datatype 'v analysis_answer =
     Malformed_Program
-  | Unsupported_Configuration
   | Analysed "'v run_result"
 
 definition analyse_program ::
-    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
+    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
        \<Rightarrow> abstract_value analysis_answer" where
-  "analyse_program kind solver ctx p =
-     (if \<not> wf_program_compile_input_exec p then Malformed_Program
-      else
-        case resolve_analysis_config (mk_analysis_config kind solver ctx) of
-          None \<Rightarrow> Unsupported_Configuration
-        | Some pl \<Rightarrow>
-            (case plan_result pl p of
-               None \<Rightarrow> Unsupported_Configuration
-             | Some res \<Rightarrow> Analysed res))"
+  "analyse_program kind rule ctx p =
+     (if wf_program_compile_input_exec p then Analysed (analysis_result kind rule ctx p)
+      else Malformed_Program)"
 
 fun map_analysis_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_answer \<Rightarrow> 'w analysis_answer" where
   "map_analysis_answer f Malformed_Program = Malformed_Program"
-| "map_analysis_answer f Unsupported_Configuration = Unsupported_Configuration"
 | "map_analysis_answer f (Analysed res) = Analysed (map_run_result f res)"
 
 text \<open>
@@ -459,9 +379,10 @@ text \<open>
 \<close>
 
 definition run_voblint ::
-    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
+    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
        \<Rightarrow> String.literal analysis_answer" where
-  "run_voblint kind solver ctx p =
-     map_analysis_answer string_of_abstract_value (analyse_program kind solver ctx p)"
+  "run_voblint kind rule ctx p =
+     map_analysis_answer string_of_abstract_value (analyse_program kind rule ctx p)"
 
 end
+

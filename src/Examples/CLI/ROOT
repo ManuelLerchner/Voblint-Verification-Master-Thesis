@@ -2,8 +2,8 @@ chapter Voblint
 
 session Voblint_Examples_CLI in "." = "Voblint_CLI" +
   description
-    "Witnesses that reach the CLI layer: a domain's codegen entry point, the
-     AnalysisConfig dispatcher, or the public run_voblint operation.  They see every
+    "Witnesses that reach the CLI layer: a domain's codegen entry point or the
+     public run_voblint operation.  They see every
      domain because Voblint_CLI does, which is why they are not in the per-domain
      example sessions"
   sessions
@@ -11,12 +11,7 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     "Voblint_Examples_Interval"
     "Voblint_Examples_Int"
   theories
-    (* Hand-written regressions for the generated configuration tables and
-       their production dispatchers. *)
-    Config_Matrix
-    Dispatch_Matrix
-
-    (* The AnalysisConfig dispatcher and the published result table *)
+    (* The public run_voblint operation and the published result table *)
     Example_Analysis_Dispatch_Regression
     Example_Analysis_Result_Regression
     Example_Min_Max_Regression

@@ -132,7 +132,7 @@ system from the solver's association-list states to the function-valued
 states the framework is stated over. The `Voblint_Analysis_*` sessions thread
 each concrete domain instance (Sign, Interval, ...) through them; the reuse
 locales, the publication surface and the compile-dependent routed contexts live
-under `src/Analyses/Shared/`. The dispatch config and `run_voblint` are not
+under `src/Analyses/Shared/`. The selection datatypes and `run_voblint` are not
 there -- no domain imports either, so both live in `Voblint_CLI` beside their
 only consumers.
 `docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
@@ -151,15 +151,14 @@ locale. Each domain's own
 instantiation of those endpoints -- the runtime API over an arbitrary
 `imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
 in that domain's analysis session, because it depends on that domain and on
-the shared chain and on nothing else. `Voblint_CLI` is then only the
-dispatcher and the render surface: the soundness statements it does own are the
-corollaries over `analyse` itself, which cannot live above the theory that
-defines `analyse`.
+the shared chain and on nothing else. `Voblint_CLI` is then only `run_voblint`
+and its soundness: the statements it owns are the ones over `run_voblint`
+itself, which cannot live above the theory that defines `run_voblint`.
 
-The `Voblint_Examples_*` sessions contain executable runs, regressions and
-GraphViz output, one session per folder under `src/Examples`. `Voblint_Examples`
-itself is the residue plus the `Voblint` capstone: the witnesses that reach the
-`AnalysisConfig` dispatcher or the GraphViz render surface import `Voblint_CLI`
+The `Voblint_Examples_*` sessions contain executable runs and regressions, one
+session per folder under `src/Examples`. `Voblint_Examples`
+itself is the residue plus the `Voblint` capstone: the witnesses that reach
+`run_voblint` import `Voblint_CLI`
 and therefore see every domain, so they live together in `Voblint_Examples_CLI`
 (`src/Examples/CLI`) instead of being spread back through the domain folders,
 where they would recouple each domain's session to all of them. The store-only

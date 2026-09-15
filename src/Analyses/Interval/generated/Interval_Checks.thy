@@ -74,13 +74,12 @@ definition analyse_interval_result :: "imp_prog \<Rightarrow> (unit, ivl abs_sta
   "analyse_interval_result p = analyse_interval_result_for (declared_global p) p"
 
 text \<open>
-  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
-  through \<^const>\<open>analyse_interval_result_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
-  \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point
-  classifies at its projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two
-  are not distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
-  three-way verdict rather than introducing a fourth, \<open>Dead\<close> outcome the type does not
-  carry.
+  The production discipline's report. It reads its per-node state through
+  \<^const>\<open>analyse_interval_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --- \<^const>\<open>lookup_context\<close>, not
+  a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point classifies at its projected
+  state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two are not distinguishable here)
+  classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s three-way verdict rather than
+  introducing a fourth, \<open>Dead\<close> outcome the type does not carry.
 \<close>
 
 definition analyse_interval_report_for ::
@@ -128,11 +127,11 @@ subsection \<open>Solver-choice variant: the always-join update rule\<close>
 
 text \<open>
   The same equation system solved under the always-join update rule instead of the
-  Apinis-warrowing rule production uses, so \<open>analyse_with_solver\<close> can compare solver
-  choices on one system (\<open>interval_join_equations_eq\<close> is what makes "one system" a
-  theorem rather than a claim). These are bindings onto the assembly's own instance for
-  this rule, so the sibling carries the same soundness endpoints the default does ---
-  the update rule is a parameter of the assembly, not a reason to leave it.
+  Apinis-warrowing rule of the unsuffixed names, so solver choices can be compared on
+  one system (\<open>interval_join_equations_eq\<close> is what makes "one system" a theorem rather
+  than a claim). These are bindings onto the assembly's own instance for this rule, so
+  the sibling carries the same soundness endpoints the first does --- the update rule
+  is a parameter of the assembly, not a reason to leave it.
 \<close>
 
 abbreviation interval_conf_sol_prog ::
@@ -161,11 +160,11 @@ definition analyse_interval_result_join ::
   "analyse_interval_result_join p = analyse_interval_result_join_for (declared_global p) p"
 
 text \<open>
-  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
-  through \<^const>\<open>analyse_interval_result_join_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
-  \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point
-  classifies at its projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two
-  are not distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
+  The production discipline's report. It reads its per-node state through
+  \<^const>\<open>analyse_interval_result_join_for\<close>'s \<^type>\<open>analysis_result\<close> table --- \<^const>\<open>lookup_context\<close>,
+  not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point classifies at its
+  projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two are not
+  distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
   three-way verdict rather than introducing a fourth, \<open>Dead\<close> outcome the type does not
   carry.
 \<close>
@@ -181,11 +180,11 @@ subsection \<open>Solver-choice variant: the per-origin update rule\<close>
 
 text \<open>
   The same equation system solved under the per-origin update rule instead of the
-  Apinis-warrowing rule production uses, so \<open>analyse_with_solver\<close> can compare solver
-  choices on one system (\<open>interval_po_equations_eq\<close> is what makes "one system" a
-  theorem rather than a claim). These are bindings onto the assembly's own instance for
-  this rule, so the sibling carries the same soundness endpoints the default does ---
-  the update rule is a parameter of the assembly, not a reason to leave it.
+  Apinis-warrowing rule of the unsuffixed names, so solver choices can be compared on
+  one system (\<open>interval_po_equations_eq\<close> is what makes "one system" a theorem rather
+  than a claim). These are bindings onto the assembly's own instance for this rule, so
+  the sibling carries the same soundness endpoints the first does --- the update rule
+  is a parameter of the assembly, not a reason to leave it.
 \<close>
 
 abbreviation interval_conf_sol_prog_per_origin ::
@@ -217,8 +216,8 @@ definition analyse_interval_result_per_origin ::
      analyse_interval_result_per_origin_for (declared_global p) p"
 
 text \<open>
-  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
-  through \<^const>\<open>analyse_interval_result_per_origin_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
+  The production discipline's report. It reads its per-node state through
+  \<^const>\<open>analyse_interval_result_per_origin_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
   \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point
   classifies at its projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two
   are not distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
@@ -238,11 +237,11 @@ subsection \<open>Solver-choice variant: the warrowing-per-origin update rule\<c
 
 text \<open>
   The same equation system solved under the warrowing-per-origin update rule instead of
-  the Apinis-warrowing rule production uses, so \<open>analyse_with_solver\<close> can compare
-  solver choices on one system (\<open>interval_wpo_equations_eq\<close> is what makes "one system"
-  a theorem rather than a claim). These are bindings onto the assembly's own instance
-  for this rule, so the sibling carries the same soundness endpoints the default does
-  --- the update rule is a parameter of the assembly, not a reason to leave it.
+  the Apinis-warrowing rule of the unsuffixed names, so solver choices can be compared
+  on one system (\<open>interval_wpo_equations_eq\<close> is what makes "one system" a theorem
+  rather than a claim). These are bindings onto the assembly's own instance for this
+  rule, so the sibling carries the same soundness endpoints the first does --- the
+  update rule is a parameter of the assembly, not a reason to leave it.
 \<close>
 
 abbreviation interval_conf_sol_prog_wpo ::
@@ -271,11 +270,11 @@ definition analyse_interval_result_wpo ::
   "analyse_interval_result_wpo p = analyse_interval_result_wpo_for (declared_global p) p"
 
 text \<open>
-  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
-  through \<^const>\<open>analyse_interval_result_wpo_for\<close>'s \<^type>\<open>analysis_result\<close> table ---
-  \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point
-  classifies at its projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two
-  are not distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
+  The production discipline's report. It reads its per-node state through
+  \<^const>\<open>analyse_interval_result_wpo_for\<close>'s \<^type>\<open>analysis_result\<close> table --- \<^const>\<open>lookup_context\<close>,
+  not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point classifies at its
+  projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two are not
+  distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
   three-way verdict rather than introducing a fourth, \<open>Dead\<close> outcome the type does not
   carry.
 \<close>

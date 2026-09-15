@@ -1,5 +1,5 @@
-// PARAM: --analysis interval --context entry-state --solver per-origin
-// Same program as 04-two_call_sites_entry_state.vimp, explicit --solver
+// PARAM: --analysis interval --context entry-state --globals per-origin
+// Same program as 04-two_call_sites_entry_state.vimp, explicit --globals
 // per-origin instead of entry-state's implicit Warrow default -- see
 // 07-two_call_sites_entry_state_join_solver.vimp for why the routed
 // equation system underneath accepts any solver the same way the flat one

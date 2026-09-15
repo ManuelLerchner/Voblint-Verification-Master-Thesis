@@ -5,17 +5,17 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domain solver context
-          (Isabelle-generated). One call decides whether that combination of
-          domain, solver and context is legal at all and, when it is, runs the
-          one analysis it names. What comes back is data -- states per point and
+       -> Voblint_CLI.Generated.run_voblint domain globals context
+          (Isabelle-generated). One call checks the program is well-formed and
+          runs the one analysis the domain, global update rule and context name;
+          every combination is answered. What comes back is data -- states per point and
           context, the routes calls take, the check column, diagnostics -- with
           every abstract value already rendered by its own domain. Every
           rendering below (text report, graph, snapshot, HTML) is built from that
           one result, so none can draw from a different solve than another.
        -> proved analysis results, subject to the Isabelle theorem
           assumptions (solver termination and check reachability -- see
-          Analyse_Dispatch.thy's soundness corollaries)
+          Analysis_Certified.thy)
 
    Trust boundary: soundness applies to the imp_prog the parser produces, not
    to the claim that this imp_prog faithfully represents the text file the
@@ -27,8 +27,9 @@
 
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence [--context \
-   none|entry-state|call-string] [--context-depth K] [--dot] [--timeout \
-   SECONDS] FILE.vimp\n\
+   none|entry-state|call-string] [--context-depth K] [--globals \
+   join|per-origin|warrow|warrow-per-origin] [--dot] [--timeout SECONDS] \
+   FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence[,...]\n\
@@ -36,7 +37,7 @@ let usage =
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
   \                             fixed at its most precise refinement mode\n\
-  \                             (Refine_Fixpoint) and the warrowing solver.\n\
+  \                             (Refine_Fixpoint).\n\
   \                             parity is the four-element Bot/Even/Odd/Top\n\
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities.\n\
@@ -61,31 +62,17 @@ let usage =
   \                             covered contexts separately.\n\
   \                             call-string re-analyzes each callee per\n\
   \                             distinct bounded call history (requires\n\
-  \                             --context-depth K, K >= 1).\n\
-  \                             Every domain serves both context modes, at\n\
-  \                             the solver discipline its own routed\n\
-  \                             soundness covers; an explicit --solver the\n\
-  \                             pairing has no proved route for is a clear\n\
-  \                             configuration error, not a silent fallback\n\
-  \                             to --context none.\n\
+  \                             --context-depth K). Every domain serves\n\
+  \                             every context mode at every --globals rule.\n\
   \  --context-depth K          Call-string bound (only valid with --context\n\
-  \                             call-string; must be at least 1 -- a call\n\
-  \                             string needs to keep at least one call site\n\
-  \                             to separate anything, so a bound of 0 has no\n\
-  \                             positive use as a public value and is\n\
-  \                             rejected rather than silently treated as\n\
-  \                             --context none).\n\
-  \  --solver join|per-origin|warrow|warrow-per-origin\n\
-  \                             Pick the vendored solver's update-rule\n\
-  \                             discipline directly, bypassing the domain's\n\
-  \                             production default (experimental; issue\n\
-  \                             #131). warrow is supported by interval and\n\
-  \                             int; sign, parity and congruence have a widen\n\
-  \                             operator but no solved table behind it yet.\n\
-  \                             Every supported solver/context pairing serves\n\
-  \                             the same report and graph views from its own\n\
-  \                             solved table; unsupported pairings are rejected\n\
-  \                             rather than falling back to another solver.\n\
+  \                             call-string). K = 0 keeps no call site, so\n\
+  \                             every callee shares one context.\n\
+  \  --globals join|per-origin|warrow|warrow-per-origin\n\
+  \                             How the solver merges a value side-effected\n\
+  \                             into a global: joined, joined per origin,\n\
+  \                             warrowed, or warrowed per origin (default:\n\
+  \                             warrow). Locals are warrowed at loop heads\n\
+  \                             under every rule.\n\
   \  --dot                      Emit the canonical contextual GraphViz .dot CFG\n\
   \                             instead of the textual check report. Every local\n\
   \                             node carries its own context state and checks.\n\
@@ -257,10 +244,9 @@ type outcome =
   | Ok_dot of string
   | Ok_graph of string
   | Ok_report of string
-  (* Both rejections are the analyzer's own answer, so they surface from
-     inside the contained run rather than from a gate this file keeps. *)
+  (* The rejection is the analyzer's own answer, so it surfaces from inside
+     the contained run rather than from a gate this file keeps. *)
   | Malformed
-  | Unsupported_config
 
 (* Raised where an answer other than a successful run arrives, so every
    rendering below can be written against the output it needs. *)
@@ -294,8 +280,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
               | Ok_report s ->
                   output_string oc "R\n";
                   output_string oc s
-              | Malformed -> output_string oc "M\n"
-              | Unsupported_config -> output_string oc "U\n");
+              | Malformed -> output_string oc "M\n");
               close_out oc;
               0
             with e ->
@@ -339,7 +324,6 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                     | "G" -> Ok (Ok_graph body)
                     | "R" -> Ok (Ok_report body)
                     | "M" -> Ok Malformed
-                    | "U" -> Ok Unsupported_config
                     | _ -> Error body)
                 | None -> Error "analysis subprocess produced no output")
             | _, Unix.WEXITED code ->
@@ -369,11 +353,6 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           in
           wait_loop ())
 
-(* Unset means "whatever the configuration supports": a context-sensitive run
-   is asked for because the contexts matter, so drawing them is the useful
-   default, and joining them away is the thing to opt into. An explicit choice
-   is still honoured -- and still rejected where it cannot be served. *)
-
 (* --context/--context-depth are two independent flags that can arrive in
    either order, but Ctx_CallString needs the depth at construction time --
    so parsing collects an intermediate tag + optional depth, and the final
@@ -388,7 +367,7 @@ let () =
   let analyses = ref [] in
   let context_kind = ref CK_None in
   let context_depth = ref None in
-  let solver = ref None in
+  let globals = ref Voblint_CLI.Generated.Globals_Warrow in
   let dot = ref false in
   let graph_snapshot = ref false in
   let html = ref false in
@@ -444,15 +423,15 @@ let () =
            prerr_endline ("--context-depth expects an integer: " ^ v);
            exit 1);
         parse_args rest
-    | "--solver" :: v :: rest ->
+    | "--globals" :: v :: rest ->
         (match v with
-        | "join" -> solver := Some Voblint_CLI.Generated.Solver_Join
-        | "per-origin" -> solver := Some Voblint_CLI.Generated.Solver_PerOrigin
-        | "warrow" -> solver := Some Voblint_CLI.Generated.Solver_Warrow
+        | "join" -> globals := Voblint_CLI.Generated.Globals_Join
+        | "per-origin" -> globals := Voblint_CLI.Generated.Globals_Per_Origin
+        | "warrow" -> globals := Voblint_CLI.Generated.Globals_Warrow
         | "warrow-per-origin" ->
-            solver := Some Voblint_CLI.Generated.Solver_WarrowPerOrigin
+            globals := Voblint_CLI.Generated.Globals_Warrow_Per_Origin
         | _ ->
-            prerr_endline ("unknown --solver value: " ^ v);
+            prerr_endline ("unknown --globals value: " ^ v);
             exit 1);
         parse_args rest
     | "--dot" :: rest ->
@@ -488,18 +467,15 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
-  (* --context-depth is only meaningful paired with --context call-string --
-     a shape mismatch between the two flags as typed by the user, not a
-     domain/solver/context legality question, so it is rejected here rather
-     than folded into Ctx_CallString's own construction. Once matched, the
-     depth itself is handed to Ctx_CallString unchecked (a negative
-     --context-depth clamps to nat's own zero via nat_of_integer, and k = 0 is
-     then rejected the ordinary way, as an unsupported configuration -- no
-     second k >= 1 check here). *)
+  (* --context-depth is only meaningful paired with --context call-string, so
+     a mismatch between the two flags is rejected here. *)
   let context =
     match (!context_kind, !context_depth) with
     | CK_None, None -> Voblint_CLI.Generated.Ctx_None
     | CK_EntryState, None -> Voblint_CLI.Generated.Ctx_EntryState
+    | CK_CallString, Some k when k < 0 ->
+        prerr_endline "voblint: --context-depth must not be negative";
+        exit 1
     | CK_CallString, Some k ->
         Voblint_CLI.Generated.Ctx_CallString
           (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
@@ -572,9 +548,8 @@ let () =
     end
   end;
   let result_for k =
-    match C.run_voblint k !solver context prog with
+    match C.run_voblint k !globals context prog with
     | C.Malformed_Program -> raise (Answered Malformed)
-    | C.Unsupported_Configuration -> raise (Answered Unsupported_config)
     | C.Analysed result ->
         if !html || !dot || !graph_snapshot then
           print_diagnostics path (analysis_label k) stmt_positions
@@ -747,10 +722,6 @@ let () =
   | Ok Malformed ->
       Printf.eprintf "%s: program is not well-formed\n" path;
       exit 4
-  | Ok Unsupported_config ->
-      prerr_endline
-        "voblint: unsupported --analysis/--context/--solver combination";
-      exit 1
   | Error msg ->
       Printf.eprintf "voblint: %s\n" msg;
       exit 3

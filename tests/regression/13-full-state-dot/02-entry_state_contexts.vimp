@@ -35,18 +35,18 @@
 //       a=[9,9]
 //       b=[16,16]
 //   main_pp2_ctx0: pp2
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //   main_pp3_ctx0: pp3
 //       a=[9,9]
-//       b=[-inf,+inf]
+//       b=⊤
 //   main_pp4_ctx0: pp4 [proved]
 //       a=[9,9]
 //       b=[16,16]
 //       check a == 9
 //   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //   square_exit_square_ctx0: exit_square
 //       n=[3,3]
 //   square_pp0_ctx0: pp0

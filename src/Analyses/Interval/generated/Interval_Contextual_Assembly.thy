@@ -9,6 +9,7 @@ theory Interval_Contextual_Assembly
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
+    "Voblint_Solver.Globals_Rule"
 begin
 
 text \<open>
@@ -493,5 +494,100 @@ definition analyse_interval_call_string_report ::
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
       Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
        TD_side_warrowing_apinis_Interp_solve interval_classify_check (declared_global p) p"
+
+section \<open>Interval at any global update rule\<close>
+
+text \<open>
+  Each context once more, with the rule that merges side-effected globals left
+  as a parameter, so one registration serves every discipline.
+\<close>
+
+global_interpretation interval_es_rule: routed_dg_analysis
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) routed_gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+    bot interval_classify_check
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
+    "TD_side_rule_Interp_solve_c r"
+  for r
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule exec_formals_route_commute[symmetric])
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
+
+global_interpretation interval_cs_rule: routed_dg_analysis
+    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+    bot interval_classify_check
+    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
+    enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
+    "TD_side_rule_Interp_solve_c r"
+  for k r
+proof (rule routed_dg_analysis.intro, goal_cases)
+  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule interval_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule interval_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule interval_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
 
 end

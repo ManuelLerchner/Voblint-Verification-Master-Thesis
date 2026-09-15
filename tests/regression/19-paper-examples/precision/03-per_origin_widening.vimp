@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --solver warrow-per-origin
+// PARAM: --analysis interval --globals warrow-per-origin
 // FM 2026 Sect. 5.3, "Recovering Precision at Globals: Update Rules" --
 // the paper's first improvement over widening a global's accumulated
 // value: keep the contributions separate by origin (the local that

@@ -358,7 +358,6 @@ let run_result_json r =
 
 let analysis_answer_json = function
   | C.Malformed_Program -> tagged "Malformed_Program" []
-  | C.Unsupported_Configuration -> tagged "Unsupported_Configuration" []
   | C.Analysed r -> tagged "Analysed" [ run_result_json r ]
 
 let domain_json d =
@@ -371,13 +370,13 @@ let domain_json d =
     | C.Congruence_Analysis -> "Congruence_Analysis")
     []
 
-let solver_json s =
+let globals_rule_json r =
   tagged
-    (match s with
-    | C.Solver_Join -> "Solver_Join"
-    | C.Solver_PerOrigin -> "Solver_PerOrigin"
-    | C.Solver_Warrow -> "Solver_Warrow"
-    | C.Solver_WarrowPerOrigin -> "Solver_WarrowPerOrigin")
+    (match r with
+    | C.Globals_Join -> "Globals_Join"
+    | C.Globals_Per_Origin -> "Globals_Per_Origin"
+    | C.Globals_Warrow -> "Globals_Warrow"
+    | C.Globals_Warrow_Per_Origin -> "Globals_Warrow_Per_Origin")
     []
 
 let context_mode_json = function
@@ -401,14 +400,14 @@ let program_json p =
       ("prog_table", json_list (fun f -> json_pair json_string decl (f, f)) (C.prog_procs p));
     ]
 
-let run_voblint_json ~kind ~solver ~ctx program answer =
+let run_voblint_json ~kind ~globals ~ctx program answer =
   json_object
     [
       ( "input",
         json_object
           [
             ("kind", domain_json kind);
-            ("solver", json_option solver_json solver);
+            ("rule", globals_rule_json globals);
             ("ctx", context_mode_json ctx);
             ("p", program_json program);
           ] );

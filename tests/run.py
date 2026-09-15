@@ -388,8 +388,7 @@ def run_graph_snapshot(args: list[str], path: Path) -> tuple[str, str]:
     """Returns (snapshot, error) for a --graph-snapshot run under args.
 
     A non-zero exit means this case's PARAM flags have no snapshot to render
-    at all -- --solver is plain-text-report only, and rejects
-    --graph-snapshot -- and leaves stdout empty. Reporting that as an error
+    at all and leaves stdout empty. Reporting that as an error
     rather than returning the empty stdout is what stops --update-graphs
     from recording an empty EXPECT-GRAPH block, which every later run would
     then trivially "match"."""

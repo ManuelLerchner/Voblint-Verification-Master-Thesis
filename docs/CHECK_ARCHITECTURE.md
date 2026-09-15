@@ -156,7 +156,7 @@ solver, and the check classifier. `Sign_Assembly.thy` is one
 `global_interpretation sign_join: unit_dg_analysis ...` whose `defines` clause
 publishes `sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
 `sign_unit_state_at`, `sign_unit_report` and their siblings; `Sign_Checks.thy`
-binds those to the names the CLI dispatches to (`analyse_sign_result_for`,
+binds those to the published runtime names (`analyse_sign_result_for`,
 `analyse_sign_report_for`) and defines only what is Sign's own — the
 per-origin solver sibling and the published globals. Interval and Parity carry
 the same interpretation in `Interval_Assembly.thy` and `Parity_Assembly.thy`
@@ -277,10 +277,10 @@ A graph node's state lines are the enclosing procedure's formals, its locals,
 and its return slot, identically for `--context none`, `entry-state` and
 `call-string`. Declared globals are **not** repeated in node labels.
 
-`res_globals` is not yet filled: every plan passes an empty list, so neither the
-report's globals pane nor the browser shows declared globals' solved values.
-Filling it from each plan's `Global` unknown is the remaining step of moving
-presentation out of Isabelle.
+`res_globals` is not yet filled: every context policy's builder passes an empty
+list, so neither the report's globals pane nor the browser shows declared
+globals' solved values. Filling it from each registration's `Global` unknown is
+the remaining step of moving presentation out of Isabelle.
 
 ### CLI contract
 

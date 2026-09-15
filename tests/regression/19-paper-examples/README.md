@@ -52,7 +52,7 @@ publication at all (`docs/GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction
 and publication timing, source-checked 2026-08-10). A declared global lives
 in the same reachability-lifted local unknown as every other variable, so on
 Fig. 1 case 01 answers `g == 42` and `h == 1` exactly, and answers the same
-under all four of `--solver join|per-origin|warrow|warrow-per-origin`.
+under all four of `--globals join|per-origin|warrow|warrow-per-origin`.
 Nothing about a `global` here exercises the update rule.
 
 So cases 02 and 03 stage the paper's widening chain on the unknown that does:

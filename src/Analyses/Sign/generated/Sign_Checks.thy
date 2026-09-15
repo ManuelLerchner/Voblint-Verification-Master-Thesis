@@ -72,13 +72,12 @@ definition analyse_sign_result :: "imp_prog \<Rightarrow> (unit, sign abs_state)
   "analyse_sign_result p = analyse_sign_result_for (declared_global p) p"
 
 text \<open>
-  The report the exported \<open>analyse\<close> API dispatches to. It reads its per-node state
-  through \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --- \<^const>\<open>lookup_context\<close>,
-  not a raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point classifies at its
-  projected state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two are not
-  distinguishable here) classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s
-  three-way verdict rather than introducing a fourth, \<open>Dead\<close> outcome the type does not
-  carry.
+  The production discipline's report. It reads its per-node state through
+  \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --- \<^const>\<open>lookup_context\<close>, not a
+  raw solver-environment lookup --- so a \<^const>\<open>Lifted\<close> point classifies at its projected
+  state and a \<^const>\<open>Bot\<close> one (dead, or never covered; the two are not distinguishable here)
+  classifies at \<^const>\<open>bot\<close>. That preserves \<^type>\<open>check_result\<close>'s three-way verdict rather than
+  introducing a fourth, \<open>Dead\<close> outcome the type does not carry.
 \<close>
 
 definition analyse_sign_report_for ::
@@ -125,11 +124,11 @@ subsection \<open>Solver-choice variant: the per-origin update rule\<close>
 
 text \<open>
   The same equation system solved under the per-origin update rule instead of the
-  always-join rule production uses, so \<open>analyse_with_solver\<close> can compare solver choices
-  on one system (\<open>sign_po_equations_eq\<close> is what makes "one system" a theorem rather
-  than a claim). These are bindings onto the assembly's own instance for this rule, so
-  the sibling carries the same soundness endpoints the default does --- the update rule
-  is a parameter of the assembly, not a reason to leave it.
+  always-join rule of the unsuffixed names, so solver choices can be compared on one
+  system (\<open>sign_po_equations_eq\<close> is what makes "one system" a theorem rather than a
+  claim). These are bindings onto the assembly's own instance for this rule, so the
+  sibling carries the same soundness endpoints the first does --- the update rule is a
+  parameter of the assembly, not a reason to leave it.
 \<close>
 
 abbreviation sign_conf_sol_prog_per_origin ::

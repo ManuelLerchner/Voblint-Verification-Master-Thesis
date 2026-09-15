@@ -5,6 +5,7 @@ theory Congruence_Assembly
     Congruence_Sound
     "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "TD.TD_side_upd_rule"
 begin
 
@@ -17,8 +18,8 @@ text \<open>
   this file.
 
   Congruence at the context-insensitive route: 2 instances of \<^locale>\<open>unit_dg_analysis\<close>, one
-  per published solver discipline (\<open>always_join\<close>, \<open>per_origin\<close>), the first being the
-  production default. The equation system, the solve, the reader, the result table, the
+  per published solver discipline (\<open>always_join\<close>, \<open>per_origin\<close>), the first owning the
+  unsuffixed names. The equation system, the solve, the reader, the result table, the
   report and every soundness endpoint come from that locale; this theory only names
   Congruence's own implementation and facts and chooses the disciplines.
 
@@ -157,5 +158,54 @@ lemma congruence_po_equations_eq: "congruence_po_asm.equations = congruence_unit
   by (rule ext)+
      (simp add: congruence_po_asm.equations_def congruence_join.equations_def
         congruence_po_asm.analysis_spec_def congruence_join.analysis_spec_def)
+
+subsection \<open>Any global update rule\<close>
+
+text \<open>
+  The same assembly with the rule that merges side-effected globals left as a
+  parameter, so one registration serves every discipline.
+\<close>
+
+global_interpretation congruence_rule: unit_dg_analysis
+    congruence_tf_st_for congruence_enter_st_for cinit_congruence_st
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((congruence exec_dg_st lifted, congruence exec_dg_st lifted) dg_state) r"
+    bot congruence_classify_check
+    skip_congruence assign_congruence special_congruence branch_congruence body_congruence
+    return_congruence enter_congruence_ci_for event_congruence "TD_side_rule_Interp_solve_c r"
+  for r
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
+  case (1 gs) show ?case by (rule congruence_tf.is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule congruence_tf_st_for_commute[unfolded congruence_tf.tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule congruence_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule congruence_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule congruence_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule congruence_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
 
 end

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --solver warrow
+// PARAM: --analysis interval --globals warrow
 // FM 2026 Example 2: the paper's Fig. 1 analyzed with intervals and
 // widening, where the three contributions to the global g are accumulated
 // into one value that is widened on every update.

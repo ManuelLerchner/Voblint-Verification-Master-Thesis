@@ -8,7 +8,7 @@ file, a state leaking into a node label on a domain that renders wider than the
 one the test uses.
 
 Each fixture runs under its own PARAM line, so the sweep exercises the same
-domain, context and solver combinations the corpus already covers. A fixture
+domain, context and globals-rule combinations the corpus already covers. A fixture
 whose --html rendering exceeds HTML_AUDIT_TIMEOUT is skipped, not failed: a
 context-sensitive fixture with a rich context space can cost far more to
 render in full than tests/run.py's plain report already proved it terminates
@@ -276,16 +276,16 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
 
 
 DOMAINS = ["sign", "interval", "int", "parity", "congruence"]
-SOLVERS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
+GLOBALS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
 CONTEXTS = [None, "entry-state", "call-string"]
 
 COMBO_FIXTURE = "03-procedures/precision/01-call_return.vimp"
 
 
-def combination_args(domain, solver, context):
+def combination_args(domain, rule, context):
     args = ["--analysis", domain]
-    if solver:
-        args += ["--solver", solver]
+    if rule:
+        args += ["--globals", rule]
     if context:
         args += ["--context", context]
         if context == "call-string":
@@ -296,10 +296,9 @@ def combination_args(domain, solver, context):
 def audit_combinations(verbose: bool) -> int:
     """Sweep the configuration space, not the corpus.
 
-    A configuration the CLI accepts must produce a report with per-node states
-    in it. Accepting a run and then showing nothing is the failure that let a
-    whole solver discipline go unpublished: the legality table said yes, and
-    nothing checked that a surface existed behind the yes.
+    Every configuration must produce a report with per-node states in it.
+    Accepting a run and then showing nothing is the failure that once let a
+    whole solver discipline go unpublished.
 
     This is behavioural on purpose. The surface names are not regular enough to
     match on -- analyse_interval_result beside analyse_interval_result_wpo --
@@ -310,9 +309,9 @@ def audit_combinations(verbose: bool) -> int:
     accepted = 0
     with tempfile.TemporaryDirectory() as tmp:
         for domain in DOMAINS:
-            for solver in SOLVERS:
+            for rule in GLOBALS:
                 for context in CONTEXTS:
-                    args = combination_args(domain, solver, context)
+                    args = combination_args(domain, rule, context)
                     label = " ".join(args)
                     out = Path(tmp) / f"c{abs(hash(label))}"
                     proc = subprocess.run(
@@ -376,7 +375,7 @@ def main() -> int:
     ap.add_argument("-k", dest="filter", default="", help="only fixtures matching this")
     ap.add_argument("--verbose", action="store_true", help="list every fixture")
     ap.add_argument("--combinations", action="store_true",
-                    help="sweep the domain/solver/context space instead of the corpus")
+                    help="sweep the domain/globals/context space instead of the corpus")
     args = ap.parse_args()
 
     if not VOBLINT.exists():
