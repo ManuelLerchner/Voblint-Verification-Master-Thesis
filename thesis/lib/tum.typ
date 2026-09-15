@@ -36,8 +36,7 @@
     binding: left,
     numbering: none,
   )
-  set text(font: "New Computer Modern", size: 11pt,
-           lang: "en")
+  set text(font: "New Computer Modern", size: 11pt, lang: "en")
   set par(justify: true, leading: 0.62em, spacing: 1.0em)
   set heading(numbering: "1.1")
 
@@ -141,11 +140,14 @@
   })
   v(12mm)
   table(
-    columns: 2, align: (right, left), column-gutter: 1em, row-gutter: 0.8em,
-    text(size: 1.15em)[Author:],     text(size: 1.15em)[#author],
+    columns: 2,
+    align: (right, left),
+    column-gutter: 1em,
+    row-gutter: 0.8em,
+    text(size: 1.15em)[Author:], text(size: 1.15em)[#author],
     text(size: 1.15em)[Supervisor:], text(size: 1.15em)[#supervisor],
-    text(size: 1.15em)[Examiner:],    text(size: 1.15em)[#examiner],
-    text(size: 1.15em)[Date:],       text(size: 1.15em)[#date],
+    text(size: 1.15em)[Examiner:], text(size: 1.15em)[#examiner],
+    text(size: 1.15em)[Date:], text(size: 1.15em)[#date],
   )
   pagebreak(to: "odd")
 
@@ -153,7 +155,7 @@
   set align(left)
   v(0.62fr)
   [I confirm that this #lower(doctype) is my own work and I have documented
-   all sources and material used.]
+    all sources and material used.]
   v(15mm)
   [Munich, #date #h(5cm) #author]
   v(0.38fr)

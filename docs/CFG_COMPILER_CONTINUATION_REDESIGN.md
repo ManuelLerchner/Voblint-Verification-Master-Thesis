@@ -83,7 +83,7 @@ Established facts about the interface:
 
 `rg` over `src/` shows the 5-tuple is destructured in exactly nine theories:
 
-```
+```text
 src/Program_Model/Compile/VIMP_Proc_to_CFG.thy              37 references
 src/Program_Model/Compile/Control_Simulation.thy   65
 src/Program_Model/Compile/Compile_Locality.thy     40
@@ -172,7 +172,7 @@ it.
 `factorial_program` in `src/Examples/Tooling/Example_Proc_GraphViz_Recursion.thy`
 compiles as follows (hand-evaluated against the current `compile`):
 
-```
+```text
 fac body = If (n<2) (Return 1) (Seq (Call tmp fac [n-1]) (Return (n*tmp)))
 
 Statement 0   if n < 2                       reachable
@@ -252,7 +252,7 @@ and cfgStmt (s: stmt) (next:stmt option) (break:stmt option) (cont:stmt option)
 
 with the file-level comment at line 65:
 
-```
+```text
    Fill in the CFG info for the stmts in a block
    next = succ of the last stmt in this block
    break = succ of any Break in this block
@@ -637,7 +637,7 @@ interface has **one record field per action**. Adding a constructor means adding
 a field to `tf` (`tf_assume_not`, …), `etf`, `etf_st`, and `dgs`, and then
 extending every record literal that instantiates them:
 
-```
+```text
 src/Analysis/Generic/Equations/Constraint_System.thy   apply_tf, apply_etf, local_edge_action
 src/Analysis/Generic/Solver/Exec/Exec_Bridge.thy       apply_etf_st
 src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy       two etf record literals
@@ -1037,7 +1037,7 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 | `compile_entry_node` | local repair | becomes trivial/definitional |
 | `control_at` rules | substantial | `AssignDone` locates `SKIP` at `k` instead of `Statement (Suc n)`; `CallDone` likewise; `IfDone` and `WhileDone` collapse into "located at `k`" and no longer need to name a merge node; `SeqLeft`/`SeqRight`/`IfLeft`/`IfRight`/`WhileBody` thread the appropriate continuation |
 | `control_at_initial` | unchanged shape | |
-| `control_at_node_stmt` | unchanged **provided** every continuation reaching it is a `Statement` node — true with the always-allocated epilogue; needs an extra argument under the lazy-epilogue phase |
+| `control_at_node_stmt` | unchanged **provided** every continuation reaching it is a `Statement` node — true with the always-allocated epilogue; needs an extra argument under the lazy-epilogue phase | |
 | `compile_control_at_SKIP_exit_path` | substantial, but *shrinks* | becomes "a located `SKIP` reaches `k`", which is `star.refl` in every case except source `SKIP`/`Restore` (one nop step). The `IfLeft`/`IfRight` join-hopping cases disappear |
 | `control_at_source_com`, `source_com_no_Restore/Unwind` | unchanged | |
 
@@ -1285,7 +1285,7 @@ Statement nodes and non-bracket nops only:
 
 factorial after the redesign, with the always-allocated epilogue:
 
-```
+```text
 Statement 0   if n < 2                      reachable
 Statement 1   return 1                      reachable
 Statement 2   call fac(n-1), resume at 3    reachable

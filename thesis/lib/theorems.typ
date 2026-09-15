@@ -18,19 +18,32 @@
     h(0.4em)
     if italic { emph(body) } else { body }
     if isa-name != none {
-      block(width: 100%, above: 0.3em, align(right,
-        text(size: 0.75em, font: "DejaVu Sans Mono", fill: vb.proved, isa-name)))
+      block(width: 100%, above: 0.3em, align(right, text(
+        size: 0.75em,
+        font: "DejaVu Sans Mono",
+        fill: vb.proved,
+        isa-name,
+      )))
     }
   })
 }
 
-#let theorem(body, name: none, isa: none)    = _thm-block("Theorem", name, isa, body)
-#let lemma(body, name: none, isa: none)      = _thm-block("Lemma", name, isa, body)
-#let corollary(body, name: none, isa: none)  = _thm-block("Corollary", name, isa, body)
-#let definition(body, name: none, isa: none) = _thm-block("Definition", name, isa, body, italic: false)
-#let example(body, name: none, isa: none)    = _thm-block("Example", name, isa, body, italic: false)
+#let theorem(body, name: none, isa: none) = _thm-block("Theorem", name, isa, body)
+#let lemma(body, name: none, isa: none) = _thm-block("Lemma", name, isa, body)
+#let corollary(body, name: none, isa: none) = _thm-block("Corollary", name, isa, body)
+#let definition(body, name: none, isa: none) = _thm-block(
+  "Definition",
+  name,
+  isa,
+  body,
+  italic: false,
+)
+#let example(body, name: none, isa: none) = _thm-block("Example", name, isa, body, italic: false)
 
 // Reset the theorem counter at every chapter, matching LaTeX's [chapter].
 #let reset-theorems-on-chapter = {
-  show heading.where(level: 1): it => { thm-counter.update(0); it }
+  show heading.where(level: 1): it => {
+    thm-counter.update(0)
+    it
+  }
 }

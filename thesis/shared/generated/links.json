@@ -13,7 +13,7 @@
     "thm:ltr_collect_semantic_postfix": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_collect_semantic_postfix%7Cfact",
     "thm:source_activation_sound": "Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_activation_sound%7Cfact",
     "thm:source_completes_ltr_collect_exit": "Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_completes_ltr_collect_exit%7Cfact",
-    "thm:source_sound": "Voblint/Voblint_Analysis_Congruence/Congruence_Assembly.html#Congruence_Assembly.congruence_join.source_sound%7Cfact",
+    "thm:source_sound": "Voblint/Voblint_Analysis_Congruence/Congruence_Analyses.html#Congruence_Analyses.congruence_rule.source_sound%7Cfact",
     "type:com": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.com%7Ctype",
     "type:dg_spec": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype",
     "type:dg_state": "Voblint/Voblint_Framework/DG_State.html#DG_State.dg_state%7Ctype",

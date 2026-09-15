@@ -636,7 +636,7 @@ explicitly. Everything below refines that; the two deviations are marked.
   would leave this to judgement). The naming convention below
   ends introduction, elimination and destruction rules in `I`, `E`, `D`; a
   lemma with one of those names and no `[intro]` / `[elim]` / `[dest]` is
-  either mis-named or withheld from the automation it was written for. Tag it,
+  either misnamed or withheld from the automation it was written for. Tag it,
   or rename it to say what it really is. The one standing exception is a
   multi-conclusion `D` bundle cited by index (`wf_compile_inputD(8)`): tagging
   it `[dest]` would spawn every conclusion from every occurrence of its

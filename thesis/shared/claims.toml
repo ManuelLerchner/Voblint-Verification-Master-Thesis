@@ -10,12 +10,18 @@
 #           says which sentence in the thesis is now wrong
 
 [claims.sign-cannot-bound-magnitude]
-argv = ["--analysis", "sign",
-        "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp"]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp",
+]
 why = "The known-imprecision example: sign tracks total=+ (positive) exactly but has no magnitude, so total<100 stays UNKNOWN."
 
 [claims.parse-error-shape]
-argv = ["--analysis", "interval",
-        "tests/regression/00-sanity/02-malformed.vimp"]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/00-sanity/02-malformed.vimp",
+]
 why = "The frontend reports file:line:col on a syntax error rather than crashing."
 expect_status = 2

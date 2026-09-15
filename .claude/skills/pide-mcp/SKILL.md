@@ -60,7 +60,7 @@ Operational rules (each rule is elaborated in the sections below):
 
 **Incremental workflow** (for developing complex proofs):
 
-```
+```text
 1. create_scratch → scratch theory_path
 
 2. edit → extend the scratch theory (insert new content)
@@ -97,7 +97,7 @@ Moreover, you can use Isar commands if necessary, for example:
 - ❌ **Don't:** Try to import scratch theories from your main development
 - ✅ **Do:** Use scratch theories for experimentation, then copy successful results back to main theory
 
-  ```
+  ```text
   1. create_scratch to test approach
   2. Verify it works in scratch theory
   3. Copy successful proof back to main theory with edit
@@ -115,7 +115,7 @@ Moreover, you can use Isar commands if necessary, for example:
 
 - ❌ **Don't:** Make multiple edits without checking status
 
-  ```
+  ```text
   edit  (* Add lemma 1 *)
   edit  (* Add lemma 2 *)
   edit  (* Add lemma 3 - which one has the error? *)
@@ -123,7 +123,7 @@ Moreover, you can use Isar commands if necessary, for example:
 
 - ✅ **Do:** Check `get_state` after each significant edit
 
-  ```
+  ```text
   edit
   get_state  (* Verify status: ok *)
   edit  (* Continue only after verification *)

@@ -1,6 +1,6 @@
 #import "lib/tum.typ": thesis
 #import "lib/theorems.typ": thm-counter
-#import "@preview/glossarium:0.5.10": make-glossary, register-glossary, print-glossary
+#import "@preview/glossarium:0.5.10": make-glossary, print-glossary, register-glossary
 #import "lib/glossary.typ": entries as glossary-entries
 
 #show: make-glossary
@@ -18,7 +18,10 @@
 )
 
 // Theorem numbering restarts at every chapter.
-#show heading.where(level: 1): it => { thm-counter.update(0); it }
+#show heading.where(level: 1): it => {
+  thm-counter.update(0)
+  it
+}
 
 // Front matter chapters are unnumbered.
 #set heading(numbering: none)

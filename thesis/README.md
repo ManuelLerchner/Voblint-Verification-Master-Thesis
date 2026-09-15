@@ -2,7 +2,7 @@
 
 The Voblint thesis, in Typst.
 
-```
+```text
 thesis/
   thesis.typ      the document
   lib/            style: palette, notation, figures, code, theorems, sources

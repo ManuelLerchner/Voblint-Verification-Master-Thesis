@@ -65,7 +65,7 @@ weighted against research risk and dependency depth.
 
 **Dependency graph:**
 
-```
+```text
 M2  (independent, highest value)
 M3a (independent, best value-to-cost)
 M1  (independent) ──► M3b (needs a call-string context)

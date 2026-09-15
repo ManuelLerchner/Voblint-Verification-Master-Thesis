@@ -37,16 +37,21 @@
     radius: 3pt,
     inset: 8pt,
     breakable: breakable,
-    align(left, text(font: isabelle-font,
-      raw(decode-isabelle(src), lang: "isabelle", block: true,
-          syntaxes: isabelle-syntax))),
+    align(left, text(font: isabelle-font, raw(
+      decode-isabelle(src),
+      lang: "isabelle",
+      block: true,
+      syntaxes: isabelle-syntax,
+    ))),
   )
 }
 
 // Inline Isabelle: `#isai("a \<sqsubseteq> b")`
-#let isai(s) = text(font: isabelle-font,
-                    raw(decode-isabelle(s), lang: "isabelle",
-                        syntaxes: isabelle-syntax))
+#let isai(s) = text(font: isabelle-font, raw(
+  decode-isabelle(s),
+  lang: "isabelle",
+  syntaxes: isabelle-syntax,
+))
 
 // Generic framed listing for the other languages in the thesis.
 #let listing(body, lang: none, breakable: false) = {
@@ -86,13 +91,13 @@
   let href = if kind == none { none } else { _url(kind, name) }
   if href == none { body } else { link(href, body) }
 }
-#let isathm(name)    = entity(name, vb.proved, kind: "thm")
-#let isaconst(name)  = entity(name, black, kind: "const")
-#let isatype(name)   = entity(name, vb.neutral, kind: "type")
+#let isathm(name) = entity(name, vb.proved, kind: "thm")
+#let isaconst(name) = entity(name, black, kind: "const")
+#let isatype(name) = entity(name, vb.neutral, kind: "type")
 #let isalocale(name) = entity(name, vb.accent, kind: "locale")
-#let isacmd(name)    = entity(name, vb.trusted)   // an Isabelle command
-#let isasession(n)   = entity(n, vb.muted)
-#let isafile(p)      = entity(p, vb.muted)
+#let isacmd(name) = entity(name, vb.trusted)   // an Isabelle command
+#let isasession(n) = entity(n, vb.muted)
+#let isafile(p) = entity(p, vb.muted)
 
 // The Concrete Semantics marker: a small boxed `thy` beside a heading, linking
 // to the rendered theory the section is about. Renders as plain text until the
@@ -102,7 +107,9 @@
     _links.base + "Voblint/" + session + "/" + theory + ".html"
   }
   let body = box(
-    inset: (x: 3pt, y: 1pt), radius: 2pt, baseline: -0.35em,
+    inset: (x: 3pt, y: 1pt),
+    radius: 2pt,
+    baseline: -0.35em,
     stroke: 0.6pt + vb.accent,
     text(size: 0.5em, font: "DejaVu Sans Mono", fill: vb.accent)[thy],
   )
