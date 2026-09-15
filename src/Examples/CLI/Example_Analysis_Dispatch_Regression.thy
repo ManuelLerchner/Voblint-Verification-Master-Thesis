@@ -40,8 +40,8 @@ definition dispatch_demo_checks where
 
 lemma dispatch_demo_interval_precise:
   "dispatch_demo_checks Interval_Analysis Globals_Warrow Ctx_None =
-     Some [(Statement 1, Less (N 0) (V (STR ''y'')), Lifted Check_Proved),
-           (Statement 3, Less (N 0) (V (STR ''y'')), Lifted Check_Refuted)]"
+     Some [(Statement 1, Less (exp.N 0) (V (STR ''y'')), Lifted Check_Proved),
+           (Statement 3, Less (exp.N 0) (V (STR ''y'')), Lifted Check_Refuted)]"
   by eval
 
 text \<open>
@@ -59,20 +59,23 @@ lemma dispatch_demo_rule_invariant:
 
 text \<open>
   The call-string plan reads the table its rule names, not whichever one its domain
-  publishes first. Int is where that is observable: its call-string route publishes an
-  always-join table and a warrowing one, and the two rows below are the two solves.
+  publishes first. Int is where that is observable: its call-string registration
+  \<open>int_cs_rule\<close> solves an always-join table and a warrowing one, and the two rows
+  below are the two solves.
 \<close>
 
 lemma dispatch_demo_call_string_reads_the_named_rule:
   "(case run_voblint Int_Analysis Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = analyse_int_call_string_report_warrow 1 dispatch_demo_prog
+          = int_cs_rule.verdict_report 1 Globals_Warrow
+              (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = analyse_int_call_string_report 1 dispatch_demo_prog
+          = int_cs_rule.verdict_report 1 Globals_Join
+              (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   by eval+
 

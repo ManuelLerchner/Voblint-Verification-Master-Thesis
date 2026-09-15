@@ -5,8 +5,8 @@
 > `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
 > `numeric_query_judgments` (`Abstract_Numeric_Queries.thy`), interpreted for
 > every `backward_domain` in `Backward_Numeric_Queries.thy`; `backward_domain`
-> lives in `Backward_Domain.thy`; `unit_dg_pipeline`, `abstract_domain` and
-> `backward_domain_mono` no longer exist. The current inventory is the
+> lives in `Backward_Domain.thy`; `abstract_domain` and `backward_domain_mono`
+> no longer exist. The current inventory is the
 > `Checks/` row of `src/Abstract_Interpreter/Framework/README.md`. The
 > rendering sections describe the tree as it stands.
 
@@ -30,9 +30,9 @@ VIMP source
     v
 CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
     |
-    | verified TD solver, per domain (<Domain>_Assembly / _Exec_Sound)
+    | verified TD solver, per domain (generated <Domain>_Analyses)
     v
-node-indexed analysis_result       -- analyse_<domain>_result_for
+node-indexed analysis_result       -- <d>_rule.result r
                                    ::   (vname => bool) -> imp_prog
                                      -> (unit, 'a abs_state) analysis_result
     |
@@ -65,12 +65,12 @@ abstract_check_domain (Abstract_Checks.thy)
 The check-classification and discharge layers above the node-indexed
 solver state are domain-generic; each domain supplies its own solver
 frontend and `abstract_numeric_queries` instance below that line.
-`Sign_Checks.thy`, `Interval_Checks.thy`, `Parity_Checks.thy` and
-`Int_Checks.thy` are thin instantiations of the generic layers, not separate
-implementations of the pipeline. Each reads its per-node state through
-`analyse_<domain>_result_for`'s `analysis_result` table -- the routed
-producer's own solved table at `prog_main_name` -- and interprets the generic
-`analysis_surface` locale over it.
+`Sign_Classify.thy`, `Interval_Classify.thy`, `Parity_Classify.thy`,
+`Congruence_Classify.thy` and `Int_Classify.thy` are thin instantiations of the
+generic layers, not separate implementations of the pipeline. The per-node state
+they classify is the registration's `analysis_result` table, which
+`unit_dg_analysis` reads back through the generic `analysis_surface` locale
+(`state_at`, `report`).
 
 ## Layer responsibilities
 
@@ -126,16 +126,16 @@ makes no claim either way.
 
 ### Per-domain instances
 
-`Sign_Checks.thy` and `Interval_Checks.thy` each do one
+`Sign_Classify.thy` and `Interval_Classify.thy` each do one
 `global_interpretation abstract_check_domain ...`, `defines`-exporting
-`<domain>_check_true`/`<domain>_classify_check`/`<domain>_checks_proven`.
+`<domain>_check_query`/`<domain>_classify_check`/`<domain>_checks_proven`.
 Neither restates the Boolean recursion, the classification logic, or the
 `checks_proven` bridge — that would be duplicating what `Abstract_Checks.thy`
 already proves once.
 
 They differ only in **which four query functions they feed in**:
 
-| | Sign (`Sign_Checks.thy`) | Interval (`Interval_Checks.thy`) |
+| | Sign (`Sign_Classify.thy`) | Interval (`Interval_Classify.thy`) |
 | --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
 | `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
@@ -145,25 +145,21 @@ They differ only in **which four query functions they feed in**:
 
 Each domain routes its own transfer functions and executable mirror through
 the shared D/G generator, solves with the vendored `TD_side` solver, and
-exposes the result as `analyse_<domain>_result_for`, an `analysis_result`
-table indexed by `(node, context)`.
+exposes the result as an `analysis_result` table indexed by `(node, context)`.
 
-`Unit_DG_Analysis.thy` performs that assembly once. `unit_dg_pipeline` is the
-construction half — equation system, solve, covered keys, reader, result
-table, globals, report — and carries no correctness assumptions;
-`unit_dg_analysis` adds the domain and solver contracts and derives the
-published soundness theorems. A domain instantiates it by naming five things:
-its executable transfer, its callee entry, the state a run starts from, the
-solver, and the check classifier. `Sign_Assembly.thy` is one
-`global_interpretation sign_join: unit_dg_analysis ...` whose `defines` clause
-publishes `sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
-`sign_unit_state_at`, `sign_unit_report` and their siblings; `Sign_Checks.thy`
-binds those to the published runtime names (`analyse_sign_result_for`,
-`analyse_sign_report_for`) and defines only what is Sign's own — the
-per-origin solver sibling and the published globals. Interval and Parity carry
-the same interpretation in `Interval_Assembly.thy` and `Parity_Assembly.thy`
-alongside their own `_Exec_Sound` construction, with agreement lemmas between
-the two; Int's product domain still builds its own routed spine.
+`Routed_DG_Analysis.thy` performs that assembly once, and `Unit_DG_Analysis.thy`
+instantiates it at the unit context. `routed_dg_pipeline` is the construction
+half — equation system, solve, covered keys, reader, result table, globals,
+report — and carries no correctness assumptions; `routed_dg_analysis` adds the
+domain and solver contracts, and `unit_dg_analysis` derives the published
+context-free soundness theorems. A domain instantiates it by naming its
+executable transfer, its callee entry, the state a run starts from, the solver,
+the check classifier and the facts that make them sound. The generated
+`Sign_Analyses.thy` holds `global_interpretation sign_rule: unit_dg_analysis ...
+for r`, taking the global update rule as a parameter; a caller reads
+`sign_rule.result`, `sign_rule.state_at` and `sign_rule.report` at a rule. Every
+domain, Int included, carries the same registration beside `<d>_es_rule` and
+`<d>_cs_rule` for the two contextual policies.
 
 The node-soundness bridge is generic and proved once inside
 `unit_dg_analysis`. `result_node_sound_closure` composes
@@ -356,5 +352,5 @@ worked examples.
   `pp`); the compiler currently happens to allocate one node per check,
   but the data model does not require that.
 - Every selectable domain has a check-discharge instance:
-  `Sign_Checks`, `Interval_Checks`, `Parity_Checks`, `Congruence_Checks` and
-  `Int_Checks`.
+  `Sign_Classify`, `Interval_Classify`, `Parity_Classify`,
+  `Congruence_Classify` and `Int_Classify`.

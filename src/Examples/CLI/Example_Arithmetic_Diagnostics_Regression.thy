@@ -2,6 +2,8 @@ theory Example_Arithmetic_Diagnostics_Regression
   imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Run"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 section \<open>Arithmetic diagnostics through the public CLI operation\<close>
 
 text \<open>

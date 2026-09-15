@@ -202,13 +202,16 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
             if end not in drawn:
                 problems.append(f"edge endpoint {end} is not a drawn node")
 
-    # 4. States belong in node documents. Ordinary node labels may contain a
-    #    second line for the source command; state rows use compact `name=`
-    #    assignments without spaces, which distinguishes them from `x := ...`.
+    # 4. States belong in node documents and the hover tooltip, never in the
+    #    drawn label. A label may carry a second line for the source command;
+    #    state rows use compact `name=` assignments without spaces, which
+    #    distinguishes them from `x := ...`.
     for line in dot.splitlines():
-        if "label=" in line and "->" not in line and "subgraph" not in line:
-            if re.search(r"\\n[^\\n ]+=", line):
-                problems.append(f"state leaked into a node label: {line.strip()[:90]}")
+        if "->" in line or "subgraph" in line:
+            continue
+        label = re.search(r'\blabel="((?:[^"\\]|\\.)*)"', line)
+        if label and re.search(r"\\n[^\\n ]+=", label.group(1)):
+            problems.append(f"state leaked into a node label: {line.strip()[:90]}")
 
     # 5. The graph has to render. A DOT syntax error is invisible until this.
     if shutil.which("dot"):

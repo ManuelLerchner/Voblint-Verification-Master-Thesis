@@ -148,10 +148,13 @@ The reusable soundness endpoints contain nothing domain-specific, so they sit
 `completed_run_sound`, `result_node_sound`) once, so every domain inherits them
 from an ancestor heap. Every context-insensitive result is an instance of that
 locale. Each domain's own
-instantiation of those endpoints -- the runtime API over an arbitrary
-`imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
-in that domain's analysis session, because it depends on that domain and on
-the shared chain and on nothing else. `Voblint_CLI` is then only `run_voblint`
+instantiation of those endpoints is the generated `<Domain>_Analyses` theory in
+that domain's analysis session, because it depends on that domain and on the
+shared chain and on nothing else: `<d>_rule` interprets `unit_dg_analysis`, and
+`<d>_es_rule` and `<d>_cs_rule` interpret `routed_dg_analysis` at the
+entry-state and call-string policies, each with the global update rule `r` as a
+parameter, so one fact such as `sign_rule.source_sound` covers every solver
+discipline. `Voblint_CLI` is then only `run_voblint`
 and its soundness: the statements it owns are the ones over `run_voblint`
 itself, which cannot live above the theory that defines `run_voblint`.
 
@@ -176,7 +179,7 @@ A `theories` entry is a theory *name*, never a path: a slash there is a
 malformed import and fails the whole session at load, so jEdit does not start
 and the mistake presents as a dead editor rather than as an error in the file
 that caused it. A subdirectory goes on the search path through `directories`
-instead --- `directories "generated"` plus a bare `Sign_Assembly`.
+instead --- `directories "generated"` plus a bare `Sign_Analyses`.
 `pixi run sessions-check` checks that, that every `directories` entry exists, and
 that every `.thy` on a session's search path is reached from something the
 session builds; it needs no Isabelle.
@@ -393,15 +396,17 @@ reports "no code equations" naming a constant nobody wrote by hand.
 spell the root query out. A registration that renames the pipeline's constants
 through `defines` never meets this, because each renamed constant gets its own
 equation from the interpretation; a call site that applies the pipeline
-directly -- which is what a runtime parameter such as a call-string bound
-forces, since no `global_interpretation` can fix it -- meets it immediately.
+directly meets it immediately. Every generated `<Domain>_Analyses`
+registration is such a call site: the global update rule and the call-string
+bound are runtime parameters, so `for r` and `for k r` leave them free, and
+the registrations declare no `defines`.
 
 ## Prose that claims a dependency must pin the theory
 
 A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
 only asks whether the name exists *somewhere* in the tree, which is all it can
 ask: prose here cites other domains' counterparts constantly and on purpose
-("mirroring Sign's own `analyse_sign_report_for`"), so a lint that demanded
+("`Interval_Analyses`, mirroring `Sign_Analyses`"), so a lint that demanded
 every reference resolve in the citing theory's own import closure would flag
 around a hundred correct sentences.
 

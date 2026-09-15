@@ -17,11 +17,15 @@ theory Voblint
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Check_Report"
+    "Voblint_Analysis_Sign.Sign_Classify"
     "Voblint_Analysis_Sign.Sign_Analyses"
-    "Voblint_Analysis_Sign.Sign_Checks"
     "Voblint_Analysis_Interval.Interval_Domain"
+    "Voblint_Analysis_Interval.Interval_Classify"
     "Voblint_Analysis_Interval.Interval_Analyses"
-    "Voblint_Analysis_Interval.Interval_Checks"
+    "Voblint_Analysis_Parity.Parity_Analyses"
+    "Voblint_Analysis_Congruence.Congruence_Analyses"
+    "Voblint_Analysis_Int.Int_Analyses"
+    "Voblint_CLI.Analysis_Run_Ctx_Sound"
     "Voblint_Framework.DG_Constraint_Trees"
     "Voblint_Framework.DG_Spec_Sound"
     "Voblint_Framework.CFG_Enumeration"
@@ -63,7 +67,6 @@ theory Voblint
     "Voblint_Examples_Congruence.Example_Congruence_Arithmetic"
     "Voblint_Examples_Congruence.Example_Congruence_Backward"
     "Voblint_Examples_Congruence.Example_Congruence_DG_Run"
-    "Voblint_Analysis_Sign.Sign_Entry"
 begin
 
 text \<open>
@@ -348,10 +351,10 @@ text \<open>
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Checks} --- the Sign instance: derived
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Classify} --- the Sign instance: derived
       numeric queries (read off \<^const>\<open>inv_less_sign\<close>/\<^const>\<open>inv_eq_sign\<close>/
       \<^const>\<open>meet_sign\<close>), no hand-built comparison tables.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Checks} --- the Interval instance:
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Classify} --- the Interval instance:
       specialized bound-comparison queries (\<^const>\<open>interval_less_true\<close> and
       siblings, \<open>Interval_Numeric_Queries\<close>). The backward-domain default derives
       equality refutation through \<^const>\<open>intersect_ivl\<close>, whose canonical empty
@@ -359,8 +362,12 @@ text \<open>
 
   \<^bold>\<open>4. Concrete domains.\<close> One analysis session per domain, all over the shared
     \<^verbatim>\<open>Analyses/Shared/\<close> chain, all reaching the same spine.  Each pairs a lattice theory
-    (order, transfers, soundness, monotonicity) with an \<^verbatim>\<open>_Analyses\<close> theory placing it at
-    the routed D/G spine over \<^const>\<open>ltr_collect\<close>.
+    (order, transfers, soundness, monotonicity) with one generated \<^verbatim>\<open>_Analyses\<close> theory
+    that registers it at the routed D/G spine three times: at the unit context, keyed by
+    entry state, and keyed by a bounded call string --- for Sign, \<^verbatim>\<open>sign_rule\<close>,
+    \<^verbatim>\<open>sign_es_rule\<close> and \<^verbatim>\<open>sign_cs_rule\<close>.  Every registration takes the global
+    update rule \<open>r\<close> as a parameter, and the call-string one also its bound \<open>k\<close>, so
+    one registration per context policy serves every rule and every bound.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Transfer} /
       @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element Sign
       lattice. It is finite, so the plain-join solver needs no widening.
@@ -399,10 +406,11 @@ text \<open>
       \<^const>\<open>ltr_collect\<close> through
       \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and
-      @{theory Voblint_Analysis_Interval.Interval_Analyses} --- Sign and Interval as
-      routed \<^verbatim>\<open>sound_dg_spec_core\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
-      through the adapter's generic node-soundness bridge.
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
+      domain as a \<^locale>\<open>routed_dg_analysis\<close> instance at entry state and call
+      string and a \<^locale>\<open>unit_dg_analysis\<close> instance at the unit context, so each
+      reaches \<^const>\<open>activation_collect\<close>, and at the unit context
+      \<^const>\<open>ltr_collect\<close>, through the locale's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
@@ -440,11 +448,14 @@ text \<open>
       abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the routed
-      D/G runtime for Sign: its equation system, solved table, and the
-      termination hypothesis enabled by each solver discipline.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses} --- the
-      Interval counterpart, with join, per-origin, and warrowing solver-choice
-      siblings.
+      D/G runtime for Sign: each registration's equation system, solved table,
+      and termination hypothesis \<^verbatim>\<open>sign_rule.terminates r\<close>, stated once for every
+      update rule \<open>r\<close>.
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses},
+      @{theory Voblint_Analysis_Parity.Parity_Analyses},
+      @{theory Voblint_Analysis_Congruence.Congruence_Analyses} and
+      @{theory Voblint_Analysis_Int.Int_Analyses} --- the same runtime for the other
+      four domains, generated from the same template.
 
   \<^bold>\<open>5b. Solved results and reports.\<close> What a finished analysis \<^emph>\<open>is\<close>, before anyone
     renders or dispatches it.
@@ -596,19 +607,9 @@ text \<open>
       reimplementation shaped to fit.
 
   \<^bold>\<open>9. The CLI: configuration and code generation.\<close>
-    One runtime-program entry point per selectable domain,
-    reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
-    parallel one, and one public operation over all of them, exported to OCaml.
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
-      takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
-      program) and reuses the always-join \<^verbatim>\<open>unit_dg_analysis\<close> registration's own
-      \<^verbatim>\<open>source_sound\<close> and \<^verbatim>\<open>result_node_sound\<close>
-      (@{theory Voblint_Result.Unit_DG_Analysis}) for its soundness theorems.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Entry},
-      @{theory Voblint_Analysis_Int.Int_Entry},
-      @{theory Voblint_Analysis_Parity.Parity_Entry} and
-      @{theory Voblint_Analysis_Congruence.Congruence_Entry} --- the same for the other
-      four domains, built on the same assembly endpoints.
+    One public operation over every domain, update rule and context policy, applying
+    the registrations of \<open>4\<close>/\<open>5\<close> above rather than a parallel pipeline, and
+    exported to OCaml.
     \<^item> @{theory Voblint_Solver.Globals_Rule} --- the rule that merges contributions to a
       side-effected global, as a value: one solver interpretation serves all four, and
       every domain registers each context policy once over it.
@@ -619,6 +620,16 @@ text \<open>
       development. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> pins one program's answer
       \<^verbatim>\<open>by eval\<close>, and a hand-written OCaml driver under \<open>codegen/regression/\<close>
       checks the generated module against the same values.
+    \<^item> @{theory Voblint_CLI.Analysis_Run_Sound} and
+      @{theory Voblint_CLI.Analysis_Run_Ctx_Sound} --- one soundness table per domain
+      and context policy (@{thm [source] sign_rule_table},
+      @{thm [source] interval_es_rule_table}, @{thm [source] int_cs_rule_table}, and
+      their siblings), each stated for an arbitrary update rule.  The unit tables are
+      built from the registration's own \<^verbatim>\<open>result_node_sound_of_terminates\<close>
+      (\<^theory>\<open>Voblint_Result.Unit_DG_Analysis\<close>).
+      @{theory Voblint_CLI.Analysis_Certified} dispatches over the tables to state
+      @{thm [source] run_voblint_certified_source_sound} and
+      @{thm [source] run_voblint_check_sound} once for every configuration.
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
       equations of \<^const>\<open>run_voblint\<close> and everything it transitively calls, down to the

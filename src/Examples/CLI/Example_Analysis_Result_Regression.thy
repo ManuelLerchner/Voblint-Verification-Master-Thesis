@@ -92,7 +92,6 @@ lemma result_demo_interval_stmt1_live:
   "node_live_ex result_demo_interval (Statement 1)"
   by eval
 
-
 text \<open>
   Case B --- a covered key whose raw stored state is \<^const>\<open>Lifted\<close> and yet
   concretizes to nothing. The production pipeline never leaves such a state

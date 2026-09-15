@@ -105,12 +105,13 @@ classification (`Abstract_Numeric_Queries.thy`).
 
 ## Per-domain configuration duplication (done)
 
-The per-domain `*_conf_*` families are no longer written out once per domain.
+No domain writes its configuration out by hand.
 `manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's registrations of `unit_dg_analysis` and
-`routed_dg_analysis` (`Voblint_Result`); the equation system, solve, reader,
-result table, report and soundness endpoints come from those locales, and the
-generated theories only name a domain's own facts.
+generates each domain's `<Domain>_Analyses` theory: one rule-parametric
+registration of `unit_dg_analysis` and two of `routed_dg_analysis`
+(`Voblint_Result`). The equation system, solve, reader, result table, report and
+soundness endpoints come from those locales, and the generated theory only names
+a domain's own facts.
 
 ## Deferred from the Framework and Analysis restructure
 

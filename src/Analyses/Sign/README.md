@@ -16,40 +16,38 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
 | `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
-| `generated/Sign_Assembly.thy` | three `global_interpretation`s of the shared `unit_dg_analysis`, `sign_join` (always-join, production), `sign_po_asm` (per-origin) and `sign_rule` (any global update rule, the one `run_voblint` reads): Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
-| `generated/Sign_Analyses.thy` | the call-string and entry-state routed configurations — the two the assembly does not cover, because each routes calls to more than one context — at always-join and at any global update rule (`sign_es_rule`, `sign_cs_rule`); see below |
-| `generated/Sign_Checks.thy` | the public runtime API: bindings onto the assembly, plus the per-origin solver sibling |
-| `generated/Sign_Entry.thy` | the production endpoint: `analyse_sign_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from the `sign_join` instance's own endpoints |
+| `generated/Sign_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `sign_rule` of the shared `unit_dg_analysis` at the unit context, and `sign_es_rule` and `sign_cs_rule` of `routed_dg_analysis` at the entry-state and call-string contexts. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and every soundness endpoint come out |
 
-The four `generated/` theories are written by `scripts/gen_analysis_assembly.py`
-from `manifests/analyses.yaml`; edit those, not the theories.
+`generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`
+from `manifests/analyses.yaml`; edit those, not the theory.
 
-`Sign_Entry` lives here rather than in `Voblint_CLI` because nothing in it needs
-to see another domain: it depends on Sign and on the `unit_dg_analysis` endpoints
-of `Voblint_Result`, both of which this session already has. `run_voblint` does
-not reach it: it reads `sign_rule`, `sign_es_rule` and `sign_cs_rule`, whose
-published facts `Voblint_CLI`'s table lemmas cite.
+Sign's soundness endpoints live here rather than in `Voblint_CLI` because
+nothing in them needs to see another domain: `sign_rule.source_sound`,
+`sign_rule.result_node_sound` and their siblings depend on Sign and on the
+`unit_dg_analysis` endpoints of `Voblint_Result`, both of which this session
+already has. `run_voblint` reads the same three registrations, and
+`Voblint_CLI`'s table lemmas cite their facts.
 
 ## The two contextual configurations
 
 `generated/Sign_Analyses.thy` is machine-written, so the orientation a reader
-needs lives here rather than in a header the generator owns.
+needs lives here rather than in the generated header.
 
 Neither contextual policy has a pipeline of its own. Both are interpretations
 of `routed_dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every domain at every policy. Sign
-supplies its own implementation and facts, the routing functions, the solver,
-and the published names. Nothing else.
+supplies its own implementation and facts; the generator adds the routing
+functions and the solver. Nothing else.
 
 A call string is the last `k` call sites on the stack, so a procedure entered
 from two places is analysed twice rather than once at the join. `cs_route`
 never reads the state it is handed, which is what makes
 `fun_route_activation_collect_sound` — the endpoint for a route that is a
 function of the call site and the caller's context alone — the applicable one.
-`k` is runtime data, so no `global_interpretation` can fix it: the registration
-is local to a context fixing `k`, and the published constants apply the
-pipeline's own constants at `cs_route k`.
+`k` is runtime data, so the registration leaves it free beside the rule
+(`for k r`), and a caller applies the locale's constants to both:
+`sign_cs_rule.result k r gs p`.
 
 The entry-state run keys a callee on the abstract values its formals hold on
 entry. Here `exec_formals_route` does read the state it is handed — the callee
@@ -60,21 +58,19 @@ That difference is the whole content of the routing-agreement obligation, and
 it is why the executable route and its abstract counterpart
 `formals_route_lifted_gen` are separate parameters.
 
-The context-insensitive run is neither of these: it is `Sign_Assembly`'s
-`global_interpretation` of the same assembly at the unit context.
+The context-insensitive run is neither of these: it is `sign_rule`, the
+registration of the same assembly at the unit context.
 
-## Why Sign registers no warrowing discipline of its own
+## Why widening buys Sign nothing
 
-Sign's per-discipline registrations are always-join and per-origin, with no
-warrowing one at either the unit or a contextual context. The seven-element
-lattice has finite height, so every ascending chain stabilises after a bounded
-number of steps and widening has nothing to accelerate — a warrowing rule buys no
-termination that the plain join does not already give. A caller may still select
-one: `sign_rule`, `sign_es_rule` and `sign_cs_rule` take the global update rule as
-a parameter, so `--globals warrow` solves and is sound at Sign like every other
-rule. This is the same reasoning Parity records for its own two disciplines; Interval
-and the Int product are the domains where widening earns its keep, because
-their carriers admit unbounded ascending chains.
+The seven-element lattice has finite height, so every ascending chain
+stabilises after a bounded number of steps and widening has nothing to
+accelerate — a warrowing rule buys no termination that the plain join does not
+already give. A caller may still select one: `sign_rule`, `sign_es_rule` and
+`sign_cs_rule` take the global update rule as a parameter, so `--globals warrow`
+solves and is sound at Sign like every other rule. Parity makes the same
+argument; Interval and the Int product are the domains where widening earns its
+keep, because their carriers admit unbounded ascending chains.
 
 Global keys differ per policy and are therefore parameters, not a fixed shape.
 The call-string run keys at `call_string_gk`, shared with every other

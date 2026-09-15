@@ -10,7 +10,7 @@ hide_const phase.N
 section \<open>Interval instance of the generic check-discharge interface\<close>
 
 text \<open>
-  Only composition lives here, mirroring \<open>Sign_Checks\<close>: the Interval bound
+  Only composition lives here, mirroring \<open>Sign_Classify\<close>: the Interval bound
   tables (\<open>interval_less_true\<close>/\<open>interval_less_false\<close>/\<open>interval_eq_true\<close>/
   \<open>interval_eq_false\<close>) and their \<open>Interval_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Interval expression
@@ -22,12 +22,9 @@ text \<open>
   the comparison tables --- the same way \<open>ivl_backward_domain\<close> in
   \<open>Interval_Backward\<close> interprets \<open>backward_domain\<close> for guard narrowing.
 
-  Split out of \<open>Interval_Checks\<close> as its own theory: the routed-spine
-  producer (\<open>Interval_Analyses\<close>) interprets the generic report
-  adapter locale and needs \<open>interval_classify_check\<close>'s soundness directions
-  for its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations, while \<open>Interval_Checks\<close>'s own
-  solved-result tables read that producer's routed output -- so this
-  classify machinery has to sit below both, not inside either.
+  The classifier sits below \<open>Interval_Analyses\<close>: each registration there discharges
+  its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations with \<open>interval_classify_check\<close>'s two
+  soundness directions.
 \<close>
 
 global_interpretation interval_check_domain:
@@ -47,7 +44,7 @@ qed
 
 text \<open>
   Only the consumer-facing aliases get a short Interval-prefixed name, the
-  same choice \<open>Sign_Checks\<close> makes: \<open>classify_check\<close>'s two directions and the
+  same choice \<open>Sign_Classify\<close> makes: \<open>classify_check\<close>'s two directions and the
   \<open>checks_proven\<close> bridge, both exercised by the worked example. The lower-
   level \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own soundness is built
   from stays reachable under the qualified \<open>interval_check_domain.\<close> name

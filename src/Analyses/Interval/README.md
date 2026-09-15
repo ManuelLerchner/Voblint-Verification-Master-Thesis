@@ -19,31 +19,17 @@ Executable witnesses live under
 | `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
-| `generated/Interval_Assembly.thy` | the context-insensitive route, as four interpretations of the shared `unit_dg_analysis` — one per update rule, with the lemmas proving all four solve the same system, plus `interval_rule`, which takes the rule as a parameter and is what `run_voblint` reads. Generated |
-| `generated/Interval_Contextual_Assembly.thy` | the call-string and entry-state routed configurations, each registered at all four disciplines with Apinis warrowing as the default, and once more at any rule (`interval_es_rule`, `interval_cs_rule`). Generated from `manifests/analyses.yaml`; see below |
-| `Interval_Analyses.thy` | the presentation routing this domain publishes on top of them — the one part of Interval's contextual surface that is not derivable |
-| `Interval_Solver_Analyses.thy` | the verdict reports of those two contextual configurations at the always-join, per-origin and warrowing-per-origin disciplines |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
-| `generated/Interval_Checks.thy` | the public result tables and check reports, bound to the assembly's four instances. Generated |
-| `generated/Interval_Entry.thy` | the production endpoint: `analyse_interval_report` over an arbitrary `imp_prog`, and its soundness theorems, restated from each assembly instance's own `unit_dg_analysis` endpoints. Generated |
+| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule` of the shared `unit_dg_analysis`, and `interval_es_rule` and `interval_cs_rule` of `routed_dg_analysis` at the entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 
-## The two contextual configurations, and the one hand-written part
+## The contextual configurations
 
-Interval is the one domain whose contextual surface does not generate
-completely. `generated/Interval_Contextual_Assembly.thy` holds the
-registrations -- both contexts, each at all four disciplines -- and the
-call-string published constants, machine-written from `manifests/analyses.yaml`.
-The first discipline listed for a context owns its unsuffixed binder, so the
-generator refuses a list whose first entry is not the context's default. `Interval_Analyses.thy` survives as a hand-written
-file because Interval publishes presentation routing on top of them — reading a
-callee's context back out of a solved entry-state table — and that is not
-derivable from registration data and should not be.
-
-The mechanism is uniform across all five domains: every domain's contextual
-registrations are generated. What differs is only whether the domain has
-hand-written content left to host beside them. Interval does; Sign, Parity,
-Congruence and Int do not, so for those four the generated theory carries the
-`<Domain>_Analyses` name outright.
+`generated/Interval_Analyses.thy` is machine-written from
+`manifests/analyses.yaml`, so the orientation a reader needs lives here rather
+than in a header the generator owns. The registry spells Interval's constants
+with the `ivl` prefix (`ivl_tf_st_for`, `cinit_ivl_st`) while the registrations,
+the classifier and the initial-state fact carry the domain name
+(`interval_rule`, `interval_classify_check`, `interval_cinit_gamma`).
 
 Neither contextual policy has a pipeline of its own. Both are interpretations
 of `routed_dg_analysis`, which owns the equation system, the solve, the covered
@@ -53,7 +39,7 @@ activation-indexed soundness endpoint.
 A call string is the last `k` call sites on the stack. `cs_route` never reads
 the state it is handed, which is what makes `fun_route_activation_collect_sound`
 the applicable endpoint, and `k` being runtime data is why that registration
-lives inside a `context fixes k` rather than a `global_interpretation`.
+leaves it free beside the rule (`for k r`).
 
 The entry-state run keys a callee on the abstract values its formals hold on
 entry. `exec_formals_route` does read the state it is handed, so
@@ -63,7 +49,9 @@ function on stores. Interval's bottom-sensitive handling of that entry state,
 and the covered-versus-uncovered distinction the result table draws, are
 properties of the shared assembly rather than of this domain.
 
-The context-insensitive run is neither of these: it is `Interval_Assembly`'s
-`global_interpretation` of the same assembly at the unit context, at Apinis
-warrowing. That registration owns Interval's unsuffixed names because always-join
-has no termination guarantee on this lattice.
+The context-insensitive run is neither of these: it is `interval_rule`, the
+registration of the same assembly at the unit context. Every registration takes
+the rule as a parameter, and on this lattice the rule matters: the solver warrows
+local unknowns under every rule, but a global side-effected around a loop can climb an
+unbounded chain unless the rule warrows it too, as the CLI's default
+`Globals_Warrow` (Apinis warrowing) does.

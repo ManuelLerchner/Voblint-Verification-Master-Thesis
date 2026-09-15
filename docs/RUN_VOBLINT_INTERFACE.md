@@ -199,9 +199,8 @@ cover:
 rule-parametric registration per domain and context policy, which
 `scripts/gen_analysis_assembly.py` emits from `manifests/analyses.yaml`:
 `<d>_rule` and `<d>_es_rule` for `r`, `<d>_cs_rule` for `k r`, each read through
-its `result_with_globals`. The per-discipline registrations (`sign_join`,
-`interval_es_po`, ...) remain in the domain theories; `run_voblint` does not
-reach them.
+its `result_with_globals`. These are the only registrations a domain carries:
+the rule is a parameter, so no discipline has an instance of its own.
 
 ## Steps
 
@@ -233,7 +232,6 @@ reach them.
 9. Select the side-effect update rule with `--globals` (`globals_rule`, done): it
    chooses only how a global unknown is updated; loop heads are always widened and
    narrowed (the `is_point` branch of `TD_side_upd_rule.thy`).
-10. Single-route audit over every domain x globals rule x context, including the
-    manifest's `legacy:` spellings.
+10. Single-route audit over every domain x globals rule x context.
 11. Website: introduction, domain/globals/context explainers, globals placement,
     inline editor annotations.

@@ -49,7 +49,7 @@ chain: `EntryState_Base` -> `EntryState_Ctx` -> `EntryState_Collect`.
 | `Example_Interval_DG_EntryState_Base.thy` | canonical spine | the compiled base: a call with a `__voblint_nondet_int()` argument |
 | `Example_Interval_DG_EntryState_Ctx.thy` | canonical spine | the production entry-state analysis run on it |
 | `Example_Interval_DG_EntryState_Collect.thy` | canonical spine | activation-indexed collecting soundness as a named instance of `entry_state_activation_collect_sound` |
-| `Example_Interval_DG_EntryState_Result_Regression.thy` | regression | `analyse_interval_entry_state_result`, the context-sensitive reading of the solution as an `analysis_result` |
+| `Example_Interval_DG_EntryState_Result_Regression.thy` | regression | the entry-state result table at Apinis warrowing, the context-sensitive reading of the solution as an `analysis_result`: contexts stay explicit, covered and uncovered contexts answer differently, a dead context reads as `Bot` |
 | `Example_Interval_DG_EntryState_Dead_Check_Regression.thy` | regression | the three shapes a check node takes once contexts are kept apart: live, dead, and disagreeing across contexts |
 | `Example_Interval_DG_Ctx_Factorial_Regression.thy` | regression | recursive `factorial` at `n=3` and `n=4`, four distinct entry-state contexts |
 
@@ -63,4 +63,4 @@ the call-string bound `k`.
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
 | `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_tree_def`/`routed_entry_seed_tree_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |
-| `Example_Interval_Call_String_Generic_Parity.thy` | regression | the runtime-`k` pipeline (`cs_call_string_sol_prog`) reproduces every solved value the K1/K2 instances pin, at the same query points |
+| `Example_Interval_Call_String_Generic_Parity.thy` | regression | the call-string registration at a runtime `k` reproduces every solved value the K1/K2 instances pin, at the same query points |

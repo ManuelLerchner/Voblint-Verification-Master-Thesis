@@ -38,17 +38,17 @@ remain in `Sign_Numeric_Queries`;
 `Routing/Compiled_Routed_Equations` assembles the common executable equation
 system from the chosen keys, route, specification, graph, and initial state.
 `Result/DG_Result_Construction` turns the solved system into a published table
-and `Result/Analysis_Surface` is what `Sign_Checks` reads it back through.
+and `Result/Analysis_Surface` is what `unit_dg_analysis` reads it back through.
 
-Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what
-`Sign_Analyses` actually interprets, twice: once at the call-string routing pair
-and once at the entry-state one. That locale owns the equation system, the
-solve, the covered keys, the reader, the result table, the contextual report and
-the activation-indexed soundness endpoints, so a policy costs Sign an
-interpretation and a list of published names rather than a pipeline. The
-context-insensitive route is the same shape one layer over:
-`Sign_Assembly` is one `global_interpretation` of `Result/Unit_DG_Analysis`'s
-`unit_dg_analysis`, and `Sign_Checks` binds the names it defines. Sign
+Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what the
+generated `Sign_Analyses` actually interprets, twice: `sign_cs_rule` at the
+call-string routing pair and `sign_es_rule` at the entry-state one. That locale
+owns the equation system, the solve, the covered keys, the reader, the result
+table, the contextual report and the activation-indexed soundness endpoints, so
+a policy costs Sign an interpretation rather than a pipeline. The
+context-insensitive route is the same shape one layer over: `sign_rule` is a
+`global_interpretation` of `Result/Unit_DG_Analysis`'s `unit_dg_analysis` in the
+same theory. All three take the global update rule as a parameter. Sign
 contributes the lattice and the transfer functions. Every other piece of those
 sentences is from here.
 

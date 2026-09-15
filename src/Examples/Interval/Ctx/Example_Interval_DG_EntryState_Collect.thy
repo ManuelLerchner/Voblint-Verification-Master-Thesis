@@ -248,3 +248,4 @@ corollary rc_activation_ctx_key:
             [] (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 
+end

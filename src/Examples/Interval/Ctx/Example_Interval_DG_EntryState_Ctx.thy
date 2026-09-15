@@ -57,7 +57,6 @@ text \<open>The routed callee context is \<^const>\<open>routed_dg_pipeline.ctx_
   omits the domain, so evaluation inlines its body rather than looking for a code
   equation of its own.\<close>
 
-declare routed_dg_pipeline.ctx_succ_def [code_unfold]
 
 definition ctx_call :: "ivl list" where
   "ctx_call = interval_es_rule.ctx_succ Globals_Warrow rc_gs rc_program

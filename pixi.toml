@@ -43,13 +43,10 @@ grammar-check = { depends-on = [
   "grammar-printer-check",
 ], description = "Check every generated VIMP frontend and printer for drift." }
 
-# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
+# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Analyses.thy.
 # Registration only: the generated interpretations cite handwritten lemmas, which
 # Isabelle still checks. `--check` diffs regenerated output against the checked-in
 # theories itself, so the drift gate needs neither git nor a toolchain.
-# The gate demands only what the registry has adopted; an unadopted output
-# renders under --out and is not compared, so verification cannot be red for a theory
-# nobody put in the tree.
 assembly-generate = { cmd = "python3 scripts/gen_analysis_assembly.py", description = "Regenerate analysis assembly theories from manifests/analyses.yaml." }
 assembly-check = { cmd = "python3 scripts/gen_analysis_assembly.py --check", description = "Check generated analysis assembly theories against manifests/analyses.yaml." }
 

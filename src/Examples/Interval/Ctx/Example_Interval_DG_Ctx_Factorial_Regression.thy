@@ -48,7 +48,6 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
   \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type omits the domain, so evaluation
   inlines its body rather than looking for a code equation of its own.\<close>
 
-declare routed_dg_pipeline.ctx_succ_def [code_unfold]
 
 definition fact_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where

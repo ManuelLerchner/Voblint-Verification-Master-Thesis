@@ -4,7 +4,6 @@ theory Routed_DG_Analysis
     Analysis_Surface
     "Voblint_Framework.Contextual_Check_Report"
     "Voblint_Framework.Routed_Analysis_Sound"
-    "Voblint_Framework.Seed_Global_Keys"
     "Voblint_Exec.Routed_Exec_Refinement"
     Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
@@ -244,19 +243,6 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
            (enter_st gs (call_info_of ca q)) (locals (sol_env gs p (Inl (u, ctx)))) = Bot
       then None else Some (ctx_succ gs p u ctx ca q))"
 
-text \<open>
-  The globals beside the table. Which contexts a procedure entry was solved at
-  is a policy question -- a single one at the unit context, the solved table's
-  own covered contexts elsewhere -- so the enumeration and the label are
-  arguments rather than a fixed shape.
-\<close>
-
-definition globals_at :: "(pp \<Rightarrow> 'c list) \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> String.literal)
-    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list" where
-  "globals_at ctxs label gs p =
-     dg_globals_for gs (declared_global_vars p) (sol_env gs p)
-       (seed_global_keys gk0 seed ctxs label p)"
 
 text \<open>
   The result table and the global unknowns beside it, off one solve. The second
@@ -350,7 +336,8 @@ declare routed_dg_pipeline.sol_vars_def [code]
 declare routed_dg_pipeline.sol_env_def [code]
 declare routed_dg_pipeline.reader_def [code]
 declare routed_dg_pipeline.result_def [code]
-declare routed_dg_pipeline.globals_at_def [code]
+declare routed_dg_pipeline.ctx_succ_def [code_unfold]
+declare routed_dg_pipeline.live_succ_def [code_unfold]
 declare routed_dg_pipeline.result_with_globals_def [code]
 declare routed_dg_pipeline.check_projection_def [code]
 declare routed_dg_pipeline.verdict_report_def [code]

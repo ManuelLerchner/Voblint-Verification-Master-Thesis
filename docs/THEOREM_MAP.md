@@ -38,11 +38,12 @@ explicit per-program premise; parsing, code
 generation, the OCaml compiler, and the handwritten CLI are outside the proved
 chain.
 
-The two axes now run equally far. Context-free is complete for all five domains
-in each `<Domain>_Entry` theory: `analyse_<domain>_report_sound_proved`/`_refuted`
-conclude over `ltr_collect`, and
-`analyse_<domain>_source_sound`/`_completed_run_sound` place a source run's store
-in the published table at `lookup_context ... v ()`. Under `Ctx_EntryState` and
+The two axes run equally far. Context-free is complete for all five domains at
+every global update rule, through each domain's generated `<d>_rule`
+registration of `unit_dg_analysis`: `report_proved_sound`/`report_refuted_sound`
+conclude over `ltr_collect`, and `source_sound`/`completed_run_sound` place a
+source run's store in the published state `state_at gs p v`, the table's entry
+at `lookup_context ... v ()`. Under `Ctx_EntryState` and
 `Ctx_CallString` the same reaches a source run through
 `sound_table_of_activation` and `sound_table.source_sound`, which together close
 the three gaps the per-context bound left: it names a context the run's own call history is admitted at rather than

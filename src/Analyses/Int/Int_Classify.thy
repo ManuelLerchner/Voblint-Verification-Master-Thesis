@@ -117,7 +117,7 @@ qed
 
 text \<open>
   Only the consumer-facing aliases get a short Int-prefixed name, the same choice
-  \<open>Sign_Checks\<close>/\<open>Interval_Checks\<close> make: \<open>classify_check\<close>'s
+  \<open>Sign_Classify\<close>/\<open>Interval_Classify\<close> make: \<open>classify_check\<close>'s
   two directions. Everything else the locale proves -- the \<open>checks_proven\<close>
   bridge, and the lower-level \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own
   soundness is built from -- stays reachable under the qualified

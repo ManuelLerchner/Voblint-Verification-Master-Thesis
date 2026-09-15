@@ -8,19 +8,19 @@ That is the whole reason it is a session boundary rather than a folder: anything
 importing it sees every domain, so what lives here should be only what genuinely
 needs all of them.
 
-Soundness is not one of those things. Each domain's entry point -- its runtime
-API over an arbitrary `imp_prog`, paired with its production soundness theorems
--- depends on that domain and on the shared `Voblint_Result` endpoints, never on
-a sibling, so it
-lives in that domain's own analysis session (`Sign_Entry` in
-`Voblint_Analysis_Sign`, and so on). What is left here is the part that really
-does see all five.
+Soundness is not one of those things. Each domain's registrations -- the
+solve, result table and report over an arbitrary `imp_prog`, paired with their
+soundness endpoints -- depend on that domain and on the shared `Voblint_Result`
+locales, never on a sibling, so they live in that domain's own analysis session
+(`sign_rule`, `sign_es_rule` and `sign_cs_rule` in the generated `Sign_Analyses`
+of `Voblint_Analysis_Sign`, and so on). What is left here is the part that
+really does see all five.
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| entry point | a domain's runtime API paired with its production soundness theorems, over an arbitrary `imp_prog`. Owned by the domain session, not this one. |
+| registration | a domain's interpretation of `unit_dg_analysis` or `routed_dg_analysis` at one context policy, with the global update rule as a parameter: its solve, result table and report paired with their soundness endpoints, over an arbitrary `imp_prog`. Owned by the domain session, not this one. |
 | configuration | what a caller chooses: an `analysis_domain`, a `globals_rule` and a `context_mode`. Every combination is analysed; there is no default and no refused pairing. |
 | global update rule | how the solver merges a value side-effected into a global unknown: joined, joined per origin, warrowed, or warrowed per origin (`globals_rule`). Local unknowns are warrowed at widening points under every rule. |
 | flat report | `check_report_entry list` — one verdict per check, no contexts |

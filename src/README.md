@@ -73,16 +73,13 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
 <Domain>_Transfer    the transfer functions
 <Domain>_Exec        the executable mirror, on the finite-map carrier
 <Domain>_Sound       the D/G spec and its soundness; no context, no solver
-<Domain>_Assembly    the context-insensitive route, one registration per solver discipline
-<Domain>_Analyses    the entry-state and call-string policies over the same spec
-<Domain>_Checks      the runtime API over an arbitrary program: solve, result table, report
-<Domain>_Entry       that API's soundness theorems
+<Domain>_Classify    check discharge: the three-way verdict for one condition
+<Domain>_Analyses    the unit, entry-state and call-string registrations, each at any
+                     global update rule: solve, result table, report, soundness endpoints
 ```
 
-The last four are generated from `manifests/analyses.yaml` (each domain's `generated/`
-folder); Interval and Int write some of them by hand and add `_Solver_Analyses`
-for their widening routes and alternative solver disciplines, and Int adds
-`Int_Exec_Sound` to choose its transfer by refinement mode.
+The last one is generated from `manifests/analyses.yaml` (each domain's `generated/`
+folder); Int adds `Int_Exec_Sound` to choose its transfer by refinement mode.
 
 Everything under a `generated/` folder is emitted by
 `scripts/gen_analysis_assembly.py`: change the yaml or the generator, never the
