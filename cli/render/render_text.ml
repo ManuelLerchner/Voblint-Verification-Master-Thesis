@@ -7,7 +7,6 @@ module C = Voblint_CLI.Generated
 module A = Result_text
 
 let node_label = A.point_name
-
 let verdict_label = A.verdict_name
 
 let diagnostic_location positions diagnostic =
@@ -114,4 +113,3 @@ let render_report path analysis positions result check_positions =
     (render_table "Assertion checks"
        [ "Location"; "Point"; "Condition"; "Verdict"; "State" ]
        checks)
-

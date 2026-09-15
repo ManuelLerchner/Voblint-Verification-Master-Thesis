@@ -58,7 +58,8 @@ let record (p : Lexing.position) (q : Lexing.position) (c : 'a) : 'a =
    action, which reduces after the whole body and before the next definition
    starts recording. *)
 let close (name : string) (p : Lexing.position) (q : Lexing.position) : unit =
-  closed := { name; header = span p q; statements = List.rev !pending } :: !closed;
+  closed :=
+    { name; header = span p q; statements = List.rev !pending } :: !closed;
   pending := []
 
 (* Definitions in source order: each function_decl reduces at its own closing

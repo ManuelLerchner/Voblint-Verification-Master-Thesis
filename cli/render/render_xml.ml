@@ -58,7 +58,8 @@ let split_binding line =
    split needs every part to be "<word>:<value>". *)
 let split_components value =
   let rec parts start i =
-    if i + 1 >= String.length value then [ String.sub value start (String.length value - start) ]
+    if i + 1 >= String.length value then
+      [ String.sub value start (String.length value - start) ]
     else if value.[i] = ';' && value.[i + 1] = ' ' then
       String.sub value start (i - start) :: parts (i + 2) (i + 2)
     else parts start (i + 1)
@@ -135,8 +136,7 @@ let state_map node =
     bindings;
   Buffer.add_string buf "</map>";
   let notes =
-    notes
-    @ match node.G.status with Some s -> [ status_note s ] | None -> []
+    notes @ match node.G.status with Some s -> [ status_note s ] | None -> []
   in
   (Buffer.contents buf, List.filter (fun s -> s <> "") notes)
 
@@ -196,10 +196,8 @@ let node_xml ~source_file ~fn ~loc ~blocks =
      <path>\n\
      %s%s</path>\n\
      </call></loc>\n"
-    (escape node.G.id)
-    (escape source_file) (escape fn) line order column end_line end_column
-    (escape node.G.label)
-    note_xml analyses
+    (escape node.G.id) (escape source_file) (escape fn) line order column
+    end_line end_column (escape node.G.label) note_xml analyses
 
 let index_xml ~source_file ~fns =
   Printf.sprintf
@@ -451,4 +449,3 @@ let file_xml ~source_text ~checks ~line_nodes ~dead_lines =
      %s\n\
      </file>\n"
     (String.concat "\n" body)
-

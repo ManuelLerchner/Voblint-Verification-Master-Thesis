@@ -1,9 +1,8 @@
-; Generated from manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py.
+; vimp_parser.mly and vimp_lexer.mll are generated from manifests/vimp-grammar.yaml
+; by scripts/gen_vimp_menhir.py; this file is handwritten.
 
 (menhir
  (modules vimp_parser)
- (flags
-  --table
-  --unused-precedence-levels))
+ (flags --table --unused-precedence-levels))
 
 (ocamllex vimp_lexer)

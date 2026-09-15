@@ -1,53 +1,62 @@
 (rule
  (targets Voblint_CLI.ml)
  (deps ../../codegen/generated/ml/Voblint_CLI.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_positions.ml)
  (deps ../../cli/frontend/vimp_positions.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_parser.mly)
  (deps ../../cli/frontend/vimp_parser.mly)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_lexer.mll)
  (deps ../../cli/frontend/vimp_lexer.mll)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_frontend.ml)
  (deps ../../cli/frontend/vimp_frontend.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
 (rule
  (targets vimp_printer.ml)
  (deps ../../cli/frontend/vimp_printer.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
- (menhir
+(menhir
  (modules vimp_parser)
- (flags
-  --table
-  --unused-precedence-levels))
+ (flags --table --unused-precedence-levels))
 
 (ocamllex vimp_lexer)
 
+; Same split as cli/dune: generated modules are exempt from warnings, the
+; handwritten ones around them are not.
+
+(library
+ (name ast_driver_positions)
+ (wrapped false)
+ (modules vimp_positions))
+
+(library
+ (name ast_driver_grammar)
+ (wrapped false)
+ (modules Voblint_CLI vimp_parser vimp_lexer)
+ (libraries ast_driver_positions menhirLib str zarith)
+ (flags
+  (:standard -w -a)))
+
 (executable
  (name ast_driver)
- (modules
-  Voblint_CLI
-  vimp_positions
-  vimp_parser
-  vimp_lexer
-  vimp_frontend
-  vimp_printer
-  ast_driver)
- (libraries
-  menhirLib
-  str
-  zarith)
- (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
+ (modules vimp_frontend vimp_printer ast_driver)
+ (libraries ast_driver_grammar ast_driver_positions str zarith))

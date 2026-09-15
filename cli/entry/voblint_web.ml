@@ -76,7 +76,9 @@ let context_of_string mode (depth : Js.number_t) =
   match mode with
   | "none" -> Ok C.Ctx_None
   | "entry-state" -> Ok C.Ctx_EntryState
-  | "call-string" when Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int ->
+  | "call-string"
+    when Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int
+    ->
       Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_float depth)))
   | "call-string" -> Error "Call-string depth must be a non-negative integer"
   | _ -> Error ("Unknown context mode: " ^ mode)
@@ -95,10 +97,15 @@ let run analysis_js globals_js context_js context_depth source_js =
   let source = Js.to_string source_js in
 
   let answer =
-    match domain_of_string analysis_name, globals_of_string globals_name,
-          context_of_string context_name context_depth with
-    | None, _, _ -> Render_json.error_json ("Unknown analysis domain: " ^ analysis_name)
-    | _, None, _ -> Render_json.error_json ("Unknown globals rule: " ^ globals_name)
+    match
+      ( domain_of_string analysis_name,
+        globals_of_string globals_name,
+        context_of_string context_name context_depth )
+    with
+    | None, _, _ ->
+        Render_json.error_json ("Unknown analysis domain: " ^ analysis_name)
+    | _, None, _ ->
+        Render_json.error_json ("Unknown globals rule: " ^ globals_name)
     | _, _, Error message -> Render_json.error_json message
     | Some analysis, Some globals, Ok context -> (
         try
@@ -112,7 +119,8 @@ let run analysis_js globals_js context_js context_depth source_js =
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
-            Render_json.run_voblint_json ~kind:analysis ~globals ~ctx:context program answer
+            Render_json.run_voblint_json ~kind:analysis ~globals ~ctx:context
+              program answer
           in
           match answer with
           | C.Malformed_Program ->
@@ -123,8 +131,8 @@ let run analysis_js globals_js context_js context_depth source_js =
               in
               Render_json.error_json ~raw message
           | C.Analysed result ->
-              Render_json.result_json analysis_ms program ~check_positions ~stmt_positions
-                ~header_positions ~raw result
+              Render_json.result_json analysis_ms program ~check_positions
+                ~stmt_positions ~header_positions ~raw result
         with Vimp_frontend.Parse_error { line; col; msg; _ } ->
           Render_json.parse_error_json ~line ~column:col msg)
   in

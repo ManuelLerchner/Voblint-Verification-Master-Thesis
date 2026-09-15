@@ -8,23 +8,32 @@
 (rule
  (targets Voblint_CLI.ml)
  (deps ../codegen/generated/ml/Voblint_CLI.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
+
+(library
+ (name voblint_positions)
+ (wrapped false)
+ (modules vimp_positions))
+
+; The Isabelle export and the Menhir/ocamllex output warn on constructs their
+; generators emit by design (partial matches, unused semantic values). Every
+; other module, including the generated but warning-clean printer, sits in the
+; libraries around this one, where warnings are errors.
+
+(library
+ (name voblint_grammar)
+ (wrapped false)
+ (modules Voblint_CLI vimp_parser vimp_lexer)
+ (libraries voblint_positions menhirLib str zarith)
+ (flags
+  (:standard -w -a)))
 
 (library
  (name voblint_frontend)
  (wrapped false)
- (modules
-  Voblint_CLI
-  vimp_positions
-  vimp_parser
-  vimp_lexer
-  vimp_frontend
-  vimp_printer)
- (libraries
-  menhirLib
-  str
-  zarith)
- (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
+ (modules vimp_frontend vimp_printer)
+ (libraries voblint_grammar voblint_positions str zarith))
 
 (library
  (name voblint_rendering)
@@ -40,19 +49,12 @@
   render_xml
   wf_explain
   report_dir)
- (libraries voblint_frontend)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (libraries voblint_frontend))
 
 (executable
  (name voblint)
  (modules voblint)
- (libraries
-  voblint_frontend
-  voblint_rendering
-  str
-  zarith
-  unix)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (libraries voblint_frontend voblint_rendering str zarith unix))
 
 (executable
  (name voblint_web)
@@ -64,13 +66,10 @@
   js_of_ocaml
   zarith
   zarith_stubs_js)
-
  ;; The generated analyzer contains deep indirect recursion through the
  ;; solver's query/eval callbacks. Keep CPS enabled so tail calls through
  ;; higher-order functions can be transformed rather than consuming the
  ;; Wasm/host stack.
  (wasm_of_ocaml
   (flags
-   (:standard
-   --opt=3)))
- (flags (:standard -w -8-11-20-26-27-32-37-39 -warn-error -A)))
+   (:standard --opt=3))))

@@ -45,7 +45,9 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
         {
           path = Printf.sprintf "nodes/%s.xml" id;
           content =
-            X.node_xml ~source_file ~fn ~loc:(X.node_line positions node) ~blocks;
+            X.node_xml ~source_file ~fn
+              ~loc:(X.node_line positions node)
+              ~blocks;
         })
       nodes
   in
@@ -70,7 +72,8 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
       (fun (l, ids) ->
         if
           List.for_all
-            (fun id -> List.exists (fun (n : G.node) -> n.id = id && X.is_dead n) nodes)
+            (fun id ->
+              List.exists (fun (n : G.node) -> n.id = id && X.is_dead n) nodes)
             ids
         then Some l
         else None)

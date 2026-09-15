@@ -548,7 +548,9 @@ let () =
     end
   end;
   let result_for k =
-    match Value_symbols.decode_answer (C.run_voblint k !globals context prog) with
+    match
+      Value_symbols.decode_answer (C.run_voblint k !globals context prog)
+    with
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.Analysed result ->
         if !html || !dot || !graph_snapshot then
@@ -609,7 +611,8 @@ let () =
                               Render_xml.line;
                               column;
                               verdict = A.verdict_name v;
-                              cond = Vimp_printer.string_of_exp (C.check_exp check);
+                              cond =
+                                Vimp_printer.string_of_exp (C.check_exp check);
                               message = None;
                             })
                     (Render_text.paired_checks rows check_positions)
@@ -626,7 +629,8 @@ let () =
                     (fun diagnostic ->
                       let line, column =
                         Option.value ~default:(0, 0)
-                          (Render_text.diagnostic_location stmt_positions diagnostic)
+                          (Render_text.diagnostic_location stmt_positions
+                             diagnostic)
                       in
                       {
                         Render_xml.line;
@@ -653,13 +657,16 @@ let () =
               files;
             Ok_report (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead))
           else if !graph_snapshot then
-            Ok_graph (Render_snapshot.render (Context_graph.build prog (result_for kind)))
+            Ok_graph
+              (Render_snapshot.render
+                 (Context_graph.build prog (result_for kind)))
           else if !dot then
-            Ok_dot (Render_dot.render (Context_graph.build prog (result_for kind)))
+            Ok_dot
+              (Render_dot.render (Context_graph.build prog (result_for kind)))
           else
             Ok_text
-              (Render_text.render_report path (analysis_label kind) stmt_positions
-                 (result_for kind) check_positions)
+              (Render_text.render_report path (analysis_label kind)
+                 stmt_positions (result_for kind) check_positions)
         with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s

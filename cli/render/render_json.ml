@@ -30,47 +30,56 @@ let error_json ?raw message =
     (match raw with Some r -> ",\"raw\":" ^ r | None -> "")
 
 let parse_error_json ~line ~column message =
-  Printf.sprintf "{\"status\":\"error\",\"message\":%s,\"line\":%d,\"column\":%d}"
+  Printf.sprintf
+    "{\"status\":\"error\",\"message\":%s,\"line\":%d,\"column\":%d}"
     (json_string message) line column
 
 (* Editor annotations key on these; a check or diagnostic the parser gave no
    position omits them rather than guessing one. *)
 let location_fields = function
-  | Some (line, column) -> Printf.sprintf ",\"line\":%d,\"column\":%d" line column
+  | Some (line, column) ->
+      Printf.sprintf ",\"line\":%d,\"column\":%d" line column
   | None -> ""
 
 let check_json result (check, position) =
   let point = C.check_point check and cnd = C.check_exp check in
-  let state = match C.check_verdict check with C.Bot -> "" | C.Lifted _ -> A.state_slice result point cnd in
+  let state =
+    match C.check_verdict check with
+    | C.Bot -> ""
+    | C.Lifted _ -> A.state_slice result point cnd
+  in
   Printf.sprintf "{\"point\":%s,\"condition\":%s,\"verdict\":%s,\"state\":%s%s}"
     (json_string (A.point_name point))
     (json_string (Vimp_printer.string_of_exp cnd))
     (json_string (A.contextual_verdict_name (C.check_verdict check)))
-    (json_string state)
-    (location_fields position)
+    (json_string state) (location_fields position)
 
 let diagnostic_json stmt_positions diagnostic =
   Printf.sprintf "{\"severity\":%s,\"message\":%s%s}"
     (json_string (Render_text.diagnostic_severity diagnostic))
     (json_string (A.diagnostic_message diagnostic))
-    (location_fields (Render_text.diagnostic_location stmt_positions diagnostic))
+    (location_fields
+       (Render_text.diagnostic_location stmt_positions diagnostic))
 
 (* Unlike the text report, a count mismatch drops the positions instead of
    failing: the verdicts are still correct, only their placement is not. *)
 let positioned_checks checks check_positions =
   if List.length checks = List.length check_positions then
-    List.map2 (fun check position -> (check, Some position)) checks check_positions
+    List.map2
+      (fun check position -> (check, Some position))
+      checks check_positions
   else List.map (fun check -> (check, None)) checks
 
 let json_list f xs = "[" ^ String.concat "," (List.map f xs) ^ "]"
-
 let json_option f = function Some x -> f x | None -> "null"
 
 (* Every command the parser placed, keyed by the point name nodes carry. A point
    with no node at all is one the solver never reached in any context. *)
 let statement_json (index, (line, column, end_line, end_column)) =
-  Printf.sprintf "{\"point\":%s,\"line\":%d,\"column\":%d,\"end_line\":%d,\"end_column\":%d}"
-    (json_string (A.point_name (C.Statement (C.nat_of_integer (Z.of_int index)))))
+  Printf.sprintf
+    "{\"point\":%s,\"line\":%d,\"column\":%d,\"end_line\":%d,\"end_column\":%d}"
+    (json_string
+       (A.point_name (C.Statement (C.nat_of_integer (Z.of_int index)))))
     line column end_line end_column
 
 let binding_json (x, v) = "[" ^ json_string x ^ "," ^ json_string v ^ "]"
@@ -87,22 +96,27 @@ let status_name = function
    and so is not the effect of this step alone. A step out of an unreachable node
    contributes nothing and is not counted, nor is a combine edge: that is how a
    call's own continuation receives its result, not a second path. *)
-let node_json (graph : G.t) context_of context_key incoming entered exit_of step_state
-    (n : G.node) =
+let node_json (graph : G.t) context_of context_key incoming entered exit_of
+    step_state (n : G.node) =
   let step (e : G.edge) =
     Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b%s}"
       (json_string e.dst)
-      (json_string (match e.kind with G.Call_to_return -> "after call " ^ e.text | _ -> e.text))
+      (json_string
+         (match e.kind with
+         | G.Call_to_return -> "after call " ^ e.text
+         | _ -> e.text))
       (json_option json_string e.writes)
       (Option.value ~default:0 (Hashtbl.find_opt incoming e.dst) > 1)
       (match step_state n e with
       | Some C.Bot -> ",\"state\":null"
-      | Some (C.Lifted bindings) -> ",\"state\":" ^ json_list binding_json bindings
+      | Some (C.Lifted bindings) ->
+          ",\"state\":" ^ json_list binding_json bindings
       | None -> "")
   in
   let steps =
     List.filter
-      (fun (e : G.edge) -> e.src = n.id && (e.kind = G.Intra || e.kind = G.Call_to_return))
+      (fun (e : G.edge) ->
+        e.src = n.id && (e.kind = G.Intra || e.kind = G.Call_to_return))
       graph.edges
   in
   (* The callee entries a call reaches from this node. [join] marks an entry other
@@ -112,7 +126,11 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of step
       (json_option json_string (exit_of e.dst))
       (Option.value ~default:0 (Hashtbl.find_opt entered e.dst) > 1)
   in
-  let enters = List.filter (fun (e : G.edge) -> e.src = n.id && e.kind = G.Enter) graph.edges in
+  let enters =
+    List.filter
+      (fun (e : G.edge) -> e.src = n.id && e.kind = G.Enter)
+      graph.edges
+  in
   Printf.sprintf
     "{\"id\":%s,\"point\":%s,\"context\":%s,\"context_key\":%s,\"status\":%s,\"bindings\":%s,\"globals\":%s,\"ret\":%s,\"findings\":%s,\"next\":%s,\"enters\":%s}"
     (json_string n.id) (json_string n.label)
@@ -123,8 +141,7 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of step
     (json_list binding_json n.globals)
     (json_option json_string n.ret)
     (json_list json_string n.findings)
-    (json_list step steps)
-    (json_list enter enters)
+    (json_list step steps) (json_list enter enters)
 
 (* A short name for a node's context, to tell contexts apart where their values sit
    side by side. A call string names its call sites by source line, most recent
@@ -142,13 +159,15 @@ let context_key contexts stmt_positions (n : G.node) =
   match contexts.(n.context) with
   | C.Context_Unit -> ""
   | C.Context_Call_String [] -> "root"
-  | C.Context_Call_String points -> String.concat "\u{2190}" (List.map site points)
+  | C.Context_Call_String points ->
+      String.concat "\u{2190}" (List.map site points)
   | C.Context_Entry _ -> "#" ^ string_of_int n.local_context
 
 (* Where each procedure's parameters are shown: its header span and formals, and
    whether any of its returns carries a value -- without one, the return slot a
    call reads back holds nothing the program put there. *)
-let procedure_json program returns_value (name, (line, column, end_line, end_column)) =
+let procedure_json program returns_value
+    (name, (line, column, end_line, end_column)) =
   let formals =
     match C.prog_table program name with
     | Some (C.Proc_decl_ext (formals, _, ())) when name <> "main" -> formals
@@ -158,7 +177,9 @@ let procedure_json program returns_value (name, (line, column, end_line, end_col
     "{\"name\":%s,\"entry\":%s,\"line\":%d,\"column\":%d,\"end_line\":%d,\"end_column\":%d,\"formals\":%s,\"returns_value\":%b}"
     (json_string name)
     (json_string (A.point_name (C.FunctionEntry name)))
-    line column end_line end_column (json_list json_string formals) (returns_value name)
+    line column end_line end_column
+    (json_list json_string formals)
+    (returns_value name)
 
 (* What an intra step makes of its source's state, as run_voblint publishes it beside
    that state. A point's steps follow its outgoing intra edges in CFG order, so they
@@ -174,31 +195,41 @@ let step_states result =
       let edges = List.filter (fun (u, _, _) -> u = p) (A.intra_edges g) in
       let steps = C.state_steps st in
       if List.length edges = List.length steps then
-        Hashtbl.replace table (p, A.int_of_nat (C.state_context st))
-          (List.map2 (fun (_, a, _) (w, s) -> (A.action_text a, w, s)) edges steps))
+        Hashtbl.replace table
+          (p, A.int_of_nat (C.state_context st))
+          (List.map2
+             (fun (_, a, _) (w, s) -> (A.action_text a, w, s))
+             edges steps))
     (C.res_states result);
   table
 
 let nodes_json result (graph : G.t) context_key =
   let context = Hashtbl.create 64 in
   List.iter
-    (fun (c : G.cluster) -> List.iter (fun id -> Hashtbl.replace context id c.cluster_label) c.members)
+    (fun (c : G.cluster) ->
+      List.iter (fun id -> Hashtbl.replace context id c.cluster_label) c.members)
     graph.clusters;
   let dead = Hashtbl.create 64 in
   List.iter
-    (fun (n : G.node) -> if n.status = Some G.Unreachable then Hashtbl.replace dead n.id ())
+    (fun (n : G.node) ->
+      if n.status = Some G.Unreachable then Hashtbl.replace dead n.id ())
     graph.nodes;
   let incoming = Hashtbl.create 64 in
   List.iter
     (fun (e : G.edge) ->
-      if (e.kind = G.Intra || e.kind = G.Call_to_return) && not (Hashtbl.mem dead e.src) then
-        Hashtbl.replace incoming e.dst (1 + Option.value ~default:0 (Hashtbl.find_opt incoming e.dst)))
+      if
+        (e.kind = G.Intra || e.kind = G.Call_to_return)
+        && not (Hashtbl.mem dead e.src)
+      then
+        Hashtbl.replace incoming e.dst
+          (1 + Option.value ~default:0 (Hashtbl.find_opt incoming e.dst)))
     graph.edges;
   let entered = Hashtbl.create 16 in
   List.iter
     (fun (e : G.edge) ->
       if e.kind = G.Enter then
-        Hashtbl.replace entered e.dst (1 + Option.value ~default:0 (Hashtbl.find_opt entered e.dst)))
+        Hashtbl.replace entered e.dst
+          (1 + Option.value ~default:0 (Hashtbl.find_opt entered e.dst)))
     graph.edges;
   (* A callee entry's own context exits at that procedure's exit node in the same
      context. *)
@@ -206,20 +237,26 @@ let nodes_json result (graph : G.t) context_key =
   List.iter
     (fun (n : G.node) ->
       Hashtbl.replace owners n.id (n.owner, n.context);
-      if n.kind = G.Proc_exit then Hashtbl.replace exits (n.owner, n.context) n.id)
+      if n.kind = G.Proc_exit then
+        Hashtbl.replace exits (n.owner, n.context) n.id)
     graph.nodes;
   let exit_of entry =
     Option.bind (Hashtbl.find_opt owners entry) (Hashtbl.find_opt exits)
   in
   let points = Hashtbl.create 64 in
-  List.iter (fun (n : G.node) -> Hashtbl.replace points n.id n.point) graph.nodes;
+  List.iter
+    (fun (n : G.node) -> Hashtbl.replace points n.id n.point)
+    graph.nodes;
   let steps = step_states result in
   let step_state (n : G.node) (e : G.edge) =
-    match e.kind, Hashtbl.find_opt points e.dst with
+    match (e.kind, Hashtbl.find_opt points e.dst) with
     | G.Intra, Some w ->
-        Option.bind (Hashtbl.find_opt steps (n.point, n.context)) (fun entries ->
+        Option.bind
+          (Hashtbl.find_opt steps (n.point, n.context))
+          (fun entries ->
             List.find_map
-              (fun (text, w', s) -> if w' = w && text = e.text then Some s else None)
+              (fun (text, w', s) ->
+                if w' = w && text = e.text then Some s else None)
               entries)
     | _ -> None
   in
@@ -245,7 +282,9 @@ let nodes_json result (graph : G.t) context_key =
 let json_pair f g (a, b) = "[" ^ f a ^ "," ^ g b ^ "]"
 
 let json_object fields =
-  "{" ^ String.concat "," (List.map (fun (k, v) -> json_string k ^ ":" ^ v) fields) ^ "}"
+  "{"
+  ^ String.concat "," (List.map (fun (k, v) -> json_string k ^ ":" ^ v) fields)
+  ^ "}"
 
 let tagged tag = function
   | [] -> json_string tag
@@ -288,7 +327,8 @@ let rec com_json = function
   | C.If (b, c, d) -> tagged "If" [ exp_json b; com_json c; com_json d ]
   | C.While (b, c) -> tagged "While" [ exp_json b; com_json c ]
   | C.Call (dst, f, args) ->
-      tagged "Call" [ json_option json_string dst; json_string f; json_list exp_json args ]
+      tagged "Call"
+        [ json_option json_string dst; json_string f; json_list exp_json args ]
   | C.Return e -> tagged "Return" [ json_option exp_json e ]
   | C.Restore -> tagged "Restore" []
   | C.Unwind -> tagged "Unwind" []
@@ -306,7 +346,8 @@ let special_json = function
 let edge_action_json = function
   | C.EA_Nop -> tagged "EA_Nop" []
   | C.EA_Assign (x, e) -> tagged "EA_Assign" [ json_string x; exp_json e ]
-  | C.EA_Special (sc, x) -> tagged "EA_Special" [ special_json sc; json_string x ]
+  | C.EA_Special (sc, x) ->
+      tagged "EA_Special" [ special_json sc; json_string x ]
   | C.EA_Assume b -> tagged "EA_Assume" [ exp_json b ]
   | C.EA_AssumeNot b -> tagged "EA_AssumeNot" [ exp_json b ]
   | C.EA_Body f -> tagged "EA_Body" [ json_string f ]
@@ -315,9 +356,15 @@ let edge_action_json = function
 
 let call_action_json (C.CallEdge (dst, formals, args)) =
   tagged "CallEdge"
-    [ json_option json_string dst; json_list json_string formals; json_list exp_json args ]
+    [
+      json_option json_string dst;
+      json_list json_string formals;
+      json_list exp_json args;
+    ]
 
-let lifted_json f = function C.Bot -> tagged "Bot" [] | C.Lifted v -> tagged "Lifted" [ f v ]
+let lifted_json f = function
+  | C.Bot -> tagged "Bot" []
+  | C.Lifted v -> tagged "Lifted" [ f v ]
 
 let check_result_json = function
   | C.Check_Proved -> tagged "Check_Proved" []
@@ -337,31 +384,44 @@ let cfg_json g =
       ("cfg_entry", cfg_node_json (C.cfg_entry g));
       ("cfg_node_list", json_list cfg_node_json (C.cfg_node_list g));
       ( "cfg_intra_list",
-        json_list (json_pair cfg_node_json (json_pair edge_action_json cfg_node_json)) (C.cfg_intra_list g) );
+        json_list
+          (json_pair cfg_node_json (json_pair edge_action_json cfg_node_json))
+          (C.cfg_intra_list g) );
       ( "cfg_calls_list",
         json_list
           (json_pair cfg_node_json
-             (json_pair call_action_json (json_pair cfg_node_json cfg_node_json)))
+             (json_pair call_action_json
+                (json_pair cfg_node_json cfg_node_json)))
           (C.cfg_calls_list g) );
     ]
 
 let context_json = function
   | C.Context_Unit -> tagged "Context_Unit" []
   | C.Context_Entry vs -> tagged "Context_Entry" [ json_list json_string vs ]
-  | C.Context_Call_String us -> tagged "Context_Call_String" [ json_list cfg_node_json us ]
+  | C.Context_Call_String us ->
+      tagged "Context_Call_String" [ json_list cfg_node_json us ]
 
 let state_json st =
   json_object
     [
       ("state_point", cfg_node_json (C.state_point st));
       ("state_context", nat_json (C.state_context st));
-      ("state_value", lifted_json (json_list (json_pair json_string json_string)) (C.state_value st));
-      ("state_checks", json_list (json_pair exp_json (lifted_json check_result_json)) (C.state_checks st));
+      ( "state_value",
+        lifted_json
+          (json_list (json_pair json_string json_string))
+          (C.state_value st) );
+      ( "state_checks",
+        json_list
+          (json_pair exp_json (lifted_json check_result_json))
+          (C.state_checks st) );
       ( "state_diagnostics",
-        json_list (json_pair obligation_json (lifted_json check_result_json)) (C.state_diagnostics st) );
+        json_list
+          (json_pair obligation_json (lifted_json check_result_json))
+          (C.state_diagnostics st) );
       ( "state_steps",
         json_list
-          (json_pair cfg_node_json (lifted_json (json_list (json_pair json_string json_string))))
+          (json_pair cfg_node_json
+             (lifted_json (json_list (json_pair json_string json_string))))
           (C.state_steps st) );
     ]
 
@@ -384,13 +444,17 @@ let result_check_json c =
 
 let result_global_key_json = function
   | C.Global_Shared -> tagged "Global_Shared" []
-  | C.Global_Seed (f, i) -> tagged "Global_Seed" [ json_string f; json_option nat_json i ]
+  | C.Global_Seed (f, i) ->
+      tagged "Global_Seed" [ json_string f; json_option nat_json i ]
 
 let result_global_json g =
   json_object
     [
       ("global_key", result_global_key_json (C.global_key g));
-      ("global_state", lifted_json (json_list (json_pair json_string json_string)) (C.global_state g));
+      ( "global_state",
+        lifted_json
+          (json_list (json_pair json_string json_string))
+          (C.global_state g) );
     ]
 
 let arithmetic_diagnostic_json d =
@@ -411,7 +475,8 @@ let run_result_json r =
       ("res_routes", json_list route_json (C.res_routes r));
       ("res_checks", json_list result_check_json (C.res_checks r));
       ("res_globals", json_list result_global_json (C.res_globals r));
-      ("res_diagnostics", json_list arithmetic_diagnostic_json (C.res_diagnostics r));
+      ( "res_diagnostics",
+        json_list arithmetic_diagnostic_json (C.res_diagnostics r) );
     ]
 
 let analysis_answer_json = function
@@ -448,14 +513,19 @@ let program_json p =
   let decl name =
     match C.prog_table p name with
     | Some (C.Proc_decl_ext (formals, body, ())) ->
-        json_object [ ("formals", json_list json_string formals); ("body", com_json body) ]
+        json_object
+          [
+            ("formals", json_list json_string formals); ("body", com_json body);
+          ]
     | None -> "null"
   in
   json_object
     [
       ("declared_global_vars", json_list json_string (C.declared_global_vars p));
       ("prog_main", com_json (C.prog_main p));
-      ("prog_table", json_list (fun f -> json_pair json_string decl (f, f)) (C.prog_procs p));
+      ( "prog_table",
+        json_list (fun f -> json_pair json_string decl (f, f)) (C.prog_procs p)
+      );
     ]
 
 let run_voblint_json ~kind ~globals ~ctx program answer =
@@ -477,7 +547,8 @@ let returns_value result =
   let owner_of = A.owners g in
   fun name ->
     List.exists
-      (fun (u, a, _) -> match a with C.EA_Ret (Some _, _) -> owner_of u = name | _ -> false)
+      (fun (u, a, _) ->
+        match a with C.EA_Ret (Some _, _) -> owner_of u = name | _ -> false)
       (A.intra_edges g)
 
 (* One row per procedure entry per context: the seed a call publishes and the callee
@@ -517,23 +588,35 @@ let seeds_json program result (graph : G.t) =
     | C.Global_Shared -> None
     | C.Global_Seed (f, i) ->
         let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in
-        let reachable = match C.global_state g with C.Bot -> false | C.Lifted _ -> true in
+        let reachable =
+          match C.global_state g with C.Bot -> false | C.Lifted _ -> true
+        in
         let lines = if reachable then List.filter (shown f) lines else lines in
         Some
           (Printf.sprintf
              "{\"key\":%s,\"procedure\":%s,\"entry\":%s,\"reachable\":%b,\"lines\":%s}"
-             (json_string key) (json_string f) (json_option json_string entry) reachable
+             (json_string key) (json_string f)
+             (json_option json_string entry)
+             reachable
              (json_list json_string lines))
   in
-  "[" ^ String.concat "," (List.filter_map seed (List.combine (C.res_globals result) (A.global_rows result))) ^ "]"
+  "["
+  ^ String.concat ","
+      (List.filter_map seed
+         (List.combine (C.res_globals result) (A.global_rows result)))
+  ^ "]"
 
-let result_json analysis_ms program ~check_positions ~stmt_positions ~header_positions ~raw result =
+let result_json analysis_ms program ~check_positions ~stmt_positions
+    ~header_positions ~raw result =
   let checks =
     positioned_checks (C.res_checks result) check_positions
-    |> List.map (check_json result) |> String.concat ","
+    |> List.map (check_json result)
+    |> String.concat ","
   in
   let diagnostics =
-    C.res_diagnostics result |> List.map (diagnostic_json stmt_positions) |> String.concat ","
+    C.res_diagnostics result
+    |> List.map (diagnostic_json stmt_positions)
+    |> String.concat ","
   in
   let graph = Context_graph.build program result in
   let contexts = Array.of_list (C.res_contexts result) in

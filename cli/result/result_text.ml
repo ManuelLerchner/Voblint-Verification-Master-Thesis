@@ -31,11 +31,13 @@ let division_message verdict operation =
   let kind = match operation with C.Mod _ -> "remainder" | _ -> "division" in
   let text = Vimp_printer.string_of_exp operation in
   match verdict with
-  | C.Check_Refuted -> kind ^ " by zero whenever this operation is evaluated: " ^ text
+  | C.Check_Refuted ->
+      kind ^ " by zero whenever this operation is evaluated: " ^ text
   | _ -> "possible " ^ kind ^ " by zero: " ^ text
 
 let diagnostic_message d =
-  division_message (C.diagnostic_verdict d) (C.arithmetic_operation (C.diagnostic_obligation d))
+  division_message (C.diagnostic_verdict d)
+    (C.arithmetic_operation (C.diagnostic_obligation d))
 
 let context_label = function
   | C.Context_Unit -> "unit"
@@ -71,10 +73,12 @@ let global_rows result =
 let special_text dst = function
   | C.Nondet_Int -> dst ^ " := __voblint_nondet_int()"
   | C.Min (a, b) ->
-      Printf.sprintf "%s := min(%s, %s)" dst (Vimp_printer.string_of_exp a)
+      Printf.sprintf "%s := min(%s, %s)" dst
+        (Vimp_printer.string_of_exp a)
         (Vimp_printer.string_of_exp b)
   | C.Max (a, b) ->
-      Printf.sprintf "%s := max(%s, %s)" dst (Vimp_printer.string_of_exp a)
+      Printf.sprintf "%s := max(%s, %s)" dst
+        (Vimp_printer.string_of_exp a)
         (Vimp_printer.string_of_exp b)
 
 let action_text = function
@@ -93,13 +97,16 @@ let action_writes = function
   | _ -> None
 
 let call_text callee (C.CallEdge (_, _, args)) =
-  callee ^ "(" ^ String.concat ", " (List.map Vimp_printer.string_of_exp args) ^ ")"
+  callee ^ "("
+  ^ String.concat ", " (List.map Vimp_printer.string_of_exp args)
+  ^ ")"
 
-let intra_edges g =
-  List.map (fun (u, (a, v)) -> (u, a, v)) (C.cfg_intra_list g)
+let intra_edges g = List.map (fun (u, (a, v)) -> (u, a, v)) (C.cfg_intra_list g)
 
 let call_edges g =
-  List.map (fun (u, (ca, (entry, after))) -> (u, ca, entry, after)) (C.cfg_calls_list g)
+  List.map
+    (fun (u, (ca, (entry, after))) -> (u, ca, entry, after))
+    (C.cfg_calls_list g)
 
 (* The procedure a CFG node belongs to. Intra edges and a call's step to its own
    continuation never leave a procedure, so everything reachable from a procedure's
@@ -109,7 +116,9 @@ let owners g =
   let table = Hashtbl.create 64 in
   let successors = Hashtbl.create 64 in
   List.iter (fun (u, _, v) -> Hashtbl.add successors u v) (intra_edges g);
-  List.iter (fun (u, _, _, after) -> Hashtbl.add successors u after) (call_edges g);
+  List.iter
+    (fun (u, _, _, after) -> Hashtbl.add successors u after)
+    (call_edges g);
   let rec visit owner node =
     if not (Hashtbl.mem table node) then begin
       Hashtbl.replace table node owner;
@@ -130,9 +139,19 @@ let exp_vars e =
     | C.N _ -> acc
     | C.V x -> if List.mem x acc then acc else acc @ [ x ]
     | C.Not a -> go acc a
-    | C.Plus (a, b) | C.Minus (a, b) | C.Times (a, b) | C.Div (a, b) | C.Mod (a, b)
-    | C.Less (a, b) | C.LessEq (a, b) | C.Greater (a, b) | C.GreaterEq (a, b)
-    | C.Eq (a, b) | C.NotEq (a, b) | C.And (a, b) | C.Or (a, b) ->
+    | C.Plus (a, b)
+    | C.Minus (a, b)
+    | C.Times (a, b)
+    | C.Div (a, b)
+    | C.Mod (a, b)
+    | C.Less (a, b)
+    | C.LessEq (a, b)
+    | C.Greater (a, b)
+    | C.GreaterEq (a, b)
+    | C.Eq (a, b)
+    | C.NotEq (a, b)
+    | C.And (a, b)
+    | C.Or (a, b) ->
         go (go acc a) b
   in
   go [] e
@@ -151,7 +170,9 @@ let state_slice result point cnd =
   String.concat ", "
     (List.filter_map
        (fun x ->
-         match List.sort_uniq compare (List.filter_map (List.assoc_opt x) live) with
+         match
+           List.sort_uniq compare (List.filter_map (List.assoc_opt x) live)
+         with
          | [] -> None
          | values -> Some (x ^ "=" ^ String.concat " | " values))
        (exp_vars cnd))

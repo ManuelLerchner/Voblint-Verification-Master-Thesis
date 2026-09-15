@@ -20,9 +20,19 @@ let rec exp_vars = function
   | C.N _ -> []
   | C.V x -> [ x ]
   | C.Not a -> exp_vars a
-  | C.Plus (a, b) | C.Minus (a, b) | C.Times (a, b) | C.Div (a, b) | C.Mod (a, b)
-  | C.Less (a, b) | C.LessEq (a, b) | C.Greater (a, b) | C.GreaterEq (a, b)
-  | C.NotEq (a, b) | C.Eq (a, b) | C.And (a, b) | C.Or (a, b) ->
+  | C.Plus (a, b)
+  | C.Minus (a, b)
+  | C.Times (a, b)
+  | C.Div (a, b)
+  | C.Mod (a, b)
+  | C.Less (a, b)
+  | C.LessEq (a, b)
+  | C.Greater (a, b)
+  | C.GreaterEq (a, b)
+  | C.NotEq (a, b)
+  | C.Eq (a, b)
+  | C.And (a, b)
+  | C.Or (a, b) ->
       exp_vars a @ exp_vars b
 
 let source_exp a = not (List.mem ret_var (exp_vars a))
@@ -34,7 +44,8 @@ let rec may_fallthrough = function
   | C.SKIP | C.Assign _ | C.Check _ | C.While _ | C.Call _ -> true
 
 let rec may_return returns = function
-  | C.Seq (c1, c2) -> may_return returns c1 || (may_fallthrough c1 && may_return returns c2)
+  | C.Seq (c1, c2) ->
+      may_return returns c1 || (may_fallthrough c1 && may_return returns c2)
   | C.If (_, c1, c2) -> may_return returns c1 || may_return returns c2
   | C.While (_, c) -> may_return returns c
   | C.Return e -> returns e
@@ -56,16 +67,18 @@ let rec duplicate = function
   | x :: xs -> if List.mem x xs then Some x else duplicate xs
 
 let first f xs = List.find_map f xs
-
 let plural n word = Printf.sprintf "%d %s%s" n word (if n = 1 then "" else "s")
 
 (* The first fault in one command, [where] naming the procedure it sits in. *)
 let rec com_fault program where = function
   | C.SKIP | C.Restore | C.Unwind -> None
   | C.Assign (x, a) ->
-      if x = ret_var || not (source_exp a) then Some (where ^ ": assignment to a reserved name")
+      if x = ret_var || not (source_exp a) then
+        Some (where ^ ": assignment to a reserved name")
       else None
-  | C.Check c -> if source_exp c then None else Some (where ^ ": check reads a reserved name")
+  | C.Check c ->
+      if source_exp c then None
+      else Some (where ^ ": check reads a reserved name")
   | C.Seq (c1, c2) | C.If (_, c1, c2) -> (
       match com_fault program where c1 with
       | Some _ as fault -> fault
@@ -74,26 +87,30 @@ let rec com_fault program where = function
   | C.Return _ -> None
   | C.Call (dst, callee, actuals) -> (
       let given = List.length actuals in
-      match special_arity callee, C.prog_table program callee with
+      match (special_arity callee, C.prog_table program callee) with
       | Some arity, _ when given <> arity ->
           Some
-            (Printf.sprintf "%s: %s takes %s, given %d" where callee (plural arity "argument")
-               given)
+            (Printf.sprintf "%s: %s takes %s, given %d" where callee
+               (plural arity "argument") given)
       | Some _, _ when dst = None ->
-          Some (Printf.sprintf "%s: the result of %s must be assigned" where callee)
+          Some
+            (Printf.sprintf "%s: the result of %s must be assigned" where callee)
       | Some _, _ -> None
-      | None, None -> Some (Printf.sprintf "%s: call to undefined procedure %s" where callee)
+      | None, None ->
+          Some
+            (Printf.sprintf "%s: call to undefined procedure %s" where callee)
       | None, Some (C.Proc_decl_ext (formals, body, ())) ->
           let expected = List.length formals in
           if given <> expected then
             Some
               (Printf.sprintf "%s: %s takes %s, given %d" where callee
-                 (plural expected "argument") given)
+                 (plural expected "argument")
+                 given)
           else if dst <> None && not (value_providing body) then
             Some
               (Printf.sprintf
-                 "%s: the result of %s is assigned, but not every path through %s ends in \
-                  return with a value"
+                 "%s: the result of %s is assigned, but not every path through \
+                  %s ends in return with a value"
                  where callee callee)
           else None)
 
@@ -110,23 +127,32 @@ let explain program =
     | None -> None
     | Some (formals, body) -> (
         match duplicate formals with
-        | Some x -> Some (Printf.sprintf "in %s: parameter %s is declared twice" name x)
+        | Some x ->
+            Some (Printf.sprintf "in %s: parameter %s is declared twice" name x)
         | None -> (
             match List.find_opt (fun x -> List.mem x globals) formals with
-            | Some x -> Some (Printf.sprintf "in %s: parameter %s is also a declared global" name x)
+            | Some x ->
+                Some
+                  (Printf.sprintf
+                     "in %s: parameter %s is also a declared global" name x)
             | None -> com_fault program ("in " ^ name) body))
   in
   let main = C.prog_main program in
   let faults =
     [
-      (fun () -> if List.mem ret_var globals then Some "a global uses a reserved name" else None);
       (fun () ->
-        Option.map (Printf.sprintf "procedure %s is defined more than once") (duplicate procs));
+        if List.mem ret_var globals then Some "a global uses a reserved name"
+        else None);
+      (fun () ->
+        Option.map
+          (Printf.sprintf "procedure %s is defined more than once")
+          (duplicate procs));
       (fun () ->
         first
           (fun p ->
             Option.map
-              (fun _ -> Printf.sprintf "procedure %s has the name of a built-in" p)
+              (fun _ ->
+                Printf.sprintf "procedure %s has the name of a built-in" p)
               (special_arity p))
           procs);
       (fun () -> if has_return main then Some "main must not return" else None);

@@ -21,7 +21,6 @@ open Voblint_CLI.Generated
    construction/inspection go through `Int_of_integer`/`nat_of_integer` and
    their inverses rather than walking a `num`/Peano-successor term. *)
 let mk_int n = Int_of_integer (Z.of_int n)
-
 let mk_nat n = nat_of_integer (Z.of_int n)
 
 (* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
@@ -42,20 +41,24 @@ let check_cond = Less (N (mk_int 0), V "y")
 let demo_prog =
   mk_program []
     (Seq
-       (Seq
-          (Seq (Assign ("y", N (mk_int 1)), Check check_cond),
-           Assign ("y", Minus (N (mk_int 0), N (mk_int 1))))
-       , Check check_cond))
+       ( Seq
+           ( Seq (Assign ("y", N (mk_int 1)), Check check_cond),
+             Assign ("y", Minus (N (mk_int 0), N (mk_int 1))) ),
+         Check check_cond ))
     []
 
 (* Conditions are compared as show_exp_compact renders them below. *)
 let expected_sign =
-  [ (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
-    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted)) ]
+  [
+    (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
+    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted));
+  ]
 
 let expected_interval =
-  [ (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
-    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted)) ]
+  [
+    (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
+    (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted));
+  ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, a procedure's formals, and `Call`
@@ -71,25 +74,35 @@ let expected_interval =
    widens the entered parameter's upper bound on the second visit. *)
 let proc_demo_prog =
   mk_program
-    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
+    [
+      ( "inc",
+        Proc_decl_ext ([ "n" ], Assign ("total", Plus (V "total", V "n")), ())
+      );
+    ]
     (Seq
-       (Seq
-          (Seq
-             (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
-              Call (None, "inc", [ N (mk_int 4) ])),
-           Check (Less (N (mk_int 0), V "total"))),
-        Check (Less (V "total", N (mk_int 100)))))
+       ( Seq
+           ( Seq
+               ( Seq
+                   ( Assign ("total", N (mk_int 0)),
+                     Call (None, "inc", [ N (mk_int 3) ]) ),
+                 Call (None, "inc", [ N (mk_int 4) ]) ),
+             Check (Less (N (mk_int 0), V "total")) ),
+         Check (Less (V "total", N (mk_int 100))) ))
     [ "total" ]
 
 let expected_proc_demo_sign =
-  [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
-    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
+  [
+    (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown));
+  ]
 
 (* Same shape as expected_proc_demo_sign, reached through warrowing: a global read and grown
    across two calls. *)
 let expected_proc_demo_interval =
-  [ (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
-    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown)) ]
+  [
+    (Statement (mk_nat 5), ("0<total", Lifted Check_Proved));
+    (Statement (mk_nat 6), ("total<100", Lifted Check_Unknown));
+  ]
 
 (* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
    global write that reads its own prior value. Same program as
@@ -101,8 +114,10 @@ let expected_proc_demo_interval =
 let no_call_global_self_ref_prog =
   mk_program []
     (Seq
-       (Seq (Assign ("total", N (mk_int 0)), Assign ("total", Plus (V "total", N (mk_int 3)))),
-        Check (Less (N (mk_int 0), V "total"))))
+       ( Seq
+           ( Assign ("total", N (mk_int 0)),
+             Assign ("total", Plus (V "total", N (mk_int 3))) ),
+         Check (Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
@@ -116,10 +131,15 @@ let expected_no_call_global_self_ref_interval =
    repeated-visit widening applies, and total's exact value survives the combine step. *)
 let one_call_prog =
   mk_program
-    [ ("inc", Proc_decl_ext (["n"], Assign ("total", Plus (V "total", V "n")), ())) ]
+    [
+      ( "inc",
+        Proc_decl_ext ([ "n" ], Assign ("total", Plus (V "total", V "n")), ())
+      );
+    ]
     (Seq
-       (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
-        Check (Less (N (mk_int 0), V "total"))))
+       ( Seq
+           (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
+         Check (Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_one_call_interval =
@@ -141,9 +161,9 @@ let show_nat n = Z.to_string (integer_of_nat n)
 let show_entry (n, (cond, verdict)) =
   Printf.sprintf "(%s, %s, %s)"
     (match n with
-     | Statement k -> "Statement " ^ show_nat k
-     | FunctionEntry s -> "FunctionEntry " ^ s
-     | FunctionResult s -> "FunctionResult " ^ s)
+    | Statement k -> "Statement " ^ show_nat k
+    | FunctionEntry s -> "FunctionEntry " ^ s
+    | FunctionResult s -> "FunctionResult " ^ s)
     cond (show_verdict verdict)
 
 (* Compact renderers for the expectations below: no spaces around infix
@@ -162,11 +182,17 @@ let rec show_exp_compact = function
   | Plus (a, b) -> "(" ^ show_exp_compact a ^ "+" ^ show_exp_compact b ^ ")"
   | Minus (a, b) -> "(" ^ show_exp_compact a ^ "-" ^ show_exp_compact b ^ ")"
   | Times (a, b) -> "(" ^ show_exp_compact a ^ "*" ^ show_exp_compact b ^ ")"
+  | Div (a, b) -> "(" ^ show_exp_compact a ^ "/" ^ show_exp_compact b ^ ")"
+  | Mod (a, b) -> "(" ^ show_exp_compact a ^ "%" ^ show_exp_compact b ^ ")"
   | Not b -> "!(" ^ show_exp_compact b ^ ")"
   | And (a, b) -> "(" ^ show_exp_compact a ^ "&&" ^ show_exp_compact b ^ ")"
   | Or (a, b) -> "(" ^ show_exp_compact a ^ "||" ^ show_exp_compact b ^ ")"
   | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
+  | LessEq (a, b) -> show_exp_compact a ^ "<=" ^ show_exp_compact b
+  | Greater (a, b) -> show_exp_compact a ^ ">" ^ show_exp_compact b
+  | GreaterEq (a, b) -> show_exp_compact a ^ ">=" ^ show_exp_compact b
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
+  | NotEq (a, b) -> show_exp_compact a ^ "!=" ^ show_exp_compact b
 
 (* One analysis run, reduced to the column this driver compares: the check
    point, the condition, and the lifted verdict. Every program here is
@@ -175,21 +201,24 @@ let rec show_exp_compact = function
 let report domain prog =
   match run_voblint domain Globals_Warrow Ctx_None prog with
   | Malformed_Program ->
-    print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
-    exit 1
+      print_endline
+        ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
+      exit 1
   | Analysed res ->
-    List.map
-      (fun chk -> (check_point chk, (show_exp_compact (check_exp chk), check_verdict chk)))
-      (res_checks res)
+      List.map
+        (fun chk ->
+          ( check_point chk,
+            (show_exp_compact (check_exp chk), check_verdict chk) ))
+        (res_checks res)
 
 let show_edge_action = function
   | EA_Nop -> "nop"
   | EA_Assign (x, a) -> x ^ " := " ^ show_exp_compact a
   | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
   | EA_Special (Min (a, b), x) ->
-    x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+      x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
   | EA_Special (Max (a, b), x) ->
-    x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+      x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
   | EA_Body p -> "body(" ^ p ^ ")"
   | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
@@ -198,9 +227,10 @@ let show_edge_action = function
   | EA_Check b -> "check(" ^ show_exp_compact b ^ ")"
 
 let show_call_action = function
-  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+  | CallEdge (None, _, es) ->
+      "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
   | CallEdge (Some x, _, es) ->
-    x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+      x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
 
 let show_intra_list es =
   String.concat "; "
@@ -215,7 +245,8 @@ let show_calls_list es =
     (List.map
        (fun (call, (ca, (entry, cont))) ->
          show_cfg_node_compact call ^ " --[" ^ show_call_action ca ^ "]--> "
-         ^ show_cfg_node_compact entry ^ " ~cont~> " ^ show_cfg_node_compact cont)
+         ^ show_cfg_node_compact entry
+         ^ " ~cont~> " ^ show_cfg_node_compact cont)
        es)
 
 let expected_proc_demo_intra =
@@ -225,7 +256,8 @@ let expected_proc_demo_intra =
   ^ "entry_inc --[body(inc)]--> pp0; entry_main --[body(main)]--> pp2"
 
 let expected_proc_demo_calls =
-  "pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc ~cont~> pp5"
+  "pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc \
+   ~cont~> pp5"
 
 (* [~line] is always [__LINE__] at the call site -- an OCaml builtin
    expanded there, not here, so a FAIL points at the specific
@@ -242,8 +274,10 @@ let check_case ~line label actual expected =
     true)
   else (
     print_endline (Printf.sprintf "FAIL %s (%s:%d)" label driver_path line);
-    print_endline ("  expected: " ^ String.concat "; " (List.map show_entry expected));
-    print_endline ("  actual:   " ^ String.concat "; " (List.map show_entry actual));
+    print_endline
+      ("  expected: " ^ String.concat "; " (List.map show_entry expected));
+    print_endline
+      ("  actual:   " ^ String.concat "; " (List.map show_entry actual));
     false)
 
 let check_case_str ~line label actual expected =
@@ -268,36 +302,45 @@ let () =
     report Interval_Analysis no_call_global_self_ref_prog
   in
   let actual_one_call_interval = report Interval_Analysis one_call_prog in
-  let ok_sign = check_case ~line:__LINE__ "Sign_Analysis demo report" actual_sign expected_sign in
+  let ok_sign =
+    check_case ~line:__LINE__ "Sign_Analysis demo report" actual_sign
+      expected_sign
+  in
   let ok_interval =
-    check_case ~line:__LINE__ "Interval_Analysis demo report" actual_interval expected_interval
+    check_case ~line:__LINE__ "Interval_Analysis demo report" actual_interval
+      expected_interval
   in
   let ok_proc_demo_sign =
-    check_case ~line:__LINE__ "Sign_Analysis proc_demo report" actual_proc_demo_sign
-      expected_proc_demo_sign
+    check_case ~line:__LINE__ "Sign_Analysis proc_demo report"
+      actual_proc_demo_sign expected_proc_demo_sign
   in
   let ok_proc_demo_interval =
-    check_case ~line:__LINE__ "Interval_Analysis proc_demo report (warrowing, was hanging)"
+    check_case ~line:__LINE__
+      "Interval_Analysis proc_demo report (warrowing, was hanging)"
       actual_proc_demo_interval expected_proc_demo_interval
   in
   let ok_proc_demo_intra =
-    check_case_str ~line:__LINE__ "proc_demo CFG intra edges" actual_proc_demo_intra
-      expected_proc_demo_intra
+    check_case_str ~line:__LINE__ "proc_demo CFG intra edges"
+      actual_proc_demo_intra expected_proc_demo_intra
   in
   let ok_proc_demo_calls =
-    check_case_str ~line:__LINE__ "proc_demo CFG calls edges" actual_proc_demo_calls
-      expected_proc_demo_calls
+    check_case_str ~line:__LINE__ "proc_demo CFG calls edges"
+      actual_proc_demo_calls expected_proc_demo_calls
   in
   let ok_no_call_global_self_ref_interval =
-    check_case ~line:__LINE__ "Interval_Analysis no-call global self-feedback (acceptance A)"
-      actual_no_call_global_self_ref_interval expected_no_call_global_self_ref_interval
+    check_case ~line:__LINE__
+      "Interval_Analysis no-call global self-feedback (acceptance A)"
+      actual_no_call_global_self_ref_interval
+      expected_no_call_global_self_ref_interval
   in
   let ok_one_call_interval =
-    check_case ~line:__LINE__ "Interval_Analysis interprocedural global self-feedback (acceptance B)"
+    check_case ~line:__LINE__
+      "Interval_Analysis interprocedural global self-feedback (acceptance B)"
       actual_one_call_interval expected_one_call_interval
   in
   if
-    ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra
-    && ok_proc_demo_calls && ok_no_call_global_self_ref_interval && ok_one_call_interval
+    ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval
+    && ok_proc_demo_intra && ok_proc_demo_calls
+    && ok_no_call_global_self_ref_interval && ok_one_call_interval
   then print_endline "All regression checks passed."
   else exit 1

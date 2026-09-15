@@ -1,10 +1,20 @@
 (rule
  (targets Voblint_CLI.ml)
  (deps ../../generated/ml/Voblint_CLI.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
+
+; The export's warnings are the code generator's, so only it is exempt.
+
+(library
+ (name codegen_regression_export)
+ (wrapped false)
+ (modules Voblint_CLI)
+ (libraries str zarith)
+ (flags
+  (:standard -w -a)))
 
 (executable
  (name codegen_regression)
- (modules Voblint_CLI codegen_regression)
- (libraries str zarith)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (modules codegen_regression)
+ (libraries codegen_regression_export str zarith))

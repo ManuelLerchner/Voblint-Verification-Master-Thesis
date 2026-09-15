@@ -51,12 +51,15 @@ type edge = {
   writes : string option;
 }
 
-type cluster = { cluster_id : string; cluster_label : string; members : string list }
+type cluster = {
+  cluster_id : string;
+  cluster_label : string;
+  members : string list;
+}
 
 type t = { clusters : cluster list; nodes : node list; edges : edge list }
 
 let ret_var = "#ret"
-
 let main_name = "main"
 
 (* The names a procedure's node state shows, in display order. *)
@@ -73,7 +76,10 @@ let scope prog g owner_of =
     List.concat_map
       (fun (u, a, _) ->
         if owner_of u <> owner then []
-        else match a with C.EA_Assign (x, _) | C.EA_Special (_, x) -> [ x ] | _ -> [])
+        else
+          match a with
+          | C.EA_Assign (x, _) | C.EA_Special (_, x) -> [ x ]
+          | _ -> [])
       (A.intra_edges g)
     @ List.concat_map
         (fun (u, C.CallEdge (dst, _, _), _, _) ->
@@ -85,7 +91,10 @@ let scope prog g owner_of =
     let locals =
       List.sort_uniq compare
         (List.filter
-           (fun x -> (not (List.mem x formals)) && x <> ret_var && not (List.mem x globals))
+           (fun x ->
+             (not (List.mem x formals))
+             && x <> ret_var
+             && not (List.mem x globals))
            (assigned owner))
     in
     formals @ locals
@@ -105,7 +114,8 @@ let status_of state =
          is or may be by zero colours a node. *)
       let verdicts =
         List.map snd (C.state_checks state)
-        @ List.filter (fun v -> v <> C.Lifted C.Check_Proved)
+        @ List.filter
+            (fun v -> v <> C.Lifted C.Check_Proved)
             (List.map snd (C.state_diagnostics state))
       in
       if List.mem (C.Lifted C.Check_Refuted) verdicts then Some Refuted
@@ -118,11 +128,17 @@ let bindings_of names state =
   match C.state_value state with
   | C.Bot -> []
   | C.Lifted bindings ->
-      List.filter_map (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings)) names
+      List.filter_map
+        (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings))
+        names
 
 (* What the analysis concluded at a node, short enough to label it with. *)
 let findings_of state =
-  let dead = match C.state_value state with C.Bot -> [ "unreachable" ] | C.Lifted _ -> [] in
+  let dead =
+    match C.state_value state with
+    | C.Bot -> [ "unreachable" ]
+    | C.Lifted _ -> []
+  in
   dead
   @ List.map
       (fun (cnd, verdict) ->
@@ -149,7 +165,10 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
   let states = C.res_states result in
   let covered = Hashtbl.create 64 in
   List.iter
-    (fun st -> Hashtbl.replace covered (C.state_point st, A.int_of_nat (C.state_context st)) ())
+    (fun st ->
+      Hashtbl.replace covered
+        (C.state_point st, A.int_of_nat (C.state_context st))
+        ())
     states;
   let is_covered p c = Hashtbl.mem covered (p, c) in
   (* A context's number within its owner, in the order the result lists states, so
@@ -158,7 +177,8 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
   let counts = Hashtbl.create 16 in
   List.iter
     (fun st ->
-      let owner = owner_of (C.state_point st) and c = A.int_of_nat (C.state_context st) in
+      let owner = owner_of (C.state_point st)
+      and c = A.int_of_nat (C.state_context st) in
       if not (Hashtbl.mem local_index (owner, c)) then begin
         let n = Option.value ~default:0 (Hashtbl.find_opt counts owner) in
         Hashtbl.replace local_index (owner, c) n;
@@ -167,7 +187,8 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
     states;
   let id_of p c =
     let owner = owner_of p in
-    Printf.sprintf "%s_%s_ctx%d" owner (A.point_name p) (Hashtbl.find local_index (owner, c))
+    Printf.sprintf "%s_%s_ctx%d" owner (A.point_name p)
+      (Hashtbl.find local_index (owner, c))
   in
   let targets = Hashtbl.create 16 in
   List.iter
@@ -179,14 +200,22 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
   (* A live call site that enters no callee context would otherwise show nothing of
      the call it makes; name it on the node. *)
   let unentered_calls p c =
-    match C.state_value (List.find (fun st -> C.state_point st = p && A.int_of_nat (C.state_context st) = c) states) with
+    match
+      C.state_value
+        (List.find
+           (fun st ->
+             C.state_point st = p && A.int_of_nat (C.state_context st) = c)
+           states)
+    with
     | C.Bot -> []
     | C.Lifted _ ->
         List.filter_map
           (fun (u, ca, entry, _) ->
             let callee = match entry with C.FunctionEntry f -> f | _ -> "" in
-            if u = p && Option.value ~default:[] (Hashtbl.find_opt targets (u, c)) = [] then
-              Some ("call " ^ A.call_text callee ca ^ " [not entered]")
+            if
+              u = p
+              && Option.value ~default:[] (Hashtbl.find_opt targets (u, c)) = []
+            then Some ("call " ^ A.call_text callee ca ^ " [not entered]")
             else None)
           (A.call_edges g)
   in
@@ -258,31 +287,59 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
             let c = A.int_of_nat (C.state_context st) in
             if C.state_point st <> u then []
             else
-              let callee = match entry with C.FunctionEntry p -> p | _ -> "" in
-              let routed = Option.value ~default:[] (Hashtbl.find_opt targets (u, c)) in
+              let callee =
+                match entry with C.FunctionEntry p -> p | _ -> ""
+              in
+              let routed =
+                Option.value ~default:[] (Hashtbl.find_opt targets (u, c))
+              in
               let result_node = C.FunctionResult callee in
               let enters =
                 List.concat_map
                   (fun t ->
                     (if is_covered entry t then
-                       [ { src = id_of u c; dst = id_of entry t; kind = Enter;
-                           text = A.call_text callee ca; writes = None } ]
+                       [
+                         {
+                           src = id_of u c;
+                           dst = id_of entry t;
+                           kind = Enter;
+                           text = A.call_text callee ca;
+                           writes = None;
+                         };
+                       ]
                      else [])
                     @
                     if is_covered result_node t && is_covered after c then
-                      let C.CallEdge (dst, _, _) = ca in
-                      [ { src = id_of result_node t; dst = id_of after c; kind = Combine;
-                          text = Option.fold ~none:"" ~some:(fun x -> x ^ " := " ^ A.call_text callee ca) dst;
-                          writes = None } ]
+                      let (C.CallEdge (dst, _, _)) = ca in
+                      [
+                        {
+                          src = id_of result_node t;
+                          dst = id_of after c;
+                          kind = Combine;
+                          text =
+                            Option.fold ~none:""
+                              ~some:(fun x ->
+                                x ^ " := " ^ A.call_text callee ca)
+                              dst;
+                          writes = None;
+                        };
+                      ]
                     else [])
                   routed
               in
               enters
               @
               if is_covered after c then
-                let C.CallEdge (dst, _, _) = ca in
-                [ { src = id_of u c; dst = id_of after c; kind = Call_to_return; text = callee;
-                    writes = dst } ]
+                let (C.CallEdge (dst, _, _)) = ca in
+                [
+                  {
+                    src = id_of u c;
+                    dst = id_of after c;
+                    kind = Call_to_return;
+                    text = callee;
+                    writes = dst;
+                  };
+                ]
               else [])
           states)
       (A.call_edges g)
