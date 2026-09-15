@@ -18,7 +18,8 @@ function withCode(text) {
 const movedAnchors = {
   "#analyzer": "playground.html",
   "#soundness": "#theorems",
-  "#reports": "#reading",
+  "#reports": "playground.html#reading",
+  "#reading": "playground.html#reading",
 };
 
 if (movedAnchors[location.hash]) {

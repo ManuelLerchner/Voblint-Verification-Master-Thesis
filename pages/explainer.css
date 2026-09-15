@@ -676,6 +676,173 @@
   font-style: italic;
 }
 
+.legend {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+}
+
+.legend > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+}
+
+.legend dt {
+  justify-self: start;
+  padding: 1px 8px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-radius: 999px;
+  font: 700 0.72rem var(--mono);
+  white-space: nowrap;
+}
+
+.legend dd {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.lg.proved {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+.lg.refuted {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.lg.unknown {
+  color: var(--caution);
+  background: #f7efe2;
+}
+
+.lg.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.lg.dead {
+  color: var(--text-faint);
+  background: transparent;
+  border: 1px dashed var(--text-faint);
+}
+
+.lg.hint {
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* The graph legend repeats the playground drawing's own styles. */
+.scene-graph .legend-head {
+  fill: var(--text-muted);
+  font: 700 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gn {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.gn.proved {
+  fill: var(--success-soft);
+  stroke: var(--success);
+  stroke-width: 2;
+}
+
+.gn.refuted {
+  fill: var(--danger-soft);
+  stroke: var(--danger);
+  stroke-width: 2;
+}
+
+.gn.unknown {
+  fill: #fbf1dc;
+  stroke: var(--caution);
+  stroke-width: 2;
+}
+
+.gn.dead {
+  fill: var(--surface-muted);
+  stroke: var(--text-faint);
+  stroke-dasharray: 5 3;
+}
+
+.gn.entry {
+  fill: var(--primary-soft);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.gn.entry-inner {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.ge {
+  stroke-dasharray: 7 5;
+  stroke-width: 1.4;
+}
+
+.ge.step {
+  stroke: #7c9096;
+}
+
+.ge.call {
+  stroke: var(--primary);
+  stroke-width: 2.2;
+}
+
+.ge.resume {
+  stroke: #3f7fb4;
+  stroke-width: 1.2;
+}
+
+.ge.cont {
+  stroke: #9aa9ae;
+}
+
+.ga.step {
+  fill: #7c9096;
+}
+
+.ga.call {
+  fill: var(--primary);
+}
+
+.ga.resume {
+  fill: #3f7fb4;
+}
+
+.ga.cont {
+  fill: #9aa9ae;
+}
+
+.g-cluster {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+}
+
+.scene-graph .g-cluster-label {
+  fill: var(--text-muted);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+@media (max-width: 640px) {
+  .legend > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
 .explainer-cta {
   margin: 40px 0 0;
 }

@@ -278,6 +278,26 @@
           <div id="state-inspector-body" class="state-inspector-body"></div>
         </section>
 
+        <details id="solver-globals" class="solver-globals" hidden>
+          <summary>
+            <span class="eyebrow">Entry seeds</span>
+            <span id="solver-globals-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            A call cannot write its callee's entry state directly: the solver side-effects
+            only global unknowns. So each call publishes the entered state into a seed, one
+            per procedure entry per context, and the callee's entry reads it back. Calls
+            routed to the same context meet in its seed, merged by the
+            <strong>Globals</strong> rule. Shown here are the callee's formals and the
+            program's globals; the other locals are reset on entry. These analyses keep
+            declared globals in the per-point state, so the solver's analysis-wide global
+            slot stays unused. Presentation only; no soundness statement reads these rows.
+          </p>
+
+          <ul id="solver-globals-list" class="solver-globals-list"></ul>
+        </details>
+
         <section
           id="analysis-graph-panel"
           class="analysis-graph-panel"
@@ -291,7 +311,7 @@
             </div>
 
             <div class="analysis-graph-tools">
-              <span class="graph-hint">Drag or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
+              <span class="graph-hint">Drag a node or context box to move it · drag the background or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
 
               <div class="graph-toolbar" aria-label="Graph zoom controls">
                 <button
@@ -330,33 +350,88 @@
           ></div>
         </section>
 
-        <details id="solver-globals" class="solver-globals" hidden>
-          <summary>
-            <span class="eyebrow">Entry seeds</span>
-            <span id="solver-globals-count" class="solver-globals-count"></span>
-          </summary>
+      </div>
+    </section>
 
-          <p class="solver-globals-note">
-            A call cannot write its callee's entry state directly: the solver side-effects
-            only global unknowns. So each call publishes the entered state into a seed, one
-            per procedure entry per context, and the callee's entry reads it back. Calls
-            routed to the same context meet in its seed, merged by the
-            <strong>Globals</strong> rule. Shown here are the callee's formals and the
-            program's globals; the other locals are reset on entry. These analyses keep
-            declared globals in the per-point state, so the solver's analysis-wide global
-            slot stays unused. Presentation only; no soundness statement reads these rows.
-          </p>
-
-          <ul id="solver-globals-list" class="solver-globals-list"></ul>
-        </details>
-
+    <section class="section" id="reading" aria-labelledby="reading-heading">
+      <div class="section-heading">
+        <p class="eyebrow">The output</p>
+        <h2 id="reading-heading">Reading a result</h2>
+        <p class="section-intro">
+          The analyzer writes its answer back into the source as badges and value hints, and
+          draws the solved control-flow graph underneath.
+        </p>
       </div>
 
-      <p class="notice">
-        Every domain, globals rule, and context combination runs exactly as
-        selected: the solver warrows locals at loop heads under every rule, and the
-        rule only decides how side-effected globals are merged.
-      </p>
+      <div class="reading-grid">
+        <figure class="scene scene-editor">
+          <pre class="mock-editor" aria-label="Example editor annotations"><span class="ml proved">__voblint_check(i == 5);<span class="mb">✓ PROVED</span></span>
+<span class="ml refuted">__voblint_check(i &lt; 5);<span class="mb">✗ REFUTED</span></span>
+<span class="ml unknown">__voblint_check(a == 2);<span class="mb">? UNKNOWN</span></span>
+<span class="ml warning">share = 10 / (a - 2);<span class="mb">⚠ WARNING</span></span>
+<span class="ml dead"><span class="dim">record(100);</span><span class="mb">∅ DEAD</span></span>
+<span class="ml">r = scale(w);<span class="mh">→ v: [1,1]</span><span class="mh">r: [2,2]</span></span>
+<span class="ml">while (i &lt; 5) {<span class="mh merge">⊔ i: [0,5]</span></span></pre>
+          <dl class="legend">
+            <div><dt class="lg proved">PROVED</dt><dd>The condition holds in every run that reaches the check.</dd></div>
+            <div><dt class="lg refuted">REFUTED</dt><dd>It fails in every run that reaches it. This does not say any run does.</dd></div>
+            <div><dt class="lg unknown">UNKNOWN</dt><dd>The result cannot decide, or contexts disagree.</dd></div>
+            <div><dt class="lg warning">WARNING</dt><dd>A divisor may be zero. <strong>ERROR</strong>: it is zero in every live context.</dd></div>
+            <div><dt class="lg dead">DEAD</dt><dd>No context reaches this point.</dd></div>
+            <div><dt class="lg hint">x: [2,2]</dt><dd>What a statement assigns; <code>→</code> marks callee parameters, <code>↩</code> a return.</dd></div>
+            <div><dt class="lg hint">⊔ i: [0,5]</dt><dd>Several paths meet here, so the value includes more than this step.</dd></div>
+          </dl>
+        </figure>
+
+        <figure class="scene scene-graph">
+          <svg viewBox="0 0 640 300" role="img"
+            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points and procedure entry or exit; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
+            <defs>
+              <marker id="g-arrow-step" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path class="ga step" d="M0 0 L10 5 L0 10 z"/>
+              </marker>
+              <marker id="g-arrow-call" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path class="ga call" d="M0 0 L10 5 L0 10 z"/>
+              </marker>
+              <marker id="g-arrow-resume" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path class="ga resume" d="M0 0 L10 5 L0 10 z"/>
+              </marker>
+              <marker id="g-arrow-cont" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path class="ga cont" d="M0 0 L10 5 L0 10 z"/>
+              </marker>
+            </defs>
+
+            <text class="legend-head" x="16" y="22">Nodes</text>
+            <rect class="gn proved" x="16" y="36" width="70" height="26" rx="6"/><text x="100" y="54">check proved</text>
+            <rect class="gn refuted" x="16" y="72" width="70" height="26" rx="6"/><text x="100" y="90">check refuted</text>
+            <rect class="gn unknown" x="16" y="108" width="70" height="26" rx="6"/><text x="100" y="126">unknown, or maybe ÷ 0</text>
+            <rect class="gn dead" x="16" y="144" width="70" height="26" rx="6"/><text x="100" y="162">unreachable</text>
+            <rect class="gn plain" x="16" y="180" width="70" height="26" rx="6"/><text x="100" y="198">program point</text>
+            <rect class="gn entry" x="16" y="216" width="70" height="26" rx="6"/>
+            <rect class="gn entry-inner" x="20" y="220" width="62" height="18" rx="4"/>
+            <text x="100" y="234">entry or exit</text>
+
+            <text class="legend-head" x="330" y="22">Edges</text>
+            <line x1="330" y1="50" x2="400" y2="50" class="ge step" marker-end="url(#g-arrow-step)"/>
+            <text class="code-label" x="414" y="55">i := i + 1</text>
+            <line x1="330" y1="86" x2="400" y2="86" class="ge call" marker-end="url(#g-arrow-call)"/>
+            <text x="414" y="91">call f(args)</text>
+            <line x1="330" y1="122" x2="400" y2="122" class="ge resume" marker-end="url(#g-arrow-resume)"/>
+            <text x="414" y="127">resume after the call</text>
+            <line x1="330" y1="158" x2="400" y2="158" class="ge cont" marker-end="url(#g-arrow-cont)"/>
+            <text x="414" y="163">continuation</text>
+
+            <text class="legend-head" x="330" y="206">Boxes</text>
+            <text class="g-cluster-label" x="475" y="228">wrap / call-string=pp18</text>
+            <rect class="g-cluster" x="330" y="236" width="290" height="46" rx="10"/>
+            <text x="344" y="264">one procedure in one context</text>
+          </svg>
+          <figcaption>
+            Each (point, context) pair is its own node, so contexts are drawn apart rather than
+            joined. Hover a node to see its full state; drag a node or a whole box to move it.
+          </figcaption>
+        </figure>
+      </div>
     </section>
 
   </main>

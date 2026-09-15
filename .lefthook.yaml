@@ -148,7 +148,7 @@ pre-commit:
 
           # A formatter config change can reformat files that are not staged,
           # which `stage_fixed` leaves out of the commit; fail instead so
-          # `pixi run format` gets run. biome.jsonc is covered by pages-lint.
+          # `pixi run format` gets run. biome.jsonc is covered by pages-lint-config.
           - name: formatter-config
             glob:
               - ".ocamlformat"
@@ -173,23 +173,35 @@ pre-commit:
               - ".github/**/*.yaml"
             run: pixi run actions-lint
 
+          # Staged files only, like spelling below. `--no-globs` drops the config's
+          # `**/*.md` scope, which would otherwise add every file back; its
+          # `ignores` still apply to the paths passed.
           - name: markdown-lint
-            glob:
-              - "**/*.md"
-              - ".markdownlint-cli2.yaml"
+            glob: "**/*.md"
+            run: pixi run markdown-lint -- --no-globs {staged_files}
+
+          - name: markdown-lint-config
+            glob: ".markdownlint-cli2.yaml"
             run: pixi run markdown-lint
 
+          # Staged files only, so unstaged work cannot block a commit; a config
+          # change rechecks the whole scope. `--force-exclude` applies
+          # `extend-exclude` to explicit paths, and typos skips binary files.
           - name: spelling
-            glob:
-              - "**/*.{md,typ,py,ml,mli,sh,toml,yaml,yml}"
-              - "_typos.toml"
+            run: pixi run spelling-check -- --force-exclude {staged_files}
+
+          - name: spelling-config
+            glob: "_typos.toml"
             run: pixi run spelling-check
 
           - name: pages-lint
             glob:
               - "pages/**/*.js"
               - "pages/**/*.css"
-              - "biome.jsonc"
+            run: pixi run pages-lint -- --no-errors-on-unmatched {staged_files}
+
+          - name: pages-lint-config
+            glob: "biome.jsonc"
             run: pixi run pages-lint
 
           - name: isabelle-ascii

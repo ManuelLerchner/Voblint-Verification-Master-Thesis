@@ -1390,12 +1390,14 @@ const variableHover = hoverTooltip(
 /* State inspector                                                            */
 /* -------------------------------------------------------------------------- */
 
+/* A message has no states to show, so it reads on the header line beside the title. */
 function inspectorMessage(text) {
-  const message = document.createElement("p");
+  const message = document.createElement("span");
 
   message.className = "inspector-message";
   message.textContent = text;
-  inspectorBody.replaceChildren(message);
+  inspectorLocation.append(message);
+  inspectorBody.replaceChildren();
 }
 
 function statementExcerpt(statement) {
@@ -1620,71 +1622,60 @@ function renderStateTable(node) {
 /* Graph linking                                                              */
 /* -------------------------------------------------------------------------- */
 
-function graphNodeElement(id) {
-  return graph.querySelector(`g.node#${CSS.escape(id)}`);
+/* The drawing, while one is shown; a message or an empty panel has none. */
+let cy = null;
+
+function graphElementsById(ids) {
+  return cy.collection(ids.map((id) => cy.getElementById(id)).filter((ele) => ele.nonempty()));
 }
 
 function applyGraphSelection() {
-  for (const element of graph.querySelectorAll(
-    "g.node.graph-node-selected, g.node.graph-node-focused",
-  )) {
-    element.classList.remove("graph-node-selected", "graph-node-focused");
-  }
-
-  if (!analysisModel || analysisModel.stale || !inspection) {
+  if (!cy) {
     return;
   }
 
-  for (const node of inspection.nodes) {
-    const element = graphNodeElement(node.id);
+  cy.batch(() => {
+    cy.nodes(".graph-node-selected").removeClass("graph-node-selected graph-node-focused");
 
-    element?.classList.add("graph-node-selected");
-
-    if (node.id === focusedNodeId) {
-      element?.classList.add("graph-node-focused");
+    if (!analysisModel || analysisModel.stale || !inspection) {
+      return;
     }
-  }
+
+    for (const node of inspection.nodes) {
+      const element = cy.getElementById(node.id);
+
+      element.addClass("graph-node-selected");
+
+      if (node.id === focusedNodeId) {
+        element.addClass("graph-node-focused");
+      }
+    }
+  });
 }
 
 /* Pans only the graph's own view; the page stays where the reader put it. */
 function revealGraphNodes(ids) {
-  const rects = ids
-    .map(graphNodeElement)
-    .filter(Boolean)
-    .map((element) => element.getBoundingClientRect());
-
-  if (graphPanel.hidden || rects.length === 0) {
+  if (!cy || graphPanel.hidden) {
     return;
   }
 
-  const viewport = graph.getBoundingClientRect();
+  const elements = graphElementsById(ids);
 
-  const left = Math.min(...rects.map((r) => r.left));
-  const right = Math.max(...rects.map((r) => r.right));
-  const top = Math.min(...rects.map((r) => r.top));
-  const bottom = Math.max(...rects.map((r) => r.bottom));
+  if (elements.empty()) {
+    return;
+  }
 
-  const visible =
-    left >= viewport.left &&
-    right <= viewport.right &&
-    top >= viewport.top &&
-    bottom <= viewport.bottom;
+  const box = elements.renderedBoundingBox();
+  const visible = box.x1 >= 0 && box.y1 >= 0 && box.x2 <= cy.width() && box.y2 <= cy.height();
 
   if (!visible) {
-    panGraphBy(
-      (viewport.left + viewport.right) / 2 - (left + right) / 2,
-      (viewport.top + viewport.bottom) / 2 - (top + bottom) / 2,
-      { animate: true },
-    );
+    graphFitted = false;
+    pendingZoom = null;
+    cy.stop(true, true);
+    cy.animate({ center: { eles: elements } }, GRAPH_ANIMATION);
   }
 
-  for (const id of ids) {
-    const element = graphNodeElement(id);
-
-    element?.classList.remove("graph-node-flash");
-    void element?.getBoundingClientRect();
-    element?.classList.add("graph-node-flash");
-  }
+  elements.flashClass("graph-node-flash", 900);
 }
 
 function focusNode(id, { reveal = false } = {}) {
@@ -1778,74 +1769,51 @@ function inspectGraphNode(id) {
   scrollEditorTo(statement.from);
 }
 
-function attachGraphNavigation(svg) {
-  let hoveredId = null;
-
-  svg.addEventListener("pointermove", (event) => {
-    const id = event.target.closest?.("g.node")?.id ?? null;
-
-    if (id === hoveredId) {
-      return;
-    }
-
-    hoveredId = id;
-
-    const node = id ? analysisModel?.nodes.get(id) : null;
-
-    hoveredSpan = node ? (analysisModel.statementByPoint.get(node.point) ?? null) : null;
-    scheduleHighlights();
-  });
-
-  svg.addEventListener("pointerleave", () => {
-    hoveredId = null;
-    hoveredSpan = null;
-    scheduleHighlights();
-  });
-
-  svg.addEventListener("click", (event) => {
-    const id = event.target.closest?.("g.node")?.id;
-
-    if (id) {
-      inspectGraphNode(id);
-    }
-  });
-
-  applyGraphSelection();
-}
-
 /* -------------------------------------------------------------------------- */
 /* Analysis graph                                                             */
 /* -------------------------------------------------------------------------- */
 
-let vizPromise = null;
+let graphLibrariesPromise = null;
 let analysisRunGeneration = 0;
 
-/*
- * The graph sits in a fixed-size view and moves by a CSS transform, so panning and
- * zooming never scroll the page or resize the layout. `graphView` is the transform:
- * the drawing's top-left corner lands at (x, y) in view pixels, scaled by `scale`.
- */
-const graphView = { scale: 1, x: 0, y: 0, width: 0, height: 0, fitted: true };
+/* A view that still shows the whole fitted graph refits when the panel resizes. */
+let graphFitted = true;
+
+/* The zoom an animation is heading for, so steps pressed faster than it runs compound. */
+let pendingZoom = null;
 
 const MIN_GRAPH_SCALE = 0.1;
 const MAX_GRAPH_SCALE = 4;
 const GRAPH_ZOOM_STEP = 1.2;
 const GRAPH_PADDING = 24;
+const GRAPH_ANIMATION = { duration: 260, easing: "ease-out-cubic" };
+
+const NODE_FONT_SIZE = 12;
+const NODE_LINE_HEIGHT = 1.35;
+const NODE_PADDING_X = 12;
+const NODE_PADDING_Y = 7;
+const EDGE_FONT_SIZE = 10;
+const CLUSTER_PADDING = 16;
+/* Room above a context box for its label, which Cytoscape draws outside the box. */
+const CLUSTER_LABEL_SPACE = 22;
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
 }
 
-function currentGraphSvg() {
-  return graph.querySelector("svg");
+function updateZoomResetLabel() {
+  graphZoomReset.textContent = `${Math.round((cy?.zoom() ?? 1) * 100)}%`;
 }
 
-function updateZoomResetLabel() {
-  graphZoomReset.textContent = `${Math.round(graphView.scale * 100)}%`;
+function destroyGraph() {
+  stopEdgeFlow();
+  cy?.destroy();
+  cy = null;
 }
 
 function clearGraph() {
-  Object.assign(graphView, { scale: 1, x: 0, y: 0, width: 0, height: 0, fitted: true });
+  destroyGraph();
+  graphFitted = true;
   updateZoomResetLabel();
 
   graph.replaceChildren();
@@ -1874,65 +1842,647 @@ function showGraphMessage(message, kind = "") {
 
   row.textContent = message;
 
+  destroyGraph();
   graph.replaceChildren(row);
   graphPanel.hidden = false;
 }
 
-function getViz() {
-  if (!vizPromise) {
-    vizPromise = import("https://esm.sh/@viz-js/viz@3.30.0")
-      .then((Viz) => Viz.instance())
+function getGraphLibraries() {
+  if (!graphLibrariesPromise) {
+    graphLibrariesPromise = Promise.all([
+      import("https://esm.sh/cytoscape@3.34.3"),
+      import("https://esm.sh/elkjs@0.12.0/lib/elk.bundled.js"),
+    ])
+      .then(([cytoscape, ELK]) => ({ cytoscape: cytoscape.default, elk: new ELK.default() }))
       .catch((error) => {
-        vizPromise = null;
+        graphLibrariesPromise = null;
         throw error;
       });
   }
 
-  return vizPromise;
+  return graphLibrariesPromise;
+}
+
+/* Cytoscape paints on a canvas, which cannot read CSS custom properties itself. */
+function cssToken(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const measureContext = document.createElement("canvas").getContext("2d");
+
+function textWidth(text, font) {
+  measureContext.font = font;
+
+  return measureContext.measureText(text).width;
+}
+
+function edgeLabel(edge) {
+  switch (edge.kind) {
+    case "enter":
+      return `call ${edge.text}`;
+    case "combine":
+      return edge.text ? `resume / ${edge.text}` : "resume";
+    case "call_to_return":
+      return "continuation";
+    default:
+      return edge.text;
+  }
 }
 
 /*
- * Measure the drawing once, untransformed, in rendered CSS pixels: GraphViz sizes
- * its SVG in points, and measuring after layout avoids converting units by hand.
+ * Where a right-angle path turns, as a share of the gap it crosses. Cytoscape turns
+ * every such path halfway by default, so two edges across the same gap would run on
+ * one line; a different share per edge keeps them apart while nodes move.
  */
-function rememberNaturalGraphSize(svg) {
-  svg.style.transform = "none";
-
-  const rect = svg.getBoundingClientRect();
-
-  graphView.width = rect.width;
-  graphView.height = rect.height;
-  svg.style.width = `${rect.width}px`;
-  svg.style.height = `${rect.height}px`;
+function taxiTurn(index) {
+  return `${25 + ((index * 37) % 51)}%`;
 }
 
-function applyGraphView({ animate = false } = {}) {
-  const svg = currentGraphSvg();
+/* A node's label names its point and findings; the full state is the hover tooltip. */
+function graphElements(result) {
+  const mono = cssToken("--mono");
+  const nodeFont = `${NODE_FONT_SIZE}px ${mono}`;
+  const edgeFont = `${EDGE_FONT_SIZE}px ${mono}`;
+  const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
+  const parentOf = new Map();
+  const elements = [];
 
-  if (!svg || graphView.width <= 0) {
-    updateZoomResetLabel();
+  for (const cluster of result.graph.clusters) {
+    elements.push({
+      group: "nodes",
+      data: { id: cluster.id, label: cluster.label },
+      classes: "context",
+    });
+
+    for (const id of cluster.members) {
+      parentOf.set(id, cluster.id);
+    }
+  }
+
+  for (const node of nodesById.values()) {
+    const lines = [node.point, ...node.findings];
+    const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
+    const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
+    const status = node.status ?? (node.kind === "point" ? "plain" : "boundary");
+
+    elements.push({
+      group: "nodes",
+      data: {
+        id: node.id,
+        parent: parentOf.get(node.id),
+        label: lines.join("\n"),
+        width: Math.ceil(width),
+        height: Math.ceil(height),
+      },
+      classes: `point ${status}`,
+    });
+  }
+
+  result.graph.edges.forEach((edge, index) => {
+    if (!nodesById.has(edge.source) || !nodesById.has(edge.target)) {
+      return;
+    }
+
+    const label = edgeLabel(edge);
+
+    elements.push({
+      group: "edges",
+      data: {
+        id: `edge-${index}`,
+        source: edge.source,
+        target: edge.target,
+        label,
+        /* How far along the edge a label beside its end node is centered. */
+        labelOffset: textWidth(label, edgeFont) / 2 + 10,
+        turn: taxiTurn(index),
+      },
+      classes: edge.kind,
+    });
+  });
+
+  return elements;
+}
+
+/*
+ * Two passes, so a context box can sit beside the code that calls it. Each box is laid
+ * out top to bottom on its own, from its intra and continuation edges. The boxes are
+ * then placed left to right, callers before callees, with each call edge pinned to
+ * the height of its call site and callee entry, which pulls a callee level with the
+ * call that enters it. Resume edges are routed in the second pass as well, so no two
+ * edges between boxes share a line.
+ */
+const INNER_LAYOUT = {
+  "elk.algorithm": "layered",
+  "elk.direction": "DOWN",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "40",
+  "elk.spacing.nodeNode": "28",
+  "elk.spacing.edgeNode": "16",
+  "elk.spacing.edgeEdge": "10",
+  "elk.padding": `[top=${CLUSTER_PADDING + CLUSTER_LABEL_SPACE},left=${CLUSTER_PADDING},bottom=${CLUSTER_PADDING},right=${CLUSTER_PADDING}]`,
+};
+
+const OUTER_LAYOUT = {
+  "elk.algorithm": "layered",
+  "elk.direction": "RIGHT",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
+  "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+  "elk.layered.cycleBreaking.strategy": "MODEL_ORDER",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "60",
+  "elk.spacing.nodeNode": "30",
+  "elk.spacing.edgeEdge": "12",
+  "elk.spacing.componentComponent": "60",
+};
+
+function routePoints(section, dx = 0, dy = 0) {
+  return [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map((point) => ({
+    x: point.x + dx,
+    y: point.y + dy,
+  }));
+}
+
+/*
+ * Boxes in breadth-first call order from the first. The outer pass breaks cycles by
+ * that order, so a resume edge, which runs from a callee back to its caller, is the
+ * one reversed and a call keeps pointing right.
+ */
+function callOrder(inner, crossing, parentOf) {
+  const callees = new Map([...inner.keys()].map((id) => [id, []]));
+
+  for (const edge of crossing) {
+    if (edge.kind === "enter") {
+      callees.get(parentOf.get(edge.source)).push(parentOf.get(edge.target));
+    }
+  }
+
+  const seen = new Set();
+  const order = [];
+
+  for (const root of inner.keys()) {
+    if (seen.has(root)) {
+      continue;
+    }
+
+    seen.add(root);
+
+    for (const queue = [root]; queue.length > 0; ) {
+      const id = queue.shift();
+
+      order.push(inner.get(id));
+
+      for (const callee of callees.get(id)) {
+        if (!seen.has(callee)) {
+          seen.add(callee);
+          queue.push(callee);
+        }
+      }
+    }
+  }
+
+  return order;
+}
+
+/*
+ * Ports on one side at one height -- two calls entering the same callee -- would
+ * share a channel all the way in; fanning them out keeps every edge its own line.
+ */
+const PORT_SPREAD = 8;
+
+function spreadPorts(ports, width) {
+  const groups = new Map();
+
+  for (const port of ports) {
+    const key = `${port.side}:${port.y}`;
+
+    groups.set(key, [...(groups.get(key) ?? []), port]);
+  }
+
+  return [...groups.values()].flatMap((group) =>
+    group.map((port, index) => ({
+      id: port.id,
+      x: port.side === "EAST" ? width : 0,
+      y: port.y + (index - (group.length - 1) / 2) * PORT_SPREAD,
+      width: 0,
+      height: 0,
+      layoutOptions: { "elk.port.side": port.side },
+    })),
+  );
+}
+
+/*
+ * Absolute node centers, and each laid-out edge's bends as absolute points. A route
+ * inside a box starts and ends on its nodes' borders, which Cytoscape finds itself;
+ * a route between boxes starts and ends at their sides, level with its nodes, so its
+ * end points are bends too.
+ */
+async function layoutGraph(elk, elements) {
+  const clusters = new Map();
+  const parentOf = new Map();
+  const edges = [];
+
+  for (const { group, classes, data } of elements) {
+    if (classes === "context") {
+      clusters.set(data.id, { id: data.id, layoutOptions: INNER_LAYOUT, children: [], edges: [] });
+    } else if (group === "nodes") {
+      parentOf.set(data.id, data.parent);
+      clusters
+        .get(data.parent)
+        ?.children.push({ id: data.id, width: data.width, height: data.height });
+    } else {
+      edges.push({ kind: classes, ...data });
+    }
+  }
+
+  for (const edge of edges) {
+    const box = parentOf.get(edge.source);
+
+    if (
+      (edge.kind === "intra" || edge.kind === "call_to_return") &&
+      box === parentOf.get(edge.target)
+    ) {
+      clusters
+        .get(box)
+        ?.edges.push({ id: edge.id, sources: [edge.source], targets: [edge.target] });
+    }
+  }
+
+  const inner = new Map();
+
+  for (const [id, cluster] of clusters) {
+    inner.set(id, await elk.layout(cluster));
+  }
+
+  const innerCenter = (id) => {
+    const node = inner.get(parentOf.get(id)).children.find((child) => child.id === id);
+
+    return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+  };
+
+  /* A call leaves its caller's right side and enters the callee's left; a resume runs back. */
+  const crossing = edges.filter(
+    (edge) =>
+      (edge.kind === "enter" || edge.kind === "combine") &&
+      parentOf.get(edge.source) !== parentOf.get(edge.target),
+  );
+  const ports = new Map([...inner.keys()].map((id) => [id, []]));
+
+  for (const edge of crossing) {
+    const forward = edge.kind === "enter";
+
+    ports.get(parentOf.get(edge.source)).push({
+      id: `${edge.id}-out`,
+      side: forward ? "EAST" : "WEST",
+      y: innerCenter(edge.source).y,
+    });
+    ports.get(parentOf.get(edge.target)).push({
+      id: `${edge.id}-in`,
+      side: forward ? "WEST" : "EAST",
+      y: innerCenter(edge.target).y,
+    });
+  }
+
+  const outer = await elk.layout({
+    id: "root",
+    layoutOptions: OUTER_LAYOUT,
+    children: callOrder(inner, crossing, parentOf).map((box) => ({
+      id: box.id,
+      width: box.width,
+      height: box.height,
+      ports: spreadPorts(ports.get(box.id), box.width),
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+    })),
+    edges: crossing.map((edge) => ({
+      id: edge.id,
+      sources: [`${edge.id}-out`],
+      targets: [`${edge.id}-in`],
+    })),
+  });
+
+  const centers = new Map();
+  const routes = new Map();
+
+  for (const box of outer.children) {
+    const layout = inner.get(box.id);
+
+    for (const node of layout.children) {
+      centers.set(node.id, {
+        x: box.x + node.x + node.width / 2,
+        y: box.y + node.y + node.height / 2,
+      });
+    }
+
+    for (const edge of layout.edges) {
+      if (edge.sections?.[0]) {
+        routes.set(edge.id, routePoints(edge.sections[0], box.x, box.y).slice(1, -1));
+      }
+    }
+  }
+
+  for (const edge of outer.edges) {
+    if (edge.sections?.[0]) {
+      routes.set(edge.id, routePoints(edge.sections[0]));
+    }
+  }
+
+  return { centers, routes };
+}
+
+/*
+ * Cytoscape draws a polyline as segment points relative to the line between its
+ * endpoints' centers: a weight along it and a signed distance across it. Stated that
+ * way, a route stays attached when both ends move together, as when a context box is
+ * dragged with the edges inside it.
+ */
+function segmentStyle(points, source, target) {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const lengthSquared = dx * dx + dy * dy;
+
+  if (points.length === 0 || lengthSquared < 1) {
+    return null;
+  }
+
+  const length = Math.sqrt(lengthSquared);
+  const weights = [];
+  const distances = [];
+
+  for (const point of points) {
+    const px = point.x - source.x;
+    const py = point.y - source.y;
+
+    weights.push((px * dx + py * dy) / lengthSquared);
+    distances.push((dx * py - dy * px) / length);
+  }
+
+  return { weights, distances };
+}
+
+function applyGraphLayout({ centers, routes }) {
+  cy.batch(() => {
+    cy.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
+
+    for (const [id, points] of routes) {
+      const edge = cy.getElementById(id);
+      const style = segmentStyle(
+        points,
+        centers.get(edge.data("source")),
+        centers.get(edge.data("target")),
+      );
+
+      if (style) {
+        edge.addClass("routed").data(style);
+      }
+    }
+  });
+}
+
+/*
+ * A call or resume edge crosses between boxes through channels it shares with others,
+ * so its label sits on its first or last stretch, beside the node it concerns, instead
+ * of midway where the channels meet: a call's above its line, a resume's below, since
+ * one node can start a call and receive a resume at the same height.
+ */
+function graphStyle() {
+  const mono = cssToken("--mono");
+  const text = cssToken("--text");
+  const muted = cssToken("--text-muted");
+
+  const status = (color, fill) => ({
+    "border-color": cssToken(color),
+    "border-width": 2,
+    "background-color": cssToken(fill),
+  });
+
+  return [
+    {
+      selector: "node.context",
+      style: {
+        shape: "round-rectangle",
+        "corner-radius": 10,
+        padding: CLUSTER_PADDING,
+        "background-color": cssToken("--surface"),
+        "background-opacity": 0.72,
+        "border-color": cssToken("--border-strong"),
+        "border-width": 1,
+        label: "data(label)",
+        color: muted,
+        "font-family": mono,
+        "font-size": 11,
+        "font-weight": 700,
+        "text-valign": "top",
+        "text-halign": "center",
+        "text-margin-y": -6,
+      },
+    },
+    {
+      selector: "node.context:active",
+      style: { "overlay-opacity": 0, "border-color": cssToken("--primary"), "border-width": 2 },
+    },
+    {
+      selector: "node.point",
+      style: {
+        shape: "round-rectangle",
+        "corner-radius": 6,
+        width: "data(width)",
+        height: "data(height)",
+        "background-color": cssToken("--surface"),
+        "border-color": cssToken("--border-strong"),
+        "border-width": 1,
+        label: "data(label)",
+        color: text,
+        "font-family": mono,
+        "font-size": NODE_FONT_SIZE,
+        "line-height": NODE_LINE_HEIGHT,
+        "text-wrap": "wrap",
+        "text-max-width": 2000,
+        "text-valign": "center",
+        "text-halign": "center",
+        "overlay-opacity": 0,
+        "underlay-color": cssToken("--accent"),
+        "underlay-padding": 8,
+        "underlay-opacity": 0,
+        "underlay-shape": "round-rectangle",
+        "transition-property": "underlay-opacity",
+        "transition-duration": 300,
+      },
+    },
+    {
+      selector: "node.boundary",
+      style: {
+        "border-style": "double",
+        "border-width": 4,
+        "border-color": cssToken("--primary"),
+        "background-color": cssToken("--primary-soft"),
+      },
+    },
+    { selector: "node.proved", style: status("--success", "--success-soft") },
+    { selector: "node.refuted", style: status("--danger", "--danger-soft") },
+    {
+      selector: "node.unknown",
+      style: { ...status("--caution", "--surface"), "background-color": "#fbf1dc" },
+    },
+    {
+      selector: "node.unreachable",
+      style: {
+        "border-style": "dashed",
+        "border-color": cssToken("--text-faint"),
+        "background-color": cssToken("--surface-muted"),
+        color: muted,
+      },
+    },
+    {
+      selector: "node.graph-node-selected",
+      style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 2 },
+    },
+    {
+      selector: "node.graph-node-focused",
+      style: { "outline-color": cssToken("--accent"), "outline-width": 4, "outline-offset": 2 },
+    },
+    { selector: "node.graph-node-flash", style: { "underlay-opacity": 0.35 } },
+    {
+      selector: "edge",
+      style: {
+        width: 1.4,
+        "curve-style": "round-taxi",
+        "taxi-direction": "vertical",
+        "taxi-turn": "data(turn)",
+        "taxi-turn-min-distance": 12,
+        "taxi-radius": 6,
+        "line-color": "#7c9096",
+        "target-arrow-color": "#7c9096",
+        "target-arrow-shape": "triangle",
+        "arrow-scale": 0.9,
+        "line-style": "dashed",
+        "line-dash-pattern": [7, 5],
+        label: "data(label)",
+        color: muted,
+        "font-family": mono,
+        "font-size": EDGE_FONT_SIZE,
+        "text-background-color": cssToken("--surface-muted"),
+        "text-background-opacity": 0.9,
+        "text-background-padding": 2,
+        "text-rotation": "none",
+      },
+    },
+    {
+      selector: "edge.routed",
+      style: {
+        "curve-style": "round-segments",
+        "segment-weights": "data(weights)",
+        "segment-distances": "data(distances)",
+        "segment-radii": 6,
+        "edge-distances": "node-position",
+      },
+    },
+    {
+      selector: "edge.enter",
+      style: {
+        "taxi-direction": "horizontal",
+        label: "",
+        "source-label": "data(label)",
+        "source-text-offset": "data(labelOffset)",
+        "source-text-margin-y": -9,
+        width: 2.2,
+        "line-color": cssToken("--primary"),
+        "target-arrow-color": cssToken("--primary"),
+        color: cssToken("--primary"),
+      },
+    },
+    {
+      selector: "edge.combine",
+      style: {
+        "taxi-direction": "horizontal",
+        label: "",
+        "target-label": "data(label)",
+        "target-text-offset": "data(labelOffset)",
+        "target-text-margin-y": 9,
+        width: 1.2,
+        "line-color": "#3f7fb4",
+        "target-arrow-color": "#3f7fb4",
+        "arrow-scale": 0.7,
+        color: "#3f7fb4",
+      },
+    },
+    {
+      selector: "edge.call_to_return",
+      style: { "line-color": "#9aa9ae", "target-arrow-color": "#9aa9ae" },
+    },
+  ];
+}
+
+/*
+ * Edges flow toward their target. Every frame restyles every edge and repaints the
+ * whole drawing, so a large graph or a reader who asked for less motion keeps still
+ * dashes, and nothing moves while the graph is off screen.
+ */
+const EDGE_FLOW_LIMIT = 400;
+let edgeFlowFrame = 0;
+let graphInView = false;
+
+new IntersectionObserver((entries) => {
+  graphInView = entries.some((entry) => entry.isIntersecting);
+}).observe(graph);
+
+function startEdgeFlow() {
+  stopEdgeFlow();
+
+  if (
+    !cy ||
+    cy.edges().length > EDGE_FLOW_LIMIT ||
+    matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
     return;
   }
 
-  svg.classList.toggle("is-animating", animate);
-  svg.style.transform = `translate(${graphView.x}px, ${graphView.y}px) scale(${graphView.scale})`;
-  updateZoomResetLabel();
+  let last = 0;
+
+  const step = (time) => {
+    edgeFlowFrame = requestAnimationFrame(step);
+
+    if (!graphInView || document.hidden || time - last < 50) {
+      return;
+    }
+
+    last = time;
+    cy.edges().style("line-dash-offset", -((time / 100) % 12));
+  };
+
+  edgeFlowFrame = requestAnimationFrame(step);
+}
+
+function stopEdgeFlow() {
+  cancelAnimationFrame(edgeFlowFrame);
+  edgeFlowFrame = 0;
 }
 
 /* Zooms about a point given in view coordinates, keeping that point under the pointer. */
-function zoomGraphAt(factor, viewX, viewY, options = {}) {
-  const scale = clamp(graphView.scale * factor, MIN_GRAPH_SCALE, MAX_GRAPH_SCALE);
-  const ratio = scale / graphView.scale;
+function zoomGraphAt(factor, viewX, viewY, { animate = false } = {}) {
+  if (!cy) {
+    return;
+  }
 
-  graphView.x = viewX - (viewX - graphView.x) * ratio;
-  graphView.y = viewY - (viewY - graphView.y) * ratio;
-  graphView.scale = scale;
-  graphView.fitted = false;
-  applyGraphView(options);
+  const zoom = {
+    level: clamp((pendingZoom ?? cy.zoom()) * factor, MIN_GRAPH_SCALE, MAX_GRAPH_SCALE),
+    renderedPosition: { x: viewX, y: viewY },
+  };
+
+  graphFitted = false;
+  cy.stop(true, true);
+
+  if (animate) {
+    pendingZoom = zoom.level;
+    cy.animate({ zoom }, { ...GRAPH_ANIMATION, complete: () => (pendingZoom = null) });
+  } else {
+    pendingZoom = null;
+    cy.zoom(zoom);
+  }
 }
 
 function viewCenter() {
-  return { x: graph.clientWidth / 2, y: graph.clientHeight / 2 };
+  return { x: cy.width() / 2, y: cy.height() / 2 };
 }
 
 function zoomGraphIn() {
@@ -1945,17 +2495,26 @@ function zoomGraphOut() {
   zoomGraphAt(1 / GRAPH_ZOOM_STEP, x, y, { animate: true });
 }
 
-function panGraphBy(dx, dy, options = {}) {
-  graphView.x += dx;
-  graphView.y += dy;
-  graphView.fitted = false;
-  applyGraphView(options);
+function panGraphBy(dx, dy, { animate = false } = {}) {
+  if (!cy) {
+    return;
+  }
+
+  graphFitted = false;
+  pendingZoom = null;
+  cy.stop(true, true);
+
+  if (animate) {
+    cy.animate({ panBy: { x: dx, y: dy } }, GRAPH_ANIMATION);
+  } else {
+    cy.panBy({ x: dx, y: dy });
+  }
 }
 
 /* 100%: natural size, centered on whatever is at the middle of the view now. */
 function resetGraphZoom() {
   const { x, y } = viewCenter();
-  zoomGraphAt(1 / graphView.scale, x, y, { animate: true });
+  zoomGraphAt(1 / cy.zoom(), x, y, { animate: true });
 }
 
 /*
@@ -1963,34 +2522,42 @@ function resetGraphZoom() {
  * its labels unreadable fits the width instead and starts at its top.
  */
 function fitGraphZoom({ animate = true } = {}) {
-  if (graphView.width <= 0) {
+  if (!cy || cy.elements().empty()) {
     return;
   }
 
-  const width = Math.max(1, graph.clientWidth - 2 * GRAPH_PADDING);
-  const height = Math.max(1, graph.clientHeight - 2 * GRAPH_PADDING);
-  const byWidth = width / graphView.width;
-  const whole = Math.min(1, byWidth, height / graphView.height);
-  const scale = whole >= 0.45 ? whole : Math.min(1, byWidth);
+  const box = cy.elements().boundingBox();
+  const width = Math.max(1, cy.width() - 2 * GRAPH_PADDING);
+  const height = Math.max(1, cy.height() - 2 * GRAPH_PADDING);
+  const byWidth = width / box.w;
+  const whole = Math.min(1, byWidth, height / box.h);
+  const zoom = whole >= 0.45 ? whole : Math.min(1, byWidth);
+  const pan = {
+    x: (cy.width() - box.w * zoom) / 2 - box.x1 * zoom,
+    y:
+      box.h * zoom <= height
+        ? (cy.height() - box.h * zoom) / 2 - box.y1 * zoom
+        : GRAPH_PADDING - box.y1 * zoom,
+  };
 
-  graphView.scale = scale;
-  graphView.x = (graph.clientWidth - graphView.width * scale) / 2;
-  graphView.y =
-    graphView.height * scale <= height
-      ? (graph.clientHeight - graphView.height * scale) / 2
-      : GRAPH_PADDING;
-  graphView.fitted = true;
-  applyGraphView({ animate });
+  pendingZoom = null;
+  cy.stop(true, true);
+
+  if (animate) {
+    cy.animate({ zoom, pan }, GRAPH_ANIMATION);
+  } else {
+    cy.viewport({ zoom, pan });
+  }
+
+  graphFitted = true;
 }
 
 /* Whether the drawing overflows the view along an axis, so a scroll there should pan it. */
 function graphOverflows(axis) {
-  return axis === "x"
-    ? graphView.width * graphView.scale > graph.clientWidth
-    : graphView.height * graphView.scale > graph.clientHeight;
-}
+  const box = cy.elements().renderedBoundingBox();
 
-const XLINK = "http://www.w3.org/1999/xlink";
+  return axis === "x" ? box.x1 < 0 || box.x2 > cy.width() : box.y1 < 0 || box.y2 > cy.height();
+}
 
 const graphTooltip = document.createElement("div");
 graphTooltip.className = "graph-tooltip";
@@ -2018,88 +2585,138 @@ function placeGraphTooltip(event) {
   graphTooltip.style.top = `${Math.max(4, top)}px`;
 }
 
-/*
- * GraphViz writes a node's DOT tooltip (its point, state and findings) as the
- * xlink:title of the node's link. Move it into a dataset and drop the link, whose
- * javascript: target belongs to the HTML report's frontend, so hovering shows one
- * styled popup instead of the browser's plain title.
- */
-function attachGraphTooltips(svg) {
-  for (const link of svg.querySelectorAll("g.node a")) {
-    const node = link.closest("g.node");
-    node.dataset.tooltip = link.getAttributeNS(XLINK, "title") ?? "";
-    link.removeAttributeNS(XLINK, "title");
-    link.removeAttributeNS(XLINK, "href");
-    link.removeAttribute("href");
-  }
-
-  for (const title of svg.querySelectorAll("g.node > title")) {
-    title.remove();
-  }
-
-  svg.addEventListener("pointermove", (event) => {
-    const node = event.target.closest?.("g.node");
-
-    if (!node?.dataset.tooltip) {
-      hideGraphTooltip();
-      return;
-    }
-
-    const [heading, ...lines] = node.dataset.tooltip.split("\n");
+/* A node's tooltip: its point, then its state and findings. */
+function showGraphTooltip(node, event) {
+  if (graphTooltip.dataset.node !== node.id) {
     const title = document.createElement("strong");
-    title.textContent = heading;
+    title.textContent = node.point;
+
+    const lines = [...node.bindings.map(([name, value]) => `${name}=${value}`), ...node.findings];
     const body = document.createElement("pre");
     body.textContent = lines.length > 0 ? lines.join("\n") : "no bindings";
 
-    if (graphTooltip.dataset.node !== node.id) {
-      graphTooltip.replaceChildren(title, body);
-      graphTooltip.dataset.node = node.id;
-    }
+    graphTooltip.replaceChildren(title, body);
+    graphTooltip.dataset.node = node.id;
+  }
 
-    graphTooltip.hidden = false;
-    placeGraphTooltip(event);
-  });
-
-  svg.addEventListener("pointerleave", hideGraphTooltip);
+  graphTooltip.hidden = false;
+  placeGraphTooltip(event);
 }
 
-async function renderGraph(dot, runGeneration) {
+/*
+ * Hovering a node shows its state and marks its statement in the editor; clicking
+ * inspects it. Dragging a node or a whole context box moves it. An edge with both
+ * ends inside what moved keeps its route; any other drops its laid-out bends for a
+ * right-angle path that follows the move.
+ */
+function attachGraphInteraction() {
+  cy.on("mouseover", "node.point", (event) => {
+    const node = analysisModel?.nodes.get(event.target.id());
+
+    graph.classList.add("is-over-node");
+    hoveredSpan = node ? (analysisModel.statementByPoint.get(node.point) ?? null) : null;
+    scheduleHighlights();
+
+    if (node) {
+      showGraphTooltip(node, event.originalEvent);
+    }
+  });
+
+  cy.on("mousemove", "node.point", (event) => {
+    if (!graphTooltip.hidden) {
+      placeGraphTooltip(event.originalEvent);
+    }
+  });
+
+  cy.on("mouseout", "node.point", () => {
+    graph.classList.remove("is-over-node");
+    hoveredSpan = null;
+    scheduleHighlights();
+    hideGraphTooltip();
+  });
+
+  cy.on("mouseover", "node.context", () => graph.classList.add("is-over-context"));
+  cy.on("mouseout", "node.context", () => graph.classList.remove("is-over-context"));
+
+  cy.on("tap", "node.point", (event) => inspectGraphNode(event.target.id()));
+
+  cy.on("dbltap", (event) => {
+    if (event.target === cy) {
+      fitGraphZoom();
+    }
+  });
+
+  cy.on("grab", "node", () => {
+    graphFitted = false;
+    hideGraphTooltip();
+  });
+
+  cy.on("drag", "node", (event) => {
+    const moved = event.target.isParent() ? event.target.descendants() : event.target;
+
+    moved
+      .connectedEdges(".routed")
+      .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
+      .removeClass("routed");
+  });
+
+  cy.on("dragpan pinchzoom scrollzoom", () => {
+    graphFitted = false;
+    hideGraphTooltip();
+  });
+
+  cy.on("zoom", updateZoomResetLabel);
+}
+
+async function renderGraph(result, runGeneration) {
   /*
-   * The table is rendered synchronously, while Viz.js may still be loading.
-   * Never let a graph from an older run overwrite the result of a newer run.
+   * The table is rendered synchronously, while the graph libraries may still be
+   * loading. Never let a graph from an older run overwrite the result of a newer run.
    */
   if (runGeneration !== analysisRunGeneration) {
     return;
   }
 
-  if (typeof dot !== "string" || dot.trim() === "") {
+  if (!Array.isArray(result.graph?.clusters) || !Array.isArray(result.graph?.edges)) {
     throw new Error("Internal error: successful analysis returned no control-flow graph.");
   }
 
   showGraphMessage("Rendering control-flow graph...");
 
   try {
-    const viz = await getViz();
+    const { cytoscape, elk } = await getGraphLibraries();
 
     if (runGeneration !== analysisRunGeneration) {
       return;
     }
 
-    const svg = viz.renderSVGElement(dot, {
-      engine: "dot",
-    });
+    const elements = graphElements(result);
+    const layout = await layoutGraph(elk, elements);
 
     if (runGeneration !== analysisRunGeneration) {
       return;
     }
 
-    attachGraphTooltips(svg);
-    attachGraphNavigation(svg);
-    graph.replaceChildren(svg);
+    graph.replaceChildren();
     graphPanel.hidden = false;
 
-    rememberNaturalGraphSize(svg);
+    cy = cytoscape({
+      container: graph,
+      elements,
+      style: graphStyle(),
+      layout: { name: "preset" },
+      minZoom: MIN_GRAPH_SCALE,
+      maxZoom: MAX_GRAPH_SCALE,
+      boxSelectionEnabled: false,
+      autounselectify: true,
+    });
+
+    applyGraphLayout(layout);
+    attachGraphInteraction();
+    applyGraphSelection();
     fitGraphZoom({ animate: false });
+    updateZoomResetLabel();
+    startEdgeFlow();
   } catch (error) {
     if (runGeneration !== analysisRunGeneration) {
       return;
@@ -2478,7 +3095,7 @@ async function run() {
        * graph is an internal contract violation and fails the run rather than
        * being presented as a supported graph-less configuration.
        */
-      await renderGraph(result.graph, runGeneration);
+      await renderGraph(result, runGeneration);
 
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
@@ -2635,25 +3252,29 @@ for (const control of [analysisSelect, globalsSelect, contextSelect, contextDept
 
 globalsSelect.addEventListener("change", updateGlobalsHelp);
 
-graphZoomIn.addEventListener("click", zoomGraphIn);
+graphZoomIn.addEventListener("click", () => cy && zoomGraphIn());
 
-graphZoomOut.addEventListener("click", zoomGraphOut);
+graphZoomOut.addEventListener("click", () => cy && zoomGraphOut());
 
-graphZoomReset.addEventListener("click", resetGraphZoom);
+graphZoomReset.addEventListener("click", () => cy && resetGraphZoom());
 
-graphZoomFit.addEventListener("click", fitGraphZoom);
+graphZoomFit.addEventListener("click", () => fitGraphZoom());
 
 /*
  * Trackpad: a two-finger scroll pans; a pinch arrives as a wheel event with ctrlKey
  * set (Chrome, Firefox, Edge) or as gesture events (Safari) and zooms at the pointer.
- * A scroll along an axis the drawing already fits is left to the page.
+ * A scroll along an axis the drawing already fits is left to the page. These listen
+ * in the capture phase, registered before any drawing exists, so they run ahead of
+ * Cytoscape's own wheel zoom and replace it.
  */
 graph.addEventListener(
   "wheel",
   (event) => {
-    if (!currentGraphSvg()) {
+    if (!cy) {
       return;
     }
+
+    event.stopImmediatePropagation();
 
     const bounds = graph.getBoundingClientRect();
 
@@ -2673,121 +3294,47 @@ graph.addEventListener(
     }
 
     event.preventDefault();
+    hideGraphTooltip();
     panGraphBy(-panX, -panY);
   },
-  { passive: false },
+  { capture: true, passive: false },
 );
 
 let gestureScale = 1;
 
-graph.addEventListener("gesturestart", (event) => {
-  event.preventDefault();
-  gestureScale = 1;
-});
-
-graph.addEventListener("gesturechange", (event) => {
-  event.preventDefault();
-  const bounds = graph.getBoundingClientRect();
-  zoomGraphAt(event.scale / gestureScale, event.clientX - bounds.left, event.clientY - bounds.top);
-  gestureScale = event.scale;
-});
-
-/*
- * Mouse and touch: one pointer drags, two pointers pinch. A press that barely moves
- * stays a click, so clicking a node still inspects it.
- */
-const graphPointers = new Map();
-let graphDrag = null;
-let suppressGraphClick = false;
-
-graph.addEventListener("pointerdown", (event) => {
-  if (!currentGraphSvg() || event.button > 0) {
-    return;
-  }
-
-  graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-
-  if (graphPointers.size === 1) {
-    graphDrag = { x: event.clientX, y: event.clientY, moved: false };
-  }
-});
-
-graph.addEventListener("pointermove", (event) => {
-  const previous = graphPointers.get(event.pointerId);
-
-  if (!previous) {
-    return;
-  }
-
-  const bounds = graph.getBoundingClientRect();
-
-  if (graphPointers.size === 2) {
-    const [a, b] = [...graphPointers.values()];
-    const before = Math.hypot(a.x - b.x, a.y - b.y);
-    graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    const [c, d] = [...graphPointers.values()];
-    const after = Math.hypot(c.x - d.x, c.y - d.y);
-
-    if (before > 0) {
-      zoomGraphAt(after / before, (c.x + d.x) / 2 - bounds.left, (c.y + d.y) / 2 - bounds.top);
-    }
-
-    suppressGraphClick = true;
-    return;
-  }
-
-  graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-
-  if (graphDrag) {
-    if (
-      !graphDrag.moved &&
-      Math.hypot(event.clientX - graphDrag.x, event.clientY - graphDrag.y) < 4
-    ) {
+graph.addEventListener(
+  "gesturestart",
+  (event) => {
+    if (!cy) {
       return;
     }
 
-    if (!graphDrag.moved) {
-      graphDrag.moved = true;
-      graph.setPointerCapture(event.pointerId);
-      graph.classList.add("is-panning");
-      hideGraphTooltip();
-    }
-
-    panGraphBy(event.clientX - previous.x, event.clientY - previous.y);
-  }
-});
-
-function endGraphPointer(event) {
-  graphPointers.delete(event.pointerId);
-
-  if (graphPointers.size === 0) {
-    suppressGraphClick = suppressGraphClick || Boolean(graphDrag?.moved);
-    graphDrag = null;
-    graph.classList.remove("is-panning");
-  }
-}
-
-graph.addEventListener("pointerup", endGraphPointer);
-graph.addEventListener("pointercancel", endGraphPointer);
-
-/* A drag or pinch ends with a click on whatever is under the pointer; swallow it. */
-graph.addEventListener(
-  "click",
-  (event) => {
-    if (suppressGraphClick) {
-      event.stopPropagation();
-      event.preventDefault();
-      suppressGraphClick = false;
-    }
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    gestureScale = 1;
   },
   { capture: true },
 );
 
-graph.addEventListener("dblclick", (event) => {
-  if (!event.target.closest?.("g.node")) {
-    fitGraphZoom();
-  }
-});
+graph.addEventListener(
+  "gesturechange",
+  (event) => {
+    if (!cy) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const bounds = graph.getBoundingClientRect();
+    zoomGraphAt(
+      event.scale / gestureScale,
+      event.clientX - bounds.left,
+      event.clientY - bounds.top,
+    );
+    gestureScale = event.scale;
+  },
+  { capture: true },
+);
 
 graph.addEventListener("keydown", (event) => {
   const step = 60;
@@ -2802,15 +3349,20 @@ graph.addEventListener("keydown", (event) => {
     ArrowDown: () => panGraphBy(0, -step, { animate: true }),
   };
 
-  if (actions[event.key] && currentGraphSvg()) {
+  if (actions[event.key] && cy) {
     event.preventDefault();
     actions[event.key]();
   }
 });
 
-/* A view that still shows the fitted graph stays fitted when the page resizes. */
 new ResizeObserver(() => {
-  if (graphView.fitted && currentGraphSvg()) {
+  if (!cy) {
+    return;
+  }
+
+  cy.resize();
+
+  if (graphFitted) {
     fitGraphZoom({ animate: false });
   }
 }).observe(graph);

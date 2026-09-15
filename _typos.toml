@@ -22,3 +22,5 @@ thm = "thm"
 stabl = "stabl"
 # g2html's dead-line attribute in the report XML.
 ded = "ded"
+# Cytoscape.js option naming the elements to fit or center on.
+eles = "eles"
