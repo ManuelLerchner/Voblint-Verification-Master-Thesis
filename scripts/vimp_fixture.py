@@ -99,7 +99,8 @@ def shown_source(source: str) -> str:
             kept.append(line)
     while kept and not kept[0].strip():
         kept.pop(0)
-    return "\n".join(kept).rstrip() + "\n"
+    # No final newline: an editor would show it as an empty last line.
+    return "\n".join(kept).rstrip()
 
 
 def expected_arithmetic(path: Path) -> Counter | None:
