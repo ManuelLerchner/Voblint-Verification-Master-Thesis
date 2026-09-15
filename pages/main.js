@@ -11,9 +11,9 @@ import { json } from "https://esm.sh/@codemirror/lang-json@6.0.2";
  * the one module instance basicSetup uses. A second @codemirror/state instance
  * rejects every extension built from it.
  */
-import { Decoration, WidgetType, hoverTooltip } from "https://esm.sh/@codemirror/view@^6.0.0";
+import { Decoration, WidgetType, hoverTooltip, keymap } from "https://esm.sh/@codemirror/view@^6.0.0";
 
-import { EditorState, StateEffect, StateField } from "https://esm.sh/@codemirror/state@^6.0.0";
+import { EditorState, Prec, StateEffect, StateField } from "https://esm.sh/@codemirror/state@^6.0.0";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -77,7 +77,7 @@ const rawMounts = {
 
 /*
  * Every editor feature on one screen, at the page's default configuration
- * (Interval, Warrowing, call string k=1):
+ * (Interval, Warrow, call string k=1):
  *
  *   i == 5 and hits == 8 PROVED, i < 5 REFUTED, a == 2 UNKNOWN,
  *   10 / (a - 2) a possible division by zero, record(100) DEAD,
@@ -297,7 +297,13 @@ const rawViews = Object.fromEntries(
   Object.entries(rawMounts).map(([part, parent]) => [
     part,
     new EditorView({
-      extensions: [basicSetup, json(), syntaxHighlighting(codeHighlight), EditorState.readOnly.of(true)],
+      extensions: [
+        basicSetup,
+        json(),
+        syntaxHighlighting(codeHighlight),
+        EditorState.readOnly.of(true),
+        EditorView.contentAttributes.of({ "aria-label": `run_voblint ${part} as JSON` }),
+      ],
       parent,
     }),
   ]),
@@ -596,7 +602,7 @@ function showDiagnosticsSummary(result) {
   const diagnostics = Array.isArray(result.diagnostics) ? result.diagnostics : [];
 
   if (diagnostics.length === 0) {
-    return;
+    return false;
   }
 
   const errors = diagnostics.filter((d) => d.severity === "error").length;
@@ -611,6 +617,8 @@ function showDiagnosticsSummary(result) {
     note: "An error means a divisor is zero in every live context; a warning means it may be zero.",
     items: diagnostics.map((d) => ({ kind: d.severity === "error" ? "error" : "warning", message: d.message ?? "", line: d.line })),
   });
+
+  return true;
 }
 
 function resultFailure(result) {
@@ -1152,16 +1160,8 @@ function inspectCursor(state) {
   }
 }
 
-function showAnalysisView(result, source) {
+function showAnalysisView(result) {
   const doc = editor.state.doc;
-
-  /* A result for text the editor no longer holds cannot be placed. */
-  if (doc.toString() !== source) {
-    analysisModel = null;
-    inspection = null;
-    renderInspector();
-    return;
-  }
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
@@ -2052,6 +2052,24 @@ function updateGlobalsHelp() {
   globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
 }
 
+/*
+ * Every extra call site kept multiplies the contexts a recursive program can
+ * reach; none of the explainer's examples needs more than two.
+ */
+const MAX_CONTEXT_DEPTH = 16;
+
+function parseContextDepth(text) {
+  const trimmed = String(text ?? "").trim();
+
+  if (!/^\d+$/.test(trimmed)) {
+    return null;
+  }
+
+  const depth = Number(trimmed);
+
+  return depth <= MAX_CONTEXT_DEPTH ? depth : null;
+}
+
 function readConfiguration() {
   const analysis = analysisSelect.value;
 
@@ -2074,10 +2092,10 @@ function readConfiguration() {
   let contextDepth = 0;
 
   if (context === "call-string") {
-    contextDepth = Number.parseInt(contextDepthInput.value, 10);
+    contextDepth = parseContextDepth(contextDepthInput.value);
 
-    if (!Number.isInteger(contextDepth) || contextDepth < 0) {
-      throw new Error("Call-string depth must be a non-negative integer.");
+    if (contextDepth === null) {
+      throw new Error(`Call-string depth must be a whole number from 0 to ${MAX_CONTEXT_DEPTH}.`);
     }
   }
 
@@ -2107,18 +2125,23 @@ function configurationLabel(configuration) {
 /* Run analysis                                                               */
 /* -------------------------------------------------------------------------- */
 
-function setRunning(running) {
-  runButton.disabled = running;
+/*
+ * While a run is active the run button cancels it. Nothing proves every
+ * configuration terminates on every program, so a run that never finishes must
+ * be stoppable from where it was started.
+ */
+let running = false;
+let slowRunTimer = 0;
 
-  if (running) {
-    runButton.classList.add("running");
-    runButtonIcon.className = "fa-solid fa-spinner";
-    runButtonLabel.textContent = "Analyzing";
-  } else {
-    runButton.classList.remove("running");
-    runButtonIcon.className = "fa-solid fa-play";
-    runButtonLabel.textContent = "Run analysis";
-  }
+const SLOW_RUN_MS = 5000;
+
+function setRunning(active) {
+  running = active;
+  clearTimeout(slowRunTimer);
+
+  runButton.classList.toggle("running", active);
+  runButtonIcon.className = active ? "fa-solid fa-spinner" : "fa-solid fa-play";
+  runButtonLabel.textContent = active ? "Cancel" : "Run analysis";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2152,32 +2175,50 @@ function failPendingAnalysis(error) {
 }
 
 
-/*
- * A result describes the configuration it ran under, so changing any setting
- * retires it: a finished run is cleared, and a pending one is cancelled rather than
- * allowed to land under settings it was not computed with. Bumping the generation
- * makes the cancelled run's own handlers stand down.
- */
-function resetForConfigurationChange() {
-  const hadResult = pendingAnalysis || analysisModel || !graphPanel.hidden || rawRunProgram !== null;
-
-  analysisRunGeneration++;
-
-  if (pendingAnalysis) {
-    discardAnalysisWorker();
-    failPendingAnalysis(new Error("Analysis cancelled: the configuration changed."));
-  }
-
-  setRunning(false);
+function clearResults() {
   clearGraph();
   clearTiming();
   clearAnalysisView();
   clearProblems();
   showRawRunProgram(null);
+}
+
+/*
+ * Stops the active run, if any. Bumping the generation makes its own handlers
+ * stand down, and a worker still solving is terminated: it cannot be interrupted
+ * any other way.
+ */
+function retireActiveRun(reason) {
+  analysisRunGeneration++;
+
+  if (pendingAnalysis) {
+    discardAnalysisWorker();
+    failPendingAnalysis(new Error(reason));
+  }
+
+  setRunning(false);
+}
+
+/*
+ * A result describes the configuration it ran under, so changing any setting
+ * retires it: a finished run is cleared, and a pending one is cancelled rather than
+ * allowed to land under settings it was not computed with.
+ */
+function resetForConfigurationChange() {
+  const hadResult = running || analysisModel || !graphPanel.hidden || rawRunProgram !== null;
+
+  retireActiveRun("Analysis cancelled: the configuration changed.");
+  clearResults();
 
   if (hadResult) {
     showStatus("Configuration changed \u00b7 run again");
   }
+}
+
+function cancelRun() {
+  retireActiveRun("Analysis cancelled.");
+  clearResults();
+  showStatus("Analysis cancelled \u00b7 run again when ready");
 }
 
 function createAnalysisWorker() {
@@ -2304,17 +2345,13 @@ async function run() {
    * validation, so an invalid selection can never leave an old graph next to
    * a new error/table state.
    */
-  if (runButton.disabled || pendingAnalysis) {
+  if (runButton.disabled || running || pendingAnalysis) {
     return;
   }
 
   const runGeneration = ++analysisRunGeneration;
 
-  clearGraph();
-  clearTiming();
-  clearAnalysisView();
-  clearProblems();
-  showRawRunProgram(null);
+  clearResults();
 
   let configuration;
 
@@ -2336,33 +2373,39 @@ async function run() {
 
   showStatus("Analyzing...");
 
+  slowRunTimer = setTimeout(() => {
+    if (runGeneration === analysisRunGeneration && pendingAnalysis) {
+      showStatus(
+        `Still analyzing after ${SLOW_RUN_MS / 1000} s. Some settings never finish on some ` +
+          "programs, such as Join on a growing recursion: press Cancel to stop.",
+      );
+    }
+  }, SLOW_RUN_MS);
+
+  let result = null;
+
   try {
-    /*
-     * IMPORTANT:
-     *
-     * The browser adapter takes FIVE arguments:
-     *
-     *   analysis
-     *   globals rule
-     *   context
-     *   context depth
-     *   source
-     */
     const rawResult = await runAnalysisInWorker(configuration, source);
 
     if (typeof rawResult !== "string") {
       throw new TypeError("Voblint_run returned " + `${typeof rawResult}; expected a JSON string.`);
     }
 
-    const result = JSON.parse(rawResult);
+    result = JSON.parse(rawResult);
 
     if (runGeneration !== analysisRunGeneration) {
       return;
     }
 
+    /* Positions, excerpts and "go to line" all refer to the analysed text. */
+    if (editor.state.doc.toString() !== source) {
+      showStatus("The program changed during the run \u00b7 run again");
+      return;
+    }
+
     renderTiming(result);
     showRawRunProgram(result.raw);
-    showAnalysisView(result, source);
+    showAnalysisView(result);
 
     if (result.status === "ok") {
       /*
@@ -2387,7 +2430,10 @@ async function run() {
         clearGraph();
 
         showStatus(`${configurationLabel(configuration)} · ${failureTitle(result).toLowerCase()}`, "error");
-        showProblem({ title: failureTitle(result), message: result.message, line: result.line, column: result.column });
+        /* The title already says the program is malformed; the banner keeps only the reason. */
+        const message = (result.message ?? "").replace(/^program is not well-formed:\s*/i, "");
+
+        showProblem({ title: failureTitle(result), message, line: result.line, column: result.column });
       }
     }
   } catch (error) {
@@ -2398,12 +2444,16 @@ async function run() {
        * reports its error in the status line.
        */
       if (error instanceof GraphRenderError) {
-        showStatus(`${configurationLabel(configuration)} · graph rendering failed`, "error");
-        showProblem({
-          kind: "warning",
-          title: "The result is ready, but the graph could not be drawn",
-          message: error.message,
-        });
+        showStatus(`${configurationLabel(configuration)} · complete, but the graph could not be drawn`, "error");
+
+        /* The graph panel already names the failure; arithmetic findings take the banner. */
+        if (!showDiagnosticsSummary(result)) {
+          showProblem({
+            kind: "warning",
+            title: "The result is ready, but the graph could not be drawn",
+            message: error.message,
+          });
+        }
 
         console.error(error);
 
@@ -2455,6 +2505,21 @@ const editor = new EditorView({
 
     variableHover,
 
+    /* Above basicSetup's own Mod-Enter binding, which inserts a blank line. */
+    Prec.highest(
+      keymap.of([
+        {
+          key: "Mod-Enter",
+          run: () => {
+            run();
+            return true;
+          },
+        },
+      ]),
+    ),
+
+    EditorView.contentAttributes.of({ "aria-label": "VIMP program editor" }),
+
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         markAnalysisStale();
@@ -2471,18 +2536,6 @@ const editor = new EditorView({
 
         return false;
       },
-
-      keydown(event) {
-        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-          event.preventDefault();
-
-          run();
-
-          return true;
-        }
-
-        return false;
-      },
     }),
   ],
 
@@ -2493,11 +2546,13 @@ const editor = new EditorView({
 /* Events                                                                     */
 /* -------------------------------------------------------------------------- */
 
-runButton.addEventListener("click", run);
+runButton.addEventListener("click", () => (running ? cancelRun() : run()));
 
-valueHintsToggle.addEventListener("change", () => {
+function syncValueHints() {
   editor.dispatch({ effects: setValueHintsVisible.of(valueHintsToggle.checked) });
-});
+}
+
+valueHintsToggle.addEventListener("change", syncValueHints);
 
 contextSelect.addEventListener("change", updateContextControls);
 
@@ -2686,9 +2741,15 @@ new ResizeObserver(() => {
 
 updateContextControls();
 updateGlobalsHelp();
+/* A reload can restore the checkbox's last state, which the editor field does not know. */
+syncValueHints();
 renderRawCall(null);
 renderInspector();
 updateZoomResetLabel();
+
+runButton.disabled = false;
+showStatus("Ready");
+window.voblintPlaygroundReady = true;
 
 /* -------------------------------------------------------------------------- */
 /* Links from the explainer                                                   */
@@ -2779,7 +2840,8 @@ function applyLinkedConfiguration() {
     return;
   }
 
-  const example = LINKED_EXAMPLES[params.get("example")];
+  const name = params.get("example");
+  const example = name !== null && Object.hasOwn(LINKED_EXAMPLES, name) ? LINKED_EXAMPLES[name] : null;
 
   if (example) {
     editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example } });
@@ -2789,9 +2851,9 @@ function applyLinkedConfiguration() {
   selectIfOffered(globalsSelect, params.get("globals"));
   selectIfOffered(contextSelect, params.get("context"));
 
-  const depth = Number.parseInt(params.get("k") ?? "", 10);
+  const depth = parseContextDepth(params.get("k"));
 
-  if (Number.isInteger(depth) && depth >= 0) {
+  if (depth !== null) {
     contextDepthInput.value = String(depth);
   }
 

@@ -38,6 +38,7 @@
   render_snapshot
   render_json
   render_xml
+  wf_explain
   report_dir)
  (libraries voblint_frontend)
  (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))

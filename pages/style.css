@@ -1335,7 +1335,7 @@ kbd {
   gap: 10px;
 }
 
-.raw-result-pane-header h4 {
+.raw-result-pane-header h2 {
   margin: 0;
   color: var(--text-muted);
   font: 700 0.74rem var(--mono);
@@ -1480,8 +1480,9 @@ button.solver-global-key:hover {
   font-size: 0.68rem;
 }
 
-.analysis-graph-header h3 {
+.analysis-graph-header h2 {
   margin: 0;
+  font-size: 1.25rem;
 }
 
 .analysis-graph-tools {
@@ -1581,6 +1582,17 @@ button.solver-global-key:hover {
 .analysis-graph:focus-visible {
   outline: 3px solid rgb(23 75 87 / 0.25);
   outline-offset: 2px;
+}
+
+/*
+ * On a touch screen the view is most of the viewport's height, so let vertical
+ * swipes scroll the page; a horizontal drag still pans and two fingers still pinch.
+ */
+@media (pointer: coarse) {
+  .analysis-graph {
+    height: clamp(320px, 60vh, 560px);
+    touch-action: pan-y;
+  }
 }
 
 .analysis-graph.is-panning {

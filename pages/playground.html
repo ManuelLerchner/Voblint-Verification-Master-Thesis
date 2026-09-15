@@ -6,15 +6,15 @@
 
   <meta
     name="description"
-    content="Voblint is a machine-checked Isabelle/HOL framework for building, running, and verifying interprocedural abstract interpreters, modelled on Goblint's D/G architecture."
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser: pick a domain, a globals rule and a context sensitivity, then inspect every state."
   >
-  <meta property="og:title" content="Voblint — Verified Static Analysis in Isabelle/HOL">
+  <meta property="og:title" content="Voblint Playground">
   <meta
     property="og:description"
-    content="Verified CFG compilation, activation-local semantics, executable equations, and a verified top-down solver in one soundness statement."
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
   >
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
 
   <title>Voblint Playground</title>
 
@@ -26,7 +26,42 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="explainer.css">
 
-  <script type="module" src="main.js"></script>
+  <!--
+    A module whose own imports fail never runs, and nothing else would say so: the
+    controls stay disabled under "Loading". This classic script reports the failure
+    until main.js marks the page ready.
+  -->
+  <script>
+    function voblintPlaygroundFailed(detail) {
+      if (window.voblintPlaygroundReady) {
+        return;
+      }
+
+      const show = () => {
+        const status = document.getElementById("analyzer-status");
+
+        if (status) {
+          status.textContent = "The playground could not load"
+            + (detail ? `: ${detail}` : "")
+            + ". Check your connection and reload the page.";
+          status.className = "status error";
+        }
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show, { once: true });
+      } else {
+        show();
+      }
+    }
+
+    window.addEventListener("error", (event) => voblintPlaygroundFailed(event.message));
+  </script>
+  <script
+    type="module"
+    src="main.js"
+    onerror="voblintPlaygroundFailed('a script could not be downloaded')"
+  ></script>
 </head>
 
 <body>
@@ -88,8 +123,8 @@
           </div>
 
           <div class="control-group">
-            <label for="globals-select" title="How the solver merges a value side-effected into a global">Globals</label>
-            <select id="globals-select">
+            <label for="globals-select">Globals</label>
+            <select id="globals-select" aria-describedby="globals-help">
               <option value="join">Join</option>
               <option value="per-origin">Join per origin</option>
               <option value="warrow" selected>Warrow</option>
@@ -107,20 +142,25 @@
           </div>
 
           <div class="control-group control-group-narrow" id="context-depth-group">
-            <label for="context-depth" title="Number of recent call sites retained in each context">
+            <label for="context-depth">
               Depth <code>k</code>
             </label>
             <input
               id="context-depth"
               type="number"
               min="0"
+              max="16"
               step="1"
               value="1"
               inputmode="numeric"
+              aria-describedby="context-depth-help"
             >
+            <span id="context-depth-help" class="visually-hidden">
+              Number of recent call sites kept in each context, from 0 to 16.
+            </span>
           </div>
 
-          <button id="run-analysis" type="button">
+          <button id="run-analysis" type="button" disabled>
             <i
               id="run-analysis-icon"
               class="fa-solid fa-play"
@@ -134,7 +174,7 @@
               id="analyzer-status"
               class="status"
               role="status"
-            >Ready</p>
+            >Loading the editor…</p>
 
             <span
               id="analysis-timing"
@@ -167,8 +207,10 @@
           <p class="raw-result-note">
             The call exactly as the Isabelle-generated <code>run_voblint</code> received
             it, and the typed answer it returned, serialized field by field with Isabelle's
-            own field and constructor names. Abstract values arrive already rendered as
-            strings by <code>run_voblint</code> itself. The editor annotations, state
+            own field and constructor names. Abstract values arrive as strings rendered by
+            <code>run_voblint</code> itself; the presentation layer only replaces ASCII
+            symbol names such as <code>&lt;top&gt;</code> with glyphs such as ⊤. Integers
+            too large for a JSON number appear as strings. The editor annotations, state
             inspector, and graph are drawn from this answer by untrusted presentation code.
           </p>
 
@@ -179,14 +221,14 @@
           <div id="raw-result-panes" class="raw-result-panes" hidden>
             <section class="raw-result-pane" aria-labelledby="raw-input-heading">
               <div class="raw-result-pane-header">
-                <h4 id="raw-input-heading">Input</h4>
+                <h2 id="raw-input-heading">Input</h2>
               </div>
               <div id="raw-input-body" class="code-editor raw-result-body"></div>
             </section>
 
             <section class="raw-result-pane" aria-labelledby="raw-output-heading">
               <div class="raw-result-pane-header">
-                <h4 id="raw-output-heading">Output</h4>
+                <h2 id="raw-output-heading">Output</h2>
               </div>
               <div id="raw-output-body" class="code-editor raw-result-body"></div>
             </section>
@@ -205,16 +247,12 @@
             </span>
           </div>
 
-          <div
-            id="program-editor"
-            class="code-editor"
-            aria-label="VIMP program editor"
-          ></div>
+          <div id="program-editor" class="code-editor"></div>
         </div>
 
         <p class="editor-note">
-          Runs locally in this page; your source is not uploaded. Run with
-          <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>. More examples are in
+          Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing. More
+          examples are in
           <a
             href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
             target="_blank"
@@ -231,7 +269,7 @@
             <span id="state-inspector-location" class="state-inspector-location"></span>
           </div>
 
-          <div id="state-inspector-body" class="state-inspector-body" aria-live="polite"></div>
+          <div id="state-inspector-body" class="state-inspector-body"></div>
         </section>
 
         <section
@@ -243,11 +281,11 @@
           <div class="analysis-graph-header">
             <div>
               <p class="eyebrow">Solved analysis</p>
-              <h3 id="analysis-graph-heading">Control-flow graph</h3>
+              <h2 id="analysis-graph-heading">Control-flow graph</h2>
             </div>
 
             <div class="analysis-graph-tools">
-              <span class="graph-hint">Drag or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click to fit</span>
+              <span class="graph-hint">Drag or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
 
               <div class="graph-toolbar" aria-label="Graph zoom controls">
                 <button
@@ -282,8 +320,7 @@
             id="analysis-graph"
             class="analysis-graph"
             tabindex="0"
-            aria-live="polite"
-            aria-label="Solved control-flow graph"
+            aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
           ></div>
         </section>
 

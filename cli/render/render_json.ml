@@ -200,7 +200,8 @@ let nodes_json (graph : G.t) context_key =
    otherwise an object with that name as its one key, an option is null or its
    value, and a pair is a two-element array. Association lists stay arrays of
    pairs, so their order and any repeated key survive. Abstract values arrive
-   as the strings run_voblint's own rendering produced.
+   as the strings run_voblint's own rendering produced, after Value_symbols
+   has replaced their ASCII symbol names with glyphs.
 
    Two fields are absent because the export keeps their types abstract: an
    arithmetic obligation's condition and an arithmetic diagnostic's second
@@ -218,7 +219,11 @@ let tagged tag = function
 
 let nat_json n = string_of_int (A.int_of_nat n)
 
-let int_json (C.Int_of_integer z) = Z.to_string z
+(* JSON readers parse numbers as doubles, so an integer outside what a double
+   holds exactly is written as its digit string rather than silently rounded. *)
+let int_json (C.Int_of_integer z) =
+  let exact = Z.shift_left Z.one 53 in
+  if Z.lt (Z.abs z) exact then Z.to_string z else json_string (Z.to_string z)
 
 let rec exp_json e =
   let bin tag a b = tagged tag [ exp_json a; exp_json b ] in

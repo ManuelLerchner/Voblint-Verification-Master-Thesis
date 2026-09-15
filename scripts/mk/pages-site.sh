@@ -48,6 +48,11 @@ cp -R \
   "$BROWSER_ASSETS" \
   "$SITE_DIR/assets/voblint_web.bc.wasm.assets"
 
+# Source maps outweigh the wasm they describe and serve only local debugging;
+# Finder metadata can ride along when pages/ is copied from a Mac checkout.
+find "$SITE_DIR/assets/voblint_web.bc.wasm.assets" -name '*.map' -type f -delete
+find "$SITE_DIR" -name '.DS_Store' -type f -delete
+
 for image in \
   report-graph-sign \
   report-context-interval \

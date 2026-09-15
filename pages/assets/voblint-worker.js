@@ -5,8 +5,21 @@
  * Parsing and analysis may block this worker, but never the browser UI.
  */
 
+/*
+ * The loader instantiates its wasm modules asynchronously, and a failed download
+ * surfaces only as an unhandled rejection here, never as an error the page sees.
+ * Keep it so a failed start can name its cause.
+ */
+let loaderFailure = null;
+
+self.addEventListener("unhandledrejection", (event) => {
+  loaderFailure ??= event.reason;
+});
+
 importScripts("./voblint_web.bc.wasm.js");
 
+/* Long enough for the wasm download on a slow mobile connection. */
+const ANALYZER_START_TIMEOUT_MS = 60_000;
 
 function waitForAnalyzer() {
   return new Promise((resolve, reject) => {
@@ -18,10 +31,14 @@ function waitForAnalyzer() {
         return;
       }
 
-      if (performance.now() - started > 10_000) {
+      if (loaderFailure !== null || performance.now() - started > ANALYZER_START_TIMEOUT_MS) {
+        const cause = loaderFailure instanceof Error ? loaderFailure.message : loaderFailure;
+
         reject(
           new Error(
-            "Voblint analyzer did not initialize.",
+            cause
+              ? `Voblint analyzer did not initialize: ${cause}`
+              : "Voblint analyzer did not initialize.",
           ),
         );
         return;

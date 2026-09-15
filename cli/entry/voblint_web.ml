@@ -68,18 +68,18 @@ let globals_of_string = function
   | "warrow-per-origin" -> Some C.Globals_Warrow_Per_Origin
   | _ -> None
 
-let context_of_string mode depth =
+(* The depth arrives as a JavaScript number. Only one that fits a Wasm OCaml
+   int would arrive as an int; reading it as a number first turns a fraction
+   or a huge value into an error message instead of a trap. *)
+let context_of_string mode (depth : Js.number_t) =
+  let depth = Js.to_float depth in
   match mode with
   | "none" -> Ok C.Ctx_None
   | "entry-state" -> Ok C.Ctx_EntryState
-  | "call-string" when depth >= 0 ->
-      Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_int depth)))
-  | "call-string" -> Error "Call-string depth must not be negative"
+  | "call-string" when Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int ->
+      Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_float depth)))
+  | "call-string" -> Error "Call-string depth must be a non-negative integer"
   | _ -> Error ("Unknown context mode: " ^ mode)
-
-(* -------------------------------------------------------------------------- *)
-(* Analysis result rendering                                                  *)
-(* -------------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
@@ -115,7 +115,13 @@ let run analysis_js globals_js context_js context_depth source_js =
             Render_json.run_voblint_json ~kind:analysis ~globals ~ctx:context program answer
           in
           match answer with
-          | C.Malformed_Program -> Render_json.error_json ~raw "Program is not well-formed"
+          | C.Malformed_Program ->
+              let message =
+                match Wf_explain.explain program with
+                | Some reason -> "Program is not well-formed: " ^ reason
+                | None -> "Program is not well-formed"
+              in
+              Render_json.error_json ~raw message
           | C.Analysed result ->
               Render_json.result_json analysis_ms program ~check_positions ~stmt_positions
                 ~header_positions ~raw result
