@@ -45,6 +45,7 @@ match v1 with
 
 # -- `lower: {ctor: ..., args: [...]}` / `lower: {tuple: [...]}` renderer --
 
+
 def render_lower_arg(arg: dict) -> str:
     if "ctor" in arg:
         value = render_lower(arg)
@@ -95,16 +96,25 @@ def render_action(prod: dict) -> str:
 # regex-ish strings, not ocamllex character-class syntax).
 # ---------------------------------------------------------------------------
 
+
 def gen_lexer_mll(g: dict) -> str:
     # Keyword rules must precede the generic ident rule: ocamllex resolves
     # an exact-length tie (e.g. input "global" matches both the "global"
     # literal and ident_start ident_char*) by earliest rule, not longest
     # match beyond length -- so without this order every keyword would
     # lex as a plain IDENT instead.
-    keyword_rules = "\n".join(f'  | "{word}"' + " " * max(1, 18 - len(word)) + f"{{ {tok} }}" for word, tok in g["keywords"].items())
-    punct_rules = "\n".join(f'  | "{op}"' + " " * max(1, 18 - len(op)) + f"{{ {tok} }}" for op, tok in g["punctuation"].items())
+    keyword_rules = "\n".join(
+        f'  | "{word}"' + " " * max(1, 18 - len(word)) + f"{{ {tok} }}"
+        for word, tok in g["keywords"].items()
+    )
+    punct_rules = "\n".join(
+        f'  | "{op}"' + " " * max(1, 18 - len(op)) + f"{{ {tok} }}"
+        for op, tok in g["punctuation"].items()
+    )
 
-    return HEADER + f'''{{
+    return (
+        HEADER
+        + f"""{{
 open Vimp_parser
 
 exception Lex_error of {{ line : int; col : int; msg : string }}
@@ -128,7 +138,8 @@ rule token = parse
   | digit+ as s                   {{ INT (Z.of_string s) }}
   | eof                           {{ EOF }}
   | _ as c  {{ error lexbuf (Printf.sprintf "unexpected character %C" c) }}
-'''
+"""
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +178,9 @@ def token_decls(g: dict) -> str:
 def precedence_decls(g: dict) -> str:
     lines = []
     for level in g["precedence"]:
-        assoc = {"left": "%left", "right": "%right", "none": "%nonassoc"}[level["assoc"]]
+        assoc = {"left": "%left", "right": "%right", "none": "%nonassoc"}[
+            level["assoc"]
+        ]
         lines.append(f"{assoc} {' '.join(level['tokens'])}")
     return "\n".join(lines)
 
@@ -187,8 +200,16 @@ def rhs_pattern(rhs: list) -> str:
 def owns_stmt_index(prod: dict) -> bool:
     ctor = (prod.get("lower") or {}).get("ctor")
     return ctor in {
-        "SKIP", "Assign", "Check", "If", "While", "Return", "Restore", "Unwind",
-        "com.Call", "com.If",
+        "SKIP",
+        "Assign",
+        "Check",
+        "If",
+        "While",
+        "Return",
+        "Restore",
+        "Unwind",
+        "com.Call",
+        "com.If",
     } or ctor in {"Call"}
 
 
@@ -247,7 +268,9 @@ def gen_list_rule(prod: dict) -> str:
     if min_count == 0:
         alts.append("  | (* empty *)\n      { [] }")
     alts.append(f"  | x = {item}\n      {{ [x] }}")
-    alts.append(f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ xs @ [x] }}")
+    alts.append(
+        f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ xs @ [x] }}"
+    )
     return f"{name}:\n" + "\n".join(alts)
 
 
@@ -326,7 +349,9 @@ def gen_parser(g: dict) -> str:
     rule_blocks.append(gen_named_rule(function_prod))
     rule_blocks.append(gen_program_rule())
 
-    return HEADER + f'''
+    return (
+        HEADER
+        + f"""
 %{{
 (* Menhir does not export prelude bindings through the generated .mli, so the
    recorder itself lives in cli/frontend/vimp_positions.ml where Vimp_frontend can
@@ -353,7 +378,8 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %%
 
 {chr(10).join("(* " + b.split(chr(10))[0] + " *)" + chr(10) + b for b in rule_blocks)}
-'''
+"""
+    )
 
 
 def main():

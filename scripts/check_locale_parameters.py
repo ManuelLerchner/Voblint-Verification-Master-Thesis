@@ -39,7 +39,8 @@ ALLOWED = {
 }
 
 PROSE_KW = re.compile(
-    r"\b(text|txt|section|subsection|subsubsection|paragraph|chapter)\b\s*")
+    r"\b(text|txt|section|subsection|subsubsection|paragraph|chapter)\b\s*"
+)
 IDENT = re.compile(r"[a-z][A-Za-z0-9_']*")
 HEADER = re.compile(r"^(locale|context)\b(.*?)^begin", re.S | re.M)
 QUOTED = re.compile(r'"([^"]*)"', re.S)
@@ -74,19 +75,20 @@ def strip_prose(text: str) -> str:
 
 
 def main() -> int:
-    bodies = {p: strip_prose(p.read_text(errors="ignore"))
-              for p in (REPO / "src").rglob("*.thy")}
+    bodies = {
+        p: strip_prose(p.read_text(errors="ignore"))
+        for p in (REPO / "src").rglob("*.thy")
+    }
     vendor = REPO / "vendor"
     if vendor.is_dir():
-        bodies.update({p: p.read_text(errors="ignore")
-                       for p in vendor.rglob("*.thy")})
+        bodies.update({p: p.read_text(errors="ignore") for p in vendor.rglob("*.thy")})
     if not bodies:
         print("check_locale_parameters: no .thy files found", file=sys.stderr)
         return 1
 
-    headers = [(p, m.group(0))
-               for p, body in bodies.items()
-               for m in HEADER.finditer(body)]
+    headers = [
+        (p, m.group(0)) for p, body in bodies.items() for m in HEADER.finditer(body)
+    ]
 
     # Every name introduced outside a locale header. A name that occurs only
     # inside headers is exactly the free-variable case this checks for.
@@ -111,25 +113,30 @@ def main() -> int:
                     continue
                 if len(name) < 4 or "_" not in name:
                     continue
-                free.setdefault(name, []).append(
-                    str(path.relative_to(REPO)))
+                free.setdefault(name, []).append(str(path.relative_to(REPO)))
 
     if free:
-        print(f"check_locale_parameters: {len(free)} identifier(s) occur free "
-              "in a locale assumption:")
+        print(
+            f"check_locale_parameters: {len(free)} identifier(s) occur free "
+            "in a locale assumption:"
+        )
         for name in sorted(free):
             print(f"  {name}")
             for site in sorted(set(free[name])):
                 print(f"      {site}")
         print()
-        print("Isabelle reads these as free variables, so the assumptions "
-              "naming them hold for an arbitrary function and constrain "
-              "nothing. Use the real constant, or add the name to ALLOWED if "
-              "it is deliberately not defined in this tree.")
+        print(
+            "Isabelle reads these as free variables, so the assumptions "
+            "naming them hold for an arbitrary function and constrain "
+            "nothing. Use the real constant, or add the name to ALLOWED if "
+            "it is deliberately not defined in this tree."
+        )
         return 1
 
-    print(f"check_locale_parameters: {len(headers)} locale/context headers, "
-          "no free identifiers in assumptions")
+    print(
+        f"check_locale_parameters: {len(headers)} locale/context headers, "
+        "no free identifiers in assumptions"
+    )
     return 0
 
 

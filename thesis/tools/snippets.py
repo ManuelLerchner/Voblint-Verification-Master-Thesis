@@ -25,8 +25,9 @@ import argparse
 import difflib
 import re
 import sys
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 THESIS = Path(__file__).resolve().parent.parent
 REPO = THESIS.parent
@@ -37,12 +38,39 @@ OUTDIR = THESIS / "shared" / "generated" / "snippets"
 # that declares the requested name up to the next one at column 0, minus
 # trailing blank lines -- which is what a reader means by "show me sound_state".
 COMMANDS = (
-    "definition", "fun", "primrec", "abbreviation", "inductive", "inductive_set",
-    "function", "partial_function", "lift_definition", "datatype",
-    "type_synonym", "record", "typedef", "locale", "class", "instantiation",
-    "lemma", "theorem", "corollary", "proposition", "interpretation",
-    "sublocale", "text", "section", "subsection", "subsubsection", "context",
-    "instance", "declare", "notation", "export_code", "code_identifier", "end",
+    "definition",
+    "fun",
+    "primrec",
+    "abbreviation",
+    "inductive",
+    "inductive_set",
+    "function",
+    "partial_function",
+    "lift_definition",
+    "datatype",
+    "type_synonym",
+    "record",
+    "typedef",
+    "locale",
+    "class",
+    "instantiation",
+    "lemma",
+    "theorem",
+    "corollary",
+    "proposition",
+    "interpretation",
+    "sublocale",
+    "text",
+    "section",
+    "subsection",
+    "subsubsection",
+    "context",
+    "instance",
+    "declare",
+    "notation",
+    "export_code",
+    "code_identifier",
+    "end",
 )
 NEXT_COMMAND = re.compile(r"^(?:" + "|".join(COMMANDS) + r")\b", re.M)
 
@@ -51,10 +79,25 @@ NEXT_COMMAND = re.compile(r"^(?:" + "|".join(COMMANDS) + r")\b", re.M)
 # declare it. Defining commands are tried across every theory first, so a later
 # extension never shadows the declaration a reader is being shown.
 DEFINING = (
-    "definition", "fun", "primrec", "abbreviation", "inductive", "inductive_set",
-    "function", "partial_function", "lift_definition", "datatype",
-    "type_synonym", "record", "typedef", "locale", "class",
-    "lemma", "theorem", "corollary", "proposition",
+    "definition",
+    "fun",
+    "primrec",
+    "abbreviation",
+    "inductive",
+    "inductive_set",
+    "function",
+    "partial_function",
+    "lift_definition",
+    "datatype",
+    "type_synonym",
+    "record",
+    "typedef",
+    "locale",
+    "class",
+    "lemma",
+    "theorem",
+    "corollary",
+    "proposition",
 )
 
 
@@ -63,13 +106,15 @@ def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
     return re.compile(
         r"^(?:" + "|".join(commands) + r")\b[ \t]+"
         r"(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)[ \t]+)*"
-        + re.escape(name) + r"(?![A-Za-z0-9_'])",
+        + re.escape(name)
+        + r"(?![A-Za-z0-9_'])",
         re.M,
     )
 
 
-def extract(name: str, files: list[Path],
-            pin: str | None = None) -> tuple[str, Path] | None:
+def extract(
+    name: str, files: list[Path], pin: str | None = None
+) -> tuple[str, Path] | None:
     if pin:
         files = [p for p in files if str(p.relative_to(REPO)) == pin] or files
     for commands in (DEFINING, COMMANDS):
@@ -79,14 +124,13 @@ def extract(name: str, files: list[Path],
             if not m:
                 continue
             nxt = NEXT_COMMAND.search(text, m.end())
-            body = text[m.start(): nxt.start() if nxt else len(text)]
+            body = text[m.start() : nxt.start() if nxt else len(text)]
             return body.rstrip() + "\n", path
     return None
 
 
 def theory_files() -> list[Path]:
-    return sorted(p for root in ("src", "vendor")
-                  for p in (REPO / root).rglob("*.thy"))
+    return sorted(p for root in ("src", "vendor") for p in (REPO / root).rglob("*.thy"))
 
 
 def main() -> int:
@@ -125,15 +169,23 @@ def main() -> int:
         out = OUTDIR / f"{name}.thy"
         if args.write:
             out.write_text(text)
-            print(f"snippets: wrote {out.relative_to(REPO)} from {path.relative_to(REPO)}")
+            print(
+                f"snippets: wrote {out.relative_to(REPO)} from {path.relative_to(REPO)}"
+            )
             continue
         stored = out.read_text() if out.is_file() else ""
         if stored != text:
-            diff = "".join(difflib.unified_diff(
-                stored.splitlines(True), text.splitlines(True),
-                fromfile=f"{name} (in the thesis)",
-                tofile=f"{name} (in the theories)"))
-            stale.append(f"{name}\n  shown because: {meta.get('why', '(no why line)')}\n{diff}")
+            diff = "".join(
+                difflib.unified_diff(
+                    stored.splitlines(True),
+                    text.splitlines(True),
+                    fromfile=f"{name} (in the thesis)",
+                    tofile=f"{name} (in the theories)",
+                )
+            )
+            stale.append(
+                f"{name}\n  shown because: {meta.get('why', '(no why line)')}\n{diff}"
+            )
 
     if missing or stale:
         if missing:
@@ -142,8 +194,10 @@ def main() -> int:
         if stale:
             print(f"snippets: {len(stale)} snippet(s) differ from the theories:\n")
             print("\n".join(stale))
-            print("If the new text is correct, run thesis/tools/snippets.py --write "
-                  "and check the surrounding prose still describes it.")
+            print(
+                "If the new text is correct, run thesis/tools/snippets.py --write "
+                "and check the surrounding prose still describes it."
+            )
         return 1
 
     print(f"snippets: {len(wanted)} snippet(s) match the theories")

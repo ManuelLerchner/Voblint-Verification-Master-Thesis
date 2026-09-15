@@ -45,12 +45,12 @@ GRAMMAR = yaml.safe_load(GRAMMAR_PATH.read_text())
 # by a KeyError/IndexError here rather than by this test quietly checking
 # nothing.
 VARIABLE_ROLE_SLOTS = [
-    ("exp_var", 0),         # expression use
-    ("stmt_assign", 0),     # assignment target
-    ("stmt_callret", 0),    # return-value target -- also covers special
-                             # calls (e.g. __voblint_nondet_int()), which
-                             # parse as ordinary calls, not a dedicated
-                             # production
+    ("exp_var", 0),  # expression use
+    ("stmt_assign", 0),  # assignment target
+    ("stmt_callret", 0),  # return-value target -- also covers special
+    # calls (e.g. __voblint_nondet_int()), which
+    # parse as ordinary calls, not a dedicated
+    # production
 ]
 CALLEE_ROLE_SLOTS = [
     ("stmt_call", 0),
@@ -62,9 +62,7 @@ def _rhs_of(name):
     for prod in GRAMMAR["productions"]:
         if prod["name"] == name:
             return prod["rhs"]
-    raise AssertionError(
-        f"no production named {name!r} in manifests/vimp-grammar.yaml"
-    )
+    raise AssertionError(f"no production named {name!r} in manifests/vimp-grammar.yaml")
 
 
 @pytest.mark.parametrize("name,index", VARIABLE_ROLE_SLOTS)

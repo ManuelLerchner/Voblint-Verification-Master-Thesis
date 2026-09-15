@@ -28,23 +28,32 @@ DOMAINS = {
     "Parity_Analysis": ("Parity", "parity"),
     "Congruence_Analysis": ("Congruence", "congruence"),
 }
-ROUTES = [("rule", "unit_dg_analysis", "r"),
-          ("es_rule", "routed_dg_analysis", "r"),
-          ("cs_rule", "routed_dg_analysis", "k r")]
+ROUTES = [
+    ("rule", "unit_dg_analysis", "r"),
+    ("es_rule", "routed_dg_analysis", "r"),
+    ("cs_rule", "routed_dg_analysis", "k r"),
+]
 
 
 @pytest.fixture(scope="module")
 def generated(tmp_path_factory):
     out = tmp_path_factory.mktemp("generated")
-    subprocess.run([sys.executable, "scripts/gen_analysis_assembly.py", "--out", str(out)],
-                   cwd=ROOT, check=True, capture_output=True)
+    subprocess.run(
+        [sys.executable, "scripts/gen_analysis_assembly.py", "--out", str(out)],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    )
     return {p.stem: p.read_text() for p in out.glob("*.thy")}
 
 
 def interpretation_params(text, name):
     """The `for` parameters of `global_interpretation name`, or None if absent."""
-    m = re.search(r"global_interpretation\s+" + re.escape(name) + r":\s*(\w+)(.*?)\nproof",
-                  text, re.S)
+    m = re.search(
+        r"global_interpretation\s+" + re.escape(name) + r":\s*(\w+)(.*?)\nproof",
+        text,
+        re.S,
+    )
     if not m:
         return None
     params = re.search(r"\n\s*for\s+([\w ]+?)\s*$", m.group(2))
@@ -53,8 +62,9 @@ def interpretation_params(text, name):
 
 @pytest.mark.parametrize("domain", DOMAINS)
 @pytest.mark.parametrize("suffix,locale,params", ROUTES)
-def test_every_route_registers_a_rule_parametric_instance(generated, domain, suffix,
-                                                          locale, params):
+def test_every_route_registers_a_rule_parametric_instance(
+    generated, domain, suffix, locale, params
+):
     """One interpretation per (domain, route) with the update rule left free."""
     _, prefix = DOMAINS[domain]
     name = f"{prefix}_{suffix}"
@@ -69,11 +79,14 @@ def test_run_surface_passes_the_rule_through():
     each, and none of them names a particular rule."""
     text = (ROOT / "src/Executable_Surface/CLI/Analysis_Run.thy").read_text()
     body = text.split("fun analysis_result ")[1].split("\ndatatype")[0]
-    equations = re.findall(r'"analysis_result\s+(\w+)\s+(\w+)\s+(\(Ctx_CallString k\)|Ctx_\w+)',
-                           body)
+    equations = re.findall(
+        r'"analysis_result\s+(\w+)\s+(\w+)\s+(\(Ctx_CallString k\)|Ctx_\w+)', body
+    )
     assert sorted(equations) == sorted(
-        (domain, "r", ctx) for domain in DOMAINS
-        for ctx in ("Ctx_None", "Ctx_EntryState", "(Ctx_CallString k)"))
+        (domain, "r", ctx)
+        for domain in DOMAINS
+        for ctx in ("Ctx_None", "Ctx_EntryState", "(Ctx_CallString k)")
+    )
     assert not re.search(r"\bGlobals_\w+", body)
 
 
@@ -84,6 +97,7 @@ def test_applied_roles_reach_isabelle_as_one_argument():
     the registry cannot express anything else -- there is no proof-text override
     behind this."""
     import yaml
+
     manifest = yaml.safe_load((ROOT / "manifests/analyses.yaml").read_text())
     sys.path.insert(0, str(ROOT / "scripts"))
     import gen_analysis_assembly as gen

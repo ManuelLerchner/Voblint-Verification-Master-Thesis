@@ -41,14 +41,16 @@ ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 
 # Named explicitly rather than relied on transitively: an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
-COMMON_IMPORTS = ['"Voblint_Result.Unit_DG_Analysis"',
-                  '"Voblint_Result.Routed_Live_Keys"',
-                  '"Voblint_Framework.Call_String_Context"',
-                  '"Voblint_Framework.Routed_Context"',
-                  '"Voblint_Solver.TD_Solver_Bridge"',
-                  '"Voblint_Solver.Globals_Rule"',
-                  '"Voblint_VIMP.VIMP_Program"',
-                  '"TD.TD_side_upd_rule"']
+COMMON_IMPORTS = [
+    '"Voblint_Result.Unit_DG_Analysis"',
+    '"Voblint_Result.Routed_Live_Keys"',
+    '"Voblint_Framework.Call_String_Context"',
+    '"Voblint_Framework.Routed_Context"',
+    '"Voblint_Solver.TD_Solver_Bridge"',
+    '"Voblint_Solver.Globals_Rule"',
+    '"Voblint_VIMP.VIMP_Program"',
+    '"TD.TD_side_upd_rule"',
+]
 
 INTERP = "TD_side_rule_Interp"
 
@@ -59,11 +61,33 @@ GENERATED_NOTICE = (
     "this file.\n"
 )
 
-ROLES = ["tf_st", "enter_st", "init_st", "skip", "assign", "special", "branch",
-         "body", "return", "enter_ci", "event", "transfer_sound", "tf_commute",
-         "tf_abs_def", "enter_commute", "classifier", "init_gamma"]
-FACT_ROLES = {"transfer_sound", "tf_commute", "tf_abs_def", "enter_commute",
-              "init_gamma", "classifier"}
+ROLES = [
+    "tf_st",
+    "enter_st",
+    "init_st",
+    "skip",
+    "assign",
+    "special",
+    "branch",
+    "body",
+    "return",
+    "enter_ci",
+    "event",
+    "transfer_sound",
+    "tf_commute",
+    "tf_abs_def",
+    "enter_commute",
+    "classifier",
+    "init_gamma",
+]
+FACT_ROLES = {
+    "transfer_sound",
+    "tf_commute",
+    "tf_abs_def",
+    "enter_commute",
+    "init_gamma",
+    "classifier",
+}
 
 # What distinguishes the three contexts: the global and seed keys, the route on
 # the executable and on the abstract carrier, and obligation 4, which says the
@@ -73,8 +97,10 @@ CONTEXTS = [
         "suffix": "",
         "title": "the unit context",
         "locale": "unit_dg_analysis",
-        "header": ["proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,",
-                   "       goal_cases)"],
+        "header": [
+            "proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,",
+            "       goal_cases)",
+        ],
         "gk": lambda vt: "(unit, unit) routed_gk",
         "keys": None,
         "route_abs": None,
@@ -90,9 +116,11 @@ CONTEXTS = [
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",
-        "case4": ["  case (4 gs u ctx d ca) show ?case",
-                  "    unfolding fun_of_exec_dg_st_for_def",
-                  "    by (rule exec_formals_route_commute[symmetric])"],
+        "case4": [
+            "  case (4 gs u ctx d ca) show ?case",
+            "    unfolding fun_of_exec_dg_st_for_def",
+            "    by (rule exec_formals_route_commute[symmetric])",
+        ],
     },
     {
         "suffix": "_cs",
@@ -100,11 +128,15 @@ CONTEXTS = [
         "locale": "routed_dg_analysis",
         "header": ["proof (rule routed_dg_analysis.intro, goal_cases)"],
         "gk": lambda vt: "call_string_gk",
-        "keys": ('Call_String_Context.Global Call_String_Context.Seed'
-                 ' "\\<lambda>_. cs_route k" "[]"'),
+        "keys": (
+            "Call_String_Context.Global Call_String_Context.Seed"
+            ' "\\<lambda>_. cs_route k" "[]"'
+        ),
         "route_abs": '"\\<lambda>_. cs_route k"',
         "params": "k r",
-        "case4": ["  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)"],
+        "case4": [
+            "  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
+        ],
     },
 ]
 
@@ -127,11 +159,16 @@ class Domain:
         """The interface roles, spelled the domain's way unless overridden."""
         i = self.impl
         roles = {
-            "tf_st": f"{i}_tf_st_for", "enter_st": f"{i}_enter_st_for",
-            "init_st": f"cinit_{i}_st", "skip": f"skip_{i}",
-            "assign": f"assign_{i}", "special": f"special_{i}",
-            "branch": f"branch_{i}", "body": f"body_{i}",
-            "return": f"return_{i}", "enter_ci": f"enter_{i}_ci_for",
+            "tf_st": f"{i}_tf_st_for",
+            "enter_st": f"{i}_enter_st_for",
+            "init_st": f"cinit_{i}_st",
+            "skip": f"skip_{i}",
+            "assign": f"assign_{i}",
+            "special": f"special_{i}",
+            "branch": f"branch_{i}",
+            "body": f"body_{i}",
+            "return": f"return_{i}",
+            "enter_ci": f"enter_{i}_ci_for",
             "event": f"event_{i}",
             "transfer_sound": f"{i}_tf.is_sound_transfer_for",
             "tf_commute": f"{i}_tf_st_for_commute",
@@ -169,7 +206,7 @@ def rule_step(rule):
 def pack_operands(groups):
     """One line per group where that fits, else filled by width."""
     lines = ["    " + " ".join(gs) for gs in groups]
-    if all(symbol_len(l) <= MAX_LINE for l in lines):
+    if all(symbol_len(packed) <= MAX_LINE for packed in lines):
         return lines
     out, line = [], "   "
     for op in [op for gs in groups for op in gs]:
@@ -198,9 +235,14 @@ def registration(dom, ctx):
         f'       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state) r"',
         f"    bot {t['classifier']}",
     ]
-    tail = [t["enter_ci"], t["event"]] + ([ctx["route_abs"]] if ctx["route_abs"] else [])
-    groups = [[t[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
-              tail, [f'"{INTERP}_solve_c r"']]
+    tail = [t["enter_ci"], t["event"]] + (
+        [ctx["route_abs"]] if ctx["route_abs"] else []
+    )
+    groups = [
+        [t[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
+        tail,
+        [f'"{INTERP}_solve_c r"'],
+    ]
     if not ctx["route_abs"]:
         groups = [groups[0], tail + groups[2]]
     out += pack_operands(groups)
@@ -244,7 +286,10 @@ def registration(dom, ctx):
 def render(dom):
     out = [f"theory {dom.name}_Analyses", "  imports"]
     out += [f"    {i}" for i in dom.imports + COMMON_IMPORTS] + ["begin", ""]
-    out += [f"section \\<open>Registering {dom.name} at every context and update rule\\<close>", ""]
+    out += [
+        f"section \\<open>Registering {dom.name} at every context and update rule\\<close>",
+        "",
+    ]
     out += text_block(
         GENERATED_NOTICE + "\n"
         f"{dom.name} runs through the shared D/G pipeline three times: at the unit context,\n"
@@ -254,7 +299,8 @@ def render(dom):
         "one also its bound \\<open>k\\<close>, so one registration serves every discipline and\n"
         "every bound. The equation system, the solve, the result table and every soundness\n"
         "endpoint come from the interpreted locale; this theory only names the domain's\n"
-        "own implementation and facts.") + [""]
+        "own implementation and facts."
+    ) + [""]
     for ctx in CONTEXTS:
         out += [f"subsection \\<open>At {ctx['title']}\\<close>", ""]
         out += registration(dom, ctx) + [""]
@@ -265,8 +311,10 @@ def render(dom):
 def validate(doms):
     """Reject a registry that is duplicated or names an ill-formed role."""
     problems = []
-    for what, values in [("domain name", [d.name for d in doms]),
-                         ("value type", [d.value_type for d in doms])]:
+    for what, values in [
+        ("domain name", [d.name for d in doms]),
+        ("value type", [d.value_type for d in doms]),
+    ]:
         if len(values) != len(set(values)):
             problems.append(f"duplicate {what}")
     for d in doms:
@@ -275,18 +323,26 @@ def validate(doms):
                 problems.append(f"{d.name}: unknown role {role}")
             elif isinstance(value, dict):
                 if set(value) != {"const", "args"} or not value["args"]:
-                    problems.append(f"{d.name}: applied role {role} takes exactly"
-                                    " `const` and a non-empty `args`")
-                elif not all(isinstance(x, str) and ISABELLE_NAME.match(x)
-                             for x in [value["const"], *value["args"]]):
-                    problems.append(f"{d.name}: applied role {role} may name only"
-                                    " constants")
+                    problems.append(
+                        f"{d.name}: applied role {role} takes exactly"
+                        " `const` and a non-empty `args`"
+                    )
+                elif not all(
+                    isinstance(x, str) and ISABELLE_NAME.match(x)
+                    for x in [value["const"], *value["args"]]
+                ):
+                    problems.append(
+                        f"{d.name}: applied role {role} may name only constants"
+                    )
                 elif role in FACT_ROLES:
-                    problems.append(f"{d.name}: role {role} names a fact, and a fact"
-                                    " takes no arguments")
+                    problems.append(
+                        f"{d.name}: role {role} names a fact, and a fact"
+                        " takes no arguments"
+                    )
             elif not isinstance(value, str):
-                problems.append(f"{d.name}: role {role} must be a name or an"
-                                " application")
+                problems.append(
+                    f"{d.name}: role {role} must be a name or an application"
+                )
     if problems:
         sys.exit("registry is not valid:\n  " + "\n  ".join(problems))
 
@@ -316,9 +372,14 @@ def main():
             current = target.read_text() if target.exists() else ""
             if current != text:
                 stale.append(dom.path)
-                sys.stderr.writelines(difflib.unified_diff(
-                    current.splitlines(keepends=True), text.splitlines(keepends=True),
-                    fromfile=f"{dom.path} (on disk)", tofile=f"{dom.path} (regenerated)"))
+                sys.stderr.writelines(
+                    difflib.unified_diff(
+                        current.splitlines(keepends=True),
+                        text.splitlines(keepends=True),
+                        fromfile=f"{dom.path} (on disk)",
+                        tofile=f"{dom.path} (regenerated)",
+                    )
+                )
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text)

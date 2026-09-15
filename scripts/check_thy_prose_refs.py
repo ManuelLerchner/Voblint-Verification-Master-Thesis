@@ -31,7 +31,6 @@ from pathlib import Path
 
 from gen_pdf_session import inventory, presentation
 
-
 REPO = Path(__file__).resolve().parent.parent
 OPEN, CLOSE = r"\<open>", r"\<close>"
 
@@ -41,15 +40,12 @@ ALLOWED = {
     "id_binary_log",
     "id_binary_pred",
     "id_unary_log",
-
     # Metavariable placeholders: X stands for a domain name.
     "bfilter_X_st",
     "branch_X_st_for",
-
     # A solver-menu label: `STR ''warrow_per_origin''` in Solver_Menu's table,
     # a string literal rather than an identifier.
     "warrow_per_origin",
-
     # Deliberately names something that does *not* exist -- Parity_Exec explains
     # that its branch transfer is the identity, so there is no such constant to
     # generalize.
@@ -59,9 +55,7 @@ ALLOWED = {
 PROSE_KW = re.compile(
     r"\b(text|txt|section|subsection|subsubsection|paragraph|chapter)\b\s*"
 )
-REF = re.compile(
-    re.escape(OPEN) + r"([a-z][A-Za-z0-9_']*)" + re.escape(CLOSE)
-)
+REF = re.compile(re.escape(OPEN) + r"([a-z][A-Za-z0-9_']*)" + re.escape(CLOSE))
 IDENT = re.compile(r"[A-Za-z][A-Za-z0-9_']*")
 
 # Isabelle encoded/control symbols, for example:
@@ -260,11 +254,7 @@ def main() -> int:
     defined: set[str] = set()
 
     for path, text in sources.items():
-        body = (
-            strip_prose(text)
-            if str(path).startswith(str(REPO / "src"))
-            else text
-        )
+        body = strip_prose(text) if str(path).startswith(str(REPO / "src")) else text
         defined |= set(IDENT.findall(body))
 
     # ------------------------------------------------------------------
@@ -288,9 +278,7 @@ def main() -> int:
 
         for line_no in sorted(raw_prose_underscore_lines(text)):
             line = lines[line_no - 1].strip()
-            unsafe_prose.append(
-                f"{path.relative_to(REPO)}:{line_no}: {line}"
-            )
+            unsafe_prose.append(f"{path.relative_to(REPO)}:{line_no}: {line}")
 
     if unsafe_prose:
         print(
@@ -321,20 +309,14 @@ def main() -> int:
         for match in REF.finditer(text):
             name = match.group(1)
 
-            if (
-                name.count("_") < 2
-                or name in defined
-                or name in ALLOWED
-            ):
+            if name.count("_") < 2 or name in defined or name in ALLOWED:
                 continue
 
             if name.endswith(("_def", "_defs", "_simps")):
                 continue
 
             line = text.count("\n", 0, match.start()) + 1
-            dangling.setdefault(name, []).append(
-                f"{path.relative_to(REPO)}:{line}"
-            )
+            dangling.setdefault(name, []).append(f"{path.relative_to(REPO)}:{line}")
 
     if dangling:
         print(

@@ -128,7 +128,11 @@ def ident_role(rhs: list, i: int) -> str:
 # i.e. actual name resolution across productions, not a per-production
 # markup choice; out of scope here, matching the same boundary that keeps
 # procedure def/ref out of scope above.
-IDENT_MARKUP = {"variable": "SOME Markup.free", "callee": "SOME Markup.skolem", "global": "SOME Markup.bound"}
+IDENT_MARKUP = {
+    "variable": "SOME Markup.free",
+    "callee": "SOME Markup.skolem",
+    "global": "SOME Markup.bound",
+}
 
 
 def isabelle_type(sym: str) -> str:
@@ -191,11 +195,7 @@ TEMPLATE_OVERRIDE = {
 
 
 def arg_types(g: dict, rhs: list) -> list:
-    return [
-        isabelle_type(sym)
-        for i, sym in enumerate(rhs)
-        if is_arg_symbol(sym)
-    ]
+    return [isabelle_type(sym) for i, sym in enumerate(rhs) if is_arg_symbol(sym)]
 
 
 # -- Priority assignment -----------------------------------------------
@@ -208,6 +208,7 @@ def arg_types(g: dict, rhs: list) -> list:
 # None (non-associative, e.g. LT/EQEQ): both args one level tighter than
 # the level below (matches how comparisons sit strictly above +/- in the
 # original grammar, non-chainable).
+
 
 def build_precedence_table(g: dict) -> dict:
     table = {}
@@ -227,7 +228,9 @@ def precedence_of(g: dict, token: str):
 
 # -- Syntax line rendering ------------------------------------------------
 
-ATOM_PRIORITY = 1000  # exp productions with no listed operator: unconditionally embeddable
+ATOM_PRIORITY = (
+    1000  # exp productions with no listed operator: unconditionally embeddable
+)
 
 # `stmt` has no precedence-climbing structure at all -- every stmt
 # production sits at one flat level (matching VIMP_Notation.thy's own
@@ -255,7 +258,11 @@ STMT_CALLEE_ID_PRIORITY = ATOM_PRIORITY
 
 
 def stmt_id_arg_priority(rhs: list, i: int) -> int:
-    return STMT_CALLEE_ID_PRIORITY if ident_role(rhs, i) == "callee" else STMT_TARGET_ID_PRIORITY
+    return (
+        STMT_CALLEE_ID_PRIORITY
+        if ident_role(rhs, i) == "callee"
+        else STMT_TARGET_ID_PRIORITY
+    )
 
 
 def render_syntax_line(g: dict, prod: dict) -> str:
@@ -278,10 +285,15 @@ def render_syntax_line(g: dict, prod: dict) -> str:
     # declarations (no load-time error) but the resulting priority made
     # every `value` command using unary minus fail to parse.
     override = prod.get("precedence")
-    prec_tokens = [override] if override else [s for s in rhs if precedence_of(g, s) is not None]
+    prec_tokens = (
+        [override] if override else [s for s in rhs if precedence_of(g, s) is not None]
+    )
     if len(prec_tokens) == 1:
         assoc, level = precedence_of(g, prec_tokens[0])
-        if len(arg_positions) == 2 and rhs[arg_positions[0]] == result_nt == rhs[arg_positions[1]]:
+        if (
+            len(arg_positions) == 2
+            and rhs[arg_positions[0]] == result_nt == rhs[arg_positions[1]]
+        ):
             left, right = {
                 "left": (level, level + 1),
                 "right": (level + 1, level),
@@ -303,8 +315,15 @@ def render_syntax_line(g: dict, prod: dict) -> str:
         else:
             prio = f" {ATOM_PRIORITY}"
     elif result_nt in ("stmt", "if_stmt"):
-        arg_priorities = [stmt_id_arg_priority(rhs, i) if rhs[i] == "IDENT" else 0 for i in arg_positions]
-        prio = f" [{', '.join(map(str, arg_priorities))}] {STMT_LEVEL}" if arg_priorities else f" {STMT_LEVEL}"
+        arg_priorities = [
+            stmt_id_arg_priority(rhs, i) if rhs[i] == "IDENT" else 0
+            for i in arg_positions
+        ]
+        prio = (
+            f" [{', '.join(map(str, arg_priorities))}] {STMT_LEVEL}"
+            if arg_priorities
+            else f" {STMT_LEVEL}"
+        )
     else:
         prio = ""
 
@@ -345,7 +364,9 @@ def gen_list_syntax(prod: dict) -> list:
     # Every current IDENT-item list (formals, ids) is a variable-declaration
     # list, so the IDENT fallback is id_position, not plain id -- same
     # variable-role treatment as any other declaration/use occurrence.
-    item = NONTERMINAL.get(prod.get("list_of") or prod.get("optional_list_of"), "id_position")
+    item = NONTERMINAL.get(
+        prod.get("list_of") or prod.get("optional_list_of"), "id_position"
+    )
     sep = {"SEMI": ";", "COMMA": ",", None: ""}[prod.get("separator")]
     if "optional_list_of" in prod:
         base = NONTERMINAL[prod["result"].removesuffix("_opt")]
@@ -389,6 +410,7 @@ def gen_list_syntax(prod: dict) -> list:
 # still genuinely Isabelle-target realizations of a canonical rule, not a
 # duplicate/extension of the language itself.
 
+
 def gen_isabelle_extra_syntax() -> list:
     return [
         '  "_exp_zero" :: imp2_exp ("0" 1000)',
@@ -397,8 +419,8 @@ def gen_isabelle_extra_syntax() -> list:
         # first is the zero-arg callret's return TARGET (variable role),
         # second the callee (callee role) -- both carry position, only
         # dest_id_position's markup argument differs per role.
-        "  \"_stmt_call0\" :: \"id_position => imp2_stmt\" (\"_'(') ;\" [1000] 61)",
-        "  \"_stmt_callret0\" :: \"id_position => id_position => imp2_stmt\" (\"_ = _'(') ;\" [900, 1000] 61)",
+        '  "_stmt_call0" :: "id_position => imp2_stmt" ("_\'(\') ;" [1000] 61)',
+        '  "_stmt_callret0" :: "id_position => id_position => imp2_stmt" ("_ = _\'(\') ;" [900, 1000] 61)',
     ]
 
 
@@ -427,7 +449,7 @@ def gen_syntax_block(g: dict) -> str:
     # error"). `program_structure`'s production (`program`) doesn't need
     # this fix: its result ("program") was never in NONTERMINAL to begin
     # with, so it's excluded by the membership check below regardless.
-    lines = ['syntax']
+    lines = ["syntax"]
     for prod in g["productions"]:
         if prod.get("list_of") or prod.get("optional_list_of"):
             continue
@@ -489,14 +511,29 @@ TR_CONST = {
 # re-quoting the literal string keeps every occurrence of a given
 # constructor spelled identically, one string constant per constructor.
 CTOR_VAL = {
-    "N": "c_N", "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
-    "Div": "c_Div", "Mod": "c_Mod",
-    "Less": "c_Less", "Eq": "c_Eq", "Not": "c_Not",
-    "LessEq": "c_LessEq", "Greater": "c_Greater",
-    "GreaterEq": "c_GreaterEq", "NotEq": "c_NotEq",
-    "And": "c_And", "Or": "c_Or",
-    "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign",
-    "Return": "c_Return", "Check": "c_Check", "If": "c_If", "While": "c_While",
+    "N": "c_N",
+    "V": "c_V",
+    "Plus": "c_Plus",
+    "Minus": "c_Minus",
+    "Times": "c_Times",
+    "Div": "c_Div",
+    "Mod": "c_Mod",
+    "Less": "c_Less",
+    "Eq": "c_Eq",
+    "Not": "c_Not",
+    "LessEq": "c_LessEq",
+    "Greater": "c_Greater",
+    "GreaterEq": "c_GreaterEq",
+    "NotEq": "c_NotEq",
+    "And": "c_And",
+    "Or": "c_Or",
+    "SKIP": "c_SKIP",
+    "Seq": "c_Seq",
+    "Assign": "c_Assign",
+    "Return": "c_Return",
+    "Check": "c_Check",
+    "If": "c_If",
+    "While": "c_While",
     "Call": "c_Call",
 }
 
@@ -539,7 +576,9 @@ def render_pattern_and_binds(prod: dict):
     return f'(Const ("{name}", _), [{", ".join(pats)}])', binds
 
 
-def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bool = False) -> str:
+def render_lower_arg_isabelle(
+    prod: dict, arg: dict, binds: dict, raw_idents: bool = False
+) -> str:
     """`raw_idents` covers the one real ambiguity in this rendering: whether
     an IDENT-typed slot becomes a HOL string literal immediately (every
     `{ctor: ..., args: [...]}` site -- the result feeds straight into an
@@ -562,8 +601,10 @@ def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bo
         return f"{TR_FN[sym]} ctxt {binds[i]}"
     if "ctor" in arg:
         ctor = CTOR_VAL[arg["ctor"]]
-        args = [render_lower_arg_isabelle(prod, a, binds, raw_idents)
-                for a in arg.get("args", [])]
+        args = [
+            render_lower_arg_isabelle(prod, a, binds, raw_idents)
+            for a in arg.get("args", [])
+        ]
         return f"K {ctor}" + "".join(f" $ ({a})" for a in args)
     if "some" in arg:
         return f"(K c_Some $ ({render_lower_arg_isabelle(prod, arg['some'], binds, raw_idents)}))"
@@ -599,12 +640,17 @@ def render_action_isabelle(prod: dict) -> str:
         # leaves a parse-tree Const term where an SML string/HOL term was
         # expected (caught by cross-checking function_decl's generated
         # output against funcs_cons's hand-written `formals_of formals`).
-        items = [render_lower_arg_isabelle(prod, {"rhs": i}, binds, raw_idents=True) for i in lower["tuple"]]
+        items = [
+            render_lower_arg_isabelle(prod, {"rhs": i}, binds, raw_idents=True)
+            for i in lower["tuple"]
+        ]
         rhs = "(" + ", ".join(items) + ")"
         return f"{pattern} => {rhs}"
     ctor = CTOR_VAL[lower["ctor"]]
     args = [render_lower_arg_isabelle(prod, a, binds) for a in lower["args"]]
-    rhs = f'K {ctor}' if not args else f'K {ctor} $ ' + " $ ".join(f"({a})" for a in args)
+    rhs = (
+        f"K {ctor}" if not args else f"K {ctor} $ " + " $ ".join(f"({a})" for a in args)
+    )
     return f"{pattern} => {rhs}"
 
 
@@ -621,7 +667,11 @@ def gen_tr_function(g: dict, result_nt: str, extra_clauses: list = None) -> str:
     fn = TR_FN[result_nt]
     clauses = list(extra_clauses or [])
     for prod in g["productions"]:
-        if prod["result"] != result_nt or prod.get("list_of") or prod.get("optional_list_of"):
+        if (
+            prod["result"] != result_nt
+            or prod.get("list_of")
+            or prod.get("optional_list_of")
+        ):
             continue
         arm = render_action_isabelle(prod)
         if arm is not None:
@@ -666,7 +716,7 @@ def gen_list_tr(prod: dict, fn_name: str = None) -> str:
         seq = f'(Const ("_{name}_seq", _) $ xs $ x)'
         return (
             f"{fn} ctxt {sep_one} = {TR_FN[item]} ctxt x\n"
-            f'  | {fn} ctxt {seq} = K {ctor} $ ({fn} ctxt xs) $ ({TR_FN[item]} ctxt x)\n'
+            f"  | {fn} ctxt {seq} = K {ctor} $ ({fn} ctxt xs) $ ({TR_FN[item]} ctxt x)\n"
             f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
         )
     cons = f'(Const ("_{name}_cons", _) $ x $ rest)'
@@ -686,7 +736,7 @@ def gen_list_tr(prod: dict, fn_name: str = None) -> str:
         )
     return (
         f"{fn} ctxt {sep_one} = K c_Cons $ ({TR_FN[item]} ctxt x) $ K c_Nil\n"
-        f'  | {fn} ctxt {cons} = K c_Cons $ ({TR_FN[item]} ctxt x) $ ({fn} ctxt rest)\n'
+        f"  | {fn} ctxt {cons} = K c_Cons $ ({TR_FN[item]} ctxt x) $ ({fn} ctxt rest)\n"
         f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
     )
 
@@ -794,15 +844,15 @@ fun dest_id_position report_markup ctxt (Const ("_constrain", _) $ Free (s, _) $
 
 EXP_SPECIALS = [
     '(Const ("_exp_num", _), [n]) =>\n'
-    '           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)',
+    "           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)",
     '(Const ("_exp_uminus", _), [a]) =>\n'
-    '           (case Term.strip_comb a of\n'
+    "           (case Term.strip_comb a of\n"
     '              (Const ("_exp_num", _), [n]) => neg_num (read_num_const n)\n'
     '            | (Const ("_exp_zero", _), []) =>\n'
-    '                K c_N $ HOLogic.mk_number HOLogic.intT 0\n'
+    "                K c_N $ HOLogic.mk_number HOLogic.intT 0\n"
     '            | (Const ("_exp_one", _), []) => neg_num 1\n'
-    '            | _ =>\n'
-    '                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ exp_tr ctxt a)',
+    "            | _ =>\n"
+    "                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ exp_tr ctxt a)",
 ]
 
 
@@ -822,25 +872,33 @@ def gen_grammar_tr_structure(g: dict) -> str:
     stmt_body = gen_tr_function(g, "stmt", extra_actions["stmt"])
     if_stmt_body = gen_tr_function(g, "if_stmt")
 
-    list_by_name = {p["name"]: p for p in g["productions"] if p.get("list_of") or p.get("optional_list_of")}
+    list_by_name = {
+        p["name"]: p
+        for p in g["productions"]
+        if p.get("list_of") or p.get("optional_list_of")
+    }
     actuals_body = gen_list_tr(list_by_name["actuals"])
     stmts_body = gen_list_tr(list_by_name["stmts"])
     stmts_opt_body = gen_list_tr(list_by_name["stmts_opt"])
     formals_body = gen_list_tr(list_by_name["formals"], fn_name="formals_of")
     names_body = gen_list_tr(list_by_name["ids"], fn_name="names_of")
 
-    stmt_chain = "fun " + "\nand ".join([stmts_body, stmts_opt_body, stmt_body, if_stmt_body])
+    stmt_chain = "fun " + "\nand ".join(
+        [stmts_body, stmts_opt_body, stmt_body, if_stmt_body]
+    )
 
-    return "\n\n".join([
-        VAL_DECLS,
-        DEST_NUM,
-        DEST_ID_POSITION,
-        f"fun {exp_body}",
-        f"fun {actuals_body}",
-        stmt_chain,
-        f"fun {formals_body}",
-        f"fun {names_body}",
-    ])
+    return "\n\n".join(
+        [
+            VAL_DECLS,
+            DEST_NUM,
+            DEST_ID_POSITION,
+            f"fun {exp_body}",
+            f"fun {actuals_body}",
+            stmt_chain,
+            f"fun {formals_body}",
+            f"fun {names_body}",
+        ]
+    )
 
 
 HEADER = """\

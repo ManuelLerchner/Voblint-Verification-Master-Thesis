@@ -52,7 +52,10 @@ def program(tmp_path_factory):
 
 def _voblint(*args):
     proc = subprocess.run(
-        [str(VOBLINT), *map(str, args)], capture_output=True, text=True, encoding="utf-8"
+        [str(VOBLINT), *map(str, args)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
     assert proc.returncode == 0, proc.stderr
     return proc.stdout
@@ -87,7 +90,9 @@ def test_report_shows_goblint_notation(program, analysis, state):
     assert _check_state(_voblint("--analysis", analysis, program)) == state
 
 
-@pytest.mark.parametrize("analysis", ["sign", "interval", "parity", "congruence", "int"])
+@pytest.mark.parametrize(
+    "analysis", ["sign", "interval", "parity", "congruence", "int"]
+)
 def test_no_symbol_token_survives_any_rendering(program, analysis, tmp_path):
     """Every output reads the one decoded answer, so a renderer that bypassed
     it would show up here as a raw token."""
@@ -101,7 +106,9 @@ def test_no_symbol_token_survives_any_rendering(program, analysis, tmp_path):
     for doc in (html / "nodes").glob("*.xml"):
         outputs[doc.name] = doc.read_text(encoding="utf-8")
     for name, text in outputs.items():
-        assert not TOKEN.search(text), f"{analysis} {name}: {TOKEN.search(text).group(0)}"
+        assert not TOKEN.search(text), (
+            f"{analysis} {name}: {TOKEN.search(text).group(0)}"
+        )
     assert "⊤" in outputs["report"], outputs["report"]
 
 
@@ -119,7 +126,7 @@ def test_product_value_folds_into_named_components(program, tmp_path):
     state = root.find("./call/path/analysis[@name='int']/value/map")
     keys = [k.text for k in state.findall("key")]
     values = state.findall("value")
-    by_var = dict(zip(keys, values))
+    by_var = dict(zip(keys, values, strict=True))
 
     assert by_var["c"].text == "5"
     assert by_var["t"].text == "⊤"
@@ -131,7 +138,12 @@ def test_product_value_folds_into_named_components(program, tmp_path):
         "parities",
         "congruences",
     ]
-    assert [v.text for v in components.findall("value")] == ["⊤", "[-∞,+∞]", "ℤ", "1+3ℤ"]
+    assert [v.text for v in components.findall("value")] == [
+        "⊤",
+        "[-∞,+∞]",
+        "ℤ",
+        "1+3ℤ",
+    ]
 
 
 def test_xml_declares_utf8(program, tmp_path):
@@ -151,6 +163,11 @@ def test_graphviz_keeps_the_glyphs(program):
     report's graph pane shows must carry the same text as the tooltip."""
     dot = _voblint("--analysis", "congruence", "--dot", program)
     svg = subprocess.run(
-        ["dot", "-Tsvg"], input=dot, capture_output=True, text=True, encoding="utf-8", check=True
+        ["dot", "-Tsvg"],
+        input=dot,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
     ).stdout
     assert "o=1+3ℤ" in svg, svg[:2000]

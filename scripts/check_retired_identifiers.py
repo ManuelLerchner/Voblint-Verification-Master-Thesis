@@ -38,8 +38,7 @@ def retired() -> list[str]:
 def main(argv: list[str]) -> int:
     names = retired()
     if not names:
-        print(f"check_retired_identifiers: {LIST.name} lists no names",
-              file=sys.stderr)
+        print(f"check_retired_identifiers: {LIST.name} lists no names", file=sys.stderr)
         return 1
 
     if argv:
@@ -51,7 +50,8 @@ def main(argv: list[str]) -> int:
         return 0
 
     pattern = re.compile(
-        r"(?<![A-Za-z0-9_'])(" + "|".join(map(re.escape, names)) + r")(?![A-Za-z0-9_'])")
+        r"(?<![A-Za-z0-9_'])(" + "|".join(map(re.escape, names)) + r")(?![A-Za-z0-9_'])"
+    )
 
     found: dict[str, list[str]] = {}
     for path in paths:
@@ -68,20 +68,26 @@ def main(argv: list[str]) -> int:
             found.setdefault(m.group(1), []).append(f"{rel}:{line}")
 
     if found:
-        print(f"check_retired_identifiers: {len(found)} retired identifier(s) "
-              "are still referenced:")
+        print(
+            f"check_retired_identifiers: {len(found)} retired identifier(s) "
+            "are still referenced:"
+        )
         for name in sorted(found):
             print(f"  {name}")
             for site in sorted(set(found[name])):
                 print(f"      {site}")
         print()
-        print(f"These names were deliberately removed (see {LIST.name}). Use the "
-              "replacement, or -- if the name is being reused on purpose -- "
-              "delete its line from that list in the same commit.")
+        print(
+            f"These names were deliberately removed (see {LIST.name}). Use the "
+            "replacement, or -- if the name is being reused on purpose -- "
+            "delete its line from that list in the same commit."
+        )
         return 1
 
-    print(f"check_retired_identifiers: none of the {len(names)} retired "
-          "identifiers is referenced")
+    print(
+        f"check_retired_identifiers: none of the {len(names)} retired "
+        "identifiers is referenced"
+    )
     return 0
 
 

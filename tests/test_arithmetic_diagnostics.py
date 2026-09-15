@@ -12,9 +12,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-
 from report_output import diagnostic_lines
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = Path(os.environ.get("VOBLINT_BIN", REPO_ROOT / "cli/voblint"))
@@ -54,7 +52,9 @@ def run_program(tmp_path, source, *args, analysis="interval"):
     return proc, diagnostics
 
 
-@pytest.mark.parametrize("analysis", ["sign", "interval", "int", "parity", "congruence"])
+@pytest.mark.parametrize(
+    "analysis", ["sign", "interval", "int", "parity", "congruence"]
+)
 @pytest.mark.parametrize("operator, noun", [("/", "division"), ("%", "remainder")])
 def test_zero_divisor_uses_domain_precision(tmp_path, analysis, operator, noun):
     _, findings = run_program(
@@ -67,7 +67,9 @@ def test_zero_divisor_uses_domain_precision(tmp_path, analysis, operator, noun):
     assert noun in findings[0][5]
 
 
-@pytest.mark.parametrize("analysis", ["sign", "interval", "int", "parity", "congruence"])
+@pytest.mark.parametrize(
+    "analysis", ["sign", "interval", "int", "parity", "congruence"]
+)
 def test_unknown_divisor_warns(tmp_path, analysis):
     _, findings = run_program(
         tmp_path,
@@ -78,10 +80,13 @@ def test_unknown_divisor_warns(tmp_path, analysis):
     assert findings[0].group(4, 5) == ("warning", "possible division by zero")
 
 
-@pytest.mark.parametrize("analysis", ["sign", "interval", "int", "parity", "congruence"])
+@pytest.mark.parametrize(
+    "analysis", ["sign", "interval", "int", "parity", "congruence"]
+)
 def test_nonzero_divisor_is_silent(tmp_path, analysis):
     _, findings = run_program(
-        tmp_path, "fun main() { y = 3; x = 10 / y; z = 10 % y; }\n",
+        tmp_path,
+        "fun main() { y = 3; x = 10 / y; z = 10 % y; }\n",
         analysis=analysis,
     )
     assert findings == []
@@ -94,7 +99,9 @@ def test_unreachable_operation_is_silent(tmp_path):
     assert findings == []
 
 
-@pytest.mark.parametrize("expression", ["0 && 1 / 0", "1 || 1 / 0", "1 && 1 / 0", "0 || 1 / 0"])
+@pytest.mark.parametrize(
+    "expression", ["0 && 1 / 0", "1 || 1 / 0", "1 && 1 / 0", "0 || 1 / 0"]
+)
 def test_boolean_operands_are_all_inspected(tmp_path, expression):
     _, findings = run_program(
         tmp_path, f"fun main() {{ __voblint_check({expression}); }}\n"
@@ -118,7 +125,10 @@ def test_conditional_guard_is_reported_once(tmp_path):
     assert len(findings) == 1
 
 
-@pytest.mark.parametrize("statement", ["x = f(10 / 0);", "f(10 / 0);", "x = min(10 / 0, 1);", "x = max(1, 10 / 0);"])
+@pytest.mark.parametrize(
+    "statement",
+    ["x = f(10 / 0);", "f(10 / 0);", "x = min(10 / 0, 1);", "x = max(1, 10 / 0);"],
+)
 def test_call_arguments_are_inspected(tmp_path, statement):
     _, findings = run_program(
         tmp_path, "fun f(n) { return n; }\n" + f"fun main() {{ {statement} }}\n"
@@ -138,13 +148,23 @@ def test_return_expression_is_inspected(tmp_path):
     assert findings[0][4] == "error"
 
 
-@pytest.mark.parametrize("context_args", [("--context", "entry-state"), ("--context", "call-string", "--context-depth", "1")])
+@pytest.mark.parametrize(
+    "context_args",
+    [
+        ("--context", "entry-state"),
+        ("--context", "call-string", "--context-depth", "1"),
+    ],
+)
 @pytest.mark.parametrize("rule", ["join", "per-origin", "warrow", "warrow-per-origin"])
-def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(tmp_path, context_args, rule):
+def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(
+    tmp_path, context_args, rule
+):
     _, findings = run_program(
         tmp_path,
         "fun f(n) { return 10 / n; }\nfun main() { x = f(0); y = f(2); }\n",
-        *context_args, "--globals", rule,
+        *context_args,
+        "--globals",
+        rule,
     )
     assert len(findings) == 1
     assert findings[0].group(4, 5) == ("warning", "possible division by zero")
@@ -178,13 +198,18 @@ def test_html_arithmetic_warning_links_to_source(tmp_path):
     assert warning_docs[0].stem in line.get("wrn", "")
 
 
-@pytest.mark.parametrize("view, prefix", [("--dot", "digraph AnalysisCFG"), ("--graph-snapshot", "clusters:")])
+@pytest.mark.parametrize(
+    "view, prefix",
+    [("--dot", "digraph AnalysisCFG"), ("--graph-snapshot", "clusters:")],
+)
 def test_graph_draws_diagnostics_on_their_node(tmp_path, view, prefix):
     # The warning line stays on stderr; the graph names the finding at its node.
     proc, findings = run_program(tmp_path, "fun main() { x = 10 / 0; }\n", view)
     assert len(findings) == 1
     assert proc.stdout.startswith(prefix)
-    assert "division by zero whenever this operation is evaluated: 10 / 0" in proc.stdout
+    assert (
+        "division by zero whenever this operation is evaluated: 10 / 0" in proc.stdout
+    )
     assert "error:" not in proc.stdout
 
 
@@ -203,17 +228,24 @@ def test_multiline_operations_use_statement_start_positions(tmp_path):
         "    10 / n;\n"
         "}\n",
     )
-    assert sorted((int(finding[2]), int(finding[3])) for finding in findings) == [(4, 3), (9, 3)]
+    assert sorted((int(finding[2]), int(finding[3])) for finding in findings) == [
+        (4, 3),
+        (9, 3),
+    ]
 
 
 def test_html_preserves_findings_from_every_domain(tmp_path):
     out = tmp_path / "report"
     _, findings = run_program(
-        tmp_path, "fun main() {\n  x = 10 / 0;\n}\n", "--html-out", str(out),
+        tmp_path,
+        "fun main() {\n  x = 10 / 0;\n}\n",
+        "--html-out",
+        str(out),
         analysis="interval,parity",
     )
     assert sorted(finding.group(4, 7) for finding in findings) == [
-        ("error", "interval"), ("warning", "parity"),
+        ("error", "interval"),
+        ("warning", "parity"),
     ]
     warnings = list((out / "warn").glob("warn*.xml"))
     assert len(warnings) == 2
@@ -236,9 +268,13 @@ def test_plain_report_has_two_aligned_tables(tmp_path):
     assert "Arithmetic diagnostics\nLocation  Point  Severity  Message\n" in arithmetic
     assert "Location  Point  Condition  Verdict  State\n" in checks
     assert "ERROR" in arithmetic and "PROVED" in checks
-    for section, columns in [(arithmetic.split("Arithmetic diagnostics\n")[1],
-                              ["Point", "Severity", "Message"]),
-                             (checks, ["Point", "Condition", "Verdict", "State"])]:
+    for section, columns in [
+        (
+            arithmetic.split("Arithmetic diagnostics\n")[1],
+            ["Point", "Severity", "Message"],
+        ),
+        (checks, ["Point", "Condition", "Verdict", "State"]),
+    ]:
         header, separator, row = section.splitlines()[:3]
         for column in columns:
             offset = header.index(column)
@@ -250,4 +286,6 @@ def test_empty_report_sections_are_explicit(tmp_path):
     proc, findings = run_program(tmp_path, "fun main() { x = 1; }\n")
     assert findings == []
     assert proc.stderr == ""
-    assert proc.stdout.endswith("Arithmetic diagnostics\nNone\n\nAssertion checks\nNone\n")
+    assert proc.stdout.endswith(
+        "Arithmetic diagnostics\nNone\n\nAssertion checks\nNone\n"
+    )

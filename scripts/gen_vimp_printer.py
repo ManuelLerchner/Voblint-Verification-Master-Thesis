@@ -74,14 +74,16 @@ def render(grammar: dict) -> str:
         right = level if assoc == "right" else level + 1
         binary_cases.append(
             f"  | {G}.{ctor} (a, b) -> paren ctx {level} "
-            f"(exp_at {left} a ^ \" {text} \" ^ exp_at {right} b)"
+            f'(exp_at {left} a ^ " {text} " ^ exp_at {right} b)'
         )
     unary_cases = [
-        f"  | {G}.{ctor} a -> paren ctx {level} (\"{text}\" ^ exp_at {level} a)"
+        f'  | {G}.{ctor} a -> paren ctx {level} ("{text}" ^ exp_at {level} a)'
         for ctor, text, level in unary
     ]
 
-    return HEADER + f"""
+    return (
+        HEADER
+        + f"""
 (* Precedence levels, loosest first, as the grammar's precedence table lists them.
    A subexpression prints in parentheses exactly when its own level is looser than
    the context it sits in. *)
@@ -159,6 +161,7 @@ let string_of_imp_prog p =
   string_of_program ~globals:({G}.declared_global_vars p)
     ~procs:(("main", [], {G}.prog_main p) :: List.map proc ({G}.prog_procs p))
 """
+    )
 
 
 def binary_level(binary: list[tuple], ctor: str) -> int:

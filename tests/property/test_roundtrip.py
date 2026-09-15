@@ -16,7 +16,6 @@ message than "the trees differ" when something regresses.
 """
 
 from hypothesis import given, settings
-
 from oracle import dump_reprinted, dump_source, run_ast_driver
 from strategies import programs
 
@@ -34,7 +33,9 @@ def test_ast_print_parse_roundtrip(prog):
 @settings(max_examples=100, deadline=None)
 def test_reprint_matches_first_print(prog):
     result = run_ast_driver(prog)
-    assert result.stdout.strip() == "OK", f"round-trip mismatch for {prog!r}:\n{result.stdout}"
+    assert result.stdout.strip() == "OK", (
+        f"round-trip mismatch for {prog!r}:\n{result.stdout}"
+    )
     # Already implied by the round-trip above (the printer is a
     # pure function, so structurally equal ASTs print identically), but
     # checking it directly gives a source-text diff on failure instead of

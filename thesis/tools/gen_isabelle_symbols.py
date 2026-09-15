@@ -10,6 +10,7 @@ itself uses, so the two can never disagree.
 Usage:
     python3 thesis/tools/gen_isabelle_symbols.py [ISABELLE_HOME] > out.typ
 """
+
 import re
 import subprocess
 import sys
@@ -21,7 +22,10 @@ def isabelle_home() -> Path:
         return Path(sys.argv[1])
     out = subprocess.run(
         ["isabelle", "getenv", "-b", "ISABELLE_HOME"],
-        capture_output=True, text=True, check=True)
+        capture_output=True,
+        text=True,
+        check=True,
+    )
     return Path(out.stdout.strip())
 
 

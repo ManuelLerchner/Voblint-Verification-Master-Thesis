@@ -12,6 +12,7 @@ Usage:
 After running, re-open the file in jEdit (I/Q ``open_file``) so the buffer
 picks up the on-disk content.  Companion to ``check_isabelle_ascii.py``.
 """
+
 import sys
 from pathlib import Path
 
@@ -69,7 +70,6 @@ REPL = {
     "×": r"\<times>",
     "·": r"\<cdot>",
     "∘": r"\<circ>",
-    "∧": r"\<and>",
     "⊢": r"\<turnstile>",
     "⋃": r"\<Union>",
     "⋂": r"\<Inter>",

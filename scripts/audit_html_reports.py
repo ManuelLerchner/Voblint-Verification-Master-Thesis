@@ -63,7 +63,7 @@ def param_args(fixture: Path) -> list[str] | None:
     first = fixture.read_text().splitlines()[0]
     if not first.startswith("// PARAM:"):
         return None
-    args = first[len("// PARAM:"):].split()
+    args = first[len("// PARAM:") :].split()
     return [a for a in args if a not in OUTPUT_FLAGS]
 
 
@@ -123,10 +123,14 @@ def live_check_lines(out: Path, source_text: str) -> set[int]:
         }
         if "unreachable" not in status:
             continue
-        spans.append((
-            int(call.get("line")), int(call.get("column")),
-            int(call.get("endLine")), int(call.get("endColumn")),
-        ))
+        spans.append(
+            (
+                int(call.get("line")),
+                int(call.get("column")),
+                int(call.get("endLine")),
+                int(call.get("endColumn")),
+            )
+        )
 
     def dead_at(nr: int, col: int) -> bool:
         # col and the node spans are both 1-based.
@@ -160,14 +164,18 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
     if args is None:
         return []
     cmd = [str(VOBLINT), *args, "--html-out", str(out), str(fixture)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=HTML_AUDIT_TIMEOUT)
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=HTML_AUDIT_TIMEOUT
+    )
     if proc.returncode != 0:
         # voblint's own --timeout (PARAM's, or its 10s default) can fire before
         # ours does; that shares exit 3 with every other run_contained error
         # (a crash, a signal, malformed output), so match the specific message
         # rather than the code -- a genuine crash must still fail this audit.
         if proc.returncode == 3 and "did not finish within" in (proc.stderr or ""):
-            raise subprocess.TimeoutExpired(cmd, HTML_AUDIT_TIMEOUT, output=proc.stdout, stderr=proc.stderr)
+            raise subprocess.TimeoutExpired(
+                cmd, HTML_AUDIT_TIMEOUT, output=proc.stdout, stderr=proc.stderr
+            )
         return [f"exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:200]}"]
 
     problems: list[str] = []
@@ -217,7 +225,8 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
     if shutil.which("dot"):
         svg = subprocess.run(
             ["dot", "-Tsvg", str(dot_file), "-o", str(out / "rendered.svg")],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if svg.returncode != 0:
             problems.append(f"dot -Tsvg failed: {svg.stderr.strip()[:200]}")
@@ -319,7 +328,8 @@ def audit_combinations(verbose: bool) -> int:
                     out = Path(tmp) / f"c{abs(hash(label))}"
                     proc = subprocess.run(
                         [str(VOBLINT), *args, "--html-out", str(out), str(fixture)],
-                        capture_output=True, text=True,
+                        capture_output=True,
+                        text=True,
                     )
                     if proc.returncode != 0:
                         # A rejected combination is a decision, not a defect;
@@ -330,11 +340,14 @@ def audit_combinations(verbose: bool) -> int:
                     accepted += 1
                     docs = list((out / "nodes").glob("main_*.xml"))
                     stated = [
-                        d for d in docs
+                        d
+                        for d in docs
                         if ET.parse(d).getroot().findall("./call/path/analysis")
                         and any(
                             a.findall("./value/map/key")
-                            for a in ET.parse(d).getroot().findall("./call/path/analysis")
+                            for a in ET.parse(d)
+                            .getroot()
+                            .findall("./call/path/analysis")
                         )
                     ]
                     faults = []
@@ -367,7 +380,9 @@ def audit_combinations(verbose: bool) -> int:
                         failures += 1
                         print(f"FAIL {label}: " + "; ".join(faults))
                     elif verbose:
-                        print(f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)")
+                        print(
+                            f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)"
+                        )
                     shutil.rmtree(out, ignore_errors=True)
     print(f"\n{accepted} accepted configuration(s), {failures} with problems")
     return 1 if failures else 0
@@ -377,8 +392,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("-k", dest="filter", default="", help="only fixtures matching this")
     ap.add_argument("--verbose", action="store_true", help="list every fixture")
-    ap.add_argument("--combinations", action="store_true",
-                    help="sweep the domain/globals/context space instead of the corpus")
+    ap.add_argument(
+        "--combinations",
+        action="store_true",
+        help="sweep the domain/globals/context space instead of the corpus",
+    )
     args = ap.parse_args()
 
     if not VOBLINT.exists():
@@ -408,7 +426,9 @@ def main() -> int:
             try:
                 problems = audit_one(fixture, out)
             except subprocess.TimeoutExpired:
-                reason = f"html rendering exceeded the {HTML_AUDIT_TIMEOUT}s audit budget"
+                reason = (
+                    f"html rendering exceeded the {HTML_AUDIT_TIMEOUT}s audit budget"
+                )
                 skips[reason] = skips.get(reason, 0) + 1
                 if args.verbose:
                     print(f"skip {rel} ({reason})")

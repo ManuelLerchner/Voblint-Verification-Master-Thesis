@@ -100,7 +100,9 @@ def test_state_is_a_foldable_map_not_a_flat_string(report):
     docs = list((report / "nodes").glob("main_*.xml"))
     maps = []
     for doc in docs:
-        analysis = ET.parse(doc).getroot().find("./call/path/analysis[@name='interval']")
+        analysis = (
+            ET.parse(doc).getroot().find("./call/path/analysis[@name='interval']")
+        )
         if analysis is not None:
             keys = analysis.findall("./value/map/key")
             if keys:
@@ -115,7 +117,9 @@ def test_dead_and_proved_are_highlighted_in_the_dot(report):
     assert 'style="rounded,dashed,filled",color=gray45,fillcolor=gray90' in dot, (
         "unreachable node not highlighted"
     )
-    assert "color=darkgreen,penwidth=2,fillcolor=palegreen" in dot, "proved check not highlighted"
+    assert "color=darkgreen,penwidth=2,fillcolor=palegreen" in dot, (
+        "proved check not highlighted"
+    )
 
 
 def test_dot_carries_the_click_hooks(report):
@@ -132,7 +136,9 @@ def test_graph_pane_is_the_dot_drawing(report):
     dot = (report / "dot" / FIXTURE.name / "main.dot").read_text()
     cli = subprocess.run(
         [str(VOBLINT), "--analysis", "interval", "--dot", str(FIXTURE)],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     assert dot == cli
 
@@ -147,17 +153,29 @@ def test_dead_calls_keep_their_operation_without_a_callee_context(tmp_path, dead
     )
     out = tmp_path / "result"
     proc = subprocess.run(
-        [str(VOBLINT), "--analysis", "interval", "--context", "entry-state",
-         "--html-out", str(out), str(source)],
-        capture_output=True, text=True,
+        [
+            str(VOBLINT),
+            "--analysis",
+            "interval",
+            "--context",
+            "entry-state",
+            "--html-out",
+            str(out),
+            str(source),
+        ],
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 0, proc.stderr
     dot = (out / "dot" / source.name / "main.dot").read_text()
     dead = re.search(
-        r'(\w+) \[shape=box,style="rounded,dashed,filled"[^\]]*label="pp\d+\\nunreachable', dot
+        r'(\w+) \[shape=box,style="rounded,dashed,filled"[^\]]*label="pp\d+\\nunreachable',
+        dot,
     )
     assert dead, "call inside the dead branch not drawn as unreachable"
-    assert "call f(7) [not entered]" not in dot, "routed call wrongly marked not entered"
+    assert "call f(7) [not entered]" not in dot, (
+        "routed call wrongly marked not entered"
+    )
     edges = [line for line in dot.splitlines() if f"{dead[1]} ->" in line]
     assert len(edges) == 1 and 'label="continuation"' in edges[0]
     assert 'label="call f(3)"' not in dot, "dead call created a routed callee edge"
@@ -239,7 +257,7 @@ def test_source_lines_link_to_their_cfg_nodes(report):
     # The check's own line must reach the node carrying that check's verdict.
     source = FIXTURE.read_text().splitlines()
     check_lines = [
-        str(i + 1) for i, l in enumerate(source) if "__voblint_check" in l
+        str(i + 1) for i, line in enumerate(source) if "__voblint_check" in line
     ]
     linked_lines = {nr for nr, _ in linked}
     for nr in check_lines:
@@ -407,7 +425,8 @@ def test_globals_document_is_in_the_shape_the_stylesheet_reads(tmp_path):
 # fail loudly when they regress, which is why each is asserted rather than
 # eyeballed.
 CTX_FIXTURE = (
-    REPO_ROOT / "tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp"
+    REPO_ROOT
+    / "tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp"
 )
 
 
@@ -418,16 +437,15 @@ def test_context_sensitive_runs_annotate_the_source(tmp_path):
     fell through to []. It has per-context verdicts instead, and those carry the
     same finding a reader opens the report for.
     """
-    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
-               str(CTX_FIXTURE))
+    out = _run(
+        tmp_path, "--analysis", "interval", "--context", "entry-state", str(CTX_FIXTURE)
+    )
     warns = sorted((out / "warn").glob("warn*.xml"))
     assert warns, "a context-sensitive run emitted no findings"
 
     source = CTX_FIXTURE.read_text().splitlines()
-    check_lines = [i + 1 for i, l in enumerate(source) if "__voblint_check" in l]
-    warned = sorted(
-        int(ET.parse(w).getroot().find("text").get("line")) for w in warns
-    )
+    check_lines = [i + 1 for i, line in enumerate(source) if "__voblint_check" in line]
+    warned = sorted(int(ET.parse(w).getroot().find("text").get("line")) for w in warns)
     assert warned == check_lines, (
         f"findings land on {warned}, checks are on {check_lines}"
     )
@@ -512,8 +530,9 @@ def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
     argument it was called with -- one joined row would mean the contexts were
     lost.
     """
-    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
-               str(CTX_FIXTURE))
+    out = _run(
+        tmp_path, "--analysis", "interval", "--context", "entry-state", str(CTX_FIXTURE)
+    )
     rows = {
         g.find("key").text: ET.tostring(g.find("analysis"), encoding="unicode")
         for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
@@ -525,9 +544,12 @@ def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
 
     # square(3) and square(4): each seed pins n to its own actual argument.
     pinned = sorted(
-        v for k in seeds
-        for v in ["[3,3]" if "<key>n</key><value>[3,3]</value>" in rows[k] else "",
-                  "[4,4]" if "<key>n</key><value>[4,4]</value>" in rows[k] else ""]
+        v
+        for k in seeds
+        for v in [
+            "[3,3]" if "<key>n</key><value>[3,3]</value>" in rows[k] else "",
+            "[4,4]" if "<key>n</key><value>[4,4]</value>" in rows[k] else "",
+        ]
         if v
     )
     assert pinned == ["[3,3]", "[4,4]"], (
@@ -541,8 +563,9 @@ def test_the_uncalled_entry_is_named_root_context(tmp_path):
     Its context is empty, and an empty context rendered as a bare trailing
     separator reads as a missing value rather than as the root.
     """
-    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
-               str(CTX_FIXTURE))
+    out = _run(
+        tmp_path, "--analysis", "interval", "--context", "entry-state", str(CTX_FIXTURE)
+    )
     keys = [
         g.find("key").text
         for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
@@ -564,8 +587,17 @@ def test_several_domains_land_in_one_node_document(tmp_path):
         "/01-refinement_beats_components.vimp"
     )
     subprocess.run(
-        [str(VOBLINT), "--analysis", "int,interval,sign", "--html-out", str(out), str(src)],
-        capture_output=True, text=True, check=True,
+        [
+            str(VOBLINT),
+            "--analysis",
+            "int,interval,sign",
+            "--html-out",
+            str(out),
+            str(src),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     # Every node carries one block per domain, in the order asked for. status
     # is separate and only present where there is a finding to report.
@@ -604,9 +636,19 @@ def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):
         "/04-two_call_sites_entry_state.vimp"
     )
     subprocess.run(
-        [str(VOBLINT), "--analysis", "interval", "--context", "entry-state",
-         "--html-out", str(out), str(src)],
-        capture_output=True, text=True, check=True,
+        [
+            str(VOBLINT),
+            "--analysis",
+            "interval",
+            "--context",
+            "entry-state",
+            "--html-out",
+            str(out),
+            str(src),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     )
     dot = next((out / "dot").iterdir()).joinpath("main.dot").read_text()
     contexts = re.findall(r"subgraph (cluster_ctx_\d+)", dot)
@@ -624,14 +666,27 @@ def test_rerun_clears_the_previous_programs_nodes(tmp_path):
         REPO_ROOT / "tests/regression/17-call-string/known-imprecision"
         "/01-deep_recursion_bounded_context.vimp"
     )
-    run = lambda src, *args: subprocess.run(
-        [str(VOBLINT), *args, "--html-out", str(out), str(src)],
-        capture_output=True, text=True, check=True)
+
+    def run(src, *args):
+        return subprocess.run(
+            [str(VOBLINT), *args, "--html-out", str(out), str(src)],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
     # Depth 1 already produces more node documents than FIXTURE. A depth above
     # the program's recursion bound makes this cleanup test depend on analyzer
     # runtime and can exhaust the CLI's independent 10-second timeout.
-    run(other, "--analysis", "interval", "--context", "call-string", "--context-depth", "1")
+    run(
+        other,
+        "--analysis",
+        "interval",
+        "--context",
+        "call-string",
+        "--context-depth",
+        "1",
+    )
     many = len(list((out / "nodes").glob("*.xml")))
     run(FIXTURE, "--analysis", "interval")
     few = len(list((out / "nodes").glob("*.xml")))
@@ -651,7 +706,8 @@ def test_refuses_a_directory_that_is_not_a_previous_report(tmp_path):
 
     proc = subprocess.run(
         [str(VOBLINT), "--analysis", "sign", "--html-out", str(target), str(FIXTURE)],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert proc.returncode == 5, proc.stdout + proc.stderr
     assert "refusing to write a report" in proc.stderr

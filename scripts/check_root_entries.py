@@ -54,7 +54,7 @@ def entries(text):
         head = BLOCK.match(line)
         if head:
             block = head.group(1)
-            rest = line[head.end():].strip()
+            rest = line[head.end() :].strip()
             if rest:
                 yield block, rest.strip('"')
             continue
@@ -75,8 +75,7 @@ def imported_names(thy):
     m = IMPORTS.search(COMMENT.sub("", thy.read_text()))
     if not m:
         return []
-    return [n.strip('"') for n in m.group(1).split()
-            if "." not in n.strip('"')]
+    return [n.strip('"') for n in m.group(1).split() if "." not in n.strip('"')]
 
 
 def reached(listed, search):
@@ -99,8 +98,9 @@ def reached(listed, search):
 def owned_theories(base, dirs, all_roots):
     """The .thy files this session owns: those on its search path that no
     nested session claims first."""
-    nested = {r.parent for r in all_roots if r.parent != base
-              and base in r.parent.parents}
+    nested = {
+        r.parent for r in all_roots if r.parent != base and base in r.parent.parents
+    }
     found = []
     for d in [base] + [base / x for x in dirs]:
         for thy in sorted(d.glob("*.thy")):
@@ -127,11 +127,14 @@ def check(root_file, all_roots):
             problems.append(
                 f"{root_file}: theory entry '{t}' contains a slash; Isabelle reads that as "
                 f"a malformed import and the session will not load. Put its directory in "
-                f"`directories` and write '{fix}'")
+                f"`directories` and write '{fix}'"
+            )
             continue
         if not any((d / f"{t}.thy").is_file() for d in search):
-            problems.append(f"{root_file}: theory entry '{t}' has no .thy on the "
-                            f"session's search path")
+            problems.append(
+                f"{root_file}: theory entry '{t}' has no .thy on the "
+                f"session's search path"
+            )
 
     # Two files of the same name on one search path. Isabelle resolves the
     # entry to one of them and the other is silently never built, so the
@@ -146,13 +149,16 @@ def check(root_file, all_roots):
             where = ", ".join(str(p.relative_to(base)) for p in paths)
             problems.append(
                 f"{root_file}: two theories named '{stem}' on this session's search "
-                f"path ({where}); Isabelle builds one and never reports the other")
+                f"path ({where}); Isabelle builds one and never reports the other"
+            )
 
     listed = reached(theories, search)
     for thy in owned_theories(base, dirs, all_roots):
         if thy.stem not in listed:
-            problems.append(f"{root_file}: {thy.relative_to(base)} is on this session's "
-                            f"search path but nothing this session builds reaches it")
+            problems.append(
+                f"{root_file}: {thy.relative_to(base)} is on this session's "
+                f"search path but nothing this session builds reaches it"
+            )
     return problems
 
 
