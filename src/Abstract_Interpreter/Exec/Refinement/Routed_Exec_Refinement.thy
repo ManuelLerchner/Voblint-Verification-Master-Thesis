@@ -33,7 +33,7 @@ text \<open>
 
   Also deliberately absent: the solver. The generated equation system is
   solver-independent, and \<open>TD_side_upd_rule\<close> already supplies
-  \<open>part_post_solution_of_solve_c\<close> for every update rule on the menu, so a solver choice
+  \<open>partial_post_solution\<close> for every update rule on the menu, so a solver choice
   is an argument at the use site, never a parameter of the domain capability.
 \<close>
 

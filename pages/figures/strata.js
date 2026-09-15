@@ -9,7 +9,7 @@
     name === "TD" ? "TD" : name.replace("Voblint_Analysis_", "").replace("Voblint_", "");
 
   const STRATA_DESC = {
-    TD: "The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL alone.",
+    TD: "The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree.",
     Voblint_VIMP:
       "The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving.",
     Voblint_CFG:
@@ -25,7 +25,7 @@
     Voblint_Exec:
       "The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
     Voblint_Routing:
-      "Context-routing policies over a compiled program: no context, entry-state and call-string contexts, and key-space finiteness.",
+      "Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework.",
     Voblint_Analysis_Relational:
       "A relational order domain. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable reuse locales are unavailable to it.",
     Voblint_Result:
@@ -37,12 +37,12 @@
       "The interval domain with widening and narrowing, and its instantiation of the shared endpoints.",
     Voblint_Analysis_Parity: "The parity domain and its instantiation of the shared endpoints.",
     Voblint_Analysis_Congruence:
-      "The congruence domain with backward filtering, and its instantiation of the shared endpoints.",
+      "The congruence domain and its instantiation of the shared endpoints.",
     Voblint_Analysis_Int:
       "The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them.",
     Voblint_CLI: "run_voblint, the function the browser calls, and the flagship theorems about it.",
     Voblint_Codegen:
-      "The export_code declaration that writes the analyzer out as one OCaml module. Built last, on top of Voblint_CLI.",
+      "The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS.",
   };
 
   /* A short role per session; a layer's name lists the roles of what lies in it. */
@@ -128,7 +128,7 @@
             rests: [...new Set(examples.flatMap((s) => s.rests_on))]
               .filter((n) => !isExample(n))
               .sort(),
-            info: `Executable runs and regressions, one session per folder, each parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as ${lowestExample.name}.`,
+            info: `Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as ${lowestExample.name}.`,
           },
         ],
       });

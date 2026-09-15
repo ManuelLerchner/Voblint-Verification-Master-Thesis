@@ -32,17 +32,17 @@
     {
       text: {
         entry:
-          "Entry-state contexts use the entry state as the key: `c' = [n ↦ [2, 2]]`. The recursive call `f(n - 1)` enters with `n = [1, 1]` and gets a key of its own.",
+          "Entry-state contexts key on the formals' values: `c' = [n ↦ [2, 2]]`. The recursive call `f(n - 1)` enters with `n = [1, 1]` and gets a key of its own.",
         none: "No context: every call of `f`, from `main` or from `f` itself, uses the single key `()`.",
       },
       obligation:
-        "Obligation `routed_entry_cover`: the key the policy picks is one the semantics admits for this entry.",
+        "Obligation `routed_entry_cover`: every context the semantics admits for this call is one the policy routes some covering alternative to, and that key is solved.",
     },
     {
       text: {
         entry:
-          "The entry state goes, as a side effect, to the global unknown `Seed entry_f c'`, which only this call writes. It holds `n = [2, 2]`.",
-        none: "The entry state goes to `Seed entry_f ()`. The recursive call writes `n = 1` into the same key, the lower bound moves, and warrowing widens the value to `[−∞, 2]`.",
+          "The entry state goes, as a side effect, to the global unknown `Activation_Seed entry_f c'`, a proxy the callee's entry reads back. Only this call writes it, and it holds `n = [2, 2]`.",
+        none: "The entry state goes to `Activation_Seed entry_f ()`. The recursive call writes `n = 1` into the same key, the lower bound moves, and warrowing widens the value to `[−∞, 2]`.",
       },
       obligation:
         "The published value stays below `σ` at the seed, which the post-solution guarantees (`routed_seed_publish_bound_seed`).",
@@ -54,7 +54,7 @@
         none: "The one exit of `f` covers every activation, including ones with the values of `n` that widening added, so the return value is `⊤`.",
       },
       obligation:
-        "Obligation `routed_context_comb`: the exit state read here covers the concrete callee's final store.",
+        "The exit state read here covers the concrete callee's final store; `routed_context_comb` turns that into coverage of the continuation.",
     },
     {
       text: {

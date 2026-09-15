@@ -10,6 +10,7 @@
   position: relative;
   display: grid;
   align-content: start;
+  align-self: start;
   gap: 2px;
   margin: 0;
   padding: 0 0 0 18px;
