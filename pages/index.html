@@ -99,40 +99,7 @@
       </div>
 
       <div class="analyzer">
-        <div class="analyzer-editor">
-          <div class="editor-shell">
-            <div class="editor-toolbar">
-              <span class="editor-file">example.vimp</span>
-              <span class="editor-language">VIMP</span>
-            </div>
-
-            <div
-              id="program-editor"
-              aria-label="VIMP program editor"
-            ></div>
-          </div>
-
-          <p class="editor-note">
-            Runs locally in this page. Your source is not uploaded. Run with
-            <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>. More examples are in
-            <a
-              href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
-              target="_blank"
-              rel="noreferrer"
-            >tests/regression</a>.
-          </p>
-
-          <p class="precision-note">
-            <strong>Precision demo.</strong>
-            With Interval + Call string <code>k=1</code>, run the example with
-            <strong>Default/Warrowing</strong>, then switch only the solver to
-            <strong>Warrowing per origin</strong> or increase the call-string-depth to
-            <code>k=1</code>. The first result is <code>UNKNOWN</code>; the second and
-            third are <code>PROVED</code>.
-          </p>
-        </div>
-
-        <aside class="analyzer-controls" aria-label="Analyzer configuration">
+        <div class="analyzer-controls" role="group" aria-label="Analyzer configuration">
           <div class="control-group">
             <label for="analysis-select">Analysis domain</label>
             <select id="analysis-select">
@@ -153,7 +120,6 @@
               <option value="warrow">Warrowing</option>
               <option value="warrow-per-origin">Warrowing per origin</option>
             </select>
-            <p class="control-help" id="solver-help"></p>
           </div>
 
           <div class="control-group">
@@ -165,8 +131,10 @@
             </select>
           </div>
 
-          <div class="control-group" id="context-depth-group">
-            <label for="context-depth">Call-string depth</label>
+          <div class="control-group control-group-narrow" id="context-depth-group">
+            <label for="context-depth" title="Number of recent call sites retained in each context">
+              Depth <code>k</code>
+            </label>
             <input
               id="context-depth"
               type="number"
@@ -175,9 +143,6 @@
               value="1"
               inputmode="numeric"
             >
-            <p class="control-help">
-              Number of recent call sites retained in each context.
-            </p>
           </div>
 
           <button id="run-analysis" type="button">
@@ -189,34 +154,108 @@
             <span id="run-analysis-label">Run analysis</span>
           </button>
 
-          <p
-            id="analyzer-status"
-            class="status"
-            role="status"
-          >Ready</p>
+          <div class="run-feedback">
+            <p
+              id="analyzer-status"
+              class="status"
+              role="status"
+            >Ready</p>
 
-          <div
-            id="analysis-timing"
-            class="analysis-timing"
-            aria-live="polite"
-            hidden
-          >
-            <span class="analysis-timing-icon" aria-hidden="true">
-              <i class="fa-solid fa-stopwatch"></i>
-            </span>
-
-            <span class="analysis-timing-copy">
-              <span class="analysis-timing-label">Analysis time</span>
+            <span
+              id="analysis-timing"
+              class="analysis-timing"
+              aria-live="polite"
+              hidden
+            >
+              <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+              <span class="visually-hidden">Analysis time</span>
               <strong id="analysis-timing-value">—</strong>
             </span>
           </div>
 
+          <p class="control-help" id="solver-help"></p>
+        </div>
+
+        <details id="raw-result" class="raw-result">
+          <summary>
+            <span class="eyebrow">Generated core</span>
+            <code id="raw-result-call" class="raw-call"></code>
+            <span class="raw-result-hint" aria-hidden="true">
+              <span class="raw-result-hint-closed">Click to expand</span>
+              <span class="raw-result-hint-open">Click to collapse</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </span>
+          </summary>
+
+          <p class="raw-result-note">
+            The call exactly as the Isabelle-generated <code>run_program</code> received
+            it, and the typed answer it returned, serialized field by field with Isabelle's
+            own field and constructor names. Abstract values arrive already rendered as
+            strings by <code>run_program</code> itself. The editor annotations, state
+            inspector, and graph are drawn from this answer by untrusted presentation code.
+          </p>
+
+          <p id="raw-result-empty" class="raw-result-empty">
+            Run the analysis to see the call and its answer.
+          </p>
+
+          <div id="raw-result-panes" class="raw-result-panes" hidden>
+            <section class="raw-result-pane" aria-labelledby="raw-input-heading">
+              <div class="raw-result-pane-header">
+                <h4 id="raw-input-heading">Input</h4>
+              </div>
+              <div id="raw-input-body" class="code-editor raw-result-body"></div>
+            </section>
+
+            <section class="raw-result-pane" aria-labelledby="raw-output-heading">
+              <div class="raw-result-pane-header">
+                <h4 id="raw-output-heading">Output</h4>
+              </div>
+              <div id="raw-output-body" class="code-editor raw-result-body"></div>
+            </section>
+          </div>
+        </details>
+
+        <div class="editor-shell">
+          <div class="editor-toolbar">
+            <span class="editor-file">example.vimp</span>
+            <span class="editor-toolbar-tools">
+              <label class="editor-toggle" for="value-hints-toggle">
+                <input id="value-hints-toggle" type="checkbox" checked>
+                Inline values
+              </label>
+              <span class="editor-language">VIMP</span>
+            </span>
+          </div>
+
           <div
-            id="analysis-results"
-            class="analysis-results"
-            aria-live="polite"
+            id="program-editor"
+            class="code-editor"
+            aria-label="VIMP program editor"
           ></div>
-        </aside>
+        </div>
+
+        <p class="editor-note">
+          Runs locally in this page; your source is not uploaded. Run with
+          <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd>. More examples are in
+          <a
+            href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
+            target="_blank"
+            rel="noreferrer"
+          >tests/regression</a>.
+        </p>
+
+        <section
+          class="state-inspector"
+          aria-labelledby="state-inspector-heading"
+        >
+          <div class="state-inspector-header">
+            <p class="eyebrow" id="state-inspector-heading">State inspector</p>
+            <span id="state-inspector-location" class="state-inspector-location"></span>
+          </div>
+
+          <div id="state-inspector-body" class="state-inspector-body" aria-live="polite"></div>
+        </section>
 
         <section
           id="analysis-graph-panel"
@@ -269,6 +308,7 @@
             aria-label="Solved control-flow graph"
           ></div>
         </section>
+
       </div>
 
       <p class="notice">

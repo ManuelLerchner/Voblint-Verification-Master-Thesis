@@ -64,6 +64,10 @@ let action_text = function
   | C.EA_Ret (Some e, _) -> "return " ^ Vimp_printer.string_of_exp e
   | C.EA_Check e -> "check(" ^ Vimp_printer.string_of_exp e ^ ")"
 
+let action_writes = function
+  | C.EA_Assign (x, _) | C.EA_Special (_, x) -> Some x
+  | _ -> None
+
 let call_text callee (C.CallEdge (_, _, args)) =
   callee ^ "(" ^ String.concat ", " (List.map Vimp_printer.string_of_exp args) ^ ")"
 

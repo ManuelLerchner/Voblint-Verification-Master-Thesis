@@ -1,0 +1,42 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// EXPECT-ARITHMETIC
+// The browser playground's example at call-string depth 2. scale's context
+// now also records which wrap call reached it, so wrap(1) and wrap(4) no
+// longer share a context: a is exactly 2, a == 2 is proved, and the possible
+// division by zero of the depth-1 run becomes a definite one.
+global hits;
+
+fun record(amount) {
+  hits = hits + amount;
+}
+
+fun scale(v) {
+  return v * 2;
+}
+
+fun wrap(w) {
+  r = scale(w);
+  return r;
+}
+
+fun main() {
+  i = 0;
+  while (i < 5) {
+    i = i + 1;
+  }
+  __voblint_check(i == 5); // PROVED
+  __voblint_check(i < 5); // REFUTED
+
+  record(i);
+  record(3);
+  __voblint_check(hits == 8); // PROVED
+
+  if (hits > 10) {
+    record(100);
+  }
+
+  a = wrap(1);
+  b = wrap(4);
+  __voblint_check(a == 2); // PROVED
+  share = 10 / (a - 2); // ARITH: ERROR division-by-zero
+}

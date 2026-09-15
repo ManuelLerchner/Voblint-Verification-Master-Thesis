@@ -1,0 +1,45 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// EXPECT-ARITHMETIC
+// The browser playground's example, at its default configuration. At depth 1,
+// scale's call string remembers only its call site inside wrap, so wrap(1)
+// and wrap(4) share one scale context and widen together: v enters as
+// [1,+inf] and the returned r, and so a and b, lose both bounds. a == 2 is
+// concretely true but UNKNOWN, and 10 / (a - 2) -- concretely 10 / 0 -- is
+// only a possible division by zero. record keeps one context per call site
+// in main, so hits stays exact and hits == 8 is still proved.
+global hits;
+
+fun record(amount) {
+  hits = hits + amount;
+}
+
+fun scale(v) {
+  return v * 2;
+}
+
+fun wrap(w) {
+  r = scale(w);
+  return r;
+}
+
+fun main() {
+  i = 0;
+  while (i < 5) {
+    i = i + 1;
+  }
+  __voblint_check(i == 5); // PROVED
+  __voblint_check(i < 5); // REFUTED
+
+  record(i);
+  record(3);
+  __voblint_check(hits == 8); // PROVED
+
+  if (hits > 10) {
+    record(100);
+  }
+
+  a = wrap(1);
+  b = wrap(4);
+  __voblint_check(a == 2); // UNKNOWN
+  share = 10 / (a - 2); // ARITH: WARN division-by-zero
+}

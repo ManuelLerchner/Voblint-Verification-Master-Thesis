@@ -292,7 +292,10 @@ def gen_named_rule(prod: dict) -> str:
     # rather than left in one flat list. This production reduces at its own
     # closing brace, with its name in scope.
     if prod["name"] == "function_decl":
-        action = f"close_definition ({action})"
+        # The header span, `fun` through the formals' closing parenthesis, is
+        # where the browser shows parameter values.
+        rparen = f"v{prod['rhs'].index('RPAREN')}"
+        action = f"close_definition $startpos $endpos({rparen}) ({action})"
     return f"{prod['name']}:\n  | {rhs_pattern(prod['rhs'])}\n      {{ {action} }}"
 
 
@@ -332,9 +335,10 @@ def gen_parser(g: dict) -> str:
 let record_stmt_pos = Vimp_positions.record
 
 (* A function_decl's action builds (name, formals, body); closing the bucket
-   here keeps the name and its positions together without a second traversal. *)
-let close_definition ((name, formals, body) as decl) =
-  Vimp_positions.close name;
+   here keeps the name, its header and its positions together without a second
+   traversal. *)
+let close_definition header_start header_end ((name, formals, body) as decl) =
+  Vimp_positions.close name header_start header_end;
   ignore formals; ignore body;
   decl
 %}}

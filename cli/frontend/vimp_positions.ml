@@ -24,11 +24,15 @@
 
 type pos = { line : int; column : int; end_line : int; end_column : int }
 
+(* A definition's header spans `fun` through its formals' closing parenthesis;
+   its statements are in reduction order, as described above. *)
+type definition = { name : string; header : pos; statements : pos list }
+
 (* The definition being parsed, in reduction order; reversed. *)
 let pending : pos list ref = ref []
 
 (* Completed definitions, most recent first. *)
-let closed : (string * pos list) list ref = ref []
+let closed : definition list ref = ref []
 
 let reset () =
   pending := [];
@@ -38,25 +42,26 @@ let reset () =
    restructuring: `record $startpos $endpos (Assign (x, e))`. The end position is
    where the command's own text stops, which is what a node document's endColumn
    needs -- without it a span reads as zero-width. *)
+let span (p : Lexing.position) (q : Lexing.position) : pos =
+  {
+    line = p.Lexing.pos_lnum;
+    column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1;
+    end_line = q.Lexing.pos_lnum;
+    end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1;
+  }
+
 let record (p : Lexing.position) (q : Lexing.position) (c : 'a) : 'a =
-  pending :=
-    {
-      line = p.Lexing.pos_lnum;
-      column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1;
-      end_line = q.Lexing.pos_lnum;
-      end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1;
-    }
-    :: !pending;
+  pending := span p q :: !pending;
   c
 
 (* Closes the current definition's bucket. Called from the function_decl
    action, which reduces after the whole body and before the next definition
    starts recording. *)
-let close (name : string) : unit =
-  closed := (name, List.rev !pending) :: !closed;
+let close (name : string) (p : Lexing.position) (q : Lexing.position) : unit =
+  closed := { name; header = span p q; statements = List.rev !pending } :: !closed;
   pending := []
 
 (* Definitions in source order: each function_decl reduces at its own closing
    brace, so they close left to right even though the list production that
    collects them is right-recursive. *)
-let definitions () : (string * pos list) list = List.rev !closed
+let definitions () : definition list = List.rev !closed

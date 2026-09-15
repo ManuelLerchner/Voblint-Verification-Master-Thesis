@@ -24,16 +24,32 @@ type node = {
   label : string;
   kind : node_kind;
   status : node_status option;
-  state : string list;
+  bindings : (string * string) list;
+  (* Declared globals at this point. The local state carries them like any other
+     variable, so they are per point and per context; the drawn graph leaves them
+     out only to keep its tooltips short. *)
+  globals : (string * string) list;
+  (* The return slot, which only an exit state gives a meaningful value. *)
+  ret : string option;
   findings : string list;
   point : C.cfg_node;
   owner : string;
   context : int;
+  (* The context's number within its owner, as in the node's identifier. *)
+  local_context : int;
 }
 
 type edge_kind = Intra | Enter | Combine | Call_to_return
 
-type edge = { src : string; dst : string; kind : edge_kind; text : string }
+(* [writes] names the variable a step assigns, which the browser's value hints and
+   state diffs key on; the DOT and snapshot renderings ignore it. *)
+type edge = {
+  src : string;
+  dst : string;
+  kind : edge_kind;
+  text : string;
+  writes : string option;
+}
 
 type cluster = { cluster_id : string; cluster_label : string; members : string list }
 
@@ -97,14 +113,12 @@ let status_of state =
       else if List.mem (C.Lifted C.Check_Proved) verdicts then Some Proved
       else None
 
-(* A node's variable bindings, one "x=v" per name the owner's scope shows. *)
-let state_of names state =
+(* A node's variable bindings, one per name the owner's scope shows, in scope order. *)
+let bindings_of names state =
   match C.state_value state with
   | C.Bot -> []
   | C.Lifted bindings ->
-      List.filter_map
-        (fun x -> Option.map (fun v -> x ^ "=" ^ v) (List.assoc_opt x bindings))
-        names
+      List.filter_map (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings)) names
 
 (* What the analysis concluded at a node, short enough to label it with. *)
 let findings_of state =
@@ -124,12 +138,13 @@ let findings_of state =
       (C.state_diagnostics state)
 
 (* Everything known at a node: its state, then its findings. *)
-let lines n = n.state @ n.findings
+let lines n = List.map (fun (x, v) -> x ^ "=" ^ v) n.bindings @ n.findings
 
 let build prog (result : (string, unit) C.run_result_ext) : t =
   let g = C.res_cfg result in
   let owner_of = A.owners g in
   let names_of = scope prog g owner_of in
+  let globals = C.declared_global_vars prog in
   let contexts = Array.of_list (C.res_contexts result) in
   let states = C.res_states result in
   let covered = Hashtbl.create 64 in
@@ -184,11 +199,14 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
           label = A.point_name p;
           kind = kind_of g p;
           status = status_of st;
-          state = state_of (names_of (owner_of p)) st;
+          bindings = bindings_of (names_of (owner_of p)) st;
+          globals = bindings_of globals st;
+          ret = List.assoc_opt ret_var (bindings_of [ ret_var ] st);
           findings = findings_of st @ unentered_calls p c;
           point = p;
           owner = owner_of p;
           context = c;
+          local_context = Hashtbl.find local_index (owner_of p, c);
         })
       states
   in
@@ -217,7 +235,17 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
           (fun st ->
             let c = A.int_of_nat (C.state_context st) in
             if C.state_point st = u && is_covered v c then
-              Some { src = id_of u c; dst = id_of v c; kind = Intra; text = A.action_text a }
+              Some
+                {
+                  src = id_of u c;
+                  dst = id_of v c;
+                  kind = Intra;
+                  text = A.action_text a;
+                  writes =
+                    (match a with
+                    | C.EA_Ret (Some _, _) -> Some ret_var
+                    | _ -> A.action_writes a);
+                }
             else None)
           states)
       (A.intra_edges g)
@@ -238,20 +266,23 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
                   (fun t ->
                     (if is_covered entry t then
                        [ { src = id_of u c; dst = id_of entry t; kind = Enter;
-                           text = A.call_text callee ca } ]
+                           text = A.call_text callee ca; writes = None } ]
                      else [])
                     @
                     if is_covered result_node t && is_covered after c then
                       let C.CallEdge (dst, _, _) = ca in
                       [ { src = id_of result_node t; dst = id_of after c; kind = Combine;
-                          text = Option.fold ~none:"" ~some:(fun x -> x ^ " := " ^ A.call_text callee ca) dst } ]
+                          text = Option.fold ~none:"" ~some:(fun x -> x ^ " := " ^ A.call_text callee ca) dst;
+                          writes = None } ]
                     else [])
                   routed
               in
               enters
               @
               if is_covered after c then
-                [ { src = id_of u c; dst = id_of after c; kind = Call_to_return; text = callee } ]
+                let C.CallEdge (dst, _, _) = ca in
+                [ { src = id_of u c; dst = id_of after c; kind = Call_to_return; text = callee;
+                    writes = dst } ]
               else [])
           states)
       (A.call_edges g)

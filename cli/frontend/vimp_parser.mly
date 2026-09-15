@@ -8,9 +8,10 @@
 let record_stmt_pos = Vimp_positions.record
 
 (* A function_decl's action builds (name, formals, body); closing the bucket
-   here keeps the name and its positions together without a second traversal. *)
-let close_definition ((name, formals, body) as decl) =
-  Vimp_positions.close name;
+   here keeps the name, its header and its positions together without a second
+   traversal. *)
+let close_definition header_start header_end ((name, formals, body) as decl) =
+  Vimp_positions.close name header_start header_end;
   ignore formals; ignore body;
   decl
 %}
@@ -190,7 +191,7 @@ globals_decl:
 (* function_decl: *)
 function_decl:
   | v0 = FUN v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = stmts_opt v7 = RBRACE
-      { close_definition ((v1, v3, v6)) }
+      { close_definition $startpos $endpos(v4) ((v1, v3, v6)) }
 (* program: *)
 program:
   | g = globals_opt fs = function_decl_star EOF

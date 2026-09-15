@@ -4,6 +4,17 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from "https://esm.
 
 import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
 
+import { json } from "https://esm.sh/@codemirror/lang-json@6.0.2";
+
+/*
+ * Same semver ranges codemirror@6.0.2 itself imports, so esm.sh resolves them to
+ * the one module instance basicSetup uses. A second @codemirror/state instance
+ * rejects every extension built from it.
+ */
+import { Decoration, WidgetType, hoverTooltip } from "https://esm.sh/@codemirror/view@^6.0.0";
+
+import { EditorState, StateEffect, StateField } from "https://esm.sh/@codemirror/state@^6.0.0";
+
 function query(selector) {
   const element = document.querySelector(selector);
 
@@ -34,10 +45,13 @@ const runButtonIcon = query("#run-analysis-icon");
 const runButtonLabel = query("#run-analysis-label");
 
 const status = query("#analyzer-status");
-const results = query("#analysis-results");
 
 const timing = query("#analysis-timing");
 const timingValue = query("#analysis-timing-value");
+
+const inspectorLocation = query("#state-inspector-location");
+const inspectorBody = query("#state-inspector-body");
+const valueHintsToggle = query("#value-hints-toggle");
 
 const graphPanel = query("#analysis-graph-panel");
 const graph = query("#analysis-graph");
@@ -47,26 +61,65 @@ const graphZoomReset = query("#graph-zoom-reset");
 const graphZoomIn = query("#graph-zoom-in");
 const graphZoomFit = query("#graph-zoom-fit");
 
+const rawResult = query("#raw-result");
+const rawResultEmpty = query("#raw-result-empty");
+const rawResultCall = query("#raw-result-call");
+const rawResultPanes = query("#raw-result-panes");
+const rawMounts = {
+  input: query("#raw-input-body"),
+  output: query("#raw-output-body"),
+};
+
 /*
- * Precision demo:
+ * Every editor feature on one screen, at the page's default configuration
+ * (Interval, Default solver, call string k=1):
  *
- * Interval + Warrowing + Call string k=1
- *   -> UNKNOWN
+ *   i == 5 and hits == 8 PROVED, i < 5 REFUTED, a == 2 UNKNOWN,
+ *   10 / (a - 2) a possible division by zero, record(100) DEAD,
+ *   loop hints marked as joins, record's and wrap's parameters keyed by call site.
  *
- * Interval + Warrowing per origin + Call string k=1
- *   -> PROVED
+ * scale is reached from wrap(1) and wrap(4) through one call site, so k=1
+ * merges them. Warrowing per origin narrows a to [2,8]; k=2 proves a == 2 and
+ * turns the possible division by zero into a definite one. Without context
+ * sensitivity, hits == 8 is lost as well.
  */
-const initialProgram = `fun p(n) {
-  __voblint_check(n < 10);
+const initialProgram = `// Move the cursor, hover the badges, click the graph.
+// Then try: solver "Warrowing per origin", call-string depth k=2, context None.
+global hits;
+
+fun record(amount) {
+  hits = hits + amount;
 }
 
-fun q(m) {
-  p(m);
+fun scale(v) {
+  return v * 2;
+}
+
+fun wrap(w) {
+  r = scale(w);
+  return r;
 }
 
 fun main() {
-  q(1);
-  q(2);
+  i = 0;
+  while (i < 5) {
+    i = i + 1;
+  }
+  __voblint_check(i == 5);
+  __voblint_check(i < 5);
+
+  record(i);
+  record(3);
+  __voblint_check(hits == 8);
+
+  if (hits > 10) {
+    record(100);
+  }
+
+  a = wrap(1);
+  b = wrap(4);
+  __voblint_check(a == 2);
+  share = 10 / (a - 2);
 }`;
 
 /* -------------------------------------------------------------------------- */
@@ -148,7 +201,8 @@ const vimpLanguage = StreamLanguage.define({
   },
 });
 
-const vimpHighlight = HighlightStyle.define([
+/* Shared by the VIMP editor and the raw JSON views; each language uses its own tags. */
+const codeHighlight = HighlightStyle.define([
   {
     tag: tags.keyword,
     color: "#f08a65",
@@ -180,6 +234,18 @@ const vimpHighlight = HighlightStyle.define([
     tag: tags.punctuation,
     color: "#a7bbc0",
   },
+  {
+    tag: tags.propertyName,
+    color: "#8bd5ca",
+  },
+  {
+    tag: tags.string,
+    color: "#f7faf9",
+  },
+  {
+    tag: [tags.bool, tags.null],
+    color: "#f0c674",
+  },
 ]);
 
 /* -------------------------------------------------------------------------- */
@@ -192,9 +258,145 @@ function showStatus(message, kind = "") {
   status.className = kind ? `status ${kind}` : "status";
 }
 
-function clearResults() {
-  results.replaceChildren();
+/* -------------------------------------------------------------------------- */
+/* Raw run_program answer                                                     */
+/* -------------------------------------------------------------------------- */
+
+let rawRunProgram = null;
+
+/*
+ * Two-space JSON that keeps a small value on one line: a constructor term such
+ * as {"Plus":[{"V":"x"},{"N":1}]} reads better whole than spread over a column.
+ */
+function formatJson(value, indent = "") {
+  const flat = JSON.stringify(value);
+
+  if (value === null || typeof value !== "object" || flat.length + indent.length <= 96) {
+    return flat;
+  }
+
+  const inner = `${indent}  `;
+
+  if (Array.isArray(value)) {
+    return `[\n${value.map((item) => inner + formatJson(item, inner)).join(",\n")}\n${indent}]`;
+  }
+
+  const fields = Object.entries(value).map(
+    ([key, item]) => `${inner}${JSON.stringify(key)}: ${formatJson(item, inner)}`,
+  );
+
+  return `{\n${fields.join(",\n")}\n${indent}}`;
 }
+
+const rawViews = Object.fromEntries(
+  Object.entries(rawMounts).map(([part, parent]) => [
+    part,
+    new EditorView({
+      extensions: [basicSetup, json(), syntaxHighlighting(codeHighlight), EditorState.readOnly.of(true)],
+      parent,
+    }),
+  ]),
+);
+
+function setRawText(view, text) {
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+}
+
+function fillRawViews() {
+  if (!rawResult.open || !rawRunProgram) {
+    return;
+  }
+
+  for (const [part, view] of Object.entries(rawViews)) {
+    if (view.state.doc.length === 0) {
+      setRawText(view, formatJson(rawRunProgram[part] ?? null));
+    }
+  }
+}
+
+function callPart(text, kind) {
+  const span = document.createElement("span");
+
+  span.className = `raw-call-${kind}`;
+  span.textContent = text;
+
+  return span;
+}
+
+/*
+ * A datatype value in the raw encoding, written as Isabelle would print it: a bare
+ * constructor, or the constructor applied to its arguments. Anything larger than a
+ * constructor with scalar arguments is elided; the panel below holds the whole term.
+ */
+function constructorTerm(value) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  const [tag, arg] = Object.entries(value ?? {})[0] ?? ["?", null];
+  const args = (Array.isArray(arg) ? arg : [arg]).map((a) =>
+    typeof a === "number" || typeof a === "string" ? String(a) : "\u2026",
+  );
+
+  return `(${[tag, ...args].join(" ")})`;
+}
+
+/*
+ * The panel's title: the call run_program received and the outline of its answer --
+ * the constructor, then each result field with a list's length in place of the list.
+ */
+function renderRawCall(raw) {
+  const input = raw?.input;
+  const parts = [callPart("run_program", "fn")];
+
+  if (!input) {
+    parts.push(callPart(" kind solver ctx p", "arg"), callPart(" \u27f9 ", "arrow"), callPart("?", "arg"));
+    rawResultCall.replaceChildren(...parts);
+    rawResultCall.title = rawResultCall.textContent;
+    return;
+  }
+
+  const solver = input.solver === null ? "None" : `(Some ${constructorTerm(input.solver)})`;
+
+  parts.push(
+    callPart(` ${constructorTerm(input.kind)} ${solver} ${constructorTerm(input.ctx)} `, "arg"),
+    callPart("p", "program"),
+    callPart(" \u27f9 ", "arrow"),
+  );
+
+  const output = raw.output;
+
+  if (typeof output === "string") {
+    parts.push(callPart(output, "ctor"));
+  } else {
+    const [tag, record] = Object.entries(output ?? {})[0] ?? ["?", {}];
+    const fields = Object.entries(record ?? {}).map(([name, value]) =>
+      `${name}: ${Array.isArray(value) ? `[\u2026\u00d7${value.length}]` : "\u2026"}`,
+    );
+
+    parts.push(callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields"));
+  }
+
+  rawResultCall.replaceChildren(...parts);
+  rawResultCall.title = rawResultCall.textContent;
+}
+
+/* The panel sits above the editor, so a reader who opened it keeps it open across runs. */
+function showRawRunProgram(raw) {
+  rawRunProgram = raw ?? null;
+
+  for (const view of Object.values(rawViews)) {
+    setRawText(view, "");
+  }
+
+  renderRawCall(rawRunProgram);
+  rawResultEmpty.hidden = rawRunProgram !== null;
+  rawResultPanes.hidden = rawRunProgram === null;
+  fillRawViews();
+}
+
+/* Formatting a large answer is not free, so it waits until the panel is opened. */
+rawResult.addEventListener("toggle", fillRawViews);
 
 function clearTiming() {
   timing.hidden = true;
@@ -252,93 +454,1003 @@ function workerError(message) {
   return error;
 }
 
-function renderResult(result) {
-  clearResults();
+function resultFailure(result) {
+  const message = result.message ?? "The program could not be analyzed.";
 
-  if (result.status !== "ok") {
-    const error = document.createElement("p");
-    error.className = "result-error";
+  return Number.isInteger(result.line) && Number.isInteger(result.column)
+    ? `${result.line}:${result.column}: ${message}`
+    : message;
+}
 
-    if (Number.isInteger(result.line) && Number.isInteger(result.column)) {
-      error.textContent = `${result.line}:${result.column}: ${result.message}`;
-    } else {
-      error.textContent = result.message ?? "The program could not be analyzed.";
+/* -------------------------------------------------------------------------- */
+/* Source and result navigation                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * One run's result keyed back to the text it analysed. Offsets are meaningful
+ * only for that exact text, so an edit marks the model stale instead of letting
+ * it point at lines that now say something else.
+ */
+let analysisModel = null;
+
+/* What the inspector shows: a statement's nodes, or a single node without one. */
+let inspection = null;
+let focusedNodeId = null;
+let hoveredSpan = null;
+let highlightFrame = 0;
+
+/*
+ * A line holding several findings takes the most severe one's color; the badge
+ * still lists every distinct label, so a context-sensitive UNKNOWN next to a
+ * PROVED on the same line stays visible.
+ */
+const ANNOTATION_SEVERITY = ["dead", "proved", "unknown", "warning", "refuted", "error"];
+
+const ANNOTATION_ICON = {
+  dead: "∅",
+  proved: "✓",
+  unknown: "?",
+  warning: "⚠",
+  refuted: "✗",
+  error: "✗",
+};
+
+function offsetOf(doc, line, column) {
+  const text = doc.line(clamp(line, 1, doc.lines));
+
+  return text.from + clamp(column - 1, 0, text.length);
+}
+
+function isLive(node) {
+  return node.status !== "unreachable";
+}
+
+function buildAnalysisModel(result, doc) {
+  const nodes = new Map();
+  const nodesByPoint = new Map();
+
+  for (const node of result.nodes ?? []) {
+    nodes.set(node.id, node);
+
+    const group = nodesByPoint.get(node.point) ?? [];
+
+    group.push(node);
+    nodesByPoint.set(node.point, group);
+  }
+
+  /*
+   * A procedure header stands for its entry point, so the cursor on `fun p(n)`
+   * inspects the states p is entered with and a graph entry node leads back to it.
+   */
+  const headers = (result.procedures ?? []).map((procedure) => ({
+    ...procedure,
+    point: procedure.entry,
+  }));
+
+  /*
+   * A zero-width statement is the parser's implicit skip -- an empty block or a
+   * missing else. Compile may give it no point at all, so it stands for no code
+   * and must not read as unreachable.
+   */
+  const statements = [...headers, ...(result.statements ?? [])]
+    .filter((s) => s.line < s.end_line || s.column < s.end_column)
+    .filter((s) => s.end_line <= doc.lines)
+    .map((s) => ({
+      ...s,
+      from: offsetOf(doc, s.line, s.column),
+      to: offsetOf(doc, s.end_line, s.end_column),
+      nodes: nodesByPoint.get(s.point) ?? [],
+    }));
+
+  return {
+    nodes,
+    procedureByEntry: new Map(headers.map((procedure) => [procedure.entry, procedure])),
+    statements,
+    statementByPoint: new Map(statements.map((s) => [s.point, s])),
+    stale: false,
+  };
+}
+
+/* The compiler's return slot: assigned by `return e`, read back by the caller. */
+const RETURN_SLOT = "#ret";
+
+function valueOf(node, name) {
+  if (name === RETURN_SLOT) {
+    return node.ret ?? undefined;
+  }
+
+  return (node.bindings.find(([x]) => x === name) ?? node.globals.find(([x]) => x === name))?.[1];
+}
+
+/*
+ * One hint per variable. Contexts that agree share a value; when they disagree,
+ * each value is prefixed by the contexts it holds in, so `L18 [2,2] | L19 [3,3]`
+ * cannot be read the wrong way round.
+ */
+function formatHint(label, samples) {
+  const groups = new Map();
+
+  for (const { key, value } of samples) {
+    const keys = groups.get(value) ?? [];
+
+    if (key && !keys.includes(key)) {
+      keys.push(key);
     }
 
-    results.append(error);
-    return;
+    groups.set(value, keys);
+  }
+
+  if (groups.size === 1) {
+    return `${label}${[...groups.keys()][0]}`;
+  }
+
+  const parts = [...groups].map(([value, keys]) => (keys.length ? `${keys.join(",")} ${value}` : value));
+
+  return `${label}${parts.join(" | ")}`;
+}
+
+/*
+ * A header shows each parameter as the procedure is entered, and a call shows
+ * the parameters of the callee context it enters, prefixed with an arrow. A
+ * `return e` shows the value it returns, and a call whose result is discarded
+ * shows what its callee returned, both after a return arrow. A
+ * statement shows what it assigns, read from the state after its step -- unless
+ * other steps flow into that point too (a loop head, the point after a branch):
+ * that state is a join, so its hint is marked as such rather than presented as
+ * the assignment's own effect. A callee entry that other calls also enter is
+ * marked the same way.
+ */
+function valueHints(model) {
+  const hints = [];
+
+  for (const statement of model.statements) {
+    const written = new Map();
+
+    const sample = (label, key, value, merge) => {
+      const entry = written.get(label) ?? { samples: [], merge: false };
+
+      entry.samples.push({ key, value });
+      entry.merge ||= merge;
+      written.set(label, entry);
+    };
+
+    const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${name}: `);
+
+    for (const node of statement.nodes.filter(isLive)) {
+      if (statement.formals) {
+        for (const name of statement.formals) {
+          const value = valueOf(node, name);
+
+          if (value !== undefined) {
+            sample(`${name}: `, node.context_key, value, false);
+          }
+        }
+
+        continue;
+      }
+
+      const assignsResult = node.next.some((step) => step.writes);
+
+      for (const enter of node.enters) {
+        const entry = model.nodes.get(enter.id);
+        const callee = entry ? model.procedureByEntry.get(entry.point) : null;
+
+        for (const name of callee && isLive(entry) ? callee.formals : []) {
+          const value = valueOf(entry, name);
+
+          if (value !== undefined) {
+            sample(`\u2192 ${name}: `, node.context_key, value, enter.join);
+          }
+        }
+
+        const exit = enter.exit ? model.nodes.get(enter.exit) : null;
+
+        if (!assignsResult && callee?.returns_value && exit && isLive(exit) && exit.ret) {
+          sample("\u21a9 ", node.context_key, exit.ret, enter.join);
+        }
+      }
+
+      for (const step of node.next) {
+        const after = step.writes ? model.nodes.get(step.id) : null;
+        const value = after && isLive(after) ? valueOf(after, step.writes) : undefined;
+
+        if (value !== undefined) {
+          sample(writeLabel(step.writes), node.context_key, value, step.join);
+        }
+      }
+    }
+
+    for (const [name, entry] of written) {
+      hints.push({ pos: statement.to, text: formatHint(name, entry.samples), merge: entry.merge });
+    }
+  }
+
+  return hints;
+}
+
+/*
+ * Lines inside a statement no context reaches, except a line that also starts
+ * a live statement: `if (c) { dead(); }` on one line keeps its live if.
+ */
+function deadLines(model) {
+  const dead = new Set();
+  const liveStarts = new Set();
+
+  for (const statement of model.statements) {
+    if (statement.nodes.some(isLive)) {
+      liveStarts.add(statement.line);
+      continue;
+    }
+
+    for (let line = statement.line; line <= statement.end_line; line++) {
+      dead.add(line);
+    }
+  }
+
+  return [...dead].filter((line) => !liveStarts.has(line));
+}
+
+/*
+ * A DEAD badge on each dimmed line where a dead statement starts, the same
+ * annotation a dead check already gets, so the two share one badge.
+ */
+function deadAnnotations(model, dimmed) {
+  const lines = new Set(dimmed);
+
+  return model.statements
+    .filter((statement) => lines.has(statement.line) && !statement.nodes.some(isLive))
+    .map((statement) => ({
+      line: statement.line,
+      kind: "dead",
+      label: "DEAD",
+      detail: "No context reaches this statement.",
+    }));
+}
+
+function resultAnnotations(result) {
+  if (result.status !== "ok") {
+    return [{ line: result.line, kind: "error", label: "ERROR", detail: result.message ?? "" }];
   }
 
   const checks = Array.isArray(result.checks) ? result.checks : [];
-
-  if (checks.length > 0) {
-    const list = document.createElement("div");
-    list.className = "result-list";
-
-    for (const check of checks) {
-      const verdict = typeof check.verdict === "string" ? check.verdict : "UNKNOWN";
-
-      const row = document.createElement("div");
-      row.className = `result-row ${verdict.toLowerCase()}`;
-
-      const verdictElement = document.createElement("strong");
-
-      verdictElement.textContent = verdict;
-
-      const body = document.createElement("div");
-
-      body.className = "result-body";
-
-      const condition = document.createElement("code");
-
-      condition.textContent = check.condition ?? "";
-
-      const state = document.createElement("span");
-
-      const point = check.point ? `${check.point} · ` : "";
-
-      state.textContent = `${point}${check.state ?? ""}`;
-
-      body.append(condition, state);
-
-      row.append(verdictElement, body);
-
-      list.append(row);
-    }
-
-    results.append(list);
-  }
-
   const diagnostics = Array.isArray(result.diagnostics) ? result.diagnostics : [];
 
-  if (diagnostics.length > 0) {
-    const heading = document.createElement("h3");
+  return [
+    ...checks.map((check) => {
+      const verdict = typeof check.verdict === "string" ? check.verdict : "UNKNOWN";
 
-    heading.textContent = "Diagnostics";
-    results.append(heading);
+      return {
+        line: check.line,
+        kind: verdict.toLowerCase(),
+        label: verdict,
+        detail: [check.condition, check.state].filter(Boolean).join(" · "),
+      };
+    }),
 
-    for (const diagnostic of diagnostics) {
-      const row = document.createElement("p");
+    ...diagnostics.map((diagnostic) => ({
+      line: diagnostic.line,
+      kind: diagnostic.severity === "error" ? "error" : "warning",
+      label: diagnostic.severity === "error" ? "ERROR" : "WARNING",
+      detail: diagnostic.message ?? "",
+    })),
+  ];
+}
 
-      const severity = diagnostic.severity ?? "info";
+class AnnotationBadge extends WidgetType {
+  constructor(labels, detail) {
+    super();
 
-      row.className = `diagnostic ${severity}`;
+    this.labels = labels;
+    this.detail = detail;
+  }
 
-      row.textContent = `${severity}: ${diagnostic.message ?? ""}`;
+  eq(other) {
+    return other.labels === this.labels && other.detail === this.detail;
+  }
 
-      results.append(row);
+  toDOM() {
+    const badge = document.createElement("span");
+
+    badge.className = "cm-verdict-badge";
+    badge.textContent = this.labels;
+    badge.title = this.detail;
+
+    return badge;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+class ValueHint extends WidgetType {
+  constructor(text, merge) {
+    super();
+
+    this.text = text;
+    this.merge = merge;
+  }
+
+  eq(other) {
+    return other.text === this.text && other.merge === this.merge;
+  }
+
+  toDOM() {
+    const hint = document.createElement("span");
+
+    hint.className = this.merge ? "cm-value-hint merge" : "cm-value-hint";
+    hint.textContent = this.merge ? `⊔ ${this.text}` : this.text;
+    hint.title = this.merge
+      ? "Value where several paths meet: a join that includes more than this step."
+      : "Value after this statement.";
+
+    return hint;
+  }
+
+  ignoreEvent() {
+    return false;
+  }
+}
+
+function resultDecorations(doc, view, showHints) {
+  const ranges = [];
+  const byLine = new Map();
+
+  for (const annotation of view.annotations) {
+    if (!Number.isInteger(annotation.line) || annotation.line < 1 || annotation.line > doc.lines) {
+      continue;
+    }
+
+    const group = byLine.get(annotation.line) ?? [];
+
+    group.push(annotation);
+    byLine.set(annotation.line, group);
+  }
+
+  for (const [lineNumber, group] of byLine) {
+    const line = doc.line(lineNumber);
+
+    const kind = group
+      .map((annotation) => annotation.kind)
+      .reduce((worst, current) =>
+        ANNOTATION_SEVERITY.indexOf(current) > ANNOTATION_SEVERITY.indexOf(worst) ? current : worst,
+      );
+
+    const labels = [...new Set(group.map((a) => `${ANNOTATION_ICON[a.kind]} ${a.label}`))].join("  ");
+    const detail = group.map((a) => a.detail).filter(Boolean).join("\n");
+
+    ranges.push(Decoration.line({ class: `cm-verdict-line cm-verdict-${kind}` }).range(line.from));
+    ranges.push(
+      Decoration.widget({ widget: new AnnotationBadge(labels, detail), side: 2 }).range(line.to),
+    );
+  }
+
+  for (const lineNumber of view.deadLines) {
+    if (lineNumber <= doc.lines) {
+      ranges.push(Decoration.line({ class: "cm-dead-line" }).range(doc.line(lineNumber).from));
     }
   }
 
-  if (checks.length === 0 && diagnostics.length === 0) {
+  if (showHints) {
+    for (const hint of view.hints) {
+      ranges.push(
+        Decoration.widget({ widget: new ValueHint(hint.text, hint.merge), side: 1 }).range(hint.pos),
+      );
+    }
+  }
+
+  return Decoration.set(ranges, true);
+}
+
+const setResultView = StateEffect.define();
+const setValueHintsVisible = StateEffect.define();
+
+const EMPTY_RESULT_VIEW = { annotations: [], deadLines: [], hints: [] };
+
+const resultViewField = StateField.define({
+  create() {
+    return { view: EMPTY_RESULT_VIEW, showHints: true, decorations: Decoration.none };
+  },
+
+  update(value, transaction) {
+    let { view, showHints } = value;
+    let changed = false;
+
+    for (const effect of transaction.effects) {
+      if (effect.is(setResultView)) {
+        view = effect.value;
+        changed = true;
+      } else if (effect.is(setValueHintsVisible)) {
+        showHints = effect.value;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      return { view, showHints, decorations: resultDecorations(transaction.state.doc, view, showHints) };
+    }
+
+    /* Everything here describes the analysed text; an edit invalidates all of it. */
+    if (transaction.docChanged) {
+      return { view: EMPTY_RESULT_VIEW, showHints, decorations: Decoration.none };
+    }
+
+    return value;
+  },
+
+  provide: (field) => EditorView.decorations.from(field, (value) => value.decorations),
+});
+
+const setStatementHighlights = StateEffect.define();
+
+function firstLineSpan(doc, span, className) {
+  const to = Math.min(span.to, doc.lineAt(span.from).to);
+
+  return to > span.from ? [Decoration.mark({ class: className }).range(span.from, to)] : [];
+}
+
+const statementHighlightField = StateField.define({
+  create() {
+    return Decoration.none;
+  },
+
+  update(decorations, transaction) {
+    for (const effect of transaction.effects) {
+      if (effect.is(setStatementHighlights)) {
+        const { selected, hovered } = effect.value;
+        const doc = transaction.state.doc;
+
+        return Decoration.set(
+          [
+            ...(selected ? firstLineSpan(doc, selected, "cm-statement-selected") : []),
+            ...(hovered ? firstLineSpan(doc, hovered, "cm-statement-hovered") : []),
+          ],
+          true,
+        );
+      }
+    }
+
+    return transaction.docChanged ? Decoration.none : decorations.map(transaction.changes);
+  },
+
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+/*
+ * Highlights are dispatched on the next frame: selection changes arrive inside an
+ * editor update, where dispatching again is not allowed.
+ */
+function scheduleHighlights() {
+  cancelAnimationFrame(highlightFrame);
+
+  highlightFrame = requestAnimationFrame(() => {
+    const usable = analysisModel && !analysisModel.stale;
+
+    editor.dispatch({
+      effects: setStatementHighlights.of({
+        selected: usable ? inspection?.statement ?? null : null,
+        hovered: usable ? hoveredSpan : null,
+      }),
+    });
+  });
+}
+
+/*
+ * The statement the cursor means: one starting on the cursor's line and
+ * containing it, then any starting on that line, then any containing it -- the
+ * smallest in the first non-empty group, so a loop body line selects its own
+ * statement and not the loop around it.
+ */
+function statementAt(model, doc, pos) {
+  const line = doc.lineAt(pos).number;
+  const contains = (s) => s.from <= pos && pos <= s.to;
+  const startsHere = (s) => s.line === line;
+
+  const pools = [
+    model.statements.filter((s) => startsHere(s) && contains(s)),
+    model.statements.filter(startsHere),
+    model.statements.filter(contains),
+  ];
+
+  const pool = pools.find((candidates) => candidates.length > 0) ?? [];
+
+  return pool.reduce((best, s) => (!best || s.to - s.from < best.to - best.from ? s : best), null);
+}
+
+function inspectStatement(statement) {
+  inspection = statement ? { statement, nodes: statement.nodes } : null;
+
+  if (!inspection?.nodes.some((node) => node.id === focusedNodeId)) {
+    focusedNodeId = null;
+  }
+
+  renderInspector();
+  applyGraphSelection();
+  scheduleHighlights();
+}
+
+function inspectCursor(state) {
+  if (analysisModel && !analysisModel.stale) {
+    inspectStatement(statementAt(analysisModel, state.doc, state.selection.main.head));
+  }
+}
+
+function showAnalysisView(result, source) {
+  const doc = editor.state.doc;
+
+  /* A result for text the editor no longer holds cannot be placed. */
+  if (doc.toString() !== source) {
+    analysisModel = null;
+    inspection = null;
+    renderInspector();
+    return;
+  }
+
+  analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
+
+  const dimmed = analysisModel ? deadLines(analysisModel) : [];
+
+  editor.dispatch({
+    effects: setResultView.of({
+      annotations: [
+        ...resultAnnotations(result),
+        ...(analysisModel ? deadAnnotations(analysisModel, dimmed) : []),
+      ],
+      deadLines: dimmed,
+      hints: analysisModel ? valueHints(analysisModel) : [],
+    }),
+  });
+
+  inspection = null;
+  focusedNodeId = null;
+  inspectCursor(editor.state);
+  renderInspector();
+}
+
+function clearAnalysisView() {
+  analysisModel = null;
+  inspection = null;
+  focusedNodeId = null;
+  hoveredSpan = null;
+
+  editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
+
+  renderInspector();
+  scheduleHighlights();
+}
+
+function markAnalysisStale() {
+  if (!analysisModel || analysisModel.stale) {
+    return;
+  }
+
+  analysisModel.stale = true;
+  inspection = null;
+  focusedNodeId = null;
+  hoveredSpan = null;
+
+  renderInspector();
+  applyGraphSelection();
+}
+
+/* -------------------------------------------------------------------------- */
+/* Variable hover                                                             */
+/* -------------------------------------------------------------------------- */
+
+const VIMP_KEYWORDS = new Set(["fun", "global", "if", "else", "while", "return", "skip"]);
+
+function variableTooltip(name, statement, rows) {
+  const tooltip = document.createElement("div");
+
+  tooltip.className = "cm-variable-tooltip";
+
+  const head = document.createElement("div");
+
+  head.className = "cm-variable-tooltip-head";
+
+  const title = document.createElement("strong");
+
+  title.textContent = name;
+  head.append(title);
+
+  if (rows.some(({ node }) => node.globals.some(([x]) => x === name))) {
+    const global = document.createElement("span");
+
+    global.className = "cm-variable-tooltip-tag";
+    global.textContent = "global";
+    head.append(global);
+  }
+
+  const where = document.createElement("span");
+
+  where.className = "cm-variable-tooltip-where";
+  where.textContent = statement.formals
+    ? `on entry \u00b7 line ${statement.line}`
+    : `before line ${statement.line} \u00b7 ${statement.point}`;
+  head.append(where);
+
+  const table = document.createElement("table");
+
+  for (const { node, value } of rows) {
+    const row = table.insertRow();
+    const key = row.insertCell();
+
+    key.textContent = node.context_key;
+    key.className = "cm-variable-tooltip-key";
+    row.insertCell().textContent = node.context;
+
+    const cell = row.insertCell();
+
+    cell.textContent = value ?? "unreachable";
+    cell.className = value === null ? "cm-variable-tooltip-dead" : "cm-variable-tooltip-value";
+  }
+
+  tooltip.append(head, table);
+
+  return tooltip;
+}
+
+/*
+ * A variable's value as the statement under the pointer is reached, in every
+ * context that statement has. Names the statement's contexts do not bind -- a
+ * procedure name, a keyword -- get no tooltip.
+ */
+const variableHover = hoverTooltip(
+  (view, pos) => {
+    if (!analysisModel || analysisModel.stale) {
+      return null;
+    }
+
+    const word = view.state.wordAt(pos);
+    const name = word ? view.state.sliceDoc(word.from, word.to) : "";
+
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || VIMP_KEYWORDS.has(name) || name.startsWith("__voblint_")) {
+      return null;
+    }
+
+    const statement = statementAt(analysisModel, view.state.doc, pos);
+
+    const rows = (statement?.nodes ?? [])
+      .map((node) => ({ node, value: isLive(node) ? valueOf(node, name) : null }))
+      .filter(({ value }) => value !== undefined);
+
+    if (!rows.some(({ value }) => value !== null)) {
+      return null;
+    }
+
+    return {
+      pos: word.from,
+      end: word.to,
+      above: true,
+      create: () => ({ dom: variableTooltip(name, statement, rows) }),
+    };
+  },
+  { hoverTime: 250 },
+);
+
+/* -------------------------------------------------------------------------- */
+/* State inspector                                                            */
+/* -------------------------------------------------------------------------- */
+
+function inspectorMessage(text) {
+  const message = document.createElement("p");
+
+  message.className = "inspector-message";
+  message.textContent = text;
+  inspectorBody.replaceChildren(message);
+}
+
+function statementExcerpt(statement) {
+  const doc = editor.state.doc;
+
+  return doc.sliceString(statement.from, Math.min(statement.to, doc.lineAt(statement.from).to)).trim();
+}
+
+function renderInspector() {
+  inspectorLocation.replaceChildren();
+
+  if (!analysisModel) {
+    inspectorMessage("Run the analysis, then place the cursor on a statement.");
+    return;
+  }
+
+  if (analysisModel.stale) {
+    inspectorMessage("The program changed since this run. Rerun to inspect states.");
+    return;
+  }
+
+  if (!inspection) {
+    inspectorMessage("Place the cursor on a statement to see its abstract state in every context.");
+    return;
+  }
+
+  const { statement, nodes } = inspection;
+
+  const point = document.createElement("strong");
+
+  point.textContent = statement ? `${statement.point} · line ${statement.line}` : nodes[0].point;
+
+  inspectorLocation.append(point);
+
+  if (statement) {
+    const excerpt = document.createElement("code");
+
+    excerpt.textContent = statementExcerpt(statement);
+    inspectorLocation.append(excerpt);
+  }
+
+  if (nodes.length === 0) {
+    inspectorMessage("No context reaches this statement: the solver never analysed it.");
+    return;
+  }
+
+  inspectorBody.replaceChildren(...nodes.map(renderInspectorContext));
+}
+
+function statusChip(status) {
+  const chip = document.createElement("span");
+
+  chip.className = `inspector-status ${status}`;
+  chip.textContent = status;
+
+  return chip;
+}
+
+function renderInspectorContext(node) {
+  const block = document.createElement("section");
+
+  block.className = node.id === focusedNodeId ? "inspector-context focused" : "inspector-context";
+
+  const header = document.createElement("button");
+
+  header.type = "button";
+  header.className = "inspector-context-header";
+  header.title = "Show this context's node in the graph";
+  header.addEventListener("click", () => focusNode(node.id, { reveal: true }));
+
+  const label = document.createElement("span");
+
+  label.className = "inspector-context-label";
+
+  if (node.context_key) {
+    const key = document.createElement("span");
+
+    key.className = "inspector-context-key";
+    key.textContent = node.context_key;
+    header.append(key);
+  }
+
+  label.textContent = node.context || node.id;
+  header.append(label);
+
+  if (node.status) {
+    header.append(statusChip(node.status));
+  }
+
+  block.append(header);
+
+  if (!isLive(node)) {
+    const dead = document.createElement("p");
+
+    dead.className = "inspector-message";
+    dead.textContent = "Unreachable in this context.";
+    block.append(dead);
+
+    return block;
+  }
+
+  block.append(renderStateTable(node));
+
+  const findings = node.findings.filter((finding) => finding !== "unreachable");
+
+  if (findings.length > 0) {
+    const list = document.createElement("ul");
+
+    list.className = "inspector-findings";
+
+    for (const finding of findings) {
+      const item = document.createElement("li");
+
+      item.textContent = finding;
+      list.append(item);
+    }
+
+    block.append(list);
+  }
+
+  return block;
+}
+
+/*
+ * The state as the statement is reached: locals first, then globals, each in the
+ * order the analysis lists them.
+ */
+function renderStateTable(node) {
+  const bindings = [...node.bindings, ...node.globals];
+
+  if (bindings.length === 0) {
     const empty = document.createElement("p");
 
-    empty.className = "result-empty";
+    empty.className = "inspector-message";
+    empty.textContent = "No variables in scope.";
 
-    empty.textContent = "Analysis completed without reported checks or diagnostics.";
-
-    results.append(empty);
+    return empty;
   }
+
+  const globals = new Set(node.globals.map(([name]) => name));
+
+  const table = document.createElement("table");
+  const head = table.createTHead().insertRow();
+  const row = table.createTBody().insertRow();
+
+  for (const [name, value] of bindings) {
+    const title = document.createElement("th");
+
+    title.textContent = name;
+
+    if (globals.has(name)) {
+      title.className = "global";
+      title.title = "global variable";
+    }
+
+    head.append(title);
+    row.insertCell().textContent = value;
+  }
+
+  const wrapper = document.createElement("div");
+
+  wrapper.className = "inspector-table";
+  wrapper.append(table);
+
+  return wrapper;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Graph linking                                                              */
+/* -------------------------------------------------------------------------- */
+
+function graphNodeElement(id) {
+  return graph.querySelector(`g.node#${CSS.escape(id)}`);
+}
+
+function applyGraphSelection() {
+  for (const element of graph.querySelectorAll("g.node.graph-node-selected, g.node.graph-node-focused")) {
+    element.classList.remove("graph-node-selected", "graph-node-focused");
+  }
+
+  if (!analysisModel || analysisModel.stale || !inspection) {
+    return;
+  }
+
+  for (const node of inspection.nodes) {
+    const element = graphNodeElement(node.id);
+
+    element?.classList.add("graph-node-selected");
+
+    if (node.id === focusedNodeId) {
+      element?.classList.add("graph-node-focused");
+    }
+  }
+}
+
+/* Scrolls only the graph's own viewport; the page stays where the reader put it. */
+function revealGraphNodes(ids) {
+  const rects = ids
+    .map(graphNodeElement)
+    .filter(Boolean)
+    .map((element) => element.getBoundingClientRect());
+
+  if (graphPanel.hidden || rects.length === 0) {
+    return;
+  }
+
+  const viewport = graph.getBoundingClientRect();
+
+  const left = Math.min(...rects.map((r) => r.left));
+  const right = Math.max(...rects.map((r) => r.right));
+  const top = Math.min(...rects.map((r) => r.top));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+
+  const visible =
+    left >= viewport.left && right <= viewport.right && top >= viewport.top && bottom <= viewport.bottom;
+
+  if (!visible) {
+    graph.scrollBy({
+      left: (left + right) / 2 - (viewport.left + viewport.right) / 2,
+      top: (top + bottom) / 2 - (viewport.top + viewport.bottom) / 2,
+      behavior: "smooth",
+    });
+  }
+
+  for (const id of ids) {
+    const element = graphNodeElement(id);
+
+    element?.classList.remove("graph-node-flash");
+    void element?.getBoundingClientRect();
+    element?.classList.add("graph-node-flash");
+  }
+}
+
+function focusNode(id, { reveal = false } = {}) {
+  focusedNodeId = id;
+
+  renderInspector();
+  applyGraphSelection();
+
+  if (reveal) {
+    revealGraphNodes([id]);
+  }
+}
+
+/* Moves the editor's own scroller to a line without scrolling the page. */
+function scrollEditorTo(pos) {
+  const scroller = editor.scrollDOM;
+  const block = editor.lineBlockAt(pos);
+
+  scroller.scrollTo({
+    top: Math.max(0, block.top - scroller.clientHeight / 2 + block.height / 2),
+    behavior: "smooth",
+  });
+}
+
+function inspectGraphNode(id) {
+  const node = analysisModel?.nodes.get(id);
+
+  if (!node || analysisModel.stale) {
+    return;
+  }
+
+  const statement = analysisModel.statementByPoint.get(node.point);
+
+  focusedNodeId = id;
+
+  if (!statement) {
+    inspection = { statement: null, nodes: [node] };
+    renderInspector();
+    applyGraphSelection();
+    scheduleHighlights();
+    return;
+  }
+
+  /* Moving the cursor re-inspects through the update listener; keep the focus. */
+  editor.dispatch({ selection: { anchor: statement.from } });
+  inspectStatement(statement);
+  scrollEditorTo(statement.from);
+}
+
+function attachGraphNavigation(svg) {
+  let hoveredId = null;
+
+  svg.addEventListener("pointermove", (event) => {
+    const id = event.target.closest?.("g.node")?.id ?? null;
+
+    if (id === hoveredId) {
+      return;
+    }
+
+    hoveredId = id;
+
+    const node = id ? analysisModel?.nodes.get(id) : null;
+
+    hoveredSpan = node ? analysisModel.statementByPoint.get(node.point) ?? null : null;
+    scheduleHighlights();
+  });
+
+  svg.addEventListener("pointerleave", () => {
+    hoveredId = null;
+    hoveredSpan = null;
+    scheduleHighlights();
+  });
+
+  svg.addEventListener("click", (event) => {
+    const id = event.target.closest?.("g.node")?.id;
+
+    if (id) {
+      inspectGraphNode(id);
+    }
+  });
+
+  applyGraphSelection();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -604,6 +1716,7 @@ async function renderGraph(dot, runGeneration) {
     }
 
     attachGraphTooltips(svg);
+    attachGraphNavigation(svg);
     graph.replaceChildren(svg);
     graphPanel.hidden = false;
 
@@ -751,6 +1864,33 @@ function failPendingAnalysis(error) {
 }
 
 
+/*
+ * A result describes the configuration it ran under, so changing any setting
+ * retires it: a finished run is cleared, and a pending one is cancelled rather than
+ * allowed to land under settings it was not computed with. Bumping the generation
+ * makes the cancelled run's own handlers stand down.
+ */
+function resetForConfigurationChange() {
+  const hadResult = pendingAnalysis || analysisModel || !graphPanel.hidden || rawRunProgram !== null;
+
+  analysisRunGeneration++;
+
+  if (pendingAnalysis) {
+    discardAnalysisWorker();
+    failPendingAnalysis(new Error("Analysis cancelled: the configuration changed."));
+  }
+
+  setRunning(false);
+  clearGraph();
+  clearTiming();
+  clearAnalysisView();
+  showRawRunProgram(null);
+
+  if (hadResult) {
+    showStatus("Configuration changed \u00b7 run again");
+  }
+}
+
 function createAnalysisWorker() {
   const worker = new Worker("assets/voblint-worker.js");
 
@@ -881,9 +2021,10 @@ async function run() {
 
   const runGeneration = ++analysisRunGeneration;
 
-  clearResults();
   clearGraph();
   clearTiming();
+  clearAnalysisView();
+  showRawRunProgram(null);
 
   let configuration;
 
@@ -928,7 +2069,8 @@ async function run() {
     }
 
     renderTiming(result);
-    renderResult(result);
+    showRawRunProgram(result.raw);
+    showAnalysisView(result, source);
 
     if (result.status === "ok") {
       /*
@@ -951,7 +2093,7 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         clearGraph();
 
-        showStatus(`${configurationLabel(configuration)} · failed`, "error");
+        showStatus(`${configurationLabel(configuration)} · ${resultFailure(result)}`, "error");
       }
     }
   } catch (error) {
@@ -959,7 +2101,7 @@ async function run() {
       /*
        * A render failure leaves the analysis result and the graph panel's own
        * message standing; only an analysis failure clears the graph and
-       * replaces the results with the error text.
+       * reports its error in the status line.
        */
       if (error instanceof GraphRenderError) {
         showStatus(`${configurationLabel(configuration)} · graph rendering failed`, "error");
@@ -971,12 +2113,10 @@ async function run() {
 
       clearGraph();
 
-      showStatus("Browser analysis failed.", "error");
-
-      results.textContent =
-        error instanceof Error
-          ? error.message
-          : String(error);
+      showStatus(
+        `Browser analysis failed: ${error instanceof Error ? error.message : String(error)}`,
+        "error",
+      );
 
       if (error instanceof Error) {
         console.error(
@@ -1009,9 +2149,31 @@ const editor = new EditorView({
 
     vimpLanguage,
 
-    syntaxHighlighting(vimpHighlight),
+    syntaxHighlighting(codeHighlight),
+
+    resultViewField,
+
+    statementHighlightField,
+
+    variableHover,
+
+    EditorView.updateListener.of((update) => {
+      if (update.docChanged) {
+        markAnalysisStale();
+      } else if (update.selectionSet) {
+        inspectCursor(update.state);
+      }
+    }),
 
     EditorView.domEventHandlers({
+      click() {
+        if (inspection) {
+          revealGraphNodes(inspection.nodes.map((node) => node.id));
+        }
+
+        return false;
+      },
+
       keydown(event) {
         if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
           event.preventDefault();
@@ -1035,7 +2197,15 @@ const editor = new EditorView({
 
 runButton.addEventListener("click", run);
 
+valueHintsToggle.addEventListener("change", () => {
+  editor.dispatch({ effects: setValueHintsVisible.of(valueHintsToggle.checked) });
+});
+
 contextSelect.addEventListener("change", updateContextControls);
+
+for (const control of [analysisSelect, solverSelect, contextSelect, contextDepthInput]) {
+  control.addEventListener("change", resetForConfigurationChange);
+}
 
 solverSelect.addEventListener("change", updateSolverHelp);
 
@@ -1067,4 +2237,6 @@ graph.addEventListener(
 
 updateContextControls();
 updateSolverHelp();
+renderRawCall(null);
+renderInspector();
 updateZoomResetLabel();

@@ -531,7 +531,7 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, check_positions, stmt_positions =
+  let prog, check_positions, stmt_positions, _ =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
