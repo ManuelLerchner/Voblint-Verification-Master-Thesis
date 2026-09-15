@@ -1941,12 +1941,12 @@
           <p>The generated OCaml is slow. Its code is purely functional and written for easy proofs, mostly over association lists, with red-black trees only in a few places.</p>
         </article>
         <article class="guide-card caution">
-          <h4><i class="fa-solid fa-file-code" aria-hidden="true"></i> That the parser reads your text right</h4>
-          <p>The theorems start from a parsed program. The lexer and parser are generated from one grammar and tested, not proved.</p>
+          <h4><i class="fa-solid fa-layer-group" aria-hidden="true"></i> Finite contexts</h4>
+          <p>Nothing bounds how many calling contexts an analysis creates, or how precise each one is.</p>
         </article>
         <article class="guide-card caution">
-          <h4><i class="fa-solid fa-display" aria-hidden="true"></i> That the report shows the result faithfully</h4>
-          <p>Verdicts, JSON and the browser view are rendered by handwritten OCaml and JavaScript outside the proof.</p>
+          <h4><i class="fa-solid fa-ban" aria-hidden="true"></i> Facts like <code>x != 5</code></h4>
+          <p>Goblint's exclusion sets are absent. Over unbounded integers, joining <code>5</code> and <code>7</code> has no least exclusion set, so they cannot form a lattice.</p>
         </article>
       </div>
 
