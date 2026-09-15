@@ -54,6 +54,7 @@ SITE_SOURCES = [
     ("assets/while_loop_cfg.png", REPO / "docs/images/while_loop_cfg.png"),
     ("assets/reports/", REPO / "docs/images"),
     ("assets/voblint_web.bc.wasm", None),
+    ("assets/site-stats.js", None),
     ("thesis.pdf", None),
     ("formalization.pdf", None),
 ]

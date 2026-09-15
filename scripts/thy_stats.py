@@ -477,11 +477,13 @@ def main() -> int:
     ap.add_argument("--view", action="append", choices=VIEWS + ["all"],
                     help="repeatable; default: sessions files")
     ap.add_argument("--session", action="append",
-                    help="restrict to these sessions (src/<name>), repeatable")
+                    help="restrict to these sessions (src/<name>, or TD with --vendor), repeatable")
     ap.add_argument("--sort", choices=sorted(FILE_SORTS), default="lines",
                     help="ordering for the files view (default: lines)")
     ap.add_argument("--top", type=int, default=20,
                     help="rows in the files and lemmas views; 0 for all (default: 20)")
+    ap.add_argument("--vendor", action="store_true",
+                    help="also scan the vendored TD solver, as session TD")
     ap.add_argument("--format", choices=sorted(RENDERERS), default="text")
     ap.add_argument("--out", type=Path, help="write here instead of stdout")
     args = ap.parse_args()
@@ -490,7 +492,7 @@ def main() -> int:
     if "all" in views:
         views = VIEWS
 
-    stats = [scan_theory(p) for p in iter_theory_files()]
+    stats = [scan_theory(p) for p in iter_theory_files(vendor=args.vendor)]
     if args.session:
         wanted = set(args.session)
         stats = [s for s in stats if s.session in wanted]

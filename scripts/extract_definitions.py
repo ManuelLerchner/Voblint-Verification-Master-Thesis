@@ -284,14 +284,23 @@ def parse_theory(path: Path) -> ParsedTheory:
     return ParsedTheory(path, theory_name, header_doc, headings, decls)
 
 
-def iter_theory_files():
-    for p in sorted(SRC_ROOT.rglob("*.thy")):
-        yield p
+# Vendored developments: built as their own session, but not held to this
+# project's conventions, so only callers that ask for them scan them.
+VENDOR_SESSIONS = {REPO_ROOT / "vendor" / "td-verification": "TD"}
+
+
+def iter_theory_files(vendor: bool = False):
+    yield from sorted(SRC_ROOT.rglob("*.thy"))
+    if vendor:
+        for root in VENDOR_SESSIONS:
+            yield from sorted(root.glob("*.thy"))
 
 
 def session_of(path: Path) -> str:
-    rel = path.relative_to(SRC_ROOT)
-    return rel.parts[0]
+    for root, session in VENDOR_SESSIONS.items():
+        if path.is_relative_to(root):
+            return session
+    return path.relative_to(SRC_ROOT).parts[0]
 
 
 SYMBOL_MAP = {

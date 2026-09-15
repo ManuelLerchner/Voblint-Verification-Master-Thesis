@@ -2836,6 +2836,29 @@ fun main() {
 fun main() {
   f(-1);
 }`,
+  "factorial": `fun f(n) {
+  if (n < 2) {
+    return 1;
+  } else {
+    r = f(n - 1);
+    return n * r;
+  }
+}
+
+fun main() {
+  a = f(2);
+  __voblint_check(a == 2);
+}`,
+  "int-reduction": `fun main() {
+  n = __voblint_nondet_int();
+  x = 4 * n + 1;
+  if (x >= 0) {
+    if (x <= 10) {
+      __voblint_check(x >= 1);
+      __voblint_check(x <= 9);
+    }
+  }
+}`,
   "counting-loop": `fun main() {
   i = 0;
   while (i < 5) {

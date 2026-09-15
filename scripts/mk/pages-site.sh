@@ -66,6 +66,9 @@ do
       "$SITE_DIR/assets/reports/$image.png"
   fi
 done
+# The explainer's size figures, recounted on every build so they never go stale.
+python3 "$REPO_ROOT/scripts/pages_stats.py" --out "$SITE_DIR/assets/site-stats.js"
+
 cp "$FORMALIZATION_PDF" "$SITE_DIR/formalization.pdf"
 cp "$THESIS_PDF" "$SITE_DIR/thesis.pdf"
 touch "$SITE_DIR/.nojekyll"
