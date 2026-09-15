@@ -199,7 +199,18 @@
           <div class="editor-column">
             <div class="editor-shell">
               <div class="editor-toolbar">
-                <span class="editor-file">example.vimp</span>
+                <span class="editor-toolbar-file">
+                  <button
+                    id="open-examples"
+                    class="editor-examples"
+                    type="button"
+                    aria-haspopup="dialog"
+                  >
+                    <i class="fa-solid fa-folder-open" aria-hidden="true"></i>
+                    Examples
+                  </button>
+                  <span id="editor-file" class="editor-file">example.vimp</span>
+                </span>
                 <span class="editor-toolbar-tools">
                   <label class="editor-toggle" for="value-hints-toggle">
                     <input id="value-hints-toggle" type="checkbox" checked>
@@ -213,13 +224,14 @@
             </div>
 
             <p class="editor-note">
-              Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing. More
-              examples are in
+              Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing.
+              <strong>Examples</strong> opens any program of the
               <a
                 href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
                 target="_blank"
                 rel="noreferrer"
-              >tests/regression</a>.
+              >regression suite</a>
+              with its settings.
             </p>
           </div>
         </div>
@@ -443,6 +455,33 @@
     </section>
 
   </main>
+
+  <dialog id="examples-dialog" class="examples-dialog" aria-labelledby="examples-heading">
+    <div class="examples-panel">
+      <div class="examples-header">
+        <div>
+          <p class="eyebrow">Regression suite</p>
+          <h2 id="examples-heading">Open an example</h2>
+        </div>
+        <input
+          id="examples-search"
+          type="search"
+          placeholder="Filter by name, folder or description"
+          aria-label="Filter examples"
+          autocomplete="off"
+        >
+        <button id="examples-close" class="examples-close" type="button" aria-label="Close">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+      <p class="examples-note">
+        Every program the regression suite runs, opened with the settings its
+        <code>// PARAM:</code> header selects. Its comments name the verdict each check
+        is expected to reach.
+      </p>
+      <div id="examples-body" class="examples-body"></div>
+    </div>
+  </dialog>
 
   <footer class="site-footer">
     <div class="page-shell footer-content">

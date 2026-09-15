@@ -19,7 +19,7 @@ Links are read from `pages/*.html` and from the page scripts (`explainer.js`,
     scripts/check_pages_links.py --live                      everything, deployed site
 
 `--sources` is the pre-commit check: it resolves each target to the file the site
-script copies into place (SITE_SOURCES) and skips build outputs and external URLs.
+script copies into place (SITE_LAYERS) and skips build outputs and external URLs.
 Theory anchors are compared with build/isabelle-html when it exists, but only
 warned about: a working copy's rendered theories are often older than its
 sources, so the deployed check is the one that decides. `--site` needs `pixi run pages-site-build` first; external URLs are only
@@ -45,19 +45,22 @@ from check_thesis_links import fetch, pages_base  # noqa: E402
 REPO = Path(__file__).resolve().parent.parent
 PAGES = REPO / "pages"
 
-# Where scripts/mk/pages-site.sh takes each site path from, for --sources. A path
-# mapped to None is a build output (the wasm bundle, the PDFs) that a working copy
-# may not have; the first matching prefix wins, and pages/ is the fallback.
-SITE_SOURCES = [
-    ("assets/banner.png", REPO / "docs/images/banner.png"),
-    ("assets/favicon.png", REPO / "docs/images/favicon.png"),
-    ("assets/while_loop_cfg.png", REPO / "docs/images/while_loop_cfg.png"),
-    ("assets/reports/", REPO / "docs/images"),
-    ("assets/voblint_web.bc.wasm", None),
-    ("assets/site-stats.js", None),
-    ("thesis.pdf", None),
-    ("formalization.pdf", None),
+# The directories scripts/mk/pages-site.sh copies into the site, in copy order,
+# each onto its site prefix: a later layer overwrites an earlier one, so --sources
+# looks a path up from the last layer back.
+SITE_LAYERS = [
+    ("", PAGES),
+    ("assets/", REPO / "docs/images"),
 ]
+# Site paths the build generates or copies from build outputs, which a working
+# copy may not have: the wasm bundle, derived data, and the PDFs.
+BUILD_OUTPUTS = (
+    "assets/voblint_web.bc.wasm",
+    "assets/site-stats.js",
+    "assets/regression-examples.json",
+    "thesis.pdf",
+    "formalization.pdf",
+)
 ISABELLE_HTML = REPO / "build" / "isabelle-html"
 THEORY_PREFIXES = ("Voblint/", "Unsorted/", "HOL/", "Pure/")
 
@@ -114,11 +117,11 @@ def check_internal_local(site: Path, url: str) -> str | None:
 
 
 def source_of(path: str) -> Path | None:
-    for prefix, source in SITE_SOURCES:
-        if path.startswith(prefix):
-            if source is None or source.is_file():
-                return source
-            return source / path[len(prefix) :]
+    if path.startswith(BUILD_OUTPUTS):
+        return None
+    for prefix, root in reversed(SITE_LAYERS):
+        if path.startswith(prefix) and (root / path[len(prefix) :]).is_file():
+            return root / path[len(prefix) :]
     return PAGES / path
 
 

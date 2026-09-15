@@ -3547,6 +3547,246 @@ showStatus("Ready");
 window.voblintPlaygroundReady = true;
 
 /* -------------------------------------------------------------------------- */
+/* Regression examples                                                        */
+/* -------------------------------------------------------------------------- */
+
+const examplesButton = query("#open-examples");
+const examplesDialog = query("#examples-dialog");
+const examplesSearch = query("#examples-search");
+const examplesBody = query("#examples-body");
+const examplesClose = query("#examples-close");
+const editorFile = query("#editor-file");
+
+/*
+ * What voblint assumes for a flag a fixture's header leaves out. A header that
+ * omits one must not inherit whatever the previous run selected.
+ */
+const FIXTURE_DEFAULTS = { context: "none", globals: "warrow" };
+
+let examplesPromise = null;
+
+/* Generated at site build from tests/regression; fetched once, on first open. */
+function loadExamples() {
+  examplesPromise ??= fetch("assets/regression-examples.json")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return response.json();
+    })
+    .catch((error) => {
+      examplesPromise = null;
+      throw error;
+    });
+
+  return examplesPromise;
+}
+
+function examplesMessage(text) {
+  const message = document.createElement("p");
+
+  message.className = "examples-message";
+  message.textContent = text;
+
+  return message;
+}
+
+function exampleChip(text, kind = "") {
+  const chip = document.createElement("span");
+
+  chip.className = kind ? `example-chip ${kind}` : "example-chip";
+  chip.textContent = text;
+
+  return chip;
+}
+
+/* A showcase card leads with the point it makes; the fixture's own name moves under it. */
+function exampleCard(group, fixture, pick = null) {
+  const card = document.createElement("button");
+
+  card.type = "button";
+  card.className = pick ? "example-card picked" : "example-card";
+  card.title = fixture.path;
+
+  const name = document.createElement("strong");
+
+  name.textContent = pick ? pick.title : fixture.name;
+
+  const chips = document.createElement("span");
+
+  chips.className = "example-chips";
+  chips.append(exampleChip(fixture.analyses.join(", ")));
+
+  const { context = FIXTURE_DEFAULTS.context, k, globals } = fixture.settings;
+
+  if (context !== "none") {
+    chips.append(exampleChip(k === undefined ? context : `${context} k=${k}`));
+  }
+
+  if (globals) {
+    chips.append(exampleChip(globals));
+  }
+
+  if (fixture.category) {
+    chips.append(exampleChip(fixture.category, fixture.category));
+  }
+
+  card.append(name, chips);
+
+  const description = pick ? pick.note : fixture.summary;
+
+  if (description) {
+    const summary = document.createElement("span");
+
+    summary.className = "example-summary";
+    summary.textContent = description;
+    card.append(summary);
+  }
+
+  if (pick) {
+    const path = document.createElement("code");
+
+    path.className = "example-path";
+    path.textContent = fixture.path;
+    card.append(path);
+  }
+
+  card.dataset.search = [group.title, fixture.path, fixture.summary, pick?.title, pick?.note]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  card.addEventListener("click", () => openExample(fixture));
+
+  return card;
+}
+
+function examplesSection(title, cards, className = "examples-group") {
+  const section = document.createElement("section");
+  const heading = document.createElement("h3");
+  const grid = document.createElement("div");
+
+  section.className = className;
+  heading.textContent = title;
+  heading.append(exampleChip(String(cards.length)));
+  grid.className = "examples-grid";
+  grid.append(...cards);
+  section.append(heading, grid);
+
+  return section;
+}
+
+function renderExamples({ showcase = [], groups }) {
+  const fixtures = new Map(
+    groups.flatMap((group) => group.fixtures.map((fixture) => [fixture.path, { group, fixture }])),
+  );
+  const picks = showcase
+    .filter((pick) => fixtures.has(pick.path))
+    .map((pick) => {
+      const { group, fixture } = fixtures.get(pick.path);
+
+      return exampleCard(group, fixture, pick);
+    });
+
+  examplesBody.replaceChildren(
+    ...(picks.length > 0 ? [examplesSection("Showcase", picks, "examples-group showcase")] : []),
+    ...groups.map((group) =>
+      examplesSection(
+        group.title,
+        group.fixtures.map((fixture) => exampleCard(group, fixture)),
+      ),
+    ),
+    Object.assign(examplesMessage("No example matches the filter."), {
+      hidden: true,
+      id: "examples-empty",
+    }),
+  );
+}
+
+/* Every word of the filter must occur in a card's folder, path or description. */
+function filterExamples() {
+  const words = examplesSearch.value.toLowerCase().split(/\s+/).filter(Boolean);
+  let shown = 0;
+
+  for (const section of examplesBody.querySelectorAll(".examples-group")) {
+    let sectionShown = 0;
+
+    for (const card of section.querySelectorAll(".example-card")) {
+      card.hidden = !words.every((word) => card.dataset.search.includes(word));
+      sectionShown += card.hidden ? 0 : 1;
+    }
+
+    section.hidden = sectionShown === 0;
+    shown += sectionShown;
+  }
+
+  const empty = examplesBody.querySelector("#examples-empty");
+
+  if (empty) {
+    empty.hidden = shown > 0;
+  }
+}
+
+async function openExamples() {
+  examplesDialog.showModal();
+  examplesSearch.focus();
+
+  if (examplesBody.dataset.loaded) {
+    return;
+  }
+
+  examplesBody.replaceChildren(examplesMessage("Loading the regression suite..."));
+
+  try {
+    renderExamples(await loadExamples());
+    examplesBody.dataset.loaded = "true";
+    filterExamples();
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+
+    examplesBody.replaceChildren(examplesMessage(`The examples could not be loaded: ${detail}.`));
+  }
+}
+
+/* Loads a fixture as its regression runs it: its source, then its header's settings. */
+function openExample(fixture) {
+  const settings = { ...FIXTURE_DEFAULTS, ...fixture.settings };
+
+  retireActiveRun("Analysis cancelled: another example was opened.");
+  examplesDialog.close();
+
+  editor.dispatch({
+    changes: { from: 0, to: editor.state.doc.length, insert: fixture.source },
+    selection: { anchor: 0 },
+  });
+  editor.scrollDOM.scrollTo({ top: 0 });
+  editorFile.textContent = fixture.path.split("/").at(-1);
+
+  selectIfOffered(analysisSelect, settings.analysis);
+  selectIfOffered(globalsSelect, settings.globals);
+  selectIfOffered(contextSelect, settings.context);
+
+  if (settings.k !== undefined) {
+    contextDepthInput.value = String(settings.k);
+  }
+
+  updateContextControls();
+  updateGlobalsHelp();
+  run();
+}
+
+examplesButton.addEventListener("click", openExamples);
+examplesClose.addEventListener("click", () => examplesDialog.close());
+examplesSearch.addEventListener("input", filterExamples);
+
+/* A click on the backdrop lands on the dialog itself, outside its panel. */
+examplesDialog.addEventListener("click", (event) => {
+  if (event.target === examplesDialog) {
+    examplesDialog.close();
+  }
+});
+
+/* -------------------------------------------------------------------------- */
 /* Links from the explainer                                                   */
 /* -------------------------------------------------------------------------- */
 
