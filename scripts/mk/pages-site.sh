@@ -54,11 +54,11 @@ find "$SITE_DIR/assets/voblint_web.bc.wasm.assets" -name '*.map' -type f -delete
 find "$SITE_DIR" -name '.DS_Store' -type f -delete
 
 for image in \
-  report-graph-sign \
-  report-context-interval \
-  report-int-refinement \
-  report-arithmetic-definite \
-  report-arithmetic-possible
+  playground-overview \
+  playground-contexts \
+  playground-int-refinement \
+  playground-division-definite \
+  playground-division-possible
 do
   if test -e "$REPO_ROOT/docs/images/$image.png"; then
     cp \

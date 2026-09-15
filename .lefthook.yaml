@@ -69,8 +69,8 @@ pre-commit:
     #
     # `stage_fixed` restages the staged files a formatter rewrote; lefthook
     # hides unstaged hunks of partially staged files meanwhile, so only staged
-    # content is formatted and committed. Ruff and biome take the staged files;
-    # the others format their whole scope. CI still runs the `-check` tasks.
+    # content is formatted and committed. Every formatter takes the staged files,
+    # so unstaged work is never rewritten. CI still runs the `-check` tasks.
     # ----------------------------------------------------------------------
     - name: formatters
       group:
@@ -87,17 +87,19 @@ pre-commit:
               - "**/*.mli"
               - "**/dune"
               - "dune-project"
-            run: pixi run ocaml-format
+            run: pixi run ocaml-format -- {staged_files}
             stage_fixed: true
 
+          # Task args take one string, so the staged list is quoted into it.
           - name: typst-format
             glob: "**/*.typ"
-            run: pixi run typst-format
+            exclude: "thesis/lib/isabelle-symbols.typ"
+            run: pixi run typst-format -- {staged_files}
             stage_fixed: true
 
           - name: toml-format
             glob: "**/*.toml"
-            run: pixi run toml-format
+            run: pixi run toml-format -- {staged_files}
             stage_fixed: true
 
           - name: pages-format
@@ -138,8 +140,9 @@ pre-commit:
           # ----------------------------------------------------------------
           # Linting
           #
-          # Ruff takes the staged files; the other tools are fast enough to
-          # check their whole scope, which also catches a config change.
+          # Linters take the staged files, so unstaged or untracked work cannot
+          # block a commit; a `-config` job rechecks the whole scope when the
+          # tool's configuration changes.
           # ----------------------------------------------------------------
 
           - name: python-lint
@@ -162,9 +165,11 @@ pre-commit:
             run: pixi run opam-lint
 
           - name: shell-lint
-            glob:
-              - "**/*.sh"
-              - ".shellcheckrc"
+            glob: "**/*.sh"
+            run: pixi run shell-lint -- {staged_files}
+
+          - name: shell-lint-config
+            glob: ".shellcheckrc"
             run: pixi run shell-lint
 
           - name: actions-lint
@@ -224,9 +229,11 @@ pre-commit:
           #
           # This would have caught the PR #190 ADC fixture immediately.
           - name: regression-fixtures
-            glob:
-              - "tests/run.py"
-              - "tests/regression/**/*.vimp"
+            glob: "tests/regression/**/*.vimp"
+            run: pixi run regression-lint -- {staged_files}
+
+          - name: regression-fixtures-config
+            glob: "tests/run.py"
             run: pixi run regression-lint
 
           # PDF session selection is also pure Python. Catch ROOT/import

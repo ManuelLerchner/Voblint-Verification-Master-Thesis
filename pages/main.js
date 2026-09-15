@@ -71,6 +71,7 @@ const graphZoomOut = query("#graph-zoom-out");
 const graphZoomReset = query("#graph-zoom-reset");
 const graphZoomIn = query("#graph-zoom-in");
 const graphZoomFit = query("#graph-zoom-fit");
+const graphSaveImage = query("#graph-save-image");
 
 const solverGlobals = query("#solver-globals");
 const solverGlobalsCount = query("#solver-globals-count");
@@ -1898,6 +1899,26 @@ function taxiTurn(index) {
   return `${25 + ((index * 37) % 51)}%`;
 }
 
+/*
+ * A zero divisor is marked by an icon beside the point, definite before possible, and
+ * its message left to the tooltip: an expression-length line would widen the node
+ * and, through it, the whole column of the layout.
+ */
+const DIVISION_ICON = { definite: "\u26d4", possible: "\u26a0\ufe0f" };
+
+function nodeLabelLines(node) {
+  const divisions = node.divisions ?? [];
+  const messages = new Set(divisions.map((division) => division.message));
+  const icons = ["definite", "possible"]
+    .filter((verdict) => divisions.some((division) => division.verdict === verdict))
+    .map((verdict) => DIVISION_ICON[verdict]);
+
+  return [
+    [node.point, ...icons].join(" "),
+    ...node.findings.filter((finding) => !messages.has(finding)),
+  ];
+}
+
 /* A node's label names its point and findings; the full state is the hover tooltip. */
 function graphElements(result) {
   const mono = cssToken("--mono");
@@ -1920,7 +1941,7 @@ function graphElements(result) {
   }
 
   for (const node of nodesById.values()) {
-    const lines = [node.point, ...node.findings];
+    const lines = nodeLabelLines(node);
     const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
     const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
     const status = node.status ?? (node.kind === "point" ? "plain" : "boundary");
@@ -1952,6 +1973,7 @@ function graphElements(result) {
         source: edge.source,
         target: edge.target,
         label,
+        labelWidth: textWidth(label, edgeFont),
         /* How far along the edge a label beside its end node is centered. */
         labelOffset: textWidth(label, edgeFont) / 2 + 10,
         turn: taxiTurn(index),
@@ -1977,10 +1999,14 @@ const INNER_LAYOUT = {
   "elk.edgeRouting": "ORTHOGONAL",
   "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
   "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-  "elk.layered.spacing.nodeNodeBetweenLayers": "40",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "24",
   "elk.spacing.nodeNode": "28",
   "elk.spacing.edgeNode": "16",
   "elk.spacing.edgeEdge": "10",
+  "elk.spacing.edgeLabel": "2",
+  "elk.edgeLabels.placement": "CENTER",
+  /* One port per node side: edges then leave a node from its center, not spread across it. */
+  "elk.layered.mergeEdges": "true",
   "elk.padding": `[top=${CLUSTER_PADDING + CLUSTER_LABEL_SPACE},left=${CLUSTER_PADDING},bottom=${CLUSTER_PADDING},right=${CLUSTER_PADDING}]`,
 };
 
@@ -2002,6 +2028,74 @@ function routePoints(section, dx = 0, dy = 0) {
     x: point.x + dx,
     y: point.y + dy,
   }));
+}
+
+/*
+ * The edges that go round a loop, so the layout lets them bend and keeps the rest of
+ * the flow on a straight line. A back edge is one a depth-first walk from the entry
+ * finds returning to a point still on its path; the loop it closes is its target, the
+ * loop head, and every point that reaches its source without passing the head. The
+ * edges within that set, back edge included, go round the loop; the edge leaving it
+ * does not, which is what keeps a loop's exit level with the code before it.
+ */
+function loopEdges(nodes, edges) {
+  const out = new Map(nodes.map(({ data }) => [data.id, []]));
+  const into = new Map(nodes.map(({ data }) => [data.id, []]));
+
+  for (const edge of edges) {
+    out.get(edge.source)?.push(edge);
+    into.get(edge.target)?.push(edge);
+  }
+
+  const state = new Map();
+  const back = new Set();
+  const roots = [...out.keys()].sort((a, b) => into.get(a).length - into.get(b).length);
+
+  for (const root of roots) {
+    if (state.has(root)) {
+      continue;
+    }
+
+    state.set(root, "open");
+
+    for (const stack = [{ id: root, next: 0 }]; stack.length > 0; ) {
+      const frame = stack.at(-1);
+      const edge = out.get(frame.id)[frame.next++];
+
+      if (!edge) {
+        state.set(frame.id, "done");
+        stack.pop();
+      } else if (state.get(edge.target) === "open") {
+        back.add(edge.id);
+      } else if (!state.has(edge.target)) {
+        state.set(edge.target, "open");
+        stack.push({ id: edge.target, next: 0 });
+      }
+    }
+  }
+
+  const looping = new Set();
+
+  for (const edge of edges.filter(({ id }) => back.has(id))) {
+    const body = new Set([edge.target, edge.source]);
+
+    for (const queue = [edge.source]; queue.length > 0; ) {
+      for (const { source } of into.get(queue.shift())) {
+        if (!body.has(source)) {
+          body.add(source);
+          queue.push(source);
+        }
+      }
+    }
+
+    for (const inner of edges) {
+      if (body.has(inner.source) && body.has(inner.target)) {
+        looping.add(inner.id);
+      }
+    }
+  }
+
+  return { back, looping };
 }
 
 /*
@@ -2096,17 +2190,29 @@ async function layoutGraph(elk, elements) {
     }
   }
 
-  for (const edge of edges) {
-    const box = parentOf.get(edge.source);
-
-    if (
+  const local = edges.filter(
+    (edge) =>
       (edge.kind === "intra" || edge.kind === "call_to_return") &&
-      box === parentOf.get(edge.target)
-    ) {
-      clusters
-        .get(box)
-        ?.edges.push({ id: edge.id, sources: [edge.source], targets: [edge.target] });
-    }
+      parentOf.get(edge.source) === parentOf.get(edge.target),
+  );
+  const { back, looping } = loopEdges(
+    elements.filter(({ group, classes }) => group === "nodes" && classes !== "context"),
+    local,
+  );
+
+  for (const edge of local) {
+    clusters.get(parentOf.get(edge.source))?.edges.push({
+      id: edge.id,
+      sources: [edge.source],
+      targets: [edge.target],
+      labels: edge.label
+        ? [{ text: edge.label, width: edge.labelWidth + 8, height: EDGE_FONT_SIZE * 1.6 }]
+        : [],
+      layoutOptions: {
+        "elk.layered.priority.straightness": looping.has(edge.id) ? "0" : "10",
+        "elk.layered.priority.direction": back.has(edge.id) ? "0" : "10",
+      },
+    });
   }
 
   const inner = new Map();
@@ -2163,6 +2269,7 @@ async function layoutGraph(elk, elements) {
 
   const centers = new Map();
   const routes = new Map();
+  const labels = new Map();
 
   for (const box of outer.children) {
     const layout = inner.get(box.id);
@@ -2178,6 +2285,13 @@ async function layoutGraph(elk, elements) {
       if (edge.sections?.[0]) {
         routes.set(edge.id, routePoints(edge.sections[0], box.x, box.y).slice(1, -1));
       }
+
+      for (const label of edge.labels ?? []) {
+        labels.set(edge.id, {
+          x: box.x + label.x + label.width / 2,
+          y: box.y + label.y + label.height / 2,
+        });
+      }
     }
   }
 
@@ -2187,7 +2301,7 @@ async function layoutGraph(elk, elements) {
     }
   }
 
-  return { centers, routes };
+  return { centers, routes, labels };
 }
 
 /*
@@ -2220,7 +2334,12 @@ function segmentStyle(points, source, target) {
   return { weights, distances };
 }
 
-function applyGraphLayout({ centers, routes }) {
+/*
+ * Cytoscape centers an edge label on the edge's midpoint, where a loop's forward and
+ * back edges put theirs on top of each other. The inner pass reserves room for each
+ * label and places it, so the label keeps that place as an offset from the midpoint.
+ */
+function applyGraphLayout({ centers, routes, labels }) {
   cy.batch(() => {
     cy.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
@@ -2235,6 +2354,17 @@ function applyGraphLayout({ centers, routes }) {
       if (style) {
         edge.addClass("routed").data(style);
       }
+    }
+  });
+
+  cy.batch(() => {
+    for (const [id, place] of labels) {
+      const edge = cy.getElementById(id);
+      const midpoint = edge.midpoint();
+
+      edge
+        .addClass("placed-label")
+        .data({ labelX: place.x - midpoint.x, labelY: place.y - midpoint.y });
     }
   });
 }
@@ -2368,6 +2498,10 @@ function graphStyle() {
       },
     },
     {
+      selector: "edge.placed-label",
+      style: { "text-margin-x": "data(labelX)", "text-margin-y": "data(labelY)" },
+    },
+    {
       selector: "edge.routed",
       style: {
         "curve-style": "round-segments",
@@ -2384,7 +2518,7 @@ function graphStyle() {
         label: "",
         "source-label": "data(label)",
         "source-text-offset": "data(labelOffset)",
-        "source-text-margin-y": -9,
+        "source-text-margin-y": -12,
         width: 2.2,
         "line-color": cssToken("--primary"),
         "target-arrow-color": cssToken("--primary"),
@@ -2398,7 +2532,7 @@ function graphStyle() {
         label: "",
         "target-label": "data(label)",
         "target-text-offset": "data(labelOffset)",
-        "target-text-margin-y": 9,
+        "target-text-margin-y": 12,
         width: 1.2,
         "line-color": "#3f7fb4",
         "target-arrow-color": "#3f7fb4",
@@ -2521,6 +2655,37 @@ function resetGraphZoom() {
  * Fit the whole drawing and center it. A graph so tall that fitting it would make
  * its labels unreadable fits the width instead and starts at its top.
  */
+/*
+ * The whole drawing, not the view: Cytoscape renders every element again at twice
+ * the model's size, capped so a large graph stays within what a canvas can hold.
+ */
+function saveGraphImage() {
+  if (!cy) {
+    return;
+  }
+
+  const image = cy.png({
+    output: "blob",
+    full: true,
+    scale: 2,
+    maxWidth: 8000,
+    maxHeight: 8000,
+    bg: cssToken("--surface-muted"),
+  });
+  const settings = [analysisSelect.value, globalsSelect.value, contextSelect.value];
+
+  if (contextSelect.value === "call-string") {
+    settings.push(`k${contextDepthInput.value}`);
+  }
+
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(image);
+  link.download = `voblint-graph-${settings.join("-")}.png`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+}
+
 function fitGraphZoom({ animate = true } = {}) {
   if (!cy || cy.elements().empty()) {
     return;
@@ -2655,9 +2820,9 @@ function attachGraphInteraction() {
     const moved = event.target.isParent() ? event.target.descendants() : event.target;
 
     moved
-      .connectedEdges(".routed")
+      .connectedEdges(".routed, .placed-label")
       .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
-      .removeClass("routed");
+      .removeClass("routed placed-label");
   });
 
   cy.on("dragpan pinchzoom scrollzoom", () => {
@@ -3260,6 +3425,8 @@ graphZoomReset.addEventListener("click", () => cy && resetGraphZoom());
 
 graphZoomFit.addEventListener("click", () => fitGraphZoom());
 
+graphSaveImage.addEventListener("click", saveGraphImage);
+
 /*
  * Trackpad: a two-finger scroll pans; a pinch arrives as a wheel event with ctrlKey
  * set (Chrome, Firefox, Edge) or as gesture events (Safari) and zooms at the pointer.
@@ -3386,7 +3553,7 @@ window.voblintPlaygroundReady = true;
 /*
  * The explainer's "Try it" links open a program and a configuration here:
  * playground.html?example=two-sites&globals=warrow. Every program below is one the
- * explainer shows, so the run reproduces what the page claims.
+ * explainer or a README figure shows, so the run reproduces what the page claims.
  */
 const LINKED_EXAMPLES = {
   "two-sites": `fun p(x) {
@@ -3487,6 +3654,43 @@ fun main() {
   if (y == 4) {
     __voblint_check(y == 4);
   }
+}`,
+  "while-loop": `fun main() {
+  x = 0;
+  while (x < 10) {
+    x = x + 1;
+  }
+  __voblint_check(0 < x);
+}`,
+  contexts: `fun bump(n) {
+  return n + 1;
+}
+
+fun main() {
+  a = bump(5);
+  b = bump(4);
+  __voblint_check(a == 6);
+  __voblint_check(b == 5);
+}`,
+  "int-refinement": `fun main() {
+  if (y + 1 == 3) {
+    x = 1;
+    __voblint_check(y == 2);
+  } else {
+    x = 0;
+  }
+}`,
+  "division-definite": `fun main() {
+  divisor = 0;
+  quotient = 7 / divisor;
+  remainder = 7 % divisor;
+  __voblint_check(quotient == 0);
+  __voblint_check(remainder == 7);
+}`,
+  "division-possible": `fun main() {
+  divisor = __voblint_nondet_int();
+  quotient = 7 / divisor;
+  __voblint_check(divisor != 0);
 }`,
   theorems: `fun main() {
   n = __voblint_nondet_int();

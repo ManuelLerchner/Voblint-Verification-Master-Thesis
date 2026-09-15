@@ -119,10 +119,11 @@ python-format = { cmd = "ruff format", description = "Format tracked Python sour
 python-format-check = { cmd = "ruff format --check", description = "Check that Python sources are formatted with ruff." }
 python-lint = { cmd = "ruff check", description = "Lint Python sources with ruff." }
 # Workflow run blocks are shell too: actionlint checks them with shellcheck.
-shell-lint = { cmd = "shellcheck $(git ls-files '*.sh')", description = "Lint tracked shell scripts with shellcheck." }
+# `files` defaults to every tracked script; the pre-commit hook passes its staged ones.
+shell-lint = { cmd = "bash scripts/mk/shell-lint.sh", description = "Lint tracked shell scripts, or the given ones, with shellcheck." }
 actions-lint = { cmd = "actionlint && zizmor --offline .github", description = "Lint GitHub workflows with actionlint and audit them with zizmor." }
 # 100 columns, the line limit the theories follow. The symbol table is generated.
-typst-format = { cmd = "typstyle -l 100 -i $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Format thesis Typst sources with typstyle." }
+typst-format = { cmd = "bash scripts/mk/typst-format.sh", description = "Format thesis Typst sources, or the given ones, with typstyle." }
 typst-format-check = { cmd = "typstyle -l 100 --check $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Check that thesis Typst sources are formatted with typstyle." }
 markdown-lint = { cmd = "markdownlint-cli2", description = "Lint Markdown documentation with markdownlint-cli2." }
 spelling-check = { cmd = "typos", description = "Check source and prose spelling with typos." }

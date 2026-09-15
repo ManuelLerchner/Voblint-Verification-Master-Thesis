@@ -97,6 +97,14 @@ let kind_name = function
   | G.Proc_exit -> "proc_exit"
   | G.Point -> "point"
 
+(* A zero divisor at a node, and the finding line that names it, so a drawing can
+   mark the node compactly and still find the full message among its findings. *)
+let division_json (verdict, message) =
+  Printf.sprintf "{\"verdict\":%s,\"message\":%s}"
+    (json_string
+       (match verdict with C.Check_Refuted -> "definite" | _ -> "possible"))
+    (json_string message)
+
 (* A node's outgoing steps within its own context: the edges whose target state is
    this node's state after one command. [join] marks a target that other live steps
    also flow into -- a loop head or the point after a branch -- whose state is a join
@@ -104,7 +112,7 @@ let kind_name = function
    contributes nothing and is not counted, nor is a combine edge: that is how a
    call's own continuation receives its result, not a second path. *)
 let node_json (graph : G.t) context_of context_key incoming entered exit_of
-    step_state (n : G.node) =
+    step_state divisions (n : G.node) =
   let step (e : G.edge) =
     Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b%s}"
       (json_string e.dst)
@@ -139,7 +147,7 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of
       graph.edges
   in
   Printf.sprintf
-    "{\"id\":%s,\"point\":%s,\"kind\":%s,\"context\":%s,\"context_key\":%s,\"status\":%s,\"bindings\":%s,\"globals\":%s,\"ret\":%s,\"findings\":%s,\"next\":%s,\"enters\":%s}"
+    "{\"id\":%s,\"point\":%s,\"kind\":%s,\"context\":%s,\"context_key\":%s,\"status\":%s,\"bindings\":%s,\"globals\":%s,\"ret\":%s,\"findings\":%s,\"divisions\":%s,\"next\":%s,\"enters\":%s}"
     (json_string n.id) (json_string n.label)
     (json_string (kind_name n.kind))
     (json_string (context_of n.id))
@@ -149,6 +157,7 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of
     (json_list binding_json n.globals)
     (json_option json_string n.ret)
     (json_list json_string n.findings)
+    (json_list division_json (divisions n))
     (json_list step steps) (json_list enter enters)
 
 (* A short name for a node's context, to tell contexts apart where their values sit
@@ -268,9 +277,31 @@ let nodes_json result (graph : G.t) context_key =
               entries)
     | _ -> None
   in
+  let states = Hashtbl.create 64 in
+  List.iter
+    (fun st ->
+      Hashtbl.replace states
+        (C.state_point st, A.int_of_nat (C.state_context st))
+        st)
+    (C.res_states result);
+  (* The same divisions, verdicts and messages Context_graph lists as findings. *)
+  let divisions (n : G.node) =
+    match Hashtbl.find_opt states (n.point, n.context) with
+    | None -> []
+    | Some st ->
+        List.filter_map
+          (fun (obligation, verdict) ->
+            match verdict with
+            | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
+                Some
+                  (v, A.division_message v (C.arithmetic_operation obligation))
+            | _ -> None)
+          (C.state_diagnostics st)
+  in
   let context_of id = Option.value ~default:"" (Hashtbl.find_opt context id) in
   json_list
-    (node_json graph context_of context_key incoming entered exit_of step_state)
+    (node_json graph context_of context_key incoming entered exit_of step_state
+       divisions)
     graph.nodes
 
 (* The drawing's structure: which nodes share a context box, and every edge with its
