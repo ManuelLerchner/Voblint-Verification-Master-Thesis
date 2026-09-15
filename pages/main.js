@@ -61,6 +61,10 @@ const graphZoomReset = query("#graph-zoom-reset");
 const graphZoomIn = query("#graph-zoom-in");
 const graphZoomFit = query("#graph-zoom-fit");
 
+const solverGlobals = query("#solver-globals");
+const solverGlobalsCount = query("#solver-globals-count");
+const solverGlobalsList = query("#solver-globals-list");
+
 const rawResult = query("#raw-result");
 const rawResultEmpty = query("#raw-result-empty");
 const rawResultCall = query("#raw-result-call");
@@ -543,6 +547,7 @@ function buildAnalysisModel(result, doc) {
   return {
     nodes,
     procedureByEntry: new Map(headers.map((procedure) => [procedure.entry, procedure])),
+    seedByEntry: new Map((result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed])),
     statements,
     statementByPoint: new Map(statements.map((s) => [s.point, s])),
     stale: false,
@@ -986,6 +991,8 @@ function showAnalysisView(result, source) {
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
+  showSolverGlobals(analysisModel ? result.seeds : null);
+
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
   editor.dispatch({
@@ -1010,6 +1017,8 @@ function clearAnalysisView() {
   inspection = null;
   focusedNodeId = null;
   hoveredSpan = null;
+
+  showSolverGlobals(null);
 
   editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
 
@@ -1194,6 +1203,51 @@ function statusChip(status) {
   return chip;
 }
 
+/* A seed's bindings, one chip per "x=v" line exactly as OCaml named them. */
+function seedLines(seed) {
+  const lines = document.createElement("span");
+
+  lines.className = "seed-lines";
+
+  for (const line of seed.reachable ? seed.lines : []) {
+    const chip = document.createElement("code");
+
+    chip.textContent = line;
+    lines.append(chip);
+  }
+
+  if (!seed.reachable) {
+    lines.textContent = "unreachable";
+  } else if (seed.lines.length === 0) {
+    lines.textContent = "no formals or globals";
+  }
+
+  return lines;
+}
+
+/*
+ * The seed a procedure entry reads back: what the calls routed to this context
+ * published, merged by the globals rule, as formals and globals. An unreachable seed
+ * is a context no call enters, which is how the program's own entry procedure reads.
+ */
+function renderSeed(seed) {
+  const row = document.createElement("div");
+
+  row.className = seed.reachable ? "inspector-seed" : "inspector-seed dead";
+
+  const label = document.createElement("span");
+
+  label.className = "inspector-seed-label";
+  label.textContent = "seed";
+  label.title = seed.reachable
+    ? `${seed.key}: formals and globals the calls routed to this context published`
+    : `${seed.key}: no call enters this context`;
+
+  row.append(label, seedLines(seed));
+
+  return row;
+}
+
 function renderInspectorContext(node) {
   const block = document.createElement("section");
 
@@ -1238,6 +1292,12 @@ function renderInspectorContext(node) {
   }
 
   block.append(renderStateTable(node));
+
+  const seed = analysisModel.seedByEntry.get(node.id);
+
+  if (seed) {
+    block.append(renderSeed(seed));
+  }
 
   const findings = node.findings.filter((finding) => finding !== "unreachable");
 
@@ -1331,7 +1391,7 @@ function applyGraphSelection() {
   }
 }
 
-/* Scrolls only the graph's own viewport; the page stays where the reader put it. */
+/* Pans only the graph's own view; the page stays where the reader put it. */
 function revealGraphNodes(ids) {
   const rects = ids
     .map(graphNodeElement)
@@ -1353,11 +1413,11 @@ function revealGraphNodes(ids) {
     left >= viewport.left && right <= viewport.right && top >= viewport.top && bottom <= viewport.bottom;
 
   if (!visible) {
-    graph.scrollBy({
-      left: (left + right) / 2 - (viewport.left + viewport.right) / 2,
-      top: (top + bottom) / 2 - (viewport.top + viewport.bottom) / 2,
-      behavior: "smooth",
-    });
+    panGraphBy(
+      (viewport.left + viewport.right) / 2 - (left + right) / 2,
+      (viewport.top + viewport.bottom) / 2 - (top + bottom) / 2,
+      { animate: true },
+    );
   }
 
   for (const id of ids) {
@@ -1389,6 +1449,50 @@ function scrollEditorTo(pos) {
     top: Math.max(0, block.top - scroller.clientHeight / 2 + block.height / 2),
     behavior: "smooth",
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Solver globals                                                             */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * One seed per procedure entry per context: the state the calls routed there
+ * published, which that entry reads back. A seed that feeds a graph node jumps to it.
+ */
+function showSolverGlobals(seeds) {
+  solverGlobalsList.replaceChildren();
+  solverGlobals.hidden = !seeds || seeds.length === 0;
+
+  if (solverGlobals.hidden) {
+    return;
+  }
+
+  const entered = seeds.filter((seed) => seed.reachable).length;
+
+  solverGlobalsCount.textContent = `${seeds.length} seeds \u00b7 ${entered} entered`;
+
+  for (const seed of seeds) {
+    const item = document.createElement("li");
+
+    item.className = seed.reachable ? "solver-global" : "solver-global dead";
+
+    const key = seed.entry ? document.createElement("button") : document.createElement("span");
+
+    key.className = "solver-global-key";
+    key.textContent = seed.key;
+
+    if (seed.entry) {
+      key.type = "button";
+      key.title = "Inspect the procedure entry this seed feeds";
+      key.addEventListener("click", () => {
+        inspectGraphNode(seed.entry);
+        revealGraphNodes([seed.entry]);
+      });
+    }
+
+    item.append(key, seedLines(seed));
+    solverGlobalsList.append(item);
+  }
 }
 
 function inspectGraphNode(id) {
@@ -1458,13 +1562,17 @@ function attachGraphNavigation(svg) {
 let vizPromise = null;
 let analysisRunGeneration = 0;
 
-let graphScale = 1;
-let graphBaseWidth = 0;
-let graphBaseHeight = 0;
+/*
+ * The graph sits in a fixed-size view and moves by a CSS transform, so panning and
+ * zooming never scroll the page or resize the layout. `graphView` is the transform:
+ * the drawing's top-left corner lands at (x, y) in view pixels, scaled by `scale`.
+ */
+const graphView = { scale: 1, x: 0, y: 0, width: 0, height: 0, fitted: true };
 
-const MIN_GRAPH_SCALE = 0.25;
-const MAX_GRAPH_SCALE = 3;
-const GRAPH_ZOOM_STEP = 1.15;
+const MIN_GRAPH_SCALE = 0.1;
+const MAX_GRAPH_SCALE = 4;
+const GRAPH_ZOOM_STEP = 1.2;
+const GRAPH_PADDING = 24;
 
 function clamp(value, lo, hi) {
   return Math.min(hi, Math.max(lo, value));
@@ -1475,14 +1583,11 @@ function currentGraphSvg() {
 }
 
 function updateZoomResetLabel() {
-  graphZoomReset.textContent = `${Math.round(graphScale * 100)}%`;
+  graphZoomReset.textContent = `${Math.round(graphView.scale * 100)}%`;
 }
 
 function clearGraph() {
-  graphScale = 1;
-  graphBaseWidth = 0;
-  graphBaseHeight = 0;
-
+  Object.assign(graphView, { scale: 1, x: 0, y: 0, width: 0, height: 0, fitted: true });
   updateZoomResetLabel();
 
   graph.replaceChildren();
@@ -1528,88 +1633,102 @@ function getViz() {
   return vizPromise;
 }
 
+/*
+ * Measure the drawing once, untransformed, in rendered CSS pixels: GraphViz sizes
+ * its SVG in points, and measuring after layout avoids converting units by hand.
+ */
 function rememberNaturalGraphSize(svg) {
-  /*
-   * Measure the SVG after GraphViz has inserted it into the document.
-   * Using rendered CSS pixels avoids unit mismatches between GraphViz's
-   * point-based width/height attributes and the SVG viewBox.
-   */
-  svg.style.width = "";
-  svg.style.height = "";
-  svg.style.maxWidth = "none";
+  svg.style.transform = "none";
 
   const rect = svg.getBoundingClientRect();
 
-  graphBaseWidth = rect.width;
-  graphBaseHeight = rect.height;
+  graphView.width = rect.width;
+  graphView.height = rect.height;
+  svg.style.width = `${rect.width}px`;
+  svg.style.height = `${rect.height}px`;
 }
 
-function applyGraphScale() {
+function applyGraphView({ animate = false } = {}) {
   const svg = currentGraphSvg();
 
-  if (!svg || graphBaseWidth <= 0 || graphBaseHeight <= 0) {
+  if (!svg || graphView.width <= 0) {
     updateZoomResetLabel();
     return;
   }
 
-  /*
-   * Change the SVG's actual layout size rather than using transform: scale().
-   * This keeps the scroll container's dimensions correct, so zoomed graphs
-   * can still be panned with normal scrolling.
-   */
-  svg.style.width = `${graphBaseWidth * graphScale}px`;
-
-  svg.style.height = `${graphBaseHeight * graphScale}px`;
-
+  svg.classList.toggle("is-animating", animate);
+  svg.style.transform = `translate(${graphView.x}px, ${graphView.y}px) scale(${graphView.scale})`;
   updateZoomResetLabel();
 }
 
-function setGraphScale(scale) {
-  graphScale = clamp(scale, MIN_GRAPH_SCALE, MAX_GRAPH_SCALE);
+/* Zooms about a point given in view coordinates, keeping that point under the pointer. */
+function zoomGraphAt(factor, viewX, viewY, options = {}) {
+  const scale = clamp(graphView.scale * factor, MIN_GRAPH_SCALE, MAX_GRAPH_SCALE);
+  const ratio = scale / graphView.scale;
 
-  applyGraphScale();
+  graphView.x = viewX - (viewX - graphView.x) * ratio;
+  graphView.y = viewY - (viewY - graphView.y) * ratio;
+  graphView.scale = scale;
+  graphView.fitted = false;
+  applyGraphView(options);
+}
+
+function viewCenter() {
+  return { x: graph.clientWidth / 2, y: graph.clientHeight / 2 };
 }
 
 function zoomGraphIn() {
-  setGraphScale(graphScale * GRAPH_ZOOM_STEP);
+  const { x, y } = viewCenter();
+  zoomGraphAt(GRAPH_ZOOM_STEP, x, y, { animate: true });
 }
 
 function zoomGraphOut() {
-  setGraphScale(graphScale / GRAPH_ZOOM_STEP);
+  const { x, y } = viewCenter();
+  zoomGraphAt(1 / GRAPH_ZOOM_STEP, x, y, { animate: true });
 }
 
+function panGraphBy(dx, dy, options = {}) {
+  graphView.x += dx;
+  graphView.y += dy;
+  graphView.fitted = false;
+  applyGraphView(options);
+}
+
+/* 100%: natural size, centered on whatever is at the middle of the view now. */
 function resetGraphZoom() {
-  setGraphScale(1);
-
-  graph.scrollTo({
-    left: 0,
-    top: 0,
-  });
+  const { x, y } = viewCenter();
+  zoomGraphAt(1 / graphView.scale, x, y, { animate: true });
 }
 
-function graphAvailableWidth() {
-  const style = window.getComputedStyle(graph);
-
-  const paddingLeft = Number.parseFloat(style.paddingLeft) || 0;
-
-  const paddingRight = Number.parseFloat(style.paddingRight) || 0;
-
-  return Math.max(1, graph.clientWidth - paddingLeft - paddingRight);
-}
-
-function fitGraphZoom() {
-  if (graphBaseWidth <= 0) {
+/*
+ * Fit the whole drawing and center it. A graph so tall that fitting it would make
+ * its labels unreadable fits the width instead and starts at its top.
+ */
+function fitGraphZoom({ animate = true } = {}) {
+  if (graphView.width <= 0) {
     return;
   }
 
-  graphScale = Math.min(1, graphAvailableWidth() / graphBaseWidth);
+  const width = Math.max(1, graph.clientWidth - 2 * GRAPH_PADDING);
+  const height = Math.max(1, graph.clientHeight - 2 * GRAPH_PADDING);
+  const byWidth = width / graphView.width;
+  const whole = Math.min(1, byWidth, height / graphView.height);
+  const scale = whole >= 0.45 ? whole : Math.min(1, byWidth);
 
-  applyGraphScale();
+  graphView.scale = scale;
+  graphView.x = (graph.clientWidth - graphView.width * scale) / 2;
+  graphView.y = graphView.height * scale <= height
+    ? (graph.clientHeight - graphView.height * scale) / 2
+    : GRAPH_PADDING;
+  graphView.fitted = true;
+  applyGraphView({ animate });
+}
 
-  graph.scrollTo({
-    left: 0,
-    top: 0,
-  });
+/* Whether the drawing overflows the view along an axis, so a scroll there should pan it. */
+function graphOverflows(axis) {
+  return axis === "x"
+    ? graphView.width * graphView.scale > graph.clientWidth
+    : graphView.height * graphView.scale > graph.clientHeight;
 }
 
 const XLINK = "http://www.w3.org/1999/xlink";
@@ -1718,9 +1837,8 @@ async function renderGraph(dot, runGeneration) {
     graph.replaceChildren(svg);
     graphPanel.hidden = false;
 
-    graphScale = 1;
     rememberNaturalGraphSize(svg);
-    fitGraphZoom();
+    fitGraphZoom({ animate: false });
   } catch (error) {
     if (runGeneration !== analysisRunGeneration) {
       return;
@@ -2213,26 +2331,289 @@ graphZoomReset.addEventListener("click", resetGraphZoom);
 
 graphZoomFit.addEventListener("click", fitGraphZoom);
 
+/*
+ * Trackpad: a two-finger scroll pans; a pinch arrives as a wheel event with ctrlKey
+ * set (Chrome, Firefox, Edge) or as gesture events (Safari) and zooms at the pointer.
+ * A scroll along an axis the drawing already fits is left to the page.
+ */
 graph.addEventListener(
   "wheel",
   (event) => {
-    if (!event.ctrlKey && !event.metaKey) {
+    if (!currentGraphSvg()) {
+      return;
+    }
+
+    const bounds = graph.getBoundingClientRect();
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      /* A pinch sends small deltas; a wheel notch sends ~100, so cap one event's step. */
+      const delta = clamp(event.deltaY * (event.deltaMode === 1 ? 16 : 1), -30, 30);
+      zoomGraphAt(Math.exp(-delta * 0.01), event.clientX - bounds.left, event.clientY - bounds.top);
+      return;
+    }
+
+    const panX = graphOverflows("x") ? event.deltaX : 0;
+    const panY = graphOverflows("y") ? event.deltaY : 0;
+
+    if (panX === 0 && panY === 0) {
       return;
     }
 
     event.preventDefault();
-
-    if (event.deltaY < 0) {
-      zoomGraphIn();
-    } else {
-      zoomGraphOut();
-    }
+    panGraphBy(-panX, -panY);
   },
   { passive: false },
 );
+
+let gestureScale = 1;
+
+graph.addEventListener("gesturestart", (event) => {
+  event.preventDefault();
+  gestureScale = 1;
+});
+
+graph.addEventListener("gesturechange", (event) => {
+  event.preventDefault();
+  const bounds = graph.getBoundingClientRect();
+  zoomGraphAt(event.scale / gestureScale, event.clientX - bounds.left, event.clientY - bounds.top);
+  gestureScale = event.scale;
+});
+
+/*
+ * Mouse and touch: one pointer drags, two pointers pinch. A press that barely moves
+ * stays a click, so clicking a node still inspects it.
+ */
+const graphPointers = new Map();
+let graphDrag = null;
+let suppressGraphClick = false;
+
+graph.addEventListener("pointerdown", (event) => {
+  if (!currentGraphSvg() || event.button > 0) {
+    return;
+  }
+
+  graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+  if (graphPointers.size === 1) {
+    graphDrag = { x: event.clientX, y: event.clientY, moved: false };
+  }
+});
+
+graph.addEventListener("pointermove", (event) => {
+  const previous = graphPointers.get(event.pointerId);
+
+  if (!previous) {
+    return;
+  }
+
+  const bounds = graph.getBoundingClientRect();
+
+  if (graphPointers.size === 2) {
+    const [a, b] = [...graphPointers.values()];
+    const before = Math.hypot(a.x - b.x, a.y - b.y);
+    graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const [c, d] = [...graphPointers.values()];
+    const after = Math.hypot(c.x - d.x, c.y - d.y);
+
+    if (before > 0) {
+      zoomGraphAt(after / before, (c.x + d.x) / 2 - bounds.left, (c.y + d.y) / 2 - bounds.top);
+    }
+
+    suppressGraphClick = true;
+    return;
+  }
+
+  graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+  if (graphDrag) {
+    if (!graphDrag.moved && Math.hypot(event.clientX - graphDrag.x, event.clientY - graphDrag.y) < 4) {
+      return;
+    }
+
+    if (!graphDrag.moved) {
+      graphDrag.moved = true;
+      graph.setPointerCapture(event.pointerId);
+      graph.classList.add("is-panning");
+      hideGraphTooltip();
+    }
+
+    panGraphBy(event.clientX - previous.x, event.clientY - previous.y);
+  }
+});
+
+function endGraphPointer(event) {
+  graphPointers.delete(event.pointerId);
+
+  if (graphPointers.size === 0) {
+    suppressGraphClick = suppressGraphClick || Boolean(graphDrag?.moved);
+    graphDrag = null;
+    graph.classList.remove("is-panning");
+  }
+}
+
+graph.addEventListener("pointerup", endGraphPointer);
+graph.addEventListener("pointercancel", endGraphPointer);
+
+/* A drag or pinch ends with a click on whatever is under the pointer; swallow it. */
+graph.addEventListener(
+  "click",
+  (event) => {
+    if (suppressGraphClick) {
+      event.stopPropagation();
+      event.preventDefault();
+      suppressGraphClick = false;
+    }
+  },
+  { capture: true },
+);
+
+graph.addEventListener("dblclick", (event) => {
+  if (!event.target.closest?.("g.node")) {
+    fitGraphZoom();
+  }
+});
+
+graph.addEventListener("keydown", (event) => {
+  const step = 60;
+  const actions = {
+    "+": zoomGraphIn,
+    "=": zoomGraphIn,
+    "-": zoomGraphOut,
+    "0": () => fitGraphZoom(),
+    ArrowLeft: () => panGraphBy(step, 0, { animate: true }),
+    ArrowRight: () => panGraphBy(-step, 0, { animate: true }),
+    ArrowUp: () => panGraphBy(0, step, { animate: true }),
+    ArrowDown: () => panGraphBy(0, -step, { animate: true }),
+  };
+
+  if (actions[event.key] && currentGraphSvg()) {
+    event.preventDefault();
+    actions[event.key]();
+  }
+});
+
+/* A view that still shows the fitted graph stays fitted when the page resizes. */
+new ResizeObserver(() => {
+  if (graphView.fitted && currentGraphSvg()) {
+    fitGraphZoom({ animate: false });
+  }
+}).observe(graph);
 
 updateContextControls();
 updateGlobalsHelp();
 renderRawCall(null);
 renderInspector();
 updateZoomResetLabel();
+
+/* -------------------------------------------------------------------------- */
+/* Links from the explainer                                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The explainer's "Try it" links open a program and a configuration here:
+ * playground.html?example=two-sites&globals=warrow. Every program below is one the
+ * explainer shows, so the run reproduces what the page claims.
+ */
+const LINKED_EXAMPLES = {
+  "two-sites": `fun p(x) {
+  __voblint_check(x <= 2);
+}
+
+fun main() {
+  p(1);
+  p(2);
+}`,
+  "loop-call": `fun g(x) {
+  __voblint_check(x < 10);
+}
+
+fun main() {
+  x = 0;
+  while (x < 10) {
+    g(x);
+    x = x + 1;
+  }
+}`,
+  "recursion-grows": `fun f(x) {
+  __voblint_check(x >= 0);
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}`,
+  "recursion-shrinks": `fun f(a) {
+  if (a < 4) {
+    f(9 / (a + 2));
+  }
+  __voblint_check(a <= 9);
+}
+
+fun main() {
+  f(-1);
+}`,
+  "counting-loop": `fun main() {
+  i = 0;
+  while (i < 5) {
+    i = i + 1;
+  }
+  __voblint_check(i == 5);
+}`,
+  "goblint-1587": `// goblint/analyzer #1587: 3Z - 2 was computed as 3Z, killing the branch below.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  y = x - 2;
+  if (y == 4) {
+    __voblint_check(y == 4);
+  }
+}`,
+  "theorems": `fun main() {
+  n = __voblint_nondet_int();
+  if (n > 0) {
+    q = 10 / n;
+    __voblint_check(n >= 1);
+  } else {
+    if (n > 5) {
+      __voblint_check(n == 0);
+    }
+  }
+}`,
+};
+
+function selectIfOffered(select, value) {
+  if (value !== null && [...select.options].some((option) => option.value === value)) {
+    select.value = value;
+  }
+}
+
+function applyLinkedConfiguration() {
+  const params = new URLSearchParams(location.search);
+
+  if (![...params.keys()].length) {
+    return;
+  }
+
+  const example = LINKED_EXAMPLES[params.get("example")];
+
+  if (example) {
+    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example } });
+  }
+
+  selectIfOffered(analysisSelect, params.get("analysis"));
+  selectIfOffered(globalsSelect, params.get("globals"));
+  selectIfOffered(contextSelect, params.get("context"));
+
+  const depth = Number.parseInt(params.get("k") ?? "", 10);
+
+  if (Number.isInteger(depth) && depth >= 0) {
+    contextDepthInput.value = String(depth);
+  }
+
+  updateContextControls();
+  updateGlobalsHelp();
+  run();
+}
+
+applyLinkedConfiguration();
