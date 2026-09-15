@@ -384,7 +384,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
     [$ivl(0, 0)$], [widening point],
     table.hline(),
   ),
-  caption: [After @grass25 @tilscher26. Computation trace of one $italic("solve")$ call, one row per solver
+  caption: [After @grass24 @tilscher26. Computation trace of one $italic("solve")$ call, one row per solver
     step. Auxiliary rows separate the effect of an edge from the effect of the
     widening operator, so a reader can attribute each value change to exactly
     one cause.],

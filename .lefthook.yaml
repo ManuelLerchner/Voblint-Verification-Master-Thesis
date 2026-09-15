@@ -3,7 +3,8 @@
 # Install with `pixi run hooks-install`.
 #
 # Pre-commit:
-#   Fast/static repository invariants and generated-artifact drift checks.
+#   Formats staged files and restages them, then runs fast/static repository
+#   invariants and generated-artifact drift checks.
 #
 # Pre-push:
 #   Heavier checks that make sure thesis material still agrees with the
@@ -19,9 +20,10 @@ output: [summary]
 glob_matcher: doublestar
 
 
+# No `fail_on_changes`: it hashes worktree contents across the whole hook, so
+# it would reject every fix a formatter below writes. Each drift check fails on
+# its own instead.
 pre-commit:
-  fail_on_changes: always
-
   jobs:
     # ----------------------------------------------------------------------
     # Generated artifacts
@@ -63,6 +65,49 @@ pre-commit:
             run: pixi run assembly-check
 
     # ----------------------------------------------------------------------
+    # Formatters
+    #
+    # `stage_fixed` restages the staged files a formatter rewrote; lefthook
+    # hides unstaged hunks of partially staged files meanwhile, so only staged
+    # content is formatted and committed. Ruff and biome take the staged files;
+    # the others format their whole scope. CI still runs the `-check` tasks.
+    # ----------------------------------------------------------------------
+    - name: formatters
+      group:
+        parallel: true
+        jobs:
+          - name: python-format
+            glob: "**/*.py"
+            run: pixi run python-format -- {staged_files}
+            stage_fixed: true
+
+          - name: ocaml-format
+            glob:
+              - "**/*.ml"
+              - "**/*.mli"
+              - "**/dune"
+              - "dune-project"
+            run: pixi run ocaml-format
+            stage_fixed: true
+
+          - name: typst-format
+            glob: "**/*.typ"
+            run: pixi run typst-format
+            stage_fixed: true
+
+          - name: toml-format
+            glob: "**/*.toml"
+            run: pixi run toml-format
+            stage_fixed: true
+
+          - name: pages-format
+            glob:
+              - "pages/**/*.js"
+              - "pages/**/*.css"
+            run: pixi run pages-format -- {staged_files}
+            stage_fixed: true
+
+    # ----------------------------------------------------------------------
     # Fast repository invariants
     # ----------------------------------------------------------------------
     - name: invariant-checks
@@ -91,29 +136,26 @@ pre-commit:
             run: pixi run verification-surface-check
 
           # ----------------------------------------------------------------
-          # Formatting and linting
+          # Linting
           #
           # Ruff takes the staged files; the other tools are fast enough to
           # check their whole scope, which also catches a config change.
           # ----------------------------------------------------------------
 
-          - name: python-format
-            glob: "**/*.py"
-            run: pixi run python-format-check -- {staged_files}
-
           - name: python-lint
             glob: "**/*.py"
             run: pixi run python-lint -- {staged_files}
 
-          - name: ocaml-format
+          # A formatter config change can reformat files that are not staged,
+          # which `stage_fixed` leaves out of the commit; fail instead so
+          # `pixi run format` gets run. biome.jsonc is covered by pages-lint.
+          - name: formatter-config
             glob:
-              - "**/*.ml"
-              - "**/*.mli"
-              - "**/dune"
-              - "dune-project"
               - ".ocamlformat"
               - ".ocamlformat-ignore"
-            run: pixi run ocaml-format-check
+              - "ruff.toml"
+              - ".taplo.toml"
+            run: pixi run python-format-check && pixi run ocaml-format-check && pixi run toml-format-check
 
           - name: opam-lint
             glob: "*.opam"
@@ -131,10 +173,6 @@ pre-commit:
               - ".github/**/*.yaml"
             run: pixi run actions-lint
 
-          - name: typst-format
-            glob: "**/*.typ"
-            run: pixi run typst-format-check
-
           - name: markdown-lint
             glob:
               - "**/*.md"
@@ -146,11 +184,6 @@ pre-commit:
               - "**/*.{md,typ,py,ml,mli,sh,toml,yaml,yml}"
               - "_typos.toml"
             run: pixi run spelling-check
-
-          - name: toml-format
-            glob:
-              - "**/*.toml"
-            run: pixi run toml-format-check
 
           - name: pages-lint
             glob:

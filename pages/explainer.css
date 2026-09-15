@@ -468,7 +468,7 @@
 }
 
 .guide-card.caution {
-  border-top-color: var(--warning);
+  border-top-color: var(--caution);
 }
 
 .guide-card.stuck {
@@ -493,7 +493,7 @@
 }
 
 .guide-card.caution h4 i {
-  color: var(--warning);
+  color: var(--caution);
 }
 
 .guide-card.stuck h4 i {
@@ -638,6 +638,11 @@
 .ml.unknown {
   --verdict-color: #f0c674;
   --verdict-tint: rgb(240 198 116 / 0.1);
+}
+
+.ml.warning {
+  --verdict-color: #d7a0ff;
+  --verdict-tint: rgb(215 160 255 / 0.1);
 }
 
 .ml.refuted {
@@ -1175,7 +1180,7 @@
 }
 
 .verdict.unknown {
-  color: var(--warning);
+  color: var(--caution);
   background: #f7efe2;
 }
 

@@ -23,7 +23,9 @@
   --success-soft: #e8f3ec;
   --danger: #ad422c;
   --danger-soft: #f8ebe7;
-  --warning: #a76924;
+  --caution: #a76924;
+  --warning: #8a4fbf;
+  --warning-soft: #f4edfa;
 
   --border: #d4dfe1;
   --border-strong: #a9bec2;
@@ -578,10 +580,15 @@ main {
   --verdict-tint: rgb(111 207 151 / 0.1);
 }
 
-.code-editor .cm-verdict-unknown,
-.code-editor .cm-verdict-warning {
+.code-editor .cm-verdict-unknown {
   --verdict-color: #f0c674;
   --verdict-tint: rgb(240 198 116 / 0.1);
+}
+
+/* Violet, apart from unknown's amber and error's red: a warning is neither. */
+.code-editor .cm-verdict-warning {
+  --verdict-color: #d7a0ff;
+  --verdict-tint: rgb(215 160 255 / 0.1);
 }
 
 .code-editor .cm-verdict-refuted,
@@ -864,7 +871,7 @@ main {
 }
 
 .inspector-status.unknown {
-  color: var(--warning);
+  color: var(--caution);
   background: rgb(240 198 116 / 0.22);
 }
 
@@ -921,11 +928,34 @@ kbd {
   font-size: 0.78em;
 }
 
+/* Editor two thirds, settings one third; the settings come first in source order so
+   the narrow layout stacks them above the editor. */
+.analyzer-workspace {
+  display: grid;
+  grid-template-areas: "editor controls";
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.editor-column {
+  display: grid;
+  grid-area: editor;
+  gap: 16px;
+  min-width: 0;
+}
+
+.analyzer-sidebar {
+  display: grid;
+  grid-area: controls;
+  gap: 16px;
+  min-width: 0;
+}
+
 .analyzer-controls {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 14px;
+  flex-direction: column;
+  gap: 12px;
   padding: 16px 18px;
   background: var(--surface-muted);
   border: 1px solid rgb(23 75 87 / 0.06);
@@ -935,19 +965,10 @@ kbd {
 .control-group {
   display: grid;
   gap: 6px;
-  min-width: 190px;
 }
 
 .control-group select {
   width: 100%;
-}
-
-.control-group-narrow {
-  min-width: 0;
-}
-
-.control-group-narrow input {
-  width: 5.5rem;
 }
 
 .analyzer-controls label {
@@ -985,7 +1006,6 @@ kbd {
 }
 
 .control-help {
-  flex-basis: 100%;
   margin: 0;
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -1023,12 +1043,10 @@ kbd {
 
 .run-feedback {
   display: flex;
-  flex: 1 1 260px;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 12px;
   min-width: 0;
-  min-height: 42px;
 }
 
 .status {
@@ -1059,7 +1077,7 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
-/* A failed run, or a finished one with diagnostics, is announced above the editor. */
+/* A failed run, or a finished one with diagnostics, is announced below the settings. */
 .analysis-problems {
   display: flex;
   align-items: flex-start;
@@ -1074,8 +1092,8 @@ kbd {
 }
 
 .analysis-problems.warning {
-  background: #fdf5e6;
-  border-color: rgb(167 105 36 / 0.35);
+  background: var(--warning-soft);
+  border-color: rgb(138 79 191 / 0.35);
   border-left-color: var(--warning);
 }
 
@@ -2101,6 +2119,13 @@ a:focus-visible {
 
   .analyzer {
     padding: 20px;
+  }
+
+  .analyzer-workspace {
+    grid-template-areas:
+      "controls"
+      "editor";
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .raw-result-panes {

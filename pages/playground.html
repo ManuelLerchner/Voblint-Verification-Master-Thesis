@@ -110,88 +110,119 @@
     >
 
       <div class="analyzer">
-        <div class="analyzer-controls" role="group" aria-label="Analyzer configuration">
-          <div class="control-group">
-            <label for="analysis-select">Analysis domain</label>
-            <select id="analysis-select">
-              <option value="interval" selected>Interval</option>
-              <option value="sign">Sign</option>
-              <option value="int">Int product</option>
-              <option value="parity">Parity</option>
-              <option value="congruence">Congruence</option>
-            </select>
+        <div class="analyzer-workspace">
+          <div class="analyzer-sidebar">
+            <div class="analyzer-controls" role="group" aria-label="Analyzer configuration">
+              <div class="control-group">
+                <label for="analysis-select">Analysis domain</label>
+                <select id="analysis-select">
+                  <option value="interval" selected>Interval</option>
+                  <option value="sign">Sign</option>
+                  <option value="int">Int product</option>
+                  <option value="parity">Parity</option>
+                  <option value="congruence">Congruence</option>
+                </select>
+              </div>
+
+              <div class="control-group">
+                <label for="globals-select">Globals</label>
+                <select id="globals-select" aria-describedby="globals-help">
+                  <option value="join">Join</option>
+                  <option value="per-origin">Join per origin</option>
+                  <option value="warrow" selected>Warrow</option>
+                  <option value="warrow-per-origin">Warrow per origin</option>
+                </select>
+              </div>
+
+              <div class="control-group">
+                <label for="context-select">Context sensitivity</label>
+                <select id="context-select">
+                  <option value="none">None</option>
+                  <option value="entry-state">Entry state</option>
+                  <option value="call-string" selected>Call string</option>
+                </select>
+              </div>
+
+              <div class="control-group" id="context-depth-group">
+                <label for="context-depth">
+                  Depth <code>k</code>
+                </label>
+                <input
+                  id="context-depth"
+                  type="number"
+                  min="0"
+                  max="16"
+                  step="1"
+                  value="1"
+                  inputmode="numeric"
+                  aria-describedby="context-depth-help"
+                >
+                <span id="context-depth-help" class="visually-hidden">
+                  Number of recent call sites kept in each context, from 0 to 16.
+                </span>
+              </div>
+
+              <button id="run-analysis" type="button" disabled>
+                <i
+                  id="run-analysis-icon"
+                  class="fa-solid fa-play"
+                  aria-hidden="true"
+                ></i>
+                <span id="run-analysis-label">Run analysis</span>
+              </button>
+
+              <div class="run-feedback">
+                <p
+                  id="analyzer-status"
+                  class="status"
+                  role="status"
+                >Loading the editor…</p>
+
+                <span
+                  id="analysis-timing"
+                  class="analysis-timing"
+                  aria-live="polite"
+                  hidden
+                >
+                  <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+                  <span class="visually-hidden">Analysis time</span>
+                  <strong id="analysis-timing-value">—</strong>
+                </span>
+              </div>
+
+              <p class="control-help" id="globals-help"></p>
+            </div>
+
+            <div id="analysis-problems" class="analysis-problems" hidden></div>
           </div>
 
-          <div class="control-group">
-            <label for="globals-select">Globals</label>
-            <select id="globals-select" aria-describedby="globals-help">
-              <option value="join">Join</option>
-              <option value="per-origin">Join per origin</option>
-              <option value="warrow" selected>Warrow</option>
-              <option value="warrow-per-origin">Warrow per origin</option>
-            </select>
+          <div class="editor-column">
+            <div class="editor-shell">
+              <div class="editor-toolbar">
+                <span class="editor-file">example.vimp</span>
+                <span class="editor-toolbar-tools">
+                  <label class="editor-toggle" for="value-hints-toggle">
+                    <input id="value-hints-toggle" type="checkbox" checked>
+                    Inline values
+                  </label>
+                  <span class="editor-language">VIMP</span>
+                </span>
+              </div>
+
+              <div id="program-editor" class="code-editor"></div>
+            </div>
+
+            <p class="editor-note">
+              Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing. More
+              examples are in
+              <a
+                href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
+                target="_blank"
+                rel="noreferrer"
+              >tests/regression</a>.
+            </p>
           </div>
-
-          <div class="control-group">
-            <label for="context-select">Context sensitivity</label>
-            <select id="context-select">
-              <option value="none">None</option>
-              <option value="entry-state">Entry state</option>
-              <option value="call-string" selected>Call string</option>
-            </select>
-          </div>
-
-          <div class="control-group control-group-narrow" id="context-depth-group">
-            <label for="context-depth">
-              Depth <code>k</code>
-            </label>
-            <input
-              id="context-depth"
-              type="number"
-              min="0"
-              max="16"
-              step="1"
-              value="1"
-              inputmode="numeric"
-              aria-describedby="context-depth-help"
-            >
-            <span id="context-depth-help" class="visually-hidden">
-              Number of recent call sites kept in each context, from 0 to 16.
-            </span>
-          </div>
-
-          <button id="run-analysis" type="button" disabled>
-            <i
-              id="run-analysis-icon"
-              class="fa-solid fa-play"
-              aria-hidden="true"
-            ></i>
-            <span id="run-analysis-label">Run analysis</span>
-          </button>
-
-          <div class="run-feedback">
-            <p
-              id="analyzer-status"
-              class="status"
-              role="status"
-            >Loading the editor…</p>
-
-            <span
-              id="analysis-timing"
-              class="analysis-timing"
-              aria-live="polite"
-              hidden
-            >
-              <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
-              <span class="visually-hidden">Analysis time</span>
-              <strong id="analysis-timing-value">—</strong>
-            </span>
-          </div>
-
-          <p class="control-help" id="globals-help"></p>
         </div>
-
-        <div id="analysis-problems" class="analysis-problems" hidden></div>
 
         <details id="raw-result" class="raw-result">
           <summary>
@@ -234,31 +265,6 @@
             </section>
           </div>
         </details>
-
-        <div class="editor-shell">
-          <div class="editor-toolbar">
-            <span class="editor-file">example.vimp</span>
-            <span class="editor-toolbar-tools">
-              <label class="editor-toggle" for="value-hints-toggle">
-                <input id="value-hints-toggle" type="checkbox" checked>
-                Inline values
-              </label>
-              <span class="editor-language">VIMP</span>
-            </span>
-          </div>
-
-          <div id="program-editor" class="code-editor"></div>
-        </div>
-
-        <p class="editor-note">
-          Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing. More
-          examples are in
-          <a
-            href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
-            target="_blank"
-            rel="noreferrer"
-          >tests/regression</a>.
-        </p>
 
         <section
           class="state-inspector"

@@ -131,7 +131,8 @@ toml-format-check = { cmd = "taplo fmt --check", description = "Check that TOML 
 pages-format = { cmd = "biome check --write", description = "Format the site's JavaScript and CSS and apply safe biome lint fixes." }
 pages-lint = { cmd = "biome ci", description = "Check the site's JavaScript and CSS formatting and lint with biome." }
 hooks-install = { cmd = "lefthook install", description = "Install the repository's Lefthook Git hooks." }
-pre-commit = { cmd = "lefthook run pre-commit --all-files", description = "Run every pre-commit hook against the full repository." }
+# Over every file, `stage_fixed` would stage unrelated worktree edits.
+pre-commit = { cmd = "lefthook run pre-commit --all-files --no-stage-fixed", description = "Run every pre-commit hook against the full repository." }
 [environments]
 default = ["ir", "grammar", "test", "lint", "report", "bench", "thesis"]
 thesis = ["thesis"]
