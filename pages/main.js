@@ -1,19 +1,29 @@
-import { EditorView, basicSetup } from "https://esm.sh/codemirror@6.0.2";
-
-import { HighlightStyle, StreamLanguage, syntaxHighlighting } from "https://esm.sh/@codemirror/language@6.12.4";
-
-import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
-
 import { json } from "https://esm.sh/@codemirror/lang-json@6.0.2";
 
+import {
+  HighlightStyle,
+  StreamLanguage,
+  syntaxHighlighting,
+} from "https://esm.sh/@codemirror/language@6.12.4";
+import {
+  EditorState,
+  Prec,
+  StateEffect,
+  StateField,
+} from "https://esm.sh/@codemirror/state@^6.0.0";
 /*
  * Same semver ranges codemirror@6.0.2 itself imports, so esm.sh resolves them to
  * the one module instance basicSetup uses. A second @codemirror/state instance
  * rejects every extension built from it.
  */
-import { Decoration, WidgetType, hoverTooltip, keymap } from "https://esm.sh/@codemirror/view@^6.0.0";
-
-import { EditorState, Prec, StateEffect, StateField } from "https://esm.sh/@codemirror/state@^6.0.0";
+import {
+  Decoration,
+  hoverTooltip,
+  keymap,
+  WidgetType,
+} from "https://esm.sh/@codemirror/view@^6.0.0";
+import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
+import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -194,7 +204,7 @@ const vimpLanguage = StreamLanguage.define({
       return "variableName";
     }
 
-    if (stream.match(/^[(){}\[\],;]/)) {
+    if (stream.match(/^[(){}[\],;]/)) {
       return "punctuation";
     }
 
@@ -361,14 +371,21 @@ function renderRawCall(raw) {
   const parts = [callPart("run_voblint", "fn")];
 
   if (!input) {
-    parts.push(callPart(" kind rule ctx p", "arg"), callPart(" \u27f9 ", "arrow"), callPart("?", "arg"));
+    parts.push(
+      callPart(" kind rule ctx p", "arg"),
+      callPart(" \u27f9 ", "arrow"),
+      callPart("?", "arg"),
+    );
     rawResultCall.replaceChildren(...parts);
     rawResultCall.title = rawResultCall.textContent;
     return;
   }
 
   parts.push(
-    callPart(` ${constructorTerm(input.kind)} ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `, "arg"),
+    callPart(
+      ` ${constructorTerm(input.kind)} ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+      "arg",
+    ),
     callPart("p", "program"),
     callPart(" \u27f9 ", "arrow"),
   );
@@ -379,8 +396,9 @@ function renderRawCall(raw) {
     parts.push(callPart(output, "ctor"));
   } else {
     const [tag, record] = Object.entries(output ?? {})[0] ?? ["?", {}];
-    const fields = Object.entries(record ?? {}).map(([name, value]) =>
-      `${name}: ${Array.isArray(value) ? `[\u2026\u00d7${value.length}]` : "\u2026"}`,
+    const fields = Object.entries(record ?? {}).map(
+      ([name, value]) =>
+        `${name}: ${Array.isArray(value) ? `[\u2026\u00d7${value.length}]` : "\u2026"}`,
     );
 
     parts.push(callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields"));
@@ -412,7 +430,6 @@ function clearTiming() {
   timingValue.textContent = "—";
 }
 
-
 function formatDuration(milliseconds) {
   if (!Number.isFinite(milliseconds) || milliseconds < 0) {
     return null;
@@ -433,7 +450,6 @@ function formatDuration(milliseconds) {
   return `${(milliseconds / 1000).toFixed(2)} s`;
 }
 
-
 function renderTiming(result) {
   const milliseconds = result?.timing?.analysis_ms;
   const formatted = formatDuration(milliseconds);
@@ -448,9 +464,7 @@ function renderTiming(result) {
 }
 
 function workerError(message) {
-  const error = new Error(
-    message.message ?? "Browser analysis failed.",
-  );
+  const error = new Error(message.message ?? "Browser analysis failed.");
 
   if (typeof message.name === "string" && message.name !== "") {
     error.name = message.name;
@@ -489,7 +503,9 @@ function lineButton(line, column) {
 
   button.type = "button";
   button.className = "problem-jump";
-  button.textContent = Number.isInteger(column) ? `Go to line ${line}, column ${column}` : `Go to line ${line}`;
+  button.textContent = Number.isInteger(column)
+    ? `Go to line ${line}, column ${column}`
+    : `Go to line ${line}`;
   button.addEventListener("click", () => jumpToSource(line, Number.isInteger(column) ? column : 1));
 
   return button;
@@ -521,7 +537,8 @@ function sourceExcerpt(line, column) {
 
 function showProblem({ kind = "error", title, message, note, line, column, items = [] }) {
   const icon = document.createElement("i");
-  icon.className = kind === "error" ? "fa-solid fa-circle-exclamation" : "fa-solid fa-triangle-exclamation";
+  icon.className =
+    kind === "error" ? "fa-solid fa-circle-exclamation" : "fa-solid fa-triangle-exclamation";
   icon.setAttribute("aria-hidden", "true");
 
   const body = document.createElement("div");
@@ -595,7 +612,9 @@ function failureTitle(result) {
     return "The program is not well-formed";
   }
 
-  return Number.isInteger(result.line) ? "The program could not be parsed" : "The program could not be analyzed";
+  return Number.isInteger(result.line)
+    ? "The program could not be parsed"
+    : "The program could not be analyzed";
 }
 
 function showDiagnosticsSummary(result) {
@@ -607,7 +626,10 @@ function showDiagnosticsSummary(result) {
 
   const errors = diagnostics.filter((d) => d.severity === "error").length;
   const count = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const parts = [errors && count(errors, "error"), diagnostics.length - errors && count(diagnostics.length - errors, "warning")]
+  const parts = [
+    errors && count(errors, "error"),
+    diagnostics.length - errors && count(diagnostics.length - errors, "warning"),
+  ]
     .filter(Boolean)
     .join(" and ");
 
@@ -615,18 +637,14 @@ function showDiagnosticsSummary(result) {
     kind: errors > 0 ? "error" : "warning",
     title: `${parts[0].toUpperCase()}${parts.slice(1)} in arithmetic`,
     note: "An error means a divisor is zero in every live context; a warning means it may be zero.",
-    items: diagnostics.map((d) => ({ kind: d.severity === "error" ? "error" : "warning", message: d.message ?? "", line: d.line })),
+    items: diagnostics.map((d) => ({
+      kind: d.severity === "error" ? "error" : "warning",
+      message: d.message ?? "",
+      line: d.line,
+    })),
   });
 
   return true;
-}
-
-function resultFailure(result) {
-  const message = result.message ?? "The program could not be analyzed.";
-
-  return Number.isInteger(result.line) && Number.isInteger(result.column)
-    ? `${result.line}:${result.column}: ${message}`
-    : message;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -712,7 +730,9 @@ function buildAnalysisModel(result, doc) {
   return {
     nodes,
     procedureByEntry: new Map(headers.map((procedure) => [procedure.entry, procedure])),
-    seedByEntry: new Map((result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed])),
+    seedByEntry: new Map(
+      (result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed]),
+    ),
     statements,
     statementByPoint: new Map(statements.map((s) => [s.point, s])),
     stale: false,
@@ -722,7 +742,7 @@ function buildAnalysisModel(result, doc) {
 /* The compiler's return slot: assigned by `return e`, read back by the caller. */
 const RETURN_SLOT = "#ret";
 
-function valueOf(node, name) {
+function slotValue(node, name) {
   if (name === RETURN_SLOT) {
     return node.ret ?? undefined;
   }
@@ -738,7 +758,7 @@ function valueOf(node, name) {
 function valueAfterSteps(node, name) {
   const values = node.next
     .filter((step) => step.writes === name && "state" in step)
-    .map((step) => (step.state ? step.state.find(([x]) => x === name)?.[1] ?? null : null));
+    .map((step) => (step.state ? (step.state.find(([x]) => x === name)?.[1] ?? null) : null));
 
   return values.length > 0 ? values : undefined;
 }
@@ -765,7 +785,9 @@ function formatHint(label, samples) {
     return `${label}${[...groups.keys()][0]}`;
   }
 
-  const parts = [...groups].map(([value, keys]) => (keys.length ? `${keys.join(",")} ${value}` : value));
+  const parts = [...groups].map(([value, keys]) =>
+    keys.length ? `${keys.join(",")} ${value}` : value,
+  );
 
   return `${label}${parts.join(" | ")}`;
 }
@@ -799,7 +821,7 @@ function valueHints(model) {
     for (const node of statement.nodes.filter(isLive)) {
       if (statement.formals) {
         for (const name of statement.formals) {
-          const value = valueOf(node, name);
+          const value = slotValue(node, name);
 
           if (value !== undefined) {
             sample(`${name}: `, node.context_key, value, false);
@@ -816,7 +838,7 @@ function valueHints(model) {
         const callee = entry ? model.procedureByEntry.get(entry.point) : null;
 
         for (const name of callee && isLive(entry) ? callee.formals : []) {
-          const value = valueOf(entry, name);
+          const value = slotValue(entry, name);
 
           if (value !== undefined) {
             sample(`\u2192 ${name}: `, node.context_key, value, enter.join);
@@ -842,7 +864,7 @@ function valueHints(model) {
         }
 
         const after = model.nodes.get(step.id);
-        const value = after && isLive(after) ? valueOf(after, step.writes) : undefined;
+        const value = after && isLive(after) ? slotValue(after, step.writes) : undefined;
 
         if (value !== undefined) {
           sample(writeLabel(step.writes), node.context_key, value, step.join);
@@ -899,13 +921,15 @@ function deadAnnotations(model, dimmed) {
 
 function resultAnnotations(result) {
   if (result.status !== "ok") {
-    return [{
-      line: result.line,
-      column: result.column,
-      kind: "error",
-      label: result.message ? result.message.toUpperCase() : "ERROR",
-      detail: result.message ?? "",
-    }];
+    return [
+      {
+        line: result.line,
+        column: result.column,
+        kind: "error",
+        label: result.message ? result.message.toUpperCase() : "ERROR",
+        detail: result.message ?? "",
+      },
+    ];
   }
 
   const checks = Array.isArray(result.checks) ? result.checks : [];
@@ -1012,8 +1036,13 @@ function resultDecorations(doc, view, showHints) {
         ANNOTATION_SEVERITY.indexOf(current) > ANNOTATION_SEVERITY.indexOf(worst) ? current : worst,
       );
 
-    const labels = [...new Set(group.map((a) => `${ANNOTATION_ICON[a.kind]} ${a.label}`))].join("  ");
-    const detail = group.map((a) => a.detail).filter(Boolean).join("\n");
+    const labels = [...new Set(group.map((a) => `${ANNOTATION_ICON[a.kind]} ${a.label}`))].join(
+      "  ",
+    );
+    const detail = group
+      .map((a) => a.detail)
+      .filter(Boolean)
+      .join("\n");
 
     ranges.push(Decoration.line({ class: `cm-verdict-line cm-verdict-${kind}` }).range(line.from));
 
@@ -1041,7 +1070,9 @@ function resultDecorations(doc, view, showHints) {
   if (showHints) {
     for (const hint of view.hints) {
       ranges.push(
-        Decoration.widget({ widget: new ValueHint(hint.text, hint.merge), side: 1 }).range(hint.pos),
+        Decoration.widget({ widget: new ValueHint(hint.text, hint.merge), side: 1 }).range(
+          hint.pos,
+        ),
       );
     }
   }
@@ -1074,7 +1105,11 @@ const resultViewField = StateField.define({
     }
 
     if (changed) {
-      return { view, showHints, decorations: resultDecorations(transaction.state.doc, view, showHints) };
+      return {
+        view,
+        showHints,
+        decorations: resultDecorations(transaction.state.doc, view, showHints),
+      };
     }
 
     /* Everything here describes the analysed text; an edit invalidates all of it. */
@@ -1135,7 +1170,7 @@ function scheduleHighlights() {
 
     editor.dispatch({
       effects: setStatementHighlights.of({
-        selected: usable ? inspection?.statement ?? null : null,
+        selected: usable ? (inspection?.statement ?? null) : null,
         hovered: usable ? hoveredSpan : null,
       }),
     });
@@ -1319,7 +1354,11 @@ const variableHover = hoverTooltip(
     const word = view.state.wordAt(pos);
     const name = word ? view.state.sliceDoc(word.from, word.to) : "";
 
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) || VIMP_KEYWORDS.has(name) || name.startsWith("__voblint_")) {
+    if (
+      !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) ||
+      VIMP_KEYWORDS.has(name) ||
+      name.startsWith("__voblint_")
+    ) {
       return null;
     }
 
@@ -1328,7 +1367,7 @@ const variableHover = hoverTooltip(
     const rows = (statement?.nodes ?? [])
       .map((node) => ({
         node,
-        value: isLive(node) ? valueOf(node, name) : null,
+        value: isLive(node) ? slotValue(node, name) : null,
         after: isLive(node) && !statement.formals ? valueAfterSteps(node, name) : undefined,
       }))
       .filter(({ value }) => value !== undefined);
@@ -1362,7 +1401,9 @@ function inspectorMessage(text) {
 function statementExcerpt(statement) {
   const doc = editor.state.doc;
 
-  return doc.sliceString(statement.from, Math.min(statement.to, doc.lineAt(statement.from).to)).trim();
+  return doc
+    .sliceString(statement.from, Math.min(statement.to, doc.lineAt(statement.from).to))
+    .trim();
 }
 
 function renderInspector() {
@@ -1584,7 +1625,9 @@ function graphNodeElement(id) {
 }
 
 function applyGraphSelection() {
-  for (const element of graph.querySelectorAll("g.node.graph-node-selected, g.node.graph-node-focused")) {
+  for (const element of graph.querySelectorAll(
+    "g.node.graph-node-selected, g.node.graph-node-focused",
+  )) {
     element.classList.remove("graph-node-selected", "graph-node-focused");
   }
 
@@ -1622,7 +1665,10 @@ function revealGraphNodes(ids) {
   const bottom = Math.max(...rects.map((r) => r.bottom));
 
   const visible =
-    left >= viewport.left && right <= viewport.right && top >= viewport.top && bottom <= viewport.bottom;
+    left >= viewport.left &&
+    right <= viewport.right &&
+    top >= viewport.top &&
+    bottom <= viewport.bottom;
 
   if (!visible) {
     panGraphBy(
@@ -1746,7 +1792,7 @@ function attachGraphNavigation(svg) {
 
     const node = id ? analysisModel?.nodes.get(id) : null;
 
-    hoveredSpan = node ? analysisModel.statementByPoint.get(node.point) ?? null : null;
+    hoveredSpan = node ? (analysisModel.statementByPoint.get(node.point) ?? null) : null;
     scheduleHighlights();
   });
 
@@ -1929,9 +1975,10 @@ function fitGraphZoom({ animate = true } = {}) {
 
   graphView.scale = scale;
   graphView.x = (graph.clientWidth - graphView.width * scale) / 2;
-  graphView.y = graphView.height * scale <= height
-    ? (graph.clientHeight - graphView.height * scale) / 2
-    : GRAPH_PADDING;
+  graphView.y =
+    graphView.height * scale <= height
+      ? (graph.clientHeight - graphView.height * scale) / 2
+      : GRAPH_PADDING;
   graphView.fitted = true;
   applyGraphView({ animate });
 }
@@ -1958,12 +2005,14 @@ function hideGraphTooltip() {
 function placeGraphTooltip(event) {
   const margin = 14;
   const { width, height } = graphTooltip.getBoundingClientRect();
-  const left = event.clientX + margin + width > window.innerWidth
-    ? event.clientX - margin - width
-    : event.clientX + margin;
-  const top = event.clientY + margin + height > window.innerHeight
-    ? event.clientY - margin - height
-    : event.clientY + margin;
+  const left =
+    event.clientX + margin + width > window.innerWidth
+      ? event.clientX - margin - width
+      : event.clientX + margin;
+  const top =
+    event.clientY + margin + height > window.innerHeight
+      ? event.clientY - margin - height
+      : event.clientY + margin;
 
   graphTooltip.style.left = `${Math.max(4, left)}px`;
   graphTooltip.style.top = `${Math.max(4, top)}px`;
@@ -2150,7 +2199,11 @@ function selectedLabel(select) {
 }
 
 function configurationLabel(configuration) {
-  const parts = [selectedLabel(analysisSelect), selectedLabel(globalsSelect), selectedLabel(contextSelect)];
+  const parts = [
+    selectedLabel(analysisSelect),
+    selectedLabel(globalsSelect),
+    selectedLabel(contextSelect),
+  ];
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
@@ -2196,7 +2249,6 @@ function discardAnalysisWorker(worker = analysisWorker) {
   }
 }
 
-
 function failPendingAnalysis(error) {
   if (!pendingAnalysis) {
     return;
@@ -2205,13 +2257,8 @@ function failPendingAnalysis(error) {
   const pending = pendingAnalysis;
   pendingAnalysis = null;
 
-  pending.reject(
-    error instanceof Error
-      ? error
-      : new Error(String(error)),
-  );
+  pending.reject(error instanceof Error ? error : new Error(String(error)));
 }
-
 
 function clearResults() {
   clearGraph();
@@ -2265,11 +2312,7 @@ function createAnalysisWorker() {
   worker.addEventListener("message", (event) => {
     const message = event.data;
 
-    if (
-      !pendingAnalysis ||
-      !message ||
-      message.id !== pendingAnalysis.id
-    ) {
+    if (!pendingAnalysis || !message || message.id !== pendingAnalysis.id) {
       return;
     }
 
@@ -2290,9 +2333,7 @@ function createAnalysisWorker() {
     discardAnalysisWorker(worker);
 
     pending.reject(
-      new Error(
-        `Analysis worker returned unknown message type: ${String(message.type)}`,
-      ),
+      new Error(`Analysis worker returned unknown message type: ${String(message.type)}`),
     );
   });
 
@@ -2302,9 +2343,7 @@ function createAnalysisWorker() {
     const error =
       event.error instanceof Error
         ? event.error
-        : new Error(
-            event.message || "Analysis worker failed.",
-          );
+        : new Error(event.message || "Analysis worker failed.");
 
     failPendingAnalysis(error);
   });
@@ -2312,21 +2351,13 @@ function createAnalysisWorker() {
   worker.addEventListener("messageerror", (event) => {
     discardAnalysisWorker(worker);
 
-    console.error(
-      "Could not decode the analysis worker response:",
-      event.data,
-    );
+    console.error("Could not decode the analysis worker response:", event.data);
 
-    failPendingAnalysis(
-      new Error(
-        "Could not decode the analysis worker response.",
-      ),
-    );
+    failPendingAnalysis(new Error("Could not decode the analysis worker response."));
   });
 
   return worker;
 }
-
 
 function getAnalysisWorker() {
   if (!analysisWorker) {
@@ -2335,7 +2366,6 @@ function getAnalysisWorker() {
 
   return analysisWorker;
 }
-
 
 function runAnalysisInWorker(configuration, source) {
   if (pendingAnalysis) {
@@ -2365,11 +2395,7 @@ function runAnalysisInWorker(configuration, source) {
       pendingAnalysis = null;
       discardAnalysisWorker();
 
-      reject(
-        error instanceof Error
-          ? error
-          : new Error(String(error)),
-      );
+      reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
 }
@@ -2426,7 +2452,7 @@ async function run() {
     const rawResult = await runAnalysisInWorker(configuration, source);
 
     if (typeof rawResult !== "string") {
-      throw new TypeError("Voblint_run returned " + `${typeof rawResult}; expected a JSON string.`);
+      throw new TypeError(`Voblint_run returned ${typeof rawResult}; expected a JSON string.`);
     }
 
     result = JSON.parse(rawResult);
@@ -2467,11 +2493,19 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         clearGraph();
 
-        showStatus(`${configurationLabel(configuration)} · ${failureTitle(result).toLowerCase()}`, "error");
+        showStatus(
+          `${configurationLabel(configuration)} · ${failureTitle(result).toLowerCase()}`,
+          "error",
+        );
         /* The title already says the program is malformed; the banner keeps only the reason. */
         const message = (result.message ?? "").replace(/^program is not well-formed:\s*/i, "");
 
-        showProblem({ title: failureTitle(result), message, line: result.line, column: result.column });
+        showProblem({
+          title: failureTitle(result),
+          message,
+          line: result.line,
+          column: result.column,
+        });
       }
     }
   } catch (error) {
@@ -2482,7 +2516,10 @@ async function run() {
        * reports its error in the status line.
        */
       if (error instanceof GraphRenderError) {
-        showStatus(`${configurationLabel(configuration)} · complete, but the graph could not be drawn`, "error");
+        showStatus(
+          `${configurationLabel(configuration)} · complete, but the graph could not be drawn`,
+          "error",
+        );
 
         /* The graph panel already names the failure; arithmetic findings take the banner. */
         if (!showDiagnosticsSummary(result)) {
@@ -2505,9 +2542,7 @@ async function run() {
       showProblem({ title: "The analyzer stopped", message });
 
       if (error instanceof Error) {
-        console.error(
-          `${error.name}: ${error.message}\n\n${error.stack ?? ""}`,
-        );
+        console.error(`${error.name}: ${error.message}\n\n${error.stack ?? ""}`);
       } else {
         console.error("Browser analysis failed:", error);
       }
@@ -2704,7 +2739,10 @@ graph.addEventListener("pointermove", (event) => {
   graphPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
 
   if (graphDrag) {
-    if (!graphDrag.moved && Math.hypot(event.clientX - graphDrag.x, event.clientY - graphDrag.y) < 4) {
+    if (
+      !graphDrag.moved &&
+      Math.hypot(event.clientX - graphDrag.x, event.clientY - graphDrag.y) < 4
+    ) {
       return;
     }
 
@@ -2757,7 +2795,7 @@ graph.addEventListener("keydown", (event) => {
     "+": zoomGraphIn,
     "=": zoomGraphIn,
     "-": zoomGraphOut,
-    "0": () => fitGraphZoom(),
+    0: () => fitGraphZoom(),
     ArrowLeft: () => panGraphBy(step, 0, { animate: true }),
     ArrowRight: () => panGraphBy(-step, 0, { animate: true }),
     ArrowUp: () => panGraphBy(0, step, { animate: true }),
@@ -2859,7 +2897,7 @@ fun main() {
 fun main() {
   f(-1);
 }`,
-  "factorial": `fun f(n) {
+  factorial: `fun f(n) {
   if (n < 2) {
     return 1;
   } else {
@@ -2898,7 +2936,7 @@ fun main() {
     __voblint_check(y == 4);
   }
 }`,
-  "theorems": `fun main() {
+  theorems: `fun main() {
   n = __voblint_nondet_int();
   if (n > 0) {
     q = 10 / n;
@@ -2925,7 +2963,8 @@ function applyLinkedConfiguration() {
   }
 
   const name = params.get("example");
-  const example = name !== null && Object.hasOwn(LINKED_EXAMPLES, name) ? LINKED_EXAMPLES[name] : null;
+  const example =
+    name !== null && Object.hasOwn(LINKED_EXAMPLES, name) ? LINKED_EXAMPLES[name] : null;
 
   if (example) {
     editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example } });

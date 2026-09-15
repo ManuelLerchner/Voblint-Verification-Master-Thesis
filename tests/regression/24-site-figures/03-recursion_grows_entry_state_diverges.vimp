@@ -1,0 +1,12 @@
+// PARAM: --analysis interval --context entry-state --globals warrow --timeout 5
+// Backs the entry-state "no answer" of the figure "A call that never stops
+// calling": every call enters with a new singleton x, entry-state keying makes a
+// fresh context per depth, and the solve does not finish.
+fun f(x) {
+  __voblint_check(x >= 0);
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}

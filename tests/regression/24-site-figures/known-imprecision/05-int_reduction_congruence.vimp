@@ -1,0 +1,70 @@
+// PARAM: --analysis congruence
+// Backs the "Each domain alone" column of the site figure "Four domains, one value:
+// reduction". Every run has x in {1,5,9}, but a congruence cannot bound x: x is 1 (mod 4) and nothing more, so neither check is decided.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / unit
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp8_ctx0
+//     main_exit_main_ctx0
+//     main_pp0_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       n=⊤
+//       x=⊤
+//   main_pp2_ctx0: pp2
+//       n=⊤
+//       x=1+4ℤ
+//   main_pp3_ctx0: pp3
+//       n=⊤
+//       x=1+4ℤ
+//   main_pp4_ctx0: pp4 [unknown]
+//       n=⊤
+//       x=1+4ℤ
+//       check x >= 1
+//   main_pp5_ctx0: pp5 [unknown]
+//       n=⊤
+//       x=1+4ℤ
+//       check x <= 9
+//   main_pp8_ctx0: pp8
+//       n=⊤
+//       x=1+4ℤ
+//   main_exit_main_ctx0: exit_main
+//       n=⊤
+//       x=1+4ℤ
+//   main_pp0_ctx0: pp0
+//       n=⊤
+//       x=⊤
+//   main_entry_main_ctx0: entry_main
+//       n=⊤
+//       x=⊤
+//
+// edges:
+//   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()
+//   main_pp1_ctx0 -> main_pp2_ctx0: x := 4 * n + 1
+//   main_pp2_ctx0 -> main_pp3_ctx0: [x >= 0]
+//   main_pp2_ctx0 -> main_pp8_ctx0: ![x >= 0]
+//   main_pp3_ctx0 -> main_pp4_ctx0: [x <= 10]
+//   main_pp3_ctx0 -> main_pp8_ctx0: ![x <= 10]
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(x >= 1)
+//   main_pp5_ctx0 -> main_pp8_ctx0: check(x <= 9)
+//   main_pp8_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
+// EXPECT-GRAPH-END
+
+fun main() {
+  n = __voblint_nondet_int();
+  x = 4 * n + 1;
+  if (x >= 0) {
+    if (x <= 10) {
+      __voblint_check(x >= 1); // UNKNOWN
+      __voblint_check(x <= 9); // UNKNOWN
+    }
+  }
+}

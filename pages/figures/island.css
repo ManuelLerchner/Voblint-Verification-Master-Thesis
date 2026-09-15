@@ -1,0 +1,86 @@
+/* A small island in a large language */
+
+.scene-island svg {
+  max-width: 980px;
+}
+
+:where(.scene-island) .sea {
+  fill: #eef2f3;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-island) .sea-label {
+  fill: var(--text-muted) !important;
+  font: 700 14px var(--mono) !important;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:where(.scene-island) .region ellipse {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease;
+}
+
+:where(.scene-island) .region text,
+:where(.scene-island) .island text {
+  font-size: 14px !important;
+  font-weight: 650;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+:where(.scene-island) .region text {
+  fill: var(--text-muted) !important;
+}
+
+:where(.scene-island) .region,
+:where(.scene-island) .island {
+  cursor: help;
+  outline: none;
+}
+
+:where(.scene-island) .region:hover ellipse,
+:where(.scene-island) .region:focus-visible ellipse {
+  fill: var(--danger-soft);
+  stroke: var(--danger);
+}
+
+:where(.scene-island) .island path {
+  fill: var(--success-soft);
+  stroke: var(--success);
+  stroke-width: 2.5;
+  transition: fill 150ms ease;
+}
+
+:where(.scene-island) .island:hover path,
+:where(.scene-island) .island:focus-visible path {
+  fill: #d4ebdc;
+}
+
+:where(.scene-island) .island text {
+  fill: var(--text) !important;
+  font-size: 13px !important;
+  font-weight: 500;
+}
+
+:where(.scene-island) .island .island-title {
+  fill: var(--success) !important;
+  font:
+    700 20px "Iowan Old Style",
+    Georgia,
+    serif !important;
+}
+
+:where(.scene-island) .island-note {
+  min-height: 3em;
+  margin: 8px auto 0;
+  max-width: 820px;
+  color: var(--text);
+  text-align: center;
+}

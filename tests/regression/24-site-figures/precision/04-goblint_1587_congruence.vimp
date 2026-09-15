@@ -1,0 +1,70 @@
+// PARAM: --analysis congruence --context none
+// Backs the Voblint side of the site figure "A real bug, replayed" (goblint/analyzer
+// #1587): x = 3*n is 3Z, y = x - 2 is 1+3Z, so the branch y == 4 stays live and the
+// check is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / unit
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp6_ctx0
+//     main_exit_main_ctx0
+//     main_pp0_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       n=⊤
+//       x=⊤
+//       y=⊤
+//   main_pp2_ctx0: pp2
+//       n=⊤
+//       x=3ℤ
+//       y=⊤
+//   main_pp3_ctx0: pp3
+//       n=⊤
+//       x=3ℤ
+//       y=1+3ℤ
+//   main_pp4_ctx0: pp4 [proved]
+//       n=⊤
+//       x=3ℤ
+//       y=4
+//       check y == 4
+//   main_pp6_ctx0: pp6
+//       n=⊤
+//       x=3ℤ
+//       y=1+3ℤ
+//   main_exit_main_ctx0: exit_main
+//       n=⊤
+//       x=3ℤ
+//       y=1+3ℤ
+//   main_pp0_ctx0: pp0
+//       n=⊤
+//       x=⊤
+//       y=⊤
+//   main_entry_main_ctx0: entry_main
+//       n=⊤
+//       x=⊤
+//       y=⊤
+//
+// edges:
+//   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()
+//   main_pp1_ctx0 -> main_pp2_ctx0: x := 3 * n
+//   main_pp2_ctx0 -> main_pp3_ctx0: y := x - 2
+//   main_pp3_ctx0 -> main_pp4_ctx0: [y == 4]
+//   main_pp3_ctx0 -> main_pp6_ctx0: ![y == 4]
+//   main_pp4_ctx0 -> main_pp6_ctx0: check(y == 4)
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
+// EXPECT-GRAPH-END
+
+fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  y = x - 2;
+  if (y == 4) {
+    __voblint_check(y == 4); // PROVED
+  }
+}

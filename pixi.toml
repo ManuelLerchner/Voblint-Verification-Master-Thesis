@@ -14,7 +14,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = ">=3.10"
-binaryen = ">=119" 
+binaryen = ">=119"
 
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
@@ -101,10 +101,35 @@ voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = [
   "cli-build",
 ], description = "Benchmark selected abstract domains over one VIMP program." }
 
-# Git hooks (.lefthook.yaml).
+# Git hooks (.lefthook.yaml) and the formatters and linters they gate on.
+# Each tool's own config file excludes generated and vendored sources.
 [feature.lint.dependencies]
 lefthook = "*"
+ruff = ">=0.16"
+shellcheck = ">=0.11"
+actionlint = ">=1.7"
+zizmor = ">=1.30"
+typstyle = ">=0.15"
+biome = ">=2.5"
+markdownlint-cli2 = ">=0.23"
+typos = ">=1.50"
+taplo = ">=0.10"
 [feature.lint.tasks]
+python-format = { cmd = "ruff format", description = "Format tracked Python sources with ruff." }
+python-format-check = { cmd = "ruff format --check", description = "Check that Python sources are formatted with ruff." }
+python-lint = { cmd = "ruff check", description = "Lint Python sources with ruff." }
+# Workflow run blocks are shell too: actionlint checks them with shellcheck.
+shell-lint = { cmd = "shellcheck $(git ls-files '*.sh')", description = "Lint tracked shell scripts with shellcheck." }
+actions-lint = { cmd = "actionlint && zizmor --offline .github", description = "Lint GitHub workflows with actionlint and audit them with zizmor." }
+# 100 columns, the line limit the theories follow. The symbol table is generated.
+typst-format = { cmd = "typstyle -l 100 -i $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Format thesis Typst sources with typstyle." }
+typst-format-check = { cmd = "typstyle -l 100 --check $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Check that thesis Typst sources are formatted with typstyle." }
+markdown-lint = { cmd = "markdownlint-cli2", description = "Lint Markdown documentation with markdownlint-cli2." }
+spelling-check = { cmd = "typos", description = "Check source and prose spelling with typos." }
+toml-format = { cmd = "taplo fmt", description = "Format TOML files with taplo." }
+toml-format-check = { cmd = "taplo fmt --check", description = "Check that TOML files are formatted with taplo." }
+pages-format = { cmd = "biome check --write", description = "Format the site's JavaScript and CSS and apply safe biome lint fixes." }
+pages-lint = { cmd = "biome ci", description = "Check the site's JavaScript and CSS formatting and lint with biome." }
 hooks-install = { cmd = "lefthook install", description = "Install the repository's Lefthook Git hooks." }
 pre-commit = { cmd = "lefthook run pre-commit --all-files", description = "Run every pre-commit hook against the full repository." }
 [environments]
@@ -147,6 +172,7 @@ isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
   "vendor-init",
 ], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
 pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
+  "vendor-init",
   "browser-build",
 ], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
 pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
@@ -183,6 +209,19 @@ sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = 
 # checked-in export too, so it costs a second and needs no toolchain.
 codegen-api-check = { cmd = "python3 scripts/check_generated_api.py", description = "Check handwritten OCaml consumers against the generated public export surface." }
 codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", description = "Compile and run the OCaml regression driver against the checked-in export." }
+
+# OCaml formatting. ocamlformat comes from opam like the rest of the toolchain,
+# pinned in .ocamlformat; .ocamlformat-ignore excludes generated sources.
+ocaml-format = { cmd = "bash scripts/mk/ocaml-format.sh", description = "Format handwritten OCaml sources and dune files." }
+ocaml-format-check = { cmd = "bash scripts/mk/ocaml-format.sh --check", description = "Check that handwritten OCaml sources and dune files are formatted." }
+opam-lint = { cmd = "opam lint voblint.opam", description = "Lint the opam package manifest." }
+format = { depends-on = [
+  "python-format",
+  "ocaml-format",
+  "typst-format",
+  "toml-format",
+  "pages-format",
+], description = "Format Python, OCaml, dune, Typst, TOML, and site JavaScript and CSS sources." }
 
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
@@ -261,6 +300,17 @@ verify = { depends-on = [
   # Static / no-build checks
   # ------------------------------------------------------------------------
   "verification-surface-check",
+  "python-format-check",
+  "python-lint",
+  "ocaml-format-check",
+  "opam-lint",
+  "shell-lint",
+  "actions-lint",
+  "typst-format-check",
+  "markdown-lint",
+  "spelling-check",
+  "toml-format-check",
+  "pages-lint",
   "regression-lint",
   "isabelle-ascii-check",
   "sessions-check",

@@ -1,0 +1,156 @@
+/* Take a pillar away */
+
+:where(.scene-bridge) .bridge-cliff {
+  fill: #cfdcdf;
+  stroke: #9db3b8;
+  stroke-width: 2;
+}
+
+.scene-bridge .bridge-cliff-label {
+  fill: var(--primary);
+  font:
+    700 15px "Iowan Old Style",
+    Georgia,
+    serif;
+  text-anchor: middle;
+}
+
+.scene-bridge .bridge-cliff-sub {
+  fill: var(--text-muted);
+  font: 11px var(--mono);
+  text-anchor: middle;
+}
+
+.scene-bridge .bridge-valley-label {
+  fill: var(--danger);
+  font-size: 13px;
+  font-style: italic;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #fbeee9;
+  stroke-width: 6px;
+}
+
+:where(.scene-bridge) .bridge-pillars g {
+  cursor: pointer;
+}
+
+:where(.scene-bridge) .bridge-pillars rect {
+  fill: var(--primary);
+  transition:
+    transform 450ms cubic-bezier(0.5, 0, 0.8, 0.4),
+    opacity 450ms ease;
+}
+
+.scene-bridge .bridge-pillars text {
+  fill: #ffffff;
+  font: 800 16px var(--mono);
+  text-anchor: middle;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+:where(.scene-bridge) .bridge-pillars .is-removed rect {
+  opacity: 0.12;
+  transform: translateY(40px);
+}
+
+.scene-bridge .bridge-pillars .is-removed text {
+  fill: var(--primary);
+  opacity: 0.5;
+}
+
+:where(.scene-bridge) .bridge-deck rect {
+  fill: #6f949b;
+  stroke: #4f6f75;
+  stroke-width: 1;
+  transition: transform 600ms cubic-bezier(0.5, 0, 0.75, 0);
+}
+
+:where(.scene-bridge) .bridge-deck rect.is-broken {
+  fill: var(--danger);
+}
+
+:where(.scene-bridge) .bridge-run circle {
+  fill: var(--success);
+  stroke: #ffffff;
+  stroke-width: 3;
+}
+
+.scene-bridge .bridge-run text {
+  fill: var(--success);
+  font: 700 12px var(--mono);
+  text-anchor: middle;
+}
+
+:where(.scene-bridge) .bridge-run.is-lost circle {
+  fill: var(--danger);
+}
+
+.scene-bridge .bridge-run.is-lost text {
+  fill: var(--danger);
+}
+
+:where(.scene-bridge) .bridge-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+:where(.scene-bridge) .bridge-toggles button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  color: #ffffff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-bridge) .bridge-toggles button b {
+  font-family: var(--mono);
+}
+
+:where(.scene-bridge) .bridge-toggles button code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font-size: 0.74rem;
+  opacity: 0.8;
+}
+
+:where(.scene-bridge) .bridge-toggles button[aria-pressed="false"] {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  border-style: dashed;
+  text-decoration: line-through;
+}
+
+:where(.scene-bridge) .bridge-caption {
+  display: grid;
+  gap: 8px;
+  min-height: 4.8em;
+  margin: 14px 0 0;
+}
+
+.scene-bridge[data-broken]:not([data-broken=""]) .bridge-caption span {
+  padding: 8px 12px;
+  background: var(--danger-soft);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.scene-bridge) .bridge-deck rect,
+  :where(.scene-bridge) .bridge-pillars rect {
+    animation: none !important;
+    transition: none !important;
+  }
+}

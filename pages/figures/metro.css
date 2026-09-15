@@ -1,0 +1,167 @@
+/* A map of the proof */
+
+.scene-metro {
+  --line-sem: #174b57;
+  --line-comp: #d76642;
+  --line-dom: #6b5ca5;
+  --line-fw: #2f8f6b;
+  --line-sol: #c9971c;
+  --line-res: #172126;
+}
+
+.scene-metro .metro-svg {
+  max-width: 1100px;
+}
+
+:where(.scene-metro) .metro-lines path {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+:where(.scene-metro) .metro-lines .line-sem {
+  stroke: var(--line-sem);
+}
+
+:where(.scene-metro) .metro-lines .line-comp {
+  stroke: var(--line-comp);
+}
+
+:where(.scene-metro) .metro-lines .line-dom {
+  stroke: var(--line-dom);
+}
+
+:where(.scene-metro) .metro-lines .line-fw {
+  stroke: var(--line-fw);
+}
+
+:where(.scene-metro) .metro-lines .line-sol {
+  stroke: var(--line-sol);
+}
+
+:where(.scene-metro) .metro-lines .line-res {
+  stroke: var(--line-res);
+}
+
+.scene-metro .metro-line-names text {
+  font: 800 12px var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.scene-metro .name-sem {
+  fill: var(--line-sem);
+}
+
+.scene-metro .name-comp {
+  fill: var(--line-comp);
+}
+
+.scene-metro .name-dom {
+  fill: var(--line-dom);
+}
+
+.scene-metro .name-fw {
+  fill: var(--line-fw);
+}
+
+.scene-metro .name-sol {
+  fill: var(--line-sol);
+}
+
+.scene-metro .name-res {
+  fill: var(--line-res);
+}
+
+:where(.scene-metro) .metro-station {
+  cursor: pointer;
+  outline: none;
+}
+
+:where(.scene-metro) .metro-station circle,
+:where(.scene-metro) .metro-station rect {
+  fill: #ffffff;
+  stroke: var(--line-res);
+  stroke-width: 3;
+  transition:
+    fill 150ms ease,
+    stroke-width 150ms ease;
+}
+
+.scene-metro .metro-station text {
+  fill: var(--text);
+  font: 600 11.5px var(--mono);
+}
+
+.scene-metro .metro-station text:not([text-anchor]) {
+  text-anchor: middle;
+}
+
+:where(.scene-metro) .metro-hub rect,
+:where(.scene-metro) .metro-hub circle {
+  stroke-width: 4;
+}
+
+:where(.scene-metro) .metro-core rect {
+  stroke: var(--accent);
+  stroke-width: 5;
+}
+
+.scene-metro .metro-terminal rect {
+  fill: var(--line-res);
+}
+
+.scene-metro .metro-terminal text {
+  fill: #ffffff;
+  font-weight: 800;
+}
+
+:where(.scene-metro) .metro-station:hover circle,
+:where(.scene-metro) .metro-station:hover rect,
+:where(.scene-metro) .metro-station:focus-visible circle,
+:where(.scene-metro) .metro-station:focus-visible rect,
+:where(.scene-metro) .metro-station.is-current circle,
+:where(.scene-metro) .metro-station.is-current rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+.scene-metro .metro-terminal.is-current rect {
+  fill: var(--accent);
+}
+
+.scene-metro .metro-station.is-current text {
+  fill: var(--accent);
+  font-weight: 800;
+}
+
+.scene-metro .metro-terminal.is-current text {
+  fill: #ffffff;
+}
+
+:where(.scene-metro) .metro-info {
+  min-height: 5em;
+  margin-top: 8px;
+  padding: 12px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-metro) .metro-info p {
+  margin: 0;
+}
+
+:where(.scene-metro) .metro-info-name {
+  font-weight: 700;
+}
+
+:where(.scene-metro) .metro-info-name span {
+  margin-left: 8px;
+  color: var(--text-muted);
+  font: 0.78rem var(--mono);
+}
+
+:where(.scene-metro) .metro-info-text {
+  margin-top: 4px !important;
+  color: var(--text-muted);
+}

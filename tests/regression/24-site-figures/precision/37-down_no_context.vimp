@@ -1,0 +1,63 @@
+// PARAM: --analysis interval --context none
+// Backs a row of the site's "The price of precision" recursion chart
+// (no context): n >= 0 is PROVED, and the graph snapshot pins the contexts.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: down / unit
+//     down_pp1_ctx0
+//     down_exit_down_ctx0
+//     down_pp0_ctx0
+//     down_pp2_ctx0
+//     down_pp4_ctx0
+//     down_entry_down_ctx0
+//   cluster_ctx_1: main / unit
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   down_pp1_ctx0: pp1
+//       n=[0,5]
+//   down_exit_down_ctx0: exit_down
+//       n=[0,5]
+//   main_exit_main_ctx0: exit_main
+//   down_pp0_ctx0: pp0 [proved]
+//       n=[0,5]
+//       check n >= 0
+//   down_pp2_ctx0: pp2
+//       n=[1,5]
+//   down_pp4_ctx0: pp4
+//       n=[0,5]
+//   main_pp5_ctx0: pp5
+//   down_entry_down_ctx0: entry_down
+//       n=[0,5]
+//   main_pp6_ctx0: pp6
+//   main_entry_main_ctx0: entry_main
+//
+// edges:
+//   down_pp0_ctx0 -> down_pp1_ctx0: check(n >= 0)
+//   down_pp1_ctx0 -> down_pp2_ctx0: [n > 0]
+//   down_pp1_ctx0 -> down_pp4_ctx0: ![n > 0]
+//   down_pp4_ctx0 -> down_exit_down_ctx0: return
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   down_entry_down_ctx0 -> down_pp0_ctx0: body(down)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   down_pp2_ctx0 -> down_entry_down_ctx0: enter down(n - 1)
+//   down_exit_down_ctx0 -> down_pp4_ctx0: combine
+//   down_pp2_ctx0 -> down_pp4_ctx0: call-to-return down
+//   main_pp5_ctx0 -> down_entry_down_ctx0: enter down(5)
+//   down_exit_down_ctx0 -> main_pp6_ctx0: combine
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return down
+// EXPECT-GRAPH-END
+
+fun down(n) {
+  __voblint_check(n >= 0); // PROVED
+  if (n > 0) {
+    down(n - 1);
+  }
+}
+
+fun main() {
+  down(5);
+}

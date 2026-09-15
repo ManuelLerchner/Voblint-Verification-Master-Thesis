@@ -6,7 +6,15 @@ permissions:
   contents: read
 
 on:
+  # A manual run from any branch assembles the complete Pages site and uploads it
+  # as an artifact; ticking `deploy` also publishes it, which the github-pages
+  # environment only accepts from branches its deployment policy lists.
   workflow_dispatch:
+    inputs:
+      deploy:
+        description: Publish the assembled site to GitHub Pages
+        type: boolean
+        default: false
   push:
     branches: [ main ]
   pull_request:
@@ -270,7 +278,7 @@ jobs:
           fi
 
       - name: Upload GitHub Pages site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: html-docs
@@ -395,6 +403,33 @@ jobs:
       - name: Verification task surface
         run: pixi run verification-surface-check
 
+      - name: Python formatting
+        run: pixi run python-format-check
+
+      - name: Python lint
+        run: pixi run python-lint
+
+      - name: Shell script lint
+        run: pixi run shell-lint
+
+      - name: GitHub workflow lint and audit
+        run: pixi run actions-lint
+
+      - name: Typst formatting
+        run: pixi run typst-format-check
+
+      - name: Markdown lint
+        run: pixi run markdown-lint
+
+      - name: Spelling
+        run: pixi run spelling-check
+
+      - name: TOML formatting
+        run: pixi run toml-format-check
+
+      - name: Site JavaScript and CSS formatting and lint
+        run: pixi run pages-lint
+
       - name: Isabelle ASCII-only sources
         run: pixi run isabelle-ascii-check
 
@@ -479,6 +514,12 @@ jobs:
 
       - name: Install OCaml build dependencies
         run: pixi run ocaml-deps-install
+
+      - name: OCaml formatting
+        run: pixi run ocaml-format-check
+
+      - name: opam manifest lint
+        run: pixi run opam-lint
 
       # This job checks out without submodules, but the CLI refuses --html
       # without the frontend, and the smoke tests exercise --html for real --
@@ -617,23 +658,31 @@ jobs:
           path: thesis/Voblint_Thesis.pdf
           if-no-files-found: error
 
-  deploy-pages:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # Builds the site on every push to main and every manual run, so a branch can
+  # exercise the whole pipeline without publishing anything.
+  pages-site:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     needs: [html, formalization-pdf, thesis-pdf]
     runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      # Full history: the site's commit heatmap counts every commit, and
+      # pages_stats.py refuses a shallow clone rather than publish a partial one.
       - name: Checkout Goblint Formalization
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
+
+      # The site's size figures count the vendored solver's theories and read its
+      # ROOT for the session graph, so the Pages build needs that one submodule.
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
 
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
@@ -672,13 +721,28 @@ jobs:
           THESIS_PDF: build/artifacts/thesis-pdf/Voblint_Thesis.pdf
         run: pixi run pages-site-build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Check the assembled site's internal links and theory anchors
+        run: pixi run pages-site-links
 
+      # The artifact deploy-pages publishes; downloadable from the run for inspection.
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: build/github-pages
+
+  deploy-pages:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
+    needs: pages-site
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Setup Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -689,7 +753,7 @@ jobs:
   # reader sees: it fetches every URL in the link map and verifies the page
   # responds *and* still carries the anchor the citation targets.
   thesis-links-live:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy)
     needs: deploy-pages
     runs-on: ubuntu-latest
     steps:

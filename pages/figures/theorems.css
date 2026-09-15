@@ -1,0 +1,594 @@
+/* The flagship theorems */
+
+.scene-theorems svg {
+  max-width: 1120px;
+}
+
+:where(.scene-theorems) .thm-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+:where(.scene-theorems) .thm-tabs button {
+  padding: 7px 14px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-theorems) .thm-tabs button:hover {
+  border-color: var(--border-strong);
+}
+
+:where(.scene-theorems) .thm-tabs button[aria-selected="true"] {
+  color: #ffffff;
+  background: var(--success);
+  border-color: var(--success);
+}
+
+:where(.scene-theorems) .thm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
+  align-items: start;
+  gap: 28px;
+}
+
+/* An inference rule: premises over the bar, conclusions under it, the name on the bar. */
+:where(.scene-theorems) .rule {
+  margin: 6px 0 16px;
+  padding: 18px 20px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+:where(.scene-theorems) .rule-premises,
+:where(.scene-theorems) .rule-conclusions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 10px;
+}
+
+:where(.scene-theorems) .rule-bar {
+  position: relative;
+  height: 2px;
+  margin: 14px 0;
+  background: var(--text);
+}
+
+:where(.scene-theorems) .rule-name {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  padding-left: 10px;
+  color: var(--success);
+  background: var(--surface);
+  font: 700 0.76rem var(--mono);
+  transform: translateY(-50%);
+}
+
+:where(.scene-theorems) .rule-item {
+  padding: 5px 11px;
+  color: var(--text);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  line-height: 1.35;
+  cursor: help;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+  animation: flow-in 400ms ease backwards;
+}
+
+:where(.scene-theorems) .rule-item code {
+  padding: 0;
+  background: none;
+  font-size: 0.92em;
+}
+
+:where(.scene-theorems) .rule-premises .rule-item {
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-strong);
+}
+
+:where(.scene-theorems) .rule-conclusions .rule-item {
+  background: var(--success-soft);
+  border: 1px solid rgb(40 115 75 / 0.35);
+  animation-delay: 350ms;
+}
+
+:where(.scene-theorems) .rule-item:hover,
+:where(.scene-theorems) .rule-item:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(215 102 66 / 0.18);
+  outline: none;
+}
+
+:where(.scene-theorems) .thm-cfg {
+  position: sticky;
+  top: 16px;
+  padding: 14px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-theorems) .thm-program {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  line-height: 1.5;
+}
+
+:where(.scene-theorems) .thm-cfg .cfg-svg {
+  max-width: 520px;
+  font-family: var(--mono);
+}
+
+:where(.scene-theorems) .thm-cfg-caption {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+:where(.scene-theorems) .cfg-edges line {
+  stroke: var(--text-muted);
+  stroke-width: 1.6;
+}
+
+:where(.scene-theorems) .cfg-labels text {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+:where(.scene-theorems) .cfg-nodes circle {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
+:where(.scene-theorems) .cfg-nodes .node-entry {
+  fill: lightyellow;
+  stroke: orange;
+}
+
+:where(.scene-theorems) .cfg-nodes .node-dead {
+  fill: #e5e5e5;
+  stroke: #737373;
+  stroke-dasharray: 4 3;
+}
+
+:where(.scene-theorems) .cfg-nodes text {
+  font-size: 12px !important;
+}
+
+:where(.scene-theorems) .cfg-nodes .node-id {
+  fill: var(--primary) !important;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+:where(.scene-theorems) .cfg-result .chip {
+  fill: var(--primary) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .cfg-result .dead-chip {
+  fill: var(--text-muted) !important;
+}
+
+:where(.scene-theorems) .badge-proved {
+  fill: var(--success) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .badge-dead {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .term-chip {
+  fill: var(--success-soft);
+  stroke: rgb(40 115 75 / 0.4);
+}
+
+:where(.scene-theorems) .term-text {
+  fill: var(--success) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .ov {
+  display: none;
+}
+
+.scene-theorems[data-theorem="source"] .ov-source,
+.scene-theorems[data-theorem="check"] .ov-check,
+.scene-theorems[data-theorem="dead"] .ov-dead,
+.scene-theorems[data-theorem="arith"] .ov-arith,
+.scene-theorems[data-theorem="sites"] .ov-sites {
+  display: inline;
+}
+
+:where(.scene-theorems) .ring {
+  fill: none;
+  stroke: var(--success);
+  stroke-width: 3;
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+
+:where(.scene-theorems) .ring.empty {
+  stroke: var(--danger);
+  stroke-dasharray: 5 4;
+}
+
+@keyframes ring-pulse {
+  0%,
+  100% {
+    stroke-opacity: 1;
+  }
+  50% {
+    stroke-opacity: 0.35;
+  }
+}
+
+:where(.scene-theorems) .ov-note {
+  fill: var(--primary) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .ov-note.small {
+  font-size: 11px !important;
+}
+
+:where(.scene-theorems) .ov-note.good {
+  fill: var(--success) !important;
+}
+
+:where(.scene-theorems) .ov-note.bad {
+  fill: var(--danger) !important;
+}
+
+:where(.scene-theorems) .marker {
+  fill: var(--accent);
+}
+
+:where(.scene-theorems) .marker-text {
+  fill: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .token circle {
+  fill: var(--accent);
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+:where(.scene-theorems) .token text {
+  fill: var(--accent-hover) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .token-to-3 {
+  animation: token-to-3 6s ease-in-out infinite;
+}
+
+:where(.scene-theorems) .token-to-2 {
+  animation: token-to-2 5s ease-in-out infinite;
+}
+
+:where(.scene-theorems) .token-left {
+  animation: token-left 7s ease-in-out infinite;
+}
+
+:where(.scene-theorems) .token-right {
+  animation: token-right 7s ease-in-out infinite 1.5s backwards;
+}
+
+@keyframes token-to-3 {
+  0% {
+    transform: translate(260px, 28px);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  12% {
+    transform: translate(260px, 92px);
+  }
+  26% {
+    transform: translate(260px, 170px);
+  }
+  44% {
+    transform: translate(150px, 258px);
+  }
+  60%,
+  92% {
+    transform: translate(150px, 356px);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(150px, 356px);
+    opacity: 0;
+  }
+}
+
+@keyframes token-to-2 {
+  0% {
+    transform: translate(260px, 28px);
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  15% {
+    transform: translate(260px, 92px);
+  }
+  32% {
+    transform: translate(260px, 170px);
+  }
+  52%,
+  92% {
+    transform: translate(150px, 258px);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(150px, 258px);
+    opacity: 0;
+  }
+}
+
+@keyframes token-left {
+  0% {
+    transform: translate(260px, 28px);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  10% {
+    transform: translate(260px, 92px);
+  }
+  20% {
+    transform: translate(260px, 170px);
+  }
+  32% {
+    transform: translate(150px, 258px);
+  }
+  44% {
+    transform: translate(150px, 356px);
+  }
+  60% {
+    transform: translate(260px, 448px);
+  }
+  72% {
+    transform: translate(260px, 516px);
+    opacity: 1;
+  }
+  80%,
+  100% {
+    transform: translate(260px, 516px);
+    opacity: 0;
+  }
+}
+
+@keyframes token-right {
+  0% {
+    transform: translate(260px, 28px);
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  10% {
+    transform: translate(260px, 92px);
+  }
+  20% {
+    transform: translate(260px, 170px);
+  }
+  34% {
+    transform: translate(370px, 258px);
+  }
+  54% {
+    transform: translate(260px, 448px);
+  }
+  66% {
+    transform: translate(260px, 516px);
+    opacity: 1;
+  }
+  74%,
+  100% {
+    transform: translate(260px, 516px);
+    opacity: 0;
+  }
+}
+
+/* Hovering a rule item dims the graph except the parts that item talks about. */
+:where(.scene-theorems) .cfg-svg .dm,
+:where(.scene-theorems) .cfg-svg .ov * {
+  transition: opacity 200ms ease;
+}
+
+:where(.scene-theorems) .cfg-svg.has-hl .dm:not(.is-hl) {
+  opacity: 0.22;
+}
+
+:where(.scene-theorems) .cfg-svg .is-hl {
+  filter: drop-shadow(0 0 4px rgb(215 102 66 / 0.8));
+}
+
+:where(.scene-theorems) .cfg-svg line.is-hl {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+@media (max-width: 980px) {
+  :where(.scene-theorems) .thm-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-theorems) .thm-cfg {
+    position: static;
+  }
+}
+
+:where(.scene-theorems) .thm-panels {
+  margin-top: 18px;
+}
+
+:where(.scene-theorems) .thm-panel {
+  display: none;
+  padding: 16px 20px;
+  background: var(--surface-muted);
+  border-left: 4px solid var(--success);
+  border-radius: var(--radius-sm);
+}
+
+.scene-theorems[data-theorem="source"] [data-for="source"],
+.scene-theorems[data-theorem="check"] [data-for="check"],
+.scene-theorems[data-theorem="dead"] [data-for="dead"],
+.scene-theorems[data-theorem="arith"] [data-for="arith"],
+.scene-theorems[data-theorem="sites"] [data-for="sites"] {
+  display: block;
+  animation: caption-in 300ms ease;
+}
+
+:where(.scene-theorems) .thm-panel h4 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+:where(.scene-theorems) .thm-panel h4 code {
+  padding: 0;
+  color: var(--success);
+  background: none;
+}
+
+:where(.scene-theorems) .thm-plain {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+:where(.scene-theorems) .thm-panel details {
+  margin-top: 10px;
+}
+
+:where(.scene-theorems) .thm-panel summary {
+  color: var(--primary);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-theorems) .thm-panel pre {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+/* Isabelle/jEdit's distinctions on the dark code ground: free variables blue, bound green. */
+:where(.scene-theorems) .isa-keyword {
+  color: #f08a65;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .isa-name {
+  color: #f0c674;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .isa-sub {
+  color: #8bd5ca;
+  font-weight: 700;
+}
+
+:where(.scene-theorems) .isa-quote {
+  color: #647f86;
+}
+
+:where(.scene-theorems) .isa-free {
+  color: #8fb9ff;
+}
+
+:where(.scene-theorems) .isa-bound {
+  color: #7fd68a;
+}
+
+:where(.scene-theorems) .isa-ctor {
+  color: #c4a7e7;
+}
+
+:where(.scene-theorems) .isa-op {
+  color: #e6a3d0;
+}
+
+:where(.scene-theorems) .rule-explain {
+  min-height: 92px;
+  margin: -4px 0 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-theorems) .rule-explain p {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+:where(.scene-theorems) .rule-explain .rule-explain-idle {
+  margin: 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+:where(.scene-theorems) .rule-clause {
+  margin: 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+:where(.scene-theorems) .thm-panel h4 .isa-link {
+  margin: 0 0 0 8px;
+  font-family: Inter, ui-sans-serif, sans-serif;
+  font-size: 0.78rem;
+}
+
+:where(.scene-theorems) .thm-tabs button code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}

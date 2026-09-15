@@ -1,0 +1,221 @@
+/* Context sensitivity: how many copies of a procedure */
+
+.scene-context svg {
+  max-width: 880px;
+}
+
+:where(.scene-context) .context-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+:where(.scene-context) .context-tabs input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+:where(.scene-context) .context-tabs label {
+  padding: 6px 14px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-context) .context-tabs label code {
+  padding: 0;
+  background: none;
+}
+
+:where(.scene-context) .context-tabs input:checked + label {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+:where(.scene-context) .context-tabs input:focus-visible + label {
+  outline: 3px solid rgb(23 75 87 / 0.22);
+  outline-offset: 2px;
+}
+
+:where(.scene-context) .callgraph rect {
+  fill: var(--surface-muted);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+:where(.scene-context) .callgraph text {
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+/* Scoped to the scene: GraphViz also names its edge groups "edge". */
+.scene-context .edge {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-dasharray: 7 5;
+  animation: edge-flow 1.2s linear infinite;
+}
+
+.scene-context .edge.a {
+  stroke: var(--accent);
+}
+
+.scene-context .edge.b {
+  stroke: #3f6fb0;
+}
+
+.scene-context .edge.mixed {
+  stroke: #8a5fb0;
+}
+
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+:where(.scene-context) .site {
+  fill: var(--text-muted) !important;
+  font-family: var(--mono);
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-context) .site.a {
+  fill: var(--accent-hover) !important;
+}
+
+:where(.scene-context) .site.b {
+  fill: #3f6fb0 !important;
+}
+
+:where(.scene-context) .ctx-box {
+  stroke-width: 2;
+}
+
+:where(.scene-context) .ctx-box.a {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+
+:where(.scene-context) .ctx-box.b {
+  fill: #e9f0fa;
+  stroke: #3f6fb0;
+}
+
+:where(.scene-context) .ctx-box.mixed {
+  fill: #f4eef6;
+  stroke: #8a5fb0;
+}
+
+:where(.scene-context) .ctx-key {
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+:where(.scene-context) .ctx-val {
+  fill: var(--text-muted) !important;
+  font-family: var(--mono);
+}
+
+:where(.scene-context) .ctx-verdict {
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+:where(.scene-context) .merged-note {
+  fill: var(--warning) !important;
+}
+
+:where(.scene-context) .split-note {
+  fill: var(--success) !important;
+}
+
+:where(.scene-context) .ctx-set,
+:where(.scene-context) .ctx-key,
+:where(.scene-context) .edges,
+:where(.scene-context) .ctx-verdict {
+  display: none;
+}
+
+/* The merged wrap box names no mode, so it shows whenever that set does. */
+:where(.scene-context) .wrap-merged .ctx-key {
+  display: inline;
+}
+
+/* None: every call shares one context. */
+/* Entry state: arguments tell the calls apart at both levels. */
+/* k = 1: wrap splits by call site, scale has only one. */
+/* k = 2: scale's key also remembers wrap's call site. */
+.scene-context:has(#ctx-none:checked)
+:is(.wrap-merged, .scale-merged, .key-none, .main-edges-merged, .edges-merged, .merged-note),
+.scene-context:has(#ctx-entry:checked)
+  :is(.wrap-split, .scale-split, .key-entry, .main-edges-split, .edges-split, .split-note),
+.scene-context:has(#ctx-k1:checked)
+  :is(
+    .wrap-split,
+    .key-cs,
+    .scale-merged,
+    .key-k1,
+    .main-edges-split,
+    .edges-split-merge,
+    .merged-note
+  ),
+.scene-context:has(#ctx-k2:checked)
+  :is(.wrap-split, .key-cs, .scale-split, .key-k2, .main-edges-split, .edges-split, .split-note) {
+  display: inline;
+}
+
+:where(.scene-context) .context-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 10px;
+  margin: 14px 0 0;
+}
+
+:where(.scene-context) .context-notes > div {
+  padding: 10px 12px;
+  background: var(--surface-muted);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  opacity: 0.55;
+  transition:
+    opacity 150ms ease,
+    border-color 150ms ease;
+}
+
+:where(.scene-context) .context-notes dt {
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+:where(.scene-context) .context-notes dd {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.scene-context:has(#ctx-none:checked) .note-none,
+.scene-context:has(#ctx-entry:checked) .note-entry,
+.scene-context:has(#ctx-k1:checked) .note-k1,
+.scene-context:has(#ctx-k2:checked) .note-k2 {
+  border-color: var(--primary);
+  opacity: 1;
+}
+
+:where(.scene-context) .context-tabs label code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}

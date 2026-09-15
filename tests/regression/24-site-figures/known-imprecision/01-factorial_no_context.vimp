@@ -1,0 +1,82 @@
+// PARAM: --analysis interval --context none
+// Backs the same figures in no-context mode. The concrete result is fixed (a = 2),
+// but with one context for f the recursive call f(n - 1) writes into the entry that
+// f(2) writes: the entry's lower bound moves and warrowing widens n to [-inf,2], so
+// the shared exit loses the return value and a == 2 is UNKNOWN.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: f / unit
+//     f_pp1_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp2_ctx0
+//     f_pp3_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_1: main / unit
+//     main_pp7_ctx0
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   f_pp1_ctx0: pp1
+//       n=[-∞,1]
+//       r=⊤
+//   f_exit_f_ctx0: exit_f
+//       n=[-∞,2]
+//       r=⊤
+//   main_pp7_ctx0: pp7
+//       a=⊤
+//   main_exit_main_ctx0: exit_main
+//       a=⊤
+//   f_pp0_ctx0: pp0
+//       n=[-∞,2]
+//       r=⊤
+//   f_pp2_ctx0: pp2
+//       n=[2,2]
+//       r=⊤
+//   f_pp3_ctx0: pp3
+//       n=[2,2]
+//       r=⊤
+//   main_pp5_ctx0: pp5
+//       a=⊤
+//   f_entry_f_ctx0: entry_f
+//       n=[-∞,2]
+//       r=⊤
+//   main_pp6_ctx0: pp6 [unknown]
+//       a=⊤
+//       check a == 2
+//   main_entry_main_ctx0: entry_main
+//       a=⊤
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]
+//   f_pp0_ctx0 -> f_pp2_ctx0: ![n < 2]
+//   f_pp1_ctx0 -> f_exit_f_ctx0: return 1
+//   f_pp3_ctx0 -> f_exit_f_ctx0: return n * r
+//   main_pp6_ctx0 -> main_pp7_ctx0: check(a == 2)
+//   main_pp7_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   f_pp2_ctx0 -> f_entry_f_ctx0: enter f(n - 1)
+//   f_exit_f_ctx0 -> f_pp3_ctx0: combine r := f(n - 1)
+//   f_pp2_ctx0 -> f_pp3_ctx0: call-to-return f
+//   main_pp5_ctx0 -> f_entry_f_ctx0: enter f(2)
+//   f_exit_f_ctx0 -> main_pp6_ctx0: combine a := f(2)
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(n) {
+  if (n < 2) {
+    return 1;
+  } else {
+    r = f(n - 1);
+    return n * r;
+  }
+}
+
+fun main() {
+  a = f(2);
+  __voblint_check(a == 2); // UNKNOWN
+}

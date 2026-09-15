@@ -1,0 +1,12 @@
+// PARAM: --analysis interval --context none --globals join --timeout 5
+// Backs the "no answer" cell of the site's Globals guide table for join:
+// f(x + 1) grows x without bound, and join never widens the entry, so the solve does not finish;
+// --timeout turns that into the structured rejection this case pins.
+fun f(x) {
+  __voblint_check(x >= 0);
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}

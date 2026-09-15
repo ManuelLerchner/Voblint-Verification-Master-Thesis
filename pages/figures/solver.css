@@ -1,0 +1,139 @@
+/* Globals: how contributions to a procedure entry combine */
+
+:where(.scene-solver) .solver-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+:where(.scene-solver) .flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.88rem;
+  animation: flow-step 9s ease infinite backwards;
+}
+
+:where(.scene-solver) .flow-step b {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--primary);
+  border-radius: 50%;
+  font-size: 0.72rem;
+}
+
+:where(.scene-solver) .flow-step.f2 {
+  animation-delay: 3s;
+}
+
+:where(.scene-solver) .flow-step.f3 {
+  animation-delay: 6s;
+}
+
+@keyframes flow-step {
+  0% {
+    border-color: var(--border);
+    background: var(--surface-muted);
+  }
+  3%,
+  30% {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+  36%,
+  100% {
+    border-color: var(--border);
+    background: var(--surface-muted);
+  }
+}
+
+:where(.scene-solver) .solver-table {
+  min-width: 640px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-solver) .solver-table th[scope="row"] {
+  color: var(--primary);
+  background: var(--surface);
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+:where(.scene-solver) .solver-table td {
+  color: var(--text);
+}
+
+:where(.scene-solver) .solver-table td code {
+  color: var(--text);
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+:where(.scene-solver) .solver-table .c1,
+:where(.scene-solver) .solver-table .c2,
+:where(.scene-solver) .solver-table .c3 {
+  text-align: center;
+}
+
+/* The column of the step being played gets a soft highlight; every value stays readable. */
+:where(.scene-solver) .solver-table td.c1 {
+  animation: column-now 9s ease infinite backwards;
+}
+
+:where(.scene-solver) .solver-table td.c2 {
+  animation: column-now 9s ease infinite backwards;
+  animation-delay: 3s;
+}
+
+:where(.scene-solver) .solver-table td.c3 {
+  animation: column-now 9s ease infinite backwards;
+  animation-delay: 6s;
+}
+
+@keyframes column-now {
+  0% {
+    box-shadow: none;
+  }
+  3%,
+  30% {
+    box-shadow: inset 0 0 0 999px rgb(23 75 87 / 0.07);
+  }
+  36%,
+  100% {
+    box-shadow: none;
+  }
+}
+
+:where(.scene-solver) .solver-table td.best {
+  background: var(--success-soft);
+}
+
+:where(.scene-solver) .solver-table td.best code {
+  color: var(--success);
+}
+
+:where(.scene-solver) .solver-table td.widened {
+  background: var(--accent-soft);
+}
+
+:where(.scene-solver) .solver-table td.widened code {
+  color: var(--accent-hover);
+}
+
+/* Values in the measurement tables are the content itself, not code inside prose. */
+:where(.scene-solver) .solver-table td code {
+  padding: 0;
+  border: 0;
+}

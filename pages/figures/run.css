@@ -1,0 +1,297 @@
+/* What a run is: source, graph, trace */
+
+:where(.scene-run) .run-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+:where(.scene-run) .run-panel {
+  min-width: 0;
+  padding: 14px 14px 12px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-run) .run-code {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+:where(.scene-run) .run-code span {
+  display: inline-block;
+  min-width: 100%;
+  padding-inline: 4px;
+  border-left: 3px solid transparent;
+  border-radius: 3px;
+  cursor: default;
+}
+
+:where(.scene-run) .run-code span.is-current {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+:where(.scene-run) .run-label {
+  margin: 12px 0 4px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+:where(.scene-run) .run-label code {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 400;
+}
+
+:where(.scene-run) .run-residual {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+:where(.scene-run) .run-residual code {
+  padding: 2px 6px;
+  font-size: 0.74rem;
+  background: var(--surface);
+}
+
+:where(.scene-run) .run-residual code.runtime {
+  color: #6b5ca5;
+  border-style: dashed;
+}
+
+:where(.scene-run) .run-residual code.is-next {
+  color: var(--text);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+:where(.scene-run) .run-stack {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-run) .run-stack li code {
+  font-size: 0.74rem;
+}
+
+:where(.scene-run) .run-stack li.empty code {
+  color: var(--text-faint);
+  background: none;
+  border-style: dashed;
+}
+
+.scene-run .run-cfg {
+  max-width: 380px;
+}
+
+:where(.scene-run) .run-cluster {
+  fill: rgb(255 255 255 / 0.6);
+  stroke: var(--border-strong);
+  stroke-dasharray: 4 4;
+}
+
+.scene-run .run-cluster-label {
+  fill: var(--text-muted);
+  font: 700 11px var(--mono);
+}
+
+:where(.scene-run) .run-nodes rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  transition:
+    fill 250ms ease,
+    stroke 250ms ease;
+}
+
+:where(.scene-run) .run-nodes .special rect {
+  fill: #fffbea;
+  stroke: #d99a2b;
+}
+
+:where(.scene-run) .run-nodes .is-hover rect {
+  fill: var(--primary-soft);
+  stroke-width: 2.5;
+}
+
+:where(.scene-run) .run-nodes .is-current rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.scene-run .run-nodes text {
+  fill: var(--text);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+:where(.scene-run) .run-edges line,
+:where(.scene-run) .run-edges path {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition:
+    stroke 250ms ease,
+    stroke-width 250ms ease;
+}
+
+:where(.scene-run) .run-edges .call path {
+  stroke: #9b87d6;
+}
+
+:where(.scene-run) .run-edges .resume path {
+  stroke: #8fb3d9;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-run) .run-edges .cont line {
+  stroke-dasharray: 2 4;
+}
+
+:where(.scene-run) .arrow-call {
+  fill: #9b87d6;
+}
+
+.scene-run .run-edges text {
+  fill: var(--text-faint);
+  font: 10px var(--mono);
+}
+
+:where(.scene-run) .run-edges .is-taken line,
+:where(.scene-run) .run-edges .is-taken path {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.scene-run .run-edges .is-taken text {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+:where(.scene-run) .run-tree {
+  font-size: 0.8rem;
+}
+
+:where(.scene-run) .run-act {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+:where(.scene-run) .run-tree > .run-act {
+  margin-top: 0;
+}
+
+:where(.scene-run) .run-act.is-sink {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft);
+}
+
+:where(.scene-run) .run-act.is-done {
+  background: var(--surface-muted);
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+:where(.scene-run) .run-act-head {
+  margin: 0 0 4px;
+  line-height: 1.3;
+}
+
+:where(.scene-run) .run-act-head code {
+  padding: 0 5px;
+  color: #6b5ca5;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+:where(.scene-run) .run-act-head span {
+  font-weight: 650;
+}
+
+:where(.scene-run) .run-act-head small {
+  color: var(--text-faint);
+}
+
+:where(.scene-run) .run-path {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+:where(.scene-run) .run-path span {
+  padding: 0 5px;
+  background: var(--surface-muted);
+  border-radius: 4px;
+  font: 0.7rem / 1.6 var(--mono);
+}
+
+:where(.scene-run) .run-path span.is-last {
+  color: #ffffff;
+  background: var(--accent);
+}
+
+:where(.scene-run) .run-rules {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+:where(.scene-run) .run-rules > div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-run) .run-rule-kind {
+  color: var(--text-muted);
+  font: 700 0.66rem var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+:where(.scene-run) .run-rules code {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+:where(.scene-run) .run-rules code.none {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+:where(.scene-run) .run-caption {
+  min-height: 4.8em;
+}
+
+:where(.scene-run) .run-steps button {
+  min-width: 34px;
+}
+
+@media (max-width: 1100px) {
+  :where(.scene-run) .run-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-run) .run-rules {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

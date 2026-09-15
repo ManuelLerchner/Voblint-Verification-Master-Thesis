@@ -1,0 +1,143 @@
+/* Loops: widening and narrowing */
+
+:where(.scene-loop) .ticks line {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-loop) .axis-head {
+  fill: var(--border-strong);
+}
+
+:where(.scene-loop) .ticks text {
+  fill: var(--text-muted);
+  font-size: 12px;
+  text-anchor: middle;
+}
+
+:where(.scene-loop) .loop-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.38fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+}
+
+:where(.scene-loop) .loop-code {
+  padding: 16px 0;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
+  font: 0.92rem / 2 var(--mono);
+}
+
+:where(.scene-loop) .lc {
+  display: block;
+  padding: 0 16px;
+  white-space: pre;
+  transition: background 250ms ease;
+}
+
+.scene-loop[data-step="0"] .lc-1,
+.scene-loop[data-step="1"] .lc-3,
+.scene-loop[data-step="2"] .lc-3,
+.scene-loop[data-step="4"] .lc-2,
+.scene-loop[data-step="5"] .lc-4 {
+  background: rgb(94 164 178 / 0.32);
+}
+
+.scene-loop[data-step="3"] .lc-2 {
+  background: rgb(215 102 66 / 0.35);
+}
+
+.scene-loop[data-step="6"] .lc-5 {
+  background: rgb(111 207 151 / 0.32);
+}
+
+:where(.scene-loop) .loop-visual svg {
+  max-width: 720px;
+  margin-inline: 0;
+}
+
+:where(.scene-loop) .loop-captions {
+  min-height: 2.2em;
+  margin-bottom: 8px;
+}
+
+:where(.scene-loop) .loop-captions p {
+  display: none;
+  margin: 0;
+  color: var(--text);
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+:where(.scene-loop) .loop-captions p.accent {
+  color: var(--accent-hover);
+}
+
+:where(.scene-loop) .loop-captions p.good {
+  color: var(--success);
+}
+
+.scene-loop[data-step="0"] [data-for="0"],
+.scene-loop[data-step="1"] [data-for="1"],
+.scene-loop[data-step="2"] [data-for="2"],
+.scene-loop[data-step="3"] [data-for="3"],
+.scene-loop[data-step="4"] [data-for="4"],
+.scene-loop[data-step="5"] [data-for="5"],
+.scene-loop[data-step="6"] [data-for="6"] {
+  display: block;
+  animation: caption-in 350ms ease;
+}
+
+/* The bar spans 0..+inf at scale 1; one unit is 50 of its 480 user units. */
+:where(.scene-loop) .loop-bar {
+  fill: var(--primary);
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transition:
+    transform 600ms cubic-bezier(0.3, 0.7, 0.2, 1),
+    fill 300ms ease;
+}
+
+.scene-loop[data-step="0"] .loop-bar {
+  transform: translateX(-3px) scaleX(0.0125);
+}
+
+.scene-loop[data-step="1"] .loop-bar {
+  transform: scaleX(0.1042);
+}
+
+.scene-loop[data-step="2"] .loop-bar {
+  transform: scaleX(0.2083);
+}
+
+.scene-loop[data-step="3"] .loop-bar {
+  transform: scaleX(1);
+  fill: var(--accent);
+}
+
+.scene-loop[data-step="4"] .loop-bar {
+  transform: scaleX(0.5208);
+}
+
+.scene-loop[data-step="5"] .loop-bar {
+  transform: translateX(247px) scaleX(0.0125);
+}
+
+.scene-loop[data-step="6"] .loop-bar {
+  transform: translateX(247px) scaleX(0.0125);
+  fill: var(--success);
+}
+
+:where(.scene-loop) .loop-chips button.widen[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+@media (max-width: 820px) {
+  :where(.scene-loop) .loop-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

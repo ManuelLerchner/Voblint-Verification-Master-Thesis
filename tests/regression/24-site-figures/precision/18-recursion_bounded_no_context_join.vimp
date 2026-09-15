@@ -1,0 +1,64 @@
+// PARAM: --analysis interval --context none --globals join
+// Backs the "Stops at 10" program of the figure "A call that never stops
+// calling" (no context, join): recursion ends at x = 10, every context
+// keeps x >= 0, and the check is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: f / unit
+//     f_pp1_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp2_ctx0
+//     f_pp4_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_1: main / unit
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   f_pp1_ctx0: pp1
+//       x=[0,10]
+//   f_exit_f_ctx0: exit_f
+//       x=[0,10]
+//   main_exit_main_ctx0: exit_main
+//   f_pp0_ctx0: pp0 [proved]
+//       x=[0,10]
+//       check x >= 0
+//   f_pp2_ctx0: pp2
+//       x=[0,9]
+//   f_pp4_ctx0: pp4
+//       x=[0,10]
+//   main_pp5_ctx0: pp5
+//   f_entry_f_ctx0: entry_f
+//       x=[0,10]
+//   main_pp6_ctx0: pp6
+//   main_entry_main_ctx0: entry_main
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: check(x >= 0)
+//   f_pp1_ctx0 -> f_pp2_ctx0: [x < 10]
+//   f_pp1_ctx0 -> f_pp4_ctx0: ![x < 10]
+//   f_pp4_ctx0 -> f_exit_f_ctx0: return
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   f_pp2_ctx0 -> f_entry_f_ctx0: enter f(x + 1)
+//   f_exit_f_ctx0 -> f_pp4_ctx0: combine
+//   f_pp2_ctx0 -> f_pp4_ctx0: call-to-return f
+//   main_pp5_ctx0 -> f_entry_f_ctx0: enter f(0)
+//   f_exit_f_ctx0 -> main_pp6_ctx0: combine
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(x) {
+  __voblint_check(x >= 0); // PROVED
+  if (x < 10) {
+    f(x + 1);
+  }
+}
+
+fun main() {
+  f(0);
+}

@@ -1,0 +1,135 @@
+/* What an abstract value stands for */
+
+:where(.scene-gamma) .gamma-modes,
+:where(.scene-gamma) .gamma-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:where(.scene-gamma) .gamma-presets {
+  margin-top: 12px;
+}
+
+:where(.scene-gamma) .gamma-modes button,
+:where(.scene-gamma) .gamma-presets button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-gamma) .gamma-presets button {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+:where(.scene-gamma) .gamma-presets button small {
+  color: var(--text-faint);
+  font-family: Inter, ui-sans-serif, sans-serif;
+  font-weight: 600;
+}
+
+:where(.scene-gamma) .gamma-modes button code {
+  padding: 0;
+  background: none;
+}
+
+:where(.scene-gamma) .gamma-modes button[aria-selected="true"],
+:where(.scene-gamma) .gamma-presets button[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+:where(.scene-gamma) .gamma-presets button[aria-pressed="true"] small {
+  color: rgb(255 255 255 / 0.75);
+}
+
+:where(.scene-gamma) .gamma-formula {
+  margin: 18px 0 4px;
+  color: var(--text);
+  font: 700 1.15rem var(--mono);
+  text-align: center;
+}
+
+:where(.scene-gamma) .gamma-formula .eq {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+:where(.scene-gamma) .gamma-line {
+  max-width: 900px !important;
+}
+
+:where(.scene-gamma) .gamma-line .axis {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-gamma) .gamma-line .dot-in {
+  fill: var(--primary);
+}
+
+:where(.scene-gamma) .gamma-line .dot-extra {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:where(.scene-gamma) .gamma-line .dot-out {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-gamma) .gamma-line circle {
+  transition:
+    fill 250ms ease,
+    stroke 250ms ease,
+    r 250ms ease;
+}
+
+:where(.scene-gamma) .gamma-line text {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+  text-anchor: middle;
+}
+
+:where(.scene-gamma) .gamma-line .tail {
+  fill: var(--primary) !important;
+  font-size: 18px !important;
+  font-weight: 700;
+}
+
+.scene-gamma[data-mode="gamma"] .join-only {
+  display: none;
+}
+
+:where(.scene-gamma) .swatch.out {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--border-strong);
+}
+
+:where(.scene-gamma) .gamma-note {
+  min-height: 1.6em;
+  margin: 12px auto 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+/* Code inside a control takes the control's own colors, not the prose code box. */
+:where(.scene-gamma) .gamma-modes button code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}

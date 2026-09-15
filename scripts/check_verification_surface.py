@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import re
 import sys
-import tomllib
 from pathlib import Path
 
+import tomllib
 
 REPO = Path(__file__).resolve().parent.parent
 MANIFEST = REPO / "pixi.toml"
@@ -31,6 +31,7 @@ CI_SETUP_TASKS = {
 CI_ONLY_TASKS = {
     "pages-links-live",
     "pages-site-build",
+    "pages-site-links",
     "thesis-links-live",
     "thesis-links-write",
 }
@@ -111,8 +112,11 @@ def task_description(spec: object) -> str | None:
 def workflow_tasks() -> set[str]:
     # Dropping comment-only lines excludes documentation and shell comments in
     # ``run: |`` blocks while retaining every executable Pixi invocation.
-    lines = [line for line in WORKFLOW.read_text().splitlines()
-             if not line.lstrip().startswith("#")]
+    lines = [
+        line
+        for line in WORKFLOW.read_text().splitlines()
+        if not line.lstrip().startswith("#")
+    ]
     return set(re.findall(r"\bpixi run ([a-z][a-z0-9-]*)", "\n".join(lines)))
 
 
@@ -129,7 +133,9 @@ def active_text_files():
 
 
 def retired_references() -> list[str]:
-    names = "|".join(re.escape(name) for name in sorted(RETIRED_TASKS, key=len, reverse=True))
+    names = "|".join(
+        re.escape(name) for name in sorted(RETIRED_TASKS, key=len, reverse=True)
+    )
     pattern = re.compile(rf"\bpixi run ({names})(?![a-z0-9-])")
     found = []
     for path in active_text_files():
@@ -145,8 +151,9 @@ def main() -> int:
     tasks = all_tasks(manifest)
     problems = []
 
-    undescribed = sorted(name for name, spec in tasks.items()
-                         if not task_description(spec))
+    undescribed = sorted(
+        name for name, spec in tasks.items() if not task_description(spec)
+    )
     if undescribed:
         problems.append("tasks without descriptions: " + ", ".join(undescribed))
 
@@ -163,11 +170,15 @@ def main() -> int:
     if missing_ci:
         problems.append("verify tasks absent from GitHub CI: " + ", ".join(missing_ci))
     if extra_ci:
-        problems.append("GitHub CI verification tasks absent from verify: " + ", ".join(extra_ci))
+        problems.append(
+            "GitHub CI verification tasks absent from verify: " + ", ".join(extra_ci)
+        )
 
     retired = retired_references()
     if retired:
-        problems.append("retired Pixi task invocations remain:\n  " + "\n  ".join(retired))
+        problems.append(
+            "retired Pixi task invocations remain:\n  " + "\n  ".join(retired)
+        )
 
     if "opam exec -- pixi run" in WORKFLOW.read_text():
         problems.append("GitHub CI activates opam outside Pixi tasks")

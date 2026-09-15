@@ -51,14 +51,12 @@ function waitForAnalyzer() {
   });
 }
 
-
 const analyzerReady = waitForAnalyzer();
-
 
 self.onmessage = async (event) => {
   const request = event.data;
 
-  if (!request || request.type !== "run") {
+  if (request?.type !== "run") {
     return;
   }
 
@@ -74,9 +72,7 @@ self.onmessage = async (event) => {
     );
 
     if (typeof result !== "string") {
-      throw new TypeError(
-        `Voblint_run returned ${typeof result}; expected a JSON string.`,
-      );
+      throw new TypeError(`Voblint_run returned ${typeof result}; expected a JSON string.`);
     }
 
     self.postMessage({

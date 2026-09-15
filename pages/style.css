@@ -37,19 +37,11 @@
   --radius: 12px;
   --radius-lg: 18px;
 
-  --shadow:
-    0 1px 2px rgb(20 47 54 / 0.05),
-    0 8px 24px rgb(20 47 54 / 0.06);
+  --shadow: 0 1px 2px rgb(20 47 54 / 0.05), 0 8px 24px rgb(20 47 54 / 0.06);
 
-  --shadow-hover:
-    0 2px 4px rgb(20 47 54 / 0.06),
-    0 14px 34px rgb(20 47 54 / 0.10);
+  --shadow-hover: 0 2px 4px rgb(20 47 54 / 0.06), 0 14px 34px rgb(20 47 54 / 0.1);
 
-  --mono:
-    "SFMono-Regular",
-    Consolas,
-    "Liberation Mono",
-    monospace;
+  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 * {
@@ -68,13 +60,7 @@ body {
   margin: 0;
   color: var(--text);
   background: var(--bg);
-  font-family:
-    Inter,
-    ui-sans-serif,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.65;
   -webkit-font-smoothing: antialiased;
 }
@@ -106,7 +92,8 @@ code {
  * Code inside prose, wherever it appears: captions, cards, list items, hover notes.
  * Code blocks and controls that embed code set their own look.
  */
-:where(p, li, dd, dt, td, th, figcaption, h3, h4, em, strong, span, a, label, button, summary) > code {
+:where(p, li, dd, dt, td, th, figcaption, h3, h4, em, strong, span, a, label, button, summary)
+> code {
   padding: 0.1em 0.38em;
   color: #1d5563;
   background: #e8f0f1;
@@ -284,11 +271,7 @@ h2,
 h3 {
   margin-top: 0;
   color: var(--primary);
-  font-family:
-    "Iowan Old Style",
-    "Palatino Linotype",
-    Georgia,
-    serif;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   font-weight: 650;
   line-height: 1.1;
   letter-spacing: -0.028em;
@@ -379,7 +362,7 @@ h3 {
 .actions a.pipeline {
   color: var(--accent-hover);
   background: var(--accent-soft);
-  border-color: rgb(215 102 66 / 0.30);
+  border-color: rgb(215 102 66 / 0.3);
 }
 
 .actions a.pipeline:hover {
@@ -506,7 +489,7 @@ main {
 .code-editor .cm-editor {
   color: var(--editor-text);
   background: var(--surface-dark);
-  font: 0.9rem/1.6 var(--mono);
+  font: 0.9rem / 1.6 var(--mono);
 }
 
 .code-editor .cm-editor.cm-focused {
@@ -680,7 +663,7 @@ main {
 
 .cm-variable-tooltip {
   padding: 8px 10px;
-  font: 0.76rem/1.45 var(--mono);
+  font: 0.76rem / 1.45 var(--mono);
 }
 
 .cm-variable-tooltip-head {
@@ -1107,7 +1090,10 @@ kbd {
 }
 
 @keyframes problem-in {
-  from { opacity: 0; transform: translateY(-4px); }
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 .problem-body {
@@ -1760,11 +1746,7 @@ button.solver-global-key:hover {
   padding: 3px 0 3px 20px;
   color: var(--text);
   border-left: 3px solid var(--accent);
-  font-family:
-    "Iowan Old Style",
-    "Palatino Linotype",
-    Georgia,
-    serif;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
   font-size: 1.28rem;
   line-height: 1.55;
 }
@@ -1955,7 +1937,7 @@ a:focus-visible {
 }
 
 .resource-card-featured {
-  border-color: rgb(215 102 66 / 0.30);
+  border-color: rgb(215 102 66 / 0.3);
 }
 
 .resource-card-featured:hover {

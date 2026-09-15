@@ -11,8 +11,8 @@ decays differently:
     still loads, it just no longer holds the name the sentence cites;
   * external URLs (GitHub permalinks, project sites), which break on their own.
 
-Links are read from `pages/*.html` and from the explainer script, which builds
-its definition links at runtime.
+Links are read from `pages/*.html` and from the page scripts (`explainer.js`,
+`figures/*.js`), which build some definition links at runtime.
 
     scripts/check_pages_links.py --sources                   internal links, no build needed
     scripts/check_pages_links.py --site build/github-pages   internal links, local build
@@ -78,10 +78,14 @@ def collected() -> dict[str, set[str]]:
             url = m.group(1)
             # A same-page anchor is resolved against the page it sits in.
             add(f"{page.name}{url}" if url.startswith("#") else url, page.name)
-    script = PAGES / "explainer.js"
-    for m in IS_A_CONST.finditer(script.read_text()):
-        session, theory, name = m.groups()
-        add(f"Voblint/{session}/{theory}.html#{theory}.{name}%7Cconst", script.name)
+    scripts = [PAGES / "explainer.js", *sorted((PAGES / "figures").glob("*.js"))]
+    for script in scripts:
+        for m in IS_A_CONST.finditer(script.read_text()):
+            session, theory, name = m.groups()
+            add(
+                f"Voblint/{session}/{theory}.html#{theory}.{name}%7Cconst",
+                str(script.relative_to(PAGES)),
+            )
     return links
 
 
@@ -100,7 +104,11 @@ def check_internal_local(site: Path, url: str) -> str | None:
     target = site / path
     if not target.is_file():
         return f"{path} does not exist in {site}"
-    if fragment and target.suffix == ".html" and not anchor_present(target.read_text(errors="ignore"), fragment):
+    if (
+        fragment
+        and target.suffix == ".html"
+        and not anchor_present(target.read_text(errors="ignore"), fragment)
+    ):
         return f"{path} has no anchor {fragment}"
     return None
 
@@ -110,11 +118,13 @@ def source_of(path: str) -> Path | None:
         if path.startswith(prefix):
             if source is None or source.is_file():
                 return source
-            return source / path[len(prefix):]
+            return source / path[len(prefix) :]
     return PAGES / path
 
 
-def check_internal_sources(url: str, skipped: list[str], stale: list[str]) -> str | None:
+def check_internal_sources(
+    url: str, skipped: list[str], stale: list[str]
+) -> str | None:
     path, fragment = split(url)
     if path.startswith(THEORY_PREFIXES):
         if not ISABELLE_HTML.is_dir():
@@ -127,12 +137,18 @@ def check_internal_sources(url: str, skipped: list[str], stale: list[str]) -> st
         return None
     if not target.is_file():
         return f"{path} has no source file ({target.relative_to(REPO)})"
-    if fragment and target.suffix == ".html" and not anchor_present(target.read_text(errors="ignore"), fragment):
+    if (
+        fragment
+        and target.suffix == ".html"
+        and not anchor_present(target.read_text(errors="ignore"), fragment)
+    ):
         return f"{path} has no anchor {fragment}"
     return None
 
 
-def check_internal_live(base: str, url: str, retries: int, cache: dict[str, str | None]) -> str | None:
+def check_internal_live(
+    base: str, url: str, retries: int, cache: dict[str, str | None]
+) -> str | None:
     path, fragment = split(url)
     full = base.rstrip("/") + "/" + path
     if full not in cache:
@@ -150,7 +166,9 @@ def check_external(url: str) -> tuple[str, str | None]:
     target = urllib.parse.urlunsplit(urllib.parse.urlsplit(url)._replace(fragment=""))
     refused: str | None = None
     for method in ("HEAD", "GET"):
-        request = urllib.request.Request(target, method=method, headers={"User-Agent": USER_AGENT})
+        request = urllib.request.Request(
+            target, method=method, headers={"User-Agent": USER_AGENT}
+        )
         try:
             with urllib.request.urlopen(request, timeout=20) as response:
                 if response.status < 400:
@@ -170,12 +188,25 @@ def check_external(url: str) -> tuple[str, str | None]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     mode = ap.add_mutually_exclusive_group(required=True)
-    mode.add_argument("--sources", action="store_true", help="check against the repository, no build needed")
-    mode.add_argument("--site", type=Path, help="assembled site directory, e.g. build/github-pages")
+    mode.add_argument(
+        "--sources",
+        action="store_true",
+        help="check against the repository, no build needed",
+    )
+    mode.add_argument(
+        "--site", type=Path, help="assembled site directory, e.g. build/github-pages"
+    )
     mode.add_argument("--live", action="store_true", help="check the deployed site")
     ap.add_argument("--base", help="--live: override the site URL")
-    ap.add_argument("--external", action="store_true", help="--site: also check external URLs")
-    ap.add_argument("--retries", type=int, default=6, help="--live: attempts per page while Pages propagates")
+    ap.add_argument(
+        "--external", action="store_true", help="--site: also check external URLs"
+    )
+    ap.add_argument(
+        "--retries",
+        type=int,
+        default=6,
+        help="--live: attempts per page while Pages propagates",
+    )
     args = ap.parse_args()
 
     links = collected()
@@ -187,7 +218,10 @@ def main() -> int:
     base = args.base or pages_base()
 
     if args.site and not args.site.is_dir():
-        print(f"check_pages_links: no site at {args.site} -- run `pixi run pages-site-build`", file=sys.stderr)
+        print(
+            f"check_pages_links: no site at {args.site} -- run `pixi run pages-site-build`",
+            file=sys.stderr,
+        )
         return 1
     if args.live and not base:
         print("check_pages_links: no base URL to verify against", file=sys.stderr)
@@ -217,14 +251,20 @@ def main() -> int:
             broken.append(f"  {url} ({where}): {detail}")
 
     if stale:
-        print(f"check_pages_links: warning: {len(stale)} theory link(s) not found in build/isabelle-html; "
-              "rebuild it with `pixi run isabelle-docs-build` if the names are new:")
+        print(
+            f"check_pages_links: warning: {len(stale)} theory link(s) not found in build/isabelle-html; "
+            "rebuild it with `pixi run isabelle-docs-build` if the names are new:"
+        )
         print("\n".join(stale))
     if skipped:
-        print(f"check_pages_links: {len(skipped)} theory link(s) skipped -- no build/isabelle-html "
-              "(checked against the deployed site on main)")
+        print(
+            f"check_pages_links: {len(skipped)} theory link(s) skipped -- no build/isabelle-html "
+            "(checked against the deployed site on main)"
+        )
     if unverified:
-        print(f"check_pages_links: {len(unverified)} link(s) could not be verified (host refused automated access):")
+        print(
+            f"check_pages_links: {len(unverified)} link(s) could not be verified (host refused automated access):"
+        )
         print("\n".join(unverified))
     if broken:
         print(f"check_pages_links: {len(broken)} broken link(s):")
