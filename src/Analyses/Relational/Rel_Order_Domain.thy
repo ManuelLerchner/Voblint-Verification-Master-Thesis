@@ -139,21 +139,30 @@ text \<open>Pretty-printer, the \<open>relc\<close> analogue of Interval's \<ope
   \<open>HOL-Library.Product_Lexorder\<close>, already imported transitively by every
   file in this session that touches \<^typ>\<open>cfg\<close>), so \<^const>\<open>sorted_list_of_set\<close>
   gives a deterministic, executable enumeration -- the same device this
-  project already relies on for CFG edge sets.\<close>
+  project already relies on for CFG edge sets. The notation follows Goblint's
+  two-variable equality domain, which prints a conjunction \<open>{x=y \<and> z=y}\<close> and its
+  extremes as \<open>\<bottom>\<close> and \<open>\<top>\<close>; here each conjunct is an ordering \<open>x\<le>y\<close>.\<close>
 
 fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> String.literal" where
   "string_of_pairs [] = STR ''''"
-| "string_of_pairs [(x, y)] = x + STR ''<='' + y"
+| "string_of_pairs [(x, y)] = x + sym_le + y"
 | "string_of_pairs ((x, y) # p # ps) =
-      x + STR ''<='' + y + STR '', '' + string_of_pairs (p # ps)"
+      x + sym_le + y + STR '' '' + sym_and + STR '' '' + string_of_pairs (p # ps)"
 
 definition string_of_relc :: "relc \<Rightarrow> String.literal" where
   "string_of_relc d =
      (case d of
-        Bot \<Rightarrow> STR ''BOT''
+        Bot \<Rightarrow> sym_bottom
       | RelC ps \<Rightarrow>
-          (if ps = {} then STR ''(no known relations)''
-           else string_of_pairs (sorted_list_of_set ps)))"
+          (if ps = {} then sym_top
+           else STR ''{'' + string_of_pairs (sorted_list_of_set ps) + STR ''}''))"
+
+lemma string_of_relc_regression:
+  "string_of_relc Bot = STR ''<bottom>''"
+  "string_of_relc (RelC {}) = STR ''<top>''"
+  "string_of_relc (RelC {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
+     STR ''{x<le>y <and> y<le>z}''"
+  by eval+
 
 definition gammaDG_rel :: "relc \<Rightarrow> relc \<Rightarrow> store set" where
   "gammaDG_rel d g = gamma_rel d \<inter> gamma_rel g"

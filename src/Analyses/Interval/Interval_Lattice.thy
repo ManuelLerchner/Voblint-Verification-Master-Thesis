@@ -258,19 +258,38 @@ instance ivl :: bounded_lattice_bot ..
 
 subsection \<open>Abstract domain instantiation\<close>
 
+text \<open>
+  Goblint shows an interval as \<open>[l,u]\<close>, an unconstrained end as the machine
+  integer's limit in decimal; these bounds are unbounded, so it prints as \<open>\<infinity>\<close>. Every
+  empty representation prints as \<open>\<bottom>\<close>, not only \<^const>\<open>bot\<close>. A standalone
+  interval prints its top as \<open>\<top>\<close>, as Goblint's integer-domain lifter does,
+  while a product component keeps the bounds.
+\<close>
+
 fun string_of_eint :: "eint \<Rightarrow> String.literal" where
-    "string_of_eint MinInf  = STR ''-inf''"
-  | "string_of_eint PlusInf = STR ''+inf''"
+    "string_of_eint MinInf  = STR ''-'' + sym_infinity"
+  | "string_of_eint PlusInf = STR ''+'' + sym_infinity"
   | "string_of_eint (Fin n) = string_of_int n"
 
 fun string_of_ivl :: "ivl \<Rightarrow> String.literal" where
-  "string_of_ivl (Ivl l u) = STR ''['' + string_of_eint l + STR '','' + string_of_eint u + STR '']''"
+  "string_of_ivl (Ivl l u) =
+     (if is_bottom_ivl (Ivl l u) then sym_bottom
+      else STR ''['' + string_of_eint l + STR '','' + string_of_eint u + STR '']'')"
+
+lemma string_of_ivl_regression:
+  "string_of_ivl (Ivl (Fin (-3)) (Fin 5)) = STR ''[-3,5]''"
+  "string_of_ivl (Ivl MinInf (Fin 0)) = STR ''[-<infinity>,0]''"
+  "string_of_ivl (Ivl MinInf PlusInf) = STR ''[-<infinity>,+<infinity>]''"
+  "string_of_ivl (Ivl (Fin 5) (Fin (-1))) = STR ''<bottom>''"
+  "string_of_ivl (Ivl PlusInf PlusInf) = STR ''<bottom>''"
+  by eval+
 
 instantiation ivl :: sound_domain begin
 definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
 definition is_empty_ivl [simp]: "is_empty (a :: ivl) = is_bottom_ivl a"
 definition is_full_ivl [simp]: "is_full (a :: ivl) = is_top_ivl a"
-definition to_string_ivl [simp]: "to_string (a :: ivl) = string_of_ivl a"
+definition to_string_ivl [simp]:
+  "to_string (a :: ivl) = (if is_top_ivl a then sym_top else string_of_ivl a)"
 instance proof intro_classes
   show "gamma (bot :: ivl) = {}"
     by (simp add: gamma_ivl_bot)
@@ -295,6 +314,11 @@ next
     by (simp add: is_top_ivl_correct_gamma)
 qed
 end
+
+lemma to_string_ivl_regression:
+  "to_string (top :: ivl) = STR ''<top>''"
+  "to_string (Ivl (Fin 0) PlusInf) = STR ''[0,+<infinity>]''"
+  by eval+
 
 
 

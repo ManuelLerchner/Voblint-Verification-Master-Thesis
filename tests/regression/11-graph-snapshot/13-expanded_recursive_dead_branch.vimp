@@ -48,32 +48,32 @@
 //   main_exit_main_ctx0: exit_main
 //       a=[6,6]
 //   main_pp6_ctx0: pp6
-//       a=[-inf,+inf]
+//       a=⊤
 //   main_pp7_ctx0: pp7 [proved]
 //       a=[6,6]
 //       check a == 6
 //   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
+//       a=⊤
 //   f_pp1_ctx0: pp1 [proved]
 //       n=[1,1]
-//       r=[-inf,+inf]
+//       r=⊤
 //       check n == 1
 //   f_pp2_ctx0: pp2
 //       n=[1,1]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_exit_f_ctx0: exit_f
 //       n=[1,1]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp0_ctx0: pp0
 //       n=[1,1]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp3_ctx0: pp3 [unreachable]
 //       unreachable
 //   f_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   f_entry_f_ctx0: entry_f
 //       n=[1,1]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //       check n == 1 [dead]
@@ -84,16 +84,16 @@
 //       r=[1,1]
 //   f_pp0_ctx1: pp0
 //       n=[2,2]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp3_ctx1: pp3
 //       n=[2,2]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp4_ctx1: pp4
 //       n=[2,2]
 //       r=[1,1]
 //   f_entry_f_ctx1: entry_f
 //       n=[2,2]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp1_ctx2: pp1 [unreachable]
 //       unreachable
 //       check n == 1 [dead]
@@ -104,16 +104,16 @@
 //       r=[2,2]
 //   f_pp0_ctx2: pp0
 //       n=[3,3]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp3_ctx2: pp3
 //       n=[3,3]
-//       r=[-inf,+inf]
+//       r=⊤
 //   f_pp4_ctx2: pp4
 //       n=[3,3]
 //       r=[2,2]
 //   f_entry_f_ctx2: entry_f
 //       n=[3,3]
-//       r=[-inf,+inf]
+//       r=⊤
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]

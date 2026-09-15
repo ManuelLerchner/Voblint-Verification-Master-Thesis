@@ -1,13 +1,14 @@
 # Check-discharge architecture
 
-> **Status:** partly stale. "Pipeline", "Layer responsibilities" and "Why no
-> automatic sublocale" name retired pieces: `check_true`/`check_false` are one
-> `check_query`; the `derived_*` locales are `numeric_query_judgments`
-> (`Abstract_Numeric_Queries.thy`), interpreted for every `backward_domain` in
-> `Backward_Numeric_Queries.thy`; `backward_domain` lives in
-> `Backward_Domain.thy`; `unit_dg_pipeline` and `Analysis_GraphViz.thy` no
-> longer exist. The current inventory is the `Checks/` row of
-> `src/Abstract_Interpreter/Framework/README.md`.
+> **Status:** partly stale. "Pipeline" (above the rendering branch), "Layer
+> responsibilities" and "Why no automatic sublocale" name retired pieces:
+> `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
+> `numeric_query_judgments` (`Abstract_Numeric_Queries.thy`), interpreted for
+> every `backward_domain` in `Backward_Numeric_Queries.thy`; `backward_domain`
+> lives in `Backward_Domain.thy`; `unit_dg_pipeline`, `abstract_domain` and
+> `backward_domain_mono` no longer exist. The current inventory is the
+> `Checks/` row of `src/Abstract_Interpreter/Framework/README.md`. The
+> rendering sections describe the tree as it stands.
 
 Overview of how a compiled `__voblint_check(...)` condition becomes both a
 GraphViz-rendered proof status and a semantic soundness guarantee. This is
@@ -18,9 +19,9 @@ proof status lives in the `.thy` files themselves (`docs/PROOF_PHASES.md`).
 
 `abstract_check_domain` produces two independent outputs from the same
 node-indexed abstract environment: an *executable classification* that
-GraphViz renders directly, and a *logical discharge* that `checks_proven`
-turns into a semantic guarantee. GraphViz never consumes `checks_proven`
-— rendering does not depend on proving anything.
+`run_voblint` exports and the OCaml CLI renders, and a *logical discharge*
+that `checks_proven` turns into a semantic guarantee. Rendering never
+consumes `checks_proven` — it does not depend on proving anything.
 
 ```text
 VIMP source
@@ -44,11 +45,12 @@ abstract_check_domain (Abstract_Checks.thy)
     |        v
     |    Check_Proved / Check_Refuted / Check_Unknown
     |        |
+    |        | run_voblint (Analysis_Run.thy): state_checks, res_checks
     |        v
-    |    check_result_annotation (Analysis_GraphViz.thy)
+    |    node status (cli/result/context_graph.ml)       [OCaml]
     |        |
     |        v
-    |    rendered CFG, proof status as node color
+    |    rendered CFG, proof status as node color (cli/render/render_dot.ml)
     |
     +--> abstract_checks_proven                       [proposition]
              |
@@ -178,16 +180,24 @@ exit.
 The computed table and transfer soundness are necessarily per-domain; the
 bridge above them is not.
 
-### `Analysis_GraphViz.thy` — rendering
+### `render_dot.ml` — rendering
 
-`check_result_annotation :: check_result -> bexp -> graphviz_node_annotation`
-is the single status-to-style mapping (`Check_Proved` dark green,
-`Check_Refuted` red, `Check_Unknown` grey), shared by every domain's
-worked example. It depends only on `check_result` and `bexp` — nothing
-Sign- or Interval-specific. The generic entry/exit/default node styling
-(`analysis_node_attrs`) uses green/light-yellow for entry and neutral
-gray for exit, so a refuted check's red never collides with an unrelated
-procedure-exit node.
+Rendering lives entirely in OCaml, outside every soundness theorem.
+`Context_graph.status_of` (`cli/result/context_graph.ml`) gives each node one
+status from its `result_state`: `Unreachable` when `state_value` is `Bot`;
+otherwise the strongest verdict among its `state_checks` and those
+`state_diagnostics` that are not `Check_Proved`, ordered `Refuted`, `Unknown`,
+`Proved`; no status when the node has neither. A proved division is not a
+finding, so it never colours a node.
+
+`Render_dot.node_attrs` (`cli/render/render_dot.ml`) is the single
+status-to-style mapping: `Proved` dark green on pale green, `Refuted` firebrick
+on misty rose, `Unknown` dark goldenrod on light goldenrod, `Unreachable` a
+dashed gray box. It reads only the status and the node kind — nothing
+domain-specific. A node without a status is styled by kind: a light-green box
+for a statement point, an orange double circle on light yellow for every
+procedure entry and exit, so a refuted check's red never collides with an
+unrelated procedure-exit node.
 
 ## Why no automatic sublocale
 

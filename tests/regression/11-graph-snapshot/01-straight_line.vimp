@@ -24,9 +24,9 @@
 //   main_exit_main_ctx0: exit_main
 //       x=[5,5]
 //   main_pp0_ctx0: pp0
-//       x=[-inf,+inf]
+//       x=⊤
 //   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
+//       x=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5

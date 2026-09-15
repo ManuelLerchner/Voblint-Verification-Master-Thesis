@@ -13,51 +13,51 @@
 //     main_pp3_ctx0
 //     main_pp4_ctx0
 //     main_entry_main_ctx0
-//   cluster_ctx_1: square / sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//   cluster_ctx_1: square / 3
 //     square_exit_square_ctx0
 //     square_pp0_ctx0
 //     square_entry_square_ctx0
-//   cluster_ctx_2: square / sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//   cluster_ctx_2: square / 4
 //     square_exit_square_ctx1
 //     square_pp0_ctx1
 //     square_entry_square_ctx1
 //
 // nodes:
 //   main_pp5_ctx0: pp5 [proved]
-//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
-//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       a=9
+//       b=16
 //       check 0 < b
 //   main_pp6_ctx0: pp6
-//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
-//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       a=9
+//       b=16
 //   main_exit_main_ctx0: exit_main
-//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
-//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       a=9
+//       b=16
 //   main_pp2_ctx0: pp2
-//       a=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
-//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       a=⊤
+//       b=⊤
 //   main_pp3_ctx0: pp3
-//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
-//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       a=9
+//       b=⊤
 //   main_pp4_ctx0: pp4 [proved]
-//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
-//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//       a=9
+//       b=16
 //       check 0 < a
 //   main_entry_main_ctx0: entry_main
-//       a=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
-//       b=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       a=⊤
+//       b=⊤
 //   square_exit_square_ctx0: exit_square
-//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       n=3
 //   square_pp0_ctx0: pp0
-//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       n=3
 //   square_entry_square_ctx0: entry_square
-//       n=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       n=3
 //   square_exit_square_ctx1: exit_square
-//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//       n=4
 //   square_pp0_ctx1: pp0
-//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//       n=4
 //   square_entry_square_ctx1: entry_square
-//       n=sign=Positive, ivl=[4,4], parity=Even, congruence==4
+//       n=4
 //
 // edges:
 //   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n

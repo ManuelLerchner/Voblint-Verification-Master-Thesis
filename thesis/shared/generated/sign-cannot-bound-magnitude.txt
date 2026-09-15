@@ -4,6 +4,6 @@ Arithmetic diagnostics
 None
 
 Assertion checks
-Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  --------------
-22:3      pp5    total<100  UNKNOWN  total=Positive
+Location  Point  Condition    Verdict  State
+--------  -----  -----------  -------  -------
+22:3      pp5    total < 100  UNKNOWN  total=+

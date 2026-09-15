@@ -26,17 +26,17 @@
 //       x=[0,0]
 //       y=[5,5]
 //   main_pp2_ctx0: pp2
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   main_pp3_ctx0: pp3
 //       x=[0,0]
-//       y=[-inf,+inf]
+//       y=⊤
 //   main_pp4_ctx0: pp4
 //       x=[0,0]
 //       y=[5,5]
 //   main_entry_main_ctx0: entry_main
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=⊤
+//       y=⊤
 //   f_exit_f_ctx0: exit_f
 //       n=[0,0]
 //   f_pp0_ctx0: pp0 [refuted]

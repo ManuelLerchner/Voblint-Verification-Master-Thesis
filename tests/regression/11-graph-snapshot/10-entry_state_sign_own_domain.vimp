@@ -25,41 +25,41 @@
 //     main_pp3_ctx0
 //     main_pp4_ctx0
 //     main_entry_main_ctx0
-//   cluster_ctx_1: square / Positive
+//   cluster_ctx_1: square / +
 //     square_exit_square_ctx0
 //     square_pp0_ctx0
 //     square_entry_square_ctx0
 //
 // nodes:
 //   main_pp5_ctx0: pp5 [proved]
-//       a=Positive
-//       b=Positive
+//       a=+
+//       b=+
 //       check 0 < b
 //   main_pp6_ctx0: pp6
-//       a=Positive
-//       b=Positive
+//       a=+
+//       b=+
 //   main_exit_main_ctx0: exit_main
-//       a=Positive
-//       b=Positive
+//       a=+
+//       b=+
 //   main_pp2_ctx0: pp2
-//       a=Top
-//       b=Top
+//       a=⊤
+//       b=⊤
 //   main_pp3_ctx0: pp3
-//       a=Positive
-//       b=Top
+//       a=+
+//       b=⊤
 //   main_pp4_ctx0: pp4 [proved]
-//       a=Positive
-//       b=Positive
+//       a=+
+//       b=+
 //       check 0 < a
 //   main_entry_main_ctx0: entry_main
-//       a=Top
-//       b=Top
+//       a=⊤
+//       b=⊤
 //   square_exit_square_ctx0: exit_square
-//       n=Positive
+//       n=+
 //   square_pp0_ctx0: pp0
-//       n=Positive
+//       n=+
 //   square_entry_square_ctx0: entry_square
-//       n=Positive
+//       n=+
 //
 // edges:
 //   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n

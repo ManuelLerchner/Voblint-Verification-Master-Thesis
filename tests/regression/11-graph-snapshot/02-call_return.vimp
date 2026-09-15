@@ -27,14 +27,14 @@
 //   inc_pp0_ctx0: pp0
 //       n=[5,5]
 //   main_pp2_ctx0: pp2
-//       r=[-inf,+inf]
+//       r=⊤
 //   inc_entry_inc_ctx0: entry_inc
 //       n=[5,5]
 //   main_pp3_ctx0: pp3 [proved]
 //       r=[6,6]
 //       check 0 < r
 //   main_entry_main_ctx0: entry_main
-//       r=[-inf,+inf]
+//       r=⊤
 //
 // edges:
 //   inc_pp0_ctx0 -> inc_exit_inc_ctx0: return n + 1

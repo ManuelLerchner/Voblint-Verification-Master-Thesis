@@ -23,7 +23,7 @@ submodule.
 ## Why a separate viewer at all
 
 A product domain does not fit on a graph. `--analysis int` prints one variable
-as `sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a whole program of
+as `signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ`, and a whole program of
 those is unreadable. The XML report separates graph from state the way Goblint's
 own HTML output does.
 

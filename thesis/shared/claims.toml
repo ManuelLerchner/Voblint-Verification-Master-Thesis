@@ -12,7 +12,7 @@
 [claims.sign-cannot-bound-magnitude]
 argv = ["--analysis", "sign",
         "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp"]
-why = "The known-imprecision example: sign tracks Positive exactly but has no magnitude, so total<100 stays UNKNOWN."
+why = "The known-imprecision example: sign tracks total=+ (positive) exactly but has no magnitude, so total<100 stays UNKNOWN."
 
 [claims.parse-error-shape]
 argv = ["--analysis", "interval",

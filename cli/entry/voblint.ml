@@ -548,7 +548,7 @@ let () =
     end
   end;
   let result_for k =
-    match C.run_voblint k !globals context prog with
+    match Value_symbols.decode_answer (C.run_voblint k !globals context prog) with
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.Analysed result ->
         if !html || !dot || !graph_snapshot then

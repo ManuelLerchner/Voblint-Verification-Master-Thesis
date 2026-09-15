@@ -6,9 +6,9 @@
 //
 // A node whose context is unreachable renders as "unreachable", not as an
 // ordinary state whose variables happen to read bottom. The distinction is
-// observable and not cosmetic: an empty interval prints as [+inf,-inf], which
-// is a perfectly ordinary-looking variable line, so a bottom reading drawn as
-// a state paints dead code as a live node.
+// observable and not cosmetic: an empty interval prints as x=⊥, which is
+// still an ordinary variable line in an ordinary state box, so a bottom
+// reading drawn as a state paints dead code as a live node.
 //
 // The sibling else branch still renders once per context, with that context's
 // own n, so suppressing the dead node costs nothing at the live ones.

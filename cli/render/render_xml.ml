@@ -51,44 +51,26 @@ let split_binding line =
         Some (name, String.sub line (i + 1) (String.length line - i - 1))
       else None
 
-(* A product domain renders one variable as "sign=Top, ivl=[-inf,+inf],
-   parity=Top, congruence==0 (mod 1)". Splitting it into components gives
-   node.xsl a nested <map> to fold instead of one very wide line. The split
-   only fires before a "<word>=", which leaves interval bounds like
-   [-inf,+inf] intact. *)
+(* A product domain renders a value it cannot print as one integer, ⊤ or ⊥ as
+   its components, "signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ",
+   as goblint's IntDomTuple does. Splitting it gives node.xsl a nested <map> to
+   fold instead of one very wide line. Only a product joins with "; ", and the
+   split needs every part to be "<word>:<value>". *)
 let split_components value =
-  let n = String.length value in
-  let starts_binding i =
-    let j = ref i in
-    while !j < n && is_ident_char value.[!j] do
-      incr j
-    done;
-    !j > i && !j < n && value.[!j] = '='
+  let rec parts start i =
+    if i + 1 >= String.length value then [ String.sub value start (String.length value - start) ]
+    else if value.[i] = ';' && value.[i + 1] = ' ' then
+      String.sub value start (i - start) :: parts (i + 2) (i + 2)
+    else parts start (i + 1)
   in
-  let parts = ref [] and start = ref 0 and i = ref 0 in
-  while !i < n do
-    if
-      !i + 1 < n
-      && value.[!i] = ','
-      && value.[!i + 1] = ' '
-      && starts_binding (!i + 2)
-    then begin
-      parts := String.sub value !start (!i - !start) :: !parts;
-      i := !i + 2;
-      start := !i
-    end
-    else incr i
-  done;
-  parts := String.sub value !start (n - !start) :: !parts;
-  let parts = List.rev !parts in
   let split p =
-    match String.index_opt p '=' with
-    | None -> None
-    | Some k ->
+    match String.index_opt p ':' with
+    | Some k when k > 0 && String.for_all is_ident_char (String.sub p 0 k) ->
         Some (String.sub p 0 k, String.sub p (k + 1) (String.length p - k - 1))
+    | _ -> None
   in
-  let split_parts = List.map split parts in
-  if List.length parts > 1 && List.for_all (fun x -> x <> None) split_parts then
+  let split_parts = List.map split (parts 0 0) in
+  if List.length split_parts > 1 && List.for_all Option.is_some split_parts then
     Some (List.filter_map Fun.id split_parts)
   else None
 
@@ -205,7 +187,7 @@ let node_xml ~source_file ~fn ~loc ~blocks =
     | None -> (0, 0, 0, 0, 0)
   in
   Printf.sprintf
-    "<?xml version=\"1.0\" ?>\n\
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../node.xsl\"?>\n\
      <loc><call id=\"%s\" file=\"%s\" fun=\"%s\" line=\"%d\" order=\"%d\" \
      column=\"%d\" endLine=\"%d\" endColumn=\"%d\" synthetic=\"false\">\n\
@@ -221,7 +203,7 @@ let node_xml ~source_file ~fn ~loc ~blocks =
 
 let index_xml ~source_file ~fns =
   Printf.sprintf
-    "<?xml version=\"1.0\" ?>\n\
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"report.xsl\"?>\n\
      <report><file name=\"%s\">\n\
      %s\n\
@@ -299,7 +281,7 @@ let globals_xml ~blocks =
                 per_domain))
   in
   Printf.sprintf
-    "<?xml version=\"1.0\" ?>\n\
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../globals.xsl\"?>\n\
      <globs>\n\
      %s</globs>\n"
@@ -397,7 +379,7 @@ let warn_text c =
 
 let warn_xml ~source_file c =
   Printf.sprintf
-    "<?xml version=\"1.0\" ?>\n\
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../warn.xsl\"?>\n\
      <warning>\n\
      <text file=\"%s\" line=\"%d\" column=\"%d\">%s</text></warning>\n"
@@ -463,7 +445,7 @@ let file_xml ~source_text ~checks ~line_nodes ~dead_lines =
       lines
   in
   Printf.sprintf
-    "<?xml version=\"1.0\" ?>\n\
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../file.xsl\"?>\n\
      <file>\n\
      %s\n\

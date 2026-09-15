@@ -60,7 +60,7 @@ pixi run voblint --analysis interval --dot tests/regression/02-control-flow/prec
 </p>
 
 A product domain does not fit on a graph. One variable of the `int` domain
-prints as `sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a whole
+prints as `signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ`, and a whole
 program of those is unreadable. `--html` writes a browsable report instead: the
 graph stays sparse, each node's full state lives in its own document, and
 clicking a node or a source line shows it. `pixi run html-report-serve` serves and
@@ -475,7 +475,7 @@ Sign and Parity likewise. Congruence carries the only real arithmetic
 inversion, and it is the fourth component. The
 composite's
 reduction step then re-derives the other three views from that tightened
-operand, giving `y = [2,2]`, `Positive`, `Even`, `==2`. The gain is the extra
+operand, giving `y = [2,2]`, `+`, `2ℤ`, `2`. The gain is the extra
 component *plus* cross-component reduction, not a better interval transfer
 ([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
 [`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).

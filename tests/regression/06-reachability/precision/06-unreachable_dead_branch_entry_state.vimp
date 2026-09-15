@@ -20,7 +20,7 @@
 // The graph block below is the same distinction at the rendering surface: the
 // dead check node carries "[dead]" and no state lines at all, where reading
 // the solved unknown directly would have drawn it as an undecided check over
-// an x=[+inf,-inf] store -- a live-looking node in the same grey a check the
+// an x=⊥ store -- a live-looking node in the same grey a check the
 // abstraction genuinely could not settle carries.
 // EXPECT-GRAPH-BEGIN
 // clusters:

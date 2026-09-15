@@ -75,9 +75,9 @@ graphviz = "*"
 html-report-serve = { cmd = "bash scripts/mk/report.sh", description = "Serve an existing HTML analysis report and open it in a browser." }
 # Pins the emitted directory's shape, which is a contract with a frontend this
 # repository does not own -- see the test module's own docstring.
-html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = [
+html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py tests/test_value_rendering.py", depends-on = [
   "cli-build",
-], description = "Check the emitted report structure consumed by the g2html frontend." }
+], description = "Check the emitted report structure consumed by the g2html frontend, and how abstract values read in every rendering." }
 # Sweeps the whole fixture corpus, each under its own PARAM line, for the
 # faults that only show up on particular programs -- see the script's docstring.
 html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = [

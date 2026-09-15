@@ -30,6 +30,7 @@
  (name voblint_rendering)
  (wrapped false)
  (modules
+  value_symbols
   result_text
   context_graph
   render_text

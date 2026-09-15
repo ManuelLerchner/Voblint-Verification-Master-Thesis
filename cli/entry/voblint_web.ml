@@ -107,7 +107,8 @@ let run analysis_js globals_js context_js context_depth source_js =
           in
           let analysis_start = now_ms () in
           let answer =
-            C.run_voblint analysis globals context program
+            Value_symbols.decode_answer
+              (C.run_voblint analysis globals context program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =

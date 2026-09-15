@@ -430,6 +430,53 @@ let returns_value result =
       (fun (u, a, _) -> match a with C.EA_Ret (Some _, _) -> owner_of u = name | _ -> false)
       (A.intra_edges g)
 
+(* One row per procedure entry per context: the seed a call publishes and the callee
+   entry reads back, named exactly as every other report names it. The analyses
+   run_voblint runs keep every variable in the local state, so the analysis-wide
+   slot is never side-effected and is left out.
+
+   A seed holds the whole entered frame, whose other locals the entry has just reset
+   to top; only the callee's formals and the program's globals carry information, so
+   only those lines are kept. Each row also names the graph node it feeds: its
+   procedure's entry in the context it is keyed by, absent when no solved context
+   enters that procedure. *)
+let seeds_json program result (graph : G.t) =
+  let entry_of f i =
+    List.find_map
+      (fun (n : G.node) ->
+        match n.point with
+        | C.FunctionEntry g when g = f && n.context = i -> Some n.id
+        | _ -> None)
+      graph.nodes
+  in
+  let globals = C.declared_global_vars program in
+  let shown f line =
+    let formals =
+      match C.prog_table program f with
+      | Some (C.Proc_decl_ext (formals, _, ())) -> formals
+      | None -> []
+    in
+    match String.index_opt line '=' with
+    | Some i ->
+        let name = String.sub line 0 i in
+        List.mem name formals || List.mem name globals
+    | None -> false
+  in
+  let seed (g, (key, lines)) =
+    match C.global_key g with
+    | C.Global_Shared -> None
+    | C.Global_Seed (f, i) ->
+        let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in
+        let reachable = match C.global_state g with C.Bot -> false | C.Lifted _ -> true in
+        let lines = if reachable then List.filter (shown f) lines else lines in
+        Some
+          (Printf.sprintf
+             "{\"key\":%s,\"procedure\":%s,\"entry\":%s,\"reachable\":%b,\"lines\":%s}"
+             (json_string key) (json_string f) (json_option json_string entry) reachable
+             (json_list json_string lines))
+  in
+  "[" ^ String.concat "," (List.filter_map seed (List.combine (C.res_globals result) (A.global_rows result))) ^ "]"
+
 let result_json analysis_ms program ~check_positions ~stmt_positions ~header_positions ~raw result =
   let checks =
     positioned_checks (C.res_checks result) check_positions
@@ -441,10 +488,11 @@ let result_json analysis_ms program ~check_positions ~stmt_positions ~header_pos
   let graph = Context_graph.build program result in
   let contexts = Array.of_list (C.res_contexts result) in
   Printf.sprintf
-    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"raw\":%s,\"graph\":%s}"
+    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"seeds\":%s,\"raw\":%s,\"graph\":%s}"
     analysis_ms checks diagnostics
     (json_list statement_json stmt_positions)
     (json_list (procedure_json program (returns_value result)) header_positions)
     (nodes_json graph (context_key contexts stmt_positions))
+    (seeds_json program result graph)
     raw
     (json_string (Render_dot.render graph))

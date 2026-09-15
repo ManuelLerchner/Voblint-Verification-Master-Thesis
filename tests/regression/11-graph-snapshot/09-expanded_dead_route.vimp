@@ -27,36 +27,36 @@
 //
 // nodes:
 //   main_pp3_ctx0: pp3
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //       x=[5,5]
 //   main_pp8_ctx0: pp8
-//       a=[-inf,+inf]
+//       a=⊤
 //       b=[7,7]
 //       x=[5,5]
 //   main_exit_main_ctx0: exit_main
-//       a=[-inf,+inf]
+//       a=⊤
 //       b=[7,7]
 //       x=[5,5]
 //   main_pp2_ctx0: pp2
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       x=[-inf,+inf]
+//       a=⊤
+//       b=⊤
+//       x=⊤
 //   main_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   main_pp6_ctx0: pp6
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //       x=[5,5]
 //   main_pp7_ctx0: pp7 [proved]
-//       a=[-inf,+inf]
+//       a=⊤
 //       b=[7,7]
 //       x=[5,5]
 //       check b == 7
 //   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       x=[-inf,+inf]
+//       a=⊤
+//       b=⊤
+//       x=⊤
 //   f_exit_f_ctx0: exit_f
 //       n=[7,7]
 //   f_pp0_ctx0: pp0
