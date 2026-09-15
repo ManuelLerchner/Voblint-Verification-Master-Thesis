@@ -94,10 +94,10 @@ solver layer beyond ordinary code-generation trust.
 ## 5. Soundness endpoints
 
 The chain ends at `run_voblint_certified_source_sound` (`Analysis_Certified.thy`):
-for every configuration the dispatcher answers with check rows, a source run's
+for every configuration the dispatcher answers, a source run's
 store lies in the analysis result at a genuinely reachable node, and every
-definite verdict printed there holds for that store.
-`run_voblint_dead_row_unreached`, beside it, states separately that a dead row's
+definite verdict listed there holds for that store.
+`run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
 point is unreachable, at every configuration. The caller owes `config_terminates D solver ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:

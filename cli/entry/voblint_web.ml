@@ -115,19 +115,19 @@ let run analysis_js solver_js context_js context_depth source_js =
           in
           let analysis_start = now_ms () in
           let answer =
-            C.run_program analysis (solver_argument browser_solver) context program
+            C.run_voblint analysis (solver_argument browser_solver) context program
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
-            Render_json.run_program_json ~kind:analysis ~solver:(solver_argument browser_solver)
+            Render_json.run_voblint_json ~kind:analysis ~solver:(solver_argument browser_solver)
               ~ctx:context program answer
           in
           match answer with
-          | C.Result_Malformed -> Render_json.error_json ~raw "Program is not well-formed"
-          | C.Result_Unsupported ->
+          | C.Malformed_Program -> Render_json.error_json ~raw "Program is not well-formed"
+          | C.Unsupported_Configuration ->
               Render_json.error_json ~raw
                 "This domain, solver, and context combination is not supported"
-          | C.Result_Analysed result ->
+          | C.Analysed result ->
               Render_json.result_json analysis_ms program ~check_positions ~stmt_positions
                 ~header_positions ~raw result
         with Vimp_frontend.Parse_error { line; col; msg; _ } ->

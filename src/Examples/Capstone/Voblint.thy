@@ -104,7 +104,7 @@ text \<open>
 
   \<^bold>\<open>Where the chain ends.\<close>  At the operation the CLI actually calls and code
   generation actually exports, not at an internal solved system.
-  \<open>run_program_source_sound\<close> says: run the source program, stop wherever you
+  \<open>run_voblint_source_sound\<close> says: run the source program, stop wherever you
   like, and the answer describes your store at some graph node corresponding to
   where you stopped.  Three conjuncts, because a result makes three claims --- there is
   a graph node and frame stack for where you stopped, the abstract state filed
@@ -127,14 +127,14 @@ text \<open>
   \<^bold>\<open>One statement over every configuration.\<close>  Those endpoints are one per
   configuration --- a domain, a solver discipline and a context policy --- and
   every configuration the dispatcher answers with check rows has one, all 32 of
-  them.  @{thm [source] run_program_certified_source_sound}, in
+  them.  @{thm [source] run_voblint_certified_source_sound}, in
   \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, states the result once with the
   configuration as an argument: what a caller owes is
   \<open>config_terminates D solver ctx p\<close>, and neither coverage, configuration
   legality nor well-formedness is a premise, because a terminating solve is
   closed along its live dependencies, an unsupported pairing answers
-  \<open>Result_Unsupported\<close> and a malformed program answers
-  \<open>Result_Malformed\<close>.  The case split lives in that predicate and in
+  \<open>Unsupported_Configuration\<close> and a malformed program answers
+  \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
   \<open>analysis_result_covers\<close> rather than in the statement, for the reason
   \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
   is the domain's own carrier.
@@ -501,9 +501,9 @@ text \<open>
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
     \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
       every configuration the dispatcher answers with check rows
-      (@{thm [source] run_program_certified_source_sound}), and the dead-check
+      (@{thm [source] run_voblint_certified_source_sound}), and the dead-check
       guarantee at the same entry point
-      (@{thm [source] run_program_dead_check_unreached}).
+      (@{thm [source] run_voblint_dead_check_unreached}).
     \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
       statement instantiated at one program, with every premise discharged.
 

@@ -191,16 +191,16 @@ let nodes_json (graph : G.t) context_key =
   json_list (node_json graph context_of context_key incoming entered exit_of) graph.nodes
 
 (* -------------------------------------------------------------------------- *)
-(* The run_program call, as data                                              *)
+(* The run_voblint call, as data                                              *)
 (* -------------------------------------------------------------------------- *)
 
-(* What run_program was given and what it answered, serialized without
+(* What run_voblint was given and what it answered, serialized without
    interpretation: records become objects keyed by their Isabelle field names,
    a datatype value is its constructor's name when it takes no arguments and
    otherwise an object with that name as its one key, an option is null or its
    value, and a pair is a two-element array. Association lists stay arrays of
    pairs, so their order and any repeated key survive. Abstract values arrive
-   as the strings run_program's own rendering produced.
+   as the strings run_voblint's own rendering produced.
 
    Two fields are absent because the export keeps their types abstract: an
    arithmetic obligation's condition and an arithmetic diagnostic's second
@@ -356,10 +356,10 @@ let run_result_json r =
       ("res_diagnostics", json_list arithmetic_diagnostic_json (C.res_diagnostics r));
     ]
 
-let program_answer_json = function
-  | C.Result_Malformed -> tagged "Result_Malformed" []
-  | C.Result_Unsupported -> tagged "Result_Unsupported" []
-  | C.Result_Analysed r -> tagged "Result_Analysed" [ run_result_json r ]
+let analysis_answer_json = function
+  | C.Malformed_Program -> tagged "Malformed_Program" []
+  | C.Unsupported_Configuration -> tagged "Unsupported_Configuration" []
+  | C.Analysed r -> tagged "Analysed" [ run_result_json r ]
 
 let domain_json d =
   tagged
@@ -401,7 +401,7 @@ let program_json p =
       ("prog_table", json_list (fun f -> json_pair json_string decl (f, f)) (C.prog_procs p));
     ]
 
-let run_program_json ~kind ~solver ~ctx program answer =
+let run_voblint_json ~kind ~solver ~ctx program answer =
   json_object
     [
       ( "input",
@@ -412,7 +412,7 @@ let run_program_json ~kind ~solver ~ctx program answer =
             ("ctx", context_mode_json ctx);
             ("p", program_json program);
           ] );
-      ("output", program_answer_json answer);
+      ("output", analysis_answer_json answer);
     ]
 
 let returns_value result =

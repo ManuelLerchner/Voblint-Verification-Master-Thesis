@@ -259,7 +259,7 @@ function showStatus(message, kind = "") {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Raw run_program answer                                                     */
+/* Raw run_voblint answer                                                     */
 /* -------------------------------------------------------------------------- */
 
 let rawRunProgram = null;
@@ -342,12 +342,12 @@ function constructorTerm(value) {
 }
 
 /*
- * The panel's title: the call run_program received and the outline of its answer --
+ * The panel's title: the call run_voblint received and the outline of its answer --
  * the constructor, then each result field with a list's length in place of the list.
  */
 function renderRawCall(raw) {
   const input = raw?.input;
-  const parts = [callPart("run_program", "fn")];
+  const parts = [callPart("run_voblint", "fn")];
 
   if (!input) {
     parts.push(callPart(" kind solver ctx p", "arg"), callPart(" \u27f9 ", "arrow"), callPart("?", "arg"));

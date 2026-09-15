@@ -99,6 +99,7 @@ module Generated : sig
     Unwind
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type 'a cfg_ext
+  type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type arithmetic_obligation
   type arithmetic_diagnostic
   type ('a, 'b) result_global_ext
@@ -108,9 +109,8 @@ module Generated : sig
   type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
     Context_Call_String of cfg_node list
   type ('a, 'b) run_result_ext
-  type 'a program_answer = Result_Malformed | Result_Unsupported |
-    Result_Analysed of ('a, unit) run_result_ext
-  type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
+  type 'a analysis_answer = Malformed_Program | Unsupported_Configuration |
+    Analysed of ('a, unit) run_result_ext
   type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow |
     Solver_WarrowPerOrigin
   type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis |
@@ -148,10 +148,10 @@ module Generated : sig
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
   val state_value : ('a, 'b) result_state_ext -> ((string * 'a) list) lifted
   val state_point : ('a, 'b) result_state_ext -> cfg_node
-  val run_program :
+  val run_voblint :
     analysis_domain ->
       solver_choice option ->
-        context_mode -> unit imp_prog_ext -> string program_answer
+        context_mode -> unit imp_prog_ext -> string analysis_answer
   val route_point : 'a call_route_ext -> cfg_node
   val check_exp : 'a result_check_ext -> exp
   val route_callee : 'a call_route_ext -> string
@@ -3606,38 +3606,6 @@ type ('a, 'b, 'c, 'd) state_ext =
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
-type arithmetic_obligation = Arithmetic_Obligation of exp * exp;;
-
-type arithmetic_diagnostic =
-  Arithmetic_Diagnostic of
-    cfg_node * nat * arithmetic_obligation * check_result;;
-
-type ('a, 'b) result_global_ext = Result_global_ext of string * 'a * 'b;;
-
-type ('a, 'b) result_state_ext =
-  Result_state_ext of
-    cfg_node * nat * ((string * 'a) list) lifted *
-      (exp * check_result lifted) list *
-      (arithmetic_obligation * check_result lifted) list * 'b;;
-
-type 'a result_check_ext =
-  Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
-
-type 'a call_route_ext =
-  Call_route_ext of cfg_node * nat * string * nat list * 'a;;
-
-type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
-  Context_Call_String of cfg_node list;;
-
-type ('a, 'b) run_result_ext =
-  Run_result_ext of
-    unit cfg_ext * 'a analysis_context list * ('a, unit) result_state_ext list *
-      unit call_route_ext list * unit result_check_ext list *
-      ('a, unit) result_global_ext list * arithmetic_diagnostic list * 'b;;
-
-type 'a program_answer = Result_Malformed | Result_Unsupported |
-  Result_Analysed of ('a, unit) run_result_ext;;
-
 type 'a call_info_ext =
   Call_info_ext of string option * string * string list * exp list * 'a;;
 
@@ -3689,6 +3657,38 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
       'f;;
 
 type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
+
+type arithmetic_obligation = Arithmetic_Obligation of exp * exp;;
+
+type arithmetic_diagnostic =
+  Arithmetic_Diagnostic of
+    cfg_node * nat * arithmetic_obligation * check_result;;
+
+type ('a, 'b) result_global_ext = Result_global_ext of string * 'a * 'b;;
+
+type ('a, 'b) result_state_ext =
+  Result_state_ext of
+    cfg_node * nat * ((string * 'a) list) lifted *
+      (exp * check_result lifted) list *
+      (arithmetic_obligation * check_result lifted) list * 'b;;
+
+type 'a result_check_ext =
+  Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
+
+type 'a call_route_ext =
+  Call_route_ext of cfg_node * nat * string * nat list * 'a;;
+
+type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
+  Context_Call_String of cfg_node list;;
+
+type ('a, 'b) run_result_ext =
+  Run_result_ext of
+    unit cfg_ext * 'a analysis_context list * ('a, unit) result_state_ext list *
+      unit call_route_ext list * unit result_check_ext list *
+      ('a, unit) result_global_ext list * arithmetic_diagnostic list * 'b;;
+
+type 'a analysis_answer = Malformed_Program | Unsupported_Configuration |
+  Analysed of ('a, unit) run_result_ext;;
 
 type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow |
   Solver_WarrowPerOrigin;;
@@ -11451,10 +11451,10 @@ let rec map_run_result
         res_checks res, map (map_result_global f) (res_globals res),
         res_diagnostics res, ());;
 
-let rec map_program_answer
-  f x1 = match f, x1 with f, Result_Malformed -> Result_Malformed
-    | f, Result_Unsupported -> Result_Unsupported
-    | f, Result_Analysed res -> Result_Analysed (map_run_result f res);;
+let rec map_analysis_answer
+  f x1 = match f, x1 with f, Malformed_Program -> Malformed_Program
+    | f, Unsupported_Configuration -> Unsupported_Configuration
+    | f, Analysed res -> Analysed (map_run_result f res);;
 
 let rec less_eq_set _A
   a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs
@@ -11660,16 +11660,16 @@ let rec mk_analysis_config d s c = Analysis_config_ext (d, s, c, ());;
 
 let rec analyse_program
   kind solver ctx p =
-    (if not (wf_program_compile_input_exec p) then Result_Malformed
+    (if not (wf_program_compile_input_exec p) then Malformed_Program
       else (match resolve_analysis_config (mk_analysis_config kind solver ctx)
-             with None -> Result_Unsupported
+             with None -> Unsupported_Configuration
              | Some pl ->
-               (match plan_result pl p with None -> Result_Unsupported
-                 | Some a -> Result_Analysed a)));;
+               (match plan_result pl p with None -> Unsupported_Configuration
+                 | Some a -> Analysed a)));;
 
-let rec run_program
+let rec run_voblint
   kind solver ctx p =
-    map_program_answer string_of_abstract_value
+    map_analysis_answer string_of_abstract_value
       (analyse_program kind solver ctx p);;
 
 let rec procs_stmt_next

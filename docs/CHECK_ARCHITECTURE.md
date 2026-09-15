@@ -277,13 +277,10 @@ A graph node's state lines are the enclosing procedure's formals, its locals,
 and its return slot, identically for `--context none`, `entry-state` and
 `call-string`. Declared globals are **not** repeated in node labels.
 
-`out_globals` is not yet one contract. Plans whose solver returns its global
-unknowns render those (the shared `Global` store and each `enter f` activation
-entry); plans that return only a result table reconstruct `enter f @ ctx` rows
-from the `FunctionEntry` contexts instead. Neither is "the solved value of each
-declared global", and the two differ in shape across solver choices, so the
-browser playground does not display them. Replacing both with one structured
-globals field is part of moving presentation out of Isabelle.
+`res_globals` is not yet filled: every plan passes an empty list, so neither the
+report's globals pane nor the browser shows declared globals' solved values.
+Filling it from each plan's `Global` unknown is the remaining step of moving
+presentation out of Isabelle.
 
 ### CLI contract
 

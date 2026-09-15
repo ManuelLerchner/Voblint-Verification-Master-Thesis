@@ -40,7 +40,7 @@ text \<open>
   handwritten re-export layer in between that could reinterpret a constructor or a
   conversion.
 
-  Analysis entry goes through \<^const>\<open>run_program\<close> alone, which consults
+  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which consults
   \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality.
   The typed and config-level dispatchers (\<open>analyse\<close>, \<open>analyse_config\<close>,
   \<open>analyse_with_solver\<close>, ...) are not roots: nothing handwritten calls them.
@@ -84,10 +84,10 @@ text \<open>
   The list below is grouped by what each name is \<^emph>\<open>for\<close>, because the groups answer
   different questions and only one of them is an operation.
 
-  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_program\<close>, alone. Everything a caller can ask the analyser
+  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
-  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>program_answer\<close>'s three cases, which a caller must tell apart,
+  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s three cases, which a caller must tell apart,
     and the readers of a successful one: contexts, states, routes, checks, globals and
     diagnostics. The records reach OCaml abstract, readable only through their
     selectors, so a field added later cannot break a consumer that matched on field
@@ -109,10 +109,10 @@ text \<open>
 export_code
 
   \<comment> \<open>Run\<close>
-  run_program
+  run_voblint
 
   \<comment> \<open>Result: answers, contexts, states, routes, checks, globals, diagnostics\<close>
-  Result_Malformed Result_Unsupported Result_Analysed
+  Malformed_Program Unsupported_Configuration Analysed
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics

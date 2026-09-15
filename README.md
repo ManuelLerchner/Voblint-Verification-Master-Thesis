@@ -174,12 +174,12 @@ theorem run_voblint_certified_source_sound:
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
+      and ans: "run_voblint D solver ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
                ∧ analysis_result_covers D solver ctx p v s
-               ∧ checks_sound_at out v s"
+               ∧ checks_sound_at res v s"
 ```
 
 | Premise | Meaning |
@@ -187,7 +187,7 @@ theorem run_voblint_certified_source_sound:
 | `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
 | `run` | An arbitrary finite VIMP execution prefix from `main`, with the residual command, current store, and pending caller frames made explicit. Source termination is not required. |
 | `terminates` | The selected verified-solver run terminates for this program. This is the sole analyzer-side proof obligation. |
-| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed out`. It therefore supplies configuration legality and well-formedness. The requested rendering `view` is arbitrary. |
+| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed res`. It therefore supplies configuration legality and well-formedness. |
 
 The conclusion supplies a CFG node `v` and matching call stack `stk`:
 
@@ -196,7 +196,7 @@ The conclusion supplies a CFG node `v` and matching call stack `stk`:
 | `csim ... (v, s, stk)` | The compiler's forward simulation relates the source state to `v`. |
 | `s ∈ ltr_collect ... v` | A valid trace genuinely reaches `v` with store `s`. |
 | `analysis_result_covers ... v s` | The abstract state filed for `v`, under an admitted context when contexts are used, contains `s`. |
-| `checks_sound_at out v s` | No row at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
+| `checks_sound_at res v s` | No check listed at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
 
 `config_terminates` and `analysis_result_covers` dispatch over the selected
 plan. They cannot store every domain behind one polymorphic abstract-state
@@ -228,8 +228,8 @@ instantiation, not new source-level reasoning.
 
 [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 specializes the headline to the next source check. If an execution is about to
-run `Check e`, the report contains a row for `e` at a node reached with the
-current store. That row is live, and every definite verdict is correct.
+run `Check e`, the result lists a check for `e` at a node reached with the
+current store. That check is live, and every definite verdict is correct.
 
 <details>
 <summary>Exact check theorem</summary>
@@ -242,43 +242,43 @@ theorem run_voblint_check_sound:
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some e"
       and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
-  shows "∃row ∈ set (out_checks out). row_exp row = e
+      and ans: "run_voblint D solver ctx p = Analysed res"
+  shows "∃c ∈ set (res_checks res). check_exp c = e
            ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) (row_point row)
-           ∧ row_verdict row ≠ Dead
-           ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval e s))
-           ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
+                   (cinit_stores (declared_global p)) (check_point c)
+           ∧ check_verdict c ≠ Dead
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (aval e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
 ```
 
 </details>
 
-[`run_voblint_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-states the guarantee needed for dead code: a `DEAD` row's point has an empty
+[`run_voblint_dead_check_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+states the guarantee needed for dead code: a `DEAD` check's point has an empty
 collecting semantics.
 
 <details>
-<summary>Exact dead-row theorem</summary>
+<summary>Exact dead-check theorem</summary>
 
 ```isabelle
-corollary run_voblint_dead_row_unreached:
+corollary run_voblint_dead_check_unreached:
   assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
-      and row: "row ∈ set (out_checks out)"
-      and dead: "row_verdict row = Dead"
+      and ans: "run_voblint D solver ctx p = Analysed res"
+      and listed: "chk ∈ set (res_checks res)"
+      and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
-           (cinit_stores (declared_global p)) (row_point row) = {}"
+           (cinit_stores (declared_global p)) (check_point chk) = {}"
 ```
 
 </details>
 
 This result is proved directly at the named point. It does not follow by
 contraposing the existential end-to-end theorem. Under a context policy, the
-printed row aggregates the contexts solved at that point, so `DEAD` means no
+listed check aggregates the contexts solved at that point, so `DEAD` means no
 admitted context reaches it.
 
 [`run_voblint_check_sites`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-proves that returned rows correspond exactly, in graph order, to the compiled
+proves that returned checks correspond exactly, in graph order, to the compiled
 `EA_Check` edges. The handwritten CLI pairs them with parser source positions
 by order; that pairing is outside the proof.
 
@@ -297,10 +297,10 @@ as the other CLI soundness endpoints.
 ```isabelle
 theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
+      and ans: "run_voblint D solver ctx p = Analysed res"
       and reachable: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
-      and quiet: "∀d ∈ set (out_diagnostics out). diagnostic_point d ≠ v"
+      and quiet: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
 ```
 
@@ -315,9 +315,9 @@ whether its divisor differs from zero; the classifier uses the same solved
 result as the check report and aggregates verdicts across contexts. A safe
 context cannot suppress a warning from another context.
 
-The theorem concerns `out_diagnostics` and compiled program points. Source
+The theorem concerns `res_diagnostics` and compiled program points. Source
 locations and diagnostic text come from the handwritten CLI and remain outside
-the proof, as they do for check rows.
+the proof, as they do for checks.
 
 ### Why the node and context are existential
 
@@ -350,9 +350,9 @@ context-totality premise; relational entry-state routing proves the required
 coverage of admitted contexts.
 
 The state and check claims live at different representations.
-`analysis_output` retains check rows, but renders snapshots, globals, and
-per-row states as `String.literal`. Check soundness can therefore refer to
-`out_checks out` directly. State soundness refers to the semantic result via
+`run_voblint` renders every abstract value as `String.literal` and leaves checks
+and diagnostics untouched. Check soundness can therefore refer to
+`res_checks res` directly. State soundness refers to the semantic result via
 `analysis_result_covers`; recovering an abstract state from rendered text
 would require inverting the renderer.
 
@@ -428,9 +428,9 @@ shows the headline is non-vacuous. It evaluates well-formedness, solver
 termination, and the answer for one program using the `Int` product, a
 length-one call string, and an explicit always-join solver. It also constructs
 the source run through both calls and its check. Its full certificate names the
-returned answer, the `PROVED` row, the completed run, collection at `Statement
-4`, result coverage, row soundness, and the checked condition's truth.
-The example names those witnesses `certificate_demo_check_row_sound` and
+returned answer, the `PROVED` check, the completed run, collection at `Statement
+4`, result coverage, check soundness, and the checked condition's truth.
+The example names those witnesses `certificate_demo_check_listed_sound` and
 `certificate_demo_full_certificate`.
 [`Example_Side_Execute`](src/Examples/Sign/Example_Side_Execute.thy) provides a
 smaller Sign instance with every premise discharged.

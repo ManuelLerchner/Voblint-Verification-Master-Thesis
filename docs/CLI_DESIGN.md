@@ -73,22 +73,19 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Generated.run_voblint domain solver context view prog
-    |                                  <- view is View_Report (checks only) or
-    |                                     View_Contexts (checks plus the graph)
+Voblint_CLI.Generated.run_voblint domain solver context prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
     |                                     well-formedness, resolves the
     |                                     configuration, and runs the plan
     v
-Malformed_Program | Unsupported_Configuration | Analysed out
+Malformed_Program | Unsupported_Configuration | Analysed res
     |
     v
-out_checks (text report) / out_graph (--dot, --html)
-                         / out_snapshot (--graph-snapshot)
-    -> graph, DOT, snapshot and HTML built in cli/result/ and cli/render/,
-       all sourced from the one solve that produced `out` (never a second)
+res_contexts / res_states / res_routes / res_checks / res_globals / res_diagnostics
+    -> text report, graph, DOT, snapshot and HTML built in cli/result/ and
+       cli/render/, all sourced from the one solve that produced `res`
 ```
 
 The parser is the only unverified component in this chain. Everything from

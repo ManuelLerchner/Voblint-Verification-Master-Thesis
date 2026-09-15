@@ -66,8 +66,8 @@ instantiation that connects a runtime verdict to the theorem about it. The
 
 ## Arithmetic diagnostics
 
-`Analysis_Run` adds `out_diagnostics` to `analysis_output`, computed from the same
-solved result used for checks and graph views. Every supported configuration
+`Analysis_Run` fills `res_diagnostics` and each state's `state_diagnostics` from the
+same solved result used for checks. Every supported configuration
 exposes the states needed for this query. At each point, the extractor visits
 expressions on intra-edges and call edges: assignments, guards, arguments,
 returns, special calls, and checks. It suppresses a matching `AssumeNot` guard
@@ -89,7 +89,7 @@ they do not stop analysis or change its exit code.
 
 `Analysis_Certified.run_voblint_arithmetic_safe` states the high-level contract:
 under solver termination and an accepted answer, every divisor at a collected
-point without diagnostics is nonzero. The theorem uses `out_diagnostics`
+point without diagnostics is nonzero. The theorem uses `res_diagnostics`
 directly. Source-position pairing and message rendering remain handwritten
 OCaml outside the proof. See the
 [main README](../../../README.md#arithmetic-safety-from-an-empty-diagnostic-list)

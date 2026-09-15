@@ -5,7 +5,7 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_program domain solver context
+       -> Voblint_CLI.Generated.run_voblint domain solver context
           (Isabelle-generated). One call decides whether that combination of
           domain, solver and context is legal at all and, when it is, runs the
           one analysis it names. What comes back is data -- states per point and
@@ -572,10 +572,10 @@ let () =
     end
   end;
   let result_for k =
-    match C.run_program k !solver context prog with
-    | C.Result_Malformed -> raise (Answered Malformed)
-    | C.Result_Unsupported -> raise (Answered Unsupported_config)
-    | C.Result_Analysed result ->
+    match C.run_voblint k !solver context prog with
+    | C.Malformed_Program -> raise (Answered Malformed)
+    | C.Unsupported_Configuration -> raise (Answered Unsupported_config)
+    | C.Analysed result ->
         if !html || !dot || !graph_snapshot then
           print_diagnostics path (analysis_label k) stmt_positions
             (C.res_diagnostics result);

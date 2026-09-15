@@ -1,6 +1,6 @@
 (* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
-   (never touching Isabelle), runs it through the exported `run_program`
+   (never touching Isabelle), runs it through the exported `run_voblint`
    entry point for every domain, and checks the result against the values
    src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_* lemmas prove and
@@ -171,17 +171,17 @@ let rec show_exp_compact = function
 (* One analysis run, reduced to the column this driver compares: the check
    point, the condition, and the lifted verdict. A refusal is not an outcome to
    compare against -- every configuration named here is one the analyzer
-   supports, so an answer other than `Result_Analysed` is a defect in the export
+   supports, so an answer other than `Analysed` is a defect in the export
    rather than a failed expectation. *)
 let report domain prog =
-  match run_program domain None Ctx_None prog with
-  | Result_Malformed ->
+  match run_voblint domain None Ctx_None prog with
+  | Malformed_Program ->
     print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
     exit 1
-  | Result_Unsupported ->
+  | Unsupported_Configuration ->
     print_endline ("FAIL " ^ domain_label domain ^ ": unsupported configuration");
     exit 1
-  | Result_Analysed res ->
+  | Analysed res ->
     List.map
       (fun chk -> (check_point chk, (show_exp_compact (check_exp chk), check_verdict chk)))
       (res_checks res)

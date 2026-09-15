@@ -91,9 +91,9 @@ text \<open>
   equation system three times and the columns agreed only by construction.
 \<close>
 
-lemma dispatch_demo_run_program_entry_state:
-  "(case run_program Interval_Analysis None Ctx_EntryState dispatch_demo_prog of
-      Result_Analysed res \<Rightarrow>
+lemma dispatch_demo_run_voblint_entry_state:
+  "(case run_voblint Interval_Analysis None Ctx_EntryState dispatch_demo_prog of
+      Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
         \<and> res_contexts res = [Context_Entry []]
@@ -108,9 +108,9 @@ text \<open>
   analysis's, not the dispatcher's.
 \<close>
 
-lemma dispatch_demo_run_program_flat:
-  "(case run_program Interval_Analysis None Ctx_None dispatch_demo_prog of
-      Result_Analysed res \<Rightarrow>
+lemma dispatch_demo_run_voblint_flat:
+  "(case run_voblint Interval_Analysis None Ctx_None dispatch_demo_prog of
+      Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
         \<and> res_contexts res = [Context_Unit]

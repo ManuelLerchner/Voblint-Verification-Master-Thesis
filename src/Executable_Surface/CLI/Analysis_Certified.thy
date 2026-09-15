@@ -7,7 +7,7 @@ section \<open>One soundness statement over every configuration the CLI answers\
 text \<open>
   The tables so far are one per configuration: a domain, a solver discipline and
   a context policy, each with its own \<open>sound_table\<close> instance. This theory states
-  the result once, for an arbitrary configuration, over \<^const>\<open>run_program\<close>
+  the result once, for an arbitrary configuration, over \<^const>\<open>run_voblint\<close>
   alone.
 
   The case split lives in functions over \<^typ>\<open>analysis_plan\<close>, the one thing
@@ -23,8 +23,8 @@ text \<open>
   Coverage of the solve is not a premise: the keys of a terminating solve that a run
   can reach are closed on their own, which \<^theory>\<open>Voblint_Result.Routed_Live_Keys\<close>
   proves from what the generated equations read.  Neither is configuration legality
-  --- an unsupported pairing answers \<^const>\<open>Result_Unsupported\<close> --- nor
-  well-formedness: a malformed program answers \<^const>\<open>Result_Malformed\<close>.
+  --- an unsupported pairing answers \<^const>\<open>Unsupported_Configuration\<close> --- nor
+  well-formedness: a malformed program answers \<^const>\<open>Malformed_Program\<close>.
 \<close>
 
 subsection \<open>What a plan owes, and what its table claims\<close>
@@ -163,17 +163,17 @@ definition analysis_result_covers ::
       | Some pl \<Rightarrow> plan_covers pl p v s)"
 
 lemma analyse_program_AnalysedE [elim]:
-  assumes "analyse_program D solver ctx p = Result_Analysed res"
+  assumes "analyse_program D solver ctx p = Analysed res"
   obtains pl where "wf_program_compile_input_exec p"
     and "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
     and "plan_result pl p = Some res"
   using assms unfolding analyse_program_def by (auto split: if_splits option.splits)
 
-lemma run_program_AnalysedE [elim]:
-  assumes "run_program D solver ctx p = Result_Analysed res"
-  obtains typed where "analyse_program D solver ctx p = Result_Analysed typed"
+lemma run_voblint_AnalysedE [elim]:
+  assumes "run_voblint D solver ctx p = Analysed res"
+  obtains typed where "analyse_program D solver ctx p = Analysed typed"
     and "res = map_run_result string_of_abstract_value typed"
-  using assms unfolding run_program_def
+  using assms unfolding run_voblint_def
   by (cases "analyse_program D solver ctx p") auto
 
 text \<open>
@@ -525,23 +525,23 @@ lemma plan_result_check_sites:
         split: solver_choice.splits)
 
 text \<open>
-  The same claims read through \<^const>\<open>run_program\<close>: an analysed answer names the
+  The same claims read through \<^const>\<open>run_voblint\<close>: an analysed answer names the
   plan and was only given for a well-formed program, the configuration's termination
   is its plan's, and rendering abstract values changes neither the check column nor
   the diagnostics.
 \<close>
 
-lemma run_program_analysed_plan:
-  assumes "run_program D solver ctx p = Result_Analysed res"
+lemma run_voblint_analysed_plan:
+  assumes "run_voblint D solver ctx p = Analysed res"
   obtains pl typed where "wf_program_compile_input_exec p"
     and "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
     and "plan_result pl p = Some typed"
     and "res = map_run_result string_of_abstract_value typed"
-  using assms by (elim run_program_AnalysedE analyse_program_AnalysedE) blast
+  using assms by (elim run_voblint_AnalysedE analyse_program_AnalysedE) blast
 
-lemma run_program_sound_at:
+lemma run_voblint_sound_at:
   assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_program D solver ctx p = Result_Analysed res"
+      and ans: "run_voblint D solver ctx p = Analysed res"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
   shows "analysis_result_covers D solver ctx p v s \<and> checks_sound_at res v s
@@ -552,7 +552,7 @@ proof -
       and pl: "resolve_analysis_config (mk_analysis_config D solver ctx) = Some pl"
       and pres: "plan_result pl p = Some typed"
       and res: "res = map_run_result string_of_abstract_value typed"
-    by (rule run_program_analysed_plan)
+    by (rule run_voblint_analysed_plan)
   from terminates have "plan_terminates pl p"
     unfolding config_terminates_def pl option.case .
   from plan_result_sound [OF wf_program_compile_input_exec_sound [OF wfx] this pres mem]
@@ -560,19 +560,19 @@ proof -
     unfolding analysis_result_covers_def pl option.case res map_run_result_sound_at .
 qed
 
-theorem run_program_arithmetic_safe:
+theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates D solver ctx p"
-    and ans: "run_program D solver ctx p = Result_Analysed res"
+    and ans: "run_voblint D solver ctx p = Analysed res"
     and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
       (cinit_stores (declared_global p)) v"
     and absent: "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
-  using run_program_sound_at[OF terminates ans mem] absent
+  using run_voblint_sound_at[OF terminates ans mem] absent
   unfolding diagnostics_sound_at_def by blast
 
-corollary run_program_arithmetic_intra_safe:
+corollary run_voblint_arithmetic_intra_safe:
   assumes "config_terminates D solver ctx p"
-    and "run_program D solver ctx p = Result_Analysed res"
+    and "run_voblint D solver ctx p = Analysed res"
     and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
       (cinit_stores (declared_global p)) v"
     and "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
@@ -580,7 +580,7 @@ corollary run_program_arithmetic_intra_safe:
     and "e \<in> set (arithmetic_edge_expressions action)"
     and "divisor \<in> expression_divisors e"
   shows "aval divisor s \<noteq> 0"
-  using run_program_arithmetic_safe[OF assms(1-4)]
+  using run_voblint_arithmetic_safe[OF assms(1-4)]
     arithmetic_expression_sites_intra[OF finite_intra_prog_cfg assms(5)] assms(6,7)
   unfolding arithmetic_safe_at_def by blast
 
@@ -590,15 +590,15 @@ text \<open>
   source positions happens outside this development.
 \<close>
 
-corollary run_program_check_sites:
-  assumes "run_program D solver ctx p = Result_Analysed res"
+corollary run_voblint_check_sites:
+  assumes "run_voblint D solver ctx p = Analysed res"
   shows "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"
 proof -
   from assms obtain pl typed
     where "plan_result pl p = Some typed"
       and res: "res = map_run_result string_of_abstract_value typed"
-    by (rule run_program_analysed_plan)
+    by (rule run_voblint_analysed_plan)
   from plan_result_check_sites [OF this(1)] show ?thesis by (simp add: res)
 qed
 
@@ -612,13 +612,13 @@ text \<open>
   there holds of it, with none there marked unreachable.
 \<close>
 
-theorem run_program_certified_source_sound:
+theorem run_voblint_certified_source_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes s0: "s0 \<in> cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and terminates: "config_terminates D solver ctx p"
-      and ans: "run_program D solver ctx p = Result_Analysed res"
+      and ans: "run_voblint D solver ctx p = Analysed res"
   shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
@@ -626,7 +626,7 @@ theorem run_program_certified_source_sound:
                \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
-  from ans have "wf_program_compile_input_exec p" by (rule run_program_analysed_plan)
+  from ans have "wf_program_compile_input_exec p" by (rule run_voblint_analysed_plan)
   from source_reaches_ltr_collect
          [OF wf_program_compile_input_exec_sound [OF this] s0 run]
   obtain v stk
@@ -634,7 +634,7 @@ proof -
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                       (cinit_stores (declared_global p)) v"
     unfolding cfg by blast
-  with run_program_sound_at [OF terminates ans mem] show ?thesis by blast
+  with run_voblint_sound_at [OF terminates ans mem] show ?thesis by blast
 qed
 
 text \<open>
@@ -647,14 +647,14 @@ text \<open>
   store reaches says which one is this execution's.
 \<close>
 
-theorem run_program_check_sound:
+theorem run_voblint_check_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes s0: "s0 \<in> cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some e"
       and terminates: "config_terminates D solver ctx p"
-      and ans: "run_program D solver ctx p = Result_Analysed res"
+      and ans: "run_voblint D solver ctx p = Analysed res"
   shows "\<exists>c \<in> set (res_checks res). check_exp c = e
            \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
@@ -662,7 +662,7 @@ theorem run_program_check_sound:
            \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (aval e s))
            \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval e s))"
 proof -
-  from run_program_certified_source_sound [OF s0 run terminates ans]
+  from run_voblint_certified_source_sound [OF s0 run terminates ans]
   obtain v stk
     where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
@@ -673,7 +673,7 @@ proof -
   have "(v, e) \<in> set (check_sites (prog_cfg p))" by auto
   then obtain c
     where "c \<in> set (res_checks res)" and "check_point c = v" and "check_exp c = e"
-    unfolding run_program_check_sites [OF ans, symmetric] by auto
+    unfolding run_voblint_check_sites [OF ans, symmetric] by auto
   with mem sound show ?thesis unfolding checks_sound_at_def by blast
 qed
 
@@ -684,9 +684,9 @@ text \<open>
   from the claim at every collected store.
 \<close>
 
-corollary run_program_dead_check_unreached:
+corollary run_voblint_dead_check_unreached:
   assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_program D solver ctx p = Result_Analysed res"
+      and ans: "run_voblint D solver ctx p = Analysed res"
       and listed: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
@@ -695,7 +695,7 @@ proof (rule equals0I)
   fix s
   assume "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) (check_point chk)"
-  from run_program_sound_at [OF terminates ans this]
+  from run_voblint_sound_at [OF terminates ans this]
   have "checks_sound_at res (check_point chk) s" by blast
   with listed dead show False unfolding checks_sound_at_def by blast
 qed
@@ -720,13 +720,13 @@ next
     by (cases "lookup_context r v ()") (simp_all add: table_coversI)
 qed
 
-corollary run_program_source_sound:
+corollary run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes terminates: "config_terminates D None Ctx_None p"
       and s0: "s0 \<in> cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and ans: "run_program D None Ctx_None p = Result_Analysed res"
+      and ans: "run_voblint D None Ctx_None p = Analysed res"
   shows "\<exists>v stk.
            csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
          \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
@@ -737,7 +737,7 @@ corollary run_program_source_sound:
             \<and> (check_verdict c = Lifted Check_Refuted \<longrightarrow> \<not> truthy (aval (check_exp c) s))
             \<and> check_verdict c \<noteq> Bot)"
 proof -
-  from run_program_certified_source_sound [OF s0 run terminates ans]
+  from run_voblint_certified_source_sound [OF s0 run terminates ans]
   obtain v stk
     where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
       and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)

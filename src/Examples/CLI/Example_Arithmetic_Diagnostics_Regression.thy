@@ -13,8 +13,8 @@ text \<open>
 
 definition arithmetic_example_result where
   "arithmetic_example_result p =
-    (case run_program Interval_Analysis None Ctx_EntryState p of
-       Result_Analysed res \<Rightarrow> Some
+    (case run_voblint Interval_Analysis None Ctx_EntryState p of
+       Analysed res \<Rightarrow> Some
          (map (\<lambda>d. (arithmetic_operation (diagnostic_obligation d),
                       diagnostic_verdict d)) (res_diagnostics res),
           map check_verdict (res_checks res))

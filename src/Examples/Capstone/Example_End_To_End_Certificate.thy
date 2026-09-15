@@ -5,7 +5,7 @@ begin
 section \<open>One configuration, one program, no premise left standing\<close>
 
 text \<open>
-  \<open>run_program_certified_source_sound\<close> is stated for an arbitrary configuration
+  \<open>run_voblint_certified_source_sound\<close> is stated for an arbitrary configuration
   and an arbitrary program, so on its own it says nothing about any particular
   run: a caller still owes the solve's termination and the answer. This theory
   pays all of them, by evaluation, for one program at one configuration --- the
@@ -43,9 +43,9 @@ lemma certificate_demo_wf: "wf_program_compile_input_exec certificate_demo_prog"
 subsection \<open>What the configuration answers\<close>
 
 lemma certificate_demo_report:
-  "(case run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
             certificate_demo_prog of
-      Result_Analysed res \<Rightarrow>
+      Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
           = [(Statement 4, Decided Check_Proved)]
     | _ \<Rightarrow> False)"
@@ -53,17 +53,17 @@ lemma certificate_demo_report:
 
 text \<open>
   The endpoint below reads a result, so the answer is named rather than only
-  inspected: \<^const>\<open>Result_Analysed\<close> is what this configuration returns on this
+  inspected: \<^const>\<open>Analysed\<close> is what this configuration returns on this
   program, and the check above is the check column it returns.
 \<close>
 
 lemma certificate_demo_analysed:
-  "\<exists>res. run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-           certificate_demo_prog = Result_Analysed res
+  "\<exists>res. run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+           certificate_demo_prog = Analysed res
        \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
            = [(Statement 4, Decided Check_Proved)]"
   using certificate_demo_report
-  by (cases "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+  by (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
                certificate_demo_prog")
      auto
 
@@ -367,17 +367,17 @@ text \<open>
 \<close>
 
 lemma certificate_demo_report_full:
-  "(case run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
             certificate_demo_prog of
-      Result_Analysed res \<Rightarrow>
+      Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
           = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]
     | _ \<Rightarrow> False)"
   by eval
 
 lemma certificate_demo_check:
-  assumes ans: "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-                  certificate_demo_prog = Result_Analysed res"
+  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
   shows "\<exists>chk. res_checks res = [chk] \<and> check_point chk = Statement 4
              \<and> check_exp chk = Less (N 0) (V (STR ''b''))
              \<and> check_verdict chk = Decided Check_Proved"
@@ -457,8 +457,8 @@ text \<open>
 \<close>
 
 lemma certificate_demo_checks_sound_at_check:
-  assumes ans: "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-                  certificate_demo_prog = Result_Analysed res"
+  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
       and mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
                       (prog_cfg certificate_demo_prog)
                       (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
@@ -469,7 +469,7 @@ proof -
                  (mk_analysis_config Int_Analysis (Some Solver_Join) (Ctx_CallString 1)) = Some pl"
       and typed: "plan_result pl certificate_demo_prog = Some typed"
       and res: "res = map_run_result string_of_abstract_value typed"
-    by (rule run_program_analysed_plan)
+    by (rule run_voblint_analysed_plan)
   have checks: "res_checks res
                   = result_checks_of (classify_checks_verdicts (prog_cfg certificate_demo_prog)
                       (analyse_int_call_string_result 1 certificate_demo_prog) int_classify_check)"
@@ -489,8 +489,8 @@ proof -
 qed
 
 theorem certificate_demo_check_semantically_true:
-  assumes ans: "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-                  certificate_demo_prog = Result_Analysed res"
+  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
   shows "\<forall>s \<in> ltr_collect (declared_global certificate_demo_prog)
                   (prog_cfg certificate_demo_prog)
                   (cinit_stores (declared_global certificate_demo_prog)) (Statement 4).
@@ -513,15 +513,15 @@ text \<open>
   Everything above, in one place and with every witness named. The generic endpoint
   is existential in the node and the frame stack because \<^const>\<open>csim\<close> is
   structural; here the node is \<open>Statement 4\<close>, the store is the one the program
-  computes, and the answer is the one \<^const>\<open>run_program\<close> returns --- so each
+  computes, and the answer is the one \<^const>\<open>run_voblint\<close> returns --- so each
   conjunct of the headline theorem can be read off separately rather than inferred
   from an existential.
 \<close>
 
 theorem certificate_demo_full_certificate:
   obtains res where
-    "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-       certificate_demo_prog = Result_Analysed res"
+    "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+       certificate_demo_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
     "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
@@ -535,23 +535,23 @@ theorem certificate_demo_full_certificate:
        certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "checks_sound_at res (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
-proof (cases "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Result_Analysed res)
+  case (Analysed res)
   then have checks:
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
     using certificate_demo_report_full by simp
   have true_here:
     "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
-    using certificate_demo_check_semantically_true [OF Result_Analysed]
+    using certificate_demo_check_semantically_true [OF Analysed]
           certificate_demo_reaches_check
     by blast
   show thesis
-    by (rule that [OF Result_Analysed checks certificate_demo_run certificate_demo_reaches_check
+    by (rule that [OF Analysed checks certificate_demo_run certificate_demo_reaches_check
                       certificate_demo_result_covers_at_check
                       certificate_demo_checks_sound_at_check
-                        [OF Result_Analysed certificate_demo_reaches_check] true_here])
+                        [OF Analysed certificate_demo_reaches_check] true_here])
 qed (use certificate_demo_report in simp_all)
 
 subsection \<open>The endpoint, with nothing left to assume\<close>
@@ -567,8 +567,8 @@ text \<open>
 
 theorem certificate_demo_source_certified:
   "\<exists>res v stk.
-     run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-       certificate_demo_prog = Result_Analysed res
+     run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+       certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved)]
    \<and> csim (prog_table certificate_demo_prog) (prog_cfg certificate_demo_prog)
@@ -581,16 +581,16 @@ theorem certificate_demo_source_certified:
    \<and> analysis_result_covers Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
        certificate_demo_prog v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))
    \<and> checks_sound_at res v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-proof (cases "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Result_Analysed res)
+  case (Analysed res)
   then have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
                        = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report by simp
-  from run_program_certified_source_sound
+  from run_voblint_certified_source_sound
          [OF certificate_demo_init certificate_demo_run certificate_demo_config_terminates
-             Result_Analysed]
-  show ?thesis using Result_Analysed checks by meson
+             Analysed]
+  show ?thesis using Analysed checks by meson
 qed (use certificate_demo_report in simp_all)
 
 text \<open>
@@ -600,8 +600,8 @@ text \<open>
 \<close>
 
 theorem certificate_demo_check_listed_sound:
-  "\<exists>res. run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
-           certificate_demo_prog = Result_Analysed res
+  "\<exists>res. run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+           certificate_demo_prog = Analysed res
      \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Less (N 0) (V (STR ''b''))
           \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
               \<in> ltr_collect (declared_global certificate_demo_prog)
@@ -610,15 +610,15 @@ theorem certificate_demo_check_listed_sound:
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (aval (Less (N 0) (V (STR ''b'')))
                      ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
-proof (cases "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Result_Analysed res)
+  case (Analysed res)
   have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
                   = [(Statement 4, Decided Check_Proved)]"
-    using certificate_demo_report Result_Analysed by simp
-  from run_program_check_sound
+    using certificate_demo_report Analysed by simp
+  from run_voblint_check_sound
          [OF certificate_demo_init certificate_demo_to_check next_check.simps(1)
-             certificate_demo_config_terminates Result_Analysed]
+             certificate_demo_config_terminates Analysed]
   obtain chk
     where listed: "chk \<in> set (res_checks res)"
       and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
@@ -633,7 +633,7 @@ proof (cases "run_program Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
   have "(check_point chk, check_verdict chk) \<in> set [(Statement 4, Decided Check_Proved)]"
     unfolding checks [symmetric] using listed by auto
   then have "check_verdict chk = Decided Check_Proved" by simp
-  with Result_Analysed listed re mem pr show ?thesis by blast
+  with Analysed listed re mem pr show ?thesis by blast
 qed (use certificate_demo_report in simp_all)
 
 end

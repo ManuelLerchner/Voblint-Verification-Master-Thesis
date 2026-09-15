@@ -383,38 +383,38 @@ text \<open>
   which of them happened, which is the distinction its exit codes are built on.
 \<close>
 
-datatype 'v program_answer =
-    Result_Malformed
-  | Result_Unsupported
-  | Result_Analysed "'v run_result"
+datatype 'v analysis_answer =
+    Malformed_Program
+  | Unsupported_Configuration
+  | Analysed "'v run_result"
 
 definition analyse_program ::
     "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> abstract_value program_answer" where
+       \<Rightarrow> abstract_value analysis_answer" where
   "analyse_program kind solver ctx p =
-     (if \<not> wf_program_compile_input_exec p then Result_Malformed
+     (if \<not> wf_program_compile_input_exec p then Malformed_Program
       else
         case resolve_analysis_config (mk_analysis_config kind solver ctx) of
-          None \<Rightarrow> Result_Unsupported
+          None \<Rightarrow> Unsupported_Configuration
         | Some pl \<Rightarrow>
             (case plan_result pl p of
-               None \<Rightarrow> Result_Unsupported
-             | Some res \<Rightarrow> Result_Analysed res))"
+               None \<Rightarrow> Unsupported_Configuration
+             | Some res \<Rightarrow> Analysed res))"
 
-fun map_program_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v program_answer \<Rightarrow> 'w program_answer" where
-  "map_program_answer f Result_Malformed = Result_Malformed"
-| "map_program_answer f Result_Unsupported = Result_Unsupported"
-| "map_program_answer f (Result_Analysed res) = Result_Analysed (map_run_result f res)"
+fun map_analysis_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_answer \<Rightarrow> 'w analysis_answer" where
+  "map_analysis_answer f Malformed_Program = Malformed_Program"
+| "map_analysis_answer f Unsupported_Configuration = Unsupported_Configuration"
+| "map_analysis_answer f (Analysed res) = Analysed (map_run_result f res)"
 
 text \<open>
   The operation a consumer outside Isabelle calls: \<^const>\<open>analyse_program\<close>, with each
   domain's rendering applied to every abstract value and nothing else changed.
 \<close>
 
-definition run_program ::
+definition run_voblint ::
     "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> String.literal program_answer" where
-  "run_program kind solver ctx p =
-     map_program_answer string_of_abstract_value (analyse_program kind solver ctx p)"
+       \<Rightarrow> String.literal analysis_answer" where
+  "run_voblint kind solver ctx p =
+     map_analysis_answer string_of_abstract_value (analyse_program kind solver ctx p)"
 
 end

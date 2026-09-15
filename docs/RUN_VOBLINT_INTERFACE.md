@@ -171,7 +171,7 @@ cover:
 
 The generated `Dispatch_Tables.thy` (`analyse`, `analyse_with_solver`,
 `analyse_with_state`, `analyse_with_state_default`) is a second dispatcher beside
-`plan_answer`/`run_voblint`, with its own consumers in the domain `*_Checks` and
+`plan_result`/`run_voblint`, with its own consumers in the domain `*_Checks` and
 `*_Entry` theories. `analyse_program` replaces both; the generator emits only the
 per-plan table that feeds it.
 
@@ -195,12 +195,14 @@ per-plan table that feeds it.
    entry points reduced to
    argument handling and I/O.
 7. Delete the Isabelle presentation layer: `Analysis_Graph*`, `State_Report_*`,
-   `VIMP_Source_Print`, `output_view`, `check_row`'s rendered fields.
+   `VIMP_Source_Print`. The old `run_voblint` with its views, `analysis_output` and
+   `check_row` is already gone; the endpoint theorems quantify over `run_voblint`'s
+   structured result.
 8. Regenerate every `EXPECT-GRAPH` oracle in the new format.
 9. Rename the solver selector to `--globals`: it chooses the side-effect update
    rule only; loop heads are always widened and narrowed (the `is_point` branch of
    `TD_side_upd_rule.thy`).
 10. Single-route audit over every domain x globals rule x context, including the
-    manifest's `legacy:` spellings and `plan_answer_report_defs`.
+    manifest's `legacy:` spellings and `plan_result_report_defs`.
 11. Website: introduction, domain/globals/context explainers, globals placement,
     inline editor annotations.
