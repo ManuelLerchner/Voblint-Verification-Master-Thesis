@@ -1,5 +1,5 @@
 theory Congruence_Lattice
-  imports Congruence_Domain "Voblint_VIMP.VIMP_Source_Print"
+  imports Congruence_Domain
 begin
 
 section \<open>When is one residue class contained in another?\<close>

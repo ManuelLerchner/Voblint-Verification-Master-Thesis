@@ -39,8 +39,8 @@ definition seed_global_keys ::
 text \<open>
   At the unit context every entry has exactly one seed, so the context list is a
   constant and the label is the procedure name alone. A context-sensitive caller
-  passes \<open>result_contexts_at\<close> instead, which enumerates a solved table's own
-  covered contexts without needing an order on the context type.
+  passes the contexts its solved table covers instead, which needs no order on the
+  context type.
 \<close>
 
 definition unit_seed_global_keys ::

@@ -65,7 +65,6 @@ theory Voblint
     "Voblint_Examples_Congruence.Example_Congruence_DG_Run"
     "Voblint_Analysis_Sign.Sign_Entry"
     "Voblint_Examples_CLI.Dispatch_Matrix"
-    "Voblint_CLI.State_Report_Graph"
 begin
 
 text \<open>
@@ -267,8 +266,9 @@ text \<open>
   interval analysis keeps the two call contexts separate.  Recursive examples test
   structural activation nesting independently of that repeated-call witness.
 
-  GraphViz exporters present procedure entries, results, calls, resumes, and computed
-  abstract states without changing the certified equation system.
+  The exported analyser returns its solved result as data; the text report, GraphViz
+  drawings and report pages are built from that data outside this development, so no
+  rendering is part of any soundness claim.
 
   \<^bold>\<open>How the development is laid out.\<close>  One Isabelle session per architectural
   layer, and the ROOT graph is what keeps the layering honest: a theory cannot reach
@@ -287,8 +287,8 @@ text \<open>
   most downstream file in the development: it imports the CLI and every flagship, so
   anything it names has actually been built.
 
-  The index below separates the proof spine from executable frontends, DOT exporters,
-  and research witnesses.
+  The index below separates the proof spine from executable frontends and research
+  witnesses.
 
   \<^bold>\<open>1. Language.\<close> VIMP syntax, small-step semantics, and the procedural extension
   (scopes, calls, restores).
@@ -297,7 +297,6 @@ text \<open>
     \<^item> @{theory Voblint_VIMP.VIMP_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_VIMP.VIMP_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
     \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_VIMP.VIMP_Source_Print} --- source rendering used by the GraphViz tooling.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
@@ -594,17 +593,13 @@ text \<open>
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
       @{thm dep_aux_dg_edge_tree_at} names the source address and the one
       global slot, nothing else.
-    \<^item> \<^bold>\<open>Rendering\<close> --- the \<open>_export_auto\<close> / \<open>_graph_snapshot_auto\<close> family
-      (@{theory Voblint_CLI.State_Report_Graph} and its context-expanded
-      continuations) stops at a neutral
-      \<open>export_graph\<close>; DOT and HTML are produced from it by the OCaml renderers,
-      outside any theory. Neither half has an Isabelle-side witness of its own:
-      a rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
+    \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml
+      renderers from \<^const>\<open>run_voblint\<close>'s structured result, outside any theory.
+      A rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
-      \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and
+      \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node states, and
       \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a
-      recursive procedure. Those compare output; a build-time render only proves
-      it did not crash.
+      recursive procedure.
     \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples_Tooling.Example_Strategy_Tree} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
       independent of any abstract domain, built directly from \<^const>\<open>QueryL\<close>/

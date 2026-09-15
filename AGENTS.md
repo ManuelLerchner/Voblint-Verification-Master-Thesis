@@ -132,7 +132,7 @@ system from the solver's association-list states to the function-valued
 states the framework is stated over. The `Voblint_Analysis_*` sessions thread
 each concrete domain instance (Sign, Interval, ...) through them; the reuse
 locales, the publication surface and the compile-dependent routed contexts live
-under `src/Analyses/Shared/`. The dispatch config and the graph export are not
+under `src/Analyses/Shared/`. The dispatch config and `run_voblint` are not
 there -- no domain imports either, so both live in `Voblint_CLI` beside their
 only consumers.
 `docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines

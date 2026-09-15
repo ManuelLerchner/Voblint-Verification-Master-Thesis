@@ -1,7 +1,6 @@
 theory Example_Analysis_Dispatch_Regression
   imports
     "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Run"
-    "Voblint_VIMP.VIMP_Source_Print"
 begin
 
 text \<open>
@@ -46,27 +45,6 @@ lemma dispatch_demo_interval_precise:
   by eval
 
 text \<open>
-  The explicit-solver payload owns every projection of its solved table. Its globals
-  column was empty when the CLI obtained that column through a second analysis call.
-\<close>
-
-lemma dispatch_demo_solver_payload_has_globals:
-  "map_option (\<lambda>(_, _, globals). globals \<noteq> [])
-     (solver_checked_payload_auto Interval_Analysis Solver_Warrow dispatch_demo_prog)
-   = Some True"
-  by eval
-
-lemma dispatch_demo_call_string_payload:
-  "(case cs_ctx_checked_payload_auto Interval_Analysis Solver_Warrow 1 dispatch_demo_prog of
-      None \<Rightarrow> False
-    | Some (_, verdicts, globals) \<Rightarrow>
-        verdicts =
-          [(Statement 1, Less (N 0) (V (STR ''y'')), Lifted Check_Proved),
-           (Statement 3, Less (N 0) (V (STR ''y'')), Lifted Check_Refuted)]
-        \<and> globals \<noteq> [])"
-  by eval
-
-text \<open>
   The call-string dispatcher reads the table its caller's plan named, not whichever
   one its domain publishes first. Int is where that is observable: its call-string
   route publishes an always-join table and a warrowing one, and the two rows below
@@ -76,12 +54,16 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_call_string_reads_the_named_discipline:
-  "map_option (fst \<circ> snd)
-     (cs_ctx_checked_payload_auto Int_Analysis Solver_Warrow 1 dispatch_demo_prog)
-   = Some (analyse_int_call_string_report_warrow 1 dispatch_demo_prog)"
-  "map_option (fst \<circ> snd)
-     (cs_ctx_checked_payload_auto Int_Analysis Solver_Join 1 dispatch_demo_prog)
-   = Some (analyse_int_call_string_report 1 dispatch_demo_prog)"
+  "(case run_voblint Int_Analysis (Some Solver_Warrow) (Ctx_CallString 1) dispatch_demo_prog of
+      Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+          = analyse_int_call_string_report_warrow 1 dispatch_demo_prog
+    | _ \<Rightarrow> False)"
+  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) dispatch_demo_prog of
+      Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+          = analyse_int_call_string_report 1 dispatch_demo_prog
+    | _ \<Rightarrow> False)"
   by eval+
 
 text \<open>
@@ -206,17 +188,6 @@ proof (rule analyse_interval_proved_sound)
           \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
     unfolding dispatch_demo_interval_precise by simp
 qed
-
-text \<open>
-  \<^const>\<open>string_of_exp\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Source_Print\<close>) renders the
-  \<open>exp\<close> half of a \<open>check_report_entry\<close> as a native string, so an external
-  consumer of \<open>analyse\<close>'s report can print a check's condition without decoding
-  the \<open>exp\<close> AST itself.
-\<close>
-
-lemma dispatch_demo_check_cond_rendered:
-  "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = STR ''0<y''"
-  by eval
 
 subsection \<open>The pipeline theorem on a concrete program\<close>
 

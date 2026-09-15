@@ -134,10 +134,7 @@ timeout) rather than hanging silently, and removes the temp file via
 This is containment for a CLI, not a fix. The fix (if one lands) is a
 proven-total or explicitly-scoped-nonterminating backend at the Isabelle
 level; the subprocess boundary exists only because a CLI is where an
-unsuspecting user actually hits the gap. The zero-formal EntryState
-nontermination tracked separately (see the closing text block of
-`Example_EntryState_Graph_Regression.thy`) is exactly the kind of case
-this boundary is meant to contain, not fix.
+unsuspecting user actually hits the gap.
 
 ## Explicit non-goals
 

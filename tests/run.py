@@ -94,9 +94,8 @@ verdicts:
 
   // EXPECT-GRAPH-BEGIN / -END   delimits a `voblint --graph-snapshot`
                                   capture, one output line per "// "-prefixed
-                                  source line (see Analysis_Graph_Export.thy's
-                                  contextual_analysis_canonical_text -- a
-                                  DOT-independent, cluster/node/edge textual
+                                  source line (see cli/render/render_snapshot.ml
+                                  -- a DOT-independent, cluster/node/edge textual
                                   rendering of the same solved CFG a --dot
                                   case renders as GraphViz). No block: the
                                   case's graph is not checked. Block present
@@ -454,9 +453,8 @@ def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
     Shared by both check_case's report-based cases and its --dot/--dot
     smoke cases: graph_snapshot_args preserves --dot unchanged (it only
     strips --dot/--graph-snapshot), so a --dot fixture's block is
-    checked against full_state_graph_snapshot_auto and a plain fixture's
-    against state_report_graph_snapshot_auto -- entirely decided by args,
-    with no separate marker convention needed."""
+    checked against the same snapshot as a plain fixture's -- entirely decided
+    by args, with no separate marker convention needed."""
     lines: list[str] = []
     fixture_lines = path.read_text().splitlines()
     graph_block = find_graph_block(fixture_lines)

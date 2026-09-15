@@ -58,7 +58,7 @@ text \<open>
   \<open>Ctx_EntryState\<close> selects the value-derived entry-state context analysis
   (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>, issue 108). Deliberately not
   a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
-  no-\<open>--context\<close> path, the GraphViz report, and every existing
+  no-\<open>--context\<close> path and every existing
   \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a
   trust boundary). \<open>analyse_config_ctx\<close> (\<open>Dispatch_Config\<close>) is the entry point for this
   dimension; legality is decided once, by \<open>resolve_analysis_config\<close>, and an
@@ -629,11 +629,6 @@ text \<open>
   \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close>, relevant
   wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
   result) rather than through the opaque \<open>String.literal\<close> above.
-
-  \<open>string_of_exp\<close> is exported alongside the structured \<open>exp\<close> already in
-  every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,
-  or call \<open>string_of_exp\<close> to render a check's condition as a native string
-  without decoding it --- both stay available, not a replacement report type.
 \<close>
 
 

@@ -496,7 +496,7 @@ and mark it `superseded (see below)`.
   projections specialize it. The redundant `Split_State` representation and its
   unused D/G conversions were removed. The old state-normalization,
   finite-fold, D/G reconstruction and printing clusters had no live consumer
-  and were removed. Domain printing reuses `VIMP_Source_Print.string_of_int`.
+  and were removed. Domain printing reuses `Abstract_Domain.string_of_int`.
   The Domain-session attribute audit added only rules with narrow conclusion
   heads and removed redundant `bfilter.simps` registrations; all six theories
   are I/Q-clean with no warnings.

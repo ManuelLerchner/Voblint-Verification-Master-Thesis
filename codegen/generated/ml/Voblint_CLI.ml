@@ -10624,6 +10624,29 @@ let rec arithmetic_diagnostics _A
              (zip (upt zero_nat (size_list obligations)) obligations))
       (arithmetic_sites g);;
 
+let rec result_checks_of
+  verdicts =
+    map (fun (v, (cnd, verdict)) -> Result_check_ext (v, cnd, verdict, ()))
+      verdicts;;
+
+let rec context_indices _A
+  indexed ctx =
+    map_filter
+      (fun x ->
+        (if (let (_, ctxa) = x in eq _A ctxa ctx) then Some (fst x) else None))
+      indexed;;
+
+let rec callee_of_entry = function FunctionEntry p -> p
+                          | Statement v -> ""
+                          | FunctionResult v -> "";;
+
+let rec ordered_by_key _A (_B1, _B2)
+  rank s =
+    map (fun k -> the_elem _A (filter (fun x -> eq _B1 (rank x) k) s))
+      (sorted_list_of_set (_B1, _B2) (image rank s));;
+
+let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
+
 let rec scope_vnames
   p owner =
     sup_set equal_literal
@@ -10641,29 +10664,6 @@ let rec scope_vnames_list
 let rec program_vars
   p = remdups equal_literal
         (maps (scope_vnames_list p) (prog_main_name :: prog_procs p));;
-
-let rec result_checks_of
-  verdicts =
-    map (fun (v, (cnd, verdict)) -> Result_check_ext (v, cnd, verdict, ()))
-      verdicts;;
-
-let rec ordered_by_key _A (_B1, _B2)
-  key s =
-    map (fun k -> the_elem _A (filter (fun x -> eq _B1 (key x) k) s))
-      (sorted_list_of_set (_B1, _B2) (image key s));;
-
-let rec context_indices _A
-  indexed ctx =
-    map_filter
-      (fun x ->
-        (if (let (_, ctxa) = x in eq _A ctxa ctx) then Some (fst x) else None))
-      indexed;;
-
-let rec callee_of_entry = function FunctionEntry p -> p
-                          | Statement v -> ""
-                          | FunctionResult v -> "";;
-
-let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
 
 let rec run_result_of _B
   into ctx_key ctx_view targets classify r globals p =

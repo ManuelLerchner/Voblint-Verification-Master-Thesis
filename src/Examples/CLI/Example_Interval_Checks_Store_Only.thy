@@ -3,7 +3,7 @@ section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval
 theory Example_Interval_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Entry"
           "Voblint_Analysis_Interval.Interval_Checks"
-          "Voblint_Analysis_Sign.Sign_Checks" "Voblint_CLI.Analysis_Graph_Export"
+          "Voblint_Analysis_Sign.Sign_Checks"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin

@@ -135,5 +135,22 @@ lemma warrow_idem: "a \<nabla>\<Delta> a = a" for a :: "'a::warrowing"
 lemma warrow_le_when_le: "b \<le> a \<Longrightarrow> a \<nabla>\<Delta> b \<le> a" for a b :: "'a::warrowing"
   unfolding warrow_def using narrow_le by simp
 
+subsection \<open>Printing integers\<close>
+
+text \<open>
+  Decimal text for the \<open>to_string\<close> of an integer-valued domain. Nothing is proved
+  about it: it is how a solved value is shown, not part of any soundness claim.
+\<close>
+
+fun string_of_nat :: "nat \<Rightarrow> String.literal" where
+  "string_of_nat n =
+     (if n < 10 then String.implode [char_of (n + 48)]
+      else string_of_nat (n div 10) + String.implode [char_of (n mod 10 + 48)])"
+
+definition string_of_int :: "int \<Rightarrow> String.literal" where
+  "string_of_int i =
+     (if i < 0 then STR ''-'' + string_of_nat (nat (- i))
+      else string_of_nat (nat i))"
+
 end
 

@@ -7,10 +7,9 @@ section \<open>Semantic analysis configuration\<close>
 text \<open>
   One canonical, executable representation of the choices that change
   \<^emph>\<open>what gets solved\<close>: abstract domain, solver update-rule discipline, and
-  context sensitivity. Presentation choices (DOT vs. a textual snapshot,
-  collapsed vs. expanded context rendering) are deliberately absent -- they
-  select how an already-computed result is drawn, never what the solver
-  computes, and stay owned by the CLI layer instead (\<open>Analysis_Graph_Export\<close>).
+  context sensitivity. Presentation choices (DOT vs. a textual snapshot) are
+  deliberately absent -- they select how an already-computed result is drawn,
+  never what the solver computes, and stay with the handwritten renderers.
 
   This theory names every domain explicitly by construction, so it sits in
   \<open>Voblint_CLI\<close> rather than under \<open>Analyses/Shared/\<close>: the shared layer carries no

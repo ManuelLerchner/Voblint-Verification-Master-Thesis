@@ -26,8 +26,8 @@ collecting semantics to the CLI:
   the three check results; the graph draws one node per `(pp, ctx)` pair.
 - **Regressions.** `tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp`
   (precision), `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`
-  (one wide context), `tests/regression/13-full-state-dot/02-entry_state_context_join.vimp`
-  (verdicts joined across contexts).
+  (one wide context), `tests/regression/13-full-state-dot/02-entry_state_contexts.vimp`
+  (one cluster per entry-state context).
 
 Arbitrary `gs`/`--flow-insensitive` stays out of scope; `declared_global p` is
 the classifier everywhere.

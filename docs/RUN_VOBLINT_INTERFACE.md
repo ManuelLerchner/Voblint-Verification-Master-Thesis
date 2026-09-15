@@ -194,10 +194,10 @@ per-plan table that feeds it.
    `render_json`, `render_xml`, `report_dir`), `cli/entry` (`voblint`, `voblint_web`),
    entry points reduced to
    argument handling and I/O.
-7. Delete the Isabelle presentation layer: `Analysis_Graph*`, `State_Report_*`,
-   `VIMP_Source_Print`. The old `run_voblint` with its views, `analysis_output` and
-   `check_row` is already gone; the endpoint theorems quantify over `run_voblint`'s
-   structured result.
+7. Delete the Isabelle presentation layer (done): `Analysis_Graph*`,
+   `State_Report_*`, `VIMP_Source_Print`, the old `run_voblint` views,
+   `analysis_output` and `check_row`. The endpoint theorems quantify over
+   `run_voblint`'s structured result.
 8. Regenerate every `EXPECT-GRAPH` oracle in the new format.
 9. Rename the solver selector to `--globals`: it chooses the side-effect update
    rule only; loop heads are always widened and narrowed (the `is_point` branch of

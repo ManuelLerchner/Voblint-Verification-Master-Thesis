@@ -1,18 +1,12 @@
 // PARAM: --analysis sign --context call-string --context-depth 2
-// Call-string GraphViz coverage at a non-Interval domain. Until the shared
-// contextual renderer landed, --dot/--graph-snapshot with --context
-// call-string was rejected outright at the CLI, and the only contextual
-// graph that existed was entry-state's, written for Interval alone.
-// A call-string context is a cfg_node list -- pure call history, no domain
-// content -- and every state here renders through abstract_value, so one
-// configuration (cs_ctx_graph_config, State_Report_Graph.thy) serves
-// Sign, Interval and Int alike. This fixture pins that shared renderer at
-// Sign specifically: g is entered under two distinct call strings (via
-// f(3) and via f(-10)), so it gets two separate clusters whose enter and
-// combine edges route to their own context rather than joining, and the
-// two clusters carry genuinely different states (Positive vs Negative).
-// The checks are Sign's own business, not the graph's: doubling preserves
-// sign, so both are PROVED.
+// Call-string graph coverage at a non-Interval domain. A call-string context
+// is a cfg_node list -- pure call history, no domain content -- so one graph
+// builder serves every domain. g is entered under two distinct call strings
+// (via f(3) and via f(-10)), so it gets two separate clusters whose enter and
+// combine edges route to their own context rather than joining, and the two
+// clusters carry genuinely different states (Positive vs Negative). The
+// checks are Sign's own business, not the graph's: doubling preserves sign,
+// so both are PROVED.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context

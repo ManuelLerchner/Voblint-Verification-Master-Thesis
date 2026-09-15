@@ -120,7 +120,7 @@ document, with no build step and no intermediate file.
 
 #figure(
   raw-render(raw(read("/shared/dot/cfg_fac.dot")), height: 70mm),
-  caption: [The same CFG, produced by #isaconst("state_report_export_auto") and laid out
+  caption: [The same CFG, drawn by the CLI from #isaconst("run_voblint") and laid out
     from #isafile("shared/dot/cfg_fac.dot") at compile time.],
 ) <fig:cfg-dot>
 

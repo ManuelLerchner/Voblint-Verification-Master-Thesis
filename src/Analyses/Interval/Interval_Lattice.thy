@@ -1,5 +1,5 @@
 theory Interval_Lattice
-  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds "Voblint_VIMP.VIMP_Source_Print"
+  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds "Voblint_VIMP.VIMP_Proc"
 begin
 
 section \<open>Interval lattice\<close>

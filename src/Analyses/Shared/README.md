@@ -60,7 +60,7 @@ crosses them: `Routed_DG_Analysis` imports `Compiled_Routed_Equations` and
 `Entry_State_Routed_Context` from `Routing/`. `Nonrelational/` imports nothing from
 either. Keeping those names explicit prevents shared
 code from becoming an undifferentiated analysis base; CLI-only dispatch and
-graph export stay beside their consumers in `Voblint_CLI`.
+`run_voblint` stay beside their consumers in `Voblint_CLI`.
 
 ## Why they are chained
 

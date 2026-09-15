@@ -25,8 +25,7 @@ does see all five.
 | flat report | `check_report_entry list` — one verdict per check, no contexts |
 | contextual report | one verdict per (check, context). Needed because a check can be `Dead` in one context and decided in another, which a flat verdict cannot express. |
 | arithmetic diagnostic | a `/` or `%` occurrence whose divisor is classified as definitely or possibly zero, with its source point and occurrence index |
-| context-expanded graph | one node per (program point, context) pair rather than one per point --- the only way a context-sensitive result is visible at all |
-| `export_graph` | the neutral hand-off: clusters, nodes and edges, each with a kind and a status, and no colour, shape or label markup. What the OCaml renderers consume. |
+| run result | what `run_voblint` answers: the compiled graph, the contexts, one state per covered (point, context), the contexts each call enters, the check column and the diagnostics. Everything a renderer reads. |
 
 ## What is here
 
@@ -38,15 +37,8 @@ does see all five.
 | `Dispatch_Carrier.thy` | one value type wide enough for every domain's state-carrying report |
 | `Analyse_Dispatch.thy` | `analyse` and the public soundness corollaries restated over it |
 | `Dispatch_Config.thy` | config-driven dispatch: `analyse_config`, `analyse_config_ctx`, `analyse_config_with_state` |
-| `Analysis_Graph.thy` | the graph vocabulary: cluster/node/edge datatypes, the config record of caller hooks, node status and annotation, and the chosen context ordering |
-| `Analysis_Graph_Build.thy` | `build_analysis_graph`: a solved result becomes clusters, nodes and routed edges |
-| `Analysis_Graph_Wf.thy` | that what it builds is always well-formed --- distinct nodes, every edge between nodes that exist. The one theorem in the graph layer. |
-| `Analysis_Graph_Naming.thy` | positional identifiers for nodes and clusters, plus the call-string context presentation |
-| `Analysis_Graph_Export.thy` | the three readings handed out: canonical text snapshot, `export_graph`, check-report listing. The single import point for the four above. |
-| `State_Report_Graph.thy` | the entry points that pair a solved run with a graph: per-node state labels, context-expanded graphs, check annotations |
-| `State_Report_Entry_Ctx.thy`, `State_Report_Call_String.thy` | the context-expanded entry-state and call-string graphs |
 | `Arithmetic_Diagnostics.thy` | arithmetic occurrences, extraction completeness, nonzero-divisor obligations, and structured diagnostics |
-| `Analysis_Run.thy` | `run_voblint`: one configuration, run once, answering every view from one solve. The constant `export_code` exports. |
+| `Analysis_Run.thy` | `run_voblint`: one configuration, run once, answering one structured result from one solve. The constant `export_code` exports. |
 | `Analysis_Run_Sound.thy` | what a run proves about a run of the program, at the context-free configurations |
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string configurations |
 | `Analysis_Run_Solver_Sound.thy` | the same at an explicitly chosen solver discipline |
@@ -95,18 +87,12 @@ OCaml outside the proof. See the
 [main README](../../../README.md#arithmetic-safety-from-an-empty-diagnostic-list)
 for the full statement.
 
-## Why the graph layer is here and not under `Analyses/Shared/`
+## Nothing here draws a picture
 
-`Analyses/Shared/`'s contract is what every concrete domain reuses. No domain uses
-the graph layer and the graph layer uses nothing domain-specific, so placing it there
-would put an island under a description that does not describe it. Its consumers are
-the `State_Report_*` theories and `Analysis_Run` beside it here. Domain witnesses
-cannot see this session, so graph shape is pinned CLI-observably by the golden
-fixtures under `tests/regression/11-graph-snapshot/`.
-
-Nothing here draws a picture. Isabelle stops at `export_graph`; DOT and HTML come
-from `cli/render/render_dot.ml` and `cli/render/report_dir.ml`, outside any theory and outside
-any soundness claim.
+`run_voblint` stops at its structured result. The text report, DOT, graph snapshots
+and HTML come from `cli/result/` and `cli/render/`, outside any theory and outside any
+soundness claim; graph shape is pinned CLI-observably by the golden fixtures under
+`tests/regression/11-graph-snapshot/`.
 
 ## Why the selection surface is here and not under `Analyses/Shared/`
 

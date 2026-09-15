@@ -1,6 +1,5 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.State_Report_Call_String"
     "Voblint_CLI.Analysis_Run"
 begin
 

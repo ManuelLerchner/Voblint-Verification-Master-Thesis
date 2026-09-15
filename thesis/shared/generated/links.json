@@ -5,7 +5,7 @@
     "const:combine_env": "Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst",
     "const:compile": "Voblint/Voblint_Routing/Voblint_Compile.VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile%7Cconst",
     "const:intra": "Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg.intra%7Cconst",
-    "const:state_report_export_auto": "Voblint/Voblint_CLI/State_Report_Graph.html#State_Report_Graph.state_report_export_auto%7Cconst",
+    "const:run_voblint": "Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst",
     "const:valid_ltr": "Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst",
     "locale:dg_ctx_activation_base": "Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base%7Clocale",
     "locale:sound_dg_spec_core": "Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.sound_dg_spec_core%7Clocale",

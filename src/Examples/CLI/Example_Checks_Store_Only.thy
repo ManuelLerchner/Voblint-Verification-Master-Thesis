@@ -3,7 +3,7 @@ section \<open>Example: checks_proven/checks_provenD alone, store-only\<close>
 theory Example_Checks_Store_Only
   imports "Voblint_Framework.Checks"
           "Voblint_Analysis_Sign.Sign_Entry" "Voblint_Analysis_Sign.Sign_Checks"
-          "Voblint_CLI.Analysis_Graph_Export" "Voblint_VIMP.VIMP_Notation"
+          "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
@@ -230,51 +230,6 @@ corollary checks_ex_report_agrees_with_node_classification:
       "Statement 1" "Less (N 0) (V (STR ''y''))" Check_Proved checks_ex_env sign_classify_check]
   using checks_ex_intra_eval checks_ex_classify_1
   by (auto simp: checks_ex_intra_eval)
-
-lemma checks_ex_report_rendered:
-  "map string_of_check_report_entry (analyse_sign_report_for checks_ex_gs checks_ex_program) =
-     [STR ''pp1: 0<y  PROVED'', STR ''pp3: 0<y  REFUTED'', STR ''pp5: z==1  UNKNOWN'']"
-  by eval
-
-subsection \<open>Colouring checks by executable classification\<close>
-
-text \<open>
-  What a renderer needs from a solved analysis is one annotation per node, and
-  the check-agnostic \<^type>\<open>graph_node_annotation\<close> hook is where it comes
-  from. Drawing is not done here: the CLI's own renderer consumes the structured
-  export, so this theory demonstrates the annotation, not a picture.
-  \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
-  computed \<^const>\<open>analyse_sign_report_for\<close>, so a change to the program or the
-  solver result changes the rendered color automatically.  The mapping is
-  analysis-independent, which is why only this Sign witness pins it.
-  The unrelated \<open>FunctionResult (STR ''main'')\<close> exit node gets its own neutral-grey
-  annotation through the same hook, so it is not confused with a refuted check.
-\<close>
-
-definition checks_ex_node_annotation :: "pp \<Rightarrow> graph_node_annotation option" where
-  "checks_ex_node_annotation v =
-     (case check_report_node_annotation
-             (analyse_sign_report_for checks_ex_gs checks_ex_program) v of
-        Some ann \<Rightarrow> Some ann
-      | None \<Rightarrow>
-          if v = FunctionResult (STR ''main'') then
-            Some (Node_Annotation [] NS_Exit)
-          else None)"
-
-lemma checks_ex_annotation_proved:
-  "checks_ex_node_annotation (Statement 1) =
-     Some (check_result_annotation Check_Proved (Less (N 0) (V (STR ''y''))))"
-  unfolding check_result_annotation_def by eval
-
-lemma checks_ex_annotation_refuted:
-  "checks_ex_node_annotation (Statement 3) =
-     Some (check_result_annotation Check_Refuted (Less (N 0) (V (STR ''y''))))"
-  unfolding check_result_annotation_def by eval
-
-lemma checks_ex_annotation_unknown:
-  "checks_ex_node_annotation (Statement 5) =
-     Some (check_result_annotation Check_Unknown (Eq (V (STR ''z'')) (N 1)))"
-  unfolding check_result_annotation_def by eval
 
 end
 

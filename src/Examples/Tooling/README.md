@@ -15,12 +15,9 @@ which is why `Voblint_Examples_Tooling` is parented on
 | `Example_TD_Side_Program.thy` | demo | Tilscher's TDside lock-set running example, through the typed `strategy_program` frontend |
 | `Example_TD_Plain_Program.thy` | demo | the TD must-be-initialized running example, through the same frontend with no side effects |
 
-The context-expanded graph regression needs
-`Voblint_CLI.State_Report_Graph`, so it lives in `CLI/`.
-
-Rendering has no witness here. Isabelle stops at an `export_graph`; DOT and
-HTML are produced from it by `cli/render/render_dot.ml` and `cli/render/report_dir.ml`,
-outside any theory. Neither half asserts anything a build-time render could
+Rendering has no witness here. Isabelle stops at `run_voblint`'s structured
+result; DOT and HTML are produced from it by `cli/render/render_dot.ml` and `cli/render/report_dir.ml`,
+outside any theory. A rendering asserts nothing a build-time render could
 check, so coverage lives in the executable corpus instead:
 `tests/regression/08-tooling/` for `--dot`, `13-full-state-dot/` for per-node
 state labels, and `11-graph-snapshot/` for golden cluster/node/edge snapshots
