@@ -3753,19 +3753,12 @@ function fixtureProgram(fixture) {
   return {
     source: fixture.source,
     fileName: fixture.path.split("/").at(-1),
-    origin: { param: "fixture", value: fixture.path },
     settings: { ...FIXTURE_DEFAULTS, ...fixture.settings },
   };
 }
 
-/*
- * Where the editor's program came from, while it is unedited: a link to an unedited
- * regression program or explainer example can name it instead of carrying its source.
- */
-let openedProgram = null;
-
 /* Opens a program and runs it under the settings it carries; absent settings stay. */
-function openProgram({ source, fileName, origin = null, settings = {} }) {
+function openProgram({ source, fileName, settings = {} }) {
   retireActiveRun("Analysis cancelled: another program was opened.");
   examplesDialog.close();
 
@@ -3775,7 +3768,6 @@ function openProgram({ source, fileName, origin = null, settings = {} }) {
   });
   editor.scrollDOM.scrollTo({ top: 0 });
   editorFile.textContent = fileName;
-  openedProgram = origin && { ...origin, source };
 
   selectIfOffered(analysisSelect, settings.analysis);
   selectIfOffered(globalsSelect, settings.globals);
@@ -3903,14 +3895,16 @@ fun main() {
   }
   __voblint_check(i == 5);
 }`,
-  "goblint-1587": `// goblint/analyzer #1587: 3Z - 2 was computed as 3Z, killing the branch below.
+  "goblint-1161": `// goblint/analyzer #1161: Goblint's regression test for the fix, in VIMP.
+// Before the fix Goblint read c % 2 as the constant 1, so it got both checks backwards.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 3 * n;
-  y = x - 2;
-  if (y == 4) {
-    __voblint_check(y == 4);
+  top = __voblint_nondet_int();
+  c = -5;
+  if (top) {
+    c = -7;
   }
+  __voblint_check(c % 2 == 1);
+  __voblint_check(c % 2 == -1);
 }`,
   theorems: `fun main() {
   n = __voblint_nondet_int();
@@ -3936,12 +3930,13 @@ function selectIfOffered(select, value) {
 /* -------------------------------------------------------------------------- */
 
 /*
- * A link opens a program and a configuration. The program is named when it is an
- * unedited regression program (?fixture=path) or explainer example (?example=name),
- * and otherwise travels in the fragment (#code=...), raw-deflated and base64url
- * encoded: the fragment never reaches a server and keeps a long program's link
- * short. Settings in the query override the ones a named program carries.
- * scripts/playground_link.py writes the same encoding for documentation.
+ * A link opens a program and a configuration. The Share button always carries the
+ * editor's source in the fragment (#code=...), raw-deflated and base64url encoded, so
+ * a shared link keeps showing what the sender saw: the fragment never reaches a server,
+ * and a named program can change under a link that only names it. Links written by
+ * hand or by scripts/playground_link.py may instead name a regression program
+ * (?fixture=path) or an explainer example (?example=name), which this page still opens;
+ * settings in the query override the ones a named program carries.
  */
 const LINK_SETTINGS = ["analysis", "globals", "context", "k"];
 
@@ -3994,7 +3989,6 @@ async function linkedProgram(params, code) {
     return {
       source: LINKED_EXAMPLES[name],
       fileName: "example.vimp",
-      origin: { param: "example", value: name },
     };
   }
 
@@ -4032,16 +4026,13 @@ async function applyLinkedConfiguration() {
   openProgram({ ...program, settings: { ...program.settings, ...overrides } });
 }
 
-/* A path keeps its slashes, so a fixture link stays readable. */
 function linkParam(key, value) {
-  return `${key}=${encodeURIComponent(value).replaceAll("%2F", "/")}`;
+  return `${key}=${encodeURIComponent(value)}`;
 }
 
 async function shareLink() {
   const source = editor.state.doc.toString();
-  const named = openedProgram?.source === source ? openedProgram : null;
   const parameters = [
-    ...(named ? [linkParam(named.param, named.value)] : []),
     linkParam("analysis", analysisSelect.value),
     linkParam("globals", globalsSelect.value),
     linkParam("context", contextSelect.value),
@@ -4050,7 +4041,7 @@ async function shareLink() {
   const url = new URL(location.href);
 
   url.search = parameters.join("&");
-  url.hash = named ? "" : `code=${await packSource(source)}`;
+  url.hash = `code=${await packSource(source)}`;
   history.replaceState(null, "", url);
 
   let copied = true;

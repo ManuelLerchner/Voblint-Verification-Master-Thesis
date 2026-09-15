@@ -19,7 +19,7 @@
 
 .scene-particles .pt-layout {
   display: grid;
-  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
   align-items: start;
   gap: 16px;
 }

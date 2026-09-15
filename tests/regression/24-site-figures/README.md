@@ -21,7 +21,7 @@ blocks.
 | What a run is; The life of a call; The proof chain; strategy trees (call tabs) | factorial `a = f(2)` | `precision/01-factorial_entry_state`, `known-imprecision/01-factorial_no_context` |
 | Four domains, one value: reduction | `x = 4 * n + 1` within `[0,10]` | `precision/02-int_reduction_int`, `known-imprecision/02`–`05-int_reduction_*` |
 | From a graph to equations to values; widening stepper; solver step-through; zoom lens; compiler morph | counting loop | `precision/03-counting_loop` |
-| A real bug, replayed (Voblint side) | goblint/analyzer #1587 shape | `precision/04-goblint_1587_congruence` |
+| A real bug, replayed (Voblint side) | goblint/analyzer #1161 regression test `37-congruence/14` | `precision/04-goblint_1161_congruence_mod` |
 | The flagship theorems (explorer program) | `theorems` example | `precision/05-theorems_program` |
 | Many runs in, one region per node out | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
 | Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`17`, `known-imprecision/07`–`09`, `01`–`02-recursion_grows_*_diverges` |

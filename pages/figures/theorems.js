@@ -129,7 +129,7 @@
     empty: {
       clause:
         "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores …) (check_point chk) = {}",
-      text: "The collecting semantics has no store at the check's node: no run, from any initial store, ever gets there.",
+      text: "The collecting semantics has no store at the check's node: no run, starting with its globals at zero, ever gets there.",
       link: isaConst("Voblint_CFG", "LTR_Collect", "ltr_collect"),
       linkText: "ltr_collect",
     },

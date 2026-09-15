@@ -231,9 +231,9 @@ corollary run_voblint_dead_check_unreached:
 theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-      and reachable: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
+      and mem: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
-      and quiet: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
+      and absent: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
 ```
 

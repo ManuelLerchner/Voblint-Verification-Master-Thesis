@@ -116,7 +116,9 @@ update rules and the three context modes are reachable through `run_voblint`.
 `codegen-regression` and `cli-build` compile and link the output through Dune.
 
 No `code_printing`, `code_datatype`, `code_reserved` or `code_abbrev` appears in
-`src/`. The `[code]` attributes that do appear sit on proved lemmas or on a
+`src/`. HOL-Library's own target mappings still apply, and they are what makes the
+exported integers Zarith's `Z.t`: `Code_Target_Numeral` and `Code_Abstract_Char`
+are imported by `Analysis_Run.thy`. The `[code]` attributes that do appear sit on proved lemmas or on a
 definition's own equations, and `[code_unfold]` rewrites named `dg_spec`
 definitions away before serialization.
 
@@ -133,6 +135,10 @@ from `manifests/vimp-grammar.yaml`) carry no soundness theorem; the proved chain
 an already-constructed `imp_prog`. `cli/entry/voblint.ml` calls `Generated.run_voblint`
 and reads its answer through the exported selectors. A malformed program answers
 `Malformed_Program`, which the CLI reports with exit code 4.
+
+Zarith, the OCaml and `wasm_of_ocaml` toolchains and the browser are trusted the same
+way, and so is the hand-written OCaml between `Generated.run_voblint` and the output:
+`cli/entry/voblint.ml`, `cli/entry/voblint_web.ml`, `cli/render/` and `cli/result/`.
 
 A row's verdict is a `contextual_verdict = check_result lifted`
 (`Contextual_Check_Report.thy`) computed in HOL; `Bot` is the dead marker, and
