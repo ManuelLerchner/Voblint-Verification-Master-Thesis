@@ -44,17 +44,25 @@ SKIP_PARTS = {".git", ".claude/worktrees", "_build", "docs/history"}
 def active_path(path: Path) -> bool:
     """Ignore generated and auxiliary worktrees absent from CI checkouts."""
     rel = path.relative_to(REPO).as_posix()
-    return not any(rel == part or rel.startswith(f"{part}/")
-                   for part in SKIP_PARTS)
+    return not any(rel == part or rel.startswith(f"{part}/") for part in SKIP_PARTS)
+
 
 # One kind per declaring command. A name may legitimately hold several kinds
 # (an inductive predicate brings a constant and an induction rule), so the
 # inventory maps name -> set of kinds.
 KIND_COMMANDS = {
     "thm": ("lemma", "theorem", "corollary", "proposition", "schematic_goal"),
-    "const": ("definition", "fun", "primrec", "abbreviation", "inductive",
-              "inductive_set", "function", "partial_function",
-              "lift_definition"),
+    "const": (
+        "definition",
+        "fun",
+        "primrec",
+        "abbreviation",
+        "inductive",
+        "inductive_set",
+        "function",
+        "partial_function",
+        "lift_definition",
+    ),
     "type": ("datatype", "type_synonym", "record", "typedef"),
     "locale": ("locale", "class"),
 }
@@ -63,7 +71,8 @@ COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmd
 # `record 'a domain_transfer =` and `datatype ('a, 'b) t = ...` put type
 # parameters between the command and the name, so those are skipped first.
 DECL = re.compile(
-    r"^\s*(?:qualified\s+)?(" + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
+    r"^\s*(?:qualified\s+)?("
+    + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
     + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)\s+)*"
     + r"([A-Za-z][A-Za-z0-9_']*)",
     re.M,
@@ -78,7 +87,10 @@ TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\
 # Names that deliberately do not resolve, with the reason.
 ALLOWED = {
     # Goblint's own vocabulary, cited for comparison rather than claimed.
-    "Spec", "assign", "ctx", "combine_env",
+    "Spec",
+    "assign",
+    "ctx",
+    "combine_env",
 }
 
 
@@ -92,9 +104,12 @@ def isabelle_commands() -> set[str] | None:
         exe = shutil.which("isabelle")
         if exe:
             try:
-                home = subprocess.run([exe, "getenv", "-b", "ISABELLE_HOME"],
-                                      capture_output=True, text=True,
-                                      check=True).stdout.strip()
+                home = subprocess.run(
+                    [exe, "getenv", "-b", "ISABELLE_HOME"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip()
             except (subprocess.CalledProcessError, OSError):
                 home = None
     if not home or not Path(home).is_dir():
@@ -132,8 +147,11 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str]]:
     for roots in REPO.rglob("ROOT"):
         if not active_path(roots):
             continue
-        for m in re.finditer(r"^\s*session\s+\"?([A-Za-z0-9_]+)\"?", 
-                             roots.read_text(errors="ignore"), re.M):
+        for m in re.finditer(
+            r"^\s*session\s+\"?([A-Za-z0-9_]+)\"?",
+            roots.read_text(errors="ignore"),
+            re.M,
+        ):
             sessions.add(m.group(1))
     return kinds, sessions
 
@@ -163,8 +181,11 @@ def main() -> int:
     kinds, sessions = build_inventory()
     commands = isabelle_commands()
     if not kinds:
-        print("check_thesis_refs: no declarations found -- is the tree checked "
-              "out, including vendor/td-verification?", file=sys.stderr)
+        print(
+            "check_thesis_refs: no declarations found -- is the tree checked "
+            "out, including vendor/td-verification?",
+            file=sys.stderr,
+        )
         return 1
 
     refs = collect_refs(thesis)
@@ -188,37 +209,48 @@ def main() -> int:
             if name not in sessions:
                 near = difflib.get_close_matches(name, sorted(sessions), 1, 0.7)
                 hint = f" -- did you mean {near[0]}?" if near else ""
-                missing.append(f"  {site}: session {name} is not declared in any ROOT{hint}")
+                missing.append(
+                    f"  {site}: session {name} is not declared in any ROOT{hint}"
+                )
             continue
         have = kinds.get(name)
         if have is None:
             near = difflib.get_close_matches(name, sorted(kinds), 1, 0.75)
             hint = f" -- did you mean {near[0]}?" if near else ""
-            missing.append(f"  {site}: isa{kind}(\"{name}\") does not exist{hint}")
+            missing.append(f'  {site}: isa{kind}("{name}") does not exist{hint}')
         elif kind not in have:
             deviated.append(
                 f"  {site}: {name} is cited as a {kind}, but the sources declare "
-                f"it as {'/'.join(sorted(have))}")
+                f"it as {'/'.join(sorted(have))}"
+            )
 
     if missing or deviated:
         if missing:
-            print(f"check_thesis_refs: {len(missing)} reference(s) name something "
-                  "that does not exist:")
+            print(
+                f"check_thesis_refs: {len(missing)} reference(s) name something "
+                "that does not exist:"
+            )
             print("\n".join(missing))
         if deviated:
             if missing:
                 print()
-            print(f"check_thesis_refs: {len(deviated)} reference(s) have deviated "
-                  "from what the sources declare:")
+            print(
+                f"check_thesis_refs: {len(deviated)} reference(s) have deviated "
+                "from what the sources declare:"
+            )
             print("\n".join(deviated))
-        print("\nFix the reference, or add it to ALLOWED with a reason if it "
-              "deliberately names something outside this tree.")
+        print(
+            "\nFix the reference, or add it to ALLOWED with a reason if it "
+            "deliberately names something outside this tree."
+        )
         return 1
 
     print(f"check_thesis_refs: {len(refs)} reference(s) resolve against the sources")
     if skipped_cmds:
-        print(f"  ({len(set(skipped_cmds))} \\isacmd reference(s) unchecked: "
-              "Isabelle is not on PATH)")
+        print(
+            f"  ({len(set(skipped_cmds))} \\isacmd reference(s) unchecked: "
+            "Isabelle is not on PATH)"
+        )
     return 0
 
 

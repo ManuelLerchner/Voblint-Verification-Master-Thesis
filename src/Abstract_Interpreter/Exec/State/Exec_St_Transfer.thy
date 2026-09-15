@@ -89,6 +89,31 @@ lemma fun_of_resolved_st_q_for_bot [simp]:
   by (rule ext) (simp add: fun_of_resolved_st_q_for_def)
 
 text \<open>
+  The state a run starts in gives every local one value and every global
+  another: C initializes a declared global to zero and leaves a local
+  unconstrained. Each domain's C-initial state is this construction at its own
+  abstraction of zero and its whole-value element, so the readback is one lemma
+  rather than one per domain. The triple is abstracted directly rather than
+  lifted, because a domain whose value type is itself a typedef would otherwise
+  descend through both quotients.
+\<close>
+
+definition initial_resolved_st_q :: "'a::bot => 'a => 'a resolved_st_q" where
+  "initial_resolved_st_q local_value global_value =
+     Abs_resolved_st (local_value, global_value, [])"
+
+lemma lookup_initial_resolved_st_q [simp]:
+  "fun_of_resolved_st_q_for gs (initial_resolved_st_q local_value global_value) x =
+   (if gs x then global_value else local_value)"
+  unfolding fun_of_resolved_st_q_for_def initial_resolved_st_q_def
+  by (auto simp: location_of_def split: if_splits)
+
+lemma fun_of_initial_resolved_st_q:
+  "fun_of_resolved_st_q_for gs (initial_resolved_st_q local_value global_value) =
+   (\<lambda>x. if gs x then global_value else local_value)"
+  by (rule ext) simp
+
+text \<open>
   The quotient-level projection agrees with the raw one at \<open>s\<close>'s own chosen
   representative -- so any raw-level fact about @{const fun_of_resolved_st_for}
   transports directly to @{const fun_of_resolved_st_q_for} through

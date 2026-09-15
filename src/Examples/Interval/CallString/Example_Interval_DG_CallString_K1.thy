@@ -148,7 +148,7 @@ definition nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
-     routed_node_rhs intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
+     routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_tree nest_S_st a src (\<lambda>_. Global))
       (routed_call_tree nest_S_st Global Seed (static_resolve nest_cfg) (\<lambda>d. d = Bot))
       (routed_entry_seed_tree Seed)
@@ -381,7 +381,7 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 lemma nest_cinit_le_cinit_ivl_st:
   "cinit_stores nest_gs \<subseteq> nest_gamma (Lifted cinit_ivl_st) Bot"
   by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_st_cinit_ivl_st_for)
+                 fun_of_initial_resolved_st_q)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved

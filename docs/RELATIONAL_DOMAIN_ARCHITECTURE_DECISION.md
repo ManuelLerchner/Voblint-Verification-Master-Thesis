@@ -110,7 +110,7 @@ Required by the task before evaluating any option.
 
 ### `restrict_local`/`restrict_global` footprint — 399 occurrences, not ~280
 
-```
+```text
 TD_Side_CFG.thy                    90   (flat-layer / effectful IP combine, abs_state level)
 Sign_Local_Effects.thy             75   (Sign-specific instance)
 Exec_Bridge.thy                    71   (executable bridge, st level)
@@ -1165,7 +1165,7 @@ until found.
 At the CFG point immediately after the guard's true branch (`x < y`,
 before `z := 1` executes), with `x`/`y` unconstrained at entry:
 
-```
+```text
 Interval:  x = [-inf, +inf], y = [-inf, +inf]   (guard taught it nothing)
 relc:      x <= y                                (guard recorded directly)
 ```

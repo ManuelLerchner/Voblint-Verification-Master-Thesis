@@ -18,10 +18,7 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Result.Unit_DG_Analysis"
-    "Voblint_Analysis_Interval.Interval_Assembly"
-    "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Analysis_Interval.Interval_Analyses"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"

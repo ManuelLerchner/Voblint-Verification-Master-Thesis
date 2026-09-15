@@ -1,0 +1,64 @@
+// PARAM: --analysis interval --context none --globals warrow-per-origin
+// Backs the warrow-per-origin cell of the site's Globals guide table. Concretely a stays in [-1,9],
+// but warrow per origin sees the recursive call site's own contribution grow from 9 to [1,9] and widens it to -inf; then a + 2 may be zero and the division loses everything: [-inf,+inf], so the check is UNKNOWN.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: f / unit
+//     f_pp4_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp1_ctx0
+//     f_pp3_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_1: main / unit
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   f_pp4_ctx0: pp4
+//       a=⊤
+//   f_exit_f_ctx0: exit_f
+//       a=⊤
+//   main_exit_main_ctx0: exit_main
+//   f_pp0_ctx0: pp0
+//       a=⊤
+//   f_pp1_ctx0: pp1 [unknown]
+//       a=[-∞,3]
+//       possible division by zero: 9 / (a + 2)
+//   f_pp3_ctx0: pp3 [unknown]
+//       a=⊤
+//       check a <= 9
+//   main_pp5_ctx0: pp5
+//   f_entry_f_ctx0: entry_f
+//       a=⊤
+//   main_pp6_ctx0: pp6
+//   main_entry_main_ctx0: entry_main
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: [a < 4]
+//   f_pp0_ctx0 -> f_pp3_ctx0: ![a < 4]
+//   f_pp3_ctx0 -> f_pp4_ctx0: check(a <= 9)
+//   f_pp4_ctx0 -> f_exit_f_ctx0: return
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   f_pp1_ctx0 -> f_entry_f_ctx0: enter f(9 / (a + 2))
+//   f_exit_f_ctx0 -> f_pp3_ctx0: combine
+//   f_pp1_ctx0 -> f_pp3_ctx0: call-to-return f
+//   main_pp5_ctx0 -> f_entry_f_ctx0: enter f(-1)
+//   f_exit_f_ctx0 -> main_pp6_ctx0: combine
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(a) {
+  if (a < 4) {
+    f(9 / (a + 2));
+  }
+  __voblint_check(a <= 9); // UNKNOWN
+}
+
+fun main() {
+  f(-1);
+}

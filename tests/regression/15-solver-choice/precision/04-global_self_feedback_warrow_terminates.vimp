@@ -1,7 +1,7 @@
-// PARAM: --analysis interval --solver warrow
+// PARAM: --analysis interval --globals warrow
 // Direct contrast with 05-global_self_feedback_join_terminates.vimp: the
-// identical self-referential global write, here under Interval's production
-// solver (Solver_Warrow).
+// identical self-referential global write, here under the warrowing globals
+// rule, the CLI's default.
 //
 // Termination here is not the whole claim: an imprecise UNKNOWN would also
 // be sound (the flow-insensitive global

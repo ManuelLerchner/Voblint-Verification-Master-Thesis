@@ -17,47 +17,15 @@ text \<open>
   directly, for every edge action and for procedure entry.
 
   \<open>parity_tf_st_for_commute\<close> is that statement for the transfer function and
-  \<open>parity_enter_st_for_commute\<close> for entry; the per-action \<open>_agree\<close> lemmas below
-  are the same fact spelled out one edge shape at a time, which is the form the
-  executable-refinement locale consumes.
+  \<open>parity_enter_st_for_commute\<close> for entry.
 \<close>
 
 instance parity :: bounded_warrowing ..
 
-lift_definition top_parity_st :: "parity resolved_st_q" is "(PTop, PTop, [])" .
+text \<open>The state a run starts in: a declared global holds \<open>PEven\<close>, a local \<open>PTop\<close>.\<close>
 
-lemma lookup_top_parity_st [simp]:
-  "fun_of_resolved_st_q_for gs top_parity_st x = PTop"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_top_parity_st:
-  "fun_of_resolved_st_q_for gs top_parity_st = (\<lambda>_. PTop)"
-  by (rule ext) simp
-
-lift_definition cinit_parity_st :: "parity resolved_st_q" is "(PTop, PEven, [])" .
-
-lemma lookup_cinit_parity_st [simp]:
-  "fun_of_resolved_st_q_for gs cinit_parity_st x =
-   (if gs x then PEven else PTop)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_parity_st:
-  "fun_of_resolved_st_q_for gs cinit_parity_st =
-   (\<lambda>x. if gs x then PEven else PTop)"
-  by (rule ext) simp
-
-lemma lookup_cinit_parity_st_for:
-  "fun_of_resolved_st_q_for gs cinit_parity_st x =
-   (if gs x then PEven else PTop)"
-  unfolding fun_of_resolved_st_q_for_def
-  by transfer (auto simp: location_of_def split: if_splits)
-
-lemma fun_of_st_cinit_parity_st_for:
-  "fun_of_resolved_st_q_for gs cinit_parity_st =
-   (\<lambda>x. if gs x then PEven else PTop)"
-  by (rule ext) simp
+abbreviation cinit_parity_st :: "parity resolved_st_q" where
+  "cinit_parity_st \<equiv> initial_resolved_st_q PTop PEven"
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
@@ -127,85 +95,6 @@ lemma parity_enter_st_for_commute:
    enter_parity_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
   by (simp add: parity_tf.op_defs enter_binding_def
                 enter_frame_def enter_frame_parity_st_for_commute)
-
-text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
-  \<open>sign_tf_st_for_nop_agree\<close>/\<open>sign_tf_st_for_assign_agree\<close> for the sign
-  domain: given only scoped input agreement (and, for a write, that the
-  written expression's value already agrees), the executable step agrees
-  with the abstract step at every location the scope covers.\<close>
-
-lemma parity_tf_st_for_nop_agree:
-  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (parity_tf_st_for gs EA_Nop s_exec) location =
-      parity_tf_abs EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf.op_defs)
-
-lemma parity_tf_st_for_assign_agree:
-  fixes y :: vname and a :: exp
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and val_agree: "aval_parity a (fun_of_resolved_st_q_for gs s_exec) = aval_parity a s_abs"
-    and location_in: "location \<in> universe"
-    and canonical: "location = location_of gs (location_vname location)"
-  shows
-    "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assign y a) s_exec) location =
-      parity_tf_abs (EA_Assign y a) s_abs (location_vname location)"
-proof (cases "location_vname location = y")
-  case True
-  then have "location = location_of gs y" using canonical by simp
-  then show ?thesis using val_agree True by (simp add: parity_tf.op_defs)
-next
-  case False
-  have neq: "location \<noteq> location_of gs y"
-  proof
-    assume eq: "location = location_of gs y"
-    have "location_vname location = y" using eq by (simp add: location_of_def)
-    with False show False by simp
-  qed
-  show ?thesis
-    using agree[OF location_in] neq False by (simp add: parity_tf.op_defs)
-qed
-
-text \<open>Parity's branch transfer is the identity on both sides (\<open>branch_parity_def\<close>,
-  \<open>parity_tf_st_for\<close>'s own \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two
-  agreement facts have the same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
-
-lemma parity_tf_st_for_assume_agree:
-  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assume b) s_exec) location =
-      parity_tf_abs (EA_Assume b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: branch_parity_def)
-
-lemma parity_tf_st_for_assume_not_agree:
-  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (parity_tf_st_for gs (EA_AssumeNot b) s_exec) location =
-      parity_tf_abs (EA_AssumeNot b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: branch_parity_def)
-
-lemma parity_tf_st_for_ret_none_agree:
-  fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
-  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
-      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
-    and location_in: "location \<in> universe"
-  shows
-    "lookup_resolved_st_q (parity_tf_st_for gs (EA_Ret None p) s_exec) location =
-      parity_tf_abs (EA_Ret None p) s_abs (location_vname location)"
-  using parity_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: parity_tf.op_defs)
-
-
 
 end
 

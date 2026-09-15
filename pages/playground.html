@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="description"
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser: pick a domain, a globals rule and a context sensitivity, then inspect every state."
+  >
+  <meta property="og:title" content="Voblint Playground">
+  <meta
+    property="og:description"
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
+  >
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+
+  <title>Voblint Playground</title>
+
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="explainer.css">
+
+  <!--
+    A module whose own imports fail never runs, and nothing else would say so: the
+    controls stay disabled under "Loading". This classic script reports the failure
+    until main.js marks the page ready.
+  -->
+  <script>
+    function voblintPlaygroundFailed(detail) {
+      if (window.voblintPlaygroundReady) {
+        return;
+      }
+
+      const show = () => {
+        const status = document.getElementById("analyzer-status");
+
+        if (status) {
+          status.textContent = "The playground could not load"
+            + (detail ? `: ${detail}` : "")
+            + ". Check your connection and reload the page.";
+          status.className = "status error";
+        }
+      };
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", show, { once: true });
+      } else {
+        show();
+      }
+    }
+
+    window.addEventListener("error", (event) => voblintPlaygroundFailed(event.message));
+  </script>
+  <script
+    type="module"
+    src="main.js"
+    onerror="voblintPlaygroundFailed('a script could not be downloaded')"
+  ></script>
+</head>
+
+<body>
+  <nav class="site-nav" aria-label="Site">
+    <div class="page-shell site-nav-inner">
+      <a class="site-brand" href="index.html">
+        <img src="assets/favicon.png" alt="" width="28" height="28">
+        <span>Voblint</span>
+      </a>
+      <ul class="site-links">
+        <li><a href="index.html">How it works</a></li>
+        <li><a href="Voblint/index.html">Formalization</a></li>
+        <li><a href="thesis.pdf">Thesis</a></li>
+        <li>
+          <a class="nav-icon" href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis" target="_blank" rel="noreferrer" title="GitHub">
+            <i class="fa-brands fa-github" aria-hidden="true"></i><span class="visually-hidden">GitHub</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-cta" href="playground.html" aria-current="page">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Playground
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="explainer-hero">
+    <div class="page-shell">
+      <p class="eyebrow">Playground</p>
+      <h1 id="analyzer-heading">Analyze VIMP in your browser</h1>
+      <p class="hero-lead">
+        VIMP is a small IMP-style language with <code>__voblint_check(cond)</code> assertions.
+        The analysis runs locally through the Isabelle-generated core; your source is not
+        uploaded. Parsing, rendering and this page sit outside the verified component.
+        <a href="index.html">How it works</a> explains every setting and every mark below.
+      </p>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section
+      class="section analyzer-section"
+      id="analyzer"
+      aria-labelledby="analyzer-heading"
+    >
+
+      <div class="analyzer">
+        <div class="analyzer-controls" role="group" aria-label="Analyzer configuration">
+          <div class="control-group">
+            <label for="analysis-select">Analysis domain</label>
+            <select id="analysis-select">
+              <option value="interval" selected>Interval</option>
+              <option value="sign">Sign</option>
+              <option value="int">Int product</option>
+              <option value="parity">Parity</option>
+              <option value="congruence">Congruence</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="globals-select">Globals</label>
+            <select id="globals-select" aria-describedby="globals-help">
+              <option value="join">Join</option>
+              <option value="per-origin">Join per origin</option>
+              <option value="warrow" selected>Warrow</option>
+              <option value="warrow-per-origin">Warrow per origin</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <label for="context-select">Context sensitivity</label>
+            <select id="context-select">
+              <option value="none">None</option>
+              <option value="entry-state">Entry state</option>
+              <option value="call-string" selected>Call string</option>
+            </select>
+          </div>
+
+          <div class="control-group control-group-narrow" id="context-depth-group">
+            <label for="context-depth">
+              Depth <code>k</code>
+            </label>
+            <input
+              id="context-depth"
+              type="number"
+              min="0"
+              max="16"
+              step="1"
+              value="1"
+              inputmode="numeric"
+              aria-describedby="context-depth-help"
+            >
+            <span id="context-depth-help" class="visually-hidden">
+              Number of recent call sites kept in each context, from 0 to 16.
+            </span>
+          </div>
+
+          <button id="run-analysis" type="button" disabled>
+            <i
+              id="run-analysis-icon"
+              class="fa-solid fa-play"
+              aria-hidden="true"
+            ></i>
+            <span id="run-analysis-label">Run analysis</span>
+          </button>
+
+          <div class="run-feedback">
+            <p
+              id="analyzer-status"
+              class="status"
+              role="status"
+            >Loading the editor…</p>
+
+            <span
+              id="analysis-timing"
+              class="analysis-timing"
+              aria-live="polite"
+              hidden
+            >
+              <i class="fa-solid fa-stopwatch" aria-hidden="true"></i>
+              <span class="visually-hidden">Analysis time</span>
+              <strong id="analysis-timing-value">—</strong>
+            </span>
+          </div>
+
+          <p class="control-help" id="globals-help"></p>
+        </div>
+
+        <div id="analysis-problems" class="analysis-problems" hidden></div>
+
+        <details id="raw-result" class="raw-result">
+          <summary>
+            <span class="eyebrow">Generated core</span>
+            <code id="raw-result-call" class="raw-call"></code>
+            <span class="raw-result-hint" aria-hidden="true">
+              <span class="raw-result-hint-closed">Click to expand</span>
+              <span class="raw-result-hint-open">Click to collapse</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </span>
+          </summary>
+
+          <p class="raw-result-note">
+            The call exactly as the Isabelle-generated <code>run_voblint</code> received
+            it, and the typed answer it returned, serialized field by field with Isabelle's
+            own field and constructor names. Abstract values arrive as strings rendered by
+            <code>run_voblint</code> itself; the presentation layer only replaces ASCII
+            symbol names such as <code>&lt;top&gt;</code> with glyphs such as ⊤. Integers
+            too large for a JSON number appear as strings. The editor annotations, state
+            inspector, and graph are drawn from this answer by untrusted presentation code.
+          </p>
+
+          <p id="raw-result-empty" class="raw-result-empty">
+            Run the analysis to see the call and its answer.
+          </p>
+
+          <div id="raw-result-panes" class="raw-result-panes" hidden>
+            <section class="raw-result-pane" aria-labelledby="raw-input-heading">
+              <div class="raw-result-pane-header">
+                <h2 id="raw-input-heading">Input</h2>
+              </div>
+              <div id="raw-input-body" class="code-editor raw-result-body"></div>
+            </section>
+
+            <section class="raw-result-pane" aria-labelledby="raw-output-heading">
+              <div class="raw-result-pane-header">
+                <h2 id="raw-output-heading">Output</h2>
+              </div>
+              <div id="raw-output-body" class="code-editor raw-result-body"></div>
+            </section>
+          </div>
+        </details>
+
+        <div class="editor-shell">
+          <div class="editor-toolbar">
+            <span class="editor-file">example.vimp</span>
+            <span class="editor-toolbar-tools">
+              <label class="editor-toggle" for="value-hints-toggle">
+                <input id="value-hints-toggle" type="checkbox" checked>
+                Inline values
+              </label>
+              <span class="editor-language">VIMP</span>
+            </span>
+          </div>
+
+          <div id="program-editor" class="code-editor"></div>
+        </div>
+
+        <p class="editor-note">
+          Run with <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> while editing. More
+          examples are in
+          <a
+            href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression"
+            target="_blank"
+            rel="noreferrer"
+          >tests/regression</a>.
+        </p>
+
+        <section
+          class="state-inspector"
+          aria-labelledby="state-inspector-heading"
+        >
+          <div class="state-inspector-header">
+            <p class="eyebrow" id="state-inspector-heading">State inspector</p>
+            <span id="state-inspector-location" class="state-inspector-location"></span>
+          </div>
+
+          <div id="state-inspector-body" class="state-inspector-body"></div>
+        </section>
+
+        <section
+          id="analysis-graph-panel"
+          class="analysis-graph-panel"
+          aria-labelledby="analysis-graph-heading"
+          hidden
+        >
+          <div class="analysis-graph-header">
+            <div>
+              <p class="eyebrow">Solved analysis</p>
+              <h2 id="analysis-graph-heading">Control-flow graph</h2>
+            </div>
+
+            <div class="analysis-graph-tools">
+              <span class="graph-hint">Drag or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
+
+              <div class="graph-toolbar" aria-label="Graph zoom controls">
+                <button
+                  id="graph-zoom-out"
+                  type="button"
+                  title="Zoom out"
+                  aria-label="Zoom out"
+                >−</button>
+                <button
+                  id="graph-zoom-reset"
+                  type="button"
+                  title="Reset zoom"
+                  aria-label="Reset zoom"
+                >100%</button>
+                <button
+                  id="graph-zoom-in"
+                  type="button"
+                  title="Zoom in"
+                  aria-label="Zoom in"
+                >+</button>
+                <button
+                  id="graph-zoom-fit"
+                  type="button"
+                  title="Fit graph"
+                  aria-label="Fit graph"
+                >Fit</button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="analysis-graph"
+            class="analysis-graph"
+            tabindex="0"
+            aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
+          ></div>
+        </section>
+
+        <details id="solver-globals" class="solver-globals" hidden>
+          <summary>
+            <span class="eyebrow">Entry seeds</span>
+            <span id="solver-globals-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            A call cannot write its callee's entry state directly: the solver side-effects
+            only global unknowns. So each call publishes the entered state into a seed, one
+            per procedure entry per context, and the callee's entry reads it back. Calls
+            routed to the same context meet in its seed, merged by the
+            <strong>Globals</strong> rule. Shown here are the callee's formals and the
+            program's globals; the other locals are reset on entry. These analyses keep
+            declared globals in the per-point state, so the solver's analysis-wide global
+            slot stays unused. Presentation only; no soundness statement reads these rows.
+          </p>
+
+          <ul id="solver-globals-list" class="solver-globals-list"></ul>
+        </details>
+
+      </div>
+
+      <p class="notice">
+        Every domain, globals rule, and context combination runs exactly as
+        selected: the solver warrows locals at loop heads under every rule, and the
+        rule only decides how side-effected globals are merged.
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="page-shell footer-content">
+      <span>Master&apos;s thesis · Manuel Lerchner · supervised by Alexandra Graß</span>
+      <a
+        href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
+        target="_blank"
+        rel="noreferrer"
+      >
+        <i class="fa-brands fa-github" aria-hidden="true"></i>
+        <span>GitHub repository</span>
+      </a>
+    </div>
+    <p class="page-shell logo-credits">
+      Logos belong to their projects: Isabelle (from the Isabelle distribution), Goblint
+      (<a href="https://github.com/goblint/logo" target="_blank" rel="noreferrer">goblint/logo</a>, CC BY 4.0),
+      OCaml (<a href="https://github.com/ocaml/ocaml-logo" target="_blank" rel="noreferrer">ocaml/ocaml-logo</a>, Unlicense),
+      WebAssembly (<a href="https://github.com/WebAssembly/web-assembly-logo" target="_blank" rel="noreferrer">WebAssembly/web-assembly-logo</a>, CC0).
+    </p>
+  </footer>
+</body>
+</html>

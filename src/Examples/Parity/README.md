@@ -2,16 +2,15 @@
 
 One theory, one program, one end-to-end claim. `Example_Parity_DG_Flagship.thy`
 is the evidence that the domain-registration API is reusable rather than
-Sign-shaped: it reaches source-level soundness through Parity's own production
-registration `parity_join`, an instance of the same `unit_dg_analysis` assembly
-Sign's production route interprets, without copying a proof step out of Sign's
-file. Nothing
+Sign-shaped: it reaches source-level soundness through Parity's own unit-context
+registration, an instance of the same `unit_dg_analysis` assembly Sign's
+registration interprets, without copying a proof step out of Sign's file. Nothing
 else lives here, because nothing else has to — a second domain that needed a
 second copy of the plumbing would be the negative result.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine through the production always-join registration `parity_join`, with no example-local registration, `strategy_tree`, or post-solution transport proofs |
+| `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine through Parity's unit-context registration at the always-join rule, with no example-local registration, `strategy_tree`, or post-solution transport proofs |
 
 The Parity member of the store-only check trio
 (`Example_Parity_Checks_Store_Only.thy`) lives in `CLI/` alongside Sign's and
@@ -72,8 +71,8 @@ The chain the theory then walks, one section each:
 parity_program              the VIMP source above, in program notation
   -> parity_pi              its procedure table
   -> parity_cfg             compile_prog; compiled_cfg gives finiteness and entry/exit
-  -> parity_join            the production registration, reused as is
-  -> parity_eqs             parity_unit_equations at this program
+  -> parity_rule            the unit-context registration, reused as is
+  -> parity_eqs             its equation system at this program
   -> parity_sol             what the vendored always-join solver computes, by eval
   -> parity_head_computed   x = PEven at 2, and three more readings
   -> parity_source_run_sound  every reachable VIMP store, at its matched point
@@ -91,15 +90,15 @@ one place where reading this file next to Interval's flagship — which needs
 warrowing — shows a real difference rather than a naming one.
 
 `parity_head_excludes_odd_store` closes the file by rejecting a concrete store
-from `parity_unit_state_at`, the same state `parity_source_run_sound` reads
-through. Without it the theorem could be true and empty.
+from the registration's published state at the loop head, the same state
+`parity_source_run_sound` reads through. Without it the theorem could be true and empty.
 
 ## Session shape
 
 ```text
 Voblint_Nonrelational
         |
-Voblint_Analysis_Parity        parity_join, parity_tf_st_for, cinit_parity_st
+Voblint_Analysis_Parity        parity_rule, parity_tf_st_for, cinit_parity_st
         |
 Voblint_Examples_Parity        this directory
 ```

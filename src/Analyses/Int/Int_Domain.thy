@@ -734,12 +734,69 @@ qed
 
 subsection \<open>Sound-domain instance\<close>
 
-definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> string" where
+text \<open>
+  Goblint's integer-domain tuple prints a value one of its components pins to a
+  single integer as that integer, a value no component constrains as \<open>\<top>\<close>,
+  and anything else as its components, each named and separated by \<open>;\<close>. The
+  bottom test runs first, so a component that concretizes to one integer pins a
+  live product to exactly that integer.
+\<close>
+
+fun ivl_constant :: "ivl \<Rightarrow> int option" where
+    "ivl_constant (Ivl (Fin l) (Fin u)) = (if l = u then Some l else None)"
+  | "ivl_constant _ = None"
+
+definition congruence_constant :: "congruence \<Rightarrow> int option" where
+  "congruence_constant c =
+     (case Rep_congruence c of
+        Some (r, m) \<Rightarrow> if m = 0 then Some r else None
+      | None \<Rightarrow> None)"
+
+definition int_dom_constant :: "'a int_dom_scheme \<Rightarrow> int option" where
+  "int_dom_constant d =
+     (if int_sign d = SZero then Some 0
+      else case ivl_constant (int_ivl d) of
+        Some n \<Rightarrow> Some n
+      | None \<Rightarrow> congruence_constant (int_congruence d))"
+
+lemma gamma_ivl_constant:
+  "ivl_constant i = Some n \<Longrightarrow> gamma_ivl i = {n}"
+  by (induction i rule: ivl_constant.induct) (auto split: if_splits)
+
+lemma gamma_congruence_constant:
+  "congruence_constant c = Some n \<Longrightarrow> gamma_congruence c = {n}"
+  unfolding congruence_constant_def gamma_congruence_def
+  by (auto split: option.splits if_splits)
+
+text \<open>Printing a live product as the integer \<^const>\<open>int_dom_constant\<close> names
+  loses nothing: that integer is all the product denotes.\<close>
+
+lemma gamma_int_dom_constant:
+  assumes "int_dom_constant d = Some n"
+    and "\<not> is_bottom_int_dom d"
+  shows "gamma_int_dom d = {n}"
+proof -
+  have "gamma_int_dom d \<subseteq> {n}"
+    using assms(1) gamma_ivl_constant gamma_congruence_constant
+    unfolding int_dom_constant_def gamma_int_dom_def
+    by (auto split: if_splits option.splits)
+  moreover have "gamma_int_dom d \<noteq> {}"
+    using assms(2) is_bottom_int_dom_correct by blast
+  ultimately show ?thesis
+    by blast
+qed
+
+definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> String.literal" where
   "string_of_int_dom d =
-     ''sign='' @ string_of_sign (int_sign d)
-     @ '', ivl='' @ string_of_ivl (int_ivl d)
-     @ '', parity='' @ string_of_parity (int_parity d)
-     @ '', congruence='' @ string_of_congruence (int_congruence d)"
+     (if is_bottom_int_dom d then sym_bottom
+      else if is_top_int_dom d then sym_top
+      else case int_dom_constant d of
+        Some n \<Rightarrow> string_of_int n
+      | None \<Rightarrow>
+            STR ''signs:'' + string_of_sign (int_sign d)
+          + STR ''; intervals:'' + string_of_ivl (int_ivl d)
+          + STR ''; parities:'' + string_of_parity (int_parity d)
+          + STR ''; congruences:'' + string_of_congruence (int_congruence d))"
 
 instantiation int_dom_ext ::
   (int_dom_record_lattice) sound_domain
@@ -782,5 +839,14 @@ qed
 
 end
 
+lemma to_string_int_dom_regression:
+  "to_string (bot :: int_dom) = STR ''<bottom>''"
+  "to_string (top :: int_dom) = STR ''<top>''"
+  "to_string (int_dom_sipc STop (Ivl (Fin 5) (Fin 5)) PTop top) = STR ''5''"
+  "to_string (int_dom_sipc SPos (Ivl (Fin 1) (Fin 9)) POdd (mk_congruence 1 2)) =
+     STR ''signs:+; intervals:[1,9]; parities:1+2<int>; congruences:1+2<int>''"
+  "to_string (int_dom_sipc SNonNeg (Ivl (Fin 0) PlusInf) PTop top) =
+     STR ''signs:<ge>0; intervals:[0,+<infinity>]; parities:<int>; congruences:<int>''"
+  by eval+
 
 end

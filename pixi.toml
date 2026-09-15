@@ -14,6 +14,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = ">=3.10"
+binaryen = ">=119"
 
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
@@ -33,19 +34,19 @@ pyyaml = "*"
 grammar-isabelle-generate = { cmd = "python3 scripts/gen_vimp_isabelle.py", description = "Regenerate Isabelle syntax from manifests/vimp-grammar.yaml." }
 grammar-menhir-generate = { cmd = "python3 scripts/gen_vimp_menhir.py", description = "Regenerate the Menhir and ocamllex frontends from manifests/vimp-grammar.yaml." }
 grammar-isabelle-check = { cmd = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/Program_Model/VIMP/VIMP_Grammar_Generated.thy", description = "Regenerate the Isabelle grammar and fail if the tracked theory changes." }
-grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
+grammar-menhir-check = { cmd = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/frontend/vimp_parser.mly cli/frontend/vimp_lexer.mll", description = "Regenerate the Menhir frontend and fail if tracked parser files change." }
+grammar-printer-generate = { cmd = "python3 scripts/gen_vimp_printer.py", description = "Regenerate the OCaml VIMP source printer from manifests/vimp-grammar.yaml." }
+grammar-printer-check = { cmd = "python3 scripts/gen_vimp_printer.py && bash scripts/mk/check-clean.sh cli/frontend/vimp_printer.ml", description = "Regenerate the OCaml VIMP printer and fail if the tracked printer changes." }
 grammar-check = { depends-on = [
   "grammar-isabelle-check",
   "grammar-menhir-check",
-], description = "Check both generated VIMP parser frontends for drift." }
+  "grammar-printer-check",
+], description = "Check every generated VIMP frontend and printer for drift." }
 
-# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Assembly.thy.
+# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Analyses.thy.
 # Registration only: the generated interpretations cite handwritten lemmas, which
 # Isabelle still checks. `--check` diffs regenerated output against the checked-in
 # theories itself, so the drift gate needs neither git nor a toolchain.
-# The gate demands only what the registry has adopted; an unadopted output
-# renders under --out and is not compared, so verification cannot be red for a theory
-# nobody put in the tree.
 assembly-generate = { cmd = "python3 scripts/gen_analysis_assembly.py", description = "Regenerate analysis assembly theories from manifests/analyses.yaml." }
 assembly-check = { cmd = "python3 scripts/gen_analysis_assembly.py --check", description = "Check generated analysis assembly theories against manifests/analyses.yaml." }
 
@@ -71,9 +72,9 @@ graphviz = "*"
 html-report-serve = { cmd = "bash scripts/mk/report.sh", description = "Serve an existing HTML analysis report and open it in a browser." }
 # Pins the emitted directory's shape, which is a contract with a frontend this
 # repository does not own -- see the test module's own docstring.
-html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = [
+html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py tests/test_value_rendering.py", depends-on = [
   "cli-build",
-], description = "Check the emitted report structure consumed by the g2html frontend." }
+], description = "Check the emitted report structure consumed by the g2html frontend, and how abstract values read in every rendering." }
 # Sweeps the whole fixture corpus, each under its own PARAM line, for the
 # faults that only show up on particular programs -- see the script's docstring.
 html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = [
@@ -100,10 +101,35 @@ voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = [
   "cli-build",
 ], description = "Benchmark selected abstract domains over one VIMP program." }
 
-# Git hooks (.lefthook.yaml).
+# Git hooks (.lefthook.yaml) and the formatters and linters they gate on.
+# Each tool's own config file excludes generated and vendored sources.
 [feature.lint.dependencies]
 lefthook = "*"
+ruff = ">=0.16"
+shellcheck = ">=0.11"
+actionlint = ">=1.7"
+zizmor = ">=1.30"
+typstyle = ">=0.15"
+biome = ">=2.5"
+markdownlint-cli2 = ">=0.23"
+typos = ">=1.50"
+taplo = ">=0.10"
 [feature.lint.tasks]
+python-format = { cmd = "ruff format", description = "Format tracked Python sources with ruff." }
+python-format-check = { cmd = "ruff format --check", description = "Check that Python sources are formatted with ruff." }
+python-lint = { cmd = "ruff check", description = "Lint Python sources with ruff." }
+# Workflow run blocks are shell too: actionlint checks them with shellcheck.
+shell-lint = { cmd = "shellcheck $(git ls-files '*.sh')", description = "Lint tracked shell scripts with shellcheck." }
+actions-lint = { cmd = "actionlint && zizmor --offline .github", description = "Lint GitHub workflows with actionlint and audit them with zizmor." }
+# 100 columns, the line limit the theories follow. The symbol table is generated.
+typst-format = { cmd = "typstyle -l 100 -i $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Format thesis Typst sources with typstyle." }
+typst-format-check = { cmd = "typstyle -l 100 --check $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Check that thesis Typst sources are formatted with typstyle." }
+markdown-lint = { cmd = "markdownlint-cli2", description = "Lint Markdown documentation with markdownlint-cli2." }
+spelling-check = { cmd = "typos", description = "Check source and prose spelling with typos." }
+toml-format = { cmd = "taplo fmt", description = "Format TOML files with taplo." }
+toml-format-check = { cmd = "taplo fmt --check", description = "Check that TOML files are formatted with taplo." }
+pages-format = { cmd = "biome check --write", description = "Format the site's JavaScript and CSS and apply safe biome lint fixes." }
+pages-lint = { cmd = "biome ci", description = "Check the site's JavaScript and CSS formatting and lint with biome." }
 hooks-install = { cmd = "lefthook install", description = "Install the repository's Lefthook Git hooks." }
 pre-commit = { cmd = "lefthook run pre-commit --all-files", description = "Run every pre-commit hook against the full repository." }
 [environments]
@@ -146,8 +172,10 @@ isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
   "vendor-init",
 ], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
 pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
+  "vendor-init",
   "browser-build",
 ], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
+pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
 isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = [
   "vendor-init",
 ], description = "Render the formalization with a certificate appendix into output/document.pdf." }
@@ -182,9 +210,22 @@ sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = 
 codegen-api-check = { cmd = "python3 scripts/check_generated_api.py", description = "Check handwritten OCaml consumers against the generated public export surface." }
 codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", description = "Compile and run the OCaml regression driver against the checked-in export." }
 
+# OCaml formatting. ocamlformat comes from opam like the rest of the toolchain,
+# pinned in .ocamlformat; .ocamlformat-ignore excludes generated sources.
+ocaml-format = { cmd = "bash scripts/mk/ocaml-format.sh", description = "Format handwritten OCaml sources and dune files." }
+ocaml-format-check = { cmd = "bash scripts/mk/ocaml-format.sh --check", description = "Check that handwritten OCaml sources and dune files are formatted." }
+opam-lint = { cmd = "opam lint voblint.opam", description = "Lint the opam package manifest." }
+format = { depends-on = [
+  "python-format",
+  "ocaml-format",
+  "typst-format",
+  "toml-format",
+  "pages-format",
+], description = "Format Python, OCaml, dune, Typst, TOML, and site JavaScript and CSS sources." }
+
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
-browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to JavaScript." }
+browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to WebAssembly." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
@@ -243,40 +284,84 @@ verification-surface-check = { cmd = "python3 scripts/check_verification_surface
 # Supported local verification gate. GitHub CI invokes the same named leaf
 # tasks in separately scheduled jobs; verification-surface-check prevents drift.
 # This only resolves from the default environment, which composes every feature.
+# Keep it deliberately fail-fast:
+#
+#   1. pure/static repository checks
+#   2. cheap generated/frontend/CLI checks
+#   3. analyzer/report integration checks
+#   4. Isabelle-dependent work
+#   5. documentation/PDF builds
+#
+# Pixi executes `depends-on` entries in the order listed and stops at the
+# first failure, so ordering here directly controls how quickly `verify`
+# reports inexpensive mistakes.
 verify = { depends-on = [
+  # ------------------------------------------------------------------------
+  # Static / no-build checks
+  # ------------------------------------------------------------------------
+  "verification-surface-check",
+  "python-format-check",
+  "python-lint",
+  "ocaml-format-check",
+  "opam-lint",
+  "shell-lint",
+  "actions-lint",
+  "typst-format-check",
+  "markdown-lint",
+  "spelling-check",
+  "toml-format-check",
+  "pages-lint",
+  "regression-lint",
   "isabelle-ascii-check",
+  "sessions-check",
+  "grammar-id-position-check",
   "grammar-check",
   "assembly-check",
   "analysis-registry-check",
-  "sessions-check",
+  "codegen-modules-check",
+  "codegen-api-check",
+  "isabelle-pdf-selection-check",
   "theory-prose-check",
   "retired-identifiers-check",
   "locale-parameters-check",
-  "isabelle-build",
-  "isabelle-docs-build",
-  "isabelle-pdf-build",
-  "isabelle-pdf-selection-check",
-  "isabelle-lint",
-  "codegen-check",
-  "codegen-modules-check",
-  "codegen-api-check",
-  "thesis-claims",
-  "thesis-facts",
   "thesis-refs",
   "thesis-snippets",
+
+  # ------------------------------------------------------------------------
+  # Cheap standalone builds / generated-code consumers
+  # ------------------------------------------------------------------------
   "thesis-typst",
-  "regression-lint",
-  "grammar-id-position-check",
+  "codegen-regression",
+
+  # ------------------------------------------------------------------------
+  # CLI / analyzer / report checks
+  # ------------------------------------------------------------------------
+  "cli-smoke",
   "cli-test",
   "arithmetic-diagnostics-check",
-  "cli-smoke",
+  "property-test",
   "html-report-structure-check",
   "html-report-corpus-audit",
   "html-report-config-audit",
-  "codegen-regression",
-  "property-test",
-  "verification-surface-check",
-], description = "Run the supported local verification gate; GitHub CI runs the same leaf checks separately." }
+  "thesis-claims",
+
+  # ------------------------------------------------------------------------
+  # Isabelle-dependent checks
+  #
+  # Keep the main build before consumers such as thesis-facts/codegen so
+  # they can reuse the populated heap store.
+  # ------------------------------------------------------------------------
+  "isabelle-build",
+  "thesis-facts",
+  "codegen-check",
+  "isabelle-lint",
+
+  # ------------------------------------------------------------------------
+  # Expensive rendered artifacts
+  # ------------------------------------------------------------------------
+  "isabelle-docs-build",
+  "isabelle-pdf-build",
+], description = "Run the supported local verification gate, cheapest fail-fast checks first; GitHub CI runs the same leaf checks separately." }
 [feature.thesis.dependencies]
 typst = ">=0.15"
 [feature.thesis.tasks]
@@ -345,3 +430,6 @@ thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", de
 # The gate that matters, and the only one that can be honest: it runs against
 # the deployed pages, so it cannot run until GitHub Pages has published them.
 thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
+pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
+pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
+pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }

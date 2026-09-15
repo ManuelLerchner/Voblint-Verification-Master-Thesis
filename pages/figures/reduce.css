@@ -1,0 +1,161 @@
+/* Four domains, one value: reduction */
+
+:where(.scene-reduce) .reduce-line .dot-in {
+  fill: var(--primary);
+}
+
+:where(.scene-reduce) .reduce-line .dot-extra {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:where(.scene-reduce) .reduce-line .dot-out {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-reduce) .reduce-line circle {
+  transition:
+    fill 250ms ease,
+    stroke 250ms ease,
+    r 250ms ease;
+}
+
+:where(.scene-reduce) .reduce-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+:where(.scene-reduce) .reduce-layout > div {
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-reduce) .reduce-code {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+:where(.scene-reduce) .reduce-alone {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+:where(.scene-reduce) .reduce-alone th {
+  padding: 3px 8px 3px 0;
+  text-align: left;
+  font-weight: 600;
+}
+
+:where(.scene-reduce) .reduce-alone td {
+  padding: 3px 0;
+}
+
+:where(.scene-reduce) .reduce-alone td:last-child {
+  text-align: right;
+}
+
+:where(.scene-reduce) .reduce-alone tr.int th,
+:where(.scene-reduce) .reduce-alone tr.int td {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+
+:where(.scene-reduce) .reduce-rows {
+  display: grid;
+  gap: 4px;
+}
+
+:where(.scene-reduce) .reduce-row,
+:where(.scene-reduce) .reduce-axis {
+  display: grid;
+  grid-template-columns: 7.5rem 6.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 250ms ease;
+}
+
+:where(.scene-reduce) .reduce-axis {
+  grid-template-columns: 14.5rem minmax(0, 1fr);
+  padding-block: 0;
+}
+
+:where(.scene-reduce) .reduce-row.changed {
+  background: var(--accent-soft);
+}
+
+:where(.scene-reduce) .reduce-row.together {
+  margin-top: 4px;
+  border-top: 1px dashed var(--border-strong);
+  border-radius: 0 0 8px 8px;
+}
+
+:where(.scene-reduce) .reduce-name {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+:where(.scene-reduce) .reduce-val {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 700;
+}
+
+.scene-reduce .reduce-line {
+  max-width: 330px;
+  margin: 0;
+}
+
+.scene-reduce .reduce-axis text {
+  fill: var(--text-muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+:where(.scene-reduce) .reduce-caption {
+  min-height: 4.8em;
+  margin: 14px 0 8px;
+}
+
+:where(.scene-reduce) .reduce-legend {
+  justify-content: flex-start;
+  margin: 0 0 10px;
+  font-size: 0.78rem;
+}
+
+:where(.scene-reduce) .reduce-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 1100px) {
+  :where(.scene-reduce) .reduce-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  :where(.scene-reduce) .reduce-row {
+    grid-template-columns: 5.5rem 5.5rem minmax(0, 1fr);
+  }
+
+  :where(.scene-reduce) .reduce-axis {
+    grid-template-columns: 11.5rem minmax(0, 1fr);
+  }
+}

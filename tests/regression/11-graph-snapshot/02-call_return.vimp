@@ -6,37 +6,44 @@
 // two structural shapes.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: inc / unit
+//     inc_exit_inc_ctx0
+//     inc_pp0_ctx0
+//     inc_entry_inc_ctx0
+//   cluster_ctx_1: main / unit
 //     main_pp4_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
-//   cluster_ctx_1:
-//     inc_pp0_ctx1
-//     inc_entry_inc_ctx1
-//     inc_result_inc_ctx1
+//     main_entry_main_ctx0
 //
 // nodes:
+//   inc_exit_inc_ctx0: exit_inc
+//       n=[5,5]
 //   main_pp4_ctx0: pp4
-//   main_result_main_ctx0: exit_main
-//   inc_pp0_ctx1: pp0
-//   main_entry_main_ctx0: entry_main
-//   main_pp2_ctx0: pp2
-//   inc_entry_inc_ctx1: entry_inc
-//   main_pp3_ctx0: pp3
-//       check 0<r
 //       r=[6,6]
-//   inc_result_inc_ctx1: exit_inc
+//   main_exit_main_ctx0: exit_main
+//       r=[6,6]
+//   inc_pp0_ctx0: pp0
+//       n=[5,5]
+//   main_pp2_ctx0: pp2
+//       r=⊤
+//   inc_entry_inc_ctx0: entry_inc
+//       n=[5,5]
+//   main_pp3_ctx0: pp3 [proved]
+//       r=[6,6]
+//       check 0 < r
+//   main_entry_main_ctx0: entry_main
+//       r=⊤
 //
 // edges:
-//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
-//   inc_pp0_ctx1 -> inc_result_inc_ctx1: return n+1
+//   inc_pp0_ctx0 -> inc_exit_inc_ctx0: return n + 1
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(0 < r)
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   inc_entry_inc_ctx0 -> inc_pp0_ctx0: body(inc)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
-//   inc_entry_inc_ctx1 -> inc_pp0_ctx1: body(inc)
-//   main_pp3_ctx0 -> main_pp4_ctx0: check(0<r)
-//   main_pp2_ctx0 -> inc_entry_inc_ctx1: enter inc(5)
-//   inc_result_inc_ctx1 -> main_pp3_ctx0: combine r
+//   main_pp2_ctx0 -> inc_entry_inc_ctx0: enter inc(5)
+//   inc_exit_inc_ctx0 -> main_pp3_ctx0: combine r := inc(5)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 

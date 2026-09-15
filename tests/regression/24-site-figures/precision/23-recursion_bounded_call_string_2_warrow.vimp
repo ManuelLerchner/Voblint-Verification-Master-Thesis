@@ -1,0 +1,120 @@
+// PARAM: --analysis interval --context call-string --context-depth 2 --globals warrow
+// Backs the "Stops at 10" program of the figure "A call that never stops
+// calling" (call string 2, warrow): recursion ends at x = 10, every context
+// keeps x >= 0, and the check is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: f / call-string=pp2 pp2
+//     f_pp1_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp2_ctx0
+//     f_pp4_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_2: f / call-string=pp2 pp5
+//     f_pp1_ctx1
+//     f_exit_f_ctx1
+//     f_pp0_ctx1
+//     f_pp2_ctx1
+//     f_pp4_ctx1
+//     f_entry_f_ctx1
+//   cluster_ctx_3: f / call-string=pp5
+//     f_pp1_ctx2
+//     f_exit_f_ctx2
+//     f_pp0_ctx2
+//     f_pp2_ctx2
+//     f_pp4_ctx2
+//     f_entry_f_ctx2
+//
+// nodes:
+//   main_exit_main_ctx0: exit_main
+//   main_pp5_ctx0: pp5
+//   main_pp6_ctx0: pp6
+//   main_entry_main_ctx0: entry_main
+//   f_pp1_ctx0: pp1
+//       x=[2,10]
+//   f_exit_f_ctx0: exit_f
+//       x=[2,10]
+//   f_pp0_ctx0: pp0 [proved]
+//       x=[2,10]
+//       check x >= 0
+//   f_pp2_ctx0: pp2
+//       x=[2,9]
+//   f_pp4_ctx0: pp4
+//       x=[2,10]
+//   f_entry_f_ctx0: entry_f
+//       x=[2,10]
+//   f_pp1_ctx1: pp1
+//       x=[1,1]
+//   f_exit_f_ctx1: exit_f
+//       x=[1,1]
+//   f_pp0_ctx1: pp0 [proved]
+//       x=[1,1]
+//       check x >= 0
+//   f_pp2_ctx1: pp2
+//       x=[1,1]
+//   f_pp4_ctx1: pp4
+//       x=[1,1]
+//   f_entry_f_ctx1: entry_f
+//       x=[1,1]
+//   f_pp1_ctx2: pp1
+//       x=[0,0]
+//   f_exit_f_ctx2: exit_f
+//       x=[0,0]
+//   f_pp0_ctx2: pp0 [proved]
+//       x=[0,0]
+//       check x >= 0
+//   f_pp2_ctx2: pp2
+//       x=[0,0]
+//   f_pp4_ctx2: pp4
+//       x=[0,0]
+//   f_entry_f_ctx2: entry_f
+//       x=[0,0]
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: check(x >= 0)
+//   f_pp0_ctx1 -> f_pp1_ctx1: check(x >= 0)
+//   f_pp0_ctx2 -> f_pp1_ctx2: check(x >= 0)
+//   f_pp1_ctx0 -> f_pp2_ctx0: [x < 10]
+//   f_pp1_ctx1 -> f_pp2_ctx1: [x < 10]
+//   f_pp1_ctx2 -> f_pp2_ctx2: [x < 10]
+//   f_pp1_ctx0 -> f_pp4_ctx0: ![x < 10]
+//   f_pp1_ctx1 -> f_pp4_ctx1: ![x < 10]
+//   f_pp1_ctx2 -> f_pp4_ctx2: ![x < 10]
+//   f_pp4_ctx0 -> f_exit_f_ctx0: return
+//   f_pp4_ctx1 -> f_exit_f_ctx1: return
+//   f_pp4_ctx2 -> f_exit_f_ctx2: return
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   f_entry_f_ctx2 -> f_pp0_ctx2: body(f)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   f_pp2_ctx0 -> f_entry_f_ctx0: enter f(x + 1)
+//   f_exit_f_ctx0 -> f_pp4_ctx0: combine
+//   f_pp2_ctx0 -> f_pp4_ctx0: call-to-return f
+//   f_pp2_ctx1 -> f_entry_f_ctx0: enter f(x + 1)
+//   f_exit_f_ctx0 -> f_pp4_ctx1: combine
+//   f_pp2_ctx1 -> f_pp4_ctx1: call-to-return f
+//   f_pp2_ctx2 -> f_entry_f_ctx1: enter f(x + 1)
+//   f_exit_f_ctx1 -> f_pp4_ctx2: combine
+//   f_pp2_ctx2 -> f_pp4_ctx2: call-to-return f
+//   main_pp5_ctx0 -> f_entry_f_ctx2: enter f(0)
+//   f_exit_f_ctx2 -> main_pp6_ctx0: combine
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(x) {
+  __voblint_check(x >= 0); // PROVED
+  if (x < 10) {
+    f(x + 1);
+  }
+}
+
+fun main() {
+  f(0);
+}

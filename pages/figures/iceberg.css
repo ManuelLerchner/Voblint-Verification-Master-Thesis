@@ -1,0 +1,513 @@
+/* Why this takes so long to prove */
+
+.scene:where(.scene-iceberg) .mono {
+  font-family: var(--mono);
+}
+
+:where(.scene-iceberg) .berg-tip {
+  fill: #ffffff;
+  stroke: #7fa3aa;
+  stroke-width: 2;
+}
+
+:where(.scene-iceberg) .berg-body {
+  fill: rgb(255 255 255 / 0.55);
+  stroke: #6f949b;
+  stroke-width: 2;
+}
+
+:where(.scene-iceberg) .wave {
+  fill: none;
+  stroke: #7fa3aa;
+  stroke-width: 2;
+}
+
+:where(.scene-iceberg) .berg-label text {
+  fill: var(--text) !important;
+  font-size: 14px !important;
+}
+
+:where(.scene-iceberg) .berg-label .big {
+  fill: var(--primary) !important;
+  font:
+    700 22px "Iowan Old Style",
+    Georgia,
+    serif !important;
+}
+
+:where(.scene-iceberg) .berg-label .muted {
+  fill: var(--text-muted) !important;
+  font-style: italic;
+}
+
+:where(.scene-iceberg) .berg-link path {
+  fill: none;
+  stroke: #6f949b;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-iceberg) .berg-link text {
+  fill: var(--text-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
+:where(.scene-iceberg) .berg-link .mono {
+  font-family: var(--mono);
+  font-style: normal;
+}
+
+:where(.scene-iceberg) .berg-label a text {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+:where(.scene-iceberg) .berg-label a:hover text,
+:where(.scene-iceberg) .berg-label a:focus-visible text {
+  fill: var(--primary) !important;
+  text-decoration-style: solid;
+}
+
+:where(.scene-iceberg) .berg-label line {
+  stroke: var(--text-muted);
+  stroke-width: 1.2;
+}
+
+.scene-iceberg .berg-body {
+  animation: berg-bob 6s ease-in-out infinite;
+}
+
+.scene-iceberg .berg-tip {
+  animation: berg-bob 6s ease-in-out infinite;
+}
+
+@keyframes berg-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}
+
+.scene-iceberg .berg-label.corpus text {
+  fill: var(--primary);
+}
+
+.scene-iceberg .berg-label .mono {
+  font-family: var(--mono);
+}
+
+:where(.scene-iceberg) .stats-breakdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+:where(.scene-iceberg) .stats-block {
+  padding: 16px 18px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+:where(.scene-iceberg) .stats-rows {
+  display: grid;
+  gap: 10px;
+}
+
+:where(.scene-iceberg) .stats-row p {
+  display: grid;
+  gap: 0;
+  margin: 0 0 4px;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+:where(.scene-iceberg) .stats-row small {
+  color: var(--text-muted);
+  font: 0.74rem var(--mono);
+}
+
+/* Width is the row's share of the largest row, so rows compare by length. */
+:where(.scene-iceberg) .stats-bar {
+  display: flex;
+  gap: 2px;
+  width: var(--share);
+  min-width: 6px;
+  height: 10px;
+}
+
+:where(.scene-iceberg) .stats-bar span {
+  flex-basis: 0;
+  min-width: 2px;
+  border-radius: 2px;
+}
+
+:where(.scene-iceberg) .stats-bar span:first-child {
+  border-radius: 4px 2px 2px 4px;
+}
+
+:where(.scene-iceberg) .stats-bar span:last-child {
+  border-radius: 2px 4px 4px 2px;
+}
+
+:where(.scene-iceberg) .stats-bar span:only-child {
+  border-radius: 4px;
+}
+
+:where(.scene-iceberg) .stats-bar .code {
+  background: var(--primary);
+}
+
+:where(.scene-iceberg) .stats-bar .doc {
+  background: #7fa3aa;
+}
+
+:where(.scene-iceberg) .stats-bar .blank {
+  background: var(--border);
+}
+
+:where(.scene-iceberg) .stats-bar .corpus-precision {
+  background: var(--success);
+}
+
+:where(.scene-iceberg) .stats-bar .corpus-soundness {
+  background: var(--primary);
+}
+
+:where(.scene-iceberg) .stats-bar .corpus-known-imprecision {
+  background: var(--warning);
+}
+
+:where(.scene-iceberg) .stats-bar .corpus-other {
+  background: var(--border-strong);
+}
+
+:where(.scene-iceberg) .stats-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  list-style: none;
+}
+
+:where(.scene-iceberg) .stats-legend .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+}
+
+:where(.scene-iceberg) .stats-legend .code {
+  background: var(--primary);
+}
+
+:where(.scene-iceberg) .stats-legend .doc {
+  background: #7fa3aa;
+}
+
+:where(.scene-iceberg) .stats-legend .blank {
+  background: var(--border);
+}
+
+:where(.scene-iceberg) .stats-note {
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-iceberg) .stats-breakdown {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+:where(.scene-iceberg) .stats-kinds {
+  grid-column: 1 / -1;
+
+  /* One hue per group; validated as a categorical set against the card surface. */
+  --kind-1: #1f7fb0;
+  --kind-2: #eb6834;
+  --kind-3: #7563c4;
+  --kind-4: #d49a00;
+  --kind-5: #1f9a66;
+}
+
+:where(.scene-iceberg) .stats-kinds-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 10px;
+}
+
+:where(.scene-iceberg) .stats-kinds-head .td-panel-title {
+  margin: 0;
+}
+
+:where(.scene-iceberg) .stats-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+:where(.scene-iceberg) .stats-unit i {
+  width: 9px;
+  height: 9px;
+  background: var(--text-muted);
+  border-radius: 2px;
+}
+
+:where(.scene-iceberg) .stats-kind-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 12px;
+}
+
+:where(.scene-iceberg) .kind-card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--kind);
+  border-radius: var(--radius-sm);
+}
+
+/* The statements outnumber everything else combined; give them the room to show it. */
+:where(.scene-iceberg) .kind-card:first-child {
+  grid-column: span 2;
+}
+
+:where(.scene-iceberg) .kind-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+:where(.scene-iceberg) .kind-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+:where(.scene-iceberg) .kind-total {
+  margin: 0;
+  color: var(--text);
+  font: 700 1.25rem var(--mono);
+}
+
+:where(.scene-iceberg) .kind-waffle {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 2px;
+}
+
+:where(.scene-iceberg) .kind-run {
+  display: contents;
+}
+
+:where(.scene-iceberg) .kind-run i {
+  width: 9px;
+  height: 9px;
+  background: var(--kind);
+  border-radius: 2px;
+  transition: opacity 150ms ease;
+}
+
+:where(.scene-iceberg) [data-shade="1"] i,
+:where(.scene-iceberg) .kind-swatch[data-shade="1"] {
+  opacity: 0.66;
+}
+:where(.scene-iceberg) [data-shade="2"] i,
+:where(.scene-iceberg) .kind-swatch[data-shade="2"] {
+  opacity: 0.44;
+}
+:where(.scene-iceberg) [data-shade="3"] i,
+:where(.scene-iceberg) .kind-swatch[data-shade="3"] {
+  opacity: 0.3;
+}
+:where(.scene-iceberg) [data-shade="4"] i,
+:where(.scene-iceberg) .kind-swatch[data-shade="4"] {
+  opacity: 0.2;
+}
+
+:where(.scene-iceberg) .kind-waffle.has-focus .kind-run:not(.is-focus) i {
+  opacity: 0.08;
+}
+
+:where(.scene-iceberg) .kind-legend {
+  display: grid;
+  align-content: end;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-iceberg) .kind-legend li {
+  display: grid;
+  justify-self: start;
+  grid-template-columns: 10px 3.4rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.84rem;
+  cursor: default;
+}
+
+:where(.scene-iceberg) .kind-swatch {
+  width: 10px;
+  height: 10px;
+  background: var(--kind);
+  border-radius: 2px;
+}
+
+:where(.scene-iceberg) .kind-legend b {
+  color: var(--text);
+  font: 700 0.86rem var(--mono);
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  :where(.scene-iceberg) .kind-card:first-child {
+    grid-column: auto;
+  }
+}
+
+:where(.scene-iceberg) .stats-commits {
+  grid-column: 1 / -1;
+
+  /* A single-hue ramp, light to dark, validated against the white calendar surface. */
+  --commit-0: #eef3f4;
+  --commit-1: #8fbcc4;
+  --commit-2: #5d9ca8;
+  --commit-3: #3a7d8b;
+  --commit-4: #123f49;
+}
+
+:where(.scene-iceberg) .commit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 24px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-iceberg) .commit-scroll {
+  overflow-x: auto;
+}
+
+:where(.scene-iceberg) .commit-heatmap {
+  display: block;
+  max-width: none;
+  height: auto;
+  margin: 0;
+}
+
+:where(.scene-iceberg) .commit-cell {
+  stroke: rgb(23 75 87 / 0.06);
+  stroke-width: 1;
+}
+
+:where(.scene-iceberg) .commit-cell:hover {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+:where(.scene-iceberg) .level-0 {
+  fill: var(--commit-0);
+  background: var(--commit-0);
+}
+:where(.scene-iceberg) .level-1 {
+  fill: var(--commit-1);
+  background: var(--commit-1);
+}
+:where(.scene-iceberg) .level-2 {
+  fill: var(--commit-2);
+  background: var(--commit-2);
+}
+:where(.scene-iceberg) .level-3 {
+  fill: var(--commit-3);
+  background: var(--commit-3);
+}
+:where(.scene-iceberg) .level-4 {
+  fill: var(--commit-4);
+  background: var(--commit-4);
+}
+
+:where(.scene-iceberg) .commit-month,
+:where(.scene-iceberg) .commit-day {
+  fill: var(--text-muted);
+  font: 11px var(--mono);
+}
+
+:where(.scene-iceberg) .commit-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  list-style: none;
+}
+
+:where(.scene-iceberg) .commit-legend li:first-child {
+  margin-right: 4px;
+}
+
+:where(.scene-iceberg) .commit-legend li:last-child {
+  margin-left: 4px;
+}
+
+:where(.scene-iceberg) .commit-swatch {
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgb(23 75 87 / 0.08);
+  border-radius: 2px;
+}
+
+:where(.scene-iceberg) .commit-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 10px 22px;
+  margin: 0;
+}
+
+:where(.scene-iceberg) .commit-facts dt {
+  color: var(--text);
+  font: 700 1.1rem var(--mono);
+}
+
+:where(.scene-iceberg) .commit-facts dd {
+  max-width: 13rem;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-iceberg) .commit-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

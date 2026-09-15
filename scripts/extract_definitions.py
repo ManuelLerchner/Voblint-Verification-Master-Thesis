@@ -16,6 +16,7 @@ This is a regex/line-based scanner, not an Isabelle parser. It is good
 enough for an overview/lint tool; it is not a substitute for reading the
 .thy source.
 """
+
 import argparse
 import re
 import sys
@@ -27,13 +28,25 @@ SRC_ROOT = REPO_ROOT / "src"
 
 HEADING_KEYWORDS = ["chapter", "section", "subsection", "subsubsection", "paragraph"]
 DEF_KEYWORDS = [
-    "locale", "definition", "fun", "primrec", "inductive", "inductive_set",
-    "abbreviation", "record", "datatype", "type_synonym", "class", "fun_cases",
+    "locale",
+    "definition",
+    "fun",
+    "primrec",
+    "inductive",
+    "inductive_set",
+    "abbreviation",
+    "record",
+    "datatype",
+    "type_synonym",
+    "class",
+    "fun_cases",
 ]
 THEOREM_KEYWORDS = ["theorem", "lemma", "corollary"]
 
 COMMAND_START_RE = re.compile(
-    r"^\s*(" + "|".join(HEADING_KEYWORDS + DEF_KEYWORDS + THEOREM_KEYWORDS + ["text", "theory"]) + r")\b"
+    r"^\s*("
+    + "|".join(HEADING_KEYWORDS + DEF_KEYWORDS + THEOREM_KEYWORDS + ["text", "theory"])
+    + r")\b"
 )
 
 
@@ -53,6 +66,7 @@ class Heading:
 
 
 MAX_CODE_LINES = 15
+
 
 @dataclass
 class Decl:
@@ -157,7 +171,7 @@ def extract_name(rest_of_line: str) -> str:
             elif ch == ")":
                 depth -= 1
                 if depth == 0:
-                    s = s[i + 1:].strip()
+                    s = s[i + 1 :].strip()
                     break
     while s.startswith("'"):
         s = s.split(None, 1)[1] if " " in s else ""
@@ -184,8 +198,8 @@ def parse_theory(path: Path) -> ParsedTheory:
     masked = mask_comments_and_strings(text)
     lines = text.splitlines()
     line_starts = [0]
-    for l in lines:
-        line_starts.append(line_starts[-1] + len(l) + 1)
+    for line in lines:
+        line_starts.append(line_starts[-1] + len(line) + 1)
 
     def line_of(offset: int) -> int:
         lo, hi = 0, len(line_starts) - 1
@@ -214,26 +228,38 @@ def parse_theory(path: Path) -> ParsedTheory:
         if cm.group("text") is not None:
             open_at = masked.index("\\<open>", cm.start())
             end = find_matching_close(masked, open_at)
-            content = text[open_at + len("\\<open>"):end - len("\\<close>")]
-            events.append(("text", TextBlock(line_of(cm.start()), line_of(end), content.strip()), cm.start()))
+            content = text[open_at + len("\\<open>") : end - len("\\<close>")]
+            events.append(
+                (
+                    "text",
+                    TextBlock(line_of(cm.start()), line_of(end), content.strip()),
+                    cm.start(),
+                )
+            )
             i = end
         elif cm.group("heading") is not None:
             open_at = masked.index("\\<open>", cm.start())
             end = find_matching_close(masked, open_at)
-            name = text[open_at + len("\\<open>"):end - len("\\<close>")].strip()
-            events.append(("heading", cm.group("heading"), name, line_of(cm.start()), cm.start()))
+            name = text[open_at + len("\\<open>") : end - len("\\<close>")].strip()
+            events.append(
+                ("heading", cm.group("heading"), name, line_of(cm.start()), cm.start())
+            )
             i = end
         elif cm.group("decl") is not None:
             eol = masked.find("\n", cm.end())
             eol = eol if eol != -1 else len(masked)
-            name = extract_name(text[cm.end():eol])
-            events.append(("decl", cm.group("decl"), name, line_of(cm.start()), cm.start()))
+            name = extract_name(text[cm.end() : eol])
+            events.append(
+                ("decl", cm.group("decl"), name, line_of(cm.start()), cm.start())
+            )
             i = cm.end()
         else:
             eol = masked.find("\n", cm.end())
             eol = eol if eol != -1 else len(masked)
-            name = extract_name(text[cm.end():eol])
-            events.append(("thm", cm.group("thm"), name, line_of(cm.start()), cm.start()))
+            name = extract_name(text[cm.end() : eol])
+            events.append(
+                ("thm", cm.group("thm"), name, line_of(cm.start()), cm.start())
+            )
             i = cm.end()
 
     trailing_comment_re = re.compile(r"(\s*\(\*(?:[^*]|\*(?!\)))*\*\)\s*)+$", re.DOTALL)
@@ -246,7 +272,9 @@ def parse_theory(path: Path) -> ParsedTheory:
         snippet = trailing_comment_re.sub("", snippet).rstrip()
         lines = snippet.splitlines()
         if len(lines) > MAX_CODE_LINES:
-            lines = lines[:MAX_CODE_LINES] + [f"... ({len(snippet.splitlines()) - MAX_CODE_LINES} more lines)"]
+            lines = lines[:MAX_CODE_LINES] + [
+                f"... ({len(snippet.splitlines()) - MAX_CODE_LINES} more lines)"
+            ]
         return "\n".join(lines)
 
     header_doc = None
@@ -266,7 +294,11 @@ def parse_theory(path: Path) -> ParsedTheory:
             _, kind, name, line, start = ev
             # A doc may precede the heading, but this project's convention is
             # section/subsection followed by a text block explaining it.
-            doc = pending_doc if pending_doc and line - pending_doc.end_line <= 3 else None
+            doc = (
+                pending_doc
+                if pending_doc and line - pending_doc.end_line <= 3
+                else None
+            )
             if doc is None and idx + 1 < len(events) and events[idx + 1][0] == "text":
                 following = events[idx + 1][1]
                 if following.start_line - line <= 3:
@@ -275,7 +307,11 @@ def parse_theory(path: Path) -> ParsedTheory:
             pending_doc = None
         elif ev[0] == "decl":
             _, kind, name, line, start = ev
-            doc = pending_doc if pending_doc and line - pending_doc.end_line <= 3 else None
+            doc = (
+                pending_doc
+                if pending_doc and line - pending_doc.end_line <= 3
+                else None
+            )
             decls.append(Decl(kind, name, line, doc, code_span(start, idx)))
             pending_doc = None
         else:
@@ -284,46 +320,101 @@ def parse_theory(path: Path) -> ParsedTheory:
     return ParsedTheory(path, theory_name, header_doc, headings, decls)
 
 
-def iter_theory_files():
-    for p in sorted(SRC_ROOT.rglob("*.thy")):
-        yield p
+# Vendored developments: built as their own session, but not held to this
+# project's conventions, so only callers that ask for them scan them.
+VENDOR_SESSIONS = {REPO_ROOT / "vendor" / "td-verification": "TD"}
+
+
+def iter_theory_files(vendor: bool = False):
+    yield from sorted(SRC_ROOT.rglob("*.thy"))
+    if vendor:
+        for root in VENDOR_SESSIONS:
+            yield from sorted(root.glob("*.thy"))
 
 
 def session_of(path: Path) -> str:
-    rel = path.relative_to(SRC_ROOT)
-    return rel.parts[0]
+    for root, session in VENDOR_SESSIONS.items():
+        if path.is_relative_to(root):
+            return session
+    return path.relative_to(SRC_ROOT).parts[0]
 
 
 SYMBOL_MAP = {
-    "\\<Longrightarrow>": "\u27f9", "\\<Rightarrow>": "\u21d2", "\\<And>": "\u22c0",
-    "\\<longrightarrow>": "\u27f6", "\\<rightarrow>": "\u2192", "\\<leftarrow>": "\u2190",
-    "\\<longleftrightarrow>": "\u2194", "\\<Longleftrightarrow>": "\u27fa",
-    "\\<in>": "\u2208", "\\<notin>": "\u2209", "\\<not>": "\u00ac", "\\<noteq>": "\u2260",
-    "\\<forall>": "\u2200", "\\<exists>": "\u2203", "\\<le>": "\u2264", "\\<ge>": "\u2265",
-    "\\<subseteq>": "\u2286", "\\<subset>": "\u2282", "\\<union>": "\u222a", "\\<inter>": "\u2229",
-    "\\<lbrakk>": "\u27e6", "\\<rbrakk>": "\u27e7", "\\<dots>": "\u2026",
-    "\\<lambda>": "\u03bb", "\\<equiv>": "\u2261", "\\<and>": "\u2227", "\\<or>": "\u2228",
-    "\\<sigma>": "\u03c3", "\\<Sigma>": "\u03a3", "\\<gamma>": "\u03b3", "\\<Gamma>": "\u0393",
-    "\\<nabla>": "\u2207", "\\<times>": "\u00d7", "\\<circ>": "\u2218",
-    "\\<bottom>": "\u22a5", "\\<top>": "\u22a4", "\\<squnion>": "\u2294", "\\<sqinter>": "\u2293",
-    "\\<Longleftarrow>": "\u27f8", "\\<^sub>": "_", "\\<^sup>": "^",
-    "\\<Pi>": "\u03a0", "\\<pi>": "\u03c0", "\\<mapsto>": "\u21a6", "\\<pm>": "\u00b1",
-    "\\<lparr>": "\u2987", "\\<rparr>": "\u2988", "\\<alpha>": "\u03b1", "\\<beta>": "\u03b2",
-    "\\<epsilon>": "\u03b5", "\\<infinity>": "\u221e", "\\<cdot>": "\u00b7",
-    "\\<parallel>": "\u2225", "\\<turnstile>": "\u22a2", "\\<Turnstile>": "\u22a8",
-    "\\<^item>": "\u2022", "\\<^bold>": "", "\\<^emph>": "",
+    "\\<Longrightarrow>": "\u27f9",
+    "\\<Rightarrow>": "\u21d2",
+    "\\<And>": "\u22c0",
+    "\\<longrightarrow>": "\u27f6",
+    "\\<rightarrow>": "\u2192",
+    "\\<leftarrow>": "\u2190",
+    "\\<longleftrightarrow>": "\u2194",
+    "\\<Longleftrightarrow>": "\u27fa",
+    "\\<in>": "\u2208",
+    "\\<notin>": "\u2209",
+    "\\<not>": "\u00ac",
+    "\\<noteq>": "\u2260",
+    "\\<forall>": "\u2200",
+    "\\<exists>": "\u2203",
+    "\\<le>": "\u2264",
+    "\\<ge>": "\u2265",
+    "\\<subseteq>": "\u2286",
+    "\\<subset>": "\u2282",
+    "\\<union>": "\u222a",
+    "\\<inter>": "\u2229",
+    "\\<lbrakk>": "\u27e6",
+    "\\<rbrakk>": "\u27e7",
+    "\\<dots>": "\u2026",
+    "\\<lambda>": "\u03bb",
+    "\\<equiv>": "\u2261",
+    "\\<and>": "\u2227",
+    "\\<or>": "\u2228",
+    "\\<sigma>": "\u03c3",
+    "\\<Sigma>": "\u03a3",
+    "\\<gamma>": "\u03b3",
+    "\\<Gamma>": "\u0393",
+    "\\<nabla>": "\u2207",
+    "\\<times>": "\u00d7",
+    "\\<circ>": "\u2218",
+    "\\<bottom>": "\u22a5",
+    "\\<top>": "\u22a4",
+    "\\<squnion>": "\u2294",
+    "\\<sqinter>": "\u2293",
+    "\\<Longleftarrow>": "\u27f8",
+    "\\<^sub>": "_",
+    "\\<^sup>": "^",
+    "\\<Pi>": "\u03a0",
+    "\\<pi>": "\u03c0",
+    "\\<mapsto>": "\u21a6",
+    "\\<pm>": "\u00b1",
+    "\\<lparr>": "\u2987",
+    "\\<rparr>": "\u2988",
+    "\\<alpha>": "\u03b1",
+    "\\<beta>": "\u03b2",
+    "\\<epsilon>": "\u03b5",
+    "\\<infinity>": "\u221e",
+    "\\<cdot>": "\u00b7",
+    "\\<parallel>": "\u2225",
+    "\\<turnstile>": "\u22a2",
+    "\\<Turnstile>": "\u22a8",
+    "\\<^item>": "\u2022",
+    "\\<^bold>": "",
+    "\\<^emph>": "",
 }
-SYMBOL_RE = re.compile("|".join(re.escape(k) for k in sorted(SYMBOL_MAP, key=len, reverse=True)))
+SYMBOL_RE = re.compile(
+    "|".join(re.escape(k) for k in sorted(SYMBOL_MAP, key=len, reverse=True))
+)
 
 # Document markup antiquotations of the form \<^word>\<open>...\<close>: covers
 # both semantic references (const/term/typ/class/locale/thm/theory/type/...)
 # and typesetting markup (bold/emph/item/verbatim). Rendered generically as
 # code, except the typesetting ones get their natural Markdown equivalent.
-MARKUP_TEMPLATES = {"bold": "**{0}**", "emph": "*{0}*", "item": "\u2022 {0}", "verbatim": "`{0}`"}
+MARKUP_TEMPLATES = {
+    "bold": "**{0}**",
+    "emph": "*{0}*",
+    "item": "\u2022 {0}",
+    "verbatim": "`{0}`",
+}
 GENERIC_CARTOUCHE_ANTIQ_RE = re.compile(r"\\<\^(\w+)>\\<open>(.*?)\\<close>")
-BRACE_ANTIQ_RE = re.compile(
-    r"@\{(?:const|term|typ|class|locale)\s+([^}]*)\}"
-)
+BRACE_ANTIQ_RE = re.compile(r"@\{(?:const|term|typ|class|locale)\s+([^}]*)\}")
 BRACE_THM_RE = re.compile(r"@\{thm\s*(?:\[[^\]]*\])?\s*([^}]*)\}")
 BRACE_TEXT_RE = re.compile(r"@\{text\s+\"?([^}\"]*)\"?\}")
 CARTOUCHE_RE = re.compile(r"\\<open>(.*?)\\<close>")
@@ -376,7 +467,12 @@ def cmd_dump(out_path: Path, include_theorems: bool) -> None:
         parsed = parse_theory(p)
         by_session.setdefault(session_of(p), []).append(parsed)
 
-    out = ["# Definitions Overview", "", "Generated by `scripts/extract_definitions.py --dump`. Do not edit by hand.", ""]
+    out = [
+        "# Definitions Overview",
+        "",
+        "Generated by `scripts/extract_definitions.py --dump`. Do not edit by hand.",
+        "",
+    ]
     for session in sorted(by_session):
         out.append(f"## {session}")
         out.append("")
@@ -410,10 +506,14 @@ def cmd_lint() -> int:
             violations.append(f"{rel}: theory has no header text block")
         for h in parsed.headings:
             if h.doc is None:
-                violations.append(f"{rel}:{h.line}: {h.kind} \"{h.name}\" has no accompanying text block")
+                violations.append(
+                    f'{rel}:{h.line}: {h.kind} "{h.name}" has no accompanying text block'
+                )
         for d in parsed.decls:
             if d.kind == "locale" and d.doc is None:
-                violations.append(f"{rel}:{d.line}: locale {d.name} has no accompanying text block")
+                violations.append(
+                    f"{rel}:{d.line}: locale {d.name} has no accompanying text block"
+                )
 
     if violations:
         print(f"{len(violations)} doc-coverage violation(s):", file=sys.stderr)
@@ -425,11 +525,23 @@ def cmd_lint() -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--dump", action="store_true", help="write markdown overview")
-    ap.add_argument("--lint", action="store_true", help="check doc coverage, exit 1 on violations")
-    ap.add_argument("--out", type=Path, default=REPO_ROOT / "docs" / "generated" / "DEFINITIONS_OVERVIEW.md")
-    ap.add_argument("--include-theorems", action="store_true", help="also list theorem/lemma/corollary in the dump")
+    ap.add_argument(
+        "--lint", action="store_true", help="check doc coverage, exit 1 on violations"
+    )
+    ap.add_argument(
+        "--out",
+        type=Path,
+        default=REPO_ROOT / "docs" / "generated" / "DEFINITIONS_OVERVIEW.md",
+    )
+    ap.add_argument(
+        "--include-theorems",
+        action="store_true",
+        help="also list theorem/lemma/corollary in the dump",
+    )
     args = ap.parse_args()
 
     if not args.dump and not args.lint:

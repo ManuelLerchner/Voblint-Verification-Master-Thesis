@@ -1,0 +1,75 @@
+// PARAM: --analysis interval --context entry-state
+// EXPECT-ARITHMETIC
+// A division finding belongs to the context that divides. f is entered once
+// with n=[0,0] and once with n=[2,2]: only the first context's return node
+// carries the definite division by zero, and the second carries none. The
+// source-level diagnostic joins both contexts, so it reports a possible one.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_exit_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: f / [0,0]
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_2: f / [2,2]
+//     f_exit_f_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//
+// nodes:
+//   main_exit_main_ctx0: exit_main
+//       x=[0,0]
+//       y=[5,5]
+//   main_pp2_ctx0: pp2
+//       x=⊤
+//       y=⊤
+//   main_pp3_ctx0: pp3
+//       x=[0,0]
+//       y=⊤
+//   main_pp4_ctx0: pp4
+//       x=[0,0]
+//       y=[5,5]
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
+//       y=⊤
+//   f_exit_f_ctx0: exit_f
+//       n=[0,0]
+//   f_pp0_ctx0: pp0 [refuted]
+//       n=[0,0]
+//       division by zero whenever this operation is evaluated: 10 / n
+//   f_entry_f_ctx0: entry_f
+//       n=[0,0]
+//   f_exit_f_ctx1: exit_f
+//       n=[2,2]
+//   f_pp0_ctx1: pp0
+//       n=[2,2]
+//   f_entry_f_ctx1: entry_f
+//       n=[2,2]
+//
+// edges:
+//   f_pp0_ctx0 -> f_exit_f_ctx0: return 10 / n
+//   f_pp0_ctx1 -> f_exit_f_ctx1: return 10 / n
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   main_pp2_ctx0 -> f_entry_f_ctx0: enter f(0)
+//   f_exit_f_ctx0 -> main_pp3_ctx0: combine x := f(0)
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
+//   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(2)
+//   f_exit_f_ctx1 -> main_pp4_ctx0: combine y := f(2)
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(n) {
+  return 10 / n; // ARITH: WARN division-by-zero
+}
+fun main() {
+  x = f(0);
+  y = f(2);
+}

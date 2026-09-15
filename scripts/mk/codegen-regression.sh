@@ -16,6 +16,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$REPO_ROOT/codegen/regression/ocaml"
-dune build ./main.exe
-cp "$REPO_ROOT/_build/default/codegen/regression/ocaml/main.exe" regression-ml
+dune build ./codegen_regression.exe
+cp "$REPO_ROOT/_build/default/codegen/regression/ocaml/codegen_regression.exe" regression-ml
 ./regression-ml

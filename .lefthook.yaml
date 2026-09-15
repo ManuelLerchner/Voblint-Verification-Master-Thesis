@@ -13,6 +13,12 @@
 
 output: [summary]
 
+# Lefthook's default glob matcher gives `**` non-standard semantics:
+# it matches one-or-more directories rather than zero-or-more. Most patterns
+# below intentionally use the conventional recursive meaning.
+glob_matcher: doublestar
+
+
 pre-commit:
   fail_on_changes: always
 
@@ -38,9 +44,16 @@ pre-commit:
             glob:
               - "manifests/vimp-grammar.yaml"
               - "scripts/gen_vimp_menhir.py"
-              - "cli/vimp_parser.mly"
-              - "cli/vimp_lexer.mll"
+              - "cli/frontend/vimp_parser.mly"
+              - "cli/frontend/vimp_lexer.mll"
             run: pixi run grammar-menhir-check
+
+          - name: vimp-printer-grammar-drift
+            glob:
+              - "manifests/vimp-grammar.yaml"
+              - "scripts/gen_vimp_printer.py"
+              - "cli/frontend/vimp_printer.ml"
+            run: pixi run grammar-printer-check
 
           - name: analysis-assembly-drift
             glob:
@@ -56,8 +69,14 @@ pre-commit:
       group:
         parallel: true
         jobs:
+          # Keep the verification task graph itself honest. This is broad on
+          # purpose: changes to tasks, CI, scripts, or their descriptions can
+          # otherwise make local `verify` and GitHub CI silently diverge.
           - name: verification-task-surface
             glob:
+              - ".github/**/*.yaml"
+              - ".github/**/*.yml"
+              - ".lefthook.yaml"
               - "**/*.md"
               - "**/*.ml"
               - "**/*.mli"
@@ -71,8 +90,77 @@ pre-commit:
               - "**/*.yml"
             run: pixi run verification-surface-check
 
+          # ----------------------------------------------------------------
+          # Formatting and linting
+          #
+          # Ruff takes the staged files; the other tools are fast enough to
+          # check their whole scope, which also catches a config change.
+          # ----------------------------------------------------------------
+
+          - name: python-format
+            glob: "**/*.py"
+            run: pixi run python-format-check -- {staged_files}
+
+          - name: python-lint
+            glob: "**/*.py"
+            run: pixi run python-lint -- {staged_files}
+
+          - name: ocaml-format
+            glob:
+              - "**/*.ml"
+              - "**/*.mli"
+              - "**/dune"
+              - "dune-project"
+              - ".ocamlformat"
+              - ".ocamlformat-ignore"
+            run: pixi run ocaml-format-check
+
+          - name: opam-lint
+            glob: "*.opam"
+            run: pixi run opam-lint
+
+          - name: shell-lint
+            glob:
+              - "**/*.sh"
+              - ".shellcheckrc"
+            run: pixi run shell-lint
+
+          - name: actions-lint
+            glob:
+              - ".github/**/*.yml"
+              - ".github/**/*.yaml"
+            run: pixi run actions-lint
+
+          - name: typst-format
+            glob: "**/*.typ"
+            run: pixi run typst-format-check
+
+          - name: markdown-lint
+            glob:
+              - "**/*.md"
+              - ".markdownlint-cli2.yaml"
+            run: pixi run markdown-lint
+
+          - name: spelling
+            glob:
+              - "**/*.{md,typ,py,ml,mli,sh,toml,yaml,yml}"
+              - "_typos.toml"
+            run: pixi run spelling-check
+
+          - name: toml-format
+            glob:
+              - "**/*.toml"
+            run: pixi run toml-format-check
+
+          - name: pages-lint
+            glob:
+              - "pages/**/*.js"
+              - "pages/**/*.css"
+              - "biome.jsonc"
+            run: pixi run pages-lint
+
           - name: isabelle-ascii
-            glob: "*.thy"
+            glob: "**/*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}
 
           # ROOT mistakes are cheap to detect and can otherwise make jEdit or
@@ -83,6 +171,29 @@ pre-commit:
               - "**/ROOTS"
               - "src/**/*.thy"
             run: pixi run sessions-check
+
+          # The regression linter is intentionally build-free. It checks
+          # fixture filenames, PARAM headers, directory classification,
+          # verdict annotations, graph blocks, and related metadata before
+          # we spend time compiling the CLI.
+          #
+          # This would have caught the PR #190 ADC fixture immediately.
+          - name: regression-fixtures
+            glob:
+              - "tests/run.py"
+              - "tests/regression/**/*.vimp"
+            run: pixi run regression-lint
+
+          # PDF session selection is also pure Python. Catch ROOT/import
+          # mistakes before paying for an Isabelle document build.
+          - name: pdf-session-selection
+            glob:
+              - "**/ROOT"
+              - "**/ROOTS"
+              - "src/**/*.thy"
+              - "scripts/mk/pdf.sh"
+              - "tests/test_pdf_session.py"
+            run: pixi run isabelle-pdf-selection-check
 
           # Guard the generated Isabelle grammar's source-position/markup
           # contract independently of the generated-file drift check.
@@ -135,6 +246,17 @@ pre-commit:
               - "scripts/check_thesis_links.py"
             run: pixi run thesis-links
 
+          # Site pages: every internal link and same-page anchor resolves to a
+          # source file. Needs no site build; theory anchors only warn, as the
+          # rendered theories are checked against the deployed site on main.
+          - name: pages-links
+            glob:
+              - "pages/**"
+              - "docs/images/**"
+              - "scripts/check_pages_links.py"
+              - "scripts/mk/pages-site.sh"
+            run: pixi run pages-links
+
           # ----------------------------------------------------------------
           # Generated OCaml interface
           # ----------------------------------------------------------------
@@ -167,8 +289,10 @@ pre-commit:
             run: pixi run theory-prose-check
 
           - name: retired-identifiers-check
-            glob: "src/**/*.thy"
-            run: pixi run retired-identifiers-check -- {staged_files}
+            glob:
+              - "src/**/*.thy"
+              - "scripts/retired_identifiers.txt"
+            run: pixi run retired-identifiers-check
 
           # Whether a locale name is free depends on the complete theory tree.
           - name: locale-parameters-check

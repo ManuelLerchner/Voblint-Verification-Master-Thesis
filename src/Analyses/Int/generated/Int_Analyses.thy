@@ -2,38 +2,95 @@ theory Int_Analyses
   imports
     Int_Sound
     Int_Classify
+    Int_Transfer
     Int_Exec
+    "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_VIMP.VIMP_Program"
     "TD.TD_side_upd_rule"
 begin
+
+section \<open>Registering Int at every context and update rule\<close>
 
 text \<open>
   GENERATED FILE. Source: \<^verbatim>\<open>manifests/analyses.yaml\<close>; generator:
   \<^verbatim>\<open>scripts/gen_analysis_assembly.py\<close>. Regenerate with the generator
   rather than hand-editing; a drift check compares regenerated output against
   this file.
+
+  Int runs through the shared D/G pipeline three times: at the unit context,
+  keyed by the abstract values a callee's formals hold on entry, and keyed by a
+  bounded call string. Each registration leaves the rule that merges a value
+  side-effected into a global as a parameter \<open>r\<close>, and the call-string
+  one also its bound \<open>k\<close>, so one registration serves every discipline and
+  every bound. The equation system, the solve, the result table and every soundness
+  endpoint come from the interpreted locale; this theory only names the domain's
+  own implementation and facts.
 \<close>
 
-section \<open>Int at the entry-state context\<close>
+subsection \<open>At the unit context\<close>
 
-context
-  fixes mode :: refine_mode
-begin
-
-interpretation int_es: routed_dg_analysis
-    "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
-    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
-    TD_side_always_join_Interp_solve
-    "TD_side_always_join_Interp.solve_dom TYPE((unit, int_dom list) routed_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+global_interpretation int_rule: unit_dg_analysis
+    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
     bot int_classify_check
-    skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
-    body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode" event_int_dom
-    "\<lambda>_. formals_route_lifted_gen" TD_side_always_join_Interp_solve_c
+    skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
+    "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
+    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "TD_side_rule_Interp_solve_c r"
+  for r
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+       goal_cases)
+  case (1 gs) show ?case by (rule int_is_sound_transfer_for)
+next
+  case (2 gs a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def
+    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
+next
+  case (3 gs ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
+next
+  case (4 gs u ctx d ca) show ?case by simp
+next
+  case (5 v ctx) show ?case by simp
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (7 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (8 c d s) then show ?case by (rule int_classify_check_proved)
+next
+  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
+next
+  case 10 show ?case by (rule refl)
+next
+  case (11 gs) show ?case by (rule int_cinit_gamma)
+next
+  case (12 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
+
+subsection \<open>At the entry-state context\<close>
+
+global_interpretation int_es_rule: routed_dg_analysis
+    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
+    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, int_dom list) routed_gk)
+       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
+    bot int_classify_check
+    skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
+    "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
+    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. formals_route_lifted_gen"
+    "TD_side_rule_Interp_solve_c r"
+  for r
 proof (rule routed_dg_analysis.intro, goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
@@ -51,10 +108,10 @@ next
   case (5 v ctx) show ?case by simp
 next
   case (6 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
 next
   case (7 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.finite_stabl_solve)
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
   case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
@@ -65,148 +122,23 @@ next
   case (11 gs) show ?case by (rule int_cinit_gamma)
 next
   case (12 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
 qed
 
-lemmas analyse_int_entry_state_sound =
-  int_es.entry_state_activation_collect_sound
+subsection \<open>At the call-string context\<close>
 
-lemmas analyse_int_entry_state_has_context =
-  int_es.entry_state_has_context
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union =
-  int_es.entry_state_ltr_collect_eq_Union
-
-lemmas analyse_int_entry_state_sound_of_cover =
-  int_es.entry_state_activation_collect_sound_of_cover
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover =
-  int_es.entry_state_ltr_collect_eq_Union_of_cover
-
-lemmas analyse_int_entry_state_sound_of_terminates =
-  int_es.entry_state_activation_collect_sound_of_terminates
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_terminates =
-  int_es.entry_state_ltr_collect_eq_Union_of_terminates
-
-lemmas analyse_int_entry_state_gamma_reader_eq_lookup =
-  int_es.gamma_reader_eq_lookup
-
-lemmas analyse_int_entry_state_vars_finite =
-  int_es.vars_finite_of_terminates
-
-interpretation int_es_warrow: routed_dg_analysis
-    "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
-    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
-    TD_side_warrowing_apinis_Interp_solve
-    "TD_side_warrowing_apinis_Interp.solve_dom TYPE((unit, int_dom list) routed_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
-    bot int_classify_check
-    skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
-    body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode" event_int_dom
-    "\<lambda>_. formals_route_lifted_gen" TD_side_warrowing_apinis_Interp_solve_c
-proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule int_is_sound_transfer_for)
-next
-  case (2 gs a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
-next
-  case (3 gs ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
-next
-  case (4 gs u ctx d ca) show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule exec_formals_route_commute[symmetric])
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule int_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 gs) show ?case by (rule int_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
-qed
-
-lemmas analyse_int_entry_state_sound_warrow =
-  int_es_warrow.entry_state_activation_collect_sound
-
-lemmas analyse_int_entry_state_has_context_warrow =
-  int_es_warrow.entry_state_has_context
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union_warrow =
-  int_es_warrow.entry_state_ltr_collect_eq_Union
-
-lemmas analyse_int_entry_state_sound_of_cover_warrow =
-  int_es_warrow.entry_state_activation_collect_sound_of_cover
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_cover_warrow =
-  int_es_warrow.entry_state_ltr_collect_eq_Union_of_cover
-
-lemmas analyse_int_entry_state_sound_of_terminates_warrow =
-  int_es_warrow.entry_state_activation_collect_sound_of_terminates
-
-lemmas analyse_int_entry_state_ltr_collect_eq_Union_of_terminates_warrow =
-  int_es_warrow.entry_state_ltr_collect_eq_Union_of_terminates
-
-lemmas analyse_int_entry_state_gamma_reader_eq_lookup_warrow =
-  int_es_warrow.gamma_reader_eq_lookup
-
-lemmas analyse_int_entry_state_vars_finite_warrow =
-  int_es_warrow.vars_finite_of_terminates
-
-end
-
-subsection \<open>The published entry-state constants\<close>
-
-definition analyse_int_entry_state_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (int_dom list, int_dom abs_state) analysis_result" where
-  "analyse_int_entry_state_result_for gs p =
-     routed_dg_pipeline.result
-    (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-      (Analysis_Global ()) Activation_Seed exec_formals_route []
-       TD_side_always_join_Interp_solve gs p"
-
-definition analyse_int_entry_state_result ::
-    "imp_prog \<Rightarrow> (int_dom list, int_dom abs_state) analysis_result" where
-  "analyse_int_entry_state_result p =
-     analyse_int_entry_state_result_for (declared_global p) p"
-
-definition analyse_int_entry_state_report ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_int_entry_state_report p =
-     routed_dg_pipeline.verdict_report
-    (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-      (Analysis_Global ()) Activation_Seed exec_formals_route []
-       TD_side_always_join_Interp_solve int_classify_check (declared_global p) p"
-
-section \<open>Int at the call-string context\<close>
-
-context
-  fixes mode :: refine_mode and k :: nat
-begin
-
-interpretation int_cs: routed_dg_analysis
-    "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
+global_interpretation int_cs_rule: routed_dg_analysis
+    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
-    TD_side_always_join_Interp_solve
-    "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
+       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
     bot int_classify_check
-    skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
-    body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode" event_int_dom
-    "\<lambda>_. cs_route k" TD_side_always_join_Interp_solve_c
+    skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
+    "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
+    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. cs_route k"
+    "TD_side_rule_Interp_solve_c r"
+  for k r
 proof (rule routed_dg_analysis.intro, goal_cases)
   case (1 gs) show ?case by (rule int_is_sound_transfer_for)
 next
@@ -222,10 +154,10 @@ next
   case (5 v ctx) show ?case by simp
 next
   case (6 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
 next
   case (7 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.finite_stabl_solve)
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
   case (8 c d s) then show ?case by (rule int_classify_check_proved)
 next
@@ -236,116 +168,7 @@ next
   case (11 gs) show ?case by (rule int_cinit_gamma)
 next
   case (12 eqs x) then show ?case
-    by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
 qed
-
-lemmas analyse_int_call_string_sound =
-  int_cs.fun_route_activation_collect_sound[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_sound_of_cover =
-  int_cs.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_ltr_collect_eq_Union =
-  int_cs.fun_route_ltr_collect_eq_Union
-
-lemmas analyse_int_call_string_sound_of_terminates =
-  int_cs.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_gamma_reader_eq_lookup =
-  int_cs.gamma_reader_eq_lookup
-
-lemmas analyse_int_call_string_vars_finite =
-  int_cs.vars_finite_of_terminates
-
-lemmas int_call_string_terminates_via_solve_c =
-  int_cs.terminates_of_solve_c
-
-interpretation int_cs_warrow: routed_dg_analysis
-    "int_tf_st_for mode" "int_dom_enter_st_for mode" cinit_int_dom_st
-    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
-    TD_side_warrowing_apinis_Interp_solve
-    "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)"
-    bot int_classify_check
-    skip_int_dom "assign_int_dom mode" "special_int_dom mode" "branch_int_dom_for mode"
-    body_int_dom "return_int_dom mode" "enter_int_dom_ci_for mode" event_int_dom
-    "\<lambda>_. cs_route k" TD_side_warrowing_apinis_Interp_solve_c
-proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule int_is_sound_transfer_for)
-next
-  case (2 gs a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
-next
-  case (3 gs ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
-next
-  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule int_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 gs) show ?case by (rule int_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c)
-qed
-
-lemmas analyse_int_call_string_sound_warrow =
-  int_cs_warrow.fun_route_activation_collect_sound[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_sound_of_cover_warrow =
-  int_cs_warrow.fun_route_activation_collect_sound_of_cover[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_ltr_collect_eq_Union_warrow =
-  int_cs_warrow.fun_route_ltr_collect_eq_Union
-
-lemmas analyse_int_call_string_sound_of_terminates_warrow =
-  int_cs_warrow.fun_route_activation_collect_sound_of_terminates[OF cs_route_context_agree]
-
-lemmas analyse_int_call_string_gamma_reader_eq_lookup_warrow =
-  int_cs_warrow.gamma_reader_eq_lookup
-
-lemmas analyse_int_call_string_vars_finite_warrow =
-  int_cs_warrow.vars_finite_of_terminates
-
-lemmas int_call_string_terminates_via_solve_c_warrow =
-  int_cs_warrow.terminates_of_solve_c
-
-end
-
-subsection \<open>The published call-string constants\<close>
-
-definition analyse_int_call_string_result_for ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
-  "analyse_int_call_string_result_for k gs p =
-     routed_dg_pipeline.result
-    (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-      Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_always_join_Interp_solve gs p"
-
-definition analyse_int_call_string_result ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
-  "analyse_int_call_string_result k p =
-     analyse_int_call_string_result_for k (declared_global p) p"
-
-definition analyse_int_call_string_report ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_int_call_string_report k p =
-     routed_dg_pipeline.verdict_report
-    (int_tf_st_for Refine_Fixpoint) (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
-      Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route k) []
-       TD_side_always_join_Interp_solve int_classify_check (declared_global p) p"
 
 end

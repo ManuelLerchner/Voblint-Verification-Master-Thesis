@@ -20,7 +20,4 @@ session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
     Parity_Numeric_Queries
     Parity_Sound
     Parity_Classify
-    Parity_Assembly
     Parity_Analyses
-    Parity_Checks
-    Parity_Entry

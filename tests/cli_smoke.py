@@ -25,22 +25,41 @@ SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp
 CASES = [
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),
-    ("unknown --analysis value is rejected", ["--analysis", "bogus", SANITY_FILE], 1, "unknown --analysis value"),
+    (
+        "unknown --analysis value is rejected",
+        ["--analysis", "bogus", SANITY_FILE],
+        1,
+        "unknown --analysis value",
+    ),
     ("missing --analysis is rejected", [SANITY_FILE], 1, "missing --analysis"),
     ("missing FILE.vimp is rejected", ["--analysis", "sign"], 1, "missing FILE.vimp"),
-    ("unrecognized argument is rejected", ["--analysis", "sign", "--bogus-flag", SANITY_FILE], 1, "unrecognized argument"),
-    ("unreadable file is reported, not crashed", ["--analysis", "sign", MISSING_FILE], 1, "cannot read"),
     (
-        "unknown --context-graph value is rejected",
-        ["--analysis", "interval", "--context", "entry-state", "--context-graph", "nonsense", SANITY_FILE],
+        "unrecognized argument is rejected",
+        ["--analysis", "sign", "--bogus-flag", SANITY_FILE],
         1,
-        "unknown --context-graph value",
+        "unrecognized argument",
     ),
     (
-        "--context-graph expanded without entry-state context is rejected",
-        ["--analysis", "interval", "--context-graph", "expanded", SANITY_FILE],
+        "unreadable file is reported, not crashed",
+        ["--analysis", "sign", MISSING_FILE],
         1,
-        "--context-graph expanded requires --context entry-state",
+        "cannot read",
+    ),
+    (
+        # --context-graph was removed with the collapsed rendering it selected;
+        # graphs are always contextual, so the spelling is now just unknown.
+        "retired --context-graph is rejected as unrecognized",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "entry-state",
+            "--context-graph",
+            "expanded",
+            SANITY_FILE,
+        ],
+        1,
+        "unrecognized argument",
     ),
     (
         "--context call-string without --context-depth is rejected",
@@ -49,20 +68,17 @@ CASES = [
         "--context call-string requires --context-depth K",
     ),
     (
-        # The default resolves to what the configuration supports; only an
-        # explicit request for something unsupported is an error.
-        "entry-state with sign still runs",
-        ["--analysis", "sign", "--context", "entry-state", "--graph-snapshot", SANITY_FILE],
+        "entry-state with sign runs",
+        [
+            "--analysis",
+            "sign",
+            "--context",
+            "entry-state",
+            "--graph-snapshot",
+            SANITY_FILE,
+        ],
         0,
         "",
-    ),
-    (
-        # --context-graph selects a graph rendering, so it has nothing to say
-        # about a run that prints the text report.
-        "explicit --context-graph expanded still prints the text report",
-        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", SANITY_FILE],
-        0,
-        "PROVED",
     ),
     (
         "several domains without --html is rejected",
@@ -74,7 +90,14 @@ CASES = [
         # Node identifiers are built from the CFG and the context, so they only
         # agree across domains when the context is the same for all of them.
         "several domains with a context is rejected",
-        ["--analysis", "int,interval", "--context", "entry-state", "--html", SANITY_FILE],
+        [
+            "--analysis",
+            "int,interval",
+            "--context",
+            "entry-state",
+            "--html",
+            SANITY_FILE,
+        ],
         1,
         "requires --context none",
     ),
@@ -94,38 +117,38 @@ CASES = [
         # --html takes no argument, so the program is still read as the
         # positional rather than mistaken for an output directory.
         "--html after FILE.vimp still finds the file",
-        ["--analysis", "sign", SANITY_FILE, "--html-out", "/tmp/voblint-smoke-html", "--html"],
+        [
+            "--analysis",
+            "sign",
+            SANITY_FILE,
+            "--html-out",
+            "/tmp/voblint-smoke-html",
+            "--html",
+        ],
         0,
         "node(s)",
     ),
     (
         # --html writes a directory, the other renderings write one document to
         # stdout; asking for both is a contradiction about where output goes.
-        "--html combined with --dot-full is rejected",
-        ["--analysis", "sign", "--html", "--dot-full", SANITY_FILE],
+        "--html combined with --dot is rejected",
+        ["--analysis", "sign", "--html", "--dot", SANITY_FILE],
         1,
         "--html cannot be combined with",
     ),
     (
-        # Every solver route already solves a state table; --html reads the one
-        # the requested discipline produced.
-        "--html with an explicit --solver is accepted",
-        ["--analysis", "interval", "--solver", "warrow", "--html-out", "/tmp/voblint-smoke-solver", SANITY_FILE],
+        "--html with an explicit --globals is accepted",
+        [
+            "--analysis",
+            "interval",
+            "--globals",
+            "warrow",
+            "--html-out",
+            "/tmp/voblint-smoke-solver",
+            SANITY_FILE,
+        ],
         0,
         "node(s)",
-    ),
-    (
-        "--solver with a stdout rendering is still rejected",
-        ["--analysis", "interval", "--solver", "warrow", "--dot-full", SANITY_FILE],
-        1,
-        "--solver supports the plain text report and --html",
-    ),
-    (
-        # The contextual routes publish verdict reports, not state tables.
-        "--solver with --html and a context is rejected",
-        ["--analysis", "interval", "--solver", "join", "--context", "entry-state", "--html", SANITY_FILE],
-        1,
-        "--solver with --html requires --context none",
     ),
     (
         "--context-depth without --context call-string is rejected",
@@ -135,70 +158,174 @@ CASES = [
     ),
     (
         "--context-depth with --context entry-state is rejected",
-        ["--analysis", "interval", "--context", "entry-state", "--context-depth", "2", SANITY_FILE],
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "entry-state",
+            "--context-depth",
+            "2",
+            SANITY_FILE,
+        ],
         1,
         "--context-depth is only valid with --context call-string",
     ),
     (
-        "--context-depth 0 is rejected",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "0", SANITY_FILE],
+        # A call string that keeps no call site is one shared context per callee.
+        "--context-depth 0 is accepted",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "0",
+            SANITY_FILE,
+        ],
+        0,
+        "",
+    ),
+    (
+        "negative --context-depth is rejected",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "-1",
+            SANITY_FILE,
+        ],
         1,
-        "unsupported --analysis/--context/--solver combination",
+        "--context-depth must not be negative",
+    ),
+    (
+        "unknown --globals value is rejected",
+        ["--analysis", "sign", "--globals", "bogus", SANITY_FILE],
+        1,
+        "unknown --globals value",
+    ),
+    (
+        "retired --solver is rejected as unrecognized",
+        ["--analysis", "sign", "--solver", "join", SANITY_FILE],
+        1,
+        "unrecognized argument",
     ),
     (
         "sign + call-string is accepted",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        [
+            "--analysis",
+            "sign",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
         "int + call-string is accepted",
-        ["--analysis", "int", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        [
+            "--analysis",
+            "int",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
-        "explicit --solver warrow with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "warrow", SANITY_FILE],
+        "explicit --globals warrow with --context call-string is accepted",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--globals",
+            "warrow",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
-        "explicit --solver join with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        "explicit --globals join with --context call-string is accepted",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--globals",
+            "join",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
-        "explicit --solver per-origin with --context entry-state is accepted",
-        ["--analysis", "interval", "--context", "entry-state", "--solver", "per-origin", SANITY_FILE],
+        "explicit --globals per-origin with --context entry-state is accepted",
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "entry-state",
+            "--globals",
+            "per-origin",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
-        "sign + explicit --solver join with --context call-string is accepted",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        "sign + explicit --globals join with --context call-string is accepted",
+        [
+            "--analysis",
+            "sign",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--globals",
+            "join",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
-        "sign + explicit --solver per-origin with --context call-string is still rejected",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "per-origin", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "sign + explicit --globals warrow-per-origin with --context call-string is accepted",
+        [
+            "--analysis",
+            "sign",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--globals",
+            "warrow-per-origin",
+            SANITY_FILE,
+        ],
+        0,
+        "",
     ),
     (
-        # Sign is a finite-height lattice with no widen instance, so warrowing
-        # has nothing to accelerate and the combination is refused up front
-        # rather than silently falling back to join.
-        "sign + --solver warrow is rejected",
-        ["--analysis", "sign", "--solver", "warrow", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "sign + --globals warrow is accepted",
+        ["--analysis", "sign", "--globals", "warrow", SANITY_FILE],
+        0,
+        "",
     ),
     (
-        "sign + --solver join is accepted",
-        ["--analysis", "sign", "--solver", "join", SANITY_FILE],
+        "sign + --globals join is accepted",
+        ["--analysis", "sign", "--globals", "join", SANITY_FILE],
         0,
         "",
     ),
@@ -209,16 +336,16 @@ CASES = [
         "",
     ),
     (
-        "parity + explicit --solver per-origin is accepted",
-        ["--analysis", "parity", "--solver", "per-origin", SANITY_FILE],
+        "parity + explicit --globals per-origin is accepted",
+        ["--analysis", "parity", "--globals", "per-origin", SANITY_FILE],
         0,
         "",
     ),
     (
-        "parity + --solver warrow is rejected",
-        ["--analysis", "parity", "--solver", "warrow", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        "parity + --globals warrow is accepted",
+        ["--analysis", "parity", "--globals", "warrow", SANITY_FILE],
+        0,
+        "",
     ),
     (
         "parity + entry-state is accepted",
@@ -228,46 +355,66 @@ CASES = [
     ),
     (
         "parity + call-string is accepted",
-        ["--analysis", "parity", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        [
+            "--analysis",
+            "parity",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            SANITY_FILE,
+        ],
         0,
         "",
     ),
     (
         "sign + entry-state + --dot renders sign, not interval",
-        ["--analysis", "sign", "--context", "entry-state", "--dot-full", SANITY_FILE],
+        ["--analysis", "sign", "--context", "entry-state", "--dot", SANITY_FILE],
         0,
         "digraph",
-    ),
-    (
-        # Every domain draws its own expanded graph; the renderer is no longer
-        # typed in one domain's context type.
-        "--context-graph expanded with a non-interval domain is accepted",
-        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", "--dot", SANITY_FILE],
-        0,
-        "digraph",
-    ),
-    (
-        "--context-graph with --context call-string is rejected",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2",
-         "--context-graph", "expanded", "--dot", SANITY_FILE],
-        1,
-        "--context-graph is not supported with --context call-string",
     ),
     (
         "--dot with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--dot",
+            SANITY_FILE,
+        ],
         0,
         "digraph",
     ),
     (
         "--graph-snapshot with --context call-string is accepted",
-        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--graph-snapshot", SANITY_FILE],
+        [
+            "--analysis",
+            "interval",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--graph-snapshot",
+            SANITY_FILE,
+        ],
         0,
         "clusters:",
     ),
     (
         "sign --dot with --context call-string is accepted",
-        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
+        [
+            "--analysis",
+            "sign",
+            "--context",
+            "call-string",
+            "--context-depth",
+            "2",
+            "--dot",
+            SANITY_FILE,
+        ],
         0,
         "digraph",
     ),
@@ -275,12 +422,16 @@ CASES = [
 
 
 def run(args: list[str]) -> subprocess.CompletedProcess:
-    return subprocess.run([str(VOBLINT), *args], capture_output=True, text=True, cwd=REPO_ROOT, timeout=10)
+    return subprocess.run(
+        [str(VOBLINT), *args], capture_output=True, text=True, cwd=REPO_ROOT, timeout=10
+    )
 
 
 def main() -> int:
     if "VOBLINT_BIN" not in os.environ:
-        subprocess.run(["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")], check=True)
+        subprocess.run(
+            ["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")], check=True
+        )
 
     failed = 0
     for desc, args, expected_code, needle in CASES:
@@ -288,7 +439,9 @@ def main() -> int:
         combined = result.stdout + result.stderr
         if result.returncode != expected_code:
             failed += 1
-            print(f"{red('FAIL')} {desc}: expected exit {expected_code}, got {result.returncode}")
+            print(
+                f"{red('FAIL')} {desc}: expected exit {expected_code}, got {result.returncode}"
+            )
             print(f"  stdout: {result.stdout[:200]!r}")
             print(f"  stderr: {result.stderr[:200]!r}")
             continue

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --context-graph expanded
+// PARAM: --analysis interval --context entry-state
 // Two calls with the same entered argument share exactly one callee
 // context (idf/[5]) -- there is no second cluster to distinguish them --
 // but must still resume at their own distinct call-site continuations, not
@@ -9,63 +9,62 @@
 // (call, context) domain entry, not off callee_ctx alone).
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / root context
 //     main_pp5_ctx0
 //     main_pp6_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//   cluster_ctx_1:
-//     idf_pp0_ctx1
-//     idf_entry_idf_ctx1
-//     idf_result_idf_ctx1
+//     main_entry_main_ctx0
+//   cluster_ctx_1: idf / [5,5]
+//     idf_exit_idf_ctx0
+//     idf_pp0_ctx0
+//     idf_entry_idf_ctx0
 //
 // nodes:
-//   main_pp5_ctx0: pp5
+//   main_pp5_ctx0: pp5 [proved]
 //       a=[6,6]
 //       b=[6,6]
-//       check b==6
+//       check b == 6
 //   main_pp6_ctx0: pp6
 //       a=[6,6]
 //       b=[6,6]
-//   main_result_main_ctx0: exit_main
+//   main_exit_main_ctx0: exit_main
 //       a=[6,6]
 //       b=[6,6]
-//   idf_pp0_ctx1: pp0
-//       n=[5,5]
-//   main_entry_main_ctx0: entry_main
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
 //   main_pp2_ctx0: pp2
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
+//       a=⊤
+//       b=⊤
 //   main_pp3_ctx0: pp3
 //       a=[6,6]
-//       b=[-inf,+inf]
-//   idf_entry_idf_ctx1: entry_idf
-//       n=[5,5]
-//   main_pp4_ctx0: pp4
+//       b=⊤
+//   main_pp4_ctx0: pp4 [proved]
 //       a=[6,6]
 //       b=[6,6]
-//       check a==6
-//   idf_result_idf_ctx1: exit_idf
+//       check a == 6
+//   main_entry_main_ctx0: entry_main
+//       a=⊤
+//       b=⊤
+//   idf_exit_idf_ctx0: exit_idf
 //       n=[5,5]
-//       ret=[6,6]
+//   idf_pp0_ctx0: pp0
+//       n=[5,5]
+//   idf_entry_idf_ctx0: entry_idf
+//       n=[5,5]
 //
 // edges:
-//   main_pp5_ctx0 -> main_pp6_ctx0: check(b==6)
-//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
-//   idf_pp0_ctx1 -> idf_result_idf_ctx1: return n+1
+//   idf_pp0_ctx0 -> idf_exit_idf_ctx0: return n + 1
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(a == 6)
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(b == 6)
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   idf_entry_idf_ctx0 -> idf_pp0_ctx0: body(idf)
 //   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
-//   idf_entry_idf_ctx1 -> idf_pp0_ctx1: body(idf)
-//   main_pp4_ctx0 -> main_pp5_ctx0: check(a==6)
-//   main_pp2_ctx0 -> idf_entry_idf_ctx1: enter idf(5)
-//   main_pp3_ctx0 -> idf_entry_idf_ctx1: enter idf(5)
-//   idf_result_idf_ctx1 -> main_pp3_ctx0: combine a := #ret
-//   idf_result_idf_ctx1 -> main_pp4_ctx0: combine b := #ret
+//   main_pp2_ctx0 -> idf_entry_idf_ctx0: enter idf(5)
+//   idf_exit_idf_ctx0 -> main_pp3_ctx0: combine a := idf(5)
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return idf
+//   main_pp3_ctx0 -> idf_entry_idf_ctx0: enter idf(5)
+//   idf_exit_idf_ctx0 -> main_pp4_ctx0: combine b := idf(5)
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return idf
 // EXPECT-GRAPH-END
 

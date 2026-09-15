@@ -7,10 +7,11 @@ begin
 section \<open>Parity: the runtime-\<open>k\<close> generic pipeline matches the hand-built K1/K2 instances\<close>
 
 text \<open>
-  \<^const>\<open>cs_call_string_sol_prog\<close> at \<open>k = 1\<close>/\<open>k = 2\<close> against \<^const>\<open>nest_program\<close>
-  is the same equation system \<open>nest_1_eqs\<close>/\<open>nest_2_eqs\<close> solve --- same
-  \<^const>\<open>interval_spec\<close>, same \<^const>\<open>cs_route\<close>, same seeds -- read through the new
-  runtime-parameterized surface instead of two hand-instantiated theories.
+  \<^const>\<open>interval_cs_rule.solution\<close> at \<open>Globals_Warrow\<close> and \<open>k = 1\<close>/\<open>k = 2\<close>
+  against \<^const>\<open>nest_program\<close> solves the same equation system as
+  \<open>nest_1_eqs\<close>/\<open>nest_2_eqs\<close> --- same \<^const>\<open>interval_spec\<close>, same
+  \<^const>\<open>cs_route\<close>, same seeds --- read through the registration that takes \<open>k\<close> as a
+  runtime parameter instead of through two hand-instantiated theories.
   These lemmas witness that the generic pipeline reproduces every solved value
   \<open>Example_Interval_DG_CallString_K1\<close>/\<open>_K2\<close> pin, at the identical query
   points, with no separate proof of definitional identity between the two
@@ -21,28 +22,28 @@ subsection \<open>\<open>k = 1\<close>: the merged-context widening witness\<clo
 
 lemma cs_generic_k1_g_entry_merged:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')
    = Ivl (Fin 3) PlusInf"
   by eval
 
 lemma cs_generic_k1_g_result_merged:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
    = Ivl (Fin 6) PlusInf"
   by eval
 
 lemma cs_generic_k1_x_after_first_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) PlusInf"
   by eval
 
 lemma cs_generic_k1_y_after_second_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 6) PlusInf"
   by eval
@@ -51,42 +52,42 @@ subsection \<open>\<open>k = 2\<close>: the two activations of \<open>g\<close> 
 
 lemma cs_generic_k2_g_entry_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma cs_generic_k2_g_entry_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
   by eval
 
 lemma cs_generic_k2_g_result_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) (STR ''#ret'')
    = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma cs_generic_k2_g_result_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) (STR ''#ret'')
    = Ivl (Fin 20) (Fin 20)"
   by eval
 
 lemma cs_generic_k2_x_after_first_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
    = Ivl (Fin 6) (Fin 6)"
   by eval
 
 lemma cs_generic_k2_y_after_second_return:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
    = Ivl (Fin 20) (Fin 20)"
   by eval
@@ -101,36 +102,36 @@ text \<open>
 
 theorem cs_generic_k2_strictly_more_precise_than_k1:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+         (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                     (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+         (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                     (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+         (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                     (Inl (Statement 6, [])))) (STR ''x'')"
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 2 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 2 Globals_Warrow nest_gs nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
      < nest_lookup
-         (locals (snd (cs_call_string_sol_prog 1 nest_gs nest_program)
+         (locals (snd (interval_cs_rule.solution 1 Globals_Warrow nest_gs nest_program)
                     (Inl (Statement 7, [])))) (STR ''y'')"
   by eval+
 
-subsection \<open>Runtime \<open>k\<close> beyond the historically hardcoded cases\<close>
+subsection \<open>Runtime \<open>k\<close> beyond the hardcoded cases\<close>
 
 text \<open>
-  \<open>k = 3\<close> was never a K-file: this is the same generic interface, applied to
-  a bound neither \<open>Example_Interval_DG_CallString_K1\<close> nor \<open>_K2\<close> ever
+  No K-file fixes \<open>k = 3\<close>: this is the same generic interface, applied to
+  a bound neither \<open>Example_Interval_DG_CallString_K1\<close> nor \<open>_K2\<close>
   hardcodes, terminating and solving exactly as \<open>k = 1\<close>/\<open>k = 2\<close> do. Since
   \<^const>\<open>nest_program\<close>'s deepest call chain is only two calls deep, \<open>k = 3\<close>
   cannot separate anything \<open>k = 2\<close> does not already -- the two \<open>g\<close> call
@@ -140,14 +141,14 @@ text \<open>
 
 lemma cs_generic_k3_g_entry_first:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 3 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
    = Ivl (Fin 3) (Fin 3)"
   by eval
 
 lemma cs_generic_k3_g_entry_second:
   "nest_lookup
-     (locals (snd (cs_call_string_sol_prog 3 nest_gs nest_program)
+     (locals (snd (interval_cs_rule.solution 3 Globals_Warrow nest_gs nest_program)
                 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
    = Ivl (Fin 10) (Fin 10)"
   by eval

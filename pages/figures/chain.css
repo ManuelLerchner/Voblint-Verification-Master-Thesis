@@ -1,0 +1,156 @@
+/* The proof chain: each set inside the next */
+
+:where(.scene-chain) .chain-line .dot-in {
+  fill: var(--primary);
+}
+
+:where(.scene-chain) .chain-line .dot-extra {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+:where(.scene-chain) .chain-line .dot-out {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-chain) .chain-line circle {
+  transition:
+    fill 250ms ease,
+    stroke 250ms ease,
+    r 250ms ease;
+}
+
+:where(.scene-chain) .chain-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:where(.scene-chain) .chain-ladder {
+  display: grid;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-chain) .chain-rung {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+  grid-template-rows: auto auto;
+  column-gap: 20px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-chain) .chain-head {
+  display: flex;
+  gap: 12px;
+  grid-row: span 2;
+}
+
+:where(.scene-chain) .chain-head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+:where(.scene-chain) .chain-head p {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+:where(.scene-chain) .chain-index {
+  display: grid;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  color: #ffffff;
+  background: var(--primary);
+  border-radius: 50%;
+  font: 700 0.8rem var(--mono);
+}
+
+.scene-chain .chain-line {
+  max-width: 560px;
+  margin: 0;
+}
+
+:where(.scene-chain) .chain-set {
+  justify-self: center;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: pre;
+}
+
+:where(.scene-chain) .chain-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 6px 16px 6px 22px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+:where(.scene-chain) .chain-rel {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  margin-left: -9px;
+  color: var(--accent);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+:where(.scene-chain) .chain-line .axis {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-chain) .chain-band {
+  fill: var(--primary-soft);
+  stroke: var(--primary);
+  stroke-width: 1.2;
+}
+
+.scene-chain .chain-band-label {
+  fill: var(--primary);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+.scene-chain .chain-tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  text-anchor: middle;
+}
+
+:where(.scene-chain) .chain-legend {
+  margin-top: 14px;
+}
+
+:where(.scene-chain) .chain-note {
+  min-height: 3.2em;
+  margin: 10px 0 0;
+}
+
+@media (max-width: 1100px) {
+  :where(.scene-chain) .chain-rung {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-chain) .chain-head {
+    grid-row: auto;
+  }
+}

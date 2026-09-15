@@ -20,9 +20,8 @@ text \<open>
 subsection \<open>The executable bottom predicate\<close>
 
 text \<open>The equation system reads the program's own declared globals for its bottom
-  test, and \<^const>\<open>entry_state_route\<close> takes that predicate explicitly. At a concrete
-  program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those globals, which is exact
-  for \<^const>\<open>is_empty_state\<close>.\<close>
+  test. At a concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those
+  globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
 
 definition rc_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "rc_empty_pred = resolved_st_q_is_bot_for (declared_global_vars rc_program)"
@@ -32,35 +31,40 @@ lemma rc_exact: "rc_empty_pred s = is_empty_state (fun_of_resolved_st_q_for rc_g
 
 subsection \<open>The routed equation system and its solution\<close>
 
-text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>
+text \<open>Every value below is Interval's entry-state registration \<open>interval_es_rule\<close> at
+  \<^const>\<open>Globals_Warrow\<close>. The main context is \<open>[]\<close> (\<open>main\<close> is the root
+  activation, no formal binds it).\<close>
 
 definition rc_ctx_sol ::
   "(pp \<times> ivl list) set
     \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk
       \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "rc_ctx_sol = entry_state_sol_prog rc_gs rc_program"
+  "rc_ctx_sol = interval_es_rule.solution Globals_Warrow rc_gs rc_program"
 
 lemma rc_ctx_terminates_c:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs_prog rc_gs rc_program)
-     (interval_entry_state_root_query rc_program) \<noteq> None"
-  by eval
+  "TD_side_rule_Interp_solve_c Globals_Warrow
+     (interval_es_rule.equations rc_gs rc_program)
+     (interval_es_rule.root_query rc_program) \<noteq> None"
+  unfolding interval_es_rule.root_query_def by eval
 
 lemma rc_ctx_terminates:
-  "entry_state_terminates_prog rc_gs rc_program"
-  by (rule entry_state_terminates_via_solve_c[OF rc_ctx_terminates_c])
+  "interval_es_rule.terminates Globals_Warrow rc_gs rc_program"
+  by (rule interval_es_rule.terminates_of_solve_c[OF rc_ctx_terminates_c])
 
 subsection \<open>The routed context is exactly \<open>Top\<close>\<close>
 
+text \<open>The routed callee context is \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type
+  omits the domain, so evaluation inlines its body rather than looking for a code
+  equation of its own.\<close>
+
+
 definition ctx_call :: "ivl list" where
-  "ctx_call = entry_state_route rc_gs rc_empty_pred
-                (entry_state_entered rc_gs rc_empty_pred
-                   (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
-                   (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]))
-                (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])"
+  "ctx_call = interval_es_rule.ctx_succ Globals_Warrow rc_gs rc_program
+                (Statement 3) [] (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
+                (STR ''p'')"
 
 lemma ctx_call_val: "ctx_call = [ivl_top]"
-  unfolding ctx_call_def rc_ctx_sol_def rc_empty_pred_def by eval
+  unfolding ctx_call_def rc_ctx_sol_def by eval
 
 text \<open>The callee entry is materialized once, under the wide context, and never under
   the root context.\<close>

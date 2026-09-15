@@ -1,6 +1,6 @@
 # CLI: `voblint`
 
-Status: **implemented** (`cli/main.ml`, `cli/vimp_frontend.ml`). Source file
+Status: **implemented** (`cli/entry/voblint.ml`, `cli/frontend/vimp_frontend.ml`). Source file
 extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
 not here.
 
@@ -9,9 +9,8 @@ not here.
 ```text
 voblint --analysis sign|interval|int|parity|congruence[,...]
         [--context none|entry-state|call-string] [--context-depth K]
-        [--context-graph collapsed|expanded]
-        [--dot | --dot-full | --graph-snapshot | --html | --html-out DIR]
-        [--solver join|per-origin|warrow|warrow-per-origin]
+        [--dot | --graph-snapshot | --html | --html-out DIR]
+        [--globals join|per-origin|warrow|warrow-per-origin]
         [--timeout SECONDS] FILE.vimp
 voblint --parse-only FILE.vimp
 voblint --help
@@ -19,51 +18,42 @@ voblint --help
 
 - `--analysis sign|interval|int|parity|congruence` selects the domain (required
   unless `--parse-only`). `int` is the refining composite Sign x Interval x
-  Parity x Congruence domain, fixed at its most precise refinement mode; its
-  default solver is warrowing. `parity` is the four-element
-  Bot/Even/Odd/Top lattice; it decides equalities only by refuting them
-  across differing parities. `congruence` is the residue-class domain, one
+  Parity x Congruence domain, fixed at its most precise refinement mode.
+  `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
+  only by refuting them across differing parities. `congruence` is the residue-class domain, one
   value constrained to `x = r (mod m)`. A comma list puts several domains side
   by side in one `--html` report and requires `--html` and `--context none`.
 - `--context none|entry-state|call-string` selects context sensitivity
   (default `none`). `entry-state` re-analyzes each callee per distinct
   entered-argument context; `call-string` splits it by bounded call history
-  instead and requires `--context-depth K` with `K >= 1`. Every domain has a
-  routed instance at both, though not at every `--solver`: the resolver follows
-  each pairing's proved capability, so an unproved solver/context pairing is a
-  configuration error, not a silent fallback.
-- Soundness does not follow the domain axis here. The theorem over `analyse`
-  covers all five domains at `--context none` only; under `entry-state` and
-  `call-string` what is proved is the weaker per-context bound. See
-  [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the exact shape.
+  instead and requires `--context-depth K`. Every domain serves every context
+  mode at every `--globals` rule.
+- `run_voblint_certified_source_sound` covers every domain, rule and context
+  mode. Under `entry-state` and `call-string` its table claim is existential in
+  the context: the store sits in the entry of at least one context its call
+  history is admitted at. See [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the
+  exact shape.
 - `--context-depth K` bounds the call string. Valid only with `--context
-  call-string`; `K = 0` is rejected rather than treated as `--context none`.
-- `--context-graph collapsed|expanded` selects how `--dot`/`--dot-full`/
-  `--graph-snapshot`/`--html` render an `entry-state` result, for every domain.
-  This is a rendering choice over the same computed contextual result, not a
-  different analysis — see `docs/CHECK_ARCHITECTURE.md`'s "Contextual result
-  and GraphViz presentation" section for the full architecture and the CLI
-  contract. `expanded` is the default under `--context entry-state`: a run
-  asked for per-context precision, and the collapsed view joins it away, so a
-  point dead in one activation and live in another reads as live. An explicit
-  `expanded` requires `--context entry-state`: `--context none` has one context
-  to draw and `--context call-string` renders per-context already, so asking
-  for `expanded` at either is a configuration error, not a silent fallback.
-- `--dot` / `--dot-full` / `--graph-snapshot` pick an output mode in place of
-  the default plain-text check report: `--dot` annotates check nodes only,
-  `--dot-full` annotates every node with its computed abstract state,
-  `--graph-snapshot` emits a deterministic, DOT-free textual snapshot (used
-  as the regression corpus's structural oracle, see `tests/run.py`). `--html`
-  writes a browsable result directory instead (see `docs/HTML_REPORT.md`).
-- `--solver join|per-origin|warrow|warrow-per-origin` bypasses the domain's
-  production solver choice to exercise the vendored solver's update-rule
-  discipline directly (experimental). Which disciplines a domain accepts at
-  each context is the resolver's table (`Config_Tables.thy`): `interval` takes
-  all four everywhere; `int` all four at `--context none` and `join`/`warrow`
-  at the two context modes; `sign`, `parity` and `congruence` take `join`
-  everywhere and `per-origin` at `--context none` only. The text report and
-  `--html` display a chosen discipline; `--dot`/`--dot-full`/`--graph-snapshot`
-  do not, and `--html` with `--solver` requires `--context none`.
+  call-string`; `K >= 0`, and a negative `K` is rejected. `K = 0` keeps no call
+  site, so every callee shares one context over a still call-string-keyed
+  equation system.
+- `--dot` / `--graph-snapshot` pick an output mode in place of the default
+  plain-text check report. Both draw the one contextual graph: one node per
+  `(pp, ctx)`, each carrying its procedure-local state (formals, locals, return
+  slot) and its check findings; a context-free run has the single unit
+  context. Declared globals are not repeated per node (see
+  [`docs/CHECK_ARCHITECTURE.md`](CHECK_ARCHITECTURE.md) for what the HTML
+  report's globals pane shows). `--graph-snapshot`
+  emits a deterministic, DOT-free textual form of that graph (the regression
+  corpus's structural oracle, see `tests/run.py`). `--html` writes a browsable
+  result directory instead (see `docs/HTML_REPORT.md`).
+- `--globals join|per-origin|warrow|warrow-per-origin` selects how the vendored
+  solver merges a value side-effected into a global unknown: joined, joined per
+  origin, warrowed, or warrowed per origin. Local unknowns are warrowed at
+  widening points under every rule. The default is `warrow` for every domain,
+  chosen in `cli/entry/voblint.ml`; Isabelle's `run_voblint` takes the rule as
+  an argument and has no default. Every output mode renders the table the
+  chosen rule solved, contextual graphs included.
 - `--parse-only` parses and exits without running any analysis. A
   syntactically valid but ill-formed program still exits 0 here; the full run
   rejects it with exit 4.
@@ -81,20 +71,19 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Generated.run_voblint domain solver context view prog
+Voblint_CLI.Generated.run_voblint domain globals context prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
-    |                                     well-formedness, resolves the
-    |                                     configuration, and runs the plan
+    |                                     well-formedness and runs the
+    |                                     configuration's registration
     v
-Malformed_Program | Unsupported_Configuration | Analysed out
+Malformed_Program | Analysed res
     |
     v
-out_checks (text report) / out_graph (--dot, --dot-full, --html)
-                         / out_snapshot (--graph-snapshot)
-    -> DOT and HTML drawn by cli/dot_render.ml and cli/html_report.ml,
-       all sourced from the one solve that produced `out` (never a second)
+res_contexts / res_states / res_routes / res_checks / res_globals / res_diagnostics
+    -> text report, graph, DOT, snapshot and HTML built in cli/result/ and
+       cli/render/, all sourced from the one solve that produced `res`
 ```
 
 The parser is the only unverified component in this chain. Everything from
@@ -121,10 +110,10 @@ core.
 Interval analysis is sound but not proven total: no theorem shows the solver
 terminates on every program, so termination is a premise of each soundness
 theorem, discharged per program. Interval's carrier has infinite height, and
-the join-based disciplines (`--solver join`, `per-origin`) have no termination
+the join-based rules (`--globals join`, `per-origin`) have no termination
 guarantee on it. Reproductions during development included process/backend
 crashes, not just long-running computation, so the containment mechanism is a
-killable subprocess (`run_contained` in `cli/main.ml`), not an in-process
+killable subprocess (`run_contained` in `cli/entry/voblint.ml`), not an in-process
 timeout:
 
 ```text
@@ -143,10 +132,7 @@ timeout) rather than hanging silently, and removes the temp file via
 This is containment for a CLI, not a fix. The fix (if one lands) is a
 proven-total or explicitly-scoped-nonterminating backend at the Isabelle
 level; the subprocess boundary exists only because a CLI is where an
-unsuspecting user actually hits the gap. The zero-formal EntryState
-nontermination tracked separately (see the closing text block of
-`Example_EntryState_Graph_Regression.thy`) is exactly the kind of case
-this boundary is meant to contain, not fix.
+unsuspecting user actually hits the gap.
 
 ## Explicit non-goals
 

@@ -1,0 +1,209 @@
+/* What does “verified” mean? */
+
+:where(.scene-bug) .bug-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 18px;
+}
+
+:where(.scene-bug) .bug-kicker {
+  margin: 0;
+  color: var(--accent);
+  font: 700 0.74rem var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+:where(.scene-bug) .bug-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+:where(.scene-bug) .bug-links a {
+  font-weight: 650;
+}
+
+:where(.scene-bug) .bug-intro {
+  max-width: var(--prose);
+  margin: 10px 0 18px;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+:where(.scene-bug) .bug-panes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr));
+  gap: 18px;
+}
+
+:where(.scene-bug) .bug-pane-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+:where(.scene-bug) .bug-pane.wrong .bug-pane-title {
+  color: var(--danger);
+}
+
+:where(.scene-bug) .bug-pane.right .bug-pane-title {
+  color: var(--success);
+}
+
+:where(.scene-bug) .bug-editor .mh.bad-hint {
+  color: #ff8a73;
+  font-style: normal;
+  font-weight: 600;
+}
+
+:where(.scene-bug) .bug-verdict-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+:where(.scene-bug) .bug-verdict-line.wrong {
+  color: var(--danger);
+}
+
+:where(.scene-bug) .bug-verdict-line.right {
+  color: var(--success);
+}
+
+/* The run cursor: each line lights while the run is on it, in both panes at once. */
+:where(.scene-bug) .rl {
+  animation: run-line 10s ease infinite backwards;
+}
+
+:where(.scene-bug) .rl-2 {
+  animation-delay: 1.5s;
+}
+
+:where(.scene-bug) .rl-3 {
+  animation-delay: 3s;
+}
+
+:where(.scene-bug) .rl-4 {
+  animation-delay: 4.5s;
+}
+
+:where(.scene-bug) .rl-5 {
+  animation-delay: 6s;
+}
+
+@keyframes run-line {
+  0% {
+    outline: 2px solid transparent;
+  }
+  2%,
+  14% {
+    outline: 2px solid rgb(240 198 116 / 0.9);
+    outline-offset: -2px;
+  }
+  15%,
+  100% {
+    outline: 2px solid transparent;
+  }
+}
+
+:where(.scene-bug) .rl-5.alarm {
+  animation-name: run-line, dead-alarm;
+  animation-duration: 10s, 10s;
+  animation-delay: 6s, 0s;
+  animation-iteration-count: infinite, infinite;
+}
+
+@keyframes dead-alarm {
+  0%,
+  62% {
+    background: var(--verdict-tint);
+  }
+  66%,
+  70%,
+  78%,
+  86% {
+    background: rgb(255 138 115 / 0.45);
+  }
+  68%,
+  74%,
+  82%,
+  92%,
+  100% {
+    background: var(--verdict-tint);
+  }
+}
+
+:where(.scene-bug) .run-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-bug) .rs {
+  padding: 4px 11px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.84rem;
+  animation: run-chip 10s ease infinite backwards;
+}
+
+:where(.scene-bug) .rs code {
+  padding: 0;
+  background: none;
+}
+
+:where(.scene-bug) .rs + .rs::before {
+  content: "→";
+  margin-right: 8px;
+  margin-left: -2px;
+  color: var(--text-faint);
+}
+
+:where(.scene-bug) .rs-2 {
+  animation-delay: 1.5s;
+}
+
+:where(.scene-bug) .rs-3 {
+  animation-delay: 3s;
+}
+
+:where(.scene-bug) .rs-4 {
+  animation-delay: 4.5s;
+}
+
+:where(.scene-bug) .rs-5 {
+  animation-delay: 6s;
+}
+
+@keyframes run-chip {
+  0% {
+    border-color: var(--border);
+    background: var(--surface-muted);
+  }
+  2%,
+  14% {
+    border-color: #d9a441;
+    background: rgb(240 198 116 / 0.25);
+  }
+  15%,
+  100% {
+    border-color: var(--border);
+    background: var(--surface-muted);
+  }
+}

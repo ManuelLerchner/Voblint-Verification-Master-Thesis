@@ -1,15 +1,15 @@
-// PARAM: --analysis interval --solver join --timeout 2
+// PARAM: --analysis interval --globals join --timeout 2
 // Direct contrast with ../04-global_self_feedback_warrow_terminates.vimp: the
-// identical self-referential global write, now under Solver_Join instead of
-// Interval's production Solver_Warrow.
+// identical self-referential global write, now under the join globals rule
+// instead of the default warrowing one.
 //
 // This program is the
-// canonical Solver_Join non-termination reproducer (the OLD flow-insensitive
+// canonical join non-termination reproducer (the OLD flow-insensitive
 // global-summary route folded `total`'s write back into its own current
 // value, an unstable equation plain join alone could never reach a fixpoint
 // for). With the whole abstract state lifted into the local unknown, there
 // is no separate global summary left for the write to fold back into, so
-// Solver_Join now terminates and reaches the same exact answer Solver_Warrow
+// join now terminates and reaches the same exact answer warrowing
 // does -- termination and precision coincide here, since this program's
 // global write is not inside a loop and so needs no widening either.
 // --timeout keeps the case fast even though it no longer needs to.

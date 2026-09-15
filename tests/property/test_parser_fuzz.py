@@ -23,7 +23,6 @@ mutation characters below.
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
-
 from oracle import dump_source, run_parse_only
 from strategies import programs
 

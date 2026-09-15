@@ -2,6 +2,8 @@ theory Example_End_To_End_Certificate
   imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Certified"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 section \<open>One configuration, one program, no premise left standing\<close>
 
 text \<open>
@@ -43,27 +45,27 @@ lemma certificate_demo_wf: "wf_program_compile_input_exec certificate_demo_prog"
 subsection \<open>What the configuration answers\<close>
 
 lemma certificate_demo_report:
-  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
             certificate_demo_prog of
-      Analysed out \<Rightarrow>
-        map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
+      Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
           = [(Statement 4, Decided Check_Proved)]
     | _ \<Rightarrow> False)"
   by eval
 
 text \<open>
-  The endpoint below reads an \<open>out\<close>, so the answer is named rather than only
-  inspected: \<^const>\<open>Analysed\<close> is what this configuration returns on this program,
-  and the row above is the check column it returns.
+  The endpoint below reads a result, so the answer is named rather than only
+  inspected: \<^const>\<open>Analysed\<close> is what this configuration returns on this
+  program, and the check above is the check column it returns.
 \<close>
 
 lemma certificate_demo_analysed:
-  "\<exists>out. run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-           certificate_demo_prog = Analysed out
-       \<and> map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
+  "\<exists>res. run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+           certificate_demo_prog = Analysed res
+       \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
            = [(Statement 4, Decided Check_Proved)]"
   using certificate_demo_report
-  by (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+  by (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                certificate_demo_prog")
      auto
 
@@ -336,7 +338,7 @@ text \<open>
 \<close>
 
 lemma certificate_demo_solve_c:
-  "TD_side_always_join_Interp_solve_c
+  "TD_side_rule_Interp_solve_c Globals_Join
      (routed_dg_pipeline.equations (int_tf_st_for Refine_Fixpoint)
         (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
@@ -345,8 +347,9 @@ lemma certificate_demo_solve_c:
   unfolding routed_dg_pipeline.root_query_def by eval
 
 lemma certificate_demo_terminates:
-  "int_cs_join_terminates 1 (declared_global certificate_demo_prog) certificate_demo_prog"
-  by (rule int_call_string_terminates_via_solve_c [OF certificate_demo_solve_c])
+  "int_cs_rule.terminates 1 Globals_Join (declared_global certificate_demo_prog)
+     certificate_demo_prog"
+  by (rule int_cs_rule.terminates_of_solve_c [OF certificate_demo_solve_c])
 
 text \<open>
   Nothing about which keys the solve reached is owed: the keys a run can reach are
@@ -355,76 +358,49 @@ text \<open>
 \<close>
 
 lemma certificate_demo_config_terminates:
-  "config_terminates Int_Analysis (Some Solver_Join) (Ctx_CallString 1) certificate_demo_prog"
-  by (simp del: One_nat_def
-        add: config_terminates_def mk_analysis_config_def certificate_demo_terminates)
+  "config_terminates Int_Analysis Globals_Join (Ctx_CallString 1) certificate_demo_prog"
+  by (simp del: One_nat_def add: certificate_demo_terminates)
 
 subsection \<open>What the printed verdict means at that node\<close>
 
 text \<open>
-  The row the configuration prints carries its own check expression, so it is
-  worth reading back in full rather than by point and verdict alone.
+  The check the configuration lists carries its own expression, so it is worth
+  reading back in full rather than by point and verdict alone.
 \<close>
 
 lemma certificate_demo_report_full:
-  "(case run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
             certificate_demo_prog of
-      Analysed out \<Rightarrow>
-        map (\<lambda>row. (row_point row, row_exp row, row_verdict row)) (out_checks out)
+      Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
           = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]
     | _ \<Rightarrow> False)"
   by eval
 
-lemma certificate_demo_row:
-  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-                  certificate_demo_prog = Analysed out"
-  shows "\<exists>row. out_checks out = [row] \<and> row_point row = Statement 4
-             \<and> row_exp row = Less (N 0) (V (STR ''b''))
-             \<and> row_verdict row = Decided Check_Proved"
-  using certificate_demo_report_full assms by (cases "out_checks out") auto
+lemma certificate_demo_check:
+  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
+  shows "\<exists>chk. res_checks res = [chk] \<and> check_point chk = Statement 4
+             \<and> check_exp chk = Less (N 0) (V (STR ''b''))
+             \<and> check_verdict chk = Decided Check_Proved"
+  using certificate_demo_report_full assms by (cases "res_checks res") auto
 
 text \<open>
-  The three facts about this configuration's own solve that the endpoint reads,
-  named once and reused below. Every one of them is the always-join route's:
-  \<^const>\<open>analyse_int_call_string_result\<close> is defined at
-  \<open>TD_side_always_join_Interp_solve\<close> and \<open>Analysis_Run\<close> dispatches
-  \<open>Plan_Int_CallString Solver_Join\<close> to exactly it, with the warrowing default
-  carrying the \<open>_warrow\<close> suffix instead --- which is why the unsuffixed names pair
-  with \<open>int_cs_join_terminates\<close> and its two companions above rather than clashing
-  with them.
+  The table this configuration's own solve builds, and the fact that it is sound for
+  this program: \<^const>\<open>analysis_result\<close> hands exactly this table to the call-string
+  builder.
 \<close>
 
-lemma certificate_demo_union:
-  "ltr_collect (declared_global certificate_demo_prog) (prog_cfg certificate_demo_prog)
-       (cinit_stores (declared_global certificate_demo_prog)) u
-     \<subseteq> (\<Union>c. activation_collect (declared_global certificate_demo_prog)
-                (call_context_rel_of_fun (\<lambda>u c t. cs_context 1 u c t)) []
-                (prog_cfg certificate_demo_prog)
-                (cinit_stores (declared_global certificate_demo_prog)) u c)"
-  by (rule equalityD1
-        [OF analyse_int_call_string_ltr_collect_eq_Union [where ctx_fun = "cs_context 1"]])
+abbreviation certificate_demo_table where
+  "certificate_demo_table \<equiv>
+     int_cs_rule.result 1 Globals_Join (declared_global certificate_demo_prog)
+       certificate_demo_prog"
 
-lemma certificate_demo_sound:
-  "activation_collect (declared_global certificate_demo_prog)
-       (call_context_rel_of_fun (\<lambda>u c t. cs_context 1 u c t)) []
-       (prog_cfg certificate_demo_prog)
-       (cinit_stores (declared_global certificate_demo_prog)) u ctx
-     \<subseteq> gamma_point
-          (lookup_context (analyse_int_call_string_result 1 certificate_demo_prog) u ctx)"
-  using analyse_int_call_string_sound_of_terminates
-          [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
-              certificate_demo_terminates,
-           where s = "\<lambda>u c t. t"]
-  unfolding analyse_int_call_string_result_def
-            analyse_int_call_string_result_for_def
-            analyse_int_call_string_gamma_reader_eq_lookup .
-
-lemma certificate_demo_result_finite:
-  "finite_analysis_result (analyse_int_call_string_result 1 certificate_demo_prog)"
-  using analyse_int_call_string_vars_finite [OF certificate_demo_terminates]
-  by (simp add: finite_analysis_result_def analyse_int_call_string_result_def
-      analyse_int_call_string_result_for_def
-      routed_dg_pipeline.result_def routed_dg_pipeline.sol_vars_def)
+lemma certificate_demo_sound_table:
+  "sound_table certificate_demo_prog certificate_demo_table int_classify_check"
+  by (rule int_cs_rule_table
+        [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
+            certificate_demo_terminates])
 
 text \<open>
   The endpoint's state conjunct, at the check's node rather than at an existential
@@ -434,57 +410,29 @@ text \<open>
 \<close>
 
 lemma certificate_demo_result_covers_at_check:
-  "analysis_result_covers Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+  "analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
      certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-proof -
-  obtain ctx st
-    where "lookup_context (analyse_int_call_string_result 1 certificate_demo_prog)
-             (Statement 4) ctx = Lifted st"
-      and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>st\<rbrakk>"
-    by (rule lookup_context_covers_of_activation
-          [OF certificate_demo_union certificate_demo_sound certificate_demo_reaches_check])
-  then have "table_covers (analyse_int_call_string_result 1 certificate_demo_prog) (Statement 4)
-               ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-    by (rule table_coversI)
-  then show ?thesis
-    by (simp del: One_nat_def add: analysis_result_covers_def mk_analysis_config_def)
-qed
+  using sound_table.covers [OF certificate_demo_sound_table certificate_demo_reaches_check]
+  by (simp del: One_nat_def)
 
 text \<open>
-  And the endpoint's check conjunct at the same node, from
-  \<open>ctx_rows_sound_at\<close>: the \<^const>\<open>Check_Proved\<close> the report prints is not a claim
-  about the analyzer's table but about every execution the semantics admits there.
+  And the endpoint's check conjunct at the same node: the \<^const>\<open>Check_Proved\<close> the
+  result lists is not a claim about the analyzer's table but about every execution the
+  semantics admits there.
 \<close>
 
 lemma certificate_demo_checks_sound_at_check:
-  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-                  certificate_demo_prog = Analysed out"
+  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
       and mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
                       (prog_cfg certificate_demo_prog)
                       (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
-  shows "checks_sound_at out (Statement 4) s"
-proof -
-  from ans
-  have out_eq: "cs_output_of View_Report IntDomValue int_classify_check
-                  (analyse_int_call_string_result 1 certificate_demo_prog) 1
-                  certificate_demo_prog = Analysed out"
-    by (simp add: run_voblint_def mk_analysis_config_def plan_answer_def split: if_splits)
-  obtain ctx st
-    where "lookup_context (analyse_int_call_string_result 1 certificate_demo_prog)
-             (Statement 4) ctx = Lifted st"
-      and "s \<in> \<lbrakk>st\<rbrakk>"
-    by (rule lookup_context_covers_of_activation
-          [OF certificate_demo_union certificate_demo_sound mem])
-  then show ?thesis
-    by (rule ctx_rows_sound_at
-          [OF finite_contexts_at [OF certificate_demo_result_finite] _ _
-              int_classify_check_proved int_classify_check_refuted
-              out_checks_of_cs_output [OF out_eq]])
-qed
+  shows "checks_sound_at res (Statement 4) s"
+  using run_voblint_sound_at [OF certificate_demo_config_terminates ans mem] by blast
 
 theorem certificate_demo_check_semantically_true:
-  assumes ans: "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-                  certificate_demo_prog = Analysed out"
+  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+                  certificate_demo_prog = Analysed res"
   shows "\<forall>s \<in> ltr_collect (declared_global certificate_demo_prog)
                   (prog_cfg certificate_demo_prog)
                   (cinit_stores (declared_global certificate_demo_prog)) (Statement 4).
@@ -494,10 +442,10 @@ proof (intro ballI)
   assume mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
                      (prog_cfg certificate_demo_prog)
                      (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
-  obtain row where r: "out_checks out = [row]" and rp: "row_point row = Statement 4"
-    and re: "row_exp row = Less (N 0) (V (STR ''b''))"
-    and rv: "row_verdict row = Decided Check_Proved"
-    using certificate_demo_row [OF ans] by blast
+  obtain chk where r: "res_checks res = [chk]" and rp: "check_point chk = Statement 4"
+    and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
+    and rv: "check_verdict chk = Decided Check_Proved"
+    using certificate_demo_check [OF ans] by blast
   from certificate_demo_checks_sound_at_check [OF ans mem] r rp re rv
   show "truthy (aval (Less (N 0) (V (STR ''b''))) s)"
     unfolding checks_sound_at_def by simp
@@ -513,10 +461,10 @@ text \<open>
 \<close>
 
 theorem certificate_demo_full_certificate:
-  obtains out where
-    "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-       certificate_demo_prog = Analysed out"
-    "map (\<lambda>row. (row_point row, row_exp row, row_verdict row)) (out_checks out)
+  obtains res where
+    "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+       certificate_demo_prog = Analysed res"
+    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
     "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
        (main_body (prog_table certificate_demo_prog)) (\<lambda>_. 0)
@@ -525,15 +473,16 @@ theorem certificate_demo_full_certificate:
        \<in> ltr_collect (declared_global certificate_demo_prog)
              (prog_cfg certificate_demo_prog)
              (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
-    "analysis_result_covers Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+    "analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
        certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-    "checks_sound_at out (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+    "checks_sound_at res (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
-proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Analysed out)
-  then have rows: "map (\<lambda>row. (row_point row, row_exp row, row_verdict row)) (out_checks out)
-                     = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
+  case (Analysed res)
+  then have checks:
+    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+       = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
     using certificate_demo_report_full by simp
   have true_here:
     "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
@@ -541,7 +490,7 @@ proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) Vie
           certificate_demo_reaches_check
     by blast
   show thesis
-    by (rule that [OF Analysed rows certificate_demo_run certificate_demo_reaches_check
+    by (rule that [OF Analysed checks certificate_demo_run certificate_demo_reaches_check
                       certificate_demo_result_covers_at_check
                       certificate_demo_checks_sound_at_check
                         [OF Analysed certificate_demo_reaches_check] true_here])
@@ -554,15 +503,15 @@ text \<open>
   computed above, and the solve's termination is the fact evaluated above, so
   the endpoint's conclusion holds outright: the store the program actually ends
   with sits in the entry the always-join solve filed under that activation's own
-  call string, and the \<^const>\<open>Check_Proved\<close> row the configuration printed is true
+  call string, and the \<^const>\<open>Check_Proved\<close> check the configuration listed is true
   of it.
 \<close>
 
 theorem certificate_demo_source_certified:
-  "\<exists>out v stk.
-     run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-       certificate_demo_prog = Analysed out
-   \<and> map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
+  "\<exists>res v stk.
+     run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+       certificate_demo_prog = Analysed res
+   \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved)]
    \<and> csim (prog_table certificate_demo_prog) (prog_cfg certificate_demo_prog)
        (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])
@@ -571,62 +520,62 @@ theorem certificate_demo_source_certified:
        \<in> ltr_collect (declared_global certificate_demo_prog)
              (prog_cfg certificate_demo_prog)
              (cinit_stores (declared_global certificate_demo_prog)) v
-   \<and> analysis_result_covers Int_Analysis (Some Solver_Join) (Ctx_CallString 1)
+   \<and> analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
        certificate_demo_prog v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))
-   \<and> checks_sound_at out v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+   \<and> checks_sound_at res v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
+proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Analysed out)
-  then have rows: "map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
-                     = [(Statement 4, Decided Check_Proved)]"
+  case (Analysed res)
+  then have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+                       = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report by simp
   from run_voblint_certified_source_sound
          [OF certificate_demo_init certificate_demo_run certificate_demo_config_terminates
              Analysed]
-  show ?thesis using Analysed rows by meson
+  show ?thesis using Analysed checks by meson
 qed (use certificate_demo_report in simp_all)
 
 text \<open>
   The check theorem, with nothing left to assume.  The run stopped just before the
-  check finds the report's row for the checked condition at a node that store
+  check finds the result's check for the checked condition at a node that store
   reaches, and the \<^const>\<open>Check_Proved\<close> in it is true of the store.
 \<close>
 
-theorem certificate_demo_check_row_sound:
-  "\<exists>out. run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
-           certificate_demo_prog = Analysed out
-     \<and> (\<exists>row \<in> set (out_checks out). row_exp row = Less (N 0) (V (STR ''b''))
+theorem certificate_demo_check_listed_sound:
+  "\<exists>res. run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+           certificate_demo_prog = Analysed res
+     \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Less (N 0) (V (STR ''b''))
           \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
               \<in> ltr_collect (declared_global certificate_demo_prog)
                    (prog_cfg certificate_demo_prog)
-                   (cinit_stores (declared_global certificate_demo_prog)) (row_point row)
-          \<and> row_verdict row = Decided Check_Proved
+                   (cinit_stores (declared_global certificate_demo_prog)) (check_point chk)
+          \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (aval (Less (N 0) (V (STR ''b'')))
                      ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
-proof (cases "run_voblint Int_Analysis (Some Solver_Join) (Ctx_CallString 1) View_Report
+proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
-  case (Analysed out)
-  have rows: "map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out)
-                = [(Statement 4, Decided Check_Proved)]"
+  case (Analysed res)
+  have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+                  = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report Analysed by simp
   from run_voblint_check_sound
          [OF certificate_demo_init certificate_demo_to_check next_check.simps(1)
              certificate_demo_config_terminates Analysed]
-  obtain row
-    where row: "row \<in> set (out_checks out)"
-      and re: "row_exp row = Less (N 0) (V (STR ''b''))"
+  obtain chk
+    where listed: "chk \<in> set (res_checks res)"
+      and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
       and mem: "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
                   \<in> ltr_collect (declared_global certificate_demo_prog)
                        (prog_cfg certificate_demo_prog)
-                       (cinit_stores (declared_global certificate_demo_prog)) (row_point row)"
-      and pr: "row_verdict row = Decided Check_Proved
+                       (cinit_stores (declared_global certificate_demo_prog)) (check_point chk)"
+      and pr: "check_verdict chk = Decided Check_Proved
                  \<longrightarrow> truthy (aval (Less (N 0) (V (STR ''b'')))
                             ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
     by blast
-  have "(row_point row, row_verdict row) \<in> set [(Statement 4, Decided Check_Proved)]"
-    unfolding rows [symmetric] using row by auto
-  then have "row_verdict row = Decided Check_Proved" by simp
-  with Analysed row re mem pr show ?thesis by blast
+  have "(check_point chk, check_verdict chk) \<in> set [(Statement 4, Decided Check_Proved)]"
+    unfolding checks [symmetric] using listed by auto
+  then have "check_verdict chk = Decided Check_Proved" by simp
+  with Analysed listed re mem pr show ?thesis by blast
 qed (use certificate_demo_report in simp_all)
 
 end

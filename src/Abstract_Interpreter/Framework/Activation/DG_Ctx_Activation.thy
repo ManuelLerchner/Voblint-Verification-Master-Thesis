@@ -41,7 +41,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and gammaM :: "'M \<Rightarrow> store set"
   assumes finE: "finite (intra g)"
     and pp: "post_bounded
-               (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
+               (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
                   route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
@@ -56,7 +56,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
-  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0)
+  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
            route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
@@ -65,7 +65,7 @@ abbreviation acc0 :: "pp \<Rightarrow> 'D" where
 abbreviation trees :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list" where
   "trees v ctx \<equiv>
-     routed_contribution_trees intra_predecessor_addr_list route
+     routed_contribution_trees intra_predecessor_addr_list call_site_list route
        (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g ctx v"
 
 subsection \<open>Post-solution elimination\<close>

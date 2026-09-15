@@ -2,8 +2,8 @@ section \<open>Flagship: parity analysis of an even-step loop, executed and cert
 
 text \<open>
   \<^bold>\<open>Second domain, same assembly.\<close>  Parity reaches source-level soundness through
-  its own production always-join registration \<open>parity_join\<close> --- the
-  context-insensitive instance of the routed analysis, at the unit context --- with
+  its own production unit-context registration \<open>parity_rule\<close>, at the always-join
+  rule \<open>Globals_Join\<close> --- the context-insensitive instance of the routed analysis --- with
   \<^emph>\<open>no\<close> example-local registration, \<open>strategy_tree\<close>, \<open>Inl\<close>/\<open>Inr\<close>, or manual
   post-solution transport lemmas.  A VIMP program is compiled to a CFG; the generic
   D/G framework generates the equation system; the \<^emph>\<open>verified\<close> always-join solver
@@ -27,7 +27,7 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Analysis_Parity.Parity_Assembly"
+    "Voblint_Analysis_Parity.Parity_Analyses"
     "Voblint_Analysis_Parity.Parity_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Compile.Compile_Wellformed"
@@ -131,7 +131,7 @@ lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
 
 subsection \<open>Equation generation and the executable solve\<close>
 
-text \<open>The equation system is \<^const>\<open>parity_unit_equations\<close> at this program: the
+text \<open>The equation system is \<open>parity_rule.equations\<close> at this program: the
   routed generator at the unit context, over the local-state specification.  The
   always-join solver suffices because parity has finite height.\<close>
 
@@ -139,22 +139,22 @@ definition parity_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
         (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
-  "parity_eqs = parity_unit_equations parity_gs parity_program"
+  "parity_eqs = parity_rule.equations parity_gs parity_program"
 
 lemma parity_terminates_c:
-  "TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Join parity_eqs (cfg_exit parity_cfg, ()) \<noteq> None"
   by eval
 
-lemma parity_terminates: "parity_unit_terminates parity_gs parity_program"
-  unfolding parity_join.terminates_code
-  using TD_side_always_join_Interp.solve_dom_of_solve_c[OF parity_terminates_c]
+lemma parity_terminates: "parity_rule.terminates Globals_Join parity_gs parity_program"
+  unfolding parity_rule.terminates_code
+  using TD_side_rule_Interp.solve_dom_of_solve_c[OF parity_terminates_c]
   by (simp add: parity_eqs_def parity_cfg_prog_cfg)
 
 definition parity_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) routed_gk
         \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
-  "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
+  "parity_sol = TD_side_rule_Interp_solve Globals_Join parity_eqs (cfg_exit parity_cfg, ())"
 
 subsection \<open>Coverage\<close>
 
@@ -166,8 +166,9 @@ text \<open>Coverage is read off the solved key set: a routed callee entry is so
   every intra target was solved.\<close>
 
 lemma parity_vars_cover:
-  "vars_cover (prog_cfg parity_program) (parity_unit_vars parity_gs parity_program)"
-  by (rule parity_join.vars_cover_of_exec_prog) eval
+  "vars_cover (prog_cfg parity_program)
+     (parity_rule.sol_vars Globals_Join parity_gs parity_program)"
+  by (rule parity_rule.vars_cover_of_exec_prog) eval
 
 subsection \<open>Inspecting the certified result\<close>
 
@@ -198,7 +199,7 @@ lemma parity_exit_total_computed:
 subsection \<open>Source-level soundness through the production assembly\<close>
 
 text \<open>
-  \<open>parity_join.source_sound\<close> turns the single \<^verbatim>\<open>by eval\<close> solver success
+  \<open>parity_rule.source_sound\<close> turns the single \<^verbatim>\<open>by eval\<close> solver success
   \<open>parity_terminates_c\<close> into a source-level guarantee: every reachable VIMP store
   is described by the published state at its matched program point.  No transport
   lemma, \<^const>\<open>part_post_solution\<close>, or readback appears in this proof.
@@ -212,7 +213,7 @@ theorem parity_source_run_sound:
   assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> \<lbrakk>parity_unit_state_at parity_gs parity_program v\<rbrakk>"
+                 \<and> t \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program v\<rbrakk>"
 proof -
   have run': "star (pstep parity_gs (prog_table parity_program))
                 (main_body (prog_table parity_program), s, []) (residual, t, frs)"
@@ -221,7 +222,7 @@ proof -
     using parity_wf parity_cfg_prog_cfg
     by (simp add: parity_pi_def parity_program_def)
   show ?thesis
-    using parity_join.source_sound[OF parity_terminates parity_vars_cover wf init run']
+    using parity_rule.source_sound[OF parity_terminates parity_vars_cover wf init run']
     by (simp add: parity_cfg_prog_cfg parity_pi_def)
 qed
 
@@ -247,15 +248,15 @@ lemma parity_head_excludes_odd:
   using assms by (simp add: parity_head_computed)
 
 lemma parity_state_at_head_x:
-  "parity_unit_state_at parity_gs parity_program (Statement 2) (STR ''x'') = PEven"
-  by eval
+  "parity_rule.state_at Globals_Join parity_gs parity_program (Statement 2) (STR ''x'') = PEven"
+  unfolding parity_rule.state_at_unfold by eval
 
 theorem parity_head_excludes_odd_store:
-  "(\<lambda>_. 1) \<notin> \<lbrakk>parity_unit_state_at parity_gs parity_program (Statement 2)\<rbrakk>"
+  "(\<lambda>_. 1) \<notin> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program (Statement 2)\<rbrakk>"
 proof
-  assume "(\<lambda>_. 1) \<in> \<lbrakk>parity_unit_state_at parity_gs parity_program (Statement 2)\<rbrakk>"
+  assume "(\<lambda>_. 1) \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program (Statement 2)\<rbrakk>"
   then have "(1::int) \<in> gamma_parity
-      (parity_unit_state_at parity_gs parity_program (Statement 2) (STR ''x''))"
+      (parity_rule.state_at Globals_Join parity_gs parity_program (Statement 2) (STR ''x''))"
     by (simp add: gamma_state_def)
   then show False by (simp add: parity_state_at_head_x)
 qed

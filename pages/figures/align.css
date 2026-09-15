@@ -1,0 +1,199 @@
+/* Voblint and Goblint, side by side */
+
+:where(.scene-align) .align-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+:where(.scene-align) .align-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-align) .align-filters button[aria-pressed="true"] {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+:where(.scene-align) .align-filters .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+:where(.scene-align) .dot.modeled {
+  background: var(--success);
+}
+
+:where(.scene-align) .dot.simplified {
+  background: var(--warning);
+}
+
+:where(.scene-align) .dot.absent {
+  background: var(--danger);
+}
+
+:where(.scene-align) .align-head,
+:where(.scene-align) .align-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+}
+
+:where(.scene-align) .align-head {
+  margin: 18px 0 6px;
+  padding: 0 14px;
+  color: var(--text-muted);
+  font: 700 0.76rem var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* The two project names face each other across the connector column, like the rows. */
+:where(.scene-align) .align-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+:where(.scene-align) .align-head span:first-child {
+  justify-content: flex-end;
+}
+
+:where(.scene-align) .align-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-align) .align-row {
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  row-gap: 4px;
+}
+
+:where(.scene-align) .align-goblint,
+:where(.scene-align) .align-voblint {
+  color: var(--text);
+  font: 700 0.86rem var(--mono);
+}
+
+:where(.scene-align) .align-goblint {
+  text-align: right;
+}
+
+:where(.scene-align) .align-note {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+/* The connector between the two names: solid, dashed, or broken. */
+:where(.scene-align) .align-link {
+  position: relative;
+  display: grid;
+  height: 22px;
+  place-items: center;
+}
+
+:where(.scene-align) .align-link::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 3px solid var(--success);
+}
+
+:where(.scene-align) .align-link span {
+  position: relative;
+  padding: 0 8px;
+  background: var(--surface);
+  font: 700 0.66rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:where(.scene-align) .align-row.modeled .align-link span {
+  color: var(--success);
+}
+
+:where(.scene-align) .align-row.simplified .align-link::before {
+  border-top: 3px dashed var(--warning);
+}
+
+:where(.scene-align) .align-row.simplified .align-link span {
+  color: var(--warning);
+}
+
+:where(.scene-align) .align-row.absent .align-link::before {
+  border-top: 3px dotted var(--danger);
+  right: 58%;
+}
+
+:where(.scene-align) .align-row.absent .align-link span {
+  color: var(--danger);
+}
+
+:where(.scene-align) .align-row.absent .align-voblint {
+  color: var(--text-faint);
+}
+
+.scene-align:not([data-filter="all"]) .align-row {
+  display: none;
+}
+
+.scene-align[data-filter="modeled"] .align-row.modeled,
+.scene-align[data-filter="simplified"] .align-row.simplified,
+.scene-align[data-filter="absent"] .align-row.absent {
+  display: grid;
+}
+
+@media (max-width: 760px) {
+  :where(.scene-align) .align-head {
+    display: none;
+  }
+
+  :where(.scene-align) .align-head,
+  :where(.scene-align) .align-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-align) .align-goblint {
+    text-align: left;
+  }
+
+  :where(.scene-align) .align-link {
+    justify-items: start;
+  }
+}
+
+:where(.scene-align) a.align-goblint,
+:where(.scene-align) a.align-voblint {
+  text-decoration: underline;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 3px;
+}
+
+:where(.scene-align) a.align-goblint:hover,
+:where(.scene-align) a.align-voblint:hover {
+  color: var(--primary);
+  text-decoration-color: var(--accent);
+}

@@ -8,7 +8,7 @@ file, a state leaking into a node label on a domain that renders wider than the
 one the test uses.
 
 Each fixture runs under its own PARAM line, so the sweep exercises the same
-domain, context and solver combinations the corpus already covers. A fixture
+domain, context and globals-rule combinations the corpus already covers. A fixture
 whose --html rendering exceeds HTML_AUDIT_TIMEOUT is skipped, not failed: a
 context-sensitive fixture with a rich context space can cost far more to
 render in full than tests/run.py's plain report already proved it terminates
@@ -52,7 +52,7 @@ SHT_TYPES = {"nr", "pp", "tk", "sk", "op", "sp", "cm", "st"}
 
 # Flags that decide what gets written, not how the analysis runs. --html
 # replaces them, so they are dropped from the fixture's own PARAM line.
-OUTPUT_FLAGS = {"--dot", "--dot-full", "--graph-snapshot", "--parse-only"}
+OUTPUT_FLAGS = {"--dot", "--graph-snapshot", "--parse-only"}
 
 # tests/run.py's own rule: a fixture with no inline verdict documents a
 # rejection rather than a report, so there is no report here to audit.
@@ -63,7 +63,7 @@ def param_args(fixture: Path) -> list[str] | None:
     first = fixture.read_text().splitlines()[0]
     if not first.startswith("// PARAM:"):
         return None
-    args = first[len("// PARAM:"):].split()
+    args = first[len("// PARAM:") :].split()
     return [a for a in args if a not in OUTPUT_FLAGS]
 
 
@@ -73,12 +73,6 @@ def skip_reason(fixture: Path) -> str | None:
         return "no PARAM line"
     if not VERDICT_RE.search(fixture.read_text()):
         return "documents a rejection, not a report"
-    if "--solver" in args and "--context" in args:
-        # analyse_config_ctx honours the solver contextually
-        # (Plan_Interval_EntryState Solver_Join -> analyse_interval_entry_state_join),
-        # but those routes publish verdict reports, not solved state tables, so
-        # there is no per-node state to read for that pairing yet.
-        return "--solver with --context has no per-node state table yet"
     return None
 
 
@@ -100,14 +94,21 @@ def ensure_dot_renderers() -> None:
 def live_check_lines(out: Path, source_text: str) -> set[int]:
     """Source lines carrying at least one check whose own node is reachable.
 
-    Exemption is decided per node, not per line. `ded` greys a line out only
-    when *every* node on it is unreachable, which is right for rendering but
-    too coarse here: a one-line `void main() { f(); ...; __voblint_check(...) }`
-    whose prefix is live and whose check is dead is not a dead line, and
-    reading it as a live check made 03-procedures/01-proc_layout_recursion fail
-    on a check its own header documents as provably dead. Nodes carry both
-    their reachability and their column span, so match each check to the node
-    covering its column and ask that node.
+    A dead check can appear in two forms.
+
+    If the solver covered its key with Bot, the contextual graph still has a
+    node for it and the node document carries the unreachable status. Match
+    that status by source span rather than using the line-wide `ded` flag:
+    another command on the same source line may still be live.
+
+    A genuinely uncovered point has no contextual graph node at all. This is
+    expected for code after an unconditional return and for procedures that
+    are never called: contextual_result_domain contains solved result keys,
+    not a synthetic Bot node for every CFG point. Regression fixtures spell
+    those expected no-finding checks `// NOWARN`. tests/run.py separately
+    verifies that semantic expectation, so the HTML audit may use it to
+    distinguish an intentionally absent dead check from a live check whose
+    source finding was accidentally lost.
     """
     spans = []
     for node_doc in (out / "nodes").glob("*.xml"):
@@ -122,10 +123,14 @@ def live_check_lines(out: Path, source_text: str) -> set[int]:
         }
         if "unreachable" not in status:
             continue
-        spans.append((
-            int(call.get("line")), int(call.get("column")),
-            int(call.get("endLine")), int(call.get("endColumn")),
-        ))
+        spans.append(
+            (
+                int(call.get("line")),
+                int(call.get("column")),
+                int(call.get("endLine")),
+                int(call.get("endColumn")),
+            )
+        )
 
     def dead_at(nr: int, col: int) -> bool:
         # col and the node spans are both 1-based.
@@ -138,6 +143,12 @@ def live_check_lines(out: Path, source_text: str) -> set[int]:
     for i, text_line in enumerate(source_text.splitlines()):
         nr = i + 1
         for m in re.finditer(r"__voblint_check", text_line):
+            # NOWARN is the corpus contract for an unreachable check. Such a
+            # point need not have a graph node at all: an uncovered result key
+            # is absent from the canonical contextual graph rather than being
+            # materialized as a synthetic Bot node.
+            if re.search(r"//.*\bNOWARN\b", text_line):
+                continue
             if not dead_at(nr, m.start() + 1):
                 live.add(nr)
                 break
@@ -153,14 +164,18 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
     if args is None:
         return []
     cmd = [str(VOBLINT), *args, "--html-out", str(out), str(fixture)]
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=HTML_AUDIT_TIMEOUT)
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, timeout=HTML_AUDIT_TIMEOUT
+    )
     if proc.returncode != 0:
         # voblint's own --timeout (PARAM's, or its 10s default) can fire before
         # ours does; that shares exit 3 with every other run_contained error
         # (a crash, a signal, malformed output), so match the specific message
         # rather than the code -- a genuine crash must still fail this audit.
         if proc.returncode == 3 and "did not finish within" in (proc.stderr or ""):
-            raise subprocess.TimeoutExpired(cmd, HTML_AUDIT_TIMEOUT, output=proc.stdout, stderr=proc.stderr)
+            raise subprocess.TimeoutExpired(
+                cmd, HTML_AUDIT_TIMEOUT, output=proc.stdout, stderr=proc.stderr
+            )
         return [f"exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:200]}"]
 
     problems: list[str] = []
@@ -195,19 +210,23 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
             if end not in drawn:
                 problems.append(f"edge endpoint {end} is not a drawn node")
 
-    # 4. States belong in node documents. Ordinary node labels may contain a
-    #    second line for the source command; state rows use compact `name=`
-    #    assignments without spaces, which distinguishes them from `x := ...`.
+    # 4. States belong in node documents and the hover tooltip, never in the
+    #    drawn label. A label may carry a second line for the source command;
+    #    state rows use compact `name=` assignments without spaces, which
+    #    distinguishes them from `x := ...`.
     for line in dot.splitlines():
-        if "label=" in line and "->" not in line and "subgraph" not in line:
-            if re.search(r"\\n[^\\n ]+=", line):
-                problems.append(f"state leaked into a node label: {line.strip()[:90]}")
+        if "->" in line or "subgraph" in line:
+            continue
+        label = re.search(r'\blabel="((?:[^"\\]|\\.)*)"', line)
+        if label and re.search(r"\\n[^\\n ]+=", label.group(1)):
+            problems.append(f"state leaked into a node label: {line.strip()[:90]}")
 
     # 5. The graph has to render. A DOT syntax error is invisible until this.
     if shutil.which("dot"):
         svg = subprocess.run(
             ["dot", "-Tsvg", str(dot_file), "-o", str(out / "rendered.svg")],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if svg.returncode != 0:
             problems.append(f"dot -Tsvg failed: {svg.stderr.strip()[:200]}")
@@ -269,16 +288,16 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
 
 
 DOMAINS = ["sign", "interval", "int", "parity", "congruence"]
-SOLVERS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
+GLOBALS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
 CONTEXTS = [None, "entry-state", "call-string"]
 
 COMBO_FIXTURE = "03-procedures/precision/01-call_return.vimp"
 
 
-def combination_args(domain, solver, context):
+def combination_args(domain, rule, context):
     args = ["--analysis", domain]
-    if solver:
-        args += ["--solver", solver]
+    if rule:
+        args += ["--globals", rule]
     if context:
         args += ["--context", context]
         if context == "call-string":
@@ -289,10 +308,9 @@ def combination_args(domain, solver, context):
 def audit_combinations(verbose: bool) -> int:
     """Sweep the configuration space, not the corpus.
 
-    A configuration the CLI accepts must produce a report with per-node states
-    in it. Accepting a run and then showing nothing is the failure that let a
-    whole solver discipline go unpublished: the legality table said yes, and
-    nothing checked that a surface existed behind the yes.
+    Every configuration must produce a report with per-node states in it.
+    Accepting a run and then showing nothing is the failure that once let a
+    whole solver discipline go unpublished.
 
     This is behavioural on purpose. The surface names are not regular enough to
     match on -- analyse_interval_result beside analyse_interval_result_wpo --
@@ -303,14 +321,15 @@ def audit_combinations(verbose: bool) -> int:
     accepted = 0
     with tempfile.TemporaryDirectory() as tmp:
         for domain in DOMAINS:
-            for solver in SOLVERS:
+            for rule in GLOBALS:
                 for context in CONTEXTS:
-                    args = combination_args(domain, solver, context)
+                    args = combination_args(domain, rule, context)
                     label = " ".join(args)
                     out = Path(tmp) / f"c{abs(hash(label))}"
                     proc = subprocess.run(
                         [str(VOBLINT), *args, "--html-out", str(out), str(fixture)],
-                        capture_output=True, text=True,
+                        capture_output=True,
+                        text=True,
                     )
                     if proc.returncode != 0:
                         # A rejected combination is a decision, not a defect;
@@ -321,11 +340,14 @@ def audit_combinations(verbose: bool) -> int:
                     accepted += 1
                     docs = list((out / "nodes").glob("main_*.xml"))
                     stated = [
-                        d for d in docs
+                        d
+                        for d in docs
                         if ET.parse(d).getroot().findall("./call/path/analysis")
                         and any(
                             a.findall("./value/map/key")
-                            for a in ET.parse(d).getroot().findall("./call/path/analysis")
+                            for a in ET.parse(d)
+                            .getroot()
+                            .findall("./call/path/analysis")
                         )
                     ]
                     faults = []
@@ -358,7 +380,9 @@ def audit_combinations(verbose: bool) -> int:
                         failures += 1
                         print(f"FAIL {label}: " + "; ".join(faults))
                     elif verbose:
-                        print(f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)")
+                        print(
+                            f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)"
+                        )
                     shutil.rmtree(out, ignore_errors=True)
     print(f"\n{accepted} accepted configuration(s), {failures} with problems")
     return 1 if failures else 0
@@ -368,8 +392,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("-k", dest="filter", default="", help="only fixtures matching this")
     ap.add_argument("--verbose", action="store_true", help="list every fixture")
-    ap.add_argument("--combinations", action="store_true",
-                    help="sweep the domain/solver/context space instead of the corpus")
+    ap.add_argument(
+        "--combinations",
+        action="store_true",
+        help="sweep the domain/globals/context space instead of the corpus",
+    )
     args = ap.parse_args()
 
     if not VOBLINT.exists():
@@ -399,7 +426,9 @@ def main() -> int:
             try:
                 problems = audit_one(fixture, out)
             except subprocess.TimeoutExpired:
-                reason = f"html rendering exceeded the {HTML_AUDIT_TIMEOUT}s audit budget"
+                reason = (
+                    f"html rendering exceeded the {HTML_AUDIT_TIMEOUT}s audit budget"
+                )
                 skips[reason] = skips.get(reason, 0) + 1
                 if args.verbose:
                     print(f"skip {rel} ({reason})")

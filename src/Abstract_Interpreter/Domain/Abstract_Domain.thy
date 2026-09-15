@@ -21,7 +21,7 @@ subsection \<open>Executable and sound domains\<close>
 class executable_domain = bounded_semilattice_sup_bot + order_top +
   fixes is_empty :: "'a \<Rightarrow> bool"
   fixes is_full :: "'a \<Rightarrow> bool"
-  fixes to_string :: "'a \<Rightarrow> string"
+  fixes to_string :: "'a \<Rightarrow> String.literal"
 
 class sound_domain = executable_domain +
   fixes gamma :: "'a \<Rightarrow> int set"
@@ -134,6 +134,36 @@ lemma warrow_idem: "a \<nabla>\<Delta> a = a" for a :: "'a::warrowing"
 
 lemma warrow_le_when_le: "b \<le> a \<Longrightarrow> a \<nabla>\<Delta> b \<le> a" for a b :: "'a::warrowing"
   unfolding warrow_def using narrow_le by simp
+
+subsection \<open>Printing values\<close>
+
+text \<open>
+  How a solved value is shown, following Goblint's notation (\<open>1+3\<int>\<close>, \<open>\<top>\<close>,
+  \<open>\<bottom>\<close>). Nothing is proved about it: it is not part of any soundness claim.
+
+  A \<^typ>\<open>String.literal\<close> holds ASCII only, so a mathematical symbol is written
+  as its Isabelle symbol name without the backslash --- \<open><int>\<close> for \<open>\<int>\<close> --- and
+  the CLI decodes these tokens into Unicode before rendering. No variable name,
+  numeral or bracket a printer emits contains \<open><\<close>, so the tokens are unambiguous.
+\<close>
+
+abbreviation (input) sym_bottom :: String.literal where "sym_bottom \<equiv> STR ''<bottom>''"
+abbreviation (input) sym_top :: String.literal where "sym_top \<equiv> STR ''<top>''"
+abbreviation (input) sym_int :: String.literal where "sym_int \<equiv> STR ''<int>''"
+abbreviation (input) sym_infinity :: String.literal where "sym_infinity \<equiv> STR ''<infinity>''"
+abbreviation (input) sym_le :: String.literal where "sym_le \<equiv> STR ''<le>''"
+abbreviation (input) sym_ge :: String.literal where "sym_ge \<equiv> STR ''<ge>''"
+abbreviation (input) sym_and :: String.literal where "sym_and \<equiv> STR ''<and>''"
+
+fun string_of_nat :: "nat \<Rightarrow> String.literal" where
+  "string_of_nat n =
+     (if n < 10 then String.implode [char_of (n + 48)]
+      else string_of_nat (n div 10) + String.implode [char_of (n mod 10 + 48)])"
+
+definition string_of_int :: "int \<Rightarrow> String.literal" where
+  "string_of_int i =
+     (if i < 0 then STR ''-'' + string_of_nat (nat (- i))
+      else string_of_nat (nat i))"
 
 end
 

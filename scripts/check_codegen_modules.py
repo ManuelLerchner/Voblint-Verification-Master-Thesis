@@ -30,7 +30,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
-EXPORT_SOURCE = REPO / "src" / "Executable_Surface" / "Codegen" / "Export" / "Voblint_Codegen.thy"
+EXPORT_SOURCE = (
+    REPO / "src" / "Executable_Surface" / "Codegen" / "Export" / "Voblint_Codegen.thy"
+)
 
 MODULE_RE = re.compile(r"^module ([A-Za-z_][A-Za-z0-9_]*) : sig", re.MULTILINE)
 
@@ -68,7 +70,10 @@ def export_is_stale() -> bool:
     try:
         out = subprocess.run(
             [str(REPO / "scripts" / "mk" / "codegen-hash.sh")],
-            capture_output=True, text=True, cwd=REPO, check=False,
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            check=False,
         )
     except OSError:
         return False

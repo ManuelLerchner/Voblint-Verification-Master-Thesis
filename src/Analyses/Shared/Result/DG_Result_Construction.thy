@@ -2,7 +2,9 @@ theory DG_Result_Construction
   imports
     "Voblint_Framework.Analysis_Result"
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_Framework.Seed_Global_Keys"
+    "Voblint_Framework.Routed_Call_Trees"
+    "Voblint_Framework.CFG_Enumeration"
+    "Voblint_VIMP.VIMP_Program"
     "Voblint_Exec.Exec_Result_Readback"
     "Voblint_Exec.Exec_DG_State"
     "Voblint_Exec.Exec_St_Reachability"
@@ -13,10 +15,9 @@ section \<open>What a solved D/G system publishes\<close>
 text \<open>
   Every domain, at every context policy and every solver discipline, turns the
   solver's answer -- a covered key set and a map from unknowns to \<open>dg_state\<close>s over
-  the executable carrier -- into the same two things: an \<^type>\<open>analysis_result\<close>
-  table of the locals, and the list of global unknowns beside it. This theory
-  states both constructions once, over an arbitrary solved pair, so a domain's
-  result table is one application rather than a rewritten body.
+  the executable carrier -- into an \<^type>\<open>analysis_result\<close> table of the locals.
+  This theory states that construction once, over an arbitrary solved pair, so a
+  domain's result table is one application rather than a rewritten body.
 
   Reading a local unknown back means two normalizations in sequence.
   \<^const>\<open>canonicalize_lift\<close> collapses a stored \<^const>\<open>Lifted\<close> payload that is
@@ -127,70 +128,5 @@ proof -
     with True show ?thesis unfolding lookup_context_dg_result_for by simp
   qed
 qed
-
-text \<open>
-  The whole-state reader of a solve whose local unknown already carries the entire
-  abstract state: no key set, no canonicalization, just the projected state at a unit
-  context point, with an unreached (\<^const>\<open>Bot\<close>) unknown read as \<^const>\<open>bot\<close>. It
-  differs from \<^const>\<open>dg_result_for\<close> in skipping \<^const>\<open>canonicalize_lift\<close>, so a
-  witness-bottom \<^const>\<open>Lifted\<close> payload reads back as its (empty) state rather than
-  as \<^const>\<open>bot\<close>; the routes that use it publish no soundness theorem and serve
-  executable witnesses only. Stated over \<open>sigma\<close> alone so an instance applied to the
-  solved map, point-free in \<open>v\<close>, solves once and reads many times.
-\<close>
-
-definition dg_env_for ::
-    "(vname \<Rightarrow> bool)
-     \<Rightarrow> (pp \<times> unit + 'k \<Rightarrow> (('a::order_bot) exec_dg_st lifted, 'g) dg_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state" where
-  "dg_env_for gs sigma v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (sigma (Inl (v, ())))) of
-        Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-definition dg_globals_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname list
-     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
-     \<Rightarrow> ('k \<times> String.literal
-          \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state \<Rightarrow> 'a exec_dg_st lifted)) list
-     \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list" where
-  "dg_globals_for gs gl sigma keys =
-     map (\<lambda>(k, label, payload).
-            (label,
-             readback_result_value gs
-               (canonicalize_lift (resolved_st_q_is_bot_for gl) (payload (sigma (Inr k))))))
-         keys"
-
-text \<open>
-  Both halves of one routed unit-context solve: the locals table every check report
-  already reads, and the globals beside it. \<open>solve\<close> is a parameter because which
-  solver discipline produced the pair is an application-site choice, so each
-  domain's instance is a partial application rather than another copy of this body.
-
-  Binding \<open>sol\<close> once is what keeps a report that shows both halves from solving twice.
-\<close>
-
-definition ctx_solved_for ::
-    "((vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-        \<Rightarrow> (pp \<times> unit) set
-             \<times> (pp \<times> unit + 'k
-                  \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
-     \<Rightarrow> (imp_prog
-          \<Rightarrow> ('k \<times> String.literal
-                \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state
-                     \<Rightarrow> 'a exec_dg_st lifted)) list)
-     \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-     \<Rightarrow> (unit, 'a abs_state) analysis_result
-          \<times> (String.literal \<times> 'a abs_state lifted) list" where
-  "ctx_solved_for solve keys gs p =
-     (let sol = solve gs p; gl = declared_global_vars p
-      in (dg_result_for gs gl sol, dg_globals_for gs gl (snd sol) (keys p)))"
-
-text \<open>The locals half is the domain's own result table, so publishing the globals
-  beside it adds a column and changes no verdict.\<close>
-
-lemma fst_ctx_solved_for:
-  "fst (ctx_solved_for solve keys gs p)
-     = dg_result_for gs (declared_global_vars p) (solve gs p)"
-  by (simp add: ctx_solved_for_def Let_def)
 
 end

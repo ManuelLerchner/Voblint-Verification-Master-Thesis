@@ -1,0 +1,62 @@
+// PARAM: --analysis interval --context entry-state
+// EXPECT-ARITHMETIC
+//
+// Simplified ADC peripheral:
+// each e* value models one channel-enable register bit.
+// count_enabled recursively scans the hardware channels.
+//
+// The number of enabled channels is in [0,4].
+// Computing the average therefore has a possible
+// division-by-zero when all channels are disabled.
+
+fun count_enabled(i, e0, e1, e2, e3) {
+  if (i == 4) {
+    return 0;
+  }
+
+  enabled = 0;
+
+  if (i == 0) {
+    enabled = e0;
+  }
+
+  if (i == 1) {
+    enabled = e1;
+  }
+
+  if (i == 2) {
+    enabled = e2;
+  }
+
+  if (i == 3) {
+    enabled = e3;
+  }
+
+  rest = count_enabled(i + 1, e0, e1, e2, e3);
+  return enabled + rest;
+}
+
+fun main() {
+  // Simulated MMIO register bits.
+  e0 = __voblint_nondet_int();
+  e1 = __voblint_nondet_int();
+  e2 = __voblint_nondet_int();
+  e3 = __voblint_nondet_int();
+
+  // Simulated ADC accumulation register.
+  adc_sum = __voblint_nondet_int();
+
+  if (0 <= e0 && e0 <= 1 &&
+      0 <= e1 && e1 <= 1 &&
+      0 <= e2 && e2 <= 1 &&
+      0 <= e3 && e3 <= 1 &&
+      0 <= adc_sum && adc_sum <= 16380) {
+
+    active = count_enabled(0, e0, e1, e2, e3);
+
+    __voblint_check(active >= 0); // PROVED
+    __voblint_check(active <= 4); // PROVED
+
+    average = adc_sum / active; // ARITH: WARN division-by-zero
+  }
+}

@@ -9,6 +9,7 @@ With no files, scans every .thy under src/.
 Exits 1 if any file contains non-ASCII bytes outside comments,
 listing the offending lines with suggested ASCII replacements.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -82,8 +83,11 @@ def main(argv: list[str]) -> int:
             continue
         failures.extend(scan(p))
     if failures:
-        print("Isabelle .thy files must be ASCII-only "
-              "(outside comments). Replace these symbols:", file=sys.stderr)
+        print(
+            "Isabelle .thy files must be ASCII-only "
+            "(outside comments). Replace these symbols:",
+            file=sys.stderr,
+        )
         for f in failures:
             print(f"  {f}", file=sys.stderr)
         return 1

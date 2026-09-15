@@ -657,21 +657,6 @@ text \<open>
   separate per-component recursive walk.
 \<close>
 
-definition int_dom_bool_unknown :: int_dom where
-  [simp]: "int_dom_bool_unknown = int_dom_of_int 0 \<squnion> int_dom_of_int 1"
-
-fun int_dom_of_bool_option :: "bool option => int_dom" where
-  "int_dom_of_bool_option (Some True) = int_dom_of_int 1"
-| "int_dom_of_bool_option (Some False) = int_dom_of_int 0"
-| "int_dom_of_bool_option None = int_dom_bool_unknown"
-
-lemma int_dom_of_bool_option_unfold [simp]:
-  "int_dom_of_bool_option r = (if r = Some True then int_dom_of_int 1
-                                else if r = Some False then int_dom_of_int 0
-                                else int_dom_bool_unknown)"
-  by (cases r rule: int_dom_of_bool_option.cases) simp_all
-
-
 fun aval_int_dom ::
     "refine_mode => exp => (vname => int_dom) => int_dom"
 where
@@ -699,53 +684,40 @@ where
        (aval_int_dom mode e2 sigma)"
 | "aval_int_dom mode (Less e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_lt a b))"
-| "aval_int_dom mode (LessEq e1 e2) sigma =
-     (let a = aval_int_dom mode e2 sigma; b = aval_int_dom mode e1 sigma
       in if is_empty a \<or> is_empty b then bot
-         else (if int_dom_lt a b = Some False then int_dom_of_int 1
-               else if int_dom_lt a b = Some True then int_dom_of_int 0
-               else int_dom_bool_unknown))"
+         else of_bool_option int_dom_of_int (int_dom_lt a b))"
+| "aval_int_dom mode (LessEq e1 e2) sigma =
+     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
+      in if is_empty a \<or> is_empty b then bot
+         else of_bool_option int_dom_of_int (map_option HOL.Not (int_dom_lt b a)))"
 | "aval_int_dom mode (Greater e1 e2) sigma =
-     (let a = aval_int_dom mode e2 sigma; b = aval_int_dom mode e1 sigma
-      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_lt a b))"
+     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
+      in if is_empty a \<or> is_empty b then bot
+         else of_bool_option int_dom_of_int (int_dom_lt b a))"
 | "aval_int_dom mode (GreaterEq e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot
-         else (if int_dom_lt a b = Some False then int_dom_of_int 1
-               else if int_dom_lt a b = Some True then int_dom_of_int 0
-               else int_dom_bool_unknown))"
+         else of_bool_option int_dom_of_int (map_option HOL.Not (int_dom_lt a b)))"
 | "aval_int_dom mode (NotEq e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot
-         else (if int_dom_eqb a b = Some False then int_dom_of_int 1
-               else if int_dom_eqb a b = Some True then int_dom_of_int 0
-               else int_dom_bool_unknown))"
+         else of_bool_option int_dom_of_int (map_option HOL.Not (int_dom_eqb a b)))"
 | "aval_int_dom mode (exp.Eq e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_empty a \<or> is_empty b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
+      in if is_empty a \<or> is_empty b then bot
+         else of_bool_option int_dom_of_int (int_dom_eqb a b))"
 | "aval_int_dom mode (exp.Not e) sigma =
      (let a = aval_int_dom mode e sigma
       in if is_empty a then bot
-         else if int_dom_tobool a = Some True then int_dom_of_int 0
-         else if int_dom_tobool a = Some False then int_dom_of_int 1
-         else int_dom_bool_unknown)"
+         else of_bool_option int_dom_of_int (map_option HOL.Not (int_dom_tobool a)))"
 | "aval_int_dom mode (And e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot
-         else if int_dom_tobool a = Some False \<or> int_dom_tobool b = Some False
-         then int_dom_of_int 0
-         else if int_dom_tobool a = Some True \<and> int_dom_tobool b = Some True
-         then int_dom_of_int 1
-         else int_dom_bool_unknown)"
+         else of_bool_option int_dom_of_int (and_opt (int_dom_tobool a) (int_dom_tobool b)))"
 | "aval_int_dom mode (Or e1 e2) sigma =
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot
-         else if int_dom_tobool a = Some True \<or> int_dom_tobool b = Some True
-         then int_dom_of_int 1
-         else if int_dom_tobool a = Some False \<and> int_dom_tobool b = Some False
-         then int_dom_of_int 0
-         else int_dom_bool_unknown)"
+         else of_bool_option int_dom_of_int (or_opt (int_dom_tobool a) (int_dom_tobool b)))"
 
 text \<open>
   \<open>aval_int_dom\<close> has exactly the shape \<open>expression_domain_sound\<close> assumes, once

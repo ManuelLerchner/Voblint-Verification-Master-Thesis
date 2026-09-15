@@ -8,8 +8,9 @@
 // this same depth: the Sign component refines (i != 0) on NonNegative to
 // Positive, the product refinement lifts the interval to [1,k], the
 // (i <= 0) arm is dead, and the collapsed exit is the singleton 3
-// (--graph-snapshot: h's collapsed context enters with sign=NonNegative,
-// ivl=[0,3] and exits with ret=[3,3]). Interval alone needs
+// (--graph-snapshot: h's collapsed contexts enter with i at signs:≥0;
+// intervals:[0,+∞], and after the recursive call i is signs:+;
+// intervals:[1,+∞] and r reads back 3). Interval alone needs
 // --context entry-state for the same result.
 fun h(i) {
   if (i == 0) { return 3; }

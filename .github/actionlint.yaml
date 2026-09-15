@@ -1,0 +1,6 @@
+paths:
+  .github/workflows/*.yml:
+    ignore:
+      # `uses: $/<path>` is GitHub's reference to an action in this repository
+      # at the workflow's own commit, which actionlint does not parse yet.
+      - 'specifying action "\$/.+" in invalid format because ref is missing'

@@ -1,4 +1,4 @@
-// PARAM: --analysis sign --dot-full
+// PARAM: --analysis sign --dot
 // The only non-Interval case in this group: full-state rendering has to read
 // the solved table through whichever domain's own value constructor is in
 // play, so this pins that the Sign adapter reaches the same per-node
@@ -13,46 +13,41 @@
 // and only the latter is checked by a verdict fixture.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / unit
 //     main_pp1_ctx0
 //     main_pp2_ctx0
 //     main_pp3_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp0_ctx0
+//     main_entry_main_ctx0
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       #ret=Top
-//       x=Positive
-//       y=Top
-//   main_pp2_ctx0: pp2
-//       #ret=Top
-//       x=Positive
-//       y=Positive
+//       x=+
+//       y=⊤
+//   main_pp2_ctx0: pp2 [proved]
+//       x=+
+//       y=+
+//       check 0 < x
 //   main_pp3_ctx0: pp3
-//       #ret=Top
-//       x=Positive
-//       y=Positive
-//   main_result_main_ctx0: exit_main
-//       #ret=Top
-//       x=Positive
-//       y=Positive
-//   main_entry_main_ctx0: entry_main
-//       #ret=Top
-//       x=Top
-//       y=Top
+//       x=+
+//       y=+
+//   main_exit_main_ctx0: exit_main
+//       x=+
+//       y=+
 //   main_pp0_ctx0: pp0
-//       #ret=Top
-//       x=Top
-//       y=Top
+//       x=⊤
+//       y=⊤
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
+//       y=⊤
 //
 // edges:
-//   main_pp1_ctx0 -> main_pp2_ctx0: y := 1
-//   main_pp2_ctx0 -> main_pp3_ctx0: check(0<x)
-//   main_pp3_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+//   main_pp1_ctx0 -> main_pp2_ctx0: y := 1
+//   main_pp2_ctx0 -> main_pp3_ctx0: check(0 < x)
+//   main_pp3_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {

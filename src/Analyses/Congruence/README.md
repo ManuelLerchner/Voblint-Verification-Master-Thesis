@@ -3,8 +3,8 @@
 `Voblint_Analysis_Congruence` is the residue-class domain: values known modulo
 some integer. It fills two roles at once. It is a selectable analysis, with its
 own transfer functions, executable carrier, equation system and check discharge,
-an `analysis_domain` constructor, and a whole-program run published at two
-solver disciplines, always-join and per-origin. It is also the fourth component
+an `analysis_domain` constructor, and a whole-program run at every context
+policy and global update rule. It is also the fourth component
 of `int_dom`, the reduced product in `Voblint_Analysis_Int`, where it carries
 the modular facts none of the other three components can express.
 
@@ -40,9 +40,9 @@ is there to carry modular information --- alignment, stride, access patterns ---
 is what makes it the one component whose arithmetic inverses still narrow under
 `Refine_Never`.
 
-It publishes always-join and per-origin, and no warrowing route. Its widening is plain
-join: the modulus only ever coarsens, so an ascending chain is a divisor chain and
-terminates without acceleration.
+A warrowing rule buys it nothing, though every registration accepts one. Its widening
+is plain join: the modulus only ever coarsens, so an ascending chain is a divisor chain
+and terminates without acceleration.
 
 ## Vocabulary
 
@@ -67,10 +67,7 @@ terminates without acceleration.
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Assembly.thy` | generated: two interpretations of the shared `unit_dg_analysis`, one per published solver discipline |
-| `generated/Congruence_Analyses.thy` | the call-string and entry-state configurations, as two interpretations of the shared routed assembly. Generated from `manifests/analyses.yaml`; see below |
-| `generated/Congruence_Checks.thy` | generated: the names a caller outside the session uses, as abbreviations for the assembly's own |
-| `generated/Congruence_Entry.thy` | generated: the codegen endpoint over an arbitrary `imp_prog`, and its production soundness under four coverage assumptions |
+| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `unit_dg_analysis`, and `congruence_es_rule` and `congruence_cs_rule` for the entry-state and call-string configurations, all at any global update rule; see below |
 
 ## Worked example
 
@@ -93,17 +90,16 @@ Neither contextual policy has a pipeline of its own. Both are interpretations
 of `routed_dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every domain at every policy. Congruence
-supplies its own implementation and facts, the routing functions, the solver,
-and the published names. Nothing else.
+supplies its own implementation and facts; the generator adds the routing
+functions and the solver. Nothing else.
 
 A call string is the last `k` call sites on the stack, so a procedure entered
 from two places is analysed twice rather than once at the join. `cs_route`
 never reads the state it is handed, which is what makes
 `fun_route_activation_collect_sound` — the endpoint for a route that is a
 function of the call site and the caller's context alone — the applicable one.
-`k` is runtime data, so no `global_interpretation` can fix it: the registration
-is local to a context fixing `k`, and the published constants apply the
-pipeline's own constants at `cs_route k`.
+`k` is runtime data, so the registration leaves it free beside the rule
+(`for k r`), and a caller applies the locale's constants to both.
 
 The entry-state run keys a callee on the abstract values its formals hold on
 entry. Here `exec_formals_route` does read the state it is handed — the callee
@@ -113,8 +109,8 @@ one the entry answer induces rather than the graph of a function on stores.
 That difference is why the executable route and its abstract counterpart
 `formals_route_lifted_gen` are separate parameters.
 
-The context-insensitive run is neither of these: it is `Congruence_Assembly`'s
-`global_interpretation` of the same assembly at the unit context.
+The context-insensitive run is neither of these: it is `congruence_rule`, the
+registration of the same assembly at the unit context.
 
 Global keys differ per policy and are therefore parameters, not a fixed shape.
 The call-string run keys at `call_string_gk`, shared with every other

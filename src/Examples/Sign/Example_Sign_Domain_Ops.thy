@@ -35,8 +35,10 @@ lemma join_sign_regression:
   by eval+
 
 lemma string_of_sign_regression:
-  "string_of_sign STop = ''Top''"
-  "string_of_sign SNonPos = ''NonPositive''"
+  "string_of_sign STop = STR ''<top>''"
+  "string_of_sign SBot = STR ''<bottom>''"
+  "string_of_sign SNonPos = STR ''<le>0''"
+  "string_of_sign SPos = STR ''+''"
   by eval+
 
 lemma aval_sign_regression:

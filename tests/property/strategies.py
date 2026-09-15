@@ -5,8 +5,8 @@ VIMP has one unified `exp` type -- arithmetic, comparison, and logical
 operators are ordinary exp constructors, not a separate aexp/bexp split
 (see VIMP_Expr.thy's `aval`/`truthy`). manifests/vimp-grammar.yaml's `exp_paren`
 production (`LPAREN exp RPAREN`, passthrough) means any exp tree is
-source-expressible: VIMP_Source_Print.thy's string_of_exp is a uniform
-precedence-climbing printer (exp_prio) that parenthesizes a subexpression
+source-expressible: the grammar-generated printer (cli/frontend/vimp_printer.ml) is a uniform
+precedence-climbing printer (the precedence table in manifests/vimp-grammar.yaml) that parenthesizes a subexpression
 exactly when its own constructor binds looser than the calling position
 requires, for every constructor alike. `exps` below therefore generates
 arbitrary trees over all expression constructors, not just left-associated
@@ -29,6 +29,7 @@ from hypothesis import strategies as st
 VAR_POOL = ["x", "y", "z", "n", "acc"]
 GLOBAL_POOL = ["g1", "g2"]
 PROC_POOL = ["f", "g", "helper"]
+MAX_PROCS = len(PROC_POOL)
 
 
 def sexp(x) -> str:
@@ -42,6 +43,7 @@ def sexp(x) -> str:
 
 
 # -- exp: arbitrary nesting over all ten constructors (see module docstring) -
+
 
 def exps(max_leaves=5):
     leaves = st.one_of(
@@ -72,6 +74,7 @@ def exps(max_leaves=5):
 
 # -- com -----------------------------------------------------------------
 
+
 @st.composite
 def atomic_com(draw, depth):
     assignable = VAR_POOL + GLOBAL_POOL
@@ -88,7 +91,9 @@ def atomic_com(draw, depth):
     if kind == "check":
         return ("Check", draw(exps()))
     if kind == "call":
-        dst = draw(st.one_of(st.none(), st.sampled_from(VAR_POOL).map(lambda x: ("Some", x))))
+        dst = draw(
+            st.one_of(st.none(), st.sampled_from(VAR_POOL).map(lambda x: ("Some", x)))
+        )
         proc = draw(st.sampled_from(PROC_POOL))
         actuals = draw(st.lists(exps(), max_size=2))
         return ("Call", dst, proc, actuals)
@@ -117,14 +122,19 @@ def coms(draw, depth=3, max_stmts=3):
 # are each drawn without replacement, so they're pairwise distinct too
 # (vimp_parser.ml also rejects duplicate procedure/global names).
 
+
 @st.composite
-def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
-    proc_names = draw(st.lists(st.sampled_from(PROC_POOL), max_size=max_procs, unique=True))
+def programs(draw, max_procs=MAX_PROCS, body_depth=3):
+    proc_names = draw(
+        st.lists(st.sampled_from(PROC_POOL), max_size=max_procs, unique=True)
+    )
     procs = []
     for name in proc_names:
         formals = draw(st.lists(st.sampled_from(VAR_POOL), max_size=2, unique=True))
         body = draw(coms(depth=body_depth - 1))
         procs.append((name, formals, body))
     main_body = draw(coms(depth=body_depth))
-    globals_ = draw(st.lists(st.sampled_from(GLOBAL_POOL), max_size=len(GLOBAL_POOL), unique=True))
+    globals_ = draw(
+        st.lists(st.sampled_from(GLOBAL_POOL), max_size=len(GLOBAL_POOL), unique=True)
+    )
     return (procs, main_body, globals_)

@@ -21,7 +21,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 args=("$@")
 
 # Does argv already carry a FILE positional? Walk it flag-arity-aware
-# (mirrors cli/main.ml's parse_args) rather than treating any non-flag
+# (mirrors cli/entry/voblint.ml's parse_args) rather than treating any non-flag
 # token as a file -- `--analysis interval` must not be misread as a file.
 # --help short-circuits to cli/voblint unchanged: no picker.
 has_file=0
@@ -32,8 +32,8 @@ while [ "$i" -lt "$n" ]; do
   arg="${args[$i]}"
   case "$arg" in
     --help) skip_picker=1; break ;;
-    --analysis | --context | --solver | --timeout) i=$((i + 2)) ;;
-    --dot | --dot-full | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
+    --analysis | --context | --globals | --timeout) i=$((i + 2)) ;;
+    --dot | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
     -*) i=$((i + 1)) ;;
     *) has_file=1; break ;;
   esac

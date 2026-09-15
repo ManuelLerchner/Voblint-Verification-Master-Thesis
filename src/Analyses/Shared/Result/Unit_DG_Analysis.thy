@@ -76,34 +76,6 @@ begin
 subsection \<open>The publication surface a single context allows\<close>
 
 text \<open>
-  One context per procedure entry, so the seed enumeration is a constant list
-  and the label is the procedure name alone.
-\<close>
-
-definition globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list" where
-  "globals = globals_at (\<lambda>_. [()]) (\<lambda>f _. STR ''enter '' + f)"
-
-text \<open>
-  The two published halves of one run. The solve is bound once and both halves
-  read that binding, so asking for the table and the globals together costs one
-  solve rather than two.
-\<close>
-
-definition solved :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (unit, 'a abs_state) analysis_result
-         \<times> (String.literal \<times> 'a abs_state lifted) list" where
-  "solved gs p =
-     (let sol = solution gs p; gl = declared_global_vars p
-      in (dg_result_for gs gl sol,
-          dg_globals_for gs gl (snd sol)
-            (seed_global_keys (Analysis_Global ()) Activation_Seed
-               (\<lambda>_. [()]) (\<lambda>f _. STR ''enter '' + f) p)))"
-
-lemma solved_eq: "solved gs p = (result gs p, globals gs p)"
-  by (simp add: solved_def result_def globals_def globals_at_def sol_env_def Let_def)
-
-text \<open>
   A caller reads a program point without naming a context, which is the whole
   difference the unit policy makes to the published surface.
 \<close>
@@ -384,13 +356,11 @@ subsection \<open>Executability of the unit-only surface\<close>
 
 text \<open>
   Nothing is declared here, and that is deliberate. \<^locale>\<open>unit_dg_analysis\<close>
-  has assumptions, so \<open>globals_def\<close> and its four siblings come out carrying the
-  locale predicate as a premise; \<open>[code]\<close> rejects such a theorem with a warning
-  and silently adds no equation, which is exactly the trap of declaring them
-  anyway. Every executable use goes through a domain's
-  \<open>global_interpretation ... defines\<close>, and each renamed constant gets an
-  unconditional equation from that registration. The objects inherited from
-  \<^locale>\<open>routed_dg_pipeline\<close> keep the equations declared there.
+  has assumptions, and \<open>state_at\<close>, \<open>report\<close> and \<open>report_with_state\<close> have types
+  that omit the domain type variable, so \<open>[code]\<close> would reject their definitions
+  with a warning and silently add no equation. An executable use unfolds them at
+  the use site instead. The objects inherited from \<^locale>\<open>routed_dg_pipeline\<close>
+  keep the equations declared there.
 \<close>
 
 end

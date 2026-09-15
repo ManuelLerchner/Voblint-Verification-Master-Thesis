@@ -1,5 +1,5 @@
-// PARAM: --analysis interval --solver join
-// 09's program under --solver join, which folds every contribution into one
+// PARAM: --analysis interval --globals join
+// 09's program under --globals join, which folds every contribution into one
 // slot and therefore never dips: this case terminates with or without the
 // per-key aggregation. It is here as the control. Aggregating writes changes
 // when a key is published within one right-hand side, so it changes the order

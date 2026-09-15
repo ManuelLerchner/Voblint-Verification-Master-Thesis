@@ -1,0 +1,198 @@
+/* Where the proof starts and stops */
+
+.scene-trust svg {
+  max-width: 1120px;
+}
+
+:where(.scene-trust) .zone {
+  stroke-width: 1.5;
+}
+
+:where(.scene-trust) .zone.untrusted {
+  fill: rgb(128 144 151 / 0.06);
+  stroke: var(--border-strong);
+  stroke-dasharray: 7 6;
+}
+
+:where(.scene-trust) .zone.proved {
+  fill: rgb(40 115 75 / 0.07);
+  stroke: var(--success);
+  stroke-width: 2.5;
+}
+
+:where(.scene-trust) .zone.trusted-base {
+  fill: rgb(167 105 36 / 0.07);
+  stroke: var(--warning);
+  stroke-dasharray: 2 4;
+}
+
+:where(.scene-trust) .zone-label {
+  fill: var(--text-muted) !important;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+:where(.scene-trust) .zone-label.proved-label {
+  fill: var(--success) !important;
+}
+
+:where(.scene-trust) .base-label {
+  fill: var(--warning) !important;
+  font-size: 14px !important;
+  font-weight: 700;
+}
+
+:where(.scene-trust) .base-detail {
+  fill: var(--text-muted) !important;
+}
+
+:where(.scene-trust) .wires line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+:where(.scene-trust) .stage rect {
+  fill: var(--surface);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  animation: stage-pulse 9s ease infinite backwards;
+}
+
+:where(.scene-trust) .stage.core rect {
+  stroke: var(--success);
+}
+
+:where(.scene-trust) .stage text {
+  font-size: 14px !important;
+  font-weight: 650;
+}
+
+:where(.scene-trust) .stage .stage-sub {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 400;
+}
+
+/* Each delay is when the packet reaches that box: its center's share of the path times 70% of 9s. */
+:where(.scene-trust) .st-parser rect {
+  animation-delay: 1.1s;
+}
+
+:where(.scene-trust) .st-cfg rect {
+  animation-delay: 2.24s;
+}
+
+:where(.scene-trust) .st-eqs rect {
+  animation-delay: 3.17s;
+}
+
+:where(.scene-trust) .st-solver rect {
+  animation-delay: 4.09s;
+}
+
+:where(.scene-trust) .st-result rect {
+  animation-delay: 5.03s;
+}
+
+:where(.scene-trust) .st-view rect {
+  animation-delay: 6.3s;
+}
+
+@keyframes stage-pulse {
+  0% {
+    fill: var(--surface);
+  }
+  3% {
+    fill: var(--primary-soft);
+  }
+  12%,
+  100% {
+    fill: var(--surface);
+  }
+}
+
+:where(.scene-trust) .packet {
+  fill: var(--text-faint);
+  animation:
+    packet-move 9s linear infinite,
+    packet-color 9s step-end infinite;
+}
+
+@keyframes packet-move {
+  0% {
+    transform: translate(80px, 160px);
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  70% {
+    transform: translate(1000px, 160px);
+    opacity: 1;
+  }
+  78%,
+  100% {
+    transform: translate(1000px, 160px);
+    opacity: 0;
+  }
+}
+
+@keyframes packet-color {
+  0% {
+    fill: var(--text-faint);
+  }
+  19% {
+    fill: var(--success);
+  }
+  61.6% {
+    fill: var(--text-faint);
+  }
+}
+
+:where(.scene-trust) .theorem-stamp {
+  fill: var(--success) !important;
+  font-weight: 700;
+  animation: stamp 9s ease infinite;
+}
+
+@keyframes stamp {
+  0%,
+  52% {
+    opacity: 0.25;
+  }
+  58%,
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.25;
+  }
+}
+
+:where(.scene-trust) .source-link .stage rect {
+  transition:
+    stroke-width 150ms ease,
+    filter 150ms ease;
+}
+
+:where(.scene-trust) .source-link:hover .stage rect,
+:where(.scene-trust) .source-link:focus-visible .stage rect {
+  stroke: var(--primary);
+  stroke-width: 3;
+}
+
+.scene:where(.scene-trust) .link-sub {
+  fill: var(--primary) !important;
+  font-weight: 650 !important;
+  text-decoration: underline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.scene-trust) .packet {
+    display: none;
+  }
+
+  :where(.scene-trust) .theorem-stamp {
+    opacity: 1;
+  }
+}

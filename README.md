@@ -3,7 +3,7 @@
 # Voblint
 
 > **A Verified Goblint-Style Static Analysis Pipeline in Isabelle/HOL**
-
+>
 > Master's thesis. Manuel Lerchner, supervised by [@AlexandraGrass](https://github.com/AlexandraGrass)
 
 [![CI](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml/badge.svg)](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml)
@@ -43,9 +43,8 @@ $ pixi run voblint --analysis interval tests/regression/02-control-flow/precisio
 ```
 
 `--dot` renders the same solved CFG as GraphViz instead: the source sits beside
-the graph, each check node carries its verdict and the state it was decided on,
-and dead nodes are shaded. `--dot-full` puts every node's own state on the graph
-rather than only the check nodes; under a context policy each context gets its
+the graph, every node carries its procedure-local state, check nodes carry their
+verdict, and dead nodes are shaded. Under a context policy each context gets its
 own cluster (see the gallery below).
 
 ```bash
@@ -61,7 +60,7 @@ pixi run voblint --analysis interval --dot tests/regression/02-control-flow/prec
 </p>
 
 A product domain does not fit on a graph. One variable of the `int` domain
-prints as `sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a whole
+prints as `signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ`, and a whole
 program of those is unreadable. `--html` writes a browsable report instead: the
 graph stays sparse, each node's full state lives in its own document, and
 clicking a node or a source line shows it. `pixi run html-report-serve` serves and
@@ -88,8 +87,7 @@ pixi run voblint --parse-only FILE.vimp
 ```
 
 `--context none|entry-state|call-string` selects the analysis context.
-`--context-graph collapsed|expanded` changes only how a context-sensitive
-result is drawn. `pixi run voblint --help` lists every flag;
+`pixi run voblint --help` lists every flag;
 [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) describes the CLI trust boundary,
 and [`docs/CHECK_ARCHITECTURE.md`](docs/CHECK_ARCHITECTURE.md) the contextual
 result and rendering architecture.
@@ -167,7 +165,7 @@ threads to procedure activations.
 The headline theorem is
 [`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy).
 It ranges over the same `run_voblint` entry point exported to OCaml and over
-every accepted domain, solver discipline, and context policy:
+every domain, global update rule, and context policy:
 
 ```isabelle
 theorem run_voblint_certified_source_sound:
@@ -175,13 +173,13 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers D solver ctx p v s
-               ∧ checks_sound_at out v s"
+               ∧ analysis_result_covers D rule ctx p v s
+               ∧ checks_sound_at res v s"
 ```
 
 | Premise | Meaning |
@@ -189,7 +187,7 @@ theorem run_voblint_certified_source_sound:
 | `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
 | `run` | An arbitrary finite VIMP execution prefix from `main`, with the residual command, current store, and pending caller frames made explicit. Source termination is not required. |
 | `terminates` | The selected verified-solver run terminates for this program. This is the sole analyzer-side proof obligation. |
-| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed out`. It therefore supplies configuration legality and well-formedness. The requested rendering `view` is arbitrary. |
+| `ans` | `run_voblint` accepted the program and configuration and returned `Analysed res`. It therefore supplies well-formedness. |
 
 The conclusion supplies a CFG node `v` and matching call stack `stk`:
 
@@ -198,40 +196,39 @@ The conclusion supplies a CFG node `v` and matching call stack `stk`:
 | `csim ... (v, s, stk)` | The compiler's forward simulation relates the source state to `v`. |
 | `s ∈ ltr_collect ... v` | A valid trace genuinely reaches `v` with store `s`. |
 | `analysis_result_covers ... v s` | The abstract state filed for `v`, under an admitted context when contexts are used, contains `s`. |
-| `checks_sound_at out v s` | No row at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
+| `checks_sound_at res v s` | No check listed at `v` is `DEAD`; every `PROVED` or `REFUTED` verdict there is correct for `s`. |
 
 `config_terminates` and `analysis_result_covers` dispatch over the selected
-plan. They cannot store every domain behind one polymorphic abstract-state
+configuration. They cannot store every domain behind one polymorphic abstract-state
 value because each domain has its own carrier type. “Certified” names the
 theorem; the CLI returns a report, not a proof certificate.
 
-The theorem covers every row-producing configuration:
+The theorem covers every configuration:
 
 ```text
 D      in {Sign, Interval, Parity, Congruence, Int}
-ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}
-solver = None, or any discipline accepted for that domain and policy
+rule   in {Globals_Join, Globals_Per_Origin, Globals_Warrow, Globals_Warrow_Per_Origin}
+ctx    in {Ctx_None, Ctx_EntryState, Ctx_CallString k}   (k = 0 included)
 ```
 
-There are 32 accepted plans. `None` selects a domain's default discipline;
-naming another accepted discipline changes how the equations are solved, not
-the guarantee. Unsupported combinations return `Unsupported_Configuration`;
-ill-formed programs return `Malformed_Program`.
+The rule selects how the solver merges a value side-effected into a global
+unknown; it changes how the equations are solved, not the guarantee. Every
+combination is analysed; ill-formed programs return `Malformed_Program`.
 
-All 32 plans discharge the same [`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
-interface. `Analysis_Run_Sound` establishes the generic endpoint,
-`Analysis_Run_Ctx_Sound` lifts contextual results through
-[`sound_table_of_activation`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy),
-and `Analysis_Run_Solver_Sound` registers explicitly selected disciplines. A
-new supported discipline therefore needs an analysis registration and
-instantiation, not new source-level reasoning.
+Every configuration discharges the same [`sound_table`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy)
+interface, through one table lemma per domain and context policy that holds for
+any rule. `Analysis_Run_Sound` establishes the generic endpoint and the
+context-free tables, and `Analysis_Run_Ctx_Sound` lifts contextual results through
+[`sound_table_of_activation`](src/Executable_Surface/CLI/Analysis_Run_Sound.thy).
+A new domain therefore needs its rule-parametric registrations and table lemmas,
+not new source-level reasoning.
 
 ### Checks and dead code
 
 [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 specializes the headline to the next source check. If an execution is about to
-run `Check e`, the report contains a row for `e` at a node reached with the
-current store. That row is live, and every definite verdict is correct.
+run `Check e`, the result lists a check for `e` at a node reached with the
+current store. That check is live, and every definite verdict is correct.
 
 <details>
 <summary>Exact check theorem</summary>
@@ -243,44 +240,44 @@ theorem run_voblint_check_sound:
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some e"
-      and terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
-  shows "∃row ∈ set (out_checks out). row_exp row = e
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
+  shows "∃c ∈ set (res_checks res). check_exp c = e
            ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) (row_point row)
-           ∧ row_verdict row ≠ Dead
-           ∧ (row_verdict row = Decided Check_Proved ⟶ truthy (aval e s))
-           ∧ (row_verdict row = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
+                   (cinit_stores (declared_global p)) (check_point c)
+           ∧ check_verdict c ≠ Dead
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (aval e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
 ```
 
 </details>
 
-[`run_voblint_dead_row_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-states the guarantee needed for dead code: a `DEAD` row's point has an empty
+[`run_voblint_dead_check_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+states the guarantee needed for dead code: a `DEAD` check's point has an empty
 collecting semantics.
 
 <details>
-<summary>Exact dead-row theorem</summary>
+<summary>Exact dead-check theorem</summary>
 
 ```isabelle
-corollary run_voblint_dead_row_unreached:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
-      and row: "row ∈ set (out_checks out)"
-      and dead: "row_verdict row = Dead"
+corollary run_voblint_dead_check_unreached:
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
+      and listed: "chk ∈ set (res_checks res)"
+      and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
-           (cinit_stores (declared_global p)) (row_point row) = {}"
+           (cinit_stores (declared_global p)) (check_point chk) = {}"
 ```
 
 </details>
 
 This result is proved directly at the named point. It does not follow by
 contraposing the existential end-to-end theorem. Under a context policy, the
-printed row aggregates the contexts solved at that point, so `DEAD` means no
+listed check aggregates the contexts solved at that point, so `DEAD` means no
 admitted context reaches it.
 
 [`run_voblint_check_sites`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-proves that returned rows correspond exactly, in graph order, to the compiled
+proves that returned checks correspond exactly, in graph order, to the compiled
 `EA_Check` edges. The handwritten CLI pairs them with parser source positions
 by order; that pairing is outside the proof.
 
@@ -290,7 +287,7 @@ by order; that pairing is outside the proof.
 connects the returned diagnostics to concrete divisors. For a terminating,
 accepted analysis, absence of a diagnostic at a reachable point guarantees
 that every divisor in that point's expressions is nonzero in every store
-collected there. It covers the same domain, solver, and context configurations
+collected there. It covers the same domain, rule, and context configurations
 as the other CLI soundness endpoints.
 
 <details>
@@ -298,11 +295,11 @@ as the other CLI soundness endpoints.
 
 ```isabelle
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates D solver ctx p"
-      and ans: "run_voblint D solver ctx view p = Analysed out"
+  assumes terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
       and reachable: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
-      and quiet: "∀d ∈ set (out_diagnostics out). diagnostic_point d ≠ v"
+      and quiet: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
 ```
 
@@ -317,9 +314,9 @@ whether its divisor differs from zero; the classifier uses the same solved
 result as the check report and aggregates verdicts across contexts. A safe
 context cannot suppress a warning from another context.
 
-The theorem concerns `out_diagnostics` and compiled program points. Source
+The theorem concerns `res_diagnostics` and compiled program points. Source
 locations and diagnostic text come from the handwritten CLI and remain outside
-the proof, as they do for check rows.
+the proof, as they do for checks.
 
 ### Why the node and context are existential
 
@@ -352,9 +349,9 @@ context-totality premise; relational entry-state routing proves the required
 coverage of admitted contexts.
 
 The state and check claims live at different representations.
-`analysis_output` retains check rows, but renders snapshots, globals, and
-per-row states as `String.literal`. Check soundness can therefore refer to
-`out_checks out` directly. State soundness refers to the semantic result via
+`run_voblint` renders every abstract value as `String.literal` and leaves checks
+and diagnostics untouched. Check soundness can therefore refer to
+`res_checks res` directly. State soundness refers to the semantic result via
 `analysis_result_covers`; recovering an abstract state from rendered text
 would require inverting the renderer.
 
@@ -391,7 +388,7 @@ The proof covers:
 - semantic abstract states, returned check rows, and arithmetic safety at points
   without diagnostics.
 
-The executable `cli/main.ml` is a thin, unverified adapter around the generated
+The executable `cli/entry/voblint.ml` is a thin, unverified adapter around the generated
 `run_voblint` entry point.
 
 It does not cover:
@@ -408,8 +405,7 @@ per-configuration statements remain in
 [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md). The README keeps the three
 configuration-generic, reader-facing results above.
 
-Those lower layers retain the same content in more specialized forms: the
-context-free dispatcher states verdict soundness over its verdict list; each
+Those lower layers retain the same content in more specialized forms: each
 domain states source and completed-run soundness over its own result table; and
 the domain-free source bridge turns any `ltr_collect` bound into a source-run
 claim. New domains reuse that source reasoning.
@@ -417,8 +413,7 @@ claim. New domains reuse that source reasoning.
 <details>
 <summary>Lower-level API ladder</summary>
 
-`analyse_certified` packages the context-free analysis obligations. Domains
-expose `analyse_<domain>_source_sound` and
+Domains expose `analyse_<domain>_source_sound` and
 `analyse_<domain>_completed_run_sound`; the domain-independent
 `source_sound_from_ltr_collecting_cap` turns any `ltr_collect` bound into a
 source-execution claim.
@@ -428,11 +423,11 @@ source-execution claim.
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
 shows the headline is non-vacuous. It evaluates well-formedness, solver
 termination, and the answer for one program using the `Int` product, a
-length-one call string, and an explicit always-join solver. It also constructs
+length-one call string, and the always-join global update rule. It also constructs
 the source run through both calls and its check. Its full certificate names the
-returned answer, the `PROVED` row, the completed run, collection at `Statement
-4`, result coverage, row soundness, and the checked condition's truth.
-The example names those witnesses `certificate_demo_check_row_sound` and
+returned answer, the `PROVED` check, the completed run, collection at `Statement
+4`, result coverage, check soundness, and the checked condition's truth.
+The example names those witnesses `certificate_demo_check_listed_sound` and
 `certificate_demo_full_certificate`.
 [`Example_Side_Execute`](src/Examples/Sign/Example_Side_Execute.thy) provides a
 smaller Sign instance with every premise discharged.
@@ -457,8 +452,8 @@ question.
         <img src="docs/images/report-context-interval.png" width="420" alt="Interval analysis with entry-state contexts: three call sites drawn as three clusters">
       </a>
       <br><b>Context-sensitive Interval</b>
-      <br><sub><code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument context. Several concrete arguments can share one, and the solver may revisit a context. <code>--context-graph expanded</code> draws each as its own cluster: <code>[5,5]</code>, <code>[4,4]</code> and <code>[19,19]</code>, the last read from a global at the call site, instead of one cluster holding their join.</sub>
-      <br><sub><a href="tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp"><code>04-expanded_three_contexts.vimp</code></a> &middot; <code>--context entry-state --context-graph expanded --html</code></sub>
+      <br><sub><code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument context. Several concrete arguments can share one, and the solver may revisit a context. The graph draws each as its own cluster: <code>[5,5]</code>, <code>[4,4]</code> and <code>[19,19]</code>, the last read from a global at the call site, instead of one cluster holding their join.</sub>
+      <br><sub><a href="tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp"><code>04-expanded_three_contexts.vimp</code></a> &middot; <code>--context entry-state --html</code></sub>
     </td>
   </tr>
   <tr>
@@ -480,36 +475,34 @@ Sign and Parity likewise. Congruence carries the only real arithmetic
 inversion, and it is the fourth component. The
 composite's
 reduction step then re-derives the other three views from that tightened
-operand, giving `y = [2,2]`, `Positive`, `Even`, `==2`. The gain is the extra
+operand, giving `y = [2,2]`, `+`, `2ℤ`, `2`. The gain is the extra
 component *plus* cross-component reduction, not a better interval transfer
 ([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
 [`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
 
 ## Domains and configurations
 
-| Domain | `--analysis` | Result table | Default solver | Context policies |
-| --- | --- | --- | --- | --- |
-| Sign | `sign` | `analyse_sign_result` | join | `none`, `entry-state`, `call-string` |
-| Interval | `interval` | `analyse_interval_result` | warrowing | `none`, `entry-state`, `call-string` |
-| Parity | `parity` | `analyse_parity_result` | join | `none`, `entry-state`, `call-string` |
-| Congruence | `congruence` | `analyse_congruence_result` | join | `none`, `entry-state`, `call-string` |
-| Int (Sign × Interval × Parity × Congruence) | `int` | `analyse_int_result` | warrowing | `none`, `entry-state`, `call-string` |
+| Domain | `--analysis` | Registrations `run_voblint` reads | Context policies |
+| --- | --- | --- | --- |
+| Sign | `sign` | `sign_rule`, `sign_es_rule`, `sign_cs_rule` | `none`, `entry-state`, `call-string` |
+| Interval | `interval` | `interval_rule`, `interval_es_rule`, `interval_cs_rule` | `none`, `entry-state`, `call-string` |
+| Parity | `parity` | `parity_rule`, `parity_es_rule`, `parity_cs_rule` | `none`, `entry-state`, `call-string` |
+| Congruence | `congruence` | `congruence_rule`, `congruence_es_rule`, `congruence_cs_rule` | `none`, `entry-state`, `call-string` |
+| Int (Sign × Interval × Parity × Congruence) | `int` | `int_rule`, `int_es_rule`, `int_cs_rule` | `none`, `entry-state`, `call-string` |
 
 Every domain supplies a `widen` operator; Sign and Parity are finite lattices
-with `widen = sup`. What only Interval and the `int` product have is a solved
-table and a soundness corollary behind the widening rules, so the other
-`Solver_Warrow` pairings stay unsupported rather than being exposed on the
-strength of the instance alone. Unsupported `(domain, solver)` and
-`(domain, context)` pairings are rejected explicitly, answering `None` at
-[`resolve_analysis_config`](src/Executable_Surface/CLI/Analysis_Config.thy) rather
-than falling back silently.
+with `widen = sup`. Each registration takes the global update rule as a
+parameter, so every domain answers every `--globals` rule
+(`join`, `per-origin`, `warrow`, `warrow-per-origin`) at every context policy.
+The CLI defaults to `warrow` for every domain; `run_voblint` itself has no
+default.
 
 ## The generic D/G framework
 
 Analyses are factored the way Goblint factors them:
 
-* **D**: abstract facts attached to program points;
-* **G**: globally shared information published and consumed across points.
+- **D**: abstract facts attached to program points;
+- **G**: globally shared information published and consumed across points.
 
 The central abstraction is the Isabelle counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
@@ -551,8 +544,8 @@ and [`docs/ANALYSIS_ASSEMBLY_GENERATION.md`](docs/ANALYSIS_ASSEMBLY_GENERATION.m
 | `src/Abstract_Interpreter/Solver` | Strategy-tree equation language and the bridge to the vendored TD solver |
 | `src/Abstract_Interpreter/Framework` | Generic D/G specifications, routing, constraints, results |
 | `src/Abstract_Interpreter/Exec` | Executable finite states and their refinement |
-| `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`, which also hold the domain-independent end-to-end endpoints (`source_reaches_ltr_collect`, `unit_dg_analysis`); each selectable domain owns its `<Domain>_Entry.thy` |
-| `src/Executable_Surface/CLI` | The `analyse` dispatcher and the render surface; the one layer that sees every domain |
+| `src/Analyses` | Concrete domains over the shared sessions in `Analyses/Shared`, which also hold the domain-independent end-to-end endpoints (`source_reaches_ltr_collect`, `unit_dg_analysis`); each selectable domain registers itself in a generated `<Domain>_Analyses.thy` |
+| `src/Executable_Surface/CLI` | `run_voblint` and its soundness theorems; the one layer that sees every domain |
 | `src/Executable_Surface/Codegen` | `export_code` declarations (generated OCaml lands in `codegen/generated/`) |
 | `src/Examples` | Executable runs, flagship demos, regression proofs, one session per folder |
 | `manifests/` | Canonical YAML inputs for analysis registration and VIMP grammar generation |
@@ -658,7 +651,7 @@ realize it for two unrelated parser targets:
 ```text
 manifests/vimp-grammar.yaml
        |
-       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_menhir.py   -> cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
@@ -672,11 +665,11 @@ fuzzing under `tests/property/`.
 
 ## Foundations
 
-* **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the D/G architecture.
-* **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
-* **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
-* **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).
-* **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)): thread-modular local-trace semantics, which Voblint's activation-local traces (`src/Program_Model/CFG/Collecting/`) adapt to procedure activations.
+- **Goblint** ([GitHub](https://github.com/goblint/analyzer)): modular interprocedural abstract interpretation and the D/G architecture.
+- **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
+- **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
+- **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).
+- **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)): thread-modular local-trace semantics, which Voblint's activation-local traces (`src/Program_Model/CFG/Collecting/`) adapt to procedure activations.
 
 ## Documentation
 

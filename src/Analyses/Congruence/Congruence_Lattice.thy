@@ -1,5 +1,5 @@
 theory Congruence_Lattice
-  imports Congruence_Domain "Voblint_VIMP.VIMP_Source_Print"
+  imports Congruence_Domain
 begin
 
 section \<open>When is one residue class contained in another?\<close>
@@ -412,13 +412,28 @@ lemma is_top_congruence_correct_gamma:
   unfolding is_top_congruence_def
   by (metis gamma_congruence_inject gamma_top_congruence)
 
-definition string_of_congruence :: "congruence \<Rightarrow> string" where
+text \<open>
+  Goblint's congruence notation: a constant prints as itself, the class of \<open>r\<close>
+  modulo \<open>m\<close> as \<open>r+m\<int>\<close>, with a zero residue and a unit modulus left out, so
+  \<open>3\<int>\<close>, \<open>1+3\<int>\<close> and \<open>\<int>\<close>. A standalone congruence prints its top as \<open>\<top>\<close>.
+\<close>
+
+definition string_of_congruence :: "congruence \<Rightarrow> String.literal" where
   "string_of_congruence c =
      (case Rep_congruence c of
-        None \<Rightarrow> ''Top''
+        None \<Rightarrow> sym_bottom
       | Some (r, m) \<Rightarrow>
-          if m = 0 then ''='' @ string_of_int r
-          else ''='' @ string_of_int r @ '' (mod '' @ string_of_int m @ '')'')"
+          if m = 0 then string_of_int r
+          else (if r = 0 then STR '''' else string_of_int r + STR ''+'')
+             + (if m = 1 then STR '''' else string_of_int m) + sym_int)"
+
+lemma string_of_congruence_regression:
+  "string_of_congruence bottom_congruence = STR ''<bottom>''"
+  "string_of_congruence (mk_congruence (-7) 0) = STR ''-7''"
+  "string_of_congruence (mk_congruence 0 1) = STR ''<int>''"
+  "string_of_congruence (mk_congruence 0 3) = STR ''3<int>''"
+  "string_of_congruence (mk_congruence 4 3) = STR ''1+3<int>''"
+  by eval+
 
 instantiation congruence :: sound_domain
 begin
@@ -433,7 +448,8 @@ definition is_full_congruence [simp]:
   "is_full (a :: congruence) = is_top_congruence a"
 
 definition to_string_congruence [simp]:
-  "to_string (a :: congruence) = string_of_congruence a"
+  "to_string (a :: congruence) =
+     (if is_top_congruence a then sym_top else string_of_congruence a)"
 
 instance
 proof intro_classes
@@ -459,5 +475,10 @@ next
 qed
 
 end
+
+lemma to_string_congruence_regression:
+  "to_string (top :: congruence) = STR ''<top>''"
+  "to_string (mk_congruence 1 2) = STR ''1+2<int>''"
+  by eval+
 
 end

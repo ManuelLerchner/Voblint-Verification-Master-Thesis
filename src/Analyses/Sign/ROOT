@@ -22,7 +22,4 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
     Sign_Exec
     Sign_Sound
     Sign_Classify
-    Sign_Assembly
     Sign_Analyses
-    Sign_Checks
-    Sign_Entry

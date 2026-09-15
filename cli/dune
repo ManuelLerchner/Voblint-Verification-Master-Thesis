@@ -1,49 +1,75 @@
+; frontend/  source text -> imp_prog, and imp_prog -> source text
+; result/    reading one run result: names, verdicts, the contextual CFG
+; render/    one module per output: text report, DOT, snapshot, JSON, g2html
+; entry/     the native CLI and the browser adapter
+
+(include_subdirs unqualified)
+
 (rule
  (targets Voblint_CLI.ml)
  (deps ../codegen/generated/ml/Voblint_CLI.ml)
- (action (copy %{deps} %{targets})))
+ (action
+  (copy %{deps} %{targets})))
 
-(menhir
- (modules vimp_parser)
- (flags --unused-precedence-levels))
+(library
+ (name voblint_positions)
+ (wrapped false)
+ (modules vimp_positions))
 
-(ocamllex vimp_lexer)
+; The Isabelle export and the Menhir/ocamllex output warn on constructs their
+; generators emit by design (partial matches, unused semantic values). Every
+; other module, including the generated but warning-clean printer, sits in the
+; libraries around this one, where warnings are errors.
+
+(library
+ (name voblint_grammar)
+ (wrapped false)
+ (modules Voblint_CLI vimp_parser vimp_lexer)
+ (libraries voblint_positions menhirLib str zarith)
+ (flags
+  (:standard -w -a)))
 
 (library
  (name voblint_frontend)
  (wrapped false)
- (modules
-  Voblint_CLI
-  vimp_positions
-  vimp_parser
-  vimp_lexer
-  vimp_frontend)
- (libraries str zarith)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ (modules vimp_frontend vimp_printer)
+ (libraries voblint_grammar voblint_positions str zarith))
 
 (library
  (name voblint_rendering)
  (wrapped false)
- (modules dot_render)
- (libraries voblint_frontend)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
-
-(executable
- (name main)
  (modules
-  html_report
-  main)
- (libraries voblint_frontend voblint_rendering str zarith unix)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+  value_symbols
+  result_text
+  context_graph
+  render_text
+  render_dot
+  render_snapshot
+  render_json
+  render_xml
+  wf_explain
+  report_dir)
+ (libraries voblint_frontend))
 
 (executable
- (name browser_main)
- (modules browser_main)
- (modes js)
+ (name voblint)
+ (modules voblint)
+ (libraries voblint_frontend voblint_rendering str zarith unix))
+
+(executable
+ (name voblint_web)
+ (modules voblint_web)
+ (modes wasm)
  (libraries
   voblint_frontend
   voblint_rendering
   js_of_ocaml
   zarith
   zarith_stubs_js)
- (flags (:standard -w -8-11-20-27-32-37-39 -warn-error -A)))
+ ;; The generated analyzer contains deep indirect recursion through the
+ ;; solver's query/eval callbacks. Keep CPS enabled so tail calls through
+ ;; higher-order functions can be transformed rather than consuming the
+ ;; Wasm/host stack.
+ (wasm_of_ocaml
+  (flags
+   (:standard --opt=3))))

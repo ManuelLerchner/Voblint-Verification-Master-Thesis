@@ -1,8 +1,13 @@
 # Generic non-relational pipeline: handoff
 
-Status: **IN PROGRESS.** Investigation complete (three simulation agents, read-only,
-findings below). Implementation not started. This handoff is for whoever picks up
-next — a fresh agent or a continuation of this session.
+Status: **SUPERSEDED — collapses (A) and (B) are implemented.** The generic abstract
+enter frame is `nonrelational_transfer.enter_frame_for`
+(`src/Analyses/Shared/Nonrelational/Nonrelational_Transfer.thy`), which every
+domain re-exports through its `global_interpretation ... defines`; its executable
+twin is `enter_frame_D_resolved_q` (`src/Abstract_Interpreter/Exec/State/Exec_St_Transfer.thy`),
+and `generic_tf_st_for_commute` in `Numeric_Ops.thy` discharges every non-guard
+edge once. File paths below predate the `src/Analyses/Shared/` layout. Kept as a
+record of the investigation, not as open work.
 
 Read this document together with:
 

@@ -78,7 +78,7 @@ A lexicographic 5-tuple `inv_image prod_relation (\<lambda>st. ...)`:
 
 `value_relation` (`TD_wn_phases.thy:565`, `wf` proved at `:571`):
 
-```
+```isabelle
 value_relation = {((N,_),(W,_))}                       (* one W -> N transition *)
               \<union> {((W,d1),(W,d2)). (d1,d2) \<in> widening_chains}
               \<union> {((N,d1),(N,d2)). (d1,d2) \<in> narrowing_chains}
@@ -257,7 +257,7 @@ the CFG/path spine).
 
 Composition for unconditional total correctness:
 
-```
+```text
 [ this sketch: TD_side termination, finite 'x/'g + wf chains ]   (upstream, missing)
         \<circ>
 [ P5: finite reachable-point subtype for pp ]                     (downstream, P1 route (a))

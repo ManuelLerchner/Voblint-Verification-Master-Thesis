@@ -1,0 +1,77 @@
+// PARAM: --analysis int --context none
+// Backs the same figure's Int remark: the congruence component keeps x = 0 (mod 3),
+// so x < 3 after x > 0 is empty too and both checks are DEAD.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / unit
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp6_ctx0
+//     main_pp7_ctx0
+//     main_pp9_ctx0
+//     main_exit_main_ctx0
+//     main_pp0_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       n=⊤
+//       x=⊤
+//   main_pp2_ctx0: pp2
+//       n=⊤
+//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//   main_pp3_ctx0: pp3
+//       n=⊤
+//       x=signs:+; intervals:[3,+∞]; parities:ℤ; congruences:3ℤ
+//   main_pp4_ctx0: pp4 [unreachable]
+//       unreachable
+//       check x == 1 [dead]
+//   main_pp6_ctx0: pp6
+//       n=⊤
+//       x=signs:≤0; intervals:[-∞,0]; parities:ℤ; congruences:3ℤ
+//   main_pp7_ctx0: pp7 [unreachable]
+//       unreachable
+//       check x == 6 [dead]
+//   main_pp9_ctx0: pp9
+//       n=⊤
+//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//   main_exit_main_ctx0: exit_main
+//       n=⊤
+//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//   main_pp0_ctx0: pp0
+//       n=⊤
+//       x=⊤
+//   main_entry_main_ctx0: entry_main
+//       n=⊤
+//       x=⊤
+//
+// edges:
+//   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()
+//   main_pp1_ctx0 -> main_pp2_ctx0: x := 3 * n
+//   main_pp2_ctx0 -> main_pp3_ctx0: [x > 0]
+//   main_pp2_ctx0 -> main_pp6_ctx0: ![x > 0]
+//   main_pp3_ctx0 -> main_pp4_ctx0: [x < 3]
+//   main_pp3_ctx0 -> main_pp9_ctx0: ![x < 3]
+//   main_pp4_ctx0 -> main_pp9_ctx0: check(x == 1)
+//   main_pp6_ctx0 -> main_pp7_ctx0: [x > 5]
+//   main_pp6_ctx0 -> main_pp9_ctx0: ![x > 5]
+//   main_pp7_ctx0 -> main_pp9_ctx0: check(x == 6)
+//   main_pp9_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
+// EXPECT-GRAPH-END
+
+fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  if (x > 0) {
+    if (x < 3) {
+      __voblint_check(x == 1); // NOWARN
+    }
+  } else {
+    if (x > 5) {
+      __voblint_check(x == 6); // NOWARN
+    }
+  }
+}

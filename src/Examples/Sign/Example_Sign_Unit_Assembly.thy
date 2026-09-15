@@ -1,5 +1,5 @@
 theory Example_Sign_Unit_Assembly
-  imports "Voblint_Analysis_Sign.Sign_Checks" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Analysis_Sign.Sign_Analyses" "Voblint_VIMP.VIMP_Notation"
 begin
 
 hide_const phase.N
@@ -14,6 +14,9 @@ text \<open>
   generator without a code equation, or a specification left folded --- fails
   here.
 
+  Every run below uses the registration \<open>sign_rule\<close> at
+  \<^const>\<open>Globals_Join\<close>, with the program's own declared globals.
+
   What this checks is Isabelle's own evaluation of the assembled definitions. It
   is not a check of the OCaml export, nor of the handwritten consumers that
   compile against it; those need a regenerated \<open>codegen/generated\<close> and its own
@@ -25,6 +28,9 @@ definition sign_assembly_demo_prog :: imp_prog where
      fun f() { Gx = 1; }
      fun main() { Gx = 0; f(); __voblint_check(0 < Gx); } }"
 
+abbreviation sign_assembly_demo_gs :: "vname \<Rightarrow> bool" where
+  "sign_assembly_demo_gs \<equiv> declared_global sign_assembly_demo_prog"
+
 text \<open>
   The check is \<^const>\<open>Check_Proved\<close>, not \<^const>\<open>Check_Unknown\<close>, because the
   callee's write to the global reaches the caller through the local unknown
@@ -33,9 +39,9 @@ text \<open>
 \<close>
 
 lemma sign_assembly_demo_report:
-  "set (analyse_sign_report sign_assembly_demo_prog)
+  "set (sign_rule.report Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog)
      = {(Statement 4, Less (N 0) (V (STR ''Gx'')), Check_Proved)}"
-  by eval
+  unfolding sign_rule.report_def by eval
 
 text \<open>
   The state-carrying and globals-carrying readings of the same solve run too,
@@ -44,19 +50,18 @@ text \<open>
 
 lemma sign_assembly_demo_report_with_state_verdicts:
   "map (\<lambda>(v, c, r, unreachable, _). (v, c, r, unreachable))
-     (analyse_sign_report_with_state sign_assembly_demo_prog)
+     (sign_rule.report_with_state Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog)
      = [(Statement 4, Less (N 0) (V (STR ''Gx'')), Check_Proved, False)]"
-  by eval
+  unfolding sign_rule.report_with_state_def by eval
 
 lemma sign_assembly_demo_terminates:
-  "sign_conf_terminates_prog (declared_global sign_assembly_demo_prog)
-     sign_assembly_demo_prog"
-  by (rule sign_conf_terminates_prog_via_solve_c) eval
+  "sign_rule.terminates Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog"
+  unfolding sign_rule.terminates_code
+  by (rule TD_side_rule_Interp.solve_dom_of_solve_c) eval
 
 lemma sign_assembly_demo_cover:
   "vars_cover_exec (prog_cfg sign_assembly_demo_prog)
-     (fst (sign_conf_sol_prog (declared_global sign_assembly_demo_prog)
-             sign_assembly_demo_prog))"
+     (sign_rule.sol_vars Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog)"
   by eval
 
 end

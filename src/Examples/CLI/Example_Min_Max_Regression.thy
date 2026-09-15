@@ -1,5 +1,5 @@
 theory Example_Min_Max_Regression
-  imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analyse_Dispatch"
+  imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Run"
 begin
 
 section \<open>Regression: Min/Max special calls across Sign, Interval, and Parity\<close>
@@ -48,15 +48,15 @@ text \<open>
   a synthesized value, so when both arguments share a known parity the
   result provably shares it too. \<open>3\<close> and \<open>0 - 5\<close> are both odd; \<open>z\<close>/\<open>w\<close> stay
   \<open>POdd\<close> here, not \<open>PTop\<close>. The exit state is read through
-  \<^const>\<open>analyse_parity_result_for\<close>, the same routed table
-  \<^const>\<open>analyse_parity_report_for\<close> -- and hence the runtime dispatcher's
-  Parity branch -- serves.
+  \<open>parity_rule.result\<close> at \<^const>\<open>Globals_Join\<close>, the same routed table
+  \<open>parity_rule.report\<close> and the runtime dispatcher's Parity branch serve.
 \<close>
 
 definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
   "min_max_demo_parity_env =
      (case lookup_context
-             (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
+             (parity_rule.result Globals_Join (declared_global min_max_demo_prog)
+                min_max_demo_prog)
              (cfg_exit (prog_cfg min_max_demo_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 

@@ -4,7 +4,6 @@ theory Routed_DG_Analysis
     Analysis_Surface
     "Voblint_Framework.Contextual_Check_Report"
     "Voblint_Framework.Routed_Analysis_Sound"
-    "Voblint_Framework.Seed_Global_Keys"
     "Voblint_Exec.Routed_Exec_Refinement"
     Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
@@ -244,20 +243,39 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
            (enter_st gs (call_info_of ca q)) (locals (sol_env gs p (Inl (u, ctx)))) = Bot
       then None else Some (ctx_succ gs p u ctx ca q))"
 
+
 text \<open>
-  The globals beside the table. Which contexts a procedure entry was solved at
-  is a policy question -- a single one at the unit context, the solved table's
-  own covered contexts elsewhere -- so the enumeration and the label are
-  arguments rather than a fixed shape.
+  The result table and the global unknowns beside it, off one solve. The second
+  component reads the analysis-wide global, the third reads the seed a call
+  published at a procedure entry under a context. Both are read back exactly as a
+  table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
+
+  The fourth is what one edge's local step makes of a point's solved state: the term
+  that edge contributes to its target's equation, re-evaluated on the solution. A
+  target with several incoming edges stores only their join, so this is the one
+  place the contribution of a single edge can be read. It is the specification's
+  own step -- \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> sends every edge
+  action to \<open>tf_st\<close> under the same reachability lift -- applied to the stored
+  executable state, not a re-implementation of it.
 \<close>
 
-definition globals_at :: "(pp \<Rightarrow> 'c list) \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> String.literal)
-    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (String.literal \<times> 'a abs_state lifted) list" where
-  "globals_at ctxs label gs p =
-     dg_globals_for gs (declared_global_vars p) (sol_env gs p)
-       (seed_global_keys gk0 seed ctxs label p)"
+definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+    \<Rightarrow> ('c, 'a abs_state) analysis_result \<times> 'a abs_state lifted
+         \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)
+         \<times> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)" where
+  "result_with_globals gs p =
+     (let sol = solution gs p;
+          gl = declared_global_vars p;
+          read = (\<lambda>d. readback_result_value gs
+                          (canonicalize_lift (resolved_st_q_is_bot_for gl) d))
+      in (dg_result_for gs gl sol,
+          read (globs (snd sol (Inr gk0))),
+          (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
+          (\<lambda>v ctx a. read (transfer_lift (resolved_st_q_is_bot_for gl) (tf_st gs a)
+                              (locals (snd sol (Inl (v, ctx))))))))"
 
+lemma fst_result_with_globals [simp]: "fst (result_with_globals gs p) = result gs p"
+  by (simp add: result_with_globals_def result_def Let_def)
 text \<open>
   The contextual publication surface: one verdict per context at a check, and
   the aggregate a caller prints. Both are \<^const>\<open>classify_checks_ctx\<close> and
@@ -318,7 +336,9 @@ declare routed_dg_pipeline.sol_vars_def [code]
 declare routed_dg_pipeline.sol_env_def [code]
 declare routed_dg_pipeline.reader_def [code]
 declare routed_dg_pipeline.result_def [code]
-declare routed_dg_pipeline.globals_at_def [code]
+declare routed_dg_pipeline.ctx_succ_def [code_unfold]
+declare routed_dg_pipeline.live_succ_def [code_unfold]
+declare routed_dg_pipeline.result_with_globals_def [code]
 declare routed_dg_pipeline.check_projection_def [code]
 declare routed_dg_pipeline.verdict_report_def [code]
 
@@ -524,7 +544,7 @@ lemma pp_buffered:
 theorem pp_routed:
   assumes solves: "terminates pgs p"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) (route pgs)
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) (route pgs)
         (\<lambda>ctx' src a. dg_spec_edge_tree (analysis_spec pgs p) a src (\<lambda>_. gk0))
         (routed_call_tree (analysis_spec pgs p) gk0 seed
            (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))

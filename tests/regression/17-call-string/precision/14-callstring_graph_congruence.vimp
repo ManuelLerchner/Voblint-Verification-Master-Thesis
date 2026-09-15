@@ -2,15 +2,10 @@
 // Call-string GraphViz coverage at Congruence, the sibling of
 // 05-callstring_graph_sign.vimp and 06-callstring_graph_int.vimp.
 //
-// This pins a crash, not a precision claim. cs_ctx_domain_for and
-// cs_ctx_check_annotation (State_Report_Graph.thy) enumerated their
-// analysis_domain cases and omitted Congruence_Analysis. Isabelle fills a
-// missing case with undefined without complaining, the serializer emits a
-// non-exhaustive OCaml match, and every renderer on this route died with
-// "Pattern matching failed" while valid_analysis_config accepted the
-// combination and the text report answered normally. --dot is the flag
-// that reaches those two constants; run.py fails the case on a non-zero
-// exit, which is exactly what the defect produced.
+// This pins a crash, not a precision claim: an earlier Isabelle-side renderer
+// omitted Congruence_Analysis from a domain case split, and --dot on this
+// route died with "Pattern matching failed" while the text report answered
+// normally. run.py fails the case on a non-zero exit.
 //
 // The program is a witness the route can actually decide, so the case
 // stays meaningful once it renders: mid is entered under two distinct call

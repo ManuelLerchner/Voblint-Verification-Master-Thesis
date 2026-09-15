@@ -23,12 +23,11 @@ collecting semantics to the CLI:
   reach a source run.
 - **Checks and rendering.** `classify_checks_verdicts` joins verdicts over the
   contexts the solved table covers (`contexts_at`), with `Dead` kept apart from
-  the three check results; `--context-graph expanded` draws one node per
-  `(pp, ctx)` pair.
+  the three check results; the graph draws one node per `(pp, ctx)` pair.
 - **Regressions.** `tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp`
   (precision), `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`
-  (one wide context), `tests/regression/13-full-state-dot/02-entry_state_context_join.vimp`
-  (the collapsed join).
+  (one wide context), `tests/regression/13-full-state-dot/02-entry_state_contexts.vimp`
+  (one cluster per entry-state context).
 
 Arbitrary `gs`/`--flow-insensitive` stays out of scope; `declared_global p` is
 the classifier everywhere.
@@ -106,12 +105,13 @@ classification (`Abstract_Numeric_Queries.thy`).
 
 ## Per-domain configuration duplication (done)
 
-The per-domain `*_conf_*` families are no longer written out once per domain.
+No domain writes its configuration out by hand.
 `manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's registrations of `unit_dg_analysis` and
-`routed_dg_analysis` (`Voblint_Result`); the equation system, solve, reader,
-result table, report and soundness endpoints come from those locales, and the
-generated theories only name a domain's own facts.
+generates each domain's `<Domain>_Analyses` theory: one rule-parametric
+registration of `unit_dg_analysis` and two of `routed_dg_analysis`
+(`Voblint_Result`). The equation system, solve, reader, result table, report and
+soundness endpoints come from those locales, and the generated theory only names
+a domain's own facts.
 
 ## Deferred from the Framework and Analysis restructure
 

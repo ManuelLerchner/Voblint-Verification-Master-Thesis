@@ -40,8 +40,9 @@ def scan(path: Path) -> list[ProofHole]:
     source = mask_docs(text, mask_comments_and_strings(text))
     holes = []
     for match in PROOF_HOLE_RE.finditer(source):
-        holes.append(ProofHole(path, source.count("\n", 0, match.start()) + 1,
-                               match.group(1)))
+        holes.append(
+            ProofHole(path, source.count("\n", 0, match.start()) + 1, match.group(1))
+        )
     return holes
 
 

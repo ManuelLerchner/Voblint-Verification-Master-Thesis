@@ -62,9 +62,13 @@ ANCHOR = re.compile(r'id="([A-Za-z][A-Za-z0-9_.\']*)\|([a-z]+)"')
 def pages_base() -> str:
     """GitHub Pages URL for this repository."""
     try:
-        url = subprocess.run(["git", "config", "--get", "remote.origin.url"],
-                             cwd=REPO, capture_output=True, text=True,
-                             check=True).stdout.strip()
+        url = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
     except (subprocess.CalledProcessError, OSError):
         return ""
     m = re.search(r"[:/]([^/:]+)/([^/]+?)(?:\.git)?$", url)
@@ -83,8 +87,9 @@ def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
             index.setdefault((".".join(parts[i:]), kind), f"{rel}#{anchor}")
 
 
-def index_live(base: str, retries: int,
-               sessions: str = "Voblint") -> dict[tuple[str, str], str]:
+def index_live(
+    base: str, retries: int, sessions: str = "Voblint"
+) -> dict[tuple[str, str], str]:
     """Index anchors from the published site, which is what a reader clicks.
 
     A working copy's build/isabelle-html and the deployed site drift apart in both
@@ -95,8 +100,11 @@ def index_live(base: str, retries: int,
     root = fetch(base + "Voblint/index.html", retries)
     if root is None:
         sys.exit(f"check_thesis_links: cannot reach {base}Voblint/index.html")
-    names = [m.group(1) for m in re.finditer(r'href="([^"/]+)/index\.html"', root)
-             if sessions in m.group(1)]
+    names = [
+        m.group(1)
+        for m in re.finditer(r'href="([^"/]+)/index\.html"', root)
+        if sessions in m.group(1)
+    ]
     index: dict[tuple[str, str], str] = {}
     pages = 0
     for session in sorted(names):
@@ -113,8 +121,11 @@ def index_live(base: str, retries: int,
                 continue
             _index_page(index, rel, body)
             pages += 1
-    print(f"check_thesis_links: indexed {len(index)} anchor(s) from {pages} "
-          f"published page(s)", file=sys.stderr)
+    print(
+        f"check_thesis_links: indexed {len(index)} anchor(s) from {pages} "
+        f"published page(s)",
+        file=sys.stderr,
+    )
     return index
 
 
@@ -148,8 +159,9 @@ def cited() -> list[tuple[Path, int, str, str]]:
     return refs
 
 
-def resolve(index: dict[tuple[str, str], str] | None = None
-            ) -> tuple[dict[str, str], list[str]]:
+def resolve(
+    index: dict[tuple[str, str], str] | None = None,
+) -> tuple[dict[str, str], list[str]]:
     if index is None:
         index = index_anchors()
     links: dict[str, str] = {}
@@ -166,7 +178,8 @@ def resolve(index: dict[tuple[str, str], str] | None = None
         else:
             unresolved.append(
                 f"  {path.relative_to(REPO)}:{line}: {name} has no "
-                f"{'/'.join(KIND_ANCHORS[kind])} anchor in the rendered theories")
+                f"{'/'.join(KIND_ANCHORS[kind])} anchor in the rendered theories"
+            )
     return links, unresolved
 
 
@@ -190,15 +203,18 @@ def fetch(url: str, retries: int) -> str | None:
         except (urllib.error.URLError, urllib.error.HTTPError, OSError):
             pass
         if attempt < retries - 1:
-            time.sleep(2 ** attempt)
+            time.sleep(2**attempt)
     return None
 
 
 def check_live(base_override: str | None, retries: int) -> int:
     """Verify every stored link against the site a reader will actually click."""
     if not OUT.is_file():
-        print(f"check_thesis_links: no {OUT.relative_to(REPO)} to verify -- "
-              "run --write against the rendered theories first", file=sys.stderr)
+        print(
+            f"check_thesis_links: no {OUT.relative_to(REPO)} to verify -- "
+            "run --write against the rendered theories first",
+            file=sys.stderr,
+        )
         return 1
     data = json.loads(OUT.read_text())
     base = base_override or data.get("base") or pages_base()
@@ -227,14 +243,18 @@ def check_live(base_override: str | None, retries: int) -> int:
                 broken.append(f"  {key}: {url} has no anchor {raw}")
 
     if broken:
-        print(f"check_thesis_links: {len(broken)} deployed link(s) do not reach "
-              "a definition:")
+        print(
+            f"check_thesis_links: {len(broken)} deployed link(s) do not reach "
+            "a definition:"
+        )
         print("\n".join(broken))
         return 1
 
     total = sum(len(v) for v in by_page.values())
-    print(f"check_thesis_links: {total} deployed link(s) reach their definition "
-          f"across {len(by_page)} page(s)")
+    print(
+        f"check_thesis_links: {total} deployed link(s) reach their definition "
+        f"across {len(by_page)} page(s)"
+    )
     return 0
 
 
@@ -246,14 +266,22 @@ def main() -> int:
     mode.add_argument("--live", action="store_true")
     mode.add_argument("--list", action="store_true")
     ap.add_argument("--base", help="override the link base URL")
-    ap.add_argument("--lenient", action="store_true",
-                    help="warn instead of failing when the theories are not "
-                         "rendered locally")
-    ap.add_argument("--retries", type=int, default=6,
-                    help="--live: attempts per URL while Pages propagates")
-    ap.add_argument("--from-live", action="store_true",
-                    help="resolve against the published site instead of "
-                         "build/isabelle-html")
+    ap.add_argument(
+        "--lenient",
+        action="store_true",
+        help="warn instead of failing when the theories are not rendered locally",
+    )
+    ap.add_argument(
+        "--retries",
+        type=int,
+        default=6,
+        help="--live: attempts per URL while Pages propagates",
+    )
+    ap.add_argument(
+        "--from-live",
+        action="store_true",
+        help="resolve against the published site instead of build/isabelle-html",
+    )
     args = ap.parse_args()
 
     if args.live:
@@ -267,18 +295,24 @@ def main() -> int:
         if not HTML.is_dir() or not any(HTML.rglob("*.html")):
             return skip_or_fail(
                 "no rendered theories under build/isabelle-html -- build them with "
-                "`pixi run isabelle-docs-build`", args.lenient)
+                "`pixi run isabelle-docs-build`",
+                args.lenient,
+            )
 
     links, unresolved = resolve(index)
     if unresolved:
-        detail = (f"{len(unresolved)} cited entity/entities have no definition "
-                  "anchor:\n" + "\n".join(unresolved) +
-                  "\nEither the name is stale, or build/isabelle-html predates it "
-                  "(rebuild with: pixi run isabelle-docs-build)")
+        detail = (
+            f"{len(unresolved)} cited entity/entities have no definition "
+            "anchor:\n"
+            + "\n".join(unresolved)
+            + "\nEither the name is stale, or build/isabelle-html predates it "
+            "(rebuild with: pixi run isabelle-docs-build)"
+        )
         return skip_or_fail(detail, args.lenient)
 
-    payload = json.dumps({"base": base, "links": links},
-                         indent=2, sort_keys=True) + "\n"
+    payload = (
+        json.dumps({"base": base, "links": links}, indent=2, sort_keys=True) + "\n"
+    )
 
     if args.list:
         for key, url in sorted(links.items()):
@@ -287,18 +321,27 @@ def main() -> int:
     if args.write:
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(payload)
-        print(f"check_thesis_links: wrote {OUT.relative_to(REPO)} "
-              f"({len(links)} link(s))")
+        print(
+            f"check_thesis_links: wrote {OUT.relative_to(REPO)} ({len(links)} link(s))"
+        )
         return 0
 
     stored = OUT.read_text() if OUT.is_file() else ""
     if stored != payload:
-        print("check_thesis_links: the stored links no longer match the "
-              "rendered theories:\n")
-        print("".join(difflib.unified_diff(
-            stored.splitlines(True), payload.splitlines(True),
-            fromfile="links.json (in the thesis)",
-            tofile="links.json (resolved now)")))
+        print(
+            "check_thesis_links: the stored links no longer match the "
+            "rendered theories:\n"
+        )
+        print(
+            "".join(
+                difflib.unified_diff(
+                    stored.splitlines(True),
+                    payload.splitlines(True),
+                    fromfile="links.json (in the thesis)",
+                    tofile="links.json (resolved now)",
+                )
+            )
+        )
         return 1
 
     print(f"check_thesis_links: {len(links)} link(s) resolve to a definition")

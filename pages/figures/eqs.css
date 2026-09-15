@@ -1,0 +1,220 @@
+/* From a graph to equations to values */
+
+:where(.scene-eqs) .eqs-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr) minmax(220px, 0.7fr);
+  gap: 16px;
+}
+
+:where(.scene-eqs) .eqs-panel {
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-eqs) .eqs-cfg {
+  max-width: 300px !important;
+  font-family: var(--mono) !important;
+}
+
+:where(.scene-eqs) .eqs-edge line,
+:where(.scene-eqs) .eqs-edge path {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.8;
+  transition:
+    stroke 150ms ease,
+    stroke-width 150ms ease;
+}
+
+:where(.scene-eqs) .eqs-edge .hit {
+  stroke: transparent;
+  stroke-width: 14;
+}
+
+:where(.scene-eqs) .eqs-edge text {
+  fill: var(--text-muted) !important;
+  font-size: 11px !important;
+}
+
+:where(.scene-eqs) .eqs-edge:not(.plain) {
+  cursor: help;
+  outline: none;
+}
+
+:where(.scene-eqs) .eqs-edge.is-hl line:not(.hit),
+:where(.scene-eqs) .eqs-edge.is-hl path:not(.hit) {
+  stroke: var(--accent);
+  stroke-width: 3.5;
+}
+
+:where(.scene-eqs) .eqs-edge.is-hl text {
+  fill: var(--accent-hover) !important;
+  font-weight: 700;
+}
+
+:where(.scene-eqs) .eqs-val {
+  fill: var(--primary) !important;
+}
+
+:where(.scene-eqs) .eqs-eq {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 8px;
+  font: 0.92rem / 1.6 var(--mono);
+}
+
+:where(.scene-eqs) .eqs-eq small {
+  display: block;
+  color: var(--text-faint);
+  font-family: Inter, ui-sans-serif, sans-serif;
+  font-size: 0.74rem;
+}
+
+:where(.scene-eqs) .eqs-eq .term[data-edge] {
+  padding: 1px 4px;
+  border-bottom: 2px dotted var(--border-strong);
+  border-radius: 4px;
+  cursor: help;
+  outline: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+:where(.scene-eqs) .eqs-eq .term.is-hl {
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent);
+}
+
+:where(.scene-eqs) .eqs-hint {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+:where(.scene-eqs) .eqs-box-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+:where(.scene-eqs) .eqs-box-panel .td-panel-title {
+  align-self: flex-start;
+}
+
+:where(.scene-eqs) .eqs-flow {
+  display: grid;
+  justify-items: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+:where(.scene-eqs) .eqs-flow-arrow {
+  color: var(--accent);
+  font-size: 1.3rem;
+  line-height: 1.2;
+  animation: flow-arrow 1.6s ease-in-out infinite;
+}
+
+@keyframes flow-arrow {
+  0%,
+  100% {
+    transform: translateY(-2px);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateY(3px);
+    opacity: 1;
+  }
+}
+
+:where(.scene-eqs) .eqs-box {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 16px 12px;
+  color: #ffffff;
+  background: var(--surface-dark);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+:where(.scene-eqs) .eqs-box i {
+  color: #f0c674;
+  font-size: 1.6rem;
+  animation: gear-turn 6s linear infinite;
+}
+
+:where(.scene-eqs) .eqs-box span {
+  color: #8fa6ab;
+  font-size: 0.76rem;
+}
+
+@keyframes gear-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+:where(.scene-eqs) .eqs-result {
+  width: 100%;
+  margin-top: 4px;
+  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-eqs) .eqs-result th,
+:where(.scene-eqs) .eqs-result td {
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+}
+
+:where(.scene-eqs) .eqs-result th {
+  width: 2.5em;
+  color: var(--primary);
+}
+
+:where(.scene-eqs) .eqs-result td {
+  color: var(--text);
+  font-weight: 700;
+}
+
+:where(.scene-eqs) .eqs-check {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--success-soft);
+  border: 1px solid rgb(40 115 75 / 0.25);
+  border-radius: var(--radius);
+}
+
+:where(.scene-eqs) .eqs-check p {
+  margin: 0;
+}
+
+:where(.scene-eqs) .eqs-check ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+:where(.scene-eqs) .eqs-check li {
+  margin-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  :where(.scene-eqs) .eqs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+:where(.scene-eqs) .eqs-result code {
+  padding: 0;
+  border: 0;
+}

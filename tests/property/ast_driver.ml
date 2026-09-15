@@ -2,7 +2,7 @@
    from stdin, builds it via the exported Isabelle constructors (NOT via
    Vimp_parser -- the whole point is an independently-constructed AST, so a
    parser bug can't hide by round-tripping consistently with itself), prints
-   it through the Isabelle-generated pretty_string_of_program, re-parses
+   it through the grammar-generated Vimp_printer, re-parses
    that text with Vimp_parser, and checks the result is structurally equal
    (OCaml's polymorphic (=), which works across the module's abstract types
    at the value level regardless of the signature hiding constructors) to
@@ -31,9 +31,12 @@ let tokenize (s : string) : string list =
     else if c = '(' || c = ')' then begin
       toks := String.make 1 c :: !toks;
       incr i
-    end else begin
+    end
+    else begin
       let start = !i in
-      while !i < n && (not (is_space s.[!i])) && s.[!i] <> '(' && s.[!i] <> ')' do
+      while
+        !i < n && (not (is_space s.[!i])) && s.[!i] <> '(' && s.[!i] <> ')'
+      do
         incr i
       done;
       toks := String.sub s start (!i - start) :: !toks
@@ -46,17 +49,21 @@ let parse_sexp (input : string) : sexp =
   let rec one () =
     match !toks with
     | "(" :: rest ->
-      toks := rest;
-      Slist (list [])
+        toks := rest;
+        Slist (list [])
     | atom :: rest ->
-      toks := rest;
-      Atom atom
+        toks := rest;
+        Atom atom
     | [] -> failwith "ast_driver: unexpected end of input"
   and list acc =
     match !toks with
-    | ")" :: rest -> toks := rest; List.rev acc
+    | ")" :: rest ->
+        toks := rest;
+        List.rev acc
     | [] -> failwith "ast_driver: unterminated list"
-    | _ -> let e = one () in list (e :: acc)
+    | _ ->
+        let e = one () in
+        list (e :: acc)
   in
   one ()
 
@@ -105,10 +112,11 @@ and build_com = function
   | Slist [ Atom "Random"; Atom x ] -> Call (Some x, "__voblint_nondet_int", [])
   | Slist [ Atom "Check"; b ] -> Check (build_exp b)
   | Slist [ Atom "Seq"; c1; c2 ] -> Seq (build_com c1, build_com c2)
-  | Slist [ Atom "If"; b; c1; c2 ] -> If (build_exp b, build_com c1, build_com c2)
+  | Slist [ Atom "If"; b; c1; c2 ] ->
+      If (build_exp b, build_com c1, build_com c2)
   | Slist [ Atom "While"; b; c ] -> While (build_exp b, build_com c)
   | Slist [ Atom "Call"; dst; Atom p; actuals ] ->
-    Call (build_dst_opt dst, p, build_actuals actuals)
+      Call (build_dst_opt dst, p, build_actuals actuals)
   | Slist [ Atom "Return"; aopt ] -> Return (build_exp_opt aopt)
   | s -> failwith ("ast_driver: bad com sexp: " ^ show_sexp s)
 
@@ -117,28 +125,27 @@ and show_sexp = function
   | Slist ss -> "(" ^ String.concat " " (List.map show_sexp ss) ^ ")"
 
 let build_names = function
-  | Slist atoms -> List.map (function Atom s -> s | s -> failwith ("bad name: " ^ show_sexp s)) atoms
+  | Slist atoms ->
+      List.map
+        (function Atom s -> s | s -> failwith ("bad name: " ^ show_sexp s))
+        atoms
   | s -> failwith ("ast_driver: bad name list sexp: " ^ show_sexp s)
 
 let build_proc = function
-  | Slist [ Atom name; formals; body ] -> (name, Proc_decl_ext (build_names formals, build_com body, ()))
+  | Slist [ Atom name; formals; body ] ->
+      (name, Proc_decl_ext (build_names formals, build_com body, ()))
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
 let build_program = function
   | Slist [ Slist procs; main_body; globals ] ->
-    mk_program (List.map build_proc procs) (build_com main_body) (build_names globals)
+      mk_program
+        (List.map build_proc procs)
+        (build_com main_body) (build_names globals)
   | s -> failwith ("ast_driver: bad program sexp: " ^ show_sexp s)
 
 (* -- Driver --------------------------------------------------------------- *)
 
-let source_text_of_program original =
-  let source_chars =
-    pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
-      (declared_global_vars original)
-  in
-  String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
-
-
+let source_text_of_program = Vimp_printer.string_of_imp_prog
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 
 let () =
@@ -146,34 +153,46 @@ let () =
   try
     let original = build_program (parse_sexp input) in
     let source_text = source_text_of_program original in
-    if mode = "--print-source" then (print_string source_text; exit 0);
+    if mode = "--print-source" then (
+      print_string source_text;
+      exit 0);
     match Vimp_frontend.program "<generated>" source_text with
-    | reparsed, _, _ when mode = "--print-reprinted" ->
-      (* Prints pretty(parse(pretty(original))) -- the print/parse/print
-         invariant is implied by original = reparsed (pretty_string_of_program
+    | reparsed, _, _, _ when mode = "--print-reprinted" ->
+        (* Prints pretty(parse(pretty(original))) -- the print/parse/print
+         invariant is implied by original = reparsed (the printer
          is a pure function, so structurally equal ASTs print identically),
          but checking it directly gives a source-text diff on failure instead
          of "the trees differ", and catches the (structural-equality
          assumption) breaking silently. *)
-      print_string (source_text_of_program reparsed);
-      exit 0
-    | reparsed, _, _ ->
-      if original = reparsed then print_endline "OK"
-      else begin
-        Printf.printf "FAIL round-trip mismatch\n--- generated source ---\n%s\n--- end ---\n" source_text;
+        print_string (source_text_of_program reparsed);
+        exit 0
+    | reparsed, _, _, _ ->
+        if original = reparsed then print_endline "OK"
+        else begin
+          Printf.printf
+            "FAIL round-trip mismatch\n\
+             --- generated source ---\n\
+             %s\n\
+             --- end ---\n"
+            source_text;
+          exit 1
+        end
+    | exception Vimp_frontend.Parse_error { line; col; msg; _ }
+      when mode = "--print-reprinted" ->
+        Printf.printf "FAIL re-parse error at %d:%d: %s\n" line col msg;
         exit 1
-      end
-    | exception Vimp_frontend.Parse_error { line; col; msg; _ } when mode = "--print-reprinted" ->
-      Printf.printf "FAIL re-parse error at %d:%d: %s\n" line col msg;
-      exit 1
     | exception Vimp_frontend.Parse_error { line; col; msg; _ } ->
-      Printf.printf "FAIL re-parse error at %d:%d: %s\n--- generated source ---\n%s\n--- end ---\n"
-        line col msg source_text;
-      exit 1
+        Printf.printf
+          "FAIL re-parse error at %d:%d: %s\n\
+           --- generated source ---\n\
+           %s\n\
+           --- end ---\n"
+          line col msg source_text;
+        exit 1
   with
   | Failure msg ->
-    Printf.printf "FAIL driver error: %s\n" msg;
-    exit 1
+      Printf.printf "FAIL driver error: %s\n" msg;
+      exit 1
   | e ->
-    Printf.printf "FAIL unexpected exception: %s\n" (Printexc.to_string e);
-    exit 1
+      Printf.printf "FAIL unexpected exception: %s\n" (Printexc.to_string e);
+      exit 1

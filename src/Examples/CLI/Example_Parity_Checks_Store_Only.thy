@@ -1,17 +1,21 @@
 section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
-  imports "Voblint_Framework.Checks" "Voblint_Analysis_Parity.Parity_Entry"
-          "Voblint_CLI.Analysis_Graph_Export" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Framework.Checks" "Voblint_Analysis_Parity.Parity_Analyses"
+          "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
+
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 
 text \<open>
   Third-domain worked example, mirroring
   Voblint_Examples_CLI.Example_Checks_Store_Only (Sign) and
   Voblint_Examples_CLI.Example_Interval_Checks_Store_Only, discharged
-  node-locally through \<^theory>\<open>Voblint_Analysis_Parity.Parity_Checks\<close> rather than by
-  forwarding stores to the procedure exit.
+  node-locally through \<^theory>\<open>Voblint_Analysis_Parity.Parity_Classify\<close> rather than by
+  forwarding stores to the procedure exit. The run is Parity's unit-context registration
+  \<open>parity_rule\<close> at \<^const>\<open>Globals_Join\<close>.
 
   \<open>x\<close> is read from \<open>__voblint_nondet_int()\<close>, so neither Sign nor Interval learns anything
   about it. \<open>y := x * 2\<close> is \<^emph>\<open>always even\<close>, regardless of \<open>x\<close>'s sign or
@@ -66,18 +70,18 @@ lemma parity_ex_calls_eval: "calls (prog_cfg parity_ex_program) = {}"
         special_pname_nondet_int_def main_body_def prog_main_name_def)
 
 lemma parity_ex_solver_terminates:
-  "parity_conf_terminates_prog parity_ex_gs parity_ex_program"
-  by (rule parity_conf_terminates_prog_via_solve_c) eval
+  "parity_rule.terminates Globals_Join parity_ex_gs parity_ex_program"
+  by (rule parity_rule.terminates_of_solve_c) (simp only: parity_rule.root_query_def, eval)
 
 lemma parity_ex_entry_cov:
   "(cfg_entry (prog_cfg parity_ex_program), ())
-     \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
+     \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program"
   by eval
 
 lemma parity_ex_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg parity_ex_program).
-     (u, ()) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (parity_conf_sol_prog parity_ex_gs parity_ex_program)"
+     (u, ()) \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program \<longrightarrow>
+     (w, ()) \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program"
   by eval
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
@@ -86,11 +90,12 @@ definition parity_ex_reach :: "pp \<Rightarrow> store set" where
        (cinit_stores parity_ex_gs) v"
 
 text \<open>The computed Parity environment at an arbitrary node, read out of the
-  routed-unit solved table \<^const>\<open>analyse_parity_result_for\<close> the production
+  routed-unit solved table \<open>parity_rule.result\<close> the production
   report also reads, with an unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
   "parity_ex_env v =
-     (case lookup_context (analyse_parity_result_for parity_ex_gs parity_ex_program) v () of
+     (case lookup_context (parity_rule.result Globals_Join parity_ex_gs parity_ex_program)
+             v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma parity_ex_intra_eval:
@@ -110,9 +115,9 @@ lemma parity_ex_entry_eval: "cfg_entry (prog_cfg parity_ex_program) = FunctionEn
   unfolding prog_cfg_def by (simp add: prog_main_name_def)
 
 lemma parity_ex_node_sound: "parity_ex_reach v \<le> \<lbrakk>parity_ex_env v\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def
+  unfolding parity_ex_reach_def parity_ex_env_def parity_rule.state_at_unfold[symmetric]
   using parity_ex_fwd_ok_ball
-  by (intro analyse_parity_result_node_sound_for parity_ex_solver_terminates
+  by (intro parity_rule.result_node_sound_closure parity_ex_solver_terminates
         parity_ex_entry_cov)
      (auto simp: parity_ex_calls_eval)
 
@@ -202,23 +207,23 @@ qed
 subsection \<open>Whole-program check report\<close>
 
 lemma parity_ex_report_eval:
-  "analyse_parity_report_for parity_ex_gs parity_ex_program =
+  "parity_rule.report Globals_Join parity_ex_gs parity_ex_program =
      [(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')), Check_Proved),
       (Statement 4, Eq (V (STR ''y'')) (V (STR ''z'')), Check_Refuted),
       (Statement 6, Eq (V (STR ''y'')) (V (STR ''w'')), Check_Unknown)]"
-  by eval
+  unfolding parity_rule.report_def by eval
 
 text \<open>The proved entry, discharged against the collecting semantics rather than against
-  the computed table, by the report-level soundness theorem of
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Entry\<close>.\<close>
+  the computed table, by the report-level soundness endpoint
+  \<open>parity_rule.report_proved_sound_closure\<close> of Parity's unit registration in
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Analyses\<close>.\<close>
 
 corollary parity_ex_report_proved_entry_sound:
   "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (NotEq (V (STR ''y'')) (V (STR ''z''))) t)"
   unfolding parity_ex_reach_def
-  using parity_ex_fwd_ok_ball
-  by (intro analyse_parity_report_sound_proved_for parity_ex_solver_terminates
-        parity_ex_entry_cov)
-     (auto simp: parity_ex_calls_eval parity_ex_report_eval)
+  by (rule parity_rule.report_proved_sound_closure
+        [OF parity_ex_solver_terminates _ _ _ parity_ex_entry_cov])
+     (use parity_ex_fwd_ok_ball in \<open>auto simp: parity_ex_calls_eval parity_ex_report_eval\<close>)
 
 lemma parity_direct_comparisons:
   "map (\<lambda>c. aval_parity (c (V (STR ''x'')) (N 1)) (\<lambda>_. PEven))

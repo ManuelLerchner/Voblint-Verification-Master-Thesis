@@ -17,11 +17,15 @@ theory Voblint
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Check_Report"
+    "Voblint_Analysis_Sign.Sign_Classify"
     "Voblint_Analysis_Sign.Sign_Analyses"
-    "Voblint_Analysis_Sign.Sign_Checks"
     "Voblint_Analysis_Interval.Interval_Domain"
+    "Voblint_Analysis_Interval.Interval_Classify"
     "Voblint_Analysis_Interval.Interval_Analyses"
-    "Voblint_Analysis_Interval.Interval_Checks"
+    "Voblint_Analysis_Parity.Parity_Analyses"
+    "Voblint_Analysis_Congruence.Congruence_Analyses"
+    "Voblint_Analysis_Int.Int_Analyses"
+    "Voblint_CLI.Analysis_Run_Ctx_Sound"
     "Voblint_Framework.DG_Constraint_Trees"
     "Voblint_Framework.DG_Spec_Sound"
     "Voblint_Framework.CFG_Enumeration"
@@ -63,9 +67,6 @@ theory Voblint
     "Voblint_Examples_Congruence.Example_Congruence_Arithmetic"
     "Voblint_Examples_Congruence.Example_Congruence_Backward"
     "Voblint_Examples_Congruence.Example_Congruence_DG_Run"
-    "Voblint_Analysis_Sign.Sign_Entry"
-    "Voblint_Examples_CLI.Dispatch_Matrix"
-    "Voblint_CLI.State_Report_Graph"
 begin
 
 text \<open>
@@ -104,46 +105,31 @@ text \<open>
 
   \<^bold>\<open>Where the chain ends.\<close>  At the operation the CLI actually calls and code
   generation actually exports, not at an internal solved system.
-  \<open>run_voblint_source_sound\<close> says: run the source program, stop wherever you
-  like, and the answer describes your store at some graph node corresponding to
-  where you stopped.  Three conjuncts, because a report makes three claims --- there is
-  a graph node and frame stack for where you stopped, the abstract state filed
-  for that node contains your store, and every check row printed beside it holds
-  of that store, with no row there marked unreachable.
+  @{thm [source] run_voblint_certified_source_sound}, in
+  \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, says: run the source program, stop
+  wherever you like, and ask any configuration --- a domain, a global update rule and a
+  context policy --- for a result. There is a graph node and frame stack for where you
+  stopped, the abstract state filed for that node contains your store, and every check
+  listed there holds of that store, with none there marked unreachable.
 
-  \<open>Analysis_Run_Ctx_Sound\<close> carries the same statement to the
-  context-sensitive configurations, where the table has one entry per point
-  \<^emph>\<open>and\<close> context.  A store reaching a point then sits in the entry filed under
-  at least one context its own call history is admitted at --- exactly one for a
-  call string, possibly several under entry-state routing; quantifying over
-  every covered context would be false, since another activation's entry need
-  not describe this store.  What a caller owes is a termination fact.  The solve
-  must also be closed under every edge out of a live solved point --- closure
-  rather than blanket coverage, since which contexts a node was solved at is
-  decided by the run and not by the graph --- and a terminating solve is: every
-  key a live reader reads was visited, so the closure is proved rather than
-  checked.
+  Under a context policy the table has one entry per point \<^emph>\<open>and\<close> context.  A
+  store reaching a point then sits in the entry filed under at least one context its
+  own call history is admitted at --- exactly one for a call string, possibly several
+  under entry-state routing; quantifying over every covered context would be false,
+  since another activation's entry need not describe this store.
 
-  \<^bold>\<open>One statement over every configuration.\<close>  Those endpoints are one per
-  configuration --- a domain, a solver discipline and a context policy --- and
-  every configuration the dispatcher answers with check rows has one, all 32 of
-  them.  @{thm [source] run_voblint_certified_source_sound}, in
-  \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, states the result once with the
-  configuration as an argument: what a caller owes is
-  \<open>config_terminates D solver ctx p\<close>, and neither coverage, configuration
-  legality nor well-formedness is a premise, because a terminating solve is
-  closed along its live dependencies, an unsupported pairing answers
-  \<open>Unsupported_Configuration\<close> and a malformed program answers
+  What a caller owes is \<open>config_terminates D rule ctx p\<close>: the solve completed.
+  Neither coverage nor well-formedness is a premise, because a terminating solve is
+  closed along its live dependencies and a malformed program answers
   \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
-  \<open>analysis_result_covers\<close> rather than in the statement, for the reason
-  \<^const>\<open>analyse_state_covers\<close> already is a function: an abstract state's type
-  is the domain's own carrier.
+  \<open>analysis_result_covers\<close> rather than in the statement, because an abstract state's
+  type is the domain's own carrier.
 
   \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> is that theorem
   with nothing left to assume.  It fixes one program at the product domain, a
-  call-string context of length one and always-join named explicitly, evaluates
+  call-string context of length one and always-join globals, evaluates
   the solve's termination and the answer, builds the source run step by step,
-  and reads the printed \<^const>\<open>Check_Proved\<close> row off the conclusion.
+  and reads the listed \<^const>\<open>Check_Proved\<close> check off the conclusion.
 \<close>
 
 section \<open>Flagship theorems\<close>
@@ -267,8 +253,9 @@ text \<open>
   interval analysis keeps the two call contexts separate.  Recursive examples test
   structural activation nesting independently of that repeated-call witness.
 
-  GraphViz exporters present procedure entries, results, calls, resumes, and computed
-  abstract states without changing the certified equation system.
+  The exported analyser returns its solved result as data; the text report, GraphViz
+  drawings and report pages are built from that data outside this development, so no
+  rendering is part of any soundness claim.
 
   \<^bold>\<open>How the development is laid out.\<close>  One Isabelle session per architectural
   layer, and the ROOT graph is what keeps the layering honest: a theory cannot reach
@@ -287,8 +274,8 @@ text \<open>
   most downstream file in the development: it imports the CLI and every flagship, so
   anything it names has actually been built.
 
-  The index below separates the proof spine from executable frontends, DOT exporters,
-  and research witnesses.
+  The index below separates the proof spine from executable frontends and research
+  witnesses.
 
   \<^bold>\<open>1. Language.\<close> VIMP syntax, small-step semantics, and the procedural extension
   (scopes, calls, restores).
@@ -297,7 +284,6 @@ text \<open>
     \<^item> @{theory Voblint_VIMP.VIMP_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_VIMP.VIMP_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
     \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
-    \<^item> @{theory Voblint_VIMP.VIMP_Source_Print} --- source rendering used by the GraphViz tooling.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
@@ -365,10 +351,10 @@ text \<open>
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Checks} --- the Sign instance: derived
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Classify} --- the Sign instance: derived
       numeric queries (read off \<^const>\<open>inv_less_sign\<close>/\<^const>\<open>inv_eq_sign\<close>/
       \<^const>\<open>meet_sign\<close>), no hand-built comparison tables.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Checks} --- the Interval instance:
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Classify} --- the Interval instance:
       specialized bound-comparison queries (\<^const>\<open>interval_less_true\<close> and
       siblings, \<open>Interval_Numeric_Queries\<close>). The backward-domain default derives
       equality refutation through \<^const>\<open>intersect_ivl\<close>, whose canonical empty
@@ -376,8 +362,12 @@ text \<open>
 
   \<^bold>\<open>4. Concrete domains.\<close> One analysis session per domain, all over the shared
     \<^verbatim>\<open>Analyses/Shared/\<close> chain, all reaching the same spine.  Each pairs a lattice theory
-    (order, transfers, soundness, monotonicity) with an \<^verbatim>\<open>_Analyses\<close> theory placing it at
-    the routed D/G spine over \<^const>\<open>ltr_collect\<close>.
+    (order, transfers, soundness, monotonicity) with one generated \<^verbatim>\<open>_Analyses\<close> theory
+    that registers it at the routed D/G spine three times: at the unit context, keyed by
+    entry state, and keyed by a bounded call string --- for Sign, \<^verbatim>\<open>sign_rule\<close>,
+    \<^verbatim>\<open>sign_es_rule\<close> and \<^verbatim>\<open>sign_cs_rule\<close>.  Every registration takes the global
+    update rule \<open>r\<close> as a parameter, and the call-string one also its bound \<open>k\<close>, so
+    one registration per context policy serves every rule and every bound.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Transfer} /
       @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element Sign
       lattice. It is finite, so the plain-join solver needs no widening.
@@ -416,10 +406,11 @@ text \<open>
       \<^const>\<open>ltr_collect\<close> through
       \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and
-      @{theory Voblint_Analysis_Interval.Interval_Analyses} --- Sign and Interval as
-      routed \<^verbatim>\<open>sound_dg_spec_core\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
-      through the adapter's generic node-soundness bridge.
+    \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
+      domain as a \<^locale>\<open>routed_dg_analysis\<close> instance at entry state and call
+      string and a \<^locale>\<open>unit_dg_analysis\<close> instance at the unit context, so each
+      reaches \<^const>\<open>activation_collect\<close>, and at the unit context
+      \<^const>\<open>ltr_collect\<close>, through the locale's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
@@ -457,11 +448,14 @@ text \<open>
       abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the routed
-      D/G runtime for Sign: its equation system, solved table, and the
-      termination hypothesis enabled by each solver discipline.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses} --- the
-      Interval counterpart, with join, per-origin, and warrowing solver-choice
-      siblings.
+      D/G runtime for Sign: each registration's equation system, solved table,
+      and termination hypothesis \<^verbatim>\<open>sign_rule.terminates r\<close>, stated once for every
+      update rule \<open>r\<close>.
+    \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses},
+      @{theory Voblint_Analysis_Parity.Parity_Analyses},
+      @{theory Voblint_Analysis_Congruence.Congruence_Analyses} and
+      @{theory Voblint_Analysis_Int.Int_Analyses} --- the same runtime for the other
+      four domains, generated from the same template.
 
   \<^bold>\<open>5b. Solved results and reports.\<close> What a finished analysis \<^emph>\<open>is\<close>, before anyone
     renders or dispatches it.
@@ -478,11 +472,9 @@ text \<open>
       flat \<^typ>\<open>check_result\<close> cannot express. The contextual report
       therefore has a separate type.
     \<^item> @{theory Voblint_CLI.Analysis_Config} --- the selection surface:
-      \<^typ>\<open>analysis_domain\<close>, \<^typ>\<open>solver_choice\<close>,
-      \<^typ>\<open>context_mode\<close>, and
-      \<^const>\<open>resolve_analysis_config\<close>. It decides once which
-      combinations are legal. Unsupported pairings return
-      \<^const>\<open>None\<close> instead of degrading silently.
+      \<^typ>\<open>analysis_domain\<close>, \<^typ>\<open>globals_rule\<close> and \<^typ>\<open>context_mode\<close>, all
+      plain values. Every combination is analysed, so there is no legality table and no
+      default a caller inherits.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Result.Source_Activation_Sound} --- the
@@ -501,9 +493,9 @@ text \<open>
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
     \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
       every configuration the dispatcher answers with check rows
-      (@{thm [source] run_voblint_certified_source_sound}), and the dead-row
+      (@{thm [source] run_voblint_certified_source_sound}), and the dead-check
       guarantee at the same entry point
-      (@{thm [source] run_voblint_dead_row_unreached}).
+      (@{thm [source] run_voblint_dead_check_unreached}).
     \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
       statement instantiated at one program, with every premise discharged.
 
@@ -594,17 +586,13 @@ text \<open>
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
       @{thm dep_aux_dg_edge_tree_at} names the source address and the one
       global slot, nothing else.
-    \<^item> \<^bold>\<open>Rendering\<close> --- the \<open>_export_auto\<close> / \<open>_graph_snapshot_auto\<close> family
-      (@{theory Voblint_CLI.State_Report_Graph} and its context-expanded
-      continuations) stops at a neutral
-      \<open>export_graph\<close>; DOT and HTML are produced from it by the OCaml renderers,
-      outside any theory. Neither half has an Isabelle-side witness of its own:
-      a rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
+    \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml
+      renderers from \<^const>\<open>run_voblint\<close>'s structured result, outside any theory.
+      A rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
-      \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and
+      \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node states, and
       \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a
-      recursive procedure. Those compare output; a build-time render only proves
-      it did not crash.
+      recursive procedure.
     \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples_Tooling.Example_Strategy_Tree} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
       independent of any abstract domain, built directly from \<^const>\<open>QueryL\<close>/
@@ -618,105 +606,40 @@ text \<open>
       solver interface this development builds on is the vendored one, not a
       reimplementation shaped to fit.
 
-  \<^bold>\<open>9. The CLI: configuration, dispatch, and code generation.\<close>
-    One runtime-program entry point per selectable domain,
-    reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
-    parallel one, exported to OCaml.
-    \<^item> @{theory Voblint_Analysis_Sign.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
-      takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
-      program) and reuses the always-join \<^verbatim>\<open>unit_dg_analysis\<close> registration's own
-      \<^verbatim>\<open>source_sound\<close> and \<^verbatim>\<open>result_node_sound\<close>
-      (@{theory Voblint_Result.Unit_DG_Analysis}) for its soundness theorems.
-      \<^verbatim>\<open>analyse_sign_report\<close> classifies every
-      compiled \<^verbatim>\<open>__voblint_check(...)\<close> against that same computed
-      post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
-      \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
-      computation, not two.
-    \<^item> @{theory Voblint_Analysis_Interval.Interval_Entry} ---
-      \<^verbatim>\<open>analyse_interval_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
-      dispatches to, built on the same assembly endpoints. \<^verbatim>\<open>Interval_Checks\<close>
-      additionally carries \<^verbatim>\<open>analyse_interval_report_join\<close>/
-      \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
-      \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
-      same production default on the identical equation system, each with its own soundness
-      theorems proved the same way, in @{theory
-      Voblint_Analysis_Interval.Interval_Entry}.
-    \<^item> @{theory Voblint_Analysis_Int.Int_Entry} --- the \<^verbatim>\<open>int_dom\<close> counterpart,
-      \<^verbatim>\<open>analyse_int_report\<close>, built the same way; the product's refinement mode is fixed
-      inside the entry point, not exposed as a CLI axis.
-    \<^item> @{theory Voblint_Analysis_Parity.Parity_Entry} ---
-      \<^verbatim>\<open>analyse_parity_report\<close>, the fourth selectable
-      analysis, with the same assembly endpoints.
-    \<^item> @{theory Voblint_Analysis_Congruence.Congruence_Entry} ---
-      \<^verbatim>\<open>analyse_congruence_report\<close>, the fifth selectable
-      analysis and the standalone route exercised by the Congruence flagship.
-    \<^item> @{theory Voblint_CLI.Analyse_Dispatch} ---
-      \<^const>\<open>analyse\<close> dispatches \<^typ>\<open>analysis_domain\<close>
-      to the five domains' report functions. All share the observable
-      \<^typ>\<open>check_report_entry list\<close> result type
-      (@{theory Voblint_Framework.Abstract_Checks}), so the dispatcher adds no
-      new proof.
-      Interval's branch is the warrowing report \<^const>\<open>analyse_interval_report\<close>: that
-      is the production default, carrying its own soundness theorems, not an unproved
-      alternative parked outside the dispatcher.
-
-      Above \<^const>\<open>analyse\<close> sit the two configuration-driven entry points.
-      \<^const>\<open>analyse_config\<close> answers a flat report and \<^const>\<open>analyse_config_ctx\<close> a
-      per-context one; both route through \<^const>\<open>resolve_analysis_config\<close>, so which
-      (domain, solver, context) triples are legal is decided in exactly one place.  The
-      split is not cosmetic: entry-state and call-string routing have no honest flat
-      report, because a check can be \<^const>\<open>Dead\<close> in one context and decided in another,
-      so \<^const>\<open>analyse_config\<close> answers \<^const>\<open>None\<close> there rather than flattening.
-      \<^verbatim>\<open>dispatch_demo_interval_precise\<close> computes (\<^verbatim>\<open>by eval\<close>) one program's report, and
-      the executable corpus under \<^verbatim>\<open>tests/regression/\<close> runs the same analyses through the
-      generated CLI.
-
-      A downstream \<open>Voblint_Codegen\<close> session exports \<open>analyse\<close>, the AST
-      constructors, and \<open>imp_prog.make\<close> to OCaml, so external code can build a
-      fresh \<open>imp_prog\<close> and call \<open>analyse\<close> without touching Isabelle. The
-      generated source is tracked under \<open>codegen/generated/\<close> (regenerated
-      by \<open>pixi run codegen\<close>; \<open>pixi run codegen-check\<close> fails if it has
-      drifted from the export declarations). A hand-written OCaml driver under
-      \<open>codegen/regression/\<close> (\<open>pixi run codegen-regression\<close>) constructs
-      that same program purely through the exported constructors, calls
-      \<open>analyse\<close>, and checks the result against the values
-      \<open>dispatch_demo_interval_precise\<close> already proves --- so the generated
-      OCaml is checked against the same theorem as the Isabelle source, not
-      merely assumed to match it. That driver additionally pins the Sign
-      verdict and several call/global shapes for which no Isabelle-side
-      \<open>eval\<close> witness is kept, since the executable corpus under
-      \<open>tests/regression/\<close> covers the same programs far more cheaply.
-
+  \<^bold>\<open>9. The CLI: configuration and code generation.\<close>
+    One public operation over every domain, update rule and context policy, applying
+    the registrations of \<open>4\<close>/\<open>5\<close> above rather than a parallel pipeline, and
+    exported to OCaml.
+    \<^item> @{theory Voblint_Solver.Globals_Rule} --- the rule that merges contributions to a
+      side-effected global, as a value: one solver interpretation serves all four, and
+      every domain registers each context policy once over it.
+    \<^item> @{theory Voblint_CLI.Analysis_Run} --- \<^const>\<open>run_voblint\<close>, the one operation
+      code generation exports: a domain, a global update rule and a context policy, all
+      plain values, and a program. Every combination is analysed; the answer is the
+      solved result as data, and every rendering of it is built outside this
+      development. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> pins one program's answer
+      \<^verbatim>\<open>by eval\<close>, and a hand-written OCaml driver under \<open>codegen/regression/\<close>
+      checks the generated module against the same values.
+    \<^item> @{theory Voblint_CLI.Analysis_Run_Sound} and
+      @{theory Voblint_CLI.Analysis_Run_Ctx_Sound} --- one soundness table per domain
+      and context policy (@{thm [source] sign_rule_table},
+      @{thm [source] interval_es_rule_table}, @{thm [source] int_cs_rule_table}, and
+      their siblings), each stated for an arbitrary update rule.  The unit tables are
+      built from the registration's own \<^verbatim>\<open>result_node_sound_of_terminates\<close>
+      (\<^theory>\<open>Voblint_Result.Unit_DG_Analysis\<close>).
+      @{theory Voblint_CLI.Analysis_Certified} dispatches over the tables to state
+      @{thm [source] run_voblint_certified_source_sound} and
+      @{thm [source] run_voblint_check_sound} once for every configuration.
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
-      equations of the HOL constant \<^verbatim>\<open>analyse\<close> and everything it transitively
-      calls --- \<^verbatim>\<open>analyse_sign_report\<close>/\<^verbatim>\<open>analyse_interval_report\<close> down to
-      the warrowing solver itself. It is not proving one function and exporting
-      a different, hand-written one: the generated \<^verbatim>\<open>analyse\<close> is a translation
-      of the same equations \<^verbatim>\<open>analyse_sign_report_sound_proved\<close>/\<^verbatim>\<open>_refuted\<close>
-      and \<^verbatim>\<open>analyse_interval_report_sound_proved\<close>/\<^verbatim>\<open>_refuted\<close> are proved
-      about. The proof term itself is erased by code generation, as for any
-      \<^verbatim>\<open>export_code\<close> use --- what survives is that the exported constant
-      \<^emph>\<open>is\<close> the proved one, not an assumed match to it.
-      \<^verbatim>\<open>analyse_interval_proved_sound\<close>/\<^verbatim>\<open>analyse_interval_refuted_sound\<close> and
-      \<^verbatim>\<open>analyse_sign_proved_sound\<close>/\<^verbatim>\<open>analyse_sign_refuted_sound\<close> restate those
-      theorems directly over \<^verbatim>\<open>analyse\<close>, so this connection does not require
-      unfolding the dispatcher's \<^verbatim>\<open>fun\<close> equations by hand.
-
-      These soundness theorems are conditional, not automatic: a
-      \<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close> value \<^verbatim>\<open>analyse\<close> returns at runtime is
-      not itself a discharged certificate. Beyond report membership, applying
-      the theorem to a concrete program additionally needs a solver-termination
-      witness for that program --- nothing here proves that either solver
-      terminates on every input, so termination is a genuine per-program fact,
-      typically discharged \<^verbatim>\<open>by eval\<close> through the domain's own
-      \<^verbatim>\<open>*_terminates_prog_via_solve_c\<close> --- and a proof that the
-      checked node reaches \<^verbatim>\<open>cfg_exit\<close>, a real structural fact about the
-      compiled CFG, not a formality. \<^verbatim>\<open>dispatch_demo_first_check_certified\<close>
-      is one complete instance of the whole chain with every hypothesis
-      actually discharged: a concrete \<^verbatim>\<open>Check_Proved\<close> value \<^verbatim>\<open>analyse\<close> returns
-      for \<^verbatim>\<open>dispatch_demo_prog\<close>, proved semantically correct with no assumption
-      left open.
+      equations of \<^const>\<open>run_voblint\<close> and everything it transitively calls, down to the
+      solver itself. It is not proving one function and exporting a different,
+      hand-written one: the generated operation is a translation of the same equations
+      @{thm [source] run_voblint_certified_source_sound} is proved about. That theorem is
+      conditional: applying it to a concrete program needs the solve's termination on
+      that program, a genuine per-program fact typically discharged \<^verbatim>\<open>by eval\<close>.
+      \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> discharges it for one
+      program, with no assumption left open.
 \<close>
 
 text \<open>
@@ -738,7 +661,7 @@ text \<open>
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec_core\<close>; every domain is one of its
   instances, and context slicing is factored through
   the relational activation spine and its per-context admitted slots --- the unit
-  and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), wh ile
+  and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), while
   entry-state routing genuinely admits several contexts per call. There is one
   such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through the routed
   unit-context instance's \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>, and the routed

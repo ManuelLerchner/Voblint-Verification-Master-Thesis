@@ -32,9 +32,8 @@ text \<open>
 subsection \<open>The executable bottom predicate\<close>
 
 text \<open>The equation system reads the program's own declared globals for its bottom
-  test, and \<^const>\<open>entry_state_route\<close> takes that predicate explicitly. At a concrete
-  program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those globals, which is exact
-  for \<^const>\<open>is_empty_state\<close>.\<close>
+  test. At a concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those
+  globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
 
 definition twice_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "twice_empty_pred = resolved_st_q_is_bot_for (declared_global_vars twice_program)"
@@ -50,38 +49,41 @@ abbreviation twice_ctx_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Ri
 
 subsection \<open>The routed equation system and its solution\<close>
 
-text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>
+text \<open>Every value below is Interval's entry-state registration \<open>interval_es_rule\<close> at
+  \<^const>\<open>Globals_Warrow\<close>. The main context is \<open>[]\<close> (\<open>main\<close> is the root
+  activation, no formal binds it).\<close>
 
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
      \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "twice_ctx_sol = entry_state_sol_prog twice_gs twice_program"
+  "twice_ctx_sol = interval_es_rule.solution Globals_Warrow twice_gs twice_program"
 
 lemma twice_ctx_terminates_c:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs_prog twice_gs twice_program)
-     (interval_entry_state_root_query twice_program) \<noteq> None"
-  by eval
+  "TD_side_rule_Interp_solve_c Globals_Warrow
+     (interval_es_rule.equations twice_gs twice_program)
+     (interval_es_rule.root_query twice_program) \<noteq> None"
+  unfolding interval_es_rule.root_query_def by eval
 
 lemma twice_ctx_terminates:
-  "entry_state_terminates_prog twice_gs twice_program"
-  by (rule entry_state_terminates_via_solve_c[OF twice_ctx_terminates_c])
+  "interval_es_rule.terminates Globals_Warrow twice_gs twice_program"
+  by (rule interval_es_rule.terminates_of_solve_c[OF twice_ctx_terminates_c])
 
 subsection \<open>The two calling contexts are distinct\<close>
 
+text \<open>The routed callee context is \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type
+  omits the domain, so evaluation inlines its body rather than looking for a code
+  equation of its own.\<close>
+
+
 definition ctx_call1 :: "ivl list" where
-  "ctx_call1 = entry_state_route twice_gs twice_empty_pred
-                 (entry_state_entered twice_gs twice_empty_pred
-                    (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
-                    (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
-                 (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])"
+  "ctx_call1 = interval_es_rule.ctx_succ Globals_Warrow twice_gs twice_program
+                 (Statement 2) [] (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
+                 (STR ''twice'')"
 
 definition ctx_call2 :: "ivl list" where
-  "ctx_call2 = entry_state_route twice_gs twice_empty_pred
-                 (entry_state_entered twice_gs twice_empty_pred
-                    (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
-                    (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
-                 (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])"
+  "ctx_call2 = interval_es_rule.ctx_succ Globals_Warrow twice_gs twice_program
+                 (Statement 3) [] (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
+                 (STR ''twice'')"
 
 lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]"
   unfolding ctx_call1_def twice_ctx_sol_def twice_empty_pred_def by eval

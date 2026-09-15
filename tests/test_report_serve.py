@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 REPO = Path(__file__).resolve().parent.parent
 
 
@@ -27,14 +26,22 @@ def test_serve_preserves_existing_report(tmp_path, custom):
     python = bin_dir / "python3"
     python.write_text('#!/bin/sh\nprintf "%s\\n" "$@"\n')
     python.chmod(0o755)
-    env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", NO_OPEN="1", PORT="9123")
+    env = dict(
+        os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}", NO_OPEN="1", PORT="9123"
+    )
     env.pop("OUTDIR", None)
     args = [str(report)] if custom else []
-    result = subprocess.run(["bash", str(script), *args], env=env, capture_output=True, text=True)
+    result = subprocess.run(
+        ["bash", str(script), *args], env=env, capture_output=True, text=True
+    )
 
     assert result.returncode == 0, result.stderr
     assert result.stdout.splitlines()[-5:] == [
-        "-m", "http.server", "--directory", str(report), "9123"
+        "-m",
+        "http.server",
+        "--directory",
+        str(report),
+        "9123",
     ]
     assert {p.name: p.read_bytes() for p in report.iterdir()} == contents
 
@@ -43,7 +50,8 @@ def test_missing_report_fails_without_creating_output(tmp_path):
     report = tmp_path / "missing"
     result = subprocess.run(
         ["bash", str(REPO / "scripts/mk/report.sh"), str(report)],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     assert result.returncode == 1
     assert "Generate one with voblint --html first" in result.stderr

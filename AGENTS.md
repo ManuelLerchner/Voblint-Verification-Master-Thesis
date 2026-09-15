@@ -132,7 +132,7 @@ system from the solver's association-list states to the function-valued
 states the framework is stated over. The `Voblint_Analysis_*` sessions thread
 each concrete domain instance (Sign, Interval, ...) through them; the reuse
 locales, the publication surface and the compile-dependent routed contexts live
-under `src/Analyses/Shared/`. The dispatch config and the graph export are not
+under `src/Analyses/Shared/`. The selection datatypes and `run_voblint` are not
 there -- no domain imports either, so both live in `Voblint_CLI` beside their
 only consumers.
 `docs/CORE_REFACTOR_PLAN.md` records why the split runs along these lines
@@ -148,18 +148,20 @@ The reusable soundness endpoints contain nothing domain-specific, so they sit
 `completed_run_sound`, `result_node_sound`) once, so every domain inherits them
 from an ancestor heap. Every context-insensitive result is an instance of that
 locale. Each domain's own
-instantiation of those endpoints -- the runtime API over an arbitrary
-`imp_prog` paired with its production soundness theorems -- is `<Domain>_Entry`
-in that domain's analysis session, because it depends on that domain and on
-the shared chain and on nothing else. `Voblint_CLI` is then only the
-dispatcher and the render surface: the soundness statements it does own are the
-corollaries over `analyse` itself, which cannot live above the theory that
-defines `analyse`.
+instantiation of those endpoints is the generated `<Domain>_Analyses` theory in
+that domain's analysis session, because it depends on that domain and on the
+shared chain and on nothing else: `<d>_rule` interprets `unit_dg_analysis`, and
+`<d>_es_rule` and `<d>_cs_rule` interpret `routed_dg_analysis` at the
+entry-state and call-string policies, each with the global update rule `r` as a
+parameter, so one fact such as `sign_rule.source_sound` covers every solver
+discipline. `Voblint_CLI` is then only `run_voblint`
+and its soundness: the statements it owns are the ones over `run_voblint`
+itself, which cannot live above the theory that defines `run_voblint`.
 
-The `Voblint_Examples_*` sessions contain executable runs, regressions and
-GraphViz output, one session per folder under `src/Examples`. `Voblint_Examples`
-itself is the residue plus the `Voblint` capstone: the witnesses that reach the
-`AnalysisConfig` dispatcher or the GraphViz render surface import `Voblint_CLI`
+The `Voblint_Examples_*` sessions contain executable runs and regressions, one
+session per folder under `src/Examples`. `Voblint_Examples`
+itself is the residue plus the `Voblint` capstone: the witnesses that reach
+`run_voblint` import `Voblint_CLI`
 and therefore see every domain, so they live together in `Voblint_Examples_CLI`
 (`src/Examples/CLI`) instead of being spread back through the domain folders,
 where they would recouple each domain's session to all of them. The store-only
@@ -177,7 +179,7 @@ A `theories` entry is a theory *name*, never a path: a slash there is a
 malformed import and fails the whole session at load, so jEdit does not start
 and the mistake presents as a dead editor rather than as an error in the file
 that caused it. A subdirectory goes on the search path through `directories`
-instead --- `directories "generated"` plus a bare `Sign_Assembly`.
+instead --- `directories "generated"` plus a bare `Sign_Analyses`.
 `pixi run sessions-check` checks that, that every `directories` entry exists, and
 that every `.thy` on a session's search path is reached from something the
 session builds; it needs no Isabelle.
@@ -204,7 +206,7 @@ generators realize it for two unrelated parser targets:
 ```text
 manifests/vimp-grammar.yaml
        |
-       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_menhir.py   -> cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll
        +-- scripts/gen_vimp_isabelle.py -> src/Program_Model/VIMP/VIMP_Grammar_Generated.thy
 ```
 
@@ -236,8 +238,8 @@ dirty, so the drift check runs locally, not only in CI.
 When changing VIMP syntax:
 
 1. Edit `manifests/vimp-grammar.yaml` only.
-2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
-   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
+2. Never hand-edit `cli/frontend/vimp_parser.mly`, `cli/frontend/vimp_lexer.mll`, `cli/frontend/vimp_printer.ml`, or
+   `src/Program_Model/VIMP/VIMP_Grammar_Generated.thy` -- all four are generated.
 3. Regenerate: `pixi run grammar-menhir-generate` (Menhir/ocamllex) and
    `pixi run grammar-isabelle-generate` (Isabelle); load the regenerated
    `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
@@ -343,7 +345,7 @@ was last regenerated.
 One thing does have to be named explicitly. The serializer keeps a datatype's
 constructors out of the emitted signature unless it considers them public, and
 an abstract type cannot be pattern-matched on. So a datatype whose *shape* the
-handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/main.ml`
+handwritten OCaml depends on -- `lifted`'s `Bot`/`Lifted`, which `cli/entry/voblint.ml`
 matches to tell a dead point from a live verdict -- is an export root even
 though nothing calls it.
 
@@ -394,15 +396,17 @@ reports "no code equations" naming a constant nobody wrote by hand.
 spell the root query out. A registration that renames the pipeline's constants
 through `defines` never meets this, because each renamed constant gets its own
 equation from the interpretation; a call site that applies the pipeline
-directly -- which is what a runtime parameter such as a call-string bound
-forces, since no `global_interpretation` can fix it -- meets it immediately.
+directly meets it immediately. Every generated `<Domain>_Analyses`
+registration is such a call site: the global update rule and the call-string
+bound are runtime parameters, so `for r` and `for k r` leave them free, and
+the registrations declare no `defines`.
 
 ## Prose that claims a dependency must pin the theory
 
 A bare `\<open>name\<close>` cartouche is unchecked. `scripts/check_thy_prose_refs.py`
 only asks whether the name exists *somewhere* in the tree, which is all it can
 ask: prose here cites other domains' counterparts constantly and on purpose
-("mirroring Sign's own `analyse_sign_report_for`"), so a lint that demanded
+("`Interval_Analyses`, mirroring `Sign_Analyses`"), so a lint that demanded
 every reference resolve in the citing theory's own import closure would flag
 around a hundred correct sentences.
 
@@ -632,7 +636,7 @@ explicitly. Everything below refines that; the two deviations are marked.
   would leave this to judgement). The naming convention below
   ends introduction, elimination and destruction rules in `I`, `E`, `D`; a
   lemma with one of those names and no `[intro]` / `[elim]` / `[dest]` is
-  either mis-named or withheld from the automation it was written for. Tag it,
+  either misnamed or withheld from the automation it was written for. Tag it,
   or rename it to say what it really is. The one standing exception is a
   multi-conclusion `D` bundle cited by index (`wf_compile_inputD(8)`): tagging
   it `[dest]` would spawn every conclusion from every occurrence of its

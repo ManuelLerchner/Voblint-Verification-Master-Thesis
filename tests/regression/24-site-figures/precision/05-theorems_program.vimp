@@ -1,0 +1,70 @@
+// PARAM: --analysis interval --context none
+// Backs the program of the site's theorem explorer: n >= 1 holds after n > 0, and
+// n > 5 is impossible after !(n > 0), so the inner check is DEAD.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / unit
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp7_ctx0
+//     main_exit_main_ctx0
+//     main_pp0_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       n=⊤
+//       q=⊤
+//   main_pp2_ctx0: pp2
+//       n=[1,+∞]
+//       q=⊤
+//   main_pp3_ctx0: pp3 [proved]
+//       n=[1,+∞]
+//       q=⊤
+//       check n >= 1
+//   main_pp4_ctx0: pp4
+//       n=[-∞,0]
+//       q=⊤
+//   main_pp5_ctx0: pp5 [unreachable]
+//       unreachable
+//       check n == 0 [dead]
+//   main_pp7_ctx0: pp7
+//       n=⊤
+//       q=⊤
+//   main_exit_main_ctx0: exit_main
+//       n=⊤
+//       q=⊤
+//   main_pp0_ctx0: pp0
+//       n=⊤
+//       q=⊤
+//   main_entry_main_ctx0: entry_main
+//       n=⊤
+//       q=⊤
+//
+// edges:
+//   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()
+//   main_pp1_ctx0 -> main_pp2_ctx0: [n > 0]
+//   main_pp1_ctx0 -> main_pp4_ctx0: ![n > 0]
+//   main_pp2_ctx0 -> main_pp3_ctx0: q := 10 / n
+//   main_pp3_ctx0 -> main_pp7_ctx0: check(n >= 1)
+//   main_pp4_ctx0 -> main_pp5_ctx0: [n > 5]
+//   main_pp4_ctx0 -> main_pp7_ctx0: ![n > 5]
+//   main_pp5_ctx0 -> main_pp7_ctx0: check(n == 0)
+//   main_pp7_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
+// EXPECT-GRAPH-END
+
+fun main() {
+  n = __voblint_nondet_int();
+  if (n > 0) {
+    q = 10 / n;
+    __voblint_check(n >= 1); // PROVED
+  } else {
+    if (n > 5) {
+      __voblint_check(n == 0); // NOWARN
+    }
+  }
+}

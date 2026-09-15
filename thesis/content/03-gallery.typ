@@ -1,5 +1,5 @@
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
-#import "@preview/curryst:0.6.0": rule, prooftree
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
+#import "@preview/curryst:0.6.0": prooftree, rule
 #import "@preview/lilaq:0.6.0" as lq
 #import "@preview/lovelace:0.3.1": pseudocode-list
 #import "@preview/cetz:0.5.2"
@@ -10,9 +10,9 @@
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": *
 #import "../lib/code.typ": *
-#import "../lib/theorems.typ": theorem, definition
-#import "../lib/sources.typ": thy, stmt, proved
-#import "../lib/figures.typ": iteration-plot, simulation, annotation-grid
+#import "../lib/theorems.typ": definition, theorem
+#import "../lib/sources.typ": proved, stmt, thy
+#import "../lib/figures.typ": annotation-grid, iteration-plot, simulation
 
 = Figure Gallery <ch:gallery>
 
@@ -57,10 +57,13 @@ between two proved stages is a gap, visible at a glance.
     flow((3.2, 2.4), (0, 3.6), bend: -12deg),
     flow((0, 3.6), (1.6, 3.6)),
 
-    node(enclose: ((0, 1.2), (4.8, 1.2), (0, 2.4), (3.2, 2.4)),
-         stroke: (paint: vb.unproved, thickness: 0.7pt, dash: "dashed"),
-         corner-radius: 4pt, inset: 8pt,
-         name: <bnd>),
+    node(
+      enclose: ((0, 1.2), (4.8, 1.2), (0, 2.4), (3.2, 2.4)),
+      stroke: (paint: vb.unproved, thickness: 0.7pt, dash: "dashed"),
+      corner-radius: 4pt,
+      inset: 8pt,
+      name: <bnd>,
+    ),
   ),
   caption: [The verified pipeline. Arrow labels name the fact that justifies
     the step; stage colour states whether the stage is proved, trusted, or
@@ -77,17 +80,18 @@ between two proved stages is a gap, visible at a glance.
 #subfigures(
   figure(
     listing(lang: "c", ```
-proc fac(n) {
-  if (n <= 1) {
-    return 1;
-  } else {
-    r = fac(n - 1);
-    return n * r;
-  }
-}
-```),
+    proc fac(n) {
+      if (n <= 1) {
+        return 1;
+      } else {
+        r = fac(n - 1);
+        return n * r;
+      }
+    }
+    ```),
     caption: [VIMP source],
-  ), <fig:cfg-source>,
+  ),
+  <fig:cfg-source>,
   figure(
     diagram(
       spacing: (10mm, 9mm),
@@ -105,7 +109,8 @@ proc fac(n) {
       intra-edge((0, 3), (0, 4)),
     ),
     caption: [compiled CFG; dashed edges are #isaconst("calls")],
-  ), <fig:cfg-graph>,
+  ),
+  <fig:cfg-graph>,
   columns: (0.42fr, 0.58fr),
   align: bottom,
   caption: [A recursive VIMP procedure and its procedure-aware CFG. Local
@@ -120,7 +125,7 @@ document, with no build step and no intermediate file.
 
 #figure(
   raw-render(raw(read("/shared/dot/cfg_fac.dot")), height: 70mm),
-  caption: [The same CFG, produced by #isaconst("state_report_export_auto") and laid out
+  caption: [The same CFG, drawn by the CLI from #isaconst("run_voblint") and laid out
     from #isafile("shared/dot/cfg_fac.dot") at compile time.],
 ) <fig:cfg-dot>
 
@@ -129,14 +134,15 @@ Between the two sits the abstract syntax the compiler actually consumes.
 
 #figure(
   syntree(
-    child-spacing: 1.4em, layer-spacing: 2.1em,
+    child-spacing: 1.4em,
+    layer-spacing: 2.1em,
     nonterminal: (fill: vb.accent),
     terminal: (fill: black, font: "DejaVu Sans Mono", size: 0.85em),
     [[Proc [fac] [n]
-       [If [Leq [n] [1]]
-           [Return [1]]
-           [Seq [Call [r] [fac] [Minus [n] [1]]]
-                [Return [Times [n] [r]]]]]]],
+      [If [Leq [n] [1]]
+      [Return [1]]
+      [Seq [Call [r] [fac] [Minus [n] [1]]]
+      [Return [Times [n] [r]]]]]]],
   ),
   kind: image,
   caption: [The procedure as an abstract syntax tree. Non-terminals are the
@@ -150,14 +156,17 @@ Between the two sits the abstract syntax the compiler actually consumes.
 #figure(
   rhsbox[
     $
-      tf(assign(x, e)) d      &= upd(d, x, asem(e) d) \
-      tf(keyw("assume") b) d  &= cases(
-        d & "if" mono("true") in asem(b) d,
-        lbot & "otherwise") \
-      tf(skipC) d             &= d \
-      enterh p d              &= setcomp(upd(d_0, arrow(x)_p, asem(arrow(e)) d),
-                                          d_0 = restrict(d, italic("globals"))) \
-      combineh d_c d_r        &= combineassignh (combineenvh d_c d_r)
+          tf(assign(x, e)) d & = upd(d, x, asem(e) d) \
+      tf(keyw("assume") b) d & = cases(
+                                 d & "if" mono("true") in asem(b) d,
+                                 lbot & "otherwise"
+                               ) \
+                 tf(skipC) d & = d \
+                  enterh p d & = setcomp(
+                                 upd(d_0, arrow(x)_p, asem(arrow(e)) d),
+                                 d_0 = restrict(d, italic("globals"))
+                               ) \
+            combineh d_c d_r & = combineassignh (combineenvh d_c d_r)
     $
   ],
   kind: image,
@@ -168,22 +177,32 @@ Between the two sits the abstract syntax the compiler actually consumes.
 == Inference rules
 
 #figure(
-  grid(columns: 2, column-gutter: 2.5em, row-gutter: 1.6em,
+  grid(
+    columns: 2,
+    column-gutter: 2.5em,
+    row-gutter: 1.6em,
     prooftree(rule(name: [Root], $validltr ("Root" u_0 s_0)$)),
-    prooftree(rule(name: [Step],
+    prooftree(rule(
+      name: [Step],
       $validltr t$,
       $cfgedge(italic("last") t, a, v)$,
       $s' in sem(a) (sinkstore t)$,
-      $validltr (t dot (v, s'))$)),
-    prooftree(rule(name: [Call],
+      $validltr (t dot (v, s'))$,
+    )),
+
+    prooftree(rule(
+      name: [Call],
       $validltr t$,
       $cfgcall(u, a, p, v)$,
       $s' = enterh p (sinkstore t)$,
-      $validltr ("Called" t p s')$)),
-    prooftree(rule(name: [Resume],
+      $validltr ("Called" t p s')$,
+    )),
+    prooftree(rule(
+      name: [Resume],
       $validltr t_c$,
       $callerof t_c = t$,
-      $validltr ("Resumed" t t_c)$)),
+      $validltr ("Resumed" t t_c)$,
+    )),
   ),
   kind: image,
   caption: [The activation-local trace semantics #isaconst("valid_ltr"). Every
@@ -196,42 +215,65 @@ Between the two sits the abstract syntax the compiler actually consumes.
 #subfigures(
   figure(
     hasse(
-      ((( 0, 0), $ltop$),
-       ((-1, 1), signval("leq0")), (( 1, 1), signval("geq0")),
-       ((-1, 2), signval("neg")), (( 0, 2), signval("zero")), (( 1, 2), signval("pos")),
-       (( 0, 3), $lbot$)),
-      (((-1, 1), (0, 0)), ((1, 1), (0, 0)),
-       ((-1, 2), (-1, 1)), ((0, 2), (-1, 1)), ((0, 2), (1, 1)), ((1, 2), (1, 1)),
-       ((0, 3), (-1, 2)), ((0, 3), (0, 2)), ((0, 3), (1, 2))),
+      (
+        ((0, 0), $ltop$),
+        ((-1, 1), signval("leq0")),
+        ((1, 1), signval("geq0")),
+        ((-1, 2), signval("neg")),
+        ((0, 2), signval("zero")),
+        ((1, 2), signval("pos")),
+        ((0, 3), $lbot$),
+      ),
+      (
+        ((-1, 1), (0, 0)),
+        ((1, 1), (0, 0)),
+        ((-1, 2), (-1, 1)),
+        ((0, 2), (-1, 1)),
+        ((0, 2), (1, 1)),
+        ((1, 2), (1, 1)),
+        ((0, 3), (-1, 2)),
+        ((0, 3), (0, 2)),
+        ((0, 3), (1, 2)),
+      ),
     ),
     caption: [#DSign],
-  ), <fig:lat-sign>,
+  ),
+  <fig:lat-sign>,
   figure(
     hasse(
-      ((( 0, 0), $ltop$),
-       ((-1, 1), signval("even")), (( 1, 1), signval("odd")),
-       (( 0, 2), $lbot$)),
-      (((-1, 1), (0, 0)), ((1, 1), (0, 0)),
-       ((0, 2), (-1, 1)), ((0, 2), (1, 1))),
+      (((0, 0), $ltop$), ((-1, 1), signval("even")), ((1, 1), signval("odd")), ((0, 2), $lbot$)),
+      (((-1, 1), (0, 0)), ((1, 1), (0, 0)), ((0, 2), (-1, 1)), ((0, 2), (1, 1))),
     ),
     caption: [#DPar],
-  ), <fig:lat-par>,
+  ),
+  <fig:lat-par>,
   figure(
     diagram(
       spacing: (18mm, 8mm),
-      node((0, 0), $cal(P)(Val)$, stroke: 0.8pt + vb.accent,
-           fill: vb.accent.lighten(90%), width: 24mm, height: 20mm,
-           corner-radius: 3pt),
-      node((1, 0), DSign, stroke: 0.8pt + vb.sign,
-           fill: vb.sign.lighten(90%), width: 20mm, height: 20mm,
-           corner-radius: 3pt),
-      edge((0, 0), (1, 0), "->", label: $alpha$, bend: 25deg,
-           stroke: 0.8pt + vb.accent),
-      edge((1, 0), (0, 0), "->", label: $gamma$, bend: 25deg,
-           stroke: 0.8pt + vb.proved),
+      node(
+        (0, 0),
+        $cal(P)(Val)$,
+        stroke: 0.8pt + vb.accent,
+        fill: vb.accent.lighten(90%),
+        width: 24mm,
+        height: 20mm,
+        corner-radius: 3pt,
+      ),
+      node(
+        (1, 0),
+        DSign,
+        stroke: 0.8pt + vb.sign,
+        fill: vb.sign.lighten(90%),
+        width: 20mm,
+        height: 20mm,
+        corner-radius: 3pt,
+      ),
+      edge((0, 0), (1, 0), "->", label: $alpha$, bend: 25deg, stroke: 0.8pt + vb.accent),
+      edge((1, 0), (0, 0), "->", label: $gamma$, bend: 25deg, stroke: 0.8pt + vb.proved),
     ),
     caption: [the induced abstraction],
-  ), <fig:galois>,
+  ),
+  <fig:galois>,
   columns: (1fr, 1fr, 1.15fr),
   align: bottom,
   caption: [Hasse diagrams of two component domains and the abstraction they
@@ -242,17 +284,33 @@ Between the two sits the abstract syntax the compiler actually consumes.
 
 #figure(
   lq.diagram(
-    width: 11cm, height: 4.2cm,
-    xlabel: [iteration $i$], ylabel: [interval at the loop head],
-    xlim: (0, 7), ylim: (-1, 12),
+    width: 11cm,
+    height: 4.2cm,
+    xlabel: [iteration $i$],
+    ylabel: [interval at the loop head],
+    xlim: (0, 7),
+    ylim: (-1, 12),
     legend: (position: left + top),
-    lq.plot((0, 1, 2, 3, 4, 5, 6, 7), (0, 1, 2, 11, 11, 11, 11, 11),
-            color: vb.ivl, label: [upper bound, with $widen$ at $i = 3$]),
-    lq.plot((0, 1, 2, 3, 4, 5, 6, 7), (0, 1, 2, 3, 4, 5, 6, 7),
-            color: vb.unstable, stroke: (dash: "dashed"),
-            label: [without widening]),
-    lq.plot((3, 4, 5, 6, 7), (11, 10, 10, 10, 10),
-            color: vb.proved, stroke: (dash: "dotted"), label: [after $narrow$]),
+    lq.plot(
+      (0, 1, 2, 3, 4, 5, 6, 7),
+      (0, 1, 2, 11, 11, 11, 11, 11),
+      color: vb.ivl,
+      label: [upper bound, with $widen$ at $i = 3$],
+    ),
+    lq.plot(
+      (0, 1, 2, 3, 4, 5, 6, 7),
+      (0, 1, 2, 3, 4, 5, 6, 7),
+      color: vb.unstable,
+      stroke: (dash: "dashed"),
+      label: [without widening],
+    ),
+    lq.plot(
+      (3, 4, 5, 6, 7),
+      (11, 10, 10, 10, 10),
+      color: vb.proved,
+      stroke: (dash: "dotted"),
+      label: [after $narrow$],
+    ),
   ),
   caption: [Chain iteration at a single loop head. Widening jumps to a coarse
     bound at iteration 3; narrowing recovers the exact one. Plots like this
@@ -266,21 +324,18 @@ Between the two sits the abstract syntax the compiler actually consumes.
   figure(
     cetz.canvas({
       import cetz.draw: *
-      rect((-2.5, -1.6), (2.5, 1.6), fill: vb.called.lighten(90%),
-           stroke: none, radius: 0.2)
+      rect((-2.5, -1.6), (2.5, 1.6), fill: vb.called.lighten(90%), stroke: none, radius: 0.2)
       content((0, 1.3), text(0.75em, fill: vb.called)[#called])
-      rect((-2.1, -1.25), (1.0, 1.0), fill: vb.stable.lighten(82%),
-           stroke: none, radius: 0.2)
+      rect((-2.1, -1.25), (1.0, 1.0), fill: vb.stable.lighten(82%), stroke: none, radius: 0.2)
       content((-0.55, 0.7), text(0.75em, fill: vb.stable)[#stable])
-      rect((-1.8, -0.95), (-0.2, 0.3), fill: vb.proved.lighten(65%),
-           stroke: none, radius: 0.2)
+      rect((-1.8, -0.95), (-0.2, 0.3), fill: vb.proved.lighten(65%), stroke: none, radius: 0.2)
       content((-1.0, -0.35), text(0.7em)[truly \ stable])
-      rect((0.3, -1.25), (2.2, 0.35), fill: vb.unstable.lighten(65%),
-           stroke: none, radius: 0.2)
+      rect((0.3, -1.25), (2.2, 0.35), fill: vb.unstable.lighten(65%), stroke: none, radius: 0.2)
       content((1.25, -0.45), text(0.7em)[affected by \ side effects])
     }),
     caption: [invariant regions of a solver state],
-  ), <fig:euler>,
+  ),
+  <fig:euler>,
   figure(
     diagram(
       spacing: (12mm, 10mm),
@@ -296,7 +351,8 @@ Between the two sits the abstract syntax the compiler actually consumes.
       withdrawn-edge((0, 1), (1, 2)),
     ),
     caption: [one frame of a #TDside run],
-  ), <fig:solverstate>,
+  ),
+  <fig:solverstate>,
   columns: (1fr, 1fr),
   align: bottom,
   caption: [Left: the subsets a correctness argument reasons about; #called
@@ -318,14 +374,14 @@ Between the two sits the abstract syntax the compiler actually consumes.
     [1], [$italic("solve") u_1$], [$lbot$], [$lbot$], [$lbot$], [],
     [2], [$italic("eval") u_2$], [$lbot$], [$lbot$], [$lbot$], [dependency recorded],
     [3], [$italic("eval") u_1$], [$lbot$], [$lbot$], [$lbot$],
-        [#text(fill: vb.unstable)[cycle detected]],
+    [#text(fill: vb.unstable)[cycle detected]],
     [4], [update $u_2$], [$lbot$], [$ivl(0, 0)$], [$lbot$], [],
     [5], [side effect to $g$], [$lbot$], [$ivl(0, 0)$], [$ivl(0, 0)$],
-        [$u_2 sidefx g$],
+    [$u_2 sidefx g$],
     [6], [destabilise], [$lbot$], [$ivl(0, 0)$], [$ivl(0, 0)$],
-        [$u_1$ leaves #stable],
+    [$u_1$ leaves #stable],
     [7], [update $u_1$ with $widen$], [$ivl(0, infinity)$], [$ivl(0, 0)$],
-        [$ivl(0, 0)$], [widening point],
+    [$ivl(0, 0)$], [widening point],
     table.hline(),
   ),
   caption: [After @grass25 @tilscher26. Computation trace of one $italic("solve")$ call, one row per solver
@@ -435,18 +491,18 @@ the trust boundary follows @leroy09.
     node((2, 1), `Analysis_Config`, stroke: 0.7pt + vb.muted, inset: 5pt),
     node((2, 2), `State_Report_GraphViz`, stroke: 0.7pt + vb.muted, inset: 5pt),
 
-    edge((0, 0), (0, 1), "->"), edge((0, 1), (0, 2), "->"),
-    edge((1, 0), (1, 1), "->"), edge((1, 1), (1, 2), "->"),
+    edge((0, 0), (0, 1), "->"),
+    edge((0, 1), (0, 2), "->"),
+    edge((1, 0), (1, 1), "->"),
+    edge((1, 1), (1, 2), "->"),
     edge((0, 2), (1, 0), "->", bend: -30deg),
     edge((1, 2), (2, 0), "->", bend: -30deg),
-    edge((2, 0), (2, 1), "-->"), edge((2, 1), (2, 2), "-->"),
+    edge((2, 0), (2, 1), "-->"),
+    edge((2, 1), (2, 2), "-->"),
 
-    node(enclose: ((0, 0), (0, 2)), stroke: 0.8pt + vb.neutral,
-         corner-radius: 4pt, inset: 7pt),
-    node(enclose: ((1, 0), (1, 2)), stroke: 0.8pt + vb.neutral,
-         corner-radius: 4pt, inset: 7pt),
-    node(enclose: ((2, 0), (2, 2)), stroke: 0.8pt + vb.neutral,
-         corner-radius: 4pt, inset: 7pt),
+    node(enclose: ((0, 0), (0, 2)), stroke: 0.8pt + vb.neutral, corner-radius: 4pt, inset: 7pt),
+    node(enclose: ((1, 0), (1, 2)), stroke: 0.8pt + vb.neutral, corner-radius: 4pt, inset: 7pt),
+    node(enclose: ((2, 0), (2, 2)), stroke: 0.8pt + vb.neutral, corner-radius: 4pt, inset: 7pt),
   ),
   caption: [Theories grouped by session, and the module boundary the code
     generator produces. Solid arrows are theory imports; dashed arrows mark
@@ -521,25 +577,33 @@ squares below are @fig:simulation --- the claim is that they commute.
 #subfigures(
   figure(
     simulation(
-      top-left: $(c, s)$, top-right: $t$,
-      bottom-left: $italic("compile") c$, bottom-right: $t'$,
+      top-left: $(c, s)$,
+      top-right: $t$,
+      bottom-left: $italic("compile") c$,
+      bottom-right: $t'$,
       top-label: text(0.8em)[$arrow.r.double$],
       bottom-label: text(0.8em)[$arrow.r.double^*$],
-      left-label: text(0.8em)[$approx$], right-label: text(0.8em)[$approx$],
+      left-label: text(0.8em)[$approx$],
+      right-label: text(0.8em)[$approx$],
     ),
     caption: [every source execution is matched],
-  ), <fig:sim-forward>,
+  ),
+  <fig:sim-forward>,
   figure(
     simulation(
-      top-left: $italic("compile") c$, top-right: $t'$,
-      bottom-left: $(c, s)$, bottom-right: $t$,
+      top-left: $italic("compile") c$,
+      top-right: $t'$,
+      bottom-left: $(c, s)$,
+      bottom-right: $t$,
       top-label: text(0.8em)[$arrow.r.double^*$],
       bottom-label: text(0.8em)[$arrow.r.double$],
-      left-label: text(0.8em)[$approx$], right-label: text(0.8em)[$approx$],
+      left-label: text(0.8em)[$approx$],
+      right-label: text(0.8em)[$approx$],
       dashed-bottom: true,
     ),
     caption: [every compiled execution comes from one],
-  ), <fig:sim-backward>,
+  ),
+  <fig:sim-backward>,
   columns: (1fr, 1fr),
   align: bottom,
   caption: [Compiler correctness as two simulations. Neither direction alone is
@@ -551,9 +615,11 @@ squares below are @fig:simulation --- the claim is that they commute.
   annotation-grid(
     ($u_1$, $u_2$, $u_3$),
     ("i", "n", "sum"),
-    ((ivl(0, 0), $top$, ivl(0, 0)),
-     (ivl(0, 9), $top$, ivl(0, 45)),
-     (ivl(10, 10), $top$, ivl(45, 45))),
+    (
+      (ivl(0, 0), $top$, ivl(0, 0)),
+      (ivl(0, 9), $top$, ivl(0, 45)),
+      (ivl(10, 10), $top$, ivl(45, 45)),
+    ),
   ),
   kind: image,
   caption: [The abstract state as a grid: one value per variable per program
@@ -571,8 +637,7 @@ material this chapter quotes, so it grows when a new snippet does.
     read("/shared/generated/snippets/sound_domain.thy"),
     read("/shared/generated/snippets/sound_dg_spec_core.thy"),
     read("/shared/generated/snippets/combine_env.thy"),
-    json("/shared/generated/facts.json").facts.values()
-      .map(f => f.statement).join(" "),
+    json("/shared/generated/facts.json").facts.values().map(f => f.statement).join(" "),
   )),
   caption: [Isabelle symbols and the ASCII forms the sources are written in.],
 ) <tab:symbols>
@@ -581,19 +646,27 @@ material this chapter quotes, so it grows when a new snippet does.
 
 #subfigures(
   figure(
-    stack(dir: ttb, spacing: 0pt,
+    stack(
+      dir: ttb,
+      spacing: 0pt,
       rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted)[`fac`, $n = 1$],
       rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted)[`fac`, $n = 2$],
       rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted)[`fac`, $n = 3$],
-      rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted,
-           fill: vb.muted.lighten(85%))[`main`],
+      rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted, fill: vb.muted.lighten(85%))[`main`],
     ),
     caption: [standard semantics: the whole stack],
-  ), <fig:stack-std>,
+  ),
+  <fig:stack-std>,
   figure(
-    stack(dir: ttb, spacing: 0pt,
-      rect(width: 34mm, inset: 5pt, stroke: 1pt + vb.accent,
-           fill: vb.accent.lighten(90%))[`fac`, $n = 1$],
+    stack(
+      dir: ttb,
+      spacing: 0pt,
+      rect(
+        width: 34mm,
+        inset: 5pt,
+        stroke: 1pt + vb.accent,
+        fill: vb.accent.lighten(90%),
+      )[`fac`, $n = 1$],
       rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted.lighten(50%))[
         #text(fill: vb.muted)[`fac`, $n = 2$]],
       rect(width: 34mm, inset: 5pt, stroke: 0.7pt + vb.muted.lighten(50%))[
@@ -602,7 +675,8 @@ material this chapter quotes, so it grows when a new snippet does.
         #text(fill: vb.muted)[`main`]],
     ),
     caption: [activation-local: one activation plus a caller link],
-  ), <fig:stack-local>,
+  ),
+  <fig:stack-local>,
   columns: (1fr, 1fr),
   align: top,
   caption: [The same runtime stack under two semantics.
@@ -615,32 +689,35 @@ material this chapter quotes, so it grows when a new snippet does.
 == Correspondence with Goblint
 
 #figure(
-  grid(columns: 2, column-gutter: 1em, align: top,
+  grid(
+    columns: 2,
+    column-gutter: 1em,
+    align: top,
     [
       #align(center, text(0.95em, weight: "bold")[Goblint (OCaml)])
       #listing(lang: "ocaml", ```ocaml
-module type Spec =
-sig
-  module D : Lattice.S
-  module G : Lattice.S
-  module C : Printable.S
-  module V : SpecSysVar
-  val assign : (D.t,G.t,C.t,V.t) ctx
-            -> lval -> exp -> D.t
-end
-```)
+      module type Spec =
+      sig
+        module D : Lattice.S
+        module G : Lattice.S
+        module C : Printable.S
+        module V : SpecSysVar
+        val assign : (D.t,G.t,C.t,V.t) ctx
+                  -> lval -> exp -> D.t
+      end
+      ```)
     ],
     [
       #align(center, text(0.95em, weight: "bold")[Voblint (Isabelle)])
       #isa(```
-locale dg_spec =
-  fixes tf   :: "edge_action
-              \<Rightarrow> ('d,'g) dg_state
-              \<Rightarrow> ('d,'g) dg_state"
-    and route :: "store \<Rightarrow> 'c"
-    and read  :: "'k \<Rightarrow> 'g"
-    and publish :: "'k \<Rightarrow> 'g \<Rightarrow> unit"
-```)
+      locale dg_spec =
+        fixes tf   :: "edge_action
+                    \<Rightarrow> ('d,'g) dg_state
+                    \<Rightarrow> ('d,'g) dg_state"
+          and route :: "store \<Rightarrow> 'c"
+          and read  :: "'k \<Rightarrow> 'g"
+          and publish :: "'k \<Rightarrow> 'g \<Rightarrow> unit"
+      ```)
     ],
   ),
   kind: image,
@@ -684,7 +761,7 @@ that is gone.
   kind: image,
   caption: [Output of `voblint --analysis sign` on the known-imprecision case.
     The listing includes the command's report header and table. Sign tracks
-    #signval("Positive") exactly, but the lattice has no magnitude, so `total <
+    #signval("+") (positive) exactly, but the lattice has no magnitude, so `total <
     100` is genuinely undecidable here --- `UNKNOWN` is the correct answer, not
     a regression.],
 ) <fig:claim>
@@ -693,16 +770,32 @@ that is gone.
 
 #figure(
   lq.diagram(
-    width: 11cm, height: 4.5cm,
+    width: 11cm,
+    height: 4.5cm,
     ylabel: [assertions proved],
-    xaxis: (ticks: (0, 1, 2, 3, 4).zip(
-      ([Sign], [Parity], [Congruence], [Interval], [Int product])).map(
-      ((i, l)) => (i, l))),
-    lq.bar((-0.15, 0.85, 1.85, 2.85, 3.85), (31, 24, 29, 68, 84),
-           width: 0.3, fill: vb.accent.lighten(40%), label: [precision suite]),
-    lq.bar((0.15, 1.15, 2.15, 3.15, 4.15), (12, 9, 11, 26, 33),
-           width: 0.3, fill: vb.muted.lighten(40%),
-           label: [known-imprecision suite]),
+    xaxis: (
+      ticks: (0, 1, 2, 3, 4)
+        .zip(
+          ([Sign], [Parity], [Congruence], [Interval], [Int product]),
+        )
+        .map(
+          ((i, l)) => (i, l),
+        ),
+    ),
+    lq.bar(
+      (-0.15, 0.85, 1.85, 2.85, 3.85),
+      (31, 24, 29, 68, 84),
+      width: 0.3,
+      fill: vb.accent.lighten(40%),
+      label: [precision suite],
+    ),
+    lq.bar(
+      (0.15, 1.15, 2.15, 3.15, 4.15),
+      (12, 9, 11, 26, 33),
+      width: 0.3,
+      fill: vb.muted.lighten(40%),
+      label: [known-imprecision suite],
+    ),
   ),
   caption: [Assertions discharged per selectable analysis. Bars are read off
     the regression runner, so the figure and the test suite cannot disagree.],

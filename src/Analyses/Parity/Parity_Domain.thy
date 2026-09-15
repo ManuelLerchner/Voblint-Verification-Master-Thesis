@@ -252,17 +252,31 @@ lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<L
 
 subsection \<open>Sound-domain instance\<close>
 
-fun string_of_parity :: "parity \<Rightarrow> string" where
-    "string_of_parity PBot  = ''Bottom''"
-  | "string_of_parity PEven = ''Even''"
-  | "string_of_parity POdd  = ''Odd''"
-  | "string_of_parity PTop  = ''Top''"
+text \<open>
+  Goblint has no parity domain. A parity is the congruence class modulo 2, so it
+  prints in Goblint's congruence notation: \<open>2\<int>\<close>, \<open>1+2\<int>\<close>, and \<open>\<int>\<close> for a
+  product component's top. A standalone parity prints its top as \<open>\<top>\<close>.
+\<close>
+
+fun string_of_parity :: "parity \<Rightarrow> String.literal" where
+    "string_of_parity PBot  = sym_bottom"
+  | "string_of_parity PEven = STR ''2'' + sym_int"
+  | "string_of_parity POdd  = STR ''1+2'' + sym_int"
+  | "string_of_parity PTop  = sym_int"
+
+lemma string_of_parity_regression:
+  "string_of_parity PBot = STR ''<bottom>''"
+  "string_of_parity PEven = STR ''2<int>''"
+  "string_of_parity POdd = STR ''1+2<int>''"
+  "string_of_parity PTop = STR ''<int>''"
+  by eval+
 
 instantiation parity :: sound_domain begin
 definition gamma_abs_parity [simp]: "gamma (a :: parity) = gamma_parity a"
 definition is_empty_parity [simp]: "is_empty (a :: parity) = is_bottom_parity a"
 definition is_full_parity [simp]: "is_full (a :: parity) = is_top_parity a"
-definition to_string_parity [simp]: "to_string (a :: parity) = string_of_parity a"
+definition to_string_parity [simp]:
+  "to_string (a :: parity) = (if is_top_parity a then sym_top else string_of_parity a)"
 instance proof
   show "gamma (bot :: parity) = {}" unfolding bot_parity_def by simp
 next
@@ -283,6 +297,11 @@ next
     by (simp add: is_top_parity_correct_gamma)
 qed
 end
+
+lemma to_string_parity_regression:
+  "to_string PTop = STR ''<top>''"
+  "to_string POdd = STR ''1+2<int>''"
+  by eval+
 
 instance parity :: widening_domain ..
 
@@ -375,57 +394,36 @@ fun aval_parity :: "exp => (vname => parity) => parity" where
   | "aval_parity (Mod a b) \<sigma> = parity_mod (aval_parity a \<sigma>) (aval_parity b \<sigma>)"
   | "aval_parity (Less a b)  \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
-        else PTop)"
+        else of_bool_option parity_of_int (parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>)))"
   | "aval_parity (LessEq a b)  \<sigma> =
-       (if is_empty (aval_parity b \<sigma>) \<or> is_empty (aval_parity a \<sigma>) then bot
-        else if parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>) = Some False then POdd
-        else if parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>) = Some True then PEven
-        else PTop)"
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
+        else of_bool_option parity_of_int
+               (map_option HOL.Not (parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>))))"
   | "aval_parity (Greater a b)  \<sigma> =
-       (if is_empty (aval_parity b \<sigma>) \<or> is_empty (aval_parity a \<sigma>) then bot
-        else if parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>) = Some True then POdd
-        else if parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>) = Some False then PEven
-        else PTop)"
+       (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
+        else of_bool_option parity_of_int (parity_lt (aval_parity b \<sigma>) (aval_parity a \<sigma>)))"
   | "aval_parity (GreaterEq a b)  \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then POdd
-        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then PEven
-        else PTop)"
+        else of_bool_option parity_of_int
+               (map_option HOL.Not (parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>))))"
   | "aval_parity (NotEq a b) \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then POdd
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then PEven
-        else PTop)"
+        else of_bool_option parity_of_int
+               (map_option HOL.Not (parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>))))"
   | "aval_parity (exp.Eq a b) \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
-        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
-        else PTop)"
+        else of_bool_option parity_of_int (parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>)))"
   | "aval_parity (exp.Not a)  \<sigma> =
        (if is_empty (aval_parity a \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some True then PEven
-        else if parity_tobool (aval_parity a \<sigma>) = Some False then POdd
-        else PTop)"
+        else of_bool_option parity_of_int (map_option HOL.Not (parity_tobool (aval_parity a \<sigma>))))"
   | "aval_parity (And a b)    \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some False
-             \<or> parity_tobool (aval_parity b \<sigma>) = Some False
-        then PEven
-        else if parity_tobool (aval_parity a \<sigma>) = Some True
-             \<and> parity_tobool (aval_parity b \<sigma>) = Some True
-        then POdd
-        else PTop)"
+        else of_bool_option parity_of_int
+               (and_opt (parity_tobool (aval_parity a \<sigma>)) (parity_tobool (aval_parity b \<sigma>))))"
   | "aval_parity (Or a b)     \<sigma> =
        (if is_empty (aval_parity a \<sigma>) \<or> is_empty (aval_parity b \<sigma>) then bot
-        else if parity_tobool (aval_parity a \<sigma>) = Some True
-             \<or> parity_tobool (aval_parity b \<sigma>) = Some True
-        then POdd
-        else if parity_tobool (aval_parity a \<sigma>) = Some False
-             \<and> parity_tobool (aval_parity b \<sigma>) = Some False
-        then PEven
-        else PTop)"
+        else of_bool_option parity_of_int
+               (or_opt (parity_tobool (aval_parity a \<sigma>)) (parity_tobool (aval_parity b \<sigma>))))"
 
 interpretation parity_arith: expression_domain_mono
     aval_parity parity_of_int "(+)" "(-)" "(*)" parity_div parity_mod

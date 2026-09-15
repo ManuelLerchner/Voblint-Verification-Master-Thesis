@@ -248,14 +248,19 @@ end
 
 subsection \<open>Printing\<close>
 
-fun string_of_sign :: "sign \<Rightarrow> string" where
-    "string_of_sign SBot    = ''Bottom''"
-  | "string_of_sign SNeg    = ''Negative''"
-  | "string_of_sign SNonPos = ''NonPositive''"
-  | "string_of_sign SZero   = ''Zero''"
-  | "string_of_sign SNonNeg = ''NonNegative''"
-  | "string_of_sign SPos    = ''Positive''"
-  | "string_of_sign STop    = ''Top''"
+text \<open>
+  Goblint has no sign value domain; its tutorial sign analysis prints \<open>-\<close>, \<open>0\<close>
+  and \<open>+\<close>, which the two non-strict elements extend as \<open>\<le>0\<close> and \<open>\<ge>0\<close>.
+\<close>
+
+fun string_of_sign :: "sign \<Rightarrow> String.literal" where
+    "string_of_sign SBot    = sym_bottom"
+  | "string_of_sign SNeg    = STR ''-''"
+  | "string_of_sign SNonPos = sym_le + STR ''0''"
+  | "string_of_sign SZero   = STR ''0''"
+  | "string_of_sign SNonNeg = sym_ge + STR ''0''"
+  | "string_of_sign SPos    = STR ''+''"
+  | "string_of_sign STop    = sym_top"
 
 subsection \<open>Abstract domain instantiation\<close>
 

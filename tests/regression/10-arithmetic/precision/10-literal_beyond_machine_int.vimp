@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// VIMP integers are unbounded, so a literal wider than the host's native int
+// is still one exact value. The lexer reads digits straight into an arbitrary
+// precision integer: the browser build's 31-bit ints and the native 63-bit
+// ints must both accept these literals and keep them exact.
+fun main() {
+  x = 1073741824;
+  __voblint_check(x == 1073741823 + 1); // PROVED
+  y = 99999999999999999999999;
+  __voblint_check(y - 99999999999999999999998 == 1); // PROVED
+  __voblint_check(y > 9223372036854775807); // PROVED
+}

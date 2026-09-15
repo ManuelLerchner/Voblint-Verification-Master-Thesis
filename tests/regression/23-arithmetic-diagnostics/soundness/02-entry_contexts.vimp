@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --solver per-origin
+// PARAM: --analysis interval --context entry-state --globals per-origin
 // EXPECT-ARITHMETIC
 // This source operation sees zero on one activation and nonzero on another.
 // Its aggregate finding must remain possible rather than definite.

@@ -45,13 +45,21 @@ MODULE = "Generated"
 # copies of the export itself, and vimp_parser.ml/vimp_lexer.ml come from
 # menhir/ocamllex at build time.
 CONSUMERS = [
-    "cli/main.ml",
-    "cli/dot_render.ml",
-    "cli/html_report.ml",
-    "cli/vimp_frontend.ml",
-    "cli/vimp_positions.ml",
-    "cli/vimp_parser.mly",
-    "codegen/regression/ocaml/main.ml",
+    "cli/entry/voblint.ml",
+    "cli/entry/voblint_web.ml",
+    "cli/result/result_text.ml",
+    "cli/result/context_graph.ml",
+    "cli/render/render_text.ml",
+    "cli/render/render_dot.ml",
+    "cli/render/render_snapshot.ml",
+    "cli/render/render_json.ml",
+    "cli/render/render_xml.ml",
+    "cli/render/report_dir.ml",
+    "cli/frontend/vimp_frontend.ml",
+    "cli/frontend/vimp_positions.ml",
+    "cli/frontend/vimp_printer.ml",
+    "cli/frontend/vimp_parser.mly",
+    "codegen/regression/ocaml/codegen_regression.ml",
     "tests/property/ast_driver.ml",
 ]
 
@@ -80,7 +88,9 @@ def signature_names(sig: str) -> set[str]:
     names |= set(re.findall(rf"^\s*type (?:\S+ )*?({IDENT})\b", sig, re.M))
     # Constructors are nameable only where the type is transparent, i.e. the
     # declaration carries its `= A | B of ...` right here.
-    for decl in re.findall(r"^\s*type [^\n]*=(.*?)(?=^\s*(?:type|val)\s|\Z)", sig, re.S | re.M):
+    for decl in re.findall(
+        r"^\s*type [^\n]*=(.*?)(?=^\s*(?:type|val)\s|\Z)", sig, re.S | re.M
+    ):
         names |= set(re.findall(rf"\b({CTOR})\b", decl))
     return names
 
@@ -164,14 +174,20 @@ def main() -> int:
         for alias in aliases(text):
             for name in re.findall(rf"\b{re.escape(alias)}\.({IDENT}|{CTOR})", text):
                 if name not in exposed:
-                    why = "hidden by the export" if name in hidden else "not in the export"
+                    why = (
+                        "hidden by the export"
+                        if name in hidden
+                        else "not in the export"
+                    )
                     problems.append((rel, f"{alias}.{name}", why))
 
         if re.search(rf"^open Voblint_CLI\.{MODULE}\s*$", text, re.M):
             bound = locally_bound(text)
             for name in sorted(hidden - bound):
                 if re.search(rf"(?<![\w.']){re.escape(name)}(?![\w'])", text):
-                    problems.append((rel, name, "used unqualified, hidden by the export"))
+                    problems.append(
+                        (rel, name, "used unqualified, hidden by the export")
+                    )
 
     if not problems:
         print(

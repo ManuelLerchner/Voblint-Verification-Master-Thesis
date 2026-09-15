@@ -1,54 +1,45 @@
-// PARAM: --analysis interval --dot-full
+// PARAM: --analysis interval --dot
 // Every CFG node carries its own computed abstract state here, not just
-// check nodes -- full_state_export_auto (State_Report_Graph.thy) reads the
-// solved state at every pp, unlike
-// state_report_export_auto (08-tooling/01-dot_smoke.vimp's --dot), which only
-// annotates nodes state_report_node_annotation finds in the check report.
+// check nodes.
 // Same program as 02-control-flow/precision/02-while_loop.vimp so the loop
 // head's widened/narrowed interval is visible mid-loop, not only at the
 // one check near the end.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: main / unit
 //     main_pp2_ctx0
 //     main_pp1_ctx0
 //     main_pp3_ctx0
 //     main_pp4_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp0_ctx0
+//     main_entry_main_ctx0
 //
 // nodes:
 //   main_pp2_ctx0: pp2
-//       #ret=[-inf,+inf]
 //       x=[0,9]
 //   main_pp1_ctx0: pp1
-//       #ret=[-inf,+inf]
 //       x=[0,10]
-//   main_pp3_ctx0: pp3
-//       #ret=[-inf,+inf]
+//   main_pp3_ctx0: pp3 [proved]
 //       x=[10,10]
+//       check 0 < x
 //   main_pp4_ctx0: pp4
-//       #ret=[-inf,+inf]
 //       x=[10,10]
-//   main_result_main_ctx0: exit_main
-//       #ret=[-inf,+inf]
+//   main_exit_main_ctx0: exit_main
 //       x=[10,10]
-//   main_entry_main_ctx0: entry_main
-//       #ret=[-inf,+inf]
-//       x=[-inf,+inf]
 //   main_pp0_ctx0: pp0
-//       #ret=[-inf,+inf]
-//       x=[-inf,+inf]
+//       x=⊤
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
 //
 // edges:
-//   main_pp2_ctx0 -> main_pp1_ctx0: x := x+1
-//   main_pp1_ctx0 -> main_pp2_ctx0: x<10
-//   main_pp1_ctx0 -> main_pp3_ctx0: not (x<10)
-//   main_pp3_ctx0 -> main_pp4_ctx0: check(0<x)
-//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
-//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 0
+//   main_pp1_ctx0 -> main_pp2_ctx0: [x < 10]
+//   main_pp1_ctx0 -> main_pp3_ctx0: ![x < 10]
+//   main_pp2_ctx0 -> main_pp1_ctx0: x := x + 1
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(0 < x)
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {

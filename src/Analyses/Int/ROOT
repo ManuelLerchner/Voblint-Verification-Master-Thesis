@@ -28,9 +28,5 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
     Int_Exec
     Int_Exec_Sound
     Int_Sound
-    Int_Analyses
-    Int_Solver_Analyses
     Int_Classify
-    Int_Assembly
-    Int_Checks
-    Int_Entry
+    Int_Analyses

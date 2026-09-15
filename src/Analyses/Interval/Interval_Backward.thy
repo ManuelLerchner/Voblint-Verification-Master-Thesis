@@ -144,8 +144,11 @@ qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
+definition ivl_of_int :: "int \<Rightarrow> ivl" where
+  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
+
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
-    "aval_ivl (N n)        \<sigma> = Ivl (Fin n) (Fin n)"
+    "aval_ivl (N n)        \<sigma> = ivl_of_int n"
   | "aval_ivl (V x)        \<sigma> = \<sigma> x"
   | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
@@ -154,60 +157,39 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
   | "aval_ivl (Mod a b)  \<sigma> = ivl_mod (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
   | "aval_ivl (Less a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
-        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int (interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
   | "aval_ivl (LessEq a b)   \<sigma> =
-       (if is_empty (aval_ivl b \<sigma>) \<or> is_empty (aval_ivl a \<sigma>) then bot
-        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
-        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+        else of_bool_option ivl_of_int
+               (map_option HOL.Not (interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>))))"
   | "aval_ivl (Greater a b)   \<sigma> =
-       (if is_empty (aval_ivl b \<sigma>) \<or> is_empty (aval_ivl a \<sigma>) then bot
-        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
-        else if interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+        else of_bool_option ivl_of_int (interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>)))"
   | "aval_ivl (GreaterEq a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
-        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int
+               (map_option HOL.Not (interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
   | "aval_ivl (NotEq a b) \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
-        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int
+               (map_option HOL.Not (interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
   | "aval_ivl (exp.Eq a b) \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
-        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int (interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
   | "aval_ivl (exp.Not a)  \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) then bot
-        else if interval_tobool (aval_ivl a \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
-        else if interval_tobool (aval_ivl a \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int (map_option HOL.Not (interval_tobool (aval_ivl a \<sigma>))))"
   | "aval_ivl (And a b)    \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_tobool (aval_ivl a \<sigma>) = Some False
-             \<or> interval_tobool (aval_ivl b \<sigma>) = Some False
-        then Ivl (Fin 0) (Fin 0)
-        else if interval_tobool (aval_ivl a \<sigma>) = Some True
-             \<and> interval_tobool (aval_ivl b \<sigma>) = Some True
-        then Ivl (Fin 1) (Fin 1)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int
+               (and_opt (interval_tobool (aval_ivl a \<sigma>)) (interval_tobool (aval_ivl b \<sigma>))))"
   | "aval_ivl (Or a b)     \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else if interval_tobool (aval_ivl a \<sigma>) = Some True
-             \<or> interval_tobool (aval_ivl b \<sigma>) = Some True
-        then Ivl (Fin 1) (Fin 1)
-        else if interval_tobool (aval_ivl a \<sigma>) = Some False
-             \<and> interval_tobool (aval_ivl b \<sigma>) = Some False
-        then Ivl (Fin 0) (Fin 0)
-        else Ivl (Fin 0) (Fin 1))"
+        else of_bool_option ivl_of_int
+               (or_opt (interval_tobool (aval_ivl a \<sigma>)) (interval_tobool (aval_ivl b \<sigma>))))"
 
 interpretation ivl_arith: expression_domain_mono
-    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" "(+)" "(-)" "(*)" ivl_div ivl_mod
+    aval_ivl ivl_of_int "(+)" "(-)" "(*)" ivl_div ivl_mod
     interval_lt interval_eqb interval_tobool
   by unfold_locales
      (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound ivl_mod_sound

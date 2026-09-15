@@ -1,0 +1,109 @@
+// PARAM: --analysis interval --context entry-state
+// Backs the site figures "The life of a call", "The proof chain" and "What an
+// equation is made of: strategy trees" in entry-state mode: each recursion depth is its
+// own context, so pp0 holds n=[2,2] in one and n=[1,1] in the other and a == 2 is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_pp7_ctx0
+//     main_exit_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: f / [1,1]
+//     f_pp1_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp2_ctx0
+//     f_pp3_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_2: f / [2,2]
+//     f_pp1_ctx1
+//     f_exit_f_ctx1
+//     f_pp0_ctx1
+//     f_pp2_ctx1
+//     f_pp3_ctx1
+//     f_entry_f_ctx1
+//
+// nodes:
+//   main_pp7_ctx0: pp7
+//       a=[2,2]
+//   main_exit_main_ctx0: exit_main
+//       a=[2,2]
+//   main_pp5_ctx0: pp5
+//       a=⊤
+//   main_pp6_ctx0: pp6 [proved]
+//       a=[2,2]
+//       check a == 2
+//   main_entry_main_ctx0: entry_main
+//       a=⊤
+//   f_pp1_ctx0: pp1
+//       n=[1,1]
+//       r=⊤
+//   f_exit_f_ctx0: exit_f
+//       n=[1,1]
+//       r=⊤
+//   f_pp0_ctx0: pp0
+//       n=[1,1]
+//       r=⊤
+//   f_pp2_ctx0: pp2 [unreachable]
+//       unreachable
+//   f_pp3_ctx0: pp3 [unreachable]
+//       unreachable
+//   f_entry_f_ctx0: entry_f
+//       n=[1,1]
+//       r=⊤
+//   f_pp1_ctx1: pp1 [unreachable]
+//       unreachable
+//   f_exit_f_ctx1: exit_f
+//       n=[2,2]
+//       r=[1,1]
+//   f_pp0_ctx1: pp0
+//       n=[2,2]
+//       r=⊤
+//   f_pp2_ctx1: pp2
+//       n=[2,2]
+//       r=⊤
+//   f_pp3_ctx1: pp3
+//       n=[2,2]
+//       r=[1,1]
+//   f_entry_f_ctx1: entry_f
+//       n=[2,2]
+//       r=⊤
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]
+//   f_pp0_ctx1 -> f_pp1_ctx1: [n < 2]
+//   f_pp0_ctx0 -> f_pp2_ctx0: ![n < 2]
+//   f_pp0_ctx1 -> f_pp2_ctx1: ![n < 2]
+//   f_pp1_ctx0 -> f_exit_f_ctx0: return 1
+//   f_pp1_ctx1 -> f_exit_f_ctx1: return 1
+//   f_pp3_ctx0 -> f_exit_f_ctx0: return n * r
+//   f_pp3_ctx1 -> f_exit_f_ctx1: return n * r
+//   main_pp6_ctx0 -> main_pp7_ctx0: check(a == 2)
+//   main_pp7_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+//   f_pp2_ctx0 -> f_pp3_ctx0: call-to-return f
+//   f_pp2_ctx1 -> f_entry_f_ctx0: enter f(n - 1)
+//   f_exit_f_ctx0 -> f_pp3_ctx1: combine r := f(n - 1)
+//   f_pp2_ctx1 -> f_pp3_ctx1: call-to-return f
+//   main_pp5_ctx0 -> f_entry_f_ctx1: enter f(2)
+//   f_exit_f_ctx1 -> main_pp6_ctx0: combine a := f(2)
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(n) {
+  if (n < 2) {
+    return 1;
+  } else {
+    r = f(n - 1);
+    return n * r;
+  }
+}
+
+fun main() {
+  a = f(2);
+  __voblint_check(a == 2); // PROVED
+}

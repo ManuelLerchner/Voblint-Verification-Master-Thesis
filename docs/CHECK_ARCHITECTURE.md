@@ -1,13 +1,14 @@
 # Check-discharge architecture
 
-> **Status:** partly stale. "Pipeline", "Layer responsibilities" and "Why no
-> automatic sublocale" name retired pieces: `check_true`/`check_false` are one
-> `check_query`; the `derived_*` locales are `numeric_query_judgments`
-> (`Abstract_Numeric_Queries.thy`), interpreted for every `backward_domain` in
-> `Backward_Numeric_Queries.thy`; `backward_domain` lives in
-> `Backward_Domain.thy`; `unit_dg_pipeline` and `Analysis_GraphViz.thy` no
-> longer exist. The current inventory is the `Checks/` row of
-> `src/Abstract_Interpreter/Framework/README.md`.
+> **Status:** partly stale. "Pipeline" (above the rendering branch), "Layer
+> responsibilities" and "Why no automatic sublocale" name retired pieces:
+> `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
+> `numeric_query_judgments` (`Abstract_Numeric_Queries.thy`), interpreted for
+> every `backward_domain` in `Backward_Numeric_Queries.thy`; `backward_domain`
+> lives in `Backward_Domain.thy`; `abstract_domain` and `backward_domain_mono`
+> no longer exist. The current inventory is the
+> `Checks/` row of `src/Abstract_Interpreter/Framework/README.md`. The
+> rendering sections describe the tree as it stands.
 
 Overview of how a compiled `__voblint_check(...)` condition becomes both a
 GraphViz-rendered proof status and a semantic soundness guarantee. This is
@@ -18,9 +19,9 @@ proof status lives in the `.thy` files themselves (`docs/PROOF_PHASES.md`).
 
 `abstract_check_domain` produces two independent outputs from the same
 node-indexed abstract environment: an *executable classification* that
-GraphViz renders directly, and a *logical discharge* that `checks_proven`
-turns into a semantic guarantee. GraphViz never consumes `checks_proven`
-— rendering does not depend on proving anything.
+`run_voblint` exports and the OCaml CLI renders, and a *logical discharge*
+that `checks_proven` turns into a semantic guarantee. Rendering never
+consumes `checks_proven` — it does not depend on proving anything.
 
 ```text
 VIMP source
@@ -29,9 +30,9 @@ VIMP source
     v
 CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
     |
-    | verified TD solver, per domain (<Domain>_Assembly / _Exec_Sound)
+    | verified TD solver, per domain (generated <Domain>_Analyses)
     v
-node-indexed analysis_result       -- analyse_<domain>_result_for
+node-indexed analysis_result       -- <d>_rule.result r
                                    ::   (vname => bool) -> imp_prog
                                      -> (unit, 'a abs_state) analysis_result
     |
@@ -44,11 +45,12 @@ abstract_check_domain (Abstract_Checks.thy)
     |        v
     |    Check_Proved / Check_Refuted / Check_Unknown
     |        |
+    |        | run_voblint (Analysis_Run.thy): state_checks, res_checks
     |        v
-    |    check_result_annotation (Analysis_GraphViz.thy)
+    |    node status (cli/result/context_graph.ml)       [OCaml]
     |        |
     |        v
-    |    rendered CFG, proof status as node color
+    |    rendered CFG, proof status as node color (cli/render/render_dot.ml)
     |
     +--> abstract_checks_proven                       [proposition]
              |
@@ -63,12 +65,12 @@ abstract_check_domain (Abstract_Checks.thy)
 The check-classification and discharge layers above the node-indexed
 solver state are domain-generic; each domain supplies its own solver
 frontend and `abstract_numeric_queries` instance below that line.
-`Sign_Checks.thy`, `Interval_Checks.thy`, `Parity_Checks.thy` and
-`Int_Checks.thy` are thin instantiations of the generic layers, not separate
-implementations of the pipeline. Each reads its per-node state through
-`analyse_<domain>_result_for`'s `analysis_result` table -- the routed
-producer's own solved table at `prog_main_name` -- and interprets the generic
-`analysis_surface` locale over it.
+`Sign_Classify.thy`, `Interval_Classify.thy`, `Parity_Classify.thy`,
+`Congruence_Classify.thy` and `Int_Classify.thy` are thin instantiations of the
+generic layers, not separate implementations of the pipeline. The per-node state
+they classify is the registration's `analysis_result` table, which
+`unit_dg_analysis` reads back through the generic `analysis_surface` locale
+(`state_at`, `report`).
 
 ## Layer responsibilities
 
@@ -124,16 +126,16 @@ makes no claim either way.
 
 ### Per-domain instances
 
-`Sign_Checks.thy` and `Interval_Checks.thy` each do one
+`Sign_Classify.thy` and `Interval_Classify.thy` each do one
 `global_interpretation abstract_check_domain ...`, `defines`-exporting
-`<domain>_check_true`/`<domain>_classify_check`/`<domain>_checks_proven`.
+`<domain>_check_query`/`<domain>_classify_check`/`<domain>_checks_proven`.
 Neither restates the Boolean recursion, the classification logic, or the
 `checks_proven` bridge — that would be duplicating what `Abstract_Checks.thy`
 already proves once.
 
 They differ only in **which four query functions they feed in**:
 
-| | Sign (`Sign_Checks.thy`) | Interval (`Interval_Checks.thy`) |
+| | Sign (`Sign_Classify.thy`) | Interval (`Interval_Classify.thy`) |
 | --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
 | `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
@@ -143,25 +145,21 @@ They differ only in **which four query functions they feed in**:
 
 Each domain routes its own transfer functions and executable mirror through
 the shared D/G generator, solves with the vendored `TD_side` solver, and
-exposes the result as `analyse_<domain>_result_for`, an `analysis_result`
-table indexed by `(node, context)`.
+exposes the result as an `analysis_result` table indexed by `(node, context)`.
 
-`Unit_DG_Analysis.thy` performs that assembly once. `unit_dg_pipeline` is the
-construction half — equation system, solve, covered keys, reader, result
-table, globals, report — and carries no correctness assumptions;
-`unit_dg_analysis` adds the domain and solver contracts and derives the
-published soundness theorems. A domain instantiates it by naming five things:
-its executable transfer, its callee entry, the state a run starts from, the
-solver, and the check classifier. `Sign_Assembly.thy` is one
-`global_interpretation sign_join: unit_dg_analysis ...` whose `defines` clause
-publishes `sign_unit_equations`, `sign_unit_solution`, `sign_unit_result`,
-`sign_unit_state_at`, `sign_unit_report` and their siblings; `Sign_Checks.thy`
-binds those to the names the CLI dispatches to (`analyse_sign_result_for`,
-`analyse_sign_report_for`) and defines only what is Sign's own — the
-per-origin solver sibling and the published globals. Interval and Parity carry
-the same interpretation in `Interval_Assembly.thy` and `Parity_Assembly.thy`
-alongside their own `_Exec_Sound` construction, with agreement lemmas between
-the two; Int's product domain still builds its own routed spine.
+`Routed_DG_Analysis.thy` performs that assembly once, and `Unit_DG_Analysis.thy`
+instantiates it at the unit context. `routed_dg_pipeline` is the construction
+half — equation system, solve, covered keys, reader, result table, globals,
+report — and carries no correctness assumptions; `routed_dg_analysis` adds the
+domain and solver contracts, and `unit_dg_analysis` derives the published
+context-free soundness theorems. A domain instantiates it by naming its
+executable transfer, its callee entry, the state a run starts from, the solver,
+the check classifier and the facts that make them sound. The generated
+`Sign_Analyses.thy` holds `global_interpretation sign_rule: unit_dg_analysis ...
+for r`, taking the global update rule as a parameter; a caller reads
+`sign_rule.result`, `sign_rule.state_at` and `sign_rule.report` at a rule. Every
+domain, Int included, carries the same registration beside `<d>_es_rule` and
+`<d>_cs_rule` for the two contextual policies.
 
 The node-soundness bridge is generic and proved once inside
 `unit_dg_analysis`. `result_node_sound_closure` composes
@@ -178,16 +176,24 @@ exit.
 The computed table and transfer soundness are necessarily per-domain; the
 bridge above them is not.
 
-### `Analysis_GraphViz.thy` — rendering
+### `render_dot.ml` — rendering
 
-`check_result_annotation :: check_result -> bexp -> graphviz_node_annotation`
-is the single status-to-style mapping (`Check_Proved` dark green,
-`Check_Refuted` red, `Check_Unknown` grey), shared by every domain's
-worked example. It depends only on `check_result` and `bexp` — nothing
-Sign- or Interval-specific. The generic entry/exit/default node styling
-(`analysis_node_attrs`) uses green/light-yellow for entry and neutral
-gray for exit, so a refuted check's red never collides with an unrelated
-procedure-exit node.
+Rendering lives entirely in OCaml, outside every soundness theorem.
+`Context_graph.status_of` (`cli/result/context_graph.ml`) gives each node one
+status from its `result_state`: `Unreachable` when `state_value` is `Bot`;
+otherwise the strongest verdict among its `state_checks` and those
+`state_diagnostics` that are not `Check_Proved`, ordered `Refuted`, `Unknown`,
+`Proved`; no status when the node has neither. A proved division is not a
+finding, so it never colours a node.
+
+`Render_dot.node_attrs` (`cli/render/render_dot.ml`) is the single
+status-to-style mapping: `Proved` dark green on pale green, `Refuted` firebrick
+on misty rose, `Unknown` dark goldenrod on light goldenrod, `Unreachable` a
+dashed gray box. It reads only the status and the node kind — nothing
+domain-specific. A node without a status is styled by kind: a light-green box
+for a statement point, an orange double circle on light yellow for every
+procedure entry and exit, so a refuted check's red never collides with an
+unrelated procedure-exit node.
 
 ## Why no automatic sublocale
 
@@ -232,13 +238,15 @@ Interval example additionally demonstrates a precision gain: a bound Interval pr
 outright (`x < 11` after narrowing `x` to `[1,9]`) that Sign's `SPos`
 alone cannot.
 
-## Contextual result and GraphViz presentation (collapsed vs. expanded)
+## Contextual result and GraphViz presentation
 
-The pipeline above is per-node and context-independent. A context-sensitive
-analysis -- `--context entry-state` or `--context call-string` -- produces a
-canonical, contextual `analysis_result` instead, and everything downstream of
-the solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
-table, never the raw solver map:
+Every analysis produces one canonical, contextual `analysis_result`: a table
+from `(pp, ctx)` to `Lifted abs_state | Bot`. A context-free run
+(`--context none`) is not a special case -- its table has the single unit
+context. `run_result_of` (`Analysis_Run.thy`) reads that one table, never the
+raw solver map, and publishes it as a structured `run_result`; `run_voblint`
+applies `string_of_abstract_value` to every abstract value in it through
+`map_run_result`. Everything below that line is OCaml:
 
 ```text
                        verified solver
@@ -247,53 +255,93 @@ table, never the raw solver map:
                       analysis_result
                (pp, ctx) -> Lifted abs_state | Bot
                              |
-           +-----------------+-----------------+
-           |                 |                 |
-           v                 v                 v
-     contextual        collapsed graph    expanded graph
-       checks         (Analysis_Graph_Build, both modes)
-  (aggregate_        one node per pp,     one node per (pp, ctx),
-   verdicts)         contextual states    states never joined
-                       joined for
-                        rendering
-           |                 |                 |
-           +-----------------+-----------------+
-                             |
+                             |  run_result_of, map_run_result   [Isabelle]
                              v
-                        CLI (voblint)
+                   String.literal run_result
+     res_cfg  res_contexts  res_states  res_routes
+     res_checks  res_globals  res_diagnostics
+                             |
+                +------------+-------------+                   [OCaml]
+                |                          |
+                v                          v
+     res_checks, res_diagnostics    Context_graph.build
+     (joined over contexts)         one node per (pp, ctx),
+                |                   states never joined
+                |                          |
+                |       +---------+--------+--------+
+                |       v         v                 v
+                |   Render_dot  Render_snapshot   Report_dir / Render_xml
+                |   (--dot)     (--graph-snapshot) (--html)
+                |       |
+                +-------+---------> Render_json (browser playground)
 ```
 
-`lookup_context`/`contexts_at` are the only reads either graph mode
-performs against the result. Collapsed and expanded are **the same
-canonical `analysis_result`, rendered two ways** -- not two analyses, and
-not two solves: `analysis_graph_config.route` (partial -- `None` on an
-unreachable caller or an entered-bottom callee frame, never a real `'ctx`
-value doubling as a sentinel) decides what edges to draw, `context_key`
-decides presentation order, and `node_annotation` reads the context, but
-none of that changes what the solver computed.
+`Context_graph.build` (`cli/result/context_graph.ml`) reads only the result:
+
+- **Nodes.** One per `res_states` entry, i.e. per `(point, context index)` the
+  solve covered. The identifier is `<procedure>_<point>_ctx<n>`, where `n`
+  numbers the context within its procedure in the order the states list it, so
+  an identifier does not move when another procedure gains or loses a context.
+- **Clusters.** One per `(procedure, context)`, labelled
+  `<procedure> / <context>`; the context label comes from `res_contexts`
+  (`unit`, the rendered entry values, or `call-string=...`).
+- **Intra edges.** Each intra edge of `res_cfg`, drawn inside one context when
+  both endpoints are covered in it.
+- **Call edges.** At every covered caller node, `route_targets` of the matching
+  `res_routes` entry names the callee context indices the call enters. Each
+  target gets an `Enter` edge to the callee's entry and a `Combine` edge from
+  the callee's `FunctionResult` back to the continuation in the caller's
+  context; a `Call_to_return` edge joins caller and continuation in the caller's
+  context. OCaml never re-derives a route. `route_targets` is `[]` when the
+  caller state is `Bot` or entering yields a bottom frame (`entered_targets`),
+  and a live call with no target gets a `call ... [not entered]` finding.
+
+A node whose `state_value` is `Bot` carries `Unreachable` as its status, set
+once in `Context_graph.status_of`. Renderers read that constructor
+(`Render_dot.node_attrs`, the snapshot's `[unreachable]`, `Render_xml.is_dead`,
+the JSON `status` field); they never infer deadness from label text. A node's
+findings are `unreachable`, one `check <exp>` line per `state_checks` entry
+(suffixed `[dead]` when that context's verdict is `Bot`), one message per
+refuted or unknown division in `state_diagnostics`, and the unentered calls
+above.
+
+### What a node shows, and where globals go
+
+A graph node's `bindings` are the enclosing procedure's formals, then the
+locals it assigns, identically for `--context none`, `entry-state` and
+`call-string`. Declared globals and the return slot `#ret` are **not** among
+them: the node record keeps both apart (`globals`, `ret`), and only the browser
+JSON emits them. `Render_dot` labels a node with its point and findings and
+puts the full state in the tooltip; `Render_snapshot` lists status, bindings
+and findings; `Report_dir` writes the same lines to `nodes/<id>.xml` through
+`Render_xml`, one `<analysis>` block per `--analysis` domain.
+
+`res_globals` lists the constraint system's global unknowns, the same set
+Goblint's globals pane iterates: `Global_Shared`, the analysis-wide slot, then
+for `main` and every procedure one `Global_Seed f (Some i)` per context index
+`i` its entry was solved at, holding the state calls push into that entry. A
+procedure no solved context enters is listed once as `Global_Seed f None` with
+state `Bot`. Each registration's `result_with_globals` returns the table and
+these unknowns off one solve. `Result_text.global_rows` names the rows
+(`Global`, `enter f`, `enter f @ <context>`) for the HTML globals pane; the
+browser JSON's `seeds` drops `Global_Shared` and links each seed to its entry
+node.
 
 ### CLI contract
 
 ```text
---context none|entry-state|call-string  context sensitivity (analysis-level)
---context-graph collapsed|expanded  rendering mode (presentation-level)
+--context none|entry-state|call-string   context sensitivity (analysis-level)
+--context-depth N                        call-string bound
+--globals join|per-origin|warrow|warrow-per-origin
+                                         side-effect update rule
+--dot | --graph-snapshot | --html        what to render from the one result
 ```
 
-`--context-graph` only selects how an already-computed contextual result
-is drawn under `--dot`/`--dot-full`/`--graph-snapshot`/`--html`; it never
-affects analysis precision, the solver, or which contexts get computed.
-`collapsed` joins every context's state per CFG node for rendering.
-`expanded` draws one node per `(pp, ctx)` pair instead, so a check that is
-`Dead` in one context and `Decided` in another -- or two live contexts
-that disagree on the same check's verdict -- stays visible as distinct
-nodes rather than collapsing into one rendering. That is why `expanded`
-is the default under `--context entry-state`, for every domain: a run
-that paid for per-context precision should not have it joined away in the
-picture. See
-`tests/regression/11-graph-snapshot/06-collapsed_three_contexts.vimp`
-through `09-expanded_dead_route.vimp` for worked collapsed/expanded pairs.
-`--context-graph expanded` without `--context entry-state` is a CLI
-error, not a silent fallback to collapsed.
+There is exactly one graph rendering. A check that is `Dead` in one context and
+`Decided` in another -- or two live contexts that disagree on the same check --
+stays visible as distinct nodes. See `tests/regression/11-graph-snapshot/`
+(`04-expanded_three_contexts.vimp` through `09-expanded_dead_route.vimp`) for
+worked examples.
 
 ## Known limitations (not yet addressed)
 
@@ -304,5 +352,5 @@ error, not a silent fallback to collapsed.
   `pp`); the compiler currently happens to allocate one node per check,
   but the data model does not require that.
 - Every selectable domain has a check-discharge instance:
-  `Sign_Checks`, `Interval_Checks`, `Parity_Checks`, `Congruence_Checks` and
-  `Int_Checks`.
+  `Sign_Classify`, `Interval_Classify`, `Parity_Classify`,
+  `Congruence_Classify` and `Int_Classify`.

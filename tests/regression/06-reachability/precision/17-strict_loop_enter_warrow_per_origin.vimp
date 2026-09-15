@@ -1,10 +1,10 @@
-// PARAM: --analysis interval --solver warrow-per-origin
+// PARAM: --analysis interval --globals warrow-per-origin
 // Same program as 10-strict_loop_enter.vimp under the warrow-per-origin update rule.
-// Regression for issue #160: an explicit --solver used to have no
+// Regression for issue #160: an explicit --globals used to have no
 // reachability flag, so the NOWARN check below printed a vacuous PROVED for
-// the bottom state instead of being suppressed. analyse_config_with_state
-// now carries that flag at every solver, so this agrees with the default
-// route exactly.
+// the bottom state instead of being suppressed. Every globals rule now reads
+// reachability from its own solved table, so this agrees with the default
+// rule exactly.
 global g;
 fun main() {
   x = 0;

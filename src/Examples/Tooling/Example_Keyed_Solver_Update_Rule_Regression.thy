@@ -67,7 +67,7 @@ text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issu
 
 definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_eqs =
-     routed_node_rhs keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs keyed_pred_sel call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_tree_at (keyed_step a) src ())
        keyed_cmb keyed_extra keyed_dummy_cfg bot bot bot"
 
@@ -77,7 +77,7 @@ text \<open>The buffered generator: the same two predecessor contributions, fold
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve_c\<close>.\<close>
 definition keyed_multiwrite_buffered_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_buffered_eqs =
-     routed_node_rhs_buffered keyed_pred_sel (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs_buffered keyed_pred_sel call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_contribution_tree_at (keyed_step a) src ())
        keyed_cmb_c keyed_extra keyed_dummy_cfg bot bot bot"
 
@@ -116,7 +116,7 @@ definition merge_cfg :: cfg where
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
-     routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        (\<lambda>ctx' src a. dg_edge_contribution_tree_at (merge_step a) src ())
        keyed_cmb_c keyed_extra merge_cfg bot bot bot"
 

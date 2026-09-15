@@ -1,0 +1,158 @@
+/* What is abstract interpretation? */
+
+:where(.scene-runs) .panel-title {
+  font-size: 16px !important;
+  font-weight: 700;
+  fill: var(--primary) !important;
+}
+
+:where(.scene-runs) .panel-note {
+  fill: var(--text-muted) !important;
+  font-size: 13px !important;
+}
+
+:where(.scene-runs) .bad-zone {
+  fill: url(#bad-hatch);
+  stroke: var(--danger);
+}
+
+:where(.scene-runs) .hatch-line {
+  stroke: var(--danger);
+  stroke-opacity: 0.3;
+  stroke-width: 3;
+}
+
+:where(.scene-runs) .bad-label {
+  fill: var(--danger) !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+:where(.scene-runs) .run {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+:where(.scene-runs) .run.untested {
+  stroke: var(--text-faint);
+  stroke-dasharray: 6 6;
+  animation: dash-flow 1.4s linear infinite;
+}
+
+:where(.scene-runs) .run.faint {
+  stroke-opacity: 0.45;
+  stroke-width: 2;
+}
+
+:where(.scene-runs) .pass-marks circle {
+  fill: var(--success);
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+:where(.scene-runs) .untested-label {
+  fill: var(--text-muted) !important;
+  font-style: italic;
+}
+
+:where(.scene-runs) .probe {
+  fill: var(--accent);
+  opacity: 0;
+  animation: probe-run 5s ease-in-out infinite;
+}
+
+:where(.scene-runs) .probe.p1 {
+  offset-path: path("M20 200 C 90 184, 150 190, 215 163 S 320 146, 370 152");
+}
+
+:where(.scene-runs) .probe.p2 {
+  offset-path: path("M20 200 C 80 206, 160 174, 225 181 S 320 192, 370 186");
+  animation-delay: 1.25s;
+}
+
+:where(.scene-runs) .probe.p3 {
+  offset-path: path("M20 200 C 110 158, 175 158, 240 139 S 330 126, 370 130");
+  animation-delay: 2.5s;
+}
+
+:where(.scene-runs) .probe.p4 {
+  offset-path: path("M20 200 C 95 214, 180 208, 245 212 S 330 205, 370 208");
+  animation-delay: 3.75s;
+}
+
+@keyframes probe-run {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  60% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+:where(.scene-runs) .envelope {
+  fill: rgb(23 75 87 / 0.14);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
+:where(.scene-runs) .envelope-label {
+  fill: var(--primary) !important;
+  font-weight: 700;
+}
+
+:where(.scene-runs) .gap-line {
+  stroke: var(--success);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+:where(.scene-runs) .gap-label {
+  fill: var(--success) !important;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+
+:where(.scene-runs) .sweep {
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0.7;
+  animation: sweep 5s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0% {
+    transform: translateX(0);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.7;
+  }
+  80% {
+    transform: translateX(350px);
+    opacity: 0.7;
+  }
+  90%,
+  100% {
+    transform: translateX(350px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.scene-runs) .probe,
+  :where(.scene-runs) .sweep {
+    display: none;
+  }
+}

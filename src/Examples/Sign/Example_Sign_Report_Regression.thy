@@ -1,6 +1,6 @@
 theory Example_Sign_Report_Regression
   imports
-    "Voblint_Analysis_Sign.Sign_Checks"
+    "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -9,7 +9,9 @@ hide_const phase.N
 section \<open>Four whole-program runs Sign's report has to keep getting right\<close>
 
 text \<open>
-  Four regression fixtures over \<^const>\<open>analyse_sign_report\<close>: each is a whole VIMP program
+  Four regression fixtures over \<open>sign_join_report\<close>, the check report of Sign's
+  unit-context registration \<open>sign_rule\<close> at \<^const>\<open>Globals_Join\<close> and the program's
+  declared globals: each is a whole VIMP program
   the analysis runs end to end, with a \<^verbatim>\<open>by eval\<close> assertion pinning the
   verdicts it must produce. Two pin what carrying the whole abstract state in \<open>D\<close> buys ---
   a global assigned in a callee read back exactly at the caller, and a call whose argument
@@ -18,6 +20,9 @@ text \<open>
   procedure, and one procedure called from two sites. Each fixture's own comment names the
   mechanism it isolates.
 \<close>
+
+abbreviation sign_join_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "sign_join_report p \<equiv> sign_rule.report Globals_Join (declared_global p) p"
 
 subsection \<open>Base-style flow-sensitive global regressions\<close>
 
@@ -48,8 +53,8 @@ text \<open>
 
 lemma sign_flow_sensitive_global_result:
   "(Statement 4, Less (N 0) (V (STR ''Gx'')), Check_Proved)
-     \<in> set (analyse_sign_report sign_flow_sensitive_global_prog)"
-  by eval
+     \<in> set (sign_join_report sign_flow_sensitive_global_prog)"
+  unfolding sign_rule.report_def by eval
 
 definition sign_dead_branch_bot_prog :: imp_prog where
   "sign_dead_branch_bot_prog = program { global Gx;
@@ -70,8 +75,8 @@ text \<open>
 
 lemma sign_dead_branch_bot_result:
   "(Statement 6, Less (N 0) (V (STR ''Gx'')), Check_Proved)
-     \<in> set (analyse_sign_report sign_dead_branch_bot_prog)"
-  by eval
+     \<in> set (sign_join_report sign_dead_branch_bot_prog)"
+  unfolding sign_rule.report_def by eval
 
 subsection \<open>Recursion and repeated call sites\<close>
 
@@ -117,12 +122,12 @@ text \<open>
 \<close>
 
 lemma sign_factorial_result:
-  "set (analyse_sign_report sign_factorial_prog) =
+  "set (sign_join_report sign_factorial_prog) =
      {(Statement 0, Less (N 0) (V (STR ''n'')), Check_Unknown),
       (Statement 4, Less (N 0) (V (STR ''r'')), Check_Proved),
       (Statement 9, Less (N 0) (V (STR ''a'')), Check_Proved),
       (Statement 10, Less (N 0) (V (STR ''b'')), Check_Proved)}"
-  by eval
+  unfolding sign_rule.report_def by eval
 
 text \<open>
   \<open>sign_two_call_sites_prog\<close> isolates repeated evaluation of one callee entry node without
@@ -152,9 +157,9 @@ definition sign_two_call_sites_prog :: imp_prog where
      }"
 
 lemma sign_two_call_sites_result:
-  "set (analyse_sign_report sign_two_call_sites_prog) =
+  "set (sign_join_report sign_two_call_sites_prog) =
      {(Statement 4, Less (N 0) (V (STR ''a'')), Check_Proved),
       (Statement 5, Less (N 0) (V (STR ''b'')), Check_Proved)}"
-  by eval
+  unfolding sign_rule.report_def by eval
 
 end

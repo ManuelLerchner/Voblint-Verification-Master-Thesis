@@ -1,0 +1,69 @@
+// PARAM: --analysis interval --context none --globals per-origin
+// Backs the per-origin cell of the site's Globals guide table: g receives [0,9] from the loop, and the check is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: g / unit
+//     g_pp1_ctx0
+//     g_exit_g_ctx0
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//   cluster_ctx_1: main / unit
+//     main_pp3_ctx0
+//     main_pp6_ctx0
+//     main_exit_main_ctx0
+//     main_pp2_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   g_pp1_ctx0: pp1
+//       x=[0,9]
+//   g_exit_g_ctx0: exit_g
+//       x=[0,9]
+//   main_pp3_ctx0: pp3
+//       x=[0,10]
+//   main_pp6_ctx0: pp6
+//       x=[10,10]
+//   main_exit_main_ctx0: exit_main
+//       x=[10,10]
+//   g_pp0_ctx0: pp0 [proved]
+//       x=[0,9]
+//       check x < 10
+//   main_pp2_ctx0: pp2
+//       x=⊤
+//   main_pp4_ctx0: pp4
+//       x=[0,9]
+//   g_entry_g_ctx0: entry_g
+//       x=[0,9]
+//   main_pp5_ctx0: pp5
+//       x=[0,9]
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
+//
+// edges:
+//   g_pp0_ctx0 -> g_pp1_ctx0: check(x < 10)
+//   g_pp1_ctx0 -> g_exit_g_ctx0: return
+//   main_pp2_ctx0 -> main_pp3_ctx0: x := 0
+//   main_pp3_ctx0 -> main_pp4_ctx0: [x < 10]
+//   main_pp3_ctx0 -> main_pp6_ctx0: ![x < 10]
+//   main_pp5_ctx0 -> main_pp3_ctx0: x := x + 1
+//   main_pp6_ctx0 -> main_exit_main_ctx0: return
+//   g_entry_g_ctx0 -> g_pp0_ctx0: body(g)
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   main_pp4_ctx0 -> g_entry_g_ctx0: enter g(x)
+//   g_exit_g_ctx0 -> main_pp5_ctx0: combine
+//   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return g
+// EXPECT-GRAPH-END
+
+fun g(x) {
+  __voblint_check(x < 10); // PROVED
+}
+
+fun main() {
+  x = 0;
+  while (x < 10) {
+    g(x);
+    x = x + 1;
+  }
+}

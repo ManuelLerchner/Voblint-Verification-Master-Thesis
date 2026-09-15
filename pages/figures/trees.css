@@ -1,0 +1,153 @@
+/* What an equation is made of: strategy trees */
+
+:where(.scene-trees) .trees-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+:where(.scene-trees) .trees-tabs button[aria-selected="true"] {
+  color: #ffffff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+:where(.scene-trees) .trees-tabs button code {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+}
+
+:where(.scene-trees) .trees-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+:where(.scene-trees) .trees-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(0, 0.95fr);
+  gap: 16px;
+}
+
+:where(.scene-trees) .trees-panel {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-trees) .trees-code,
+:where(.scene-trees) .trees-datatype {
+  margin: 0 0 14px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+:where(.scene-trees) .trees-code span {
+  display: inline-block;
+  min-width: 100%;
+  padding-inline: 4px;
+  border-radius: 4px;
+  cursor: default;
+  transition: background 200ms ease;
+}
+
+:where(.scene-trees) .trees-code span.is-current {
+  background: var(--accent-soft);
+}
+
+:where(.scene-trees) .trees-datatype {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.scene-trees .trees-svg {
+  max-width: 360px;
+}
+
+:where(.scene-trees) .tree-node rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.8;
+  transition:
+    fill 200ms ease,
+    stroke 200ms ease;
+}
+
+:where(.scene-trees) .tree-side rect {
+  stroke: var(--accent);
+  stroke-dasharray: 5 3;
+}
+
+:where(.scene-trees) .tree-queryg rect {
+  stroke: #6b5ca5;
+}
+
+:where(.scene-trees) .tree-answer rect {
+  fill: var(--success-soft);
+  stroke: var(--success);
+}
+
+:where(.scene-trees) .tree-node.is-current rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.scene-trees .tree-node text {
+  fill: var(--text);
+  font: 600 12.5px var(--mono);
+  text-anchor: middle;
+}
+
+:where(.scene-trees) .tree-edge line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+
+.scene-trees .tree-edge text {
+  fill: var(--text-muted);
+  font: italic 12px var(--mono);
+}
+
+:where(.scene-trees) .trees-walk {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 0.88rem;
+}
+
+:where(.scene-trees) .trees-walk li {
+  color: var(--text-muted);
+}
+
+:where(.scene-trees) .trees-walk li.is-current {
+  color: var(--text);
+}
+
+:where(.scene-trees) .trees-post p {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  background: var(--success-soft);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+}
+
+@media (max-width: 1100px) {
+  :where(.scene-trees) .trees-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

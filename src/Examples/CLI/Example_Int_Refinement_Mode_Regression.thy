@@ -6,7 +6,6 @@ theory Example_Int_Refinement_Mode_Regression
     "Voblint_Analysis_Int.Int_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_Int.Exec_Int_DG_Run"
-    "Voblint_CLI.Analyse_Dispatch"
 begin
 
 text \<open>
@@ -174,25 +173,5 @@ text \<open>
   survives parsing, compilation, solving, and report generation.
 \<close>
 
-section \<open>Production dispatcher coverage\<close>
-
-text \<open>
-  The CLI fixes \<open>Int_Analysis\<close> at \<open>Refine_Fixpoint\<close>. These witnesses check that
-  every published solver choice reaches the dispatcher. Mode-specific abstract
-  values stay in \<open>Exec_Int_DG_Run\<close>, avoiding repeated solves across the
-  refinement-mode and solver axes.
-\<close>
-lemma analyse_with_solver_int_default_unchanged:
-  "analyse_with_solver Int_Analysis Solver_Warrow int_ex_prog =
-   Some (analyse Int_Analysis int_ex_prog)"
-  by simp
-
-lemma analyse_with_solver_int_join_returns_result:
-  "analyse_with_solver Int_Analysis Solver_Join int_ex_prog ~= None"
-  by eval
-
-lemma analyse_with_solver_int_per_origin_returns_result:
-  "analyse_with_solver Int_Analysis Solver_PerOrigin int_ex_prog ~= None"
-  by eval
 
 end

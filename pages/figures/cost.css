@@ -1,0 +1,86 @@
+/* The price of precision */
+
+:where(.scene-cost) .cost-title {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+:where(.scene-cost) .cost-sub {
+  margin: 2px 0 10px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+:where(.scene-cost) .cost-chart {
+  max-width: 560px !important;
+}
+
+:where(.scene-cost) .cost-grid-lines line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+:where(.scene-cost) .cost-axis text,
+:where(.scene-cost) .bar-label {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+}
+
+:where(.scene-cost) .bar-label,
+:where(.scene-cost) .bar-value,
+:where(.scene-cost) .bar-verdict {
+  text-anchor: middle;
+}
+
+:where(.scene-cost) .bar rect {
+  fill: var(--primary);
+  transition: fill 150ms ease;
+}
+
+:where(.scene-cost) .bar.alt rect {
+  fill: #4f7c85;
+}
+
+:where(.scene-cost) .bar.dip rect {
+  fill: #7fa3aa;
+}
+
+:where(.scene-cost) .bar:hover rect {
+  fill: var(--accent);
+}
+
+:where(.scene-cost) .bar-value {
+  fill: var(--text) !important;
+  font-size: 13px !important;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .bar-verdict {
+  font-size: 16px !important;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .bar-verdict.ok {
+  fill: var(--success) !important;
+}
+
+:where(.scene-cost) .bar-verdict.meh {
+  fill: var(--warning) !important;
+}
+
+:where(.scene-cost) .cost-note {
+  fill: var(--text-muted) !important;
+  font-size: 12px !important;
+  font-style: italic;
+}
+
+:where(.scene-cost) .cost-note.meh {
+  fill: var(--warning) !important;
+  font-style: normal;
+  font-weight: 700;
+}
+
+:where(.scene-cost) .cost-note-line {
+  stroke: var(--border-strong);
+}

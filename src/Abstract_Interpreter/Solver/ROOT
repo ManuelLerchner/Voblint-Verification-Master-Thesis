@@ -19,3 +19,5 @@ session Voblint_Solver in "." = "TD" +
        to solver-domain membership to part_post_solution, proved once inside
        TD_side_upd_rule. *)
     TD_Solver_Bridge
+    (* The global update rule as a value: one solver interpretation for all four. *)
+    Globals_Rule

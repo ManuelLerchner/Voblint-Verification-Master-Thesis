@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --solver warrow
+// PARAM: --analysis interval --globals warrow
 // n is concretely 1 or 2, so n < 10 genuinely holds -- but Apinis warrowing
 // cannot establish it. Mechanism: p's single FunctionEntry seed is written by
 // two distinct call-site origins. The first write leaves the slot at [1,1];
@@ -9,7 +9,7 @@
 //
 // Not a limitation of widening as such: 15-solver-choice/precision/
 // 06-warrow_per_origin_keeps_bound.vimp is the same program under
-// --solver warrow-per-origin, which widens per origin and answers PROVED.
+// --globals warrow-per-origin, which widens per origin and answers PROVED.
 fun p(n) {
   __voblint_check(n < 10); // UNKNOWN
 }

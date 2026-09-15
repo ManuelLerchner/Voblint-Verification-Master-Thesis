@@ -1,9 +1,8 @@
 section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Entry"
-          "Voblint_Analysis_Interval.Interval_Checks"
-          "Voblint_Analysis_Sign.Sign_Checks" "Voblint_CLI.Analysis_Graph_Export"
+  imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Analyses"
+          "Voblint_Analysis_Sign.Sign_Classify"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
@@ -14,10 +13,11 @@ hide_const phase.N
 text \<open>
   The Interval analogue of \<open>Example_Checks_Store_Only\<close> (Sign): exercises
   \<^const>\<open>checks_proven\<close> against a computed Interval post-solution, discharged
-  node-locally through \<open>Interval_Checks\<close> rather than by forwarding stores to
-  the procedure exit. Unlike the Sign example, the checks sit inside a guard
-  that bounds \<open>x\<close> on both sides (\<open>0 < x \<and> x < 10\<close>), so Interval's numeric
-  bounds --- not just its sign --- narrow the checked variable.
+  node-locally through \<open>Interval_Classify\<close> rather than by forwarding stores to
+  the procedure exit. The run is Interval's unit-context registration
+  \<open>interval_rule\<close> at \<^const>\<open>Globals_Join\<close>. Unlike the Sign example, the checks sit
+  inside a guard that bounds \<open>x\<close> on both sides (\<open>0 < x \<and> x < 10\<close>), so Interval's
+  numeric bounds --- not just its sign --- narrow the checked variable.
 \<close>
 
 text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
@@ -60,18 +60,18 @@ lemma checks_ivl_ex_calls_eval: "calls (prog_cfg checks_ivl_ex_program) = {}"
         special_pname_nondet_int_def main_body_def prog_main_name_def)
 
 lemma checks_ivl_ex_solver_terminates:
-  "interval_conf_terminates_prog checks_ivl_ex_gs checks_ivl_ex_program"
-  by (rule interval_conf_terminates_prog_via_solve_c) eval
+  "interval_rule.terminates Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
+  by (rule interval_rule.terminates_of_solve_c) (simp only: interval_rule.root_query_def, eval)
 
 lemma checks_ivl_ex_entry_cov:
   "(cfg_entry (prog_cfg checks_ivl_ex_program), ())
-     \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
   by eval
 
 lemma checks_ivl_ex_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program).
-     (u, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program) \<longrightarrow>
-     (w, ()) \<in> fst (interval_conf_sol_prog checks_ivl_ex_gs checks_ivl_ex_program)"
+     (u, ()) \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program
+       \<longrightarrow> (w, ()) \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
   by eval
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
@@ -80,12 +80,12 @@ definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
        (cinit_stores checks_ivl_ex_gs) v"
 
 text \<open>The computed Interval environment at an arbitrary node, read out of the
-  routed-unit solved table \<^const>\<open>analyse_interval_result_join_for\<close> the
+  routed-unit solved table \<open>interval_rule.result\<close> the
   always-join report also reads, with an unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
   "checks_ivl_ex_env v =
      (case lookup_context
-       (analyse_interval_result_join_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
+       (interval_rule.result Globals_Join checks_ivl_ex_gs checks_ivl_ex_program) v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 lemma checks_ivl_ex_intra_eval:
@@ -110,9 +110,9 @@ lemma checks_ivl_ex_entry_eval:
   by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma checks_ivl_ex_node_sound: "checks_ivl_ex_reach v \<le> \<lbrakk>checks_ivl_ex_env v\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def interval_rule.state_at_unfold[symmetric]
   using checks_ivl_ex_fwd_ok_ball
-  by (intro analyse_interval_result_join_node_sound_for checks_ivl_ex_solver_terminates
+  by (intro interval_rule.result_node_sound_closure checks_ivl_ex_solver_terminates
         checks_ivl_ex_entry_cov)
      (auto simp: checks_ivl_ex_calls_eval)
 
@@ -194,10 +194,10 @@ qed
 subsection \<open>Whole-program check report\<close>
 
 lemma checks_ivl_ex_report_eval:
-  "analyse_interval_report_join_for checks_ivl_ex_gs checks_ivl_ex_program =
+  "interval_rule.report Globals_Join checks_ivl_ex_gs checks_ivl_ex_program =
      [(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved),
       (Statement 3, Less (V (STR ''x'')) (N 0), Check_Refuted),
       (Statement 4, Eq (V (STR ''x'')) (N 5), Check_Unknown)]"
-  by eval
+  unfolding interval_rule.report_def by eval
 
 end

@@ -1,0 +1,31 @@
+{
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": { "includes": ["pages/**/*.js", "pages/**/*.css"] },
+  "formatter": { "indentStyle": "space", "lineWidth": 100 },
+  "linter": {
+    "rules": {
+      "complexity": {
+        // The site's figures override the base theme per component on purpose.
+        "noImportantStyles": "off"
+      },
+      "style": {
+        // Stylesheets are ordered by component, not by selector specificity.
+        "noDescendingSpecificity": "off"
+      }
+    }
+  },
+  // The explainer page loads explainer.js and each figures/*.js as classic
+  // scripts sharing one global scope.
+  "overrides": [
+    {
+      // Its helpers are called from the figure scripts.
+      "includes": ["pages/explainer.js"],
+      "linter": { "rules": { "correctness": { "noUnusedVariables": "off" } } }
+    },
+    {
+      // A top-level block keeps each figure's names out of the shared scope.
+      "includes": ["pages/figures/*.js"],
+      "linter": { "rules": { "complexity": { "noUselessLoneBlockStatements": "off" } } }
+    }
+  ]
+}

@@ -41,7 +41,10 @@ def main() -> None:
     labels = [label(r) for r in results]
 
     fig, (ax_box, ax_hist) = plt.subplots(
-        2, 1, sharex=True, figsize=(8, 3.5 + 0.8 * len(results)),
+        2,
+        1,
+        sharex=True,
+        figsize=(8, 3.5 + 0.8 * len(results)),
         height_ratios=[len(results), 3],
     )
     ax_box.boxplot(times, orientation="horizontal", tick_labels=labels, showmeans=True)
@@ -50,7 +53,7 @@ def main() -> None:
 
     # Shared bin edges keep the per-command histograms comparable.
     edges = np.histogram_bin_edges(np.concatenate(times), bins="auto")
-    for series, name in zip(times, labels):
+    for series, name in zip(times, labels, strict=True):
         ax_hist.hist(series, bins=edges, alpha=0.5, label=name)
     ax_hist.set_xlabel("Time [s]")
     ax_hist.set_ylabel("Runs")

@@ -23,72 +23,66 @@
 // every other variable and is analyzed flow-sensitively through calls (see
 // 04-globals/precision/02-global_var.vimp). So g == 42 and h == 1 exactly,
 // and the paper's imprecision has no occasion to arise. This program also
-// answers identically under all four of --solver
+// answers identically under all four of --globals
 // join|per-origin|warrow|warrow-per-origin: nothing about a `global` here
 // exercises the update rule at all. The unknown that does is a procedure's
 // FunctionEntry seed, written once per call site, and on it the paper's
 // widening loss reproduces exactly -- this group's 02- and 03- cases.
 // EXPECT-GRAPH-BEGIN
 // clusters:
-//   cluster_ctx_0:
+//   cluster_ctx_0: f / unit
+//     f_pp1_ctx0
+//     f_pp2_ctx0
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_1: main / unit
 //     main_pp4_ctx0
 //     main_pp5_ctx0
 //     main_pp8_ctx0
 //     main_pp9_ctx0
 //     main_pp10_ctx0
-//     main_result_main_ctx0
-//     main_entry_main_ctx0
+//     main_exit_main_ctx0
 //     main_pp3_ctx0
 //     main_pp6_ctx0
 //     main_pp7_ctx0
-//   cluster_ctx_1:
-//     f_pp1_ctx1
-//     f_pp2_ctx1
-//     f_pp0_ctx1
-//     f_entry_f_ctx1
-//     f_result_f_ctx1
+//     main_entry_main_ctx0
 //
 // nodes:
-//   f_pp1_ctx1: pp1
-//   f_pp2_ctx1: pp2
+//   f_pp1_ctx0: pp1
+//   f_pp2_ctx0: pp2
+//   f_exit_f_ctx0: exit_f
 //   main_pp4_ctx0: pp4
 //   main_pp5_ctx0: pp5
-//   main_pp8_ctx0: pp8
-//       check h==1
-//       g=[42,42]
-//       h=[1,1]
-//   main_pp9_ctx0: pp9
-//       check g<43
-//       g=[42,42]
-//       h=[1,1]
+//   main_pp8_ctx0: pp8 [proved]
+//       check h == 1
+//   main_pp9_ctx0: pp9 [proved]
+//       check g < 43
 //   main_pp10_ctx0: pp10
-//   main_result_main_ctx0: exit_main
-//   f_pp0_ctx1: pp0
-//   main_entry_main_ctx0: entry_main
+//   main_exit_main_ctx0: exit_main
+//   f_pp0_ctx0: pp0
 //   main_pp3_ctx0: pp3
 //   main_pp6_ctx0: pp6
-//   f_entry_f_ctx1: entry_f
-//   main_pp7_ctx0: pp7
-//       check g==42
-//       g=[42,42]
-//       h=[1,1]
-//   f_result_f_ctx1: exit_f
+//   f_entry_f_ctx0: entry_f
+//   main_pp7_ctx0: pp7 [proved]
+//       check g == 42
+//   main_entry_main_ctx0: entry_main
 //
 // edges:
-//   f_pp1_ctx1 -> f_pp2_ctx1: g := 42
-//   f_pp2_ctx1 -> f_result_f_ctx1: return
+//   f_pp0_ctx0 -> f_pp1_ctx0: h := h + 1
+//   f_pp1_ctx0 -> f_pp2_ctx0: g := 42
+//   f_pp2_ctx0 -> f_exit_f_ctx0: return
+//   main_pp3_ctx0 -> main_pp4_ctx0: g := 1
 //   main_pp4_ctx0 -> main_pp5_ctx0: h := 0
 //   main_pp5_ctx0 -> main_pp6_ctx0: g := -17
-//   main_pp8_ctx0 -> main_pp9_ctx0: check(h==1)
-//   main_pp9_ctx0 -> main_pp10_ctx0: check(g<43)
-//   main_pp10_ctx0 -> main_result_main_ctx0: terminate
-//   f_pp0_ctx1 -> f_pp1_ctx1: h := h+1
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(g == 42)
+//   main_pp8_ctx0 -> main_pp9_ctx0: check(h == 1)
+//   main_pp9_ctx0 -> main_pp10_ctx0: check(g < 43)
+//   main_pp10_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
 //   main_entry_main_ctx0 -> main_pp3_ctx0: body(main)
-//   main_pp3_ctx0 -> main_pp4_ctx0: g := 1
-//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
-//   main_pp7_ctx0 -> main_pp8_ctx0: check(g==42)
-//   main_pp6_ctx0 -> f_entry_f_ctx1: enter f()
-//   f_result_f_ctx1 -> main_pp7_ctx0: combine
+//   main_pp6_ctx0 -> f_entry_f_ctx0: enter f()
+//   f_exit_f_ctx0 -> main_pp7_ctx0: combine
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 

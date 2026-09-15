@@ -2,22 +2,24 @@ theory Example_Arithmetic_Diagnostics_Regression
   imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Run"
 begin
 
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 section \<open>Arithmetic diagnostics through the public CLI operation\<close>
 
 text \<open>
   These executable witnesses inspect the same answer as the text and HTML reports.
-  Keeping rejection as \<^const>\<open>None\<close> prevents an unsupported configuration
-  from passing a silence test. These regressions pin concrete output examples;
+  Keeping a malformed program as \<^const>\<open>None\<close> prevents it from passing a silence
+  test. These regressions pin concrete output examples;
   they complement the general arithmetic safety theorem.
 \<close>
 
 definition arithmetic_example_result where
   "arithmetic_example_result p =
-    (case run_voblint Interval_Analysis None Ctx_EntryState View_Report p of
-       Analysed out \<Rightarrow> Some
+    (case run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState p of
+       Analysed res \<Rightarrow> Some
          (map (\<lambda>d. (arithmetic_operation (diagnostic_obligation d),
-                      diagnostic_verdict d)) (out_diagnostics out),
-          map row_verdict (out_checks out))
+                      diagnostic_verdict d)) (res_diagnostics res),
+          map check_verdict (res_checks res))
      | _ \<Rightarrow> None)"
 
 subsection \<open>One source guard, one finding, and continued total execution\<close>

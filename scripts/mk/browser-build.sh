@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile the browser adapter and generated analyzer export to JavaScript.
+# Compile the browser adapter and generated analyzer export to WebAssembly.
 set -euo pipefail
 
 if [ "${VOBLINT_OPAM_EXEC:-0}" != "1" ] && command -v opam >/dev/null 2>&1; then
@@ -10,7 +10,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$REPO_ROOT"
-dune build cli/browser_main.bc.js
-mkdir -p build/browser
-cp _build/default/cli/browser_main.bc.js build/browser/voblint.js
-echo "Browser analyzer: $REPO_ROOT/build/browser/voblint.js"
+dune build cli/voblint_web.bc.wasm.js
+
+OUT="$REPO_ROOT/build/browser"
+GENERATED="$REPO_ROOT/_build/default/cli"
+
+rm -rf "$OUT"
+mkdir -p "$OUT"
+
+cp \
+  "$GENERATED/voblint_web.bc.wasm.js" \
+  "$OUT/voblint_web.bc.wasm.js"
+
+cp -R \
+  "$GENERATED/voblint_web.bc.wasm.assets" \
+  "$OUT/voblint_web.bc.wasm.assets"
+
+echo "Browser analyzer:"
+echo "  $OUT/voblint_web.bc.wasm.js"
+echo "  $OUT/voblint_web.bc.wasm.assets/"

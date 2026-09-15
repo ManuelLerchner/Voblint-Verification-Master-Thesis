@@ -1,5 +1,5 @@
 #import "../lib/math.typ": *
-#import "../lib/theorems.typ": theorem, definition
+#import "../lib/theorems.typ": definition, theorem
 #import "@preview/glossarium:0.5.10": gls, glspl
 
 = Background <ch:background>

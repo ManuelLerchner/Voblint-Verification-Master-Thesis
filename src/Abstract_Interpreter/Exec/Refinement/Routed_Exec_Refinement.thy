@@ -130,13 +130,13 @@ lemma cmb_st_side_free_at_gk0: "sides_of_rhs (cmb_st g route' ctx' ca cc ex) \<t
 
 theorem pp_st:
   assumes pp: "part_post_solution
-     (routed_node_rhs_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
         intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_tree seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) route_st
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
         intra_st (routed_call_tree spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_tree seed_key)
         g bot0 s0d s0g)

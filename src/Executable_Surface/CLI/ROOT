@@ -2,8 +2,8 @@ chapter Voblint
 
 session Voblint_CLI in "." = "Voblint_Analysis_Int" +
   description
-    "Production CLI-facing surface: the AnalysisConfig-driven dispatcher over
-     the five domains' entry points, and the graph export a renderer consumes,
+    "Production CLI-facing surface: run_voblint over the five domains, every
+     global update rule and every context policy, with its soundness theorems,
      independent of the demonstration and regression theories in
      Voblint_Examples"
   sessions
@@ -12,29 +12,10 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
     "HOL-Library"
-  directories
-    "generated"
   theories
     Analysis_Config
     Dispatch_Carrier
-    Config_Tables
-    Dispatch_Tables
-    Analyse_Dispatch
-    Dispatch_Config
-
-    (* A solved result as a graph, and the readings handed to a renderer.
-       Domain-independent, but used by no domain -- only by the surface below. *)
-    Analysis_Graph
-    Analysis_Graph_Build
-    Analysis_Graph_Wf
-    Analysis_Graph_Naming
-    Analysis_Graph_Export
-
-    State_Report_Graph
-    State_Report_Entry_Ctx
-    State_Report_Call_String
     Analysis_Run
     Analysis_Run_Sound
     Analysis_Run_Ctx_Sound
-    Analysis_Run_Solver_Sound
     Analysis_Certified

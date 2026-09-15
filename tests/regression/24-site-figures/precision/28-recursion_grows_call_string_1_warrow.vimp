@@ -1,0 +1,82 @@
+// PARAM: --analysis interval --context call-string --context-depth 1 --globals warrow
+// Backs the "Endless" program of the figure "A call that never stops calling"
+// (call string 1, warrow): the first depths keep exact contexts and the deepest
+// one is widened to [k,+inf], so x >= 0 is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_exit_main_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: f / call-string=pp1
+//     f_exit_f_ctx0
+//     f_pp0_ctx0
+//     f_pp1_ctx0
+//     f_pp2_ctx0
+//     f_entry_f_ctx0
+//   cluster_ctx_2: f / call-string=pp3
+//     f_exit_f_ctx1
+//     f_pp0_ctx1
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_entry_f_ctx1
+//
+// nodes:
+//   main_exit_main_ctx0: exit_main [unreachable]
+//       unreachable
+//   main_pp3_ctx0: pp3
+//   main_pp4_ctx0: pp4 [unreachable]
+//       unreachable
+//   main_entry_main_ctx0: entry_main
+//   f_exit_f_ctx0: exit_f [unreachable]
+//       unreachable
+//   f_pp0_ctx0: pp0 [proved]
+//       x=[1,+∞]
+//       check x >= 0
+//   f_pp1_ctx0: pp1
+//       x=[1,+∞]
+//   f_pp2_ctx0: pp2 [unreachable]
+//       unreachable
+//   f_entry_f_ctx0: entry_f
+//       x=[1,+∞]
+//   f_exit_f_ctx1: exit_f [unreachable]
+//       unreachable
+//   f_pp0_ctx1: pp0 [proved]
+//       x=[0,0]
+//       check x >= 0
+//   f_pp1_ctx1: pp1
+//       x=[0,0]
+//   f_pp2_ctx1: pp2 [unreachable]
+//       unreachable
+//   f_entry_f_ctx1: entry_f
+//       x=[0,0]
+//
+// edges:
+//   f_pp0_ctx0 -> f_pp1_ctx0: check(x >= 0)
+//   f_pp0_ctx1 -> f_pp1_ctx1: check(x >= 0)
+//   f_pp2_ctx0 -> f_exit_f_ctx0: return
+//   f_pp2_ctx1 -> f_exit_f_ctx1: return
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
+//   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
+//   main_entry_main_ctx0 -> main_pp3_ctx0: body(main)
+//   f_pp1_ctx0 -> f_entry_f_ctx0: enter f(x + 1)
+//   f_exit_f_ctx0 -> f_pp2_ctx0: combine
+//   f_pp1_ctx0 -> f_pp2_ctx0: call-to-return f
+//   f_pp1_ctx1 -> f_entry_f_ctx0: enter f(x + 1)
+//   f_exit_f_ctx0 -> f_pp2_ctx1: combine
+//   f_pp1_ctx1 -> f_pp2_ctx1: call-to-return f
+//   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(0)
+//   f_exit_f_ctx1 -> main_pp4_ctx0: combine
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+fun f(x) {
+  __voblint_check(x >= 0); // PROVED
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}

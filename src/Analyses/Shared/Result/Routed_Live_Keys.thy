@@ -19,18 +19,19 @@ text \<open>
 subsection \<open>What a routed equation reads\<close>
 
 lemma dep_aux_routed_node_rhs:
-  "dep_aux \<tau> (routed_node_rhs pred_sel gkey route it cmb extra g bot0 s0d s0g (v, cx))
-     = (\<Union>t\<in>set (routed_contribution_trees pred_sel route it cmb extra g cx v). dep_aux \<tau> t)"
+  "dep_aux \<tau> (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, cx))
+     = (\<Union>t\<in>set (routed_contribution_trees pred_sel site_sel route it cmb extra g cx v).
+          dep_aux \<tau> t)"
   by (cases "v = cfg_entry g")
      (simp_all add: routed_node_rhs_def Let_def dep_aux_side_rhs_fold_dg_char)
 
 lemma dep_L_routed_node_rhs_intra:
   assumes fin: "finite (intra g)" and e: "(u, a, v) \<in> intra g"
-  shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs intra_predecessor_addr_list gkey route
+  shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs intra_predecessor_addr_list call_site_list gkey route
             (\<lambda>cx src a. dg_spec_edge_tree S a src slot) cmb extra g bot0 s0d s0g) \<tau> (v, cx)"
 proof -
   have "dg_spec_edge_tree S a (Inl (u, cx)) slot
-          \<in> set (routed_contribution_trees intra_predecessor_addr_list route
+          \<in> set (routed_contribution_trees intra_predecessor_addr_list call_site_list route
                    (\<lambda>cx src a. dg_spec_edge_tree S a src slot) cmb extra g cx v)"
     using e fin
     by (force simp: routed_contribution_trees_def intra_predecessor_addr_list_def
@@ -52,7 +53,7 @@ lemma dep_aux_routed_call_tree:
 lemma routed_call_tree_mem:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
   shows "routed_call_tree S gk0 seed_key resolve is_bot route cx ca u k
-           \<in> set (routed_contribution_trees pred_sel route it
+           \<in> set (routed_contribution_trees pred_sel call_site_list route it
                     (routed_call_tree S gk0 seed_key resolve is_bot) extra g cx k)"
 proof -
   have "(u, ca) \<in> set (call_site_list g k)" using e fin by auto
@@ -61,7 +62,7 @@ qed
 
 lemma dep_L_routed_node_rhs_call_site:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-  shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel gkey route it
+  shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list gkey route it
             (routed_call_tree S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   have "Inl (u, cx) \<in> dep_aux \<tau> (routed_call_tree S gk0 seed_key resolve is_bot route cx ca u k)"
@@ -80,7 +81,7 @@ lemma dep_L_routed_node_rhs_callee_result:
     and res: "q \<in> set (resolve k u ca (locals (\<tau> (Inl (u, cx)))))"
     and nb: "\<not> is_bot (f (locals (\<tau> (Inl (u, cx)))))"
   shows "(FunctionResult q, route u cx (f (locals (\<tau> (Inl (u, cx))))) ca)
-           \<in> dep\<^sub>L (routed_node_rhs pred_sel gkey route it
+           \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list gkey route it
                 (routed_call_tree S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   let ?d = "locals (\<tau> (Inl (u, cx)))"
@@ -125,7 +126,8 @@ lemma sol_vars_dep_closed:
   assumes solves: "terminates (declared_global p) p"
     and x: "x \<in> sol_vars (declared_global p) p"
     and y: "y \<in> dep\<^sub>L
-       (routed_node_rhs intra_predecessor_addr_list (\<lambda>_. gk0) (route (declared_global p))
+       (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
+          (route (declared_global p))
           (\<lambda>ctx' src a. dg_spec_edge_tree (analysis_spec (declared_global p) p) a src (\<lambda>_. gk0))
           (routed_call_tree (analysis_spec (declared_global p) p) gk0 seed
              (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))

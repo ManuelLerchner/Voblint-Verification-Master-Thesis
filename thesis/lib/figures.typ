@@ -1,4 +1,4 @@
-#import "@preview/fletcher:0.5.8" as fletcher: diagram, node, edge
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #import "@preview/cetz:0.5.2"
 #import "@preview/commute:0.3.0" as commute
 #import "@preview/subpar:0.2.2"
@@ -9,20 +9,29 @@
 
 // ---------------------------------------------------------- trust status ---
 #let _status = (
-  proved:   (vb.proved,   vb.proved.lighten(88%)),
-  trusted:  (vb.trusted,  vb.trusted.lighten(86%)),
+  proved: (vb.proved, vb.proved.lighten(88%)),
+  trusted: (vb.trusted, vb.trusted.lighten(86%)),
   unproved: (vb.unproved, vb.unproved.lighten(90%)),
 )
 
 #let stage(pos, body, kind: "proved", ..args) = {
   let (line, fill) = _status.at(kind)
-  node(pos, align(center, body),
-       stroke: 0.9pt + line, fill: fill, corner-radius: 3pt,
-       inset: 7pt, ..args)
+  node(
+    pos,
+    align(center, body),
+    stroke: 0.9pt + line,
+    fill: fill,
+    corner-radius: 3pt,
+    inset: 7pt,
+    ..args,
+  )
 }
 
 #let flow(from, to, label: none, ..args) = edge(
-  from, to, "->", stroke: 0.8pt + vb.neutral,
+  from,
+  to,
+  "->",
+  stroke: 0.8pt + vb.neutral,
   label: if label != none {
     text(size: 0.62em, font: "DejaVu Sans Mono", fill: vb.proved, label)
   },
@@ -30,36 +39,58 @@
 )
 
 #let badge(body, color) = box(
-  inset: (x: 3pt, y: 1pt), radius: 2pt,
-  fill: color.lighten(88%), stroke: 0.6pt + color,
+  inset: (x: 3pt, y: 1pt),
+  radius: 2pt,
+  fill: color.lighten(88%),
+  stroke: 0.6pt + color,
   text(size: 0.7em, fill: color, body),
 )
-#let proved-badge   = badge([proved], vb.proved)
-#let trusted-badge  = badge([trusted], vb.trusted)
+#let proved-badge = badge([proved], vb.proved)
+#let trusted-badge = badge([trusted], vb.trusted)
 #let unproved-badge = badge([unverified], vb.unproved)
 
 // ------------------------------------------------------------- CFG nodes ---
 #let ppoint(pos, body, ..args) = node(
-  pos, body, shape: circle, stroke: 0.9pt + vb.neutral, fill: white,
-  inset: 4pt, ..args)
+  pos,
+  body,
+  shape: circle,
+  stroke: 0.9pt + vb.neutral,
+  fill: white,
+  inset: 4pt,
+  ..args,
+)
 
 #let entry-node(pos, body, ..args) = node(
-  pos, body, stroke: 0.9pt + vb.accent, fill: vb.accent.lighten(90%),
-  corner-radius: 2pt, inset: 5pt, ..args)
+  pos,
+  body,
+  stroke: 0.9pt + vb.accent,
+  fill: vb.accent.lighten(90%),
+  corner-radius: 2pt,
+  inset: 5pt,
+  ..args,
+)
 
 #let result-node = entry-node
 
 #let intra-edge(from, to, label: none, ..args) = edge(
-  from, to, "->", stroke: 0.9pt + vb.neutral,
+  from,
+  to,
+  "->",
+  stroke: 0.9pt + vb.neutral,
   label: if label != none { text(size: 0.62em, font: "DejaVu Sans Mono", label) },
-  ..args)
+  ..args,
+)
 
 #let call-edge(from, to, label: none, ..args) = edge(
-  from, to, "-->", stroke: (paint: vb.accent, thickness: 0.9pt, dash: "dashed"),
+  from,
+  to,
+  "-->",
+  stroke: (paint: vb.accent, thickness: 0.9pt, dash: "dashed"),
   label: if label != none {
     text(size: 0.62em, font: "DejaVu Sans Mono", fill: vb.accent, label)
   },
-  ..args)
+  ..args,
+)
 
 // ---------------------------------------------------------- solver state ---
 #let unk(pos, body, state: "stable", ..args) = {
@@ -72,39 +103,66 @@
   } else {
     (vb.muted, white)
   }
-  node(pos, body, shape: circle, stroke: 1pt + line, fill: fill,
-       inset: 4pt, ..args)
+  node(pos, body, shape: circle, stroke: 1pt + line, fill: fill, inset: 4pt, ..args)
 }
 
 #let global-unk(pos, body, ..args) = node(
-  pos, body, stroke: 0.9pt + vb.neutral, fill: vb.muted.lighten(85%),
-  inset: 5pt, ..args)
+  pos,
+  body,
+  stroke: 0.9pt + vb.neutral,
+  fill: vb.muted.lighten(85%),
+  inset: 5pt,
+  ..args,
+)
 
-#let dep-edge(from, to, ..args) = edge(from, to, "->",
-  stroke: 0.7pt + vb.muted, ..args)
+#let dep-edge(from, to, ..args) = edge(from, to, "->", stroke: 0.7pt + vb.muted, ..args)
 
 // A side effect is drawn double-tipped; a withdrawn contribution is dashed.
-#let side-edge(from, to, ..args) = edge(from, to, "->>",
-  stroke: 1pt + vb.called, ..args)
-#let withdrawn-edge(from, to, ..args) = edge(from, to, "-->",
+#let side-edge(from, to, ..args) = edge(from, to, "->>", stroke: 1pt + vb.called, ..args)
+#let withdrawn-edge(from, to, ..args) = edge(
+  from,
+  to,
+  "-->",
   stroke: (paint: vb.called.lighten(35%), thickness: 1pt, dash: "dashed"),
-  ..args)
+  ..args,
+)
 
 // -------------------------------------------------------- locale diagram ---
 #let locale-node(pos, name, ..args) = node(
-  pos, raw(name), stroke: 0.9pt + vb.neutral, fill: white,
-  corner-radius: 2pt, inset: 5pt, ..args)
+  pos,
+  raw(name),
+  stroke: 0.9pt + vb.neutral,
+  fill: white,
+  corner-radius: 2pt,
+  inset: 5pt,
+  ..args,
+)
 
 #let instance-node(pos, name, ..args) = node(
-  pos, raw(name), stroke: 0.9pt + vb.accent, fill: vb.accent.lighten(90%),
-  corner-radius: 2pt, inset: 5pt, ..args)
+  pos,
+  raw(name),
+  stroke: 0.9pt + vb.accent,
+  fill: vb.accent.lighten(90%),
+  corner-radius: 2pt,
+  inset: 5pt,
+  ..args,
+)
 
-#let import-edge(from, to, ..args) = edge(from, to, "->",
-  stroke: 0.9pt + vb.neutral, ..args)
-#let sublocale-edge(from, to, ..args) = edge(from, to, "-->",
-  stroke: (paint: vb.accent, thickness: 0.9pt, dash: "dashed"), ..args)
-#let interp-edge(from, to, ..args) = edge(from, to, "->",
-  stroke: (paint: vb.proved, thickness: 0.9pt, dash: "dotted"), ..args)
+#let import-edge(from, to, ..args) = edge(from, to, "->", stroke: 0.9pt + vb.neutral, ..args)
+#let sublocale-edge(from, to, ..args) = edge(
+  from,
+  to,
+  "-->",
+  stroke: (paint: vb.accent, thickness: 0.9pt, dash: "dashed"),
+  ..args,
+)
+#let interp-edge(from, to, ..args) = edge(
+  from,
+  to,
+  "->",
+  stroke: (paint: vb.proved, thickness: 0.9pt, dash: "dotted"),
+  ..args,
+)
 
 // ------------------------------------------------------------- lattices ----
 // A Hasse diagram from a node table and a cover relation.
@@ -118,7 +176,10 @@
 // --------------------------------------------------------- boxed display ---
 // The dominant figure kind in this literature: a framed block of equations.
 #let rhsbox(body) = block(
-  width: 100%, fill: vb.bg, stroke: 0.7pt + vb.frame, radius: 3pt,
+  width: 100%,
+  fill: vb.bg,
+  stroke: 0.7pt + vb.frame,
+  radius: 3pt,
   inset: 10pt,
   {
     // Equations inside a figure box are referred to by the figure number.
@@ -133,7 +194,7 @@
 // bound jumped. Three traces share one pair of axes: plain iteration climbing
 // to the fixpoint, widening jumping past it, narrowing descending back.
 #let iteration-plot(
-  f: x => 0.55 * x + 2.2,      // the monotone function being iterated
+  f: x => 0.55 * x + 2.2, // the monotone function being iterated
   start: 0.4,
   steps: 5,
   widen-to: 7.4,
@@ -169,19 +230,20 @@
   }
 
   // widening: one jump past the fixpoint
-  line((sx(x), sy(x)), (sx(x), sy(widen-to)),
-       stroke: (paint: vb.unstable, thickness: 1.2pt))
-  line((sx(x), sy(widen-to)), (sx(widen-to), sy(widen-to)),
-       mark: (end: "straight"), stroke: (paint: vb.unstable, thickness: 1.2pt))
+  line((sx(x), sy(x)), (sx(x), sy(widen-to)), stroke: (paint: vb.unstable, thickness: 1.2pt))
+  line(
+    (sx(x), sy(widen-to)),
+    (sx(widen-to), sy(widen-to)),
+    mark: (end: "straight"),
+    stroke: (paint: vb.unstable, thickness: 1.2pt),
+  )
 
   // narrowing: descending back toward the fixpoint
   let d = widen-to
   for _ in range(narrow-steps) {
     let y = calc.max(f(d), f(d))
-    line((sx(d), sy(d)), (sx(d), sy(y)),
-         stroke: (paint: vb.proved, thickness: 1pt, dash: "dotted"))
-    line((sx(d), sy(y)), (sx(y), sy(y)),
-         stroke: (paint: vb.proved, thickness: 1pt, dash: "dotted"))
+    line((sx(d), sy(d)), (sx(d), sy(y)), stroke: (paint: vb.proved, thickness: 1pt, dash: "dotted"))
+    line((sx(d), sy(y)), (sx(y), sy(y)), stroke: (paint: vb.proved, thickness: 1pt, dash: "dotted"))
     d = y
   }
 })
@@ -193,8 +255,14 @@
 // `commute` is used rather than a hand-built square: it is purpose-made for
 // this shape and places arrow tips and labels without coaxing.
 #let simulation(
-  top-left: [], top-right: [], bottom-left: [], bottom-right: [],
-  top-label: [], bottom-label: [], left-label: [], right-label: [],
+  top-left: [],
+  top-right: [],
+  bottom-left: [],
+  bottom-right: [],
+  top-label: [],
+  bottom-label: [],
+  left-label: [],
+  right-label: [],
   dashed-bottom: false,
 ) = commute.commutative-diagram(
   commute.node((0, 0), top-left),
@@ -202,11 +270,13 @@
   commute.node((1, 0), bottom-left),
   commute.node((1, 1), bottom-right),
   commute.arr((0, 0), (0, 1), top-label),
-  ..(if dashed-bottom {
+  ..(
+    if dashed-bottom {
       (commute.arr((1, 0), (1, 1), bottom-label, "dashed"),)
     } else {
       (commute.arr((1, 0), (1, 1), bottom-label),)
-    }),
+    }
+  ),
   commute.arr((0, 0), (1, 0), left-label),
   commute.arr((0, 1), (1, 1), right-label),
 )
@@ -224,10 +294,13 @@
   ),
   inset: 6pt,
   [], ..vars.map(v => text(fill: vb.neutral, style: "italic", v)),
-  ..points.enumerate().map(((i, p)) => (
-    text(fill: vb.accent, p),
-    ..vars.enumerate().map(((j, _)) => values.at(i).at(j)),
-  )).flatten(),
+  ..points
+    .enumerate()
+    .map(((i, p)) => (
+      text(fill: vb.accent, p),
+      ..vars.enumerate().map(((j, _)) => values.at(i).at(j)),
+    ))
+    .flatten(),
 )
 
 // ------------------------------------------------------------ algorithms ---
