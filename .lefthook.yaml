@@ -177,6 +177,17 @@ pre-commit:
               - "scripts/check_thesis_links.py"
             run: pixi run thesis-links
 
+          # Site pages: every internal link and same-page anchor resolves to a
+          # source file. Needs no site build; theory anchors only warn, as the
+          # rendered theories are checked against the deployed site on main.
+          - name: pages-links
+            glob:
+              - "pages/**"
+              - "docs/images/**"
+              - "scripts/check_pages_links.py"
+              - "scripts/mk/pages-site.sh"
+            run: pixi run pages-links
+
           # ----------------------------------------------------------------
           # Generated OCaml interface
           # ----------------------------------------------------------------

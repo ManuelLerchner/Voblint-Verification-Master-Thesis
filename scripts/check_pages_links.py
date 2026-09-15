@@ -14,13 +14,19 @@ decays differently:
 Links are read from `pages/*.html` and from the explainer script, which builds
 its definition links at runtime.
 
+    scripts/check_pages_links.py --sources                   internal links, no build needed
     scripts/check_pages_links.py --site build/github-pages   internal links, local build
     scripts/check_pages_links.py --live                      everything, deployed site
 
-`--site` needs `pixi run pages-site-build` first; external URLs are only checked
-with `--external`. `--live` checks all three kinds against the published site,
-after deployment, which is the moment the links are real. Hosts that throttle
-automated clients (HTTP 403/429) are reported as unverified rather than broken.
+`--sources` is the pre-commit check: it resolves each target to the file the site
+script copies into place (SITE_SOURCES) and skips build outputs and external URLs.
+Theory anchors are compared with build/isabelle-html when it exists, but only
+warned about: a working copy's rendered theories are often older than its
+sources, so the deployed check is the one that decides. `--site` needs `pixi run pages-site-build` first; external URLs are only
+checked with `--external`. `--live` checks all three kinds against the published
+site, after deployment, which is the moment the links are real. Hosts that
+throttle automated clients (HTTP 403/429) are reported as unverified rather
+than broken.
 """
 
 from __future__ import annotations
@@ -38,6 +44,21 @@ from check_thesis_links import fetch, pages_base  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 PAGES = REPO / "pages"
+
+# Where scripts/mk/pages-site.sh takes each site path from, for --sources. A path
+# mapped to None is a build output (the wasm bundle, the PDFs) that a working copy
+# may not have; the first matching prefix wins, and pages/ is the fallback.
+SITE_SOURCES = [
+    ("assets/banner.png", REPO / "docs/images/banner.png"),
+    ("assets/favicon.png", REPO / "docs/images/favicon.png"),
+    ("assets/while_loop_cfg.png", REPO / "docs/images/while_loop_cfg.png"),
+    ("assets/reports/", REPO / "docs/images"),
+    ("assets/voblint_web.bc.wasm", None),
+    ("thesis.pdf", None),
+    ("formalization.pdf", None),
+]
+ISABELLE_HTML = REPO / "build" / "isabelle-html"
+THEORY_PREFIXES = ("Voblint/", "Unsorted/", "HOL/", "Pure/")
 
 ATTR = re.compile(r'\b(?:href|src)="([^"]+)"')
 IS_A_CONST = re.compile(r'isaConst\("([^"]+)", "([^"]+)", "([^"]+)"\)')
@@ -83,6 +104,33 @@ def check_internal_local(site: Path, url: str) -> str | None:
     return None
 
 
+def source_of(path: str) -> Path | None:
+    for prefix, source in SITE_SOURCES:
+        if path.startswith(prefix):
+            if source is None or source.is_file():
+                return source
+            return source / path[len(prefix):]
+    return PAGES / path
+
+
+def check_internal_sources(url: str, skipped: list[str], stale: list[str]) -> str | None:
+    path, fragment = split(url)
+    if path.startswith(THEORY_PREFIXES):
+        if not ISABELLE_HTML.is_dir():
+            skipped.append(url)
+        elif detail := check_internal_local(ISABELLE_HTML, url):
+            stale.append(f"  {url}: {detail}")
+        return None
+    target = source_of(path)
+    if target is None:
+        return None
+    if not target.is_file():
+        return f"{path} has no source file ({target.relative_to(REPO)})"
+    if fragment and target.suffix == ".html" and not anchor_present(target.read_text(errors="ignore"), fragment):
+        return f"{path} has no anchor {fragment}"
+    return None
+
+
 def check_internal_live(base: str, url: str, retries: int, cache: dict[str, str | None]) -> str | None:
     path, fragment = split(url)
     full = base.rstrip("/") + "/" + path
@@ -121,6 +169,7 @@ def check_external(url: str) -> tuple[str, str | None]:
 def main() -> int:
     ap = argparse.ArgumentParser()
     mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--sources", action="store_true", help="check against the repository, no build needed")
     mode.add_argument("--site", type=Path, help="assembled site directory, e.g. build/github-pages")
     mode.add_argument("--live", action="store_true", help="check the deployed site")
     ap.add_argument("--base", help="--live: override the site URL")
@@ -132,6 +181,8 @@ def main() -> int:
     broken: list[str] = []
     unverified: list[str] = []
     cache: dict[str, str | None] = {}
+    skipped: list[str] = []
+    stale: list[str] = []
     base = args.base or pages_base()
 
     if args.site and not args.site.is_dir():
@@ -147,7 +198,7 @@ def main() -> int:
         if scheme in ("mailto", "javascript", "data"):
             continue
         if scheme in ("http", "https"):
-            if not (args.live or args.external):
+            if args.sources or not (args.live or args.external):
                 continue
             status, detail = check_external(url)
             if status == "broken":
@@ -155,11 +206,22 @@ def main() -> int:
             elif status == "unverified":
                 unverified.append(f"  {url} ({where}): {detail}")
             continue
-        detail = (check_internal_live(base, url, args.retries, cache) if args.live
-                  else check_internal_local(args.site, url))
+        if args.sources:
+            detail = check_internal_sources(url, skipped, stale)
+        elif args.live:
+            detail = check_internal_live(base, url, args.retries, cache)
+        else:
+            detail = check_internal_local(args.site, url)
         if detail:
             broken.append(f"  {url} ({where}): {detail}")
 
+    if stale:
+        print(f"check_pages_links: warning: {len(stale)} theory link(s) not found in build/isabelle-html; "
+              "rebuild it with `pixi run isabelle-docs-build` if the names are new:")
+        print("\n".join(stale))
+    if skipped:
+        print(f"check_pages_links: {len(skipped)} theory link(s) skipped -- no build/isabelle-html "
+              "(checked against the deployed site on main)")
     if unverified:
         print(f"check_pages_links: {len(unverified)} link(s) could not be verified (host refused automated access):")
         print("\n".join(unverified))
