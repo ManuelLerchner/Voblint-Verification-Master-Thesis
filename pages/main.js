@@ -45,6 +45,7 @@ const runButtonIcon = query("#run-analysis-icon");
 const runButtonLabel = query("#run-analysis-label");
 
 const status = query("#analyzer-status");
+const problems = query("#analysis-problems");
 
 const timing = query("#analysis-timing");
 const timingValue = query("#analysis-timing-value");
@@ -456,6 +457,162 @@ function workerError(message) {
   return error;
 }
 
+/*
+ * A run that did not produce a usable result says so above the editor, in a banner
+ * that names what went wrong and, when the parser gave a position, jumps there.
+ * The same banner summarizes arithmetic diagnostics after a successful run.
+ */
+function clearProblems() {
+  problems.hidden = true;
+  problems.className = "analysis-problems";
+  problems.replaceChildren();
+}
+
+function jumpToSource(line, column = 1) {
+  const doc = editor.state.doc;
+  const pos = offsetOf(doc, line, column);
+
+  editor.dispatch({ selection: { anchor: pos } });
+  editor.focus();
+  scrollEditorTo(pos);
+  editorMount.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+function lineButton(line, column) {
+  const button = document.createElement("button");
+
+  button.type = "button";
+  button.className = "problem-jump";
+  button.textContent = Number.isInteger(column) ? `Go to line ${line}, column ${column}` : `Go to line ${line}`;
+  button.addEventListener("click", () => jumpToSource(line, Number.isInteger(column) ? column : 1));
+
+  return button;
+}
+
+/* The offending source line with a caret under the reported column, compiler style. */
+function sourceExcerpt(line, column) {
+  const doc = editor.state.doc;
+
+  if (!Number.isInteger(line) || line < 1 || line > doc.lines) {
+    return null;
+  }
+
+  const text = doc.line(line).text;
+  const gutter = `${line} | `;
+  const pre = document.createElement("pre");
+  pre.className = "problem-excerpt";
+  pre.textContent = `${gutter}${text}`;
+
+  if (Number.isInteger(column)) {
+    const caret = document.createElement("span");
+    caret.className = "problem-caret";
+    caret.textContent = `\n${" ".repeat(gutter.length + Math.max(0, column - 1))}^`;
+    pre.append(caret);
+  }
+
+  return pre;
+}
+
+function showProblem({ kind = "error", title, message, note, line, column, items = [] }) {
+  const icon = document.createElement("i");
+  icon.className = kind === "error" ? "fa-solid fa-circle-exclamation" : "fa-solid fa-triangle-exclamation";
+  icon.setAttribute("aria-hidden", "true");
+
+  const body = document.createElement("div");
+  body.className = "problem-body";
+
+  const heading = document.createElement("p");
+  heading.className = "problem-title";
+  heading.textContent = title;
+  body.append(heading);
+
+  /* A message that only repeats the title says nothing; the source line says more. */
+  if (message && message.trim().toLowerCase() !== title.trim().toLowerCase()) {
+    const text = document.createElement("p");
+    text.className = "problem-message";
+    text.textContent = message;
+    body.append(text);
+  }
+
+  if (note) {
+    const text = document.createElement("p");
+    text.className = "problem-note";
+    text.textContent = note;
+    body.append(text);
+  }
+
+  const excerpt = sourceExcerpt(line, column);
+
+  if (excerpt) {
+    body.append(excerpt);
+  }
+
+  if (Number.isInteger(line)) {
+    body.append(lineButton(line, column));
+  }
+
+  if (items.length > 0) {
+    const list = document.createElement("ul");
+    list.className = "problem-items";
+
+    for (const item of items) {
+      const entry = document.createElement("li");
+      entry.className = item.kind;
+      const label = document.createElement("span");
+      label.textContent = item.message;
+      entry.append(label);
+
+      if (Number.isInteger(item.line)) {
+        entry.append(lineButton(item.line));
+      }
+
+      list.append(entry);
+    }
+
+    body.append(list);
+  }
+
+  problems.className = `analysis-problems ${kind}`;
+  problems.setAttribute("role", kind === "error" ? "alert" : "status");
+  problems.replaceChildren(icon, body);
+  problems.hidden = false;
+}
+
+function failureTitle(result) {
+  const message = result.message ?? "";
+
+  if (/syntax/i.test(message)) {
+    return "Syntax error";
+  }
+
+  if (/well-formed/i.test(message)) {
+    return "The program is not well-formed";
+  }
+
+  return Number.isInteger(result.line) ? "The program could not be parsed" : "The program could not be analyzed";
+}
+
+function showDiagnosticsSummary(result) {
+  const diagnostics = Array.isArray(result.diagnostics) ? result.diagnostics : [];
+
+  if (diagnostics.length === 0) {
+    return;
+  }
+
+  const errors = diagnostics.filter((d) => d.severity === "error").length;
+  const count = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const parts = [errors && count(errors, "error"), diagnostics.length - errors && count(diagnostics.length - errors, "warning")]
+    .filter(Boolean)
+    .join(" and ");
+
+  showProblem({
+    kind: errors > 0 ? "error" : "warning",
+    title: `${parts[0].toUpperCase()}${parts.slice(1)} in arithmetic`,
+    note: "An error means a divisor is zero in every live context; a warning means it may be zero.",
+    items: diagnostics.map((d) => ({ kind: d.severity === "error" ? "error" : "warning", message: d.message ?? "", line: d.line })),
+  });
+}
+
 function resultFailure(result) {
   const message = result.message ?? "The program could not be analyzed.";
 
@@ -712,7 +869,13 @@ function deadAnnotations(model, dimmed) {
 
 function resultAnnotations(result) {
   if (result.status !== "ok") {
-    return [{ line: result.line, kind: "error", label: "ERROR", detail: result.message ?? "" }];
+    return [{
+      line: result.line,
+      column: result.column,
+      kind: "error",
+      label: result.message ? result.message.toUpperCase() : "ERROR",
+      detail: result.message ?? "",
+    }];
   }
 
   const checks = Array.isArray(result.checks) ? result.checks : [];
@@ -823,6 +986,17 @@ function resultDecorations(doc, view, showHints) {
     const detail = group.map((a) => a.detail).filter(Boolean).join("\n");
 
     ranges.push(Decoration.line({ class: `cm-verdict-line cm-verdict-${kind}` }).range(line.from));
+
+    /* A parse error points at a column: underline the character there. */
+    for (const annotation of group.filter((a) => Number.isInteger(a.column))) {
+      const at = clamp(line.from + annotation.column - 1, line.from, line.to);
+      const from = at < line.to ? at : Math.max(line.from, at - 1);
+      const to = Math.min(line.to, from + 1);
+
+      if (to > from) {
+        ranges.push(Decoration.mark({ class: "cm-error-token" }).range(from, to));
+      }
+    }
     ranges.push(
       Decoration.widget({ widget: new AnnotationBadge(labels, detail), side: 2 }).range(line.to),
     );
@@ -1998,6 +2172,7 @@ function resetForConfigurationChange() {
   clearGraph();
   clearTiming();
   clearAnalysisView();
+  clearProblems();
   showRawRunProgram(null);
 
   if (hadResult) {
@@ -2138,6 +2313,7 @@ async function run() {
   clearGraph();
   clearTiming();
   clearAnalysisView();
+  clearProblems();
   showRawRunProgram(null);
 
   let configuration;
@@ -2146,7 +2322,9 @@ async function run() {
     configuration = readConfiguration();
   } catch (error) {
     if (runGeneration === analysisRunGeneration) {
-      showStatus(error instanceof Error ? error.message : String(error), "error");
+      const message = error instanceof Error ? error.message : String(error);
+      showStatus(message, "error");
+      showProblem({ title: "These settings cannot run", message });
     }
 
     return;
@@ -2197,6 +2375,7 @@ async function run() {
 
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
+        showDiagnosticsSummary(result);
       }
     } else {
       /*
@@ -2207,7 +2386,8 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         clearGraph();
 
-        showStatus(`${configurationLabel(configuration)} · ${resultFailure(result)}`, "error");
+        showStatus(`${configurationLabel(configuration)} · ${failureTitle(result).toLowerCase()}`, "error");
+        showProblem({ title: failureTitle(result), message: result.message, line: result.line, column: result.column });
       }
     }
   } catch (error) {
@@ -2219,6 +2399,11 @@ async function run() {
        */
       if (error instanceof GraphRenderError) {
         showStatus(`${configurationLabel(configuration)} · graph rendering failed`, "error");
+        showProblem({
+          kind: "warning",
+          title: "The result is ready, but the graph could not be drawn",
+          message: error.message,
+        });
 
         console.error(error);
 
@@ -2227,10 +2412,9 @@ async function run() {
 
       clearGraph();
 
-      showStatus(
-        `Browser analysis failed: ${error instanceof Error ? error.message : String(error)}`,
-        "error",
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      showStatus("Browser analysis failed", "error");
+      showProblem({ title: "The analyzer stopped", message });
 
       if (error instanceof Error) {
         console.error(

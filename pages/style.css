@@ -612,6 +612,24 @@ main {
   --verdict-tint: rgb(124 144 150 / 0.08);
 }
 
+/* An error in the source: the line is tinted strongly and the offending column underlined. */
+.code-editor .cm-verdict-line.cm-verdict-error {
+  --verdict-tint: rgb(255 138 115 / 0.2);
+}
+
+.code-editor .cm-verdict-error .cm-verdict-badge {
+  color: #1c1c1c;
+  background: #ff8a73;
+}
+
+.code-editor .cm-error-token {
+  text-decoration: underline wavy #ff8a73;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  background: rgb(255 138 115 / 0.25);
+  border-radius: 2px;
+}
+
 .code-editor .cm-verdict-badge {
   margin-left: 1.5em;
   padding: 0 0.5em;
@@ -1056,6 +1074,125 @@ kbd {
   border-radius: 999px;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
+}
+
+/* A failed run, or a finished one with diagnostics, is announced above the editor. */
+.analysis-problems {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  color: var(--text);
+  background: var(--danger-soft);
+  border: 1px solid rgb(173 66 44 / 0.35);
+  border-left: 5px solid var(--danger);
+  border-radius: 10px;
+  animation: problem-in 220ms ease;
+}
+
+.analysis-problems.warning {
+  background: #fdf5e6;
+  border-color: rgb(167 105 36 / 0.35);
+  border-left-color: var(--warning);
+}
+
+.analysis-problems > i {
+  margin-top: 2px;
+  color: var(--danger);
+  font-size: 1.35rem;
+}
+
+.analysis-problems.warning > i {
+  color: var(--warning);
+}
+
+@keyframes problem-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+.problem-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.problem-title {
+  margin: 0;
+  color: var(--danger);
+  font-size: 1.02rem;
+  font-weight: 750;
+}
+
+.analysis-problems.warning .problem-title {
+  color: var(--warning);
+}
+
+.problem-message {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.problem-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.problem-excerpt {
+  min-width: min(100%, 520px);
+  margin: 2px 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border-radius: 6px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.problem-caret {
+  color: #ff8a73;
+  font-weight: 700;
+}
+
+.problem-jump {
+  justify-self: start;
+  padding: 3px 12px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.problem-jump:hover {
+  border-color: var(--primary);
+}
+
+.problem-items {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.problem-items li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding-left: 12px;
+  border-left: 3px solid var(--warning);
+  font-size: 0.88rem;
+}
+
+.problem-items li.error {
+  border-left-color: var(--danger);
 }
 
 #run-analysis.running #run-analysis-icon {
