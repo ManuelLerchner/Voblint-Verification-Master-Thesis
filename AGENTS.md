@@ -560,6 +560,33 @@ just underdetermined), and it makes precision improvements look like they
 "fixed" a case that was never wrong. See `tests/run.py`'s module docstring
 for the full convention.
 
+Read a fixture's `// PARAM:` header, `// EXPECT-ARITHMETIC` annotations and
+graph snapshot through `scripts/vimp_fixture.py`, never with a local regex: the
+runner, the HTML-report audit, the playground's example corpus and
+`playground_link.py` all import it, so none of them can read a fixture
+differently from the runner. A new voblint analysis flag goes into its
+`SETTING_FLAGS` or `OUTPUT_FLAGS`; an unknown flag is an error by design.
+
+## README figures and playground links
+
+The README's figures are runs of the browser playground, regenerated rather than
+edited by hand. The program behind each one is a file in `docs/readme-figures/`,
+the image lives in `docs/images/`, and the link under it carries that program.
+
+- Regenerate them with `node scripts/capture_readme_figures.mjs [figure]`. It
+  serves `pages/` and the wasm build itself and drives the installed Chrome, so it
+  needs `pixi run browser-build` and, once,
+  `npm install --no-save --prefix build/capture playwright-core`.
+- A change to how the playground looks changes every figure: recapture them all,
+  not only the one the change was about, and look at each image before keeping it.
+- Write a README link to a playground run with `scripts/playground_link.py`, from
+  the program file, never by hand. `pixi run pages-links` fails when a README
+  `#code=` link carries anything but a program in `docs/readme-figures/`, and when
+  any playground link names an example, fixture or setting the playground lacks.
+- The explainer's `playground.html?example=<name>` links name keys of
+  `LINKED_EXAMPLES` in `pages/main.js`. Renaming a key breaks them; the same check
+  reports it.
+
 ## Style
 
 Baseline: the Isabelle Community Conventions
