@@ -223,19 +223,22 @@ definition run_result_of ::
           view = map_lift (\<lambda>st. map (\<lambda>x. (x, into (st x))) vars);
           ctxs = ordered_by_key ctx_key (snd ` result_keys r);
           indexed = enumerate 0 ctxs;
+          nodes = cfg_node_list g;
+          checks = group_by_key (\<lambda>(u, a, w). u)
+            (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None)
+            (cfg_intra_list g);
+          obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
           state_at = (\<lambda>i ctx v.
             \<lparr> state_point = v, state_context = i,
               state_value = view (lookup_context r v ctx),
               state_checks =
-                map (\<lambda>(u, a, w). (ea_check_cond a,
-                                   classify_point classify (ea_check_cond a)
-                                     (lookup_context r v ctx)))
-                  (filter (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g)),
+                map (\<lambda>cond. (cond, classify_point classify cond (lookup_context r v ctx)))
+                  (group_lookup checks v),
               state_diagnostics =
                 map (\<lambda>obligation. (obligation,
                                      classify_point classify (arithmetic_condition obligation)
                                        (lookup_context r v ctx)))
-                  (concat (map snd (filter (\<lambda>(u, obligations). u = v) (arithmetic_sites g))))
+                  (concat (group_lookup obligations v))
             \<rparr>);
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
@@ -257,7 +260,7 @@ definition run_result_of ::
            res_states =
              concat (map (\<lambda>(i, ctx).
                             map (state_at i ctx)
-                              (filter (\<lambda>v. (v, ctx) \<in> result_keys r) (cfg_node_list g)))
+                              (filter (\<lambda>v. (v, ctx) \<in> result_keys r) nodes))
                        indexed),
            res_routes =
              concat (map (\<lambda>(u, ca, ce, after).
