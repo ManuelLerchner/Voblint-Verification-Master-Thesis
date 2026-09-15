@@ -178,6 +178,15 @@ from pathlib import Path
 
 from report_output import diagnostic_lines
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+
+from vimp_fixture import (  # noqa: E402
+    GRAPH_BEGIN,
+    GRAPH_END,
+    expected_arithmetic,
+    param_args,
+)
+
 # Colorize only when stdout is a real terminal and the user hasn't opted out
 # (NO_COLOR, https://no-color.org) -- piped/redirected output (CI logs, a
 # diff-review tool) stays plain ANSI-free text either way.
@@ -235,7 +244,6 @@ KNOWN_VERDICTS = {"PROVED", "REFUTED", "UNKNOWN", NOWARN, REACHABLE}
 # cases -- see --slowest for that.
 DEFAULT_TIMEOUT = 30
 
-PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 CHECK_LINE_RE = re.compile(r"__voblint_check")
 VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
 # "line:col  point  condition  VERDICT  state": the condition is printed source and
@@ -243,8 +251,6 @@ VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
 REPORT_LINE_RE = re.compile(
     r"^(\d+):\d+\s+\S+\s+.*?\s(PROVED|REFUTED|UNKNOWN|DEAD)(?:\s|$)"
 )
-ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
-ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
 ARITHMETIC_REPORT_RE = re.compile(
     r"^(.+):(\d+):(\d+): (warning|error): "
     r"(possible (division|remainder) by zero|"
@@ -252,20 +258,12 @@ ARITHMETIC_REPORT_RE = re.compile(
     r".+ \[([^\]]+)\]$"
 )
 
-GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
-GRAPH_END = "// EXPECT-GRAPH-END"
 
 # Set from main()'s --update-graphs/--create-graphs before the (possibly
 # threaded) case run; read-only from then on, so concurrent check_case calls
 # sharing them is safe.
 UPDATE_GRAPHS = False
 CREATE_GRAPHS = False
-
-
-def param_args(path: Path) -> list[str]:
-    first_line = path.read_text().splitlines()[0]
-    m = PARAM_RE.match(first_line)
-    return m.group(1).split() if m else []
 
 
 def expected_verdicts(path: Path) -> dict[int, str]:
@@ -289,35 +287,6 @@ def actual_verdicts(stdout: str) -> dict[int, str]:
         if m and m.group(2) in {"PROVED", "REFUTED", "UNKNOWN", "DEAD"}:
             verdicts[int(m.group(1))] = m.group(2)
     return verdicts
-
-
-def expected_arithmetic(path: Path) -> Counter | None:
-    """An opted-in fixture pins every (line, severity, operation) occurrence."""
-    lines = path.read_text().splitlines()
-    headers = sum(line.strip() == ARITHMETIC_HEADER for line in lines)
-    if headers > 1:
-        raise ValueError("duplicate EXPECT-ARITHMETIC directive")
-    expected = Counter()
-    for line_no, line in enumerate(lines, start=1):
-        if "// ARITH" not in line:
-            continue
-        if not headers:
-            raise ValueError(f"line {line_no}: ARITH requires {ARITHMETIC_HEADER}")
-        _, annotation = line.split("// ARITH", 1)
-        if not annotation.startswith(":"):
-            raise ValueError(f"line {line_no}: expected '// ARITH: ...'")
-        annotation = annotation[1:].strip()
-        if annotation == "NONE":
-            continue
-        for entry in annotation.split(";"):
-            match = ARITHMETIC_ENTRY_RE.fullmatch(entry.strip())
-            if match is None:
-                raise ValueError(
-                    f"line {line_no}: malformed ARITH entry {entry.strip()!r}"
-                )
-            severity = "warning" if match[1] == "WARN" else "error"
-            expected[line_no, severity, match[2]] += 1
-    return expected if headers else None
 
 
 def actual_arithmetic(output: str, path: Path, analysis: str) -> Counter:
@@ -525,7 +494,7 @@ def check_case(path: Path) -> tuple[bool, list[str], float]:
     process-global -- there is no thread-safe way to redirect it per-call,
     so the caller is responsible for printing each case's lines together,
     in discovery order."""
-    args = param_args(path)
+    args = param_args(path) or []
     cmd = voblint_cmd(args, path)
     start = time.monotonic()
     try:
@@ -668,7 +637,8 @@ def lint_case(path: Path) -> list[str]:
     problems: list[str] = []
     source = path.read_text()
     src_lines = source.splitlines()
-    args = param_args(path)
+    header = param_args(path)
+    args = header or []
     expected = expected_verdicts(path)
     try:
         arithmetic = expected_arithmetic(path)
@@ -676,7 +646,7 @@ def lint_case(path: Path) -> list[str]:
         problems.append(str(error))
         arithmetic = None
 
-    if not src_lines or not PARAM_RE.match(src_lines[0]):
+    if header is None:
         problems.append("missing or malformed '// PARAM: ...' header on line 1")
 
     if not re.match(r"^\d\d-[a-z0-9_]+$", path.stem):
@@ -844,7 +814,7 @@ def main() -> int:
         selectors = [a for a in args if a not in ("--list", "--dry-run")]
         cases = discover(selectors)
         for path in cases:
-            print(voblint_cmd(param_args(path), path))
+            print(voblint_cmd(param_args(path) or [], path))
         return 0
 
     if "VOBLINT_BIN" not in os.environ:

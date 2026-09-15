@@ -1,6 +1,6 @@
 (* Browser adapter for the generated analyzer.
 
-   Parsing, DOT rendering, JSON rendering and browser integration are
+   Parsing, graph and JSON rendering, and browser integration are
    intentionally outside the Isabelle export. The actual analysis call uses
    the same generated [run_voblint] entry point as the native CLI.
 

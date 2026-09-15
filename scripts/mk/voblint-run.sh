@@ -14,6 +14,10 @@
 # cli/voblint itself stays deterministic/non-interactive (regression and
 # property tests call it directly with an explicit file) -- the picker is
 # wrapper-only plumbing, same as the staleness check below.
+#
+# --playground is wrapper-only too: instead of analyzing FILE, it opens the
+# browser playground with FILE and the given settings encoded into the link
+# (scripts/playground_link.py), so a local program can be explored there.
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -32,7 +36,7 @@ while [ "$i" -lt "$n" ]; do
   arg="${args[$i]}"
   case "$arg" in
     --help) skip_picker=1; break ;;
-    --analysis | --context | --globals | --timeout) i=$((i + 2)) ;;
+    --analysis | --context | --context-depth | --globals | --timeout) i=$((i + 2)) ;;
     --dot | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
     -*) i=$((i + 1)) ;;
     *) has_file=1; break ;;
@@ -60,6 +64,20 @@ if [ "$has_file" -eq 0 ] && [ "$skip_picker" -eq 0 ] && [ -t 0 ] && [ -t 1 ]; th
   else
     echo "voblint: fzf not found on PATH -- skipping interactive file picker (install fzf to enable it)" >&2
   fi
+fi
+
+playground=0
+forwarded=()
+for arg in ${args[@]+"${args[@]}"}; do
+  if [ "$arg" = "--playground" ]; then
+    playground=1
+  else
+    forwarded+=("$arg")
+  fi
+done
+
+if [ "$playground" -eq 1 ]; then
+  exec python3 "$REPO_ROOT/scripts/playground_link.py" --open ${forwarded[@]+"${forwarded[@]}"}
 fi
 
 stamp="$REPO_ROOT/codegen/generated/.source-hash"

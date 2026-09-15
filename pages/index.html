@@ -177,7 +177,6 @@
         <a href="#values">Abstract values</a>
         <a href="#solver">Graph to values</a>
         <a href="#settings">Procedures</a>
-        <a href="#reading">Reading a result</a>
         <a href="#verified">What “verified” means</a>
         <a href="#semantics">Runs and traces</a>
         <a href="#chain">Proof chain</a>
@@ -211,7 +210,6 @@
           <li class="doc-toc-part">II · How it works</li>
           <li><a href="#solver" data-target="solver">From a graph to equations to values</a></li>
           <li><a href="#settings" data-target="settings">Procedures: contexts and globals</a></li>
-          <li><a href="#reading" data-target="reading">Reading a result</a></li>
           <li class="doc-toc-part">III · Why you can trust it</li>
           <li><a href="#verified" data-target="verified">What does “verified” mean?</a></li>
           <li><a href="#semantics" data-target="semantics">What a run is</a></li>
@@ -1721,90 +1719,6 @@ if (x &gt;= 0) {
     </section>
 
     <!-- ================================================================== -->
-    <section class="section" id="reading" aria-labelledby="reading-heading">
-      <div class="section-heading">
-        <p class="eyebrow">The output</p>
-        <h2 id="reading-heading">Reading a result</h2>
-        <p class="section-intro">
-          The analyzer writes its answer back into the source as badges and value hints, and
-          draws the solved control-flow graph underneath.
-        </p>
-      </div>
-
-      <div class="reading-grid">
-        <figure class="scene scene-editor">
-          <pre class="mock-editor" aria-label="Example editor annotations"><span class="ml proved">__voblint_check(i == 5);<span class="mb">✓ PROVED</span></span>
-<span class="ml refuted">__voblint_check(i &lt; 5);<span class="mb">✗ REFUTED</span></span>
-<span class="ml unknown">__voblint_check(a == 2);<span class="mb">? UNKNOWN</span></span>
-<span class="ml warning">share = 10 / (a - 2);<span class="mb">⚠ WARNING</span></span>
-<span class="ml dead"><span class="dim">record(100);</span><span class="mb">∅ DEAD</span></span>
-<span class="ml">r = scale(w);<span class="mh">→ v: [1,1]</span><span class="mh">r: [2,2]</span></span>
-<span class="ml">while (i &lt; 5) {<span class="mh merge">⊔ i: [0,5]</span></span></pre>
-          <dl class="legend">
-            <div><dt class="lg proved">PROVED</dt><dd>The condition holds in every run that reaches the check.</dd></div>
-            <div><dt class="lg refuted">REFUTED</dt><dd>It fails in every run that reaches it. This does not say any run does.</dd></div>
-            <div><dt class="lg unknown">UNKNOWN</dt><dd>The result cannot decide, or contexts disagree.</dd></div>
-            <div><dt class="lg warning">WARNING</dt><dd>A divisor may be zero. <strong>ERROR</strong>: it is zero in every live context.</dd></div>
-            <div><dt class="lg dead">DEAD</dt><dd>No context reaches this point.</dd></div>
-            <div><dt class="lg hint">x: [2,2]</dt><dd>What a statement assigns; <code>→</code> marks callee parameters, <code>↩</code> a return.</dd></div>
-            <div><dt class="lg hint">⊔ i: [0,5]</dt><dd>Several paths meet here, so the value includes more than this step.</dd></div>
-          </dl>
-        </figure>
-
-        <figure class="scene scene-graph">
-          <svg viewBox="0 0 640 270" role="img"
-            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points and procedure entry or exit; edge styles for calls, resumes and continuations; clusters per procedure and context.">
-            <defs>
-              <marker id="g-arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 0 L10 5 L0 10 z" fill="purple"/>
-              </marker>
-              <marker id="g-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 0 L10 5 L0 10 z" fill="blue"/>
-              </marker>
-              <marker id="g-arrow-gray" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                <path d="M0 0 L10 5 L0 10 z" fill="#666666"/>
-              </marker>
-            </defs>
-
-            <text class="legend-head" x="16" y="22">Nodes</text>
-            <rect class="gn proved" x="16" y="36" width="70" height="26" rx="7"/><text x="100" y="54">check proved</text>
-            <rect class="gn refuted" x="16" y="72" width="70" height="26" rx="7"/><text x="100" y="90">check refuted</text>
-            <rect class="gn unknown" x="16" y="108" width="70" height="26" rx="7"/><text x="100" y="126">unknown, or maybe ÷ 0</text>
-            <rect class="gn dead" x="16" y="144" width="70" height="26" rx="7"/><text x="100" y="162">unreachable</text>
-            <rect class="gn plain" x="16" y="180" width="70" height="26"/><text x="100" y="198">program point</text>
-            <circle class="gn entry" cx="51" cy="233" r="16"/>
-            <circle class="gn entry-inner" cx="51" cy="233" r="12"/>
-            <text x="100" y="238">entry or exit</text>
-
-            <text class="legend-head" x="330" y="22">Edges</text>
-            <line x1="330" y1="50" x2="400" y2="50" class="ge call" marker-end="url(#g-arrow-purple)"/>
-            <text x="414" y="55">call f(args)</text>
-            <line x1="330" y1="86" x2="400" y2="86" class="ge resume" marker-end="url(#g-arrow-blue)"/>
-            <text x="414" y="91">resume after the call</text>
-            <line x1="330" y1="122" x2="400" y2="122" class="ge cont" marker-end="url(#g-arrow-gray)"/>
-            <text x="414" y="127">continuation</text>
-
-            <text class="legend-head" x="330" y="176">Clusters</text>
-            <rect class="g-cluster" x="330" y="190" width="290" height="60" rx="10"/>
-            <text class="g-cluster-label mono" x="344" y="212">wrap / call-string=[s1]</text>
-            <text x="344" y="236">one procedure in one context</text>
-          </svg>
-          <figcaption>
-            Each (point, context) pair is its own node, so contexts are drawn apart rather than
-            joined. Hover a node in the analyzer to see its full state.
-          </figcaption>
-        </figure>
-      </div>
-
-      <p class="explainer-cta">
-        <a class="cta-button" href="playground.html">
-          <i class="fa-solid fa-play" aria-hidden="true"></i>
-          Try it in the analyzer
-        </a>
-      </p>
-    </section>
-
-    <!-- ================================================================== -->
     <section class="section" id="verified" aria-labelledby="verified-heading">
       <div class="section-heading">
         <p class="eyebrow">The guarantee</p>
@@ -3283,7 +3197,7 @@ qed</code></pre>
               <line x1="655" y1="258" x2="615" y2="250"/>
             </g>
             <g class="berg-label solver">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/vendor/td-verification" target="_blank" rel="noreferrer"><text class="big" x="690" y="486" text-anchor="end"><tspan data-stat="solver.used.lines">9,266</tspan> lines</text></a>
+              <a href="Unsorted/TD/index.html"><text class="big" x="690" y="486" text-anchor="end"><tspan data-stat="solver.used.lines">9,266</tspan> lines</text></a>
               <text x="690" y="508" text-anchor="end">of the vendored TD solver proof that Voblint imports</text>
               <text x="690" y="528" text-anchor="end"><tspan data-stat="solver.used.theories">5</tspan> of <tspan data-stat="solver.theories">26</tspan> theories, <tspan data-stat="solver.lines">31,328</tspan> lines in all</text>
               <line x1="695" y1="480" x2="777" y2="482"/>

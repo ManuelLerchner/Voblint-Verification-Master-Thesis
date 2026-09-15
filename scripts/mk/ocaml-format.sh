@@ -16,6 +16,21 @@ if [ "${1:-}" = "--check" ]; then
   exec dune build @fmt
 fi
 
+# Explicit paths, as the pre-commit hook passes its staged files. ocamlformat
+# honours .ocamlformat-ignore for them; dune files go through dune's formatter.
+if [ "$#" -gt 0 ]; then
+  for path in "$@"; do
+    case "$path" in
+      *.ml | *.mli) ocamlformat -i "$path" ;;
+      *)
+        formatted="$(dune format-dune-file "$path")"
+        printf '%s\n' "$formatted" >"$path"
+        ;;
+    esac
+  done
+  exit 0
+fi
+
 # `dune fmt` promotes the formatted files but still exits non-zero when it
 # changed any, so a second pass decides success.
 dune fmt >/dev/null 2>&1 || dune build @fmt

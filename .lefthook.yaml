@@ -3,7 +3,8 @@
 # Install with `pixi run hooks-install`.
 #
 # Pre-commit:
-#   Fast/static repository invariants and generated-artifact drift checks.
+#   Formats staged files and restages them, then runs fast/static repository
+#   invariants and generated-artifact drift checks.
 #
 # Pre-push:
 #   Heavier checks that make sure thesis material still agrees with the
@@ -19,9 +20,10 @@ output: [summary]
 glob_matcher: doublestar
 
 
+# No `fail_on_changes`: it hashes worktree contents across the whole hook, so
+# it would reject every fix a formatter below writes. Each drift check fails on
+# its own instead.
 pre-commit:
-  fail_on_changes: always
-
   jobs:
     # ----------------------------------------------------------------------
     # Generated artifacts
@@ -63,6 +65,51 @@ pre-commit:
             run: pixi run assembly-check
 
     # ----------------------------------------------------------------------
+    # Formatters
+    #
+    # `stage_fixed` restages the staged files a formatter rewrote; lefthook
+    # hides unstaged hunks of partially staged files meanwhile, so only staged
+    # content is formatted and committed. Every formatter takes the staged files,
+    # so unstaged work is never rewritten. CI still runs the `-check` tasks.
+    # ----------------------------------------------------------------------
+    - name: formatters
+      group:
+        parallel: true
+        jobs:
+          - name: python-format
+            glob: "**/*.py"
+            run: pixi run python-format -- {staged_files}
+            stage_fixed: true
+
+          - name: ocaml-format
+            glob:
+              - "**/*.ml"
+              - "**/*.mli"
+              - "**/dune"
+              - "dune-project"
+            run: pixi run ocaml-format -- {staged_files}
+            stage_fixed: true
+
+          # Task args take one string, so the staged list is quoted into it.
+          - name: typst-format
+            glob: "**/*.typ"
+            exclude: "thesis/lib/isabelle-symbols.typ"
+            run: pixi run typst-format -- {staged_files}
+            stage_fixed: true
+
+          - name: toml-format
+            glob: "**/*.toml"
+            run: pixi run toml-format -- {staged_files}
+            stage_fixed: true
+
+          - name: pages-format
+            glob:
+              - "pages/**/*.js"
+              - "pages/**/*.css"
+            run: pixi run pages-format -- {staged_files}
+            stage_fixed: true
+
+    # ----------------------------------------------------------------------
     # Fast repository invariants
     # ----------------------------------------------------------------------
     - name: invariant-checks
@@ -91,38 +138,38 @@ pre-commit:
             run: pixi run verification-surface-check
 
           # ----------------------------------------------------------------
-          # Formatting and linting
+          # Linting
           #
-          # Ruff takes the staged files; the other tools are fast enough to
-          # check their whole scope, which also catches a config change.
+          # Linters take the staged files, so unstaged or untracked work cannot
+          # block a commit; a `-config` job rechecks the whole scope when the
+          # tool's configuration changes.
           # ----------------------------------------------------------------
-
-          - name: python-format
-            glob: "**/*.py"
-            run: pixi run python-format-check -- {staged_files}
 
           - name: python-lint
             glob: "**/*.py"
             run: pixi run python-lint -- {staged_files}
 
-          - name: ocaml-format
+          # A formatter config change can reformat files that are not staged,
+          # which `stage_fixed` leaves out of the commit; fail instead so
+          # `pixi run format` gets run. biome.jsonc is covered by pages-lint-config.
+          - name: formatter-config
             glob:
-              - "**/*.ml"
-              - "**/*.mli"
-              - "**/dune"
-              - "dune-project"
               - ".ocamlformat"
               - ".ocamlformat-ignore"
-            run: pixi run ocaml-format-check
+              - "ruff.toml"
+              - ".taplo.toml"
+            run: pixi run python-format-check && pixi run ocaml-format-check && pixi run toml-format-check
 
           - name: opam-lint
             glob: "*.opam"
             run: pixi run opam-lint
 
           - name: shell-lint
-            glob:
-              - "**/*.sh"
-              - ".shellcheckrc"
+            glob: "**/*.sh"
+            run: pixi run shell-lint -- {staged_files}
+
+          - name: shell-lint-config
+            glob: ".shellcheckrc"
             run: pixi run shell-lint
 
           - name: actions-lint
@@ -131,32 +178,35 @@ pre-commit:
               - ".github/**/*.yaml"
             run: pixi run actions-lint
 
-          - name: typst-format
-            glob: "**/*.typ"
-            run: pixi run typst-format-check
-
+          # Staged files only, like spelling below. `--no-globs` drops the config's
+          # `**/*.md` scope, which would otherwise add every file back; its
+          # `ignores` still apply to the paths passed.
           - name: markdown-lint
-            glob:
-              - "**/*.md"
-              - ".markdownlint-cli2.yaml"
+            glob: "**/*.md"
+            run: pixi run markdown-lint -- --no-globs {staged_files}
+
+          - name: markdown-lint-config
+            glob: ".markdownlint-cli2.yaml"
             run: pixi run markdown-lint
 
+          # Staged files only, so unstaged work cannot block a commit; a config
+          # change rechecks the whole scope. `--force-exclude` applies
+          # `extend-exclude` to explicit paths, and typos skips binary files.
           - name: spelling
-            glob:
-              - "**/*.{md,typ,py,ml,mli,sh,toml,yaml,yml}"
-              - "_typos.toml"
-            run: pixi run spelling-check
+            run: pixi run spelling-check -- --force-exclude {staged_files}
 
-          - name: toml-format
-            glob:
-              - "**/*.toml"
-            run: pixi run toml-format-check
+          - name: spelling-config
+            glob: "_typos.toml"
+            run: pixi run spelling-check
 
           - name: pages-lint
             glob:
               - "pages/**/*.js"
               - "pages/**/*.css"
-              - "biome.jsonc"
+            run: pixi run pages-lint -- --no-errors-on-unmatched {staged_files}
+
+          - name: pages-lint-config
+            glob: "biome.jsonc"
             run: pixi run pages-lint
 
           - name: isabelle-ascii
@@ -179,9 +229,11 @@ pre-commit:
           #
           # This would have caught the PR #190 ADC fixture immediately.
           - name: regression-fixtures
-            glob:
-              - "tests/run.py"
-              - "tests/regression/**/*.vimp"
+            glob: "tests/regression/**/*.vimp"
+            run: pixi run regression-lint -- {staged_files}
+
+          - name: regression-fixtures-config
+            glob: "tests/run.py"
             run: pixi run regression-lint
 
           # PDF session selection is also pure Python. Catch ROOT/import
@@ -249,11 +301,28 @@ pre-commit:
           # Site pages: every internal link and same-page anchor resolves to a
           # source file. Needs no site build; theory anchors only warn, as the
           # rendered theories are checked against the deployed site on main.
+          - name: pages-scripts-check
+            glob:
+              - "scripts/vimp_fixture.py"
+              - "scripts/pages_examples.py"
+              - "scripts/playground_link.py"
+              - "scripts/check_pages_links.py"
+              - "tests/test_vimp_fixture.py"
+              - "tests/test_playground_link.py"
+              - "tests/regression/**"
+              - "docs/readme-figures/**"
+              - "pages/main.js"
+              - "pages/playground.html"
+            run: pixi run pages-scripts-check
+
           - name: pages-links
             glob:
               - "pages/**"
-              - "docs/images/**"
+              - "docs/**"
+              - "README.md"
+              - "tests/regression/**"
               - "scripts/check_pages_links.py"
+              - "scripts/vimp_fixture.py"
               - "scripts/mk/pages-site.sh"
             run: pixi run pages-links
 

@@ -430,6 +430,14 @@ jobs:
       - name: Site JavaScript and CSS formatting and lint
         run: pixi run pages-lint
 
+      # Links are checked against the repository here, so a playground link naming
+      # a missing example, fixture or setting fails before the site is built.
+      - name: Site links and what playground links open (no build needed)
+        run: pixi run pages-links
+
+      - name: Fixture reader, example corpus and playground links
+        run: pixi run pages-scripts-check
+
       - name: Isabelle ASCII-only sources
         run: pixi run isabelle-ascii-check
 

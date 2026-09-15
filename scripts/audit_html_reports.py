@@ -31,6 +31,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+import vimp_fixture
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = REPO_ROOT / "cli" / "voblint"
 CORPUS = REPO_ROOT / "tests" / "regression"
@@ -52,7 +54,6 @@ SHT_TYPES = {"nr", "pp", "tk", "sk", "op", "sp", "cm", "st"}
 
 # Flags that decide what gets written, not how the analysis runs. --html
 # replaces them, so they are dropped from the fixture's own PARAM line.
-OUTPUT_FLAGS = {"--dot", "--graph-snapshot", "--parse-only"}
 
 # tests/run.py's own rule: a fixture with no inline verdict documents a
 # rejection rather than a report, so there is no report here to audit.
@@ -60,11 +61,13 @@ VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|PROVED|REFUTED|UNKNOWN)")
 
 
 def param_args(fixture: Path) -> list[str] | None:
-    first = fixture.read_text().splitlines()[0]
-    if not first.startswith("// PARAM:"):
-        return None
-    args = first[len("// PARAM:") :].split()
-    return [a for a in args if a not in OUTPUT_FLAGS]
+    """The fixture's PARAM arguments without output flags: the audit picks its own."""
+    args = vimp_fixture.param_args(fixture)
+    return (
+        None
+        if args is None
+        else [a for a in args if a not in vimp_fixture.OUTPUT_FLAGS]
+    )
 
 
 def skip_reason(fixture: Path) -> str | None:

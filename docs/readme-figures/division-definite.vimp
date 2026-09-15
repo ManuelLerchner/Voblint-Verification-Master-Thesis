@@ -1,0 +1,7 @@
+fun main() {
+  divisor = 0;
+  quotient = 7 / divisor;
+  remainder = 7 % divisor;
+  __voblint_check(quotient == 0);
+  __voblint_check(remainder == 7);
+}

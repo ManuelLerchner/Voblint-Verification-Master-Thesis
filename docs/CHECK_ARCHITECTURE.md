@@ -268,12 +268,14 @@ applies `string_of_abstract_value` to every abstract value in it through
      (joined over contexts)         one node per (pp, ctx),
                 |                   states never joined
                 |                          |
-                |       +---------+--------+--------+
-                |       v         v                 v
-                |   Render_dot  Render_snapshot   Report_dir / Render_xml
-                |   (--dot)     (--graph-snapshot) (--html)
-                |       |
-                +-------+---------> Render_json (browser playground)
+                |       +---------+--------+--------+----------+
+                |       v         v                 v          |
+                |   Render_dot  Render_snapshot   Report_dir / |
+                |   (--dot)     (--graph-snapshot) Render_xml  |
+                |                                  (--html)    |
+                +------------------------------------------+   |
+                                                           v   v
+                                             Render_json (browser playground)
 ```
 
 `Context_graph.build` (`cli/result/context_graph.ml`) reads only the result:
@@ -312,9 +314,11 @@ locals it assigns, identically for `--context none`, `entry-state` and
 `call-string`. Declared globals and the return slot `#ret` are **not** among
 them: the node record keeps both apart (`globals`, `ret`), and only the browser
 JSON emits them. `Render_dot` labels a node with its point and findings and
-puts the full state in the tooltip; `Render_snapshot` lists status, bindings
-and findings; `Report_dir` writes the same lines to `nodes/<id>.xml` through
-`Render_xml`, one `<analysis>` block per `--analysis` domain.
+puts the full state in the tooltip; `Render_json` sends the browser the clusters
+and edges with their roles, which the playground lays out and styles itself;
+`Render_snapshot` lists status, bindings and findings; `Report_dir` writes the
+same lines to `nodes/<id>.xml` through `Render_xml`, one `<analysis>` block per
+`--analysis` domain.
 
 `res_globals` lists the constraint system's global unknowns, the same set
 Goblint's globals pane iterates: `Global_Shared`, the analysis-wide slot, then
