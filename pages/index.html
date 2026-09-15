@@ -8,6 +8,21 @@
     name="description"
     content="Abstract interpretation, what a machine-checked soundness proof covers, and how to read Voblint's settings and results."
   >
+  <meta name="author" content="Manuel Lerchner">
+  <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Voblint">
+  <meta property="og:title" content="Static analysis you can trust, and why">
+  <meta
+    property="og:description"
+    content="How an abstract interpreter modeled on Goblint computes its answers, and how Isabelle/HOL proves those answers cover every run."
+  >
+  <meta property="og:url" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/">
+  <meta property="og:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/banner.png">
+  <meta property="og:image:width" content="1792">
+  <meta property="og:image:height" content="592">
+  <meta property="article:author" content="Manuel Lerchner">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link
     rel="stylesheet"
@@ -45,6 +60,7 @@
   <link rel="stylesheet" href="figures/island.css">
   <link rel="stylesheet" href="figures/iceberg.css">
   <link rel="stylesheet" href="figures/strata.css">
+  <link rel="stylesheet" href="figures/timeline.css">
   <!-- A classic script, not a module: modules do not load from file:// and the page must. -->
   <!-- Written by the site build; absent when the page opens from the source tree. -->
   <script src="assets/site-stats.js" defer></script>
@@ -69,6 +85,7 @@
   <script src="figures/island.js" defer></script>
   <script src="figures/iceberg.js" defer></script>
   <script src="figures/strata.js" defer></script>
+  <script src="figures/timeline.js" defer></script>
 </head>
 
 <body>
@@ -99,6 +116,12 @@
     <div class="page-shell">
       <p class="eyebrow">How it works</p>
       <h1>Static analysis you can trust, and why</h1>
+      <p class="hero-byline">
+        <span>Manuel Lerchner</span>
+        <span>Master's thesis, Technical University of Munich</span>
+        <span>Supervised by Alexandra Graß and Helmut Seidl</span>
+        <span>About 30 minutes to read</span>
+      </p>
       <p class="hero-lead">
         Voblint answers questions about every run of a program without running it, and
         Isabelle/HOL checks that those answers are right. This page builds up the idea, how the
@@ -162,6 +185,7 @@
         <a href="#pipeline">From proof to browser</a>
         <a href="#goblint">Voblint and Goblint</a>
         <a href="#limits">Limits</a>
+        <a href="#further-reading">Further reading</a>
         <a href="#resources">Resources</a>
       </nav>
 
@@ -197,6 +221,7 @@
           <li class="doc-toc-part">IV · In context</li>
           <li><a href="#goblint" data-target="goblint">Voblint and Goblint, side by side</a></li>
           <li><a href="#limits" data-target="limits">What Voblint can't do</a></li>
+          <li><a href="#further-reading" data-target="further-reading">Further reading</a></li>
           <li><a href="#resources" data-target="resources">Project resources</a></li>
         </ol>
       </div>
@@ -295,7 +320,9 @@
         out, which is soundness. But the runs only ever reach multiples of three, and an interval
         cannot say so: every band also covers integers no run has. On the left that makes a node
         look reachable that no run reaches; on the right the guard rules everything out, and the
-        analysis marks the check DEAD.
+        analysis marks the check DEAD. Each check gets a verdict: PROVED when it holds in every run
+        that reaches it, REFUTED when it fails in every such run, DEAD when no run reaches it, and
+        UNKNOWN when the description is too coarse to decide.
       </p>
 
       <figure class="scene scene-particles" data-mode="both">
@@ -784,11 +811,85 @@ if (x &gt;= 0) {
         </figcaption>
       </figure>
 
+      <div class="prose-block">
+        <h3>Loops: widening and narrowing</h3>
+        <p>
+          A loop can run any number of times, so following it pass by pass may never end.
+          The analysis instead <strong>widens</strong>: when a bound keeps moving, it jumps
+          straight to infinity, which is safe, and for intervals it stops this climb. It then
+          <strong>narrows</strong>, using the loop's own guard to pull the bound back.
+          Warrowing combines the two: it widens while a value grows and narrows once it
+          shrinks. Step through it below.
+        </p>
+      </div>
+
+      <figure class="scene scene-loop" data-step="6" data-steps="7">
+        <div class="loop-layout">
+          <div class="loop-code" aria-hidden="true">
+            <span class="lc lc-1">i = 0;</span>
+            <span class="lc lc-2">while (i &lt; 5) {</span>
+            <span class="lc lc-3">  i = i + 1;</span>
+            <span class="lc lc-4">}</span>
+            <span class="lc lc-5">__voblint_check(i == 5);</span>
+          </div>
+
+          <div class="loop-visual">
+            <div class="loop-captions" aria-live="polite">
+              <p data-for="0">Enter the loop: <code>i ∈ [0, 0]</code></p>
+              <p data-for="1">One pass through the body adds <code>[1, 1]</code>: <code>i ∈ [0, 1]</code></p>
+              <p data-for="2">Another pass: <code>[0, 2]</code>. This could go on forever.</p>
+              <p data-for="3" class="accent">Widen: the upper bound keeps moving, so it jumps to <code>+∞</code></p>
+              <p data-for="4">Narrow: the body only runs when <code>i &lt; 5</code>, so the head is <code>[0, 5]</code></p>
+              <p data-for="5">Leave the loop, where <code>i ≥ 5</code>: <code>i ∈ [5, 5]</code></p>
+              <p data-for="6" class="good"><code>i == 5</code> holds for every run: <strong>PROVED</strong></p>
+            </div>
+
+            <svg viewBox="0 0 560 110" role="img"
+              aria-label="Number line from 0 to infinity with a bar showing the current interval for i.">
+              <line class="axis" x1="40" y1="70" x2="530" y2="70"/>
+              <polygon class="axis-head" points="530,65 540,70 530,75"/>
+              <rect class="loop-bar" x="40" y="22" width="480" height="30" rx="4"/>
+              <g class="ticks">
+                <line x1="40" y1="64" x2="40" y2="76"/><text x="40" y="96">0</text>
+                <line x1="90" y1="64" x2="90" y2="76"/><text x="90" y="96">1</text>
+                <line x1="140" y1="64" x2="140" y2="76"/><text x="140" y="96">2</text>
+                <line x1="190" y1="64" x2="190" y2="76"/><text x="190" y="96">3</text>
+                <line x1="240" y1="64" x2="240" y2="76"/><text x="240" y="96">4</text>
+                <line x1="290" y1="64" x2="290" y2="76"/><text x="290" y="96">5</text>
+                <line x1="340" y1="64" x2="340" y2="76"/><text x="340" y="96">6</text>
+                <line x1="390" y1="64" x2="390" y2="76"/><text x="390" y="96">7</text>
+                <text x="520" y="96">+∞</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="loop-controls" hidden>
+          <button type="button" class="loop-play" aria-label="Pause">
+            <i class="fa-solid fa-pause" aria-hidden="true"></i>
+          </button>
+          <div class="loop-chips" role="group" aria-label="Analysis steps">
+            <button type="button" data-goto="0">[0,0]</button>
+            <button type="button" data-goto="1">[0,1]</button>
+            <button type="button" data-goto="2">[0,2]</button>
+            <button type="button" data-goto="3" class="widen">∇ [0,+∞]</button>
+            <button type="button" data-goto="4" class="narrow">Δ [0,5]</button>
+            <button type="button" data-goto="5">exit [5,5]</button>
+            <button type="button" data-goto="6" class="done">✓ PROVED</button>
+          </div>
+        </div>
+        <figcaption>
+          A sketch of an interval analysis on a counting loop: the value of <code>i</code> at
+          the loop head, and after the loop in the last two steps. Voblint applies warrowing at
+          loop points in every configuration.
+          <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
+        </figcaption>
+      </figure>
 
       <div class="prose-block">
         <h3>What an equation is made of: strategy trees</h3>
         <p>
-          The solver never sees <code>⊔</code> or <code>assume</code>. It sees each right-hand side
+          One level down, the solver never sees <code>⊔</code> or <code>assume</code>. It sees each right-hand side
           as a <em>strategy tree</em>, which spells out every step the evaluation takes:
           <code>QueryL</code> reads a local unknown, <code>QueryG</code> reads a global one,
           <code>Side</code> contributes a value to a global, and <code>Answer</code> returns the
@@ -872,81 +973,6 @@ if (x &gt;= 0) {
           <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst">post-solution</a>
           when, for every unknown it covers, the tree's answer and each of its side contributions
           stay below <code>σ</code>.
-        </figcaption>
-      </figure>
-
-      <div class="prose-block">
-        <h3>Loops: widening and narrowing</h3>
-        <p>
-          A loop can run any number of times, so following it pass by pass may never end.
-          The analysis instead <strong>widens</strong>: when a bound keeps moving, it jumps
-          straight to infinity, which is safe, and for intervals it stops this climb. It then
-          <strong>narrows</strong>, using the loop's own guard to pull the bound back.
-          Warrowing combines the two: it widens while a value grows and narrows once it
-          shrinks. Step through it below.
-        </p>
-      </div>
-
-      <figure class="scene scene-loop" data-step="6" data-steps="7">
-        <div class="loop-layout">
-          <div class="loop-code" aria-hidden="true">
-            <span class="lc lc-1">i = 0;</span>
-            <span class="lc lc-2">while (i &lt; 5) {</span>
-            <span class="lc lc-3">  i = i + 1;</span>
-            <span class="lc lc-4">}</span>
-            <span class="lc lc-5">__voblint_check(i == 5);</span>
-          </div>
-
-          <div class="loop-visual">
-            <div class="loop-captions" aria-live="polite">
-              <p data-for="0">Enter the loop: <code>i ∈ [0, 0]</code></p>
-              <p data-for="1">One pass through the body adds <code>[1, 1]</code>: <code>i ∈ [0, 1]</code></p>
-              <p data-for="2">Another pass: <code>[0, 2]</code>. This could go on forever.</p>
-              <p data-for="3" class="accent">Widen: the upper bound keeps moving, so it jumps to <code>+∞</code></p>
-              <p data-for="4">Narrow: the body only runs when <code>i &lt; 5</code>, so the head is <code>[0, 5]</code></p>
-              <p data-for="5">Leave the loop, where <code>i ≥ 5</code>: <code>i ∈ [5, 5]</code></p>
-              <p data-for="6" class="good"><code>i == 5</code> holds for every run: <strong>PROVED</strong></p>
-            </div>
-
-            <svg viewBox="0 0 560 110" role="img"
-              aria-label="Number line from 0 to infinity with a bar showing the current interval for i.">
-              <line class="axis" x1="40" y1="70" x2="530" y2="70"/>
-              <polygon class="axis-head" points="530,65 540,70 530,75"/>
-              <rect class="loop-bar" x="40" y="22" width="480" height="30" rx="4"/>
-              <g class="ticks">
-                <line x1="40" y1="64" x2="40" y2="76"/><text x="40" y="96">0</text>
-                <line x1="90" y1="64" x2="90" y2="76"/><text x="90" y="96">1</text>
-                <line x1="140" y1="64" x2="140" y2="76"/><text x="140" y="96">2</text>
-                <line x1="190" y1="64" x2="190" y2="76"/><text x="190" y="96">3</text>
-                <line x1="240" y1="64" x2="240" y2="76"/><text x="240" y="96">4</text>
-                <line x1="290" y1="64" x2="290" y2="76"/><text x="290" y="96">5</text>
-                <line x1="340" y1="64" x2="340" y2="76"/><text x="340" y="96">6</text>
-                <line x1="390" y1="64" x2="390" y2="76"/><text x="390" y="96">7</text>
-                <text x="520" y="96">+∞</text>
-              </g>
-            </svg>
-          </div>
-        </div>
-
-        <div class="loop-controls" hidden>
-          <button type="button" class="loop-play" aria-label="Pause">
-            <i class="fa-solid fa-pause" aria-hidden="true"></i>
-          </button>
-          <div class="loop-chips" role="group" aria-label="Analysis steps">
-            <button type="button" data-goto="0">[0,0]</button>
-            <button type="button" data-goto="1">[0,1]</button>
-            <button type="button" data-goto="2">[0,2]</button>
-            <button type="button" data-goto="3" class="widen">∇ [0,+∞]</button>
-            <button type="button" data-goto="4" class="narrow">Δ [0,5]</button>
-            <button type="button" data-goto="5">exit [5,5]</button>
-            <button type="button" data-goto="6" class="done">✓ PROVED</button>
-          </div>
-        </div>
-        <figcaption>
-          A sketch of an interval analysis on a counting loop: the value of <code>i</code> at
-          the loop head, and after the loop in the last two steps. Voblint applies warrowing at
-          loop points in every configuration.
-          <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
         </figcaption>
       </figure>
 
@@ -1046,8 +1072,8 @@ if (x &gt;= 0) {
         <h2 id="settings-heading">Procedures: contexts and globals</h2>
         <p class="section-intro">
           Real programs call procedures from several places. Two settings decide how those calls
-          share the solver's work: how the values that several call sites send into a procedure
-          are combined, and how many separate copies of a procedure the analysis keeps apart.
+          share the solver's work: how many separate copies of a procedure the analysis keeps
+          apart, and how the values that several call sites send into one copy are combined.
           Each changes precision, never correctness.
         </p>
       </div>
@@ -1175,210 +1201,6 @@ if (x &gt;= 0) {
           <a class="try-link" href="playground.html?example=factorial&amp;analysis=interval&amp;context=entry-state">Run it with entry-state contexts ↗</a>
         </figcaption>
       </figure>
-
-      <h3 class="setting-title">Globals: how contributions to a procedure entry combine</h3>
-      <p class="setting-copy">
-        When several call sites enter the same procedure, each contributes an entry state: the
-        side effect in the figure above. The solver treats that entry as a global unknown that
-        the call sites write into, and the <strong>Globals</strong> setting decides how those
-        writes combine. The name refers to the solver's global unknowns, not to the program's
-        global variables. Below, call site
-        <em>A</em> contributes twice, and its second contribution is smaller than its first.
-      </p>
-
-      <figure class="scene scene-solver">
-        <div class="solver-flow" aria-hidden="true">
-          <span class="flow-step f1"><b>1</b> A sends <code>[0, 3]</code></span>
-          <span class="flow-step f2"><b>2</b> B sends <code>[4, 4]</code></span>
-          <span class="flow-step f3"><b>3</b> A sends <code>[1, 1]</code></span>
-        </div>
-        <div class="table-scroll">
-          <table class="solver-table">
-            <thead>
-              <tr>
-                <th scope="col">Globals</th>
-                <th scope="col">Rule</th>
-                <th scope="col" class="c1">after 1</th>
-                <th scope="col" class="c2">after 2</th>
-                <th scope="col" class="c3">after 3</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">Join</th>
-                <td>old ⊔ new</td>
-                <td class="c1"><code>[0, 3]</code></td>
-                <td class="c2"><code>[0, 4]</code></td>
-                <td class="c3"><code>[0, 4]</code></td>
-              </tr>
-              <tr>
-                <th scope="row">Join per origin</th>
-                <td>one value per call site; report their join</td>
-                <td class="c1"><code>[0, 3]</code></td>
-                <td class="c2"><code>[0, 4]</code></td>
-                <td class="c3 best"><code>[1, 4]</code></td>
-              </tr>
-              <tr>
-                <th scope="row">Warrow</th>
-                <td>old ∇Δ (join over call sites)</td>
-                <td class="c1"><code>[0, 3]</code></td>
-                <td class="c2 widened"><code>[0, +∞]</code></td>
-                <td class="c3"><code>[0, 4]</code></td>
-              </tr>
-              <tr>
-                <th scope="row">Warrow per origin</th>
-                <td>∇Δ inside each call site's value; report their join</td>
-                <td class="c1"><code>[0, 3]</code></td>
-                <td class="c2"><code>[0, 4]</code></td>
-                <td class="c3"><code>[0, 4]</code></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <figcaption>
-          Values follow from the vendored update rules with Voblint's interval widening and
-          narrowing, where narrowing only replaces an infinite bound. Warrow widens at step 2
-          because <code>[0, 4]</code> outgrows <code>[0, 3]</code>. Join never forgets A's first
-          contribution; Join per origin replaces it. The setting governs these procedure entries;
-          loop points always use warrowing.
-        </figcaption>
-      </figure>
-
-      <h3 class="setting-title">Which Globals setting should you pick?</h3>
-      <p class="setting-copy">
-        No setting is best everywhere. They trade how quickly a growing value is cut off
-        against how much a merged value forgets. Nothing proves any of them terminates on every
-        program: Voblint assumes termination per program, so a bad choice shows up as a run that
-        never finishes, not as a wrong answer.
-      </p>
-
-      <div class="guide-grid">
-        <article class="guide-card start">
-          <h4><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> Start with Warrow</h4>
-          <p>
-            The playground's starting point. Widening is what stops a recursive call whose
-            argument keeps growing.
-          </p>
-        </article>
-        <article class="guide-card try">
-          <h4><i class="fa-solid fa-arrows-split-up-and-left" aria-hidden="true"></i> UNKNOWN with several callers?</h4>
-          <p>
-            Try <strong>Warrow per origin</strong>. It widens each call site's contribution on
-            its own, so one caller's growth is not blurred into a jump to infinity for all of them.
-            It is not always better: see the last row below.
-          </p>
-        </article>
-        <article class="guide-card caution">
-          <h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Join and Join per origin on intervals</h4>
-          <p>
-            Precise when a procedure receives finitely many values, but they never widen: a call
-            chain that keeps growing an argument makes the run spin forever.
-          </p>
-        </article>
-        <article class="guide-card stuck">
-          <h4><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> If a run does not finish</h4>
-          <p>
-            The analyzer has no timeout. Press <strong>Cancel</strong>, or change any setting, then
-            pick Warrow or Warrow per origin.
-          </p>
-        </article>
-      </div>
-
-      <figure class="scene scene-guide">
-        <div class="table-scroll">
-          <table class="guide-table">
-            <thead>
-              <tr>
-                <th scope="col">Program</th>
-                <th scope="col">Join</th>
-                <th scope="col">Join per origin</th>
-                <th scope="col">Warrow</th>
-                <th scope="col">Warrow per origin</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">
-                  <span class="guide-name">Two call sites</span>
-                  <code>p(1); p(2);</code> checks <code>x &lt;= 2</code> in <code>p</code>
-                </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
-              </tr>
-              <tr>
-                <th scope="row">
-                  <span class="guide-name">Call inside a loop</span>
-                  <code>while (x &lt; 10) { g(x); … }</code> checks <code>x &lt; 10</code> in <code>g</code>
-                </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
-              </tr>
-              <tr>
-                <th scope="row">
-                  <span class="guide-name">Growing recursion</span>
-                  <code>f(x) { f(x + 1); }</code> called as <code>f(0)</code>
-                </th>
-                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
-              </tr>
-              <tr>
-                <th scope="row">
-                  <span class="guide-name">Recursion that shrinks</span>
-                  <code>f(a) { if (a &lt; 4) { f(9 / (a + 2)); } }</code> from <code>f(-1)</code>, checks <code>a &lt;= 9</code>
-                </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <figcaption>
-          Measured with the analyzer on this site: Interval domain, no context sensitivity.
-          “No answer” means no result within 12 seconds. Click a cell to run it in the playground. In the last row the recursive call
-          site's own contribution changes from <code>9</code> to <code>[1, 9]</code>. Warrow per
-          origin sees that one call site grow and widens it to <code>−∞</code>; after that
-          <code>a + 2</code> may be zero and the division loses everything. Warrow joins in
-          <code>main</code>'s <code>−1</code> first, so the combined value never grows and nothing
-          is widened.
-        </figcaption>
-      </figure>
-
-      <details class="guide-sources">
-        <summary>What the papers say</summary>
-        <ul>
-          <li>
-            Join collects contributions precisely and works well for domains of finite height;
-            with infinite ascending chains, such as intervals, it may not terminate.
-            <cite>Tilscher, Graß, Seidl: Verifying a Solver for Mixed Flow-Sensitive Analyses</cite>
-          </li>
-          <li>
-            Warrow per origin exists because narrowing one call site's value must not drop
-            what the other call sites contributed. <cite>ibid.</cite>
-          </li>
-          <li>
-            For local unknowns, a top-down solver with warrowing is always partially correct, and
-            terminates for finitely many unknowns when widening is precise and right-hand sides and
-            dependencies are monotonic; without monotonicity it may not terminate. Bounding the
-            number of switches from widening to narrowing restores termination.
-            <cite>Tilscher et al.: Proving Total Correctness of Top-Down Solvers with Widening and
-            Narrowing, Journal of Automated Reasoning 70, 2026</cite>
-          </li>
-          <li>
-            Neither paper proves termination for the update rules on side-effected unknowns that
-            these settings select, which is why Voblint's theorems take termination as a
-            premise. The vendored solver also contains a bounded-narrowing rule that this analyzer
-            does not expose.
-          </li>
-        </ul>
-      </details>
 
       <h3 class="setting-title">Context sensitivity: how many copies of a procedure</h3>
       <p class="setting-copy">
@@ -1598,6 +1420,211 @@ if (x &gt;= 0) {
             </tbody>
           </table>
         </div>
+      </details>
+
+      <h3 class="setting-title">Globals: how contributions to a procedure entry combine</h3>
+      <p class="setting-copy">
+        When several call sites enter the same copy of a procedure, each contributes an entry
+        state: the side effect in the life of a call. The solver treats that entry as a global unknown that
+        the call sites write into, and the <strong>Globals</strong> setting decides how those
+        writes combine. The name refers to the solver's global unknowns, not to the program's
+        global variables. Below, call site
+        <em>A</em> contributes twice, and its second contribution is smaller than its first.
+      </p>
+
+      <figure class="scene scene-solver">
+        <div class="solver-flow" aria-hidden="true">
+          <span class="flow-step f1"><b>1</b> A sends <code>[0, 3]</code></span>
+          <span class="flow-step f2"><b>2</b> B sends <code>[4, 4]</code></span>
+          <span class="flow-step f3"><b>3</b> A sends <code>[1, 1]</code></span>
+        </div>
+        <div class="table-scroll">
+          <table class="solver-table">
+            <thead>
+              <tr>
+                <th scope="col">Globals</th>
+                <th scope="col">Rule</th>
+                <th scope="col" class="c1">after 1</th>
+                <th scope="col" class="c2">after 2</th>
+                <th scope="col" class="c3">after 3</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Join</th>
+                <td>old ⊔ new</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2"><code>[0, 4]</code></td>
+                <td class="c3"><code>[0, 4]</code></td>
+              </tr>
+              <tr>
+                <th scope="row">Join per origin</th>
+                <td>one value per call site; report their join</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2"><code>[0, 4]</code></td>
+                <td class="c3 best"><code>[1, 4]</code></td>
+              </tr>
+              <tr>
+                <th scope="row">Warrow</th>
+                <td>old ∇Δ (join over call sites)</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2 widened"><code>[0, +∞]</code></td>
+                <td class="c3"><code>[0, 4]</code></td>
+              </tr>
+              <tr>
+                <th scope="row">Warrow per origin</th>
+                <td>∇Δ inside each call site's value; report their join</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2"><code>[0, 4]</code></td>
+                <td class="c3"><code>[0, 4]</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption>
+          Values follow from the vendored update rules with Voblint's interval widening and
+          narrowing, where narrowing only replaces an infinite bound. Warrow widens at step 2
+          because <code>[0, 4]</code> outgrows <code>[0, 3]</code>. Join never forgets A's first
+          contribution; Join per origin replaces it. The setting governs these procedure entries;
+          loop points always use warrowing.
+        </figcaption>
+      </figure>
+
+      <h3 class="setting-title">Which Globals setting should you pick?</h3>
+      <p class="setting-copy">
+        No setting is best everywhere. They trade how quickly a growing value is cut off
+        against how much a merged value forgets. Nothing proves any of them terminates on every
+        program: Voblint assumes termination per program, so a bad choice shows up as a run that
+        never finishes, not as a wrong answer.
+      </p>
+
+      <div class="guide-grid">
+        <article class="guide-card start">
+          <h4><i class="fa-solid fa-flag-checkered" aria-hidden="true"></i> Start with Warrow</h4>
+          <p>
+            The playground's starting point. Widening is what stops a recursive call whose
+            argument keeps growing.
+          </p>
+        </article>
+        <article class="guide-card try">
+          <h4><i class="fa-solid fa-arrows-split-up-and-left" aria-hidden="true"></i> UNKNOWN with several callers?</h4>
+          <p>
+            Try <strong>Warrow per origin</strong>. It widens each call site's contribution on
+            its own, so one caller's growth is not blurred into a jump to infinity for all of them.
+            It is not always better: see the last row below.
+          </p>
+        </article>
+        <article class="guide-card caution">
+          <h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Join and Join per origin on intervals</h4>
+          <p>
+            Precise when a procedure receives finitely many values, but they never widen: a call
+            chain that keeps growing an argument makes the run spin forever.
+          </p>
+        </article>
+        <article class="guide-card stuck">
+          <h4><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> If a run does not finish</h4>
+          <p>
+            The analyzer has no timeout. Press <strong>Cancel</strong>, or change any setting, then
+            pick Warrow or Warrow per origin.
+          </p>
+        </article>
+      </div>
+
+      <figure class="scene scene-guide">
+        <div class="table-scroll">
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th scope="col">Program</th>
+                <th scope="col">Join</th>
+                <th scope="col">Join per origin</th>
+                <th scope="col">Warrow</th>
+                <th scope="col">Warrow per origin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">
+                  <span class="guide-name">Two call sites</span>
+                  <code>p(1); p(2);</code> checks <code>x &lt;= 2</code> in <code>p</code>
+                </th>
+                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+              </tr>
+              <tr>
+                <th scope="row">
+                  <span class="guide-name">Call inside a loop</span>
+                  <code>while (x &lt; 10) { g(x); … }</code> checks <code>x &lt; 10</code> in <code>g</code>
+                </th>
+                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+              </tr>
+              <tr>
+                <th scope="row">
+                  <span class="guide-name">Growing recursion</span>
+                  <code>f(x) { f(x + 1); }</code> called as <code>f(0)</code>
+                </th>
+                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+              </tr>
+              <tr>
+                <th scope="row">
+                  <span class="guide-name">Recursion that shrinks</span>
+                  <code>f(a) { if (a &lt; 4) { f(9 / (a + 2)); } }</code> from <code>f(-1)</code>, checks <code>a &lt;= 9</code>
+                </th>
+                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <figcaption>
+          Measured with the analyzer on this site: Interval domain, no context sensitivity.
+          “No answer” means no result within 12 seconds. Click a cell to run it in the playground. In the last row the recursive call
+          site's own contribution changes from <code>9</code> to <code>[1, 9]</code>. Warrow per
+          origin sees that one call site grow and widens it to <code>−∞</code>; after that
+          <code>a + 2</code> may be zero and the division loses everything. Warrow joins in
+          <code>main</code>'s <code>−1</code> first, so the combined value never grows and nothing
+          is widened.
+        </figcaption>
+      </figure>
+
+      <details class="guide-sources">
+        <summary>What the papers say</summary>
+        <ul>
+          <li>
+            Join collects contributions precisely and works well for domains of finite height;
+            with infinite ascending chains, such as intervals, it may not terminate.
+            <cite><a href="https://doi.org/10.1007/978-3-032-28079-4_3" target="_blank" rel="noreferrer">Tilscher, Graß, Seidl: Verifying a Solver for Mixed Flow-Sensitive Analyses</a>, NASA Formal Methods 2026</cite>
+          </li>
+          <li>
+            Warrow per origin exists because narrowing one call site's value must not drop
+            what the other call sites contributed. <cite>ibid.</cite>
+          </li>
+          <li>
+            For local unknowns, a top-down solver with warrowing is always partially correct, and
+            terminates for finitely many unknowns when widening is precise and right-hand sides and
+            dependencies are monotonic; without monotonicity it may not terminate. Bounding the
+            number of switches from widening to narrowing restores termination.
+            <cite><a href="https://doi.org/10.1007/s10817-026-09756-x" target="_blank" rel="noreferrer">Tilscher et al.: Proving Total Correctness of Top-Down Solvers with Widening and
+            Narrowing</a>, Journal of Automated Reasoning 70, 2026</cite>
+          </li>
+          <li>
+            Neither paper proves termination for the update rules on side-effected unknowns that
+            these settings select, which is why Voblint's theorems take termination as a
+            premise. The vendored solver also contains a bounded-narrowing rule that this analyzer
+            does not expose.
+          </li>
+          <li>More on these solvers under <a href="#further-reading">Further reading</a>.</li>
+        </ul>
       </details>
 
       <h3 class="setting-title">A call that never stops calling</h3>
@@ -1943,121 +1970,6 @@ if (x &gt;= 0) {
         <figcaption>
           The guarantee holds inside the solid box. The parser that turns text into a program,
           and the code that draws badges and graphs from the result, sit outside it.
-        </figcaption>
-      </figure>
-
-
-      <div class="prose-block">
-        <h3>A map of the proof</h3>
-        <p>
-          The development runs along five lines: what programs mean, how they are compiled, what
-          a domain proves, how equations are built, and how the solver answers them. Every line
-          ends at an interchange where one theorem joins it to another, and all of them meet in
-          the result line, which ends at the verdicts you see. Hover a station to find its
-          theory; click it to open the theory.
-        </p>
-      </div>
-
-      <figure class="scene scene-metro">
-        <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three or four stations and meet at interchanges; the result line leaves the central interchange and ends at three terminals: PROVED, DEAD and SAFE.">
-          <g class="metro-lines">
-            <path class="line-sem" d="M70 70 H 700 V 395"/>
-            <path class="line-comp" d="M70 165 H 900 V 440"/>
-            <path class="line-dom" d="M70 270 H 490 V 350"/>
-            <path class="line-fw" d="M70 350 H 700"/>
-            <path class="line-sol" d="M70 470 H 560 L 640 440 H 700"/>
-            <path class="line-res" d="M700 395 L 760 440 H 900 L 960 380 H 1010 M900 440 H 1010 M900 440 L 960 500 H 1010"/>
-          </g>
-
-          <g class="metro-line-names">
-            <text class="name-sem" x="70" y="46">SEMANTICS</text>
-            <text class="name-comp" x="70" y="141">COMPILER</text>
-            <text class="name-dom" x="70" y="246">DOMAIN</text>
-            <text class="name-fw" x="70" y="326">FRAMEWORK</text>
-            <text class="name-sol" x="70" y="446">SOLVER</text>
-            <text class="name-res" x="770" y="422">RESULT</text>
-          </g>
-
-          <g class="metro-stations">
-            <a class="metro-station" href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst" data-name="pstep" data-theory="Voblint_VIMP.VIMP_Proc" data-info="The source semantics: one step rewrites the rest of the program, the store and the caller frames.">
-              <circle cx="70" cy="70" r="8"/><text x="70" y="96">pstep</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
-              <circle cx="190" cy="70" r="8"/><text x="190" y="96">cstep</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst" data-name="valid_ltr" data-theory="Voblint_CFG.LTR_Def" data-info="Activation-local traces: each records one activation's path, with its callers and finished callees nested inside.">
-              <circle cx="320" cy="70" r="8"/><text x="320" y="96">valid_ltr</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst" data-name="ltr_collect" data-theory="Voblint_CFG.LTR_Collect" data-info="The collecting semantics: every store some valid trace reaches at a node. Every soundness theorem is judged against it.">
-              <circle cx="450" cy="70" r="8"/><text x="450" y="96">ltr_collect</text></a>
-
-            <a class="metro-station" href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile_prog%7Cconst" data-name="compile_prog" data-theory="Voblint_Compile.VIMP_Proc_to_CFG" data-info="The compiler from VIMP procedures to a graph with entry and result nodes per procedure.">
-              <circle cx="70" cy="165" r="8"/><text x="70" y="191">compile_prog</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst" data-name="csim" data-theory="Voblint_Compile.Simulation_Relation" data-info="The simulation relation: which source configuration matches which graph configuration, always with the same store.">
-              <circle cx="210" cy="165" r="8"/><text x="210" y="191">csim</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact" data-name="csim_step" data-theory="Voblint_Compile.Simulation_Preservation" data-info="Forward simulation: one source step is matched by zero or more graph steps.">
-              <circle cx="350" cy="165" r="8"/><text x="350" y="191">csim_step</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_ltr%7Cfact" data-name="source_run_has_ltr" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid trace ending there.">
-              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_ltr</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact" data-name="source_reaches_ltr_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
-              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_ltr_collect</text></a>
-
-            <a class="metro-station" href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.sound_domain%7Cclass" data-name="sound_domain" data-theory="Voblint_Domain.Abstract_Domain" data-info="What an abstract value is: a concretization γ that is monotone, empty at ⊥ and full at ⊤.">
-              <circle cx="70" cy="270" r="8"/><text x="70" y="296">sound_domain</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Abstract_Arithmetic.html#Abstract_Arithmetic.expression_domain_sound%7Clocale" data-name="expression_domain_sound" data-theory="Voblint_Nonrelational.Abstract_Arithmetic" data-info="One soundness lemma per arithmetic operator and comparison, such as ivl_plus_sound.">
-              <circle cx="230" cy="270" r="8"/><text x="230" y="296">expression_domain_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Domain/Backward_Domain.html#Backward_Domain.backward_domain%7Clocale" data-name="backward_domain" data-theory="Voblint_Domain.Backward_Domain" data-info="Guards: the backward filter keeps every store the condition admits.">
-              <circle cx="390" cy="270" r="8"/><text x="390" y="296">backward_domain</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale" data-name="sound_transfer_for" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
-              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_transfer_for</text></a>
-
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: step, enter, combine, return. Goblint's Spec, in Isabelle.">
-              <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Keyed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
-              <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: the key a call is filed under is one the semantics admits for its entry.">
-              <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
-
-            <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
-              <circle cx="70" cy="470" r="8"/><text x="70" y="496">strategy_tree</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.sp_bind%7Cconst" data-name="sp_bind" data-theory="Voblint_Solver.Strategy_Tree_Program" data-info="The do-notation that builds strategy trees.">
-              <circle cx="230" cy="470" r="8"/><text x="230" y="496">sp_bind</text></a>
-            <a class="metro-station" href="Unsorted/TD/TD_side.html#TD_side.TD_side.solve%7Cconst" data-name="solve" data-theory="TD.TD_side" data-info="The vendored, verified top-down solver with side effects.">
-              <circle cx="390" cy="470" r="8"/><text x="390" y="496">TD solve</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Solver/TD_Solver_Bridge.html#TD_Solver_Bridge.TD_side_upd_rule.part_post_solution_of_solve_c%7Cfact" data-name="part_post_solution_of_solve_c" data-theory="Voblint_Solver.TD_Solver_Bridge" data-info="Whatever the global update rule: if the solve terminates, its answer is a post-solution.">
-              <circle cx="560" cy="470" r="8"/><text x="560" y="496">part_post_solution_of_solve_c</text></a>
-
-            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The central interchange of semantics, framework and solver: given a post-solution and sound transfers, every store a trace reaches is inside γ of the solver's value, by induction on the trace.">
-              <rect x="686" y="336" width="28" height="118" rx="14"/><text x="724" y="330" text-anchor="start">activation_collect_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/Unit_DG_Analysis.html#Unit_DG_Analysis.unit_dg_analysis.result_node_sound_of_terminates%7Cfact" data-name="result_node_sound_of_terminates" data-theory="Voblint_Result.Unit_DG_Analysis" data-info="The result read back from the solver covers the collecting semantics at every node.">
-              <circle cx="800" cy="440" r="8"/><text x="800" y="466">result_node_sound</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere.">
-              <circle cx="900" cy="440" r="12"/><text x="892" y="530" text-anchor="middle">run_voblint</text></a>
-
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it.">
-              <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check.">
-              <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store.">
-              <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
-          </g>
-        </svg>
-
-        <div class="metro-info" aria-live="polite">
-          <p class="metro-info-name"><code>activation_collect_sound</code> <span>Voblint_Framework.Activation_Backbone</span></p>
-          <p class="metro-info-text">
-            The central interchange of semantics, framework and solver: given a post-solution and
-            sound transfers, every store a trace reaches is inside γ of the solver's value, by
-            induction on the trace.
-          </p>
-        </div>
-
-        <figcaption>
-          Stations are real definitions and theorems; wide markers are interchanges, where one
-          theorem consumes the lines that meet there. The map follows the session structure:
-          the semantics line lives in <code>Voblint_VIMP</code> and <code>Voblint_CFG</code>, the
-          compiler in <code>Voblint_Compile</code>, the domain and framework lines in
-          <code>Voblint_Domain</code>, <code>Voblint_Nonrelational</code> and
-          <code>Voblint_Framework</code>, the solver in the vendored <code>TD</code> session and
-          <code>Voblint_Solver</code>.
         </figcaption>
       </figure>
     </section>
@@ -2844,18 +2756,120 @@ qed</code></pre>
         </figcaption>
       </figure>
 
-      <div class="claim-grid">
-        <div class="claim-card trusted">
-          <h3>What the theorems do not cover</h3>
-          <ul>
-            <li><strong>Termination.</strong> Assumed per program, as above.</li>
-            <li><strong>Parsing.</strong> Lexer and parser are generated from one grammar and tested, not proved. <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/frontend" target="_blank" rel="noreferrer">Source ↗</a></li>
-            <li><strong>Execution.</strong> Isabelle's code generator, the OCaml compiler, wasm and your browser are trusted.</li>
-            <li><strong>Presentation.</strong> Source positions, rendered strings, badges, the state inspector and GraphViz drawings. <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/render" target="_blank" rel="noreferrer">OCaml rendering ↗</a> · <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">page ↗</a></li>
-            <li><strong>Precision.</strong> A correct answer can still be <code>UNKNOWN</code>.</li>
-          </ul>
-        </div>
+      <div class="prose-block">
+        <h3>A map of the proof</h3>
+        <p>
+          Zoom back out. The zoom followed one path; the whole development runs along five
+          lines: what programs mean, how they are compiled, what
+          a domain proves, how equations are built, and how the solver answers them. Every line
+          ends at an interchange where one theorem joins it to another, and all of them meet in
+          the result line, which ends at the verdicts you see. Hover a station to find its
+          theory; click it to open the theory.
+        </p>
       </div>
+
+      <figure class="scene scene-metro">
+        <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three or four stations and meet at interchanges; the result line leaves the central interchange and ends at three terminals: PROVED, DEAD and SAFE.">
+          <g class="metro-lines">
+            <path class="line-sem" d="M70 70 H 700 V 395"/>
+            <path class="line-comp" d="M70 165 H 900 V 440"/>
+            <path class="line-dom" d="M70 270 H 490 V 350"/>
+            <path class="line-fw" d="M70 350 H 700"/>
+            <path class="line-sol" d="M70 470 H 560 L 640 440 H 700"/>
+            <path class="line-res" d="M700 395 L 760 440 H 900 L 960 380 H 1010 M900 440 H 1010 M900 440 L 960 500 H 1010"/>
+          </g>
+
+          <g class="metro-line-names">
+            <text class="name-sem" x="70" y="46">SEMANTICS</text>
+            <text class="name-comp" x="70" y="141">COMPILER</text>
+            <text class="name-dom" x="70" y="246">DOMAIN</text>
+            <text class="name-fw" x="70" y="326">FRAMEWORK</text>
+            <text class="name-sol" x="70" y="446">SOLVER</text>
+            <text class="name-res" x="770" y="422">RESULT</text>
+          </g>
+
+          <g class="metro-stations">
+            <a class="metro-station" href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst" data-name="pstep" data-theory="Voblint_VIMP.VIMP_Proc" data-info="The source semantics: one step rewrites the rest of the program, the store and the caller frames.">
+              <circle cx="70" cy="70" r="8"/><text x="70" y="96">pstep</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
+              <circle cx="190" cy="70" r="8"/><text x="190" y="96">cstep</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst" data-name="valid_ltr" data-theory="Voblint_CFG.LTR_Def" data-info="Activation-local traces: each records one activation's path, with its callers and finished callees nested inside.">
+              <circle cx="320" cy="70" r="8"/><text x="320" y="96">valid_ltr</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst" data-name="ltr_collect" data-theory="Voblint_CFG.LTR_Collect" data-info="The collecting semantics: every store some valid trace reaches at a node. Every soundness theorem is judged against it.">
+              <circle cx="450" cy="70" r="8"/><text x="450" y="96">ltr_collect</text></a>
+
+            <a class="metro-station" href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile_prog%7Cconst" data-name="compile_prog" data-theory="Voblint_Compile.VIMP_Proc_to_CFG" data-info="The compiler from VIMP procedures to a graph with entry and result nodes per procedure.">
+              <circle cx="70" cy="165" r="8"/><text x="70" y="191">compile_prog</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst" data-name="csim" data-theory="Voblint_Compile.Simulation_Relation" data-info="The simulation relation: which source configuration matches which graph configuration, always with the same store.">
+              <circle cx="210" cy="165" r="8"/><text x="210" y="191">csim</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact" data-name="csim_step" data-theory="Voblint_Compile.Simulation_Preservation" data-info="Forward simulation: one source step is matched by zero or more graph steps.">
+              <circle cx="350" cy="165" r="8"/><text x="350" y="191">csim_step</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_ltr%7Cfact" data-name="source_run_has_ltr" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid trace ending there.">
+              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_ltr</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact" data-name="source_reaches_ltr_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
+              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_ltr_collect</text></a>
+
+            <a class="metro-station" href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.sound_domain%7Cclass" data-name="sound_domain" data-theory="Voblint_Domain.Abstract_Domain" data-info="What an abstract value is: a concretization γ that is monotone, empty at ⊥ and full at ⊤.">
+              <circle cx="70" cy="270" r="8"/><text x="70" y="296">sound_domain</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Abstract_Arithmetic.html#Abstract_Arithmetic.expression_domain_sound%7Clocale" data-name="expression_domain_sound" data-theory="Voblint_Nonrelational.Abstract_Arithmetic" data-info="One soundness lemma per arithmetic operator and comparison, such as ivl_plus_sound.">
+              <circle cx="230" cy="270" r="8"/><text x="230" y="296">expression_domain_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Domain/Backward_Domain.html#Backward_Domain.backward_domain%7Clocale" data-name="backward_domain" data-theory="Voblint_Domain.Backward_Domain" data-info="Guards: the backward filter keeps every store the condition admits.">
+              <circle cx="390" cy="270" r="8"/><text x="390" y="296">backward_domain</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale" data-name="sound_transfer_for" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
+              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_transfer_for</text></a>
+
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: step, enter, combine, return. Goblint's Spec, in Isabelle.">
+              <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Keyed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
+              <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: the key a call is filed under is one the semantics admits for its entry.">
+              <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
+
+            <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
+              <circle cx="70" cy="470" r="8"/><text x="70" y="496">strategy_tree</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.sp_bind%7Cconst" data-name="sp_bind" data-theory="Voblint_Solver.Strategy_Tree_Program" data-info="The do-notation that builds strategy trees.">
+              <circle cx="230" cy="470" r="8"/><text x="230" y="496">sp_bind</text></a>
+            <a class="metro-station" href="Unsorted/TD/TD_side.html#TD_side.TD_side.solve%7Cconst" data-name="solve" data-theory="TD.TD_side" data-info="The vendored, verified top-down solver with side effects.">
+              <circle cx="390" cy="470" r="8"/><text x="390" y="496">TD solve</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Solver/TD_Solver_Bridge.html#TD_Solver_Bridge.TD_side_upd_rule.part_post_solution_of_solve_c%7Cfact" data-name="part_post_solution_of_solve_c" data-theory="Voblint_Solver.TD_Solver_Bridge" data-info="Whatever the global update rule: if the solve terminates, its answer is a post-solution.">
+              <circle cx="560" cy="470" r="8"/><text x="560" y="496">part_post_solution_of_solve_c</text></a>
+
+            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The central interchange of semantics, framework and solver: given a post-solution and sound transfers, every store a trace reaches is inside γ of the solver's value, by induction on the trace.">
+              <rect x="686" y="336" width="28" height="118" rx="14"/><text x="724" y="330" text-anchor="start">activation_collect_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Result/Unit_DG_Analysis.html#Unit_DG_Analysis.unit_dg_analysis.result_node_sound_of_terminates%7Cfact" data-name="result_node_sound_of_terminates" data-theory="Voblint_Result.Unit_DG_Analysis" data-info="The result read back from the solver covers the collecting semantics at every node.">
+              <circle cx="800" cy="440" r="8"/><text x="800" y="466">result_node_sound</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere.">
+              <circle cx="900" cy="440" r="12"/><text x="892" y="530" text-anchor="middle">run_voblint</text></a>
+
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it.">
+              <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check.">
+              <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store.">
+              <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
+          </g>
+        </svg>
+
+        <div class="metro-info" aria-live="polite">
+          <p class="metro-info-name"><code>activation_collect_sound</code> <span>Voblint_Framework.Activation_Backbone</span></p>
+          <p class="metro-info-text">
+            The central interchange of semantics, framework and solver: given a post-solution and
+            sound transfers, every store a trace reaches is inside γ of the solver's value, by
+            induction on the trace.
+          </p>
+        </div>
+
+        <figcaption>
+          Stations are real definitions and theorems; wide markers are interchanges, where one
+          theorem consumes the lines that meet there. The map follows the session structure:
+          the semantics line lives in <code>Voblint_VIMP</code> and <code>Voblint_CFG</code>, the
+          compiler in <code>Voblint_Compile</code>, the domain and framework lines in
+          <code>Voblint_Domain</code>, <code>Voblint_Nonrelational</code> and
+          <code>Voblint_Framework</code>, the solver in the vendored <code>TD</code> session and
+          <code>Voblint_Solver</code>.
+        </figcaption>
+      </figure>
     </section>
 
     <!-- ================================================================== -->
@@ -3010,7 +3024,9 @@ qed</code></pre>
           a static analyzer for real C programs, and simplifies wherever a proof would otherwise
           have to model all of C. The project's own register of differences says what the claim is:
           <em>“a simplified, machine-checked semantic model of Goblint's interprocedural
-          context-sensitive architecture”</em>, and not the exact implementation.
+          context-sensitive architecture”</em>, and not the exact implementation. Its vocabulary
+          of locals, globals and side effects, and many of this page's examples, follow the
+          <a href="#ref-seidl-2026">FM 2026 tutorial on mixed flow-sensitivity</a> by Goblint's authors.
         </p>
       </div>
 
@@ -3194,6 +3210,17 @@ qed</code></pre>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> A counterexample</h4>
           <p><code>REFUTED</code> says the check fails in every run that reaches it, not that any run does. An error diagnostic likewise does not prove the point is reachable.</p>
+        </article>
+        <article class="guide-card caution">
+          <h4><i class="fa-solid fa-plug-circle-exclamation" aria-hidden="true"></i> The code around the proof</h4>
+          <p>
+            The <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/frontend" target="_blank" rel="noreferrer">parser</a>
+            is generated from one grammar and tested. Isabelle's code generator, the OCaml compiler,
+            wasm and your browser are trusted. Source positions, badges and graph drawings
+            (<a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/render" target="_blank" rel="noreferrer">OCaml rendering</a>,
+            <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">this page</a>)
+            are unverified.
+          </p>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-right-left" aria-hidden="true"></i> Two-way compiler equivalence</h4>
@@ -3447,6 +3474,176 @@ qed</code></pre>
 
     </section>
 
+    <!-- ================================================================== -->
+    <section class="section" id="further-reading" aria-labelledby="further-reading-heading">
+      <div class="section-heading">
+        <p class="eyebrow">The neighbourhood</p>
+        <h2 id="further-reading-heading">Further reading</h2>
+        <p class="section-intro">
+          Goblint is developed at TUM and the University of Tartu. The groups below run from the
+          oldest ideas this page builds on to the solver proofs it imports. If you read one,
+          read the <a href="#ref-seidl-2026">FM 2026 tutorial on mixed flow-sensitivity</a>:
+          this page follows it closely. The full list, theses included, is on
+          <a href="https://goblint.in.tum.de/papers" target="_blank" rel="noreferrer">Goblint's publication page</a>,
+          and the analyzer itself is described in its
+          <a href="https://goblint.readthedocs.io/en/latest/" target="_blank" rel="noreferrer">documentation</a>.
+        </p>
+      </div>
+
+      <figure class="scene scene-timeline">
+        <div class="timeline-scroll">
+        <svg class="timeline-svg" viewBox="0 0 1000 132" role="img"
+          aria-label="The papers below on a time axis, from 1977 to 2026, one dot per paper colored by its group. The axis skips from 1990 to 2008; most of the solver and Goblint work falls after 2010."></svg>
+        </div>
+        <p class="timeline-info" aria-live="polite">Hover or focus a dot to see the paper; click it to jump to its entry.</p>
+        <ul class="timeline-legend"></ul>
+        <noscript><p class="timeline-info">The timeline needs JavaScript. Every entry below gives its year.</p></noscript>
+        <figcaption>
+          A paper sits at the year it first appeared, so Seidl and Vogler's solver is placed at
+          PPDP 2018 although it links to the journal version. The axis skips the years 1991 to
+          2007.
+        </figcaption>
+      </figure>
+
+      <div class="reading-groups">
+        <div class="reading-group">
+          <h3>Abstract interpretation</h3>
+          <ul class="reading-list">
+            <li id="ref-cousot-1977" data-year="1977">
+              <a href="https://doi.org/10.1145/512950.512973" target="_blank" rel="noreferrer">Abstract interpretation: a unified lattice model for static analysis of programs by construction or approximation of fixpoints</a>
+              <span class="reading-meta">Patrick Cousot, Radhia Cousot · POPL 1977</span>
+              <span class="reading-why">The founding paper: abstract values, concretization, and analysis results as fixpoints.</span>
+            </li>
+            <li id="ref-cousot-1979" data-year="1979">
+              <a href="https://doi.org/10.1145/567752.567778" target="_blank" rel="noreferrer">Systematic design of program analysis frameworks</a>
+              <span class="reading-meta">Patrick Cousot, Radhia Cousot · POPL 1979</span>
+              <span class="reading-why">Introduces the reduced product, the construction behind the Int domain.</span>
+            </li>
+            <li id="ref-sharir-pnueli-1981" data-year="1981">
+              <a href="https://www.cs.tau.ac.il/~michas/sharir_pnueli-PFA-TA-1981.pdf" target="_blank" rel="noreferrer">Two approaches to interprocedural data flow analysis</a>
+              <span class="reading-meta">Micha Sharir, Amir Pnueli · in Program Flow Analysis: Theory and Applications, 1981</span>
+              <span class="reading-why">The call-string and functional approaches, ancestors of the call-string and entry-state contexts.</span>
+            </li>
+            <li id="ref-granger-1989" data-year="1989">
+              <a href="https://doi.org/10.1080/00207168908803778" target="_blank" rel="noreferrer">Static analysis of arithmetical congruences</a>
+              <span class="reading-meta">Philippe Granger · International Journal of Computer Mathematics, 1989</span>
+              <span class="reading-why">The congruence domain, the component that settles the multiples-of-three example.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="reading-group">
+          <h3>Verified analyzers and Isabelle</h3>
+          <ul class="reading-list">
+            <li id="ref-haftmann-nipkow-2010" data-year="2010">
+              <a href="https://doi.org/10.1007/978-3-642-12251-4_9" target="_blank" rel="noreferrer">Code Generation via Higher-Order Rewrite Systems</a>
+              <span class="reading-meta">Florian Haftmann, Tobias Nipkow · FLOPS 2010</span>
+              <span class="reading-why">The code generator behind <code>export_code</code>, which turns the proved definitions into the OCaml you run.</span>
+            </li>
+            <li id="ref-nipkow-2012" data-year="2012">
+              <a href="https://doi.org/10.1007/978-3-642-32347-8_9" target="_blank" rel="noreferrer">Abstract Interpretation of Annotated Commands</a>
+              <span class="reading-meta">Tobias Nipkow · ITP 2012</span>
+              <span class="reading-why">A verified abstract interpreter that follows the program text instead of a solver.</span>
+            </li>
+            <li id="ref-nipkow-klein-2014" data-year="2014">
+              <a href="http://concrete-semantics.org/" target="_blank" rel="noreferrer">Concrete Semantics with Isabelle/HOL</a>
+              <span class="reading-meta">Tobias Nipkow, Gerwin Klein · Springer, 2014 · free online</span>
+              <span class="reading-why">IMP, its semantics and an abstract interpreter in Isabelle; VIMP builds on its HOL-IMP theories.</span>
+            </li>
+            <li id="ref-jourdan-2015" data-year="2015">
+              <a href="https://doi.org/10.1145/2676726.2676966" target="_blank" rel="noreferrer">A Formally-Verified C Static Analyzer</a>
+              <span class="reading-meta">Jacques-Henri Jourdan, Vincent Laporte, Sandrine Blazy, Xavier Leroy, David Pichardie · POPL 2015</span>
+              <span class="reading-why">Verasco: abstract interpretation of real C, verified in Coq against CompCert's semantics.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="reading-group">
+          <h3>Goblint's foundations</h3>
+          <ul class="reading-list">
+            <li id="ref-apinis-2012" data-year="2012">
+              <a href="https://doi.org/10.1007/978-3-642-35182-2_12" target="_blank" rel="noreferrer">Side-Effecting Constraint Systems: A Swiss Army Knife for Program Analysis</a>
+              <span class="reading-meta">Kalmer Apinis, Helmut Seidl, Vesal Vojdani · APLAS 2012</span>
+              <span class="reading-why">Right-hand sides that also write to global unknowns: how call sites contribute to a procedure entry.</span>
+            </li>
+            <li id="ref-apinis-2013" data-year="2013">
+              <a href="https://doi.org/10.1145/2491956.2462190" target="_blank" rel="noreferrer">How to combine widening and narrowing for non-monotonic systems of equations</a>
+              <span class="reading-meta">Kalmer Apinis, Helmut Seidl, Vesal Vojdani · PLDI 2013</span>
+              <span class="reading-why">Warrowing, the operator behind the Warrow settings.</span>
+            </li>
+            <li id="ref-vojdani-2016" data-year="2016">
+              <a href="https://doi.org/10.1145/2970276.2970337" target="_blank" rel="noreferrer">Static race detection for device drivers: the Goblint approach</a>
+              <span class="reading-meta">Vesal Vojdani, Kalmer Apinis, Vootele Rõtov, Helmut Seidl, Varmo Vene, Ralf Vogler · ASE 2016</span>
+              <span class="reading-why">Goblint as a whole, applied to data races in device drivers.</span>
+            </li>
+            <li id="ref-seidl-vogler-2018" data-year="2018">
+              <a href="https://doi.org/10.1017/S0960129521000499" target="_blank" rel="noreferrer">Three improvements to the top-down solver</a>
+              <span class="reading-meta">Helmut Seidl, Ralf Vogler · Mathematical Structures in Computer Science, 2021 (PPDP 2018)</span>
+              <span class="reading-why">TD3, the solver Goblint runs, with side effects and non-monotonic right-hand sides.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="reading-group">
+          <h3>Top-down solvers, derived and verified</h3>
+          <ul class="reading-list">
+            <li id="ref-hofmann-2010" data-year="2010">
+              <a href="https://doi.org/10.1007/978-3-642-15769-1_21" target="_blank" rel="noreferrer">Verifying a Local Generic Solver in Coq</a>
+              <span class="reading-meta">Martin Hofmann, Aleksandr Karbyshev, Helmut Seidl · SAS 2010</span>
+              <span class="reading-why">The first machine-checked local solver, with right-hand sides as strategy trees.</span>
+            </li>
+            <li id="ref-tilscher-2023" data-year="2023">
+              <a href="https://doi.org/10.1007/978-981-19-9601-6_9" target="_blank" rel="noreferrer">The Top-Down Solver—An Exercise in A²I</a>
+              <span class="reading-meta">Sarah Tilscher, Yannick Stade, Michael Schwarz, Ralf Vogler, Helmut Seidl · Challenges of Software Verification, 2023</span>
+              <span class="reading-why">Derives the top-down solver step by step.</span>
+            </li>
+            <li id="ref-stade-2024" data-year="2024">
+              <a href="https://doi.org/10.1007/978-3-031-65627-9_15" target="_blank" rel="noreferrer">The Top-Down Solver Verified: Building Confidence in Static Analyzers</a>
+              <span class="reading-meta">Yannick Stade, Sarah Tilscher, Helmut Seidl · CAV 2024</span>
+              <span class="reading-why">Partial correctness of the top-down solver in Isabelle/HOL, also in the <a href="https://isa-afp.org/entries/Top_Down_Solver.html" target="_blank" rel="noreferrer">Archive of Formal Proofs</a>.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="reading-group">
+          <h3>Mixed flow-sensitivity</h3>
+          <ul class="reading-list">
+            <li id="ref-seidl-2026" data-year="2026">
+              <a href="https://doi.org/10.1007/978-3-032-26220-2_22" target="_blank" rel="noreferrer">Mixed Flow-Sensitive Static Analysis: Engineering Modularity</a>
+              <span class="reading-meta">Helmut Seidl, Vesal Vojdani, Julian Erhard, Michael Schwarz · FM 2026</span>
+              <span class="reading-why">The tutorial this page follows in style and examples.</span>
+            </li>
+            <li id="ref-schwarz-2021" data-year="2021">
+              <a href="https://doi.org/10.1007/978-3-030-88806-0_18" target="_blank" rel="noreferrer">Improving Thread-Modular Abstract Interpretation</a>
+              <span class="reading-meta">Michael Schwarz, Simmo Saan, Helmut Seidl, Kalmer Apinis, Julian Erhard, Vesal Vojdani · SAS 2021</span>
+              <span class="reading-why">Its local-trace semantics was the guide for modeling Voblint's traces, the <code>valid_ltr</code> datatype.</span>
+            </li>
+            <li id="ref-stemmler-2025" data-year="2025">
+              <a href="https://doi.org/10.1145/3729297" target="_blank" rel="noreferrer">Taking Out the Toxic Trash: Recovering Precision in Mixed Flow-Sensitive Static Analyses</a>
+              <span class="reading-meta">Fabian Stemmler, Michael Schwarz, Julian Erhard, Sarah Tilscher, Helmut Seidl · PLDI 2025</span>
+              <span class="reading-why">Update rules that widen per origin, the source of the per-origin Globals settings.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="reading-group">
+          <h3>The solver Voblint imports</h3>
+          <ul class="reading-list">
+            <li id="ref-grass-2024" data-year="2024">
+              <a href="https://www.tcs.ifi.lmu.de/staff/alexandra-grass/master-thesis-alexandra-grass.pdf" target="_blank" rel="noreferrer">Towards the Verification of Top-Down Solvers</a>
+              <span class="reading-meta">Alexandra Graß · Master's thesis, TUM, 2024</span>
+              <span class="reading-why">Partial correctness of the top-down solver with warrowing in Isabelle/HOL.</span>
+            </li>
+            <li id="ref-tilscher-2026-jar" data-year="2026">
+              <a href="https://doi.org/10.1007/s10817-026-09756-x" target="_blank" rel="noreferrer">Proving Total Correctness of Top-Down Solvers with Widening and Narrowing</a>
+              <span class="reading-meta">Sarah Tilscher, Alexandra Graß, Helmut Seidl, Yannick Stade · Journal of Automated Reasoning, 2026</span>
+              <span class="reading-why">When the solver with warrowing terminates, and why it may not without monotonicity.</span>
+            </li>
+            <li id="ref-tilscher-2026-nfm" data-year="2026">
+              <a href="https://doi.org/10.1007/978-3-032-28079-4_3" target="_blank" rel="noreferrer">Verifying a Solver for Mixed Flow-Sensitive Analyses</a>
+              <span class="reading-meta">Sarah Tilscher, Alexandra Graß, Helmut Seidl · NASA Formal Methods 2026</span>
+              <span class="reading-why">The solver with side effects and an interface for update rules: the development Voblint vendors.</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
     <section
       class="section"
       id="resources"
@@ -3577,7 +3774,7 @@ qed</code></pre>
 
   <footer class="site-footer">
     <div class="page-shell footer-content">
-      <span>Master&apos;s thesis · Manuel Lerchner · supervised by Alexandra Graß</span>
+      <span>Master&apos;s thesis · Manuel Lerchner · supervised by Alexandra Graß and Helmut Seidl</span>
       <a
         href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
         target="_blank"

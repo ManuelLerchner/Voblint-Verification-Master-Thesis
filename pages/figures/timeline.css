@@ -1,0 +1,147 @@
+/* Further reading: timeline */
+
+:where(.scene-timeline) {
+  --tl-0: var(--warning);
+  --tl-1: #7a5aa6;
+  --tl-2: var(--primary);
+  --tl-3: var(--success);
+  --tl-4: var(--accent);
+  --tl-5: #3b6fb6;
+}
+
+:where(.scene-timeline) .timeline-scroll {
+  overflow-x: auto;
+}
+
+/* Year labels stay legible on a phone; the axis scrolls instead of shrinking. */
+:where(.scene-timeline) .timeline-svg {
+  min-width: 640px;
+}
+
+:where(.scene-timeline) .tl-axis line {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-timeline) .tl-axis .tl-break {
+  stroke: var(--text-faint);
+}
+
+:where(.scene-timeline) .tl-axis text {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+
+:where(.scene-timeline) .tl-dot circle {
+  stroke: var(--surface);
+  stroke-width: 2;
+  transition:
+    opacity 0.15s,
+    r 0.15s;
+}
+
+:where(.scene-timeline) .tl-dot:hover circle,
+:where(.scene-timeline) .tl-dot:focus-visible circle {
+  r: 9;
+}
+
+:where(.scene-timeline) .tl-dot:focus-visible {
+  outline: none;
+}
+
+:where(.scene-timeline) .tl-dot:focus-visible circle {
+  stroke: var(--text);
+}
+
+:where(.scene-timeline) .g0 circle,
+:where(.scene-timeline) .g0 .swatch {
+  fill: var(--tl-0);
+  background: var(--tl-0);
+}
+
+:where(.scene-timeline) .g1 circle,
+:where(.scene-timeline) .g1 .swatch {
+  fill: var(--tl-1);
+  background: var(--tl-1);
+}
+
+:where(.scene-timeline) .g2 circle,
+:where(.scene-timeline) .g2 .swatch {
+  fill: var(--tl-2);
+  background: var(--tl-2);
+}
+
+:where(.scene-timeline) .g3 circle,
+:where(.scene-timeline) .g3 .swatch {
+  fill: var(--tl-3);
+  background: var(--tl-3);
+}
+
+:where(.scene-timeline) .g4 circle,
+:where(.scene-timeline) .g4 .swatch {
+  fill: var(--tl-4);
+  background: var(--tl-4);
+}
+
+:where(.scene-timeline) .g5 circle,
+:where(.scene-timeline) .g5 .swatch {
+  fill: var(--tl-5);
+  background: var(--tl-5);
+}
+
+.scene-timeline[data-group="0"] .tl-dot:not(.g0),
+.scene-timeline[data-group="1"] .tl-dot:not(.g1),
+.scene-timeline[data-group="2"] .tl-dot:not(.g2),
+.scene-timeline[data-group="3"] .tl-dot:not(.g3),
+.scene-timeline[data-group="4"] .tl-dot:not(.g4),
+.scene-timeline[data-group="5"] .tl-dot:not(.g5) {
+  opacity: 0.2;
+}
+
+:where(.scene-timeline) .timeline-info {
+  min-height: 3em;
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+:where(.scene-timeline) .timeline-info b {
+  display: block;
+  color: var(--text);
+}
+
+:where(.scene-timeline) .timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  list-style: none;
+}
+
+:where(.scene-timeline) .timeline-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+:where(.scene-timeline) .timeline-legend .swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+/* A jump from the timeline lands below the sticky site bar and marks the entry. */
+.reading-list li {
+  scroll-margin-top: 96px;
+}
+
+.reading-list li:target {
+  background: var(--accent-soft);
+  box-shadow:
+    -10px 0 0 var(--accent-soft),
+    10px 0 0 var(--accent-soft);
+}
