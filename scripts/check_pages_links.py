@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""Check that every link the site's pages carry still reaches something.
+
+The landing page, explainer and playground link three kinds of target, and each
+decays differently:
+
+  * internal pages and assets (`playground.html`, `thesis.pdf`, `assets/...`),
+    which break when the site layout changes;
+  * anchors into the rendered theories (`Voblint/<Session>/<Theory>.html#...`),
+    which break silently when a definition is renamed or moves -- the page
+    still loads, it just no longer holds the name the sentence cites;
+  * external URLs (GitHub permalinks, project sites), which break on their own.
+
+Links are read from `pages/*.html` and from the explainer script, which builds
+its definition links at runtime.
+
+    scripts/check_pages_links.py --site build/github-pages   internal links, local build
+    scripts/check_pages_links.py --live                      everything, deployed site
+
+`--site` needs `pixi run pages-site-build` first; external URLs are only checked
+with `--external`. `--live` checks all three kinds against the published site,
+after deployment, which is the moment the links are real. Hosts that throttle
+automated clients (HTTP 403/429) are reported as unverified rather than broken.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_thesis_links import fetch, pages_base  # noqa: E402
+
+REPO = Path(__file__).resolve().parent.parent
+PAGES = REPO / "pages"
+
+ATTR = re.compile(r'\b(?:href|src)="([^"]+)"')
+IS_A_CONST = re.compile(r'isaConst\("([^"]+)", "([^"]+)", "([^"]+)"\)')
+USER_AGENT = "voblint-link-check (+https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis)"
+
+
+def collected() -> dict[str, set[str]]:
+    """Map each link target to the source files that carry it."""
+    links: dict[str, set[str]] = {}
+
+    def add(url: str, source: str) -> None:
+        links.setdefault(url.replace("&amp;", "&"), set()).add(source)
+
+    for page in sorted(PAGES.glob("*.html")):
+        for m in ATTR.finditer(page.read_text()):
+            url = m.group(1)
+            # A same-page anchor is resolved against the page it sits in.
+            add(f"{page.name}{url}" if url.startswith("#") else url, page.name)
+    script = PAGES / "explainer.js"
+    for m in IS_A_CONST.finditer(script.read_text()):
+        session, theory, name = m.groups()
+        add(f"Voblint/{session}/{theory}.html#{theory}.{name}%7Cconst", script.name)
+    return links
+
+
+def split(url: str) -> tuple[str, str]:
+    """Path without query, and the decoded fragment."""
+    parsed = urllib.parse.urlsplit(url)
+    return parsed.path, urllib.parse.unquote(parsed.fragment)
+
+
+def anchor_present(body: str, fragment: str) -> bool:
+    return f'id="{fragment}"' in body or f"id='{fragment}'" in body
+
+
+def check_internal_local(site: Path, url: str) -> str | None:
+    path, fragment = split(url)
+    target = site / path
+    if not target.is_file():
+        return f"{path} does not exist in {site}"
+    if fragment and target.suffix == ".html" and not anchor_present(target.read_text(errors="ignore"), fragment):
+        return f"{path} has no anchor {fragment}"
+    return None
+
+
+def check_internal_live(base: str, url: str, retries: int, cache: dict[str, str | None]) -> str | None:
+    path, fragment = split(url)
+    full = base.rstrip("/") + "/" + path
+    if full not in cache:
+        cache[full] = fetch(full, retries)
+    body = cache[full]
+    if body is None:
+        return f"{full} did not respond"
+    if fragment and path.endswith(".html") and not anchor_present(body, fragment):
+        return f"{full} has no anchor {fragment}"
+    return None
+
+
+def check_external(url: str) -> tuple[str, str | None]:
+    """Returns ("ok" | "unverified" | "broken", detail)."""
+    target = urllib.parse.urlunsplit(urllib.parse.urlsplit(url)._replace(fragment=""))
+    refused: str | None = None
+    for method in ("HEAD", "GET"):
+        request = urllib.request.Request(target, method=method, headers={"User-Agent": USER_AGENT})
+        try:
+            with urllib.request.urlopen(request, timeout=20) as response:
+                if response.status < 400:
+                    return "ok", None
+        except urllib.error.HTTPError as error:
+            if error.code in (403, 429):
+                refused = f"HTTP {error.code}"
+                continue
+            if method == "HEAD" and error.code in (400, 404, 405, 501):
+                continue
+            return "broken", f"HTTP {error.code}"
+        except (urllib.error.URLError, OSError) as error:
+            return "broken", str(getattr(error, "reason", error))
+    return ("unverified", refused) if refused else ("broken", "no successful response")
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--site", type=Path, help="assembled site directory, e.g. build/github-pages")
+    mode.add_argument("--live", action="store_true", help="check the deployed site")
+    ap.add_argument("--base", help="--live: override the site URL")
+    ap.add_argument("--external", action="store_true", help="--site: also check external URLs")
+    ap.add_argument("--retries", type=int, default=6, help="--live: attempts per page while Pages propagates")
+    args = ap.parse_args()
+
+    links = collected()
+    broken: list[str] = []
+    unverified: list[str] = []
+    cache: dict[str, str | None] = {}
+    base = args.base or pages_base()
+
+    if args.site and not args.site.is_dir():
+        print(f"check_pages_links: no site at {args.site} -- run `pixi run pages-site-build`", file=sys.stderr)
+        return 1
+    if args.live and not base:
+        print("check_pages_links: no base URL to verify against", file=sys.stderr)
+        return 1
+
+    for url, sources in sorted(links.items()):
+        scheme = urllib.parse.urlsplit(url).scheme
+        where = ", ".join(sorted(sources))
+        if scheme in ("mailto", "javascript", "data"):
+            continue
+        if scheme in ("http", "https"):
+            if not (args.live or args.external):
+                continue
+            status, detail = check_external(url)
+            if status == "broken":
+                broken.append(f"  {url} ({where}): {detail}")
+            elif status == "unverified":
+                unverified.append(f"  {url} ({where}): {detail}")
+            continue
+        detail = (check_internal_live(base, url, args.retries, cache) if args.live
+                  else check_internal_local(args.site, url))
+        if detail:
+            broken.append(f"  {url} ({where}): {detail}")
+
+    if unverified:
+        print(f"check_pages_links: {len(unverified)} link(s) could not be verified (host refused automated access):")
+        print("\n".join(unverified))
+    if broken:
+        print(f"check_pages_links: {len(broken)} broken link(s):")
+        print("\n".join(broken))
+        return 1
+    print(f"check_pages_links: {len(links)} link(s) checked, none broken")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

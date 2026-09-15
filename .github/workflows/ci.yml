@@ -707,3 +707,6 @@ jobs:
       # with backoff rather than failing on the first miss.
       - name: Thesis links reach their definition on the published site
         run: pixi run thesis-links-live
+
+      - name: Site page links reach their targets on the published site
+        run: pixi run pages-links-live

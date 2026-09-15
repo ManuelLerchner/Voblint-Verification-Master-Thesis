@@ -152,6 +152,7 @@ isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
 pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
   "browser-build",
 ], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
+pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
 isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = [
   "vendor-init",
 ], description = "Render the formalization with a certificate appendix into output/document.pdf." }
@@ -382,3 +383,5 @@ thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", de
 # The gate that matters, and the only one that can be honest: it runs against
 # the deployed pages, so it cannot run until GitHub Pages has published them.
 thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
+pages-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
+pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
