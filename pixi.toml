@@ -58,6 +58,7 @@ pytest = ">=8.0"
 # Hand-written support expectations checked against generated output, so a
 # manifest edit that changes what the CLI offers has to be intended.
 analysis-registry-check = { cmd = "python3 -m pytest tests/test_analysis_registry.py", description = "Check generated dispatcher support against the hand-written analysis policy." }
+pages-scripts-check = { cmd = "python3 -m pytest tests/test_vimp_fixture.py tests/test_playground_link.py", description = "Check the fixture header reader, the playground example corpus, and playground link encoding and validation." }
 property-test = { cmd = "python3 -m pytest tests/property", description = "Build the test drivers and run parser, printer, and AST property tests." }
 arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = [
   "cli-build",
@@ -313,6 +314,8 @@ verify = { depends-on = [
   "spelling-check",
   "toml-format-check",
   "pages-lint",
+  "pages-links",
+  "pages-scripts-check",
   "regression-lint",
   "isabelle-ascii-check",
   "sessions-check",

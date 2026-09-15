@@ -301,6 +301,20 @@ pre-commit:
           # Site pages: every internal link and same-page anchor resolves to a
           # source file. Needs no site build; theory anchors only warn, as the
           # rendered theories are checked against the deployed site on main.
+          - name: pages-scripts-check
+            glob:
+              - "scripts/vimp_fixture.py"
+              - "scripts/pages_examples.py"
+              - "scripts/playground_link.py"
+              - "scripts/check_pages_links.py"
+              - "tests/test_vimp_fixture.py"
+              - "tests/test_playground_link.py"
+              - "tests/regression/**"
+              - "docs/readme-figures/**"
+              - "pages/main.js"
+              - "pages/playground.html"
+            run: pixi run pages-scripts-check
+
           - name: pages-links
             glob:
               - "pages/**"
