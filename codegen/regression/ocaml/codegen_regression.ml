@@ -1,6 +1,6 @@
 (* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
-   (never touching Isabelle), runs it through the exported `run_voblint`
+   (never touching Isabelle), runs it through the exported `run_program`
    entry point for every domain, and checks the result against the values
    src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_* lemmas prove and
@@ -26,35 +26,14 @@ let mk_nat n = nat_of_integer (Z.of_int n)
 
 (* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
    native `string` (see Example_Analysis_Dispatch_Regression.thy), so variable/procedure
-   names need no conversion at all. The same holds for a check row's rendered
-   condition and state slice, so nothing below needs a `char list` bridge. *)
+   names need no conversion at all. *)
 
-(* One analysis run, reduced to the column this driver compares: the check
-   point, the condition as the analyzer itself renders it, and the lifted
-   verdict. `View_Report` is the view that builds no graph, which is all this
-   driver reads; the state slice it leaves empty is not compared. A refusal is
-   not an outcome to compare against -- every configuration named here is one
-   the analyzer supports, so an answer other than `Analysed` is a defect in
-   the export rather than a failed expectation. *)
 let domain_label = function
   | Sign_Analysis -> "Sign_Analysis"
   | Interval_Analysis -> "Interval_Analysis"
   | Int_Analysis -> "Int_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
-
-let report domain prog =
-  match run_voblint domain None Ctx_None View_Report prog with
-  | Malformed_Program ->
-    print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
-    exit 1
-  | Unsupported_Configuration ->
-    print_endline ("FAIL " ^ domain_label domain ^ ": unsupported configuration");
-    exit 1
-  | Analysed out ->
-    List.map
-      (fun row -> (row_point row, (row_condition row, row_verdict row)))
-      (out_checks out)
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
@@ -69,9 +48,7 @@ let demo_prog =
        , Check check_cond))
     []
 
-(* A row's condition is rendered by the export, not by this driver: the
-   expected strings below are the check conditions above as the analyzer
-   prints them (minimally parenthesized, no spaces around infix operators). *)
+(* Conditions are compared as show_exp_compact renders them below. *)
 let expected_sign =
   [ (Statement (mk_nat 1), ("0<y", Lifted Check_Proved));
     (Statement (mk_nat 3), ("0<y", Lifted Check_Refuted)) ]
@@ -169,11 +146,8 @@ let show_entry (n, (cond, verdict)) =
      | FunctionResult s -> "FunctionResult " ^ s)
     cond (show_verdict verdict)
 
-(* Compact renderers matching string_of_cfg_node/string_of_action
-   in Analysis_Graph.thy exactly (no spaces around
-   infix operators, "pp"/"entry_"/"result_" node prefixes). Unlike a check
-   row's condition, an edge label is not published as a rendered string, so
-   the CFG expectations below are rendered here. *)
+(* Compact renderers for the expectations below: no spaces around infix
+   operators, "pp"/"entry_"/"result_" node prefixes. *)
 let show_cfg_node_compact = function
   | Statement n -> "pp" ^ show_nat n
   | FunctionEntry s -> "entry_" ^ s
@@ -193,6 +167,24 @@ let rec show_exp_compact = function
   | Or (a, b) -> "(" ^ show_exp_compact a ^ "||" ^ show_exp_compact b ^ ")"
   | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
+
+(* One analysis run, reduced to the column this driver compares: the check
+   point, the condition, and the lifted verdict. A refusal is not an outcome to
+   compare against -- every configuration named here is one the analyzer
+   supports, so an answer other than `Result_Analysed` is a defect in the export
+   rather than a failed expectation. *)
+let report domain prog =
+  match run_program domain None Ctx_None prog with
+  | Result_Malformed ->
+    print_endline ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
+    exit 1
+  | Result_Unsupported ->
+    print_endline ("FAIL " ^ domain_label domain ^ ": unsupported configuration");
+    exit 1
+  | Result_Analysed res ->
+    List.map
+      (fun chk -> (check_point chk, (show_exp_compact (check_exp chk), check_verdict chk)))
+      (res_checks res)
 
 let show_edge_action = function
   | EA_Nop -> "nop"
@@ -243,10 +235,10 @@ let expected_proc_demo_calls =
    expanded there, not here, so a FAIL points at the specific
    check_case[_str] call that produced it, not this shared helper.
    [__LOC__] embeds only the filename ocamlopt was invoked with
-   ("main.ml", relative to codegen/regression/ocaml/), not clickable once
+   ("codegen_regression.ml", relative to codegen/regression/ocaml/), not clickable once
    back at the repo root this driver is normally run from -- building the
    repo-relative path explicitly instead keeps it clickable there. *)
-let driver_path = "codegen/regression/ocaml/main.ml"
+let driver_path = "codegen/regression/ocaml/codegen_regression.ml"
 
 let check_case ~line label actual expected =
   if actual = expected then (
@@ -308,18 +300,8 @@ let () =
     check_case ~line:__LINE__ "Interval_Analysis interprocedural global self-feedback (acceptance B)"
       actual_one_call_interval expected_one_call_interval
   in
-  (* The condition a report row carries is rendered by the export, so this
-     pins that rendering directly rather than through a row's other columns. *)
-  let ok_check_cond_rendered =
-    check_case_str ~line:__LINE__ "rendered check condition"
-      (match actual_sign with
-       | (_, (cond, _)) :: _ -> cond
-       | [] -> "<no check rows>")
-      "0<y"
-  in
   if
     ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra
     && ok_proc_demo_calls && ok_no_call_global_self_ref_interval && ok_one_call_interval
-    && ok_check_cond_rendered
   then print_endline "All regression checks passed."
   else exit 1

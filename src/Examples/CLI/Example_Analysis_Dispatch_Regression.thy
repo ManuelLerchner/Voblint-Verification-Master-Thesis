@@ -86,23 +86,18 @@ lemma dispatch_demo_call_string_reads_the_named_discipline:
 
 text \<open>
   The public entry point at an entry-state configuration. Its check column and its
-  globals column come off one solved table: before this the graph, the verdicts and
-  the seed listing each named an analyser of their own, so a report browser solved
-  the same equation system three times and the columns agreed only by construction.
-
-  \<^const>\<open>out_graph\<close> is \<^const>\<open>None\<close> because \<^const>\<open>View_Report\<close> asks for none.
-  A caller printing a text report should not pay to build a drawing nobody reads,
-  and on a recursive program with many activations that cost is not academic.
+  states come off one solved table: before this the graph, the verdicts and the seed
+  listing each named an analyser of their own, so a report browser solved the same
+  equation system three times and the columns agreed only by construction.
 \<close>
 
-lemma dispatch_demo_run_voblint_entry_state:
-  "(case run_voblint Interval_Analysis None Ctx_EntryState View_Report dispatch_demo_prog of
-      Analysed out \<Rightarrow>
-        map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out) =
+lemma dispatch_demo_run_program_entry_state:
+  "(case run_program Interval_Analysis None Ctx_EntryState dispatch_demo_prog of
+      Result_Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
-        \<and> out_graph out = None
-        \<and> out_snapshot out = None
-        \<and> out_globals out \<noteq> []
+        \<and> res_contexts res = [Context_Entry []]
+        \<and> res_states res \<noteq> []
     | _ \<Rightarrow> False)"
   by eval
 
@@ -113,29 +108,15 @@ text \<open>
   analysis's, not the dispatcher's.
 \<close>
 
-lemma dispatch_demo_run_voblint_flat:
-  "(case run_voblint Interval_Analysis None Ctx_None View_Report dispatch_demo_prog of
-      Analysed out \<Rightarrow>
-        map (\<lambda>row. (row_point row, row_verdict row)) (out_checks out) =
+lemma dispatch_demo_run_program_flat:
+  "(case run_program Interval_Analysis None Ctx_None dispatch_demo_prog of
+      Result_Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
-        \<and> out_graph out = None
+        \<and> res_contexts res = [Context_Unit]
     | _ \<Rightarrow> False)"
   by eval
 
-text \<open>
-  A drawing view on the same configuration does fill both, and the check column is
-  unchanged by the asking: a view selects what is drawn, never what is decided.
-\<close>
-
-lemma dispatch_demo_run_voblint_view_invariant_checks:
-  "(case (run_voblint Interval_Analysis None Ctx_EntryState View_Report dispatch_demo_prog,
-          run_voblint Interval_Analysis None Ctx_EntryState View_Contexts dispatch_demo_prog) of
-      (Analysed a, Analysed b) \<Rightarrow>
-        out_checks a = out_checks b
-        \<and> out_graph a = None
-        \<and> out_graph b \<noteq> None
-    | _ \<Rightarrow> False)"
-  by eval
 
 
 text \<open>
