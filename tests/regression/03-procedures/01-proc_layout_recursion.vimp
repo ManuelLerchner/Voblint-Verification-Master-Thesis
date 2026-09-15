@@ -70,10 +70,10 @@
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
 //   main_entry_main_ctx0 -> main_pp10_ctx0: body(main)
 //   f_pp1_ctx0 -> f_entry_f_ctx0: enter f()
-//   f_exit_f_ctx0 -> f_pp3_ctx0: combine 
+//   f_exit_f_ctx0 -> f_pp3_ctx0: combine
 //   f_pp1_ctx0 -> f_pp3_ctx0: call-to-return f
 //   main_pp10_ctx0 -> f_entry_f_ctx0: enter f()
-//   f_exit_f_ctx0 -> main_pp11_ctx0: combine 
+//   f_exit_f_ctx0 -> main_pp11_ctx0: combine
 //   main_pp10_ctx0 -> main_pp11_ctx0: call-to-return f
 //   main_pp11_ctx0 -> main_pp12_ctx0: call-to-return g
 //   main_pp12_ctx0 -> main_pp13_ctx0: call-to-return inc

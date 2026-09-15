@@ -216,7 +216,11 @@ CLI_DIR = REPO_ROOT / "cli"
 REGRESSION_DIR = TESTS_DIR / "regression"
 # VOBLINT_BIN runs an alternate binary against this corpus and its
 # verdict-matching logic; main()'s cli-build step is skipped when it is set.
-VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CLI_DIR / "voblint"
+VOBLINT = (
+    Path(os.environ["VOBLINT_BIN"])
+    if "VOBLINT_BIN" in os.environ
+    else CLI_DIR / "voblint"
+)
 
 REACHABLE = "reachable"
 NOWARN = "NOWARN"
@@ -236,7 +240,9 @@ CHECK_LINE_RE = re.compile(r"__voblint_check")
 VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
 # "line:col  point  condition  VERDICT  state": the condition is printed source and
 # may contain spaces, so the verdict is found by its own vocabulary, not by column.
-REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+.*?\s(PROVED|REFUTED|UNKNOWN|DEAD)(?:\s|$)")
+REPORT_LINE_RE = re.compile(
+    r"^(\d+):\d+\s+\S+\s+.*?\s(PROVED|REFUTED|UNKNOWN|DEAD)(?:\s|$)"
+)
 ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
 ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
 ARITHMETIC_REPORT_RE = re.compile(
@@ -306,7 +312,9 @@ def expected_arithmetic(path: Path) -> Counter | None:
         for entry in annotation.split(";"):
             match = ARITHMETIC_ENTRY_RE.fullmatch(entry.strip())
             if match is None:
-                raise ValueError(f"line {line_no}: malformed ARITH entry {entry.strip()!r}")
+                raise ValueError(
+                    f"line {line_no}: malformed ARITH entry {entry.strip()!r}"
+                )
             severity = "warning" if match[1] == "WARN" else "error"
             expected[line_no, severity, match[2]] += 1
     return expected if headers else None
@@ -331,7 +339,9 @@ def actual_arithmetic(output: str, path: Path, analysis: str) -> Counter:
     return actual
 
 
-def check_arithmetic(path: Path, args: list[str], output: str) -> tuple[bool, list[str]]:
+def check_arithmetic(
+    path: Path, args: list[str], output: str
+) -> tuple[bool, list[str]]:
     try:
         expected = expected_arithmetic(path)
         if expected is None:
@@ -341,7 +351,10 @@ def check_arithmetic(path: Path, args: list[str], output: str) -> tuple[bool, li
     except (ValueError, IndexError) as error:
         return False, [f"arithmetic diagnostics: {error}"]
     problems = []
-    for label, difference in [("missing", expected - actual), ("unexpected", actual - expected)]:
+    for label, difference in [
+        ("missing", expected - actual),
+        ("unexpected", actual - expected),
+    ]:
         for (line_no, severity, operation), count in sorted(difference.items()):
             problems.append(
                 f"line {line_no}: {label} {count} {severity} {operation}-by-zero diagnostic(s)"
@@ -373,7 +386,7 @@ def add_comment_prefix(line: str) -> str:
 
 def expected_graph(lines: list[str], block: tuple[int, int]) -> str:
     begin, end = block
-    return "\n".join(strip_comment_prefix(l) for l in lines[begin + 1 : end])
+    return "\n".join(strip_comment_prefix(line) for line in lines[begin + 1 : end])
 
 
 def graph_snapshot_args(args: list[str]) -> list[str]:
@@ -399,11 +412,17 @@ def run_graph_snapshot(args: list[str], path: Path) -> tuple[str, str]:
     return proc.stdout, ""
 
 
-def update_graph_block(path: Path, lines: list[str], block: tuple[int, int] | None, snapshot: str) -> None:
+def update_graph_block(
+    path: Path, lines: list[str], block: tuple[int, int] | None, snapshot: str
+) -> None:
     """Replaces an existing EXPECT-GRAPH block in place, or inserts a new one
     right after the fixture's leading "//" header (PARAM line plus any
     description comments), before the first line of actual VIMP source."""
-    new_block = [GRAPH_BEGIN, *(add_comment_prefix(l) for l in snapshot.splitlines()), GRAPH_END]
+    new_block = [
+        GRAPH_BEGIN,
+        *(add_comment_prefix(line) for line in snapshot.splitlines()),
+        GRAPH_END,
+    ]
     if block is not None:
         begin, end = block
         lines[begin : end + 1] = new_block
@@ -471,10 +490,14 @@ def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
         if error:
             # Not a failure: --update-graphs is routinely pointed at a whole
             # group, and a group may hold cases whose flags render no graph.
-            lines.append(f"OK   {graph_cmd}: no graph to render, block left alone ({error})")
+            lines.append(
+                f"OK   {graph_cmd}: no graph to render, block left alone ({error})"
+            )
             return True, lines
         update_graph_block(path, fixture_lines, graph_block, snapshot)
-        lines.append(f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
+        lines.append(
+            f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}"
+        )
         return True, lines
     if graph_block is None:
         return True, lines
@@ -487,7 +510,9 @@ def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
     if snapshot == expected_snapshot:
         lines.append(f"OK   {graph_cmd}: graph snapshot matches")
         return True, lines
-    lines.append(f"FAIL {graph_cmd}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
+    lines.append(
+        f"FAIL {graph_cmd}: graph snapshot mismatch (rerun with --update-graphs to refresh)"
+    )
     lines.append(f"  expected: {expected_snapshot!r}")
     lines.append(f"  actual:   {snapshot!r}")
     return False, lines
@@ -520,14 +545,20 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
 
     if "--dot" in args:
         result = run_voblint(args, path)
-        if result.returncode != 0 or not result.stdout.startswith("digraph AnalysisCFG"):
-            lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")
+        if result.returncode != 0 or not result.stdout.startswith(
+            "digraph AnalysisCFG"
+        ):
+            lines.append(
+                f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'"
+            )
             lines.append(f"  stdout: {result.stdout[:200]!r}")
             lines.append(f"  stderr: {result.stderr.strip()}")
             return False, lines
         graph_ok, graph_lines = check_graph_block(path, args)
         lines.extend(graph_lines)
-        arithmetic_ok, arithmetic_problems = check_arithmetic(path, args, result.stdout + "\n" + result.stderr)
+        arithmetic_ok, arithmetic_problems = check_arithmetic(
+            path, args, result.stdout + "\n" + result.stderr
+        )
         lines.extend(f"FAIL {cmd}: {problem}" for problem in arithmetic_problems)
         graph_ok = graph_ok and arithmetic_ok
         if graph_ok:
@@ -538,7 +569,9 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
         # No inline verdicts: this case documents a rejection, not a report.
         result = run_voblint(args, path)
         if result.returncode == 0:
-            lines.append(f"FAIL {cmd}: expected a non-zero exit (no verdict annotations present)")
+            lines.append(
+                f"FAIL {cmd}: expected a non-zero exit (no verdict annotations present)"
+            )
             return False, lines
         if (
             "parse error" in result.stderr
@@ -562,7 +595,9 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
 
     actual = actual_verdicts(result.stdout)
 
-    ok, arithmetic_problems = check_arithmetic(path, args, result.stdout + "\n" + result.stderr)
+    ok, arithmetic_problems = check_arithmetic(
+        path, args, result.stdout + "\n" + result.stderr
+    )
     lines.extend(f"FAIL {cmd}: {problem}" for problem in arithmetic_problems)
     for line_no, exp in sorted(expected.items()):
         if exp == NOWARN:
@@ -588,13 +623,17 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
             ok = False
             continue
         if line_no not in actual:
-            lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, but missing from the report")
+            lines.append(
+                f"FAIL {cmd}: line {line_no} expected {exp}, but missing from the report"
+            )
             ok = False
             continue
         # "reachable" only asserts presence (already true, since the line
         # is in the report); any verdict there satisfies it.
         if exp != REACHABLE and exp != actual[line_no]:
-            lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, got {actual[line_no]}")
+            lines.append(
+                f"FAIL {cmd}: line {line_no} expected {exp}, got {actual[line_no]}"
+            )
             ok = False
 
     extra = set(actual) - set(expected)
@@ -623,10 +662,12 @@ def lint_case(path: Path) -> list[str]:
     the conventions this module's docstring and AGENTS.md's "Regression
     discipline" section otherwise only state in prose: every check carries
     a recognized verdict, every known-imprecision/ case documents why, every
-    soundness/ case asserts only UNKNOWN, and EXPECT-GRAPH blocks are
-    balanced."""
+    soundness/ case asserts only UNKNOWN, EXPECT-GRAPH blocks are balanced,
+    and the layout is uniform: no tabs or trailing whitespace, two-space
+    indentation steps, and a final newline."""
     problems: list[str] = []
-    src_lines = path.read_text().splitlines()
+    source = path.read_text()
+    src_lines = source.splitlines()
     args = param_args(path)
     expected = expected_verdicts(path)
     try:
@@ -639,19 +680,27 @@ def lint_case(path: Path) -> list[str]:
         problems.append("missing or malformed '// PARAM: ...' header on line 1")
 
     if not re.match(r"^\d\d-[a-z0-9_]+$", path.stem):
-        problems.append(f"filename '{path.name}' doesn't follow the NN-name.vimp convention")
+        problems.append(
+            f"filename '{path.name}' doesn't follow the NN-name.vimp convention"
+        )
 
     # A case with no verdicts at all is a parse-rejection fixture (checked
     # for a structured error, not a report -- see check_case), and a --dot/
     # --dot case checks DOT shape, not verdicts: neither kind's
     # __voblint_check lines are meant to carry one.
-    if (expected or arithmetic is not None) and "--dot" not in args and "--dot" not in args:
+    if (
+        (expected or arithmetic is not None)
+        and "--dot" not in args
+        and "--dot" not in args
+    ):
         for line_no, line in enumerate(src_lines, start=1):
             if not CHECK_LINE_RE.search(line):
                 continue
             m = VERDICT_RE.search(line)
             if m is None:
-                problems.append(f"line {line_no}: __voblint_check with no verdict annotation")
+                problems.append(
+                    f"line {line_no}: __voblint_check with no verdict annotation"
+                )
             elif m.group(1) not in KNOWN_VERDICTS:
                 problems.append(f"line {line_no}: unrecognized verdict '{m.group(1)}'")
 
@@ -668,8 +717,13 @@ def lint_case(path: Path) -> list[str]:
                 "known-imprecision case has no header comment explaining "
                 "why the result is imprecise"
             )
-        has_possible_arithmetic = arithmetic and any(key[1] == "warning" for key in arithmetic)
-        if not (set(expected.values()) & {"UNKNOWN", NOWARN}) and not has_possible_arithmetic:
+        has_possible_arithmetic = arithmetic and any(
+            key[1] == "warning" for key in arithmetic
+        )
+        if (
+            not (set(expected.values()) & {"UNKNOWN", NOWARN})
+            and not has_possible_arithmetic
+        ):
             problems.append(
                 "known-imprecision case asserts no UNKNOWN/NOWARN or arithmetic WARN -- "
                 "does it belong in precision/ instead?"
@@ -681,7 +735,9 @@ def lint_case(path: Path) -> list[str]:
                 "soundness case has no header comment naming what's "
                 "unconstrained (e.g. an unbounded __voblint_nondet_int())"
             )
-        definite_arithmetic = arithmetic and any(key[1] == "error" for key in arithmetic)
+        definite_arithmetic = arithmetic and any(
+            key[1] == "error" for key in arithmetic
+        )
         if set(expected.values()) - {"UNKNOWN"} or definite_arithmetic:
             problems.append(
                 "soundness case asserts a verdict other than UNKNOWN -- "
@@ -693,6 +749,19 @@ def lint_case(path: Path) -> list[str]:
     ends = sum(1 for line in src_lines if line.rstrip() == GRAPH_END)
     if begins != ends:
         problems.append(f"EXPECT-GRAPH block imbalance: {begins} BEGIN vs {ends} END")
+
+    for line_no, line in enumerate(src_lines, start=1):
+        if "\t" in line:
+            problems.append(f"line {line_no}: tab character")
+        if line != line.rstrip():
+            problems.append(f"line {line_no}: trailing whitespace")
+        indent = len(line) - len(line.lstrip(" "))
+        if line.strip() and indent % 2:
+            problems.append(
+                f"line {line_no}: indentation of {indent} is not a multiple of 2"
+            )
+    if source and not source.endswith("\n"):
+        problems.append("missing final newline")
 
     return problems
 
@@ -719,15 +788,23 @@ def discover(selectors: list[str]) -> list[Path]:
         sys.exit(f"no such case file: {', '.join(missing)}")
 
     file_selectors = [s for s in selectors if s.endswith(".vimp") and Path(s).exists()]
-    includes = [s for s in selectors if not s.endswith(".vimp") and not s.startswith("-")]
-    excludes = [s[1:] for s in selectors if s.startswith("-") and not s.endswith(".vimp")]
+    includes = [
+        s for s in selectors if not s.endswith(".vimp") and not s.startswith("-")
+    ]
+    excludes = [
+        s[1:] for s in selectors if s.startswith("-") and not s.endswith(".vimp")
+    ]
 
     if includes or file_selectors:
-        cases = [p for p in all_cases if any(matches_selector(p, sel) for sel in includes)]
+        cases = [
+            p for p in all_cases if any(matches_selector(p, sel) for sel in includes)
+        ]
     else:
         cases = list(all_cases)
     if excludes:
-        cases = [p for p in cases if not any(matches_selector(p, sel) for sel in excludes)]
+        cases = [
+            p for p in cases if not any(matches_selector(p, sel) for sel in excludes)
+        ]
     cases += [Path(sel).resolve() for sel in file_selectors]
 
     seen = set()
@@ -746,7 +823,9 @@ def main() -> int:
         selectors = [a for a in args if a != "--lint"]
         cases = discover(selectors)
         if not cases:
-            print(f"no matching .vimp cases found under {REGRESSION_DIR} for {selectors}")
+            print(
+                f"no matching .vimp cases found under {REGRESSION_DIR} for {selectors}"
+            )
             return 1
         any_problems = False
         for path in cases:
@@ -815,7 +894,7 @@ def main() -> int:
     results = []
     group = None
     try:
-        for path, (ok, lines, duration) in zip(cases, outcome_iter):
+        for path, (ok, lines, duration) in zip(cases, outcome_iter, strict=True):
             outcomes.append((ok, lines, duration))
             # cases is path-sorted, so its NN-group (the first path component
             # under REGRESSION_DIR) only changes at a group boundary -- a cheap
@@ -848,7 +927,9 @@ def main() -> int:
     if slowest_n:
         print()
         print(bold(f"slowest {min(slowest_n, len(outcomes))}:"))
-        by_duration = sorted(zip(cases, outcomes), key=lambda co: co[1][2], reverse=True)
+        by_duration = sorted(
+            zip(cases, outcomes, strict=True), key=lambda co: co[1][2], reverse=True
+        )
         for path, (_, _, duration) in by_duration[:slowest_n]:
             print(f"  {duration:6.2f}s  {path.relative_to(REGRESSION_DIR)}")
 

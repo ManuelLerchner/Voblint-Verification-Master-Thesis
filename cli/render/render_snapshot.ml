@@ -13,13 +13,25 @@ let status_text = function
 
 let edge_kind_text = function
   | G.Intra -> ""
-  | G.Enter -> "enter "
-  | G.Combine -> "combine "
-  | G.Call_to_return -> "call-to-return "
+  | G.Enter -> "enter"
+  | G.Combine -> "combine"
+  | G.Call_to_return -> "call-to-return"
+
+(* A combine without a result variable has no wording, so the parts are joined
+   only when present: a fixture line never ends in a space. *)
+let edge_label (e : G.edge) =
+  String.concat " "
+    (List.filter (fun s -> s <> "") [ edge_kind_text e.kind; e.text ])
 
 let render (graph : G.t) =
   let buf = Buffer.create 4096 in
-  let line fmt = Printf.ksprintf (fun s -> Buffer.add_string buf s; Buffer.add_char buf '\n') fmt in
+  let line fmt =
+    Printf.ksprintf
+      (fun s ->
+        Buffer.add_string buf s;
+        Buffer.add_char buf '\n')
+      fmt
+  in
   line "clusters:";
   List.iter
     (fun (c : G.cluster) ->
@@ -36,7 +48,6 @@ let render (graph : G.t) =
   line "";
   line "edges:";
   List.iter
-    (fun (e : G.edge) ->
-      line "  %s -> %s: %s%s" e.src e.dst (edge_kind_text e.kind) e.text)
+    (fun (e : G.edge) -> line "  %s -> %s: %s" e.src e.dst (edge_label e))
     graph.edges;
   Buffer.contents buf
