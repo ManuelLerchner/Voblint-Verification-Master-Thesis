@@ -53,13 +53,19 @@ Location  Point  Condition  Verdict  State
 The [browser playground](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html) runs the same generated analyzer on a program
 you edit, with no server involved. Verdicts and value hints appear in the source,
 the cursor's statement shows its state in every context, and the solved graph
-draws one box per procedure and context.
+draws one box per procedure and context. To explore a local program there, add
+`--playground`: it opens the playground with the file and the given settings, or
+those of its `// PARAM:` header, instead of analyzing it locally.
+
+```bash
+pixi run voblint --analysis interval --context entry-state my_program.vimp --playground
+```
 
 <p align="center">
   <a href="docs/images/while_loop_cfg.png">
     <img src="docs/images/while_loop_cfg.png" width="560" alt="The counted-loop program in the browser playground: the source with its PROVED check, the state at the check, and the solved control-flow graph">
   </a>
-  <br><sub>The program above in the playground. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=while-loop&amp;analysis=interval&amp;context=none">Open this run</a>.</sub>
+  <br><sub>The program above in the playground. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmqgUA">Open this run</a>.</sub>
 </p>
 
 <p align="center">
@@ -90,13 +96,13 @@ report nothing, and diagnostics never change the exit code.
       <a href="docs/images/playground-division-definite.png">
         <img src="docs/images/playground-division-definite.png" width="400" alt="The playground on definite division and remainder by zero: two ERROR badges, the arithmetic findings, and the selected statement's state with divisor equal to zero">
       </a>
-      <br><sub>Definite: errors, while both checks still prove. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=division-definite&amp;analysis=interval&amp;context=none">Open</a>.</sub>
+      <br><sub>Definite: errors, while both checks still prove. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVTCwBnILS_NLMlPzSoB8cwV9mCxIpigVpCsltQgspYosFR9flp-Uk5lXEp-ckZqcrYEwBGiqJjYVSIYBTQMqqQUA">Open</a>.</sub>
     </td>
     <td align="center">
       <a href="docs/images/playground-division-possible.png">
         <img src="docs/images/playground-division-possible.png" width="400" alt="The playground on a possible zero divisor from a nondeterministic input: a WARNING badge and an UNKNOWN check">
       </a>
-      <br><sub>Possible: the state cannot exclude zero. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=division-possible&amp;analysis=interval&amp;context=none">Open</a>.</sub>
+      <br><sub>Possible: the state cannot exclude zero. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVYiPL8tPysnMK4nPy89LSS2JBzI1NK2BagpL80syU_NKgIrMFfRhWkAyCD3JGanJ2Row0xRtFQyAWmsB">Open</a>.</sub>
     </td>
   </tr>
 </table>
@@ -266,7 +272,7 @@ settings.
       </a>
       <br><b>Context sensitivity, Interval</b>
       <br><sub>Without contexts, <code>bump(5)</code> and <code>bump(4)</code> share one state for <code>n</code>, so neither result is exact and both checks are UNKNOWN. <code>--context entry-state</code> keeps a separate abstract state per distinct <em>abstract</em> argument, so both checks prove, and the graph draws each context as its own box: <code>[5,5]</code> and <code>[4,4]</code>, instead of one box holding their join.</sub>
-      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=contexts&amp;analysis=interval&amp;context=none">Open without contexts</a> &middot; <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=contexts&amp;analysis=interval&amp;context=entry-state">open with entry-state contexts</a></sub>
+      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open without contexts</a> &middot; <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">open with entry-state contexts</a></sub>
     </td>
   </tr>
   <tr>
@@ -276,7 +282,7 @@ settings.
       </a>
       <br><b>The refining <code>int</code> domain against three of its components</b>
       <br><sub><code>int: PROVED</code> beside <code>interval</code>, <code>sign</code> and <code>parity</code>, each UNKNOWN on the same program and the same check.</sub>
-      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?example=int-refinement&amp;analysis=int&amp;context=none">Open with <code>int</code></a> &middot; <a href="tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp"><code>01-refinement_beats_components.vimp</code></a></sub>
+      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQyExT0KhU0FYwVLC1VTCGiCkoVCjYKhhag5nx8WX5STmZeSXxyRmpydlAxUCFRpogyVqF1JziVCQtBmBRrloA">Open with <code>int</code></a> &middot; <a href="tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp"><code>01-refinement_beats_components.vimp</code></a></sub>
     </td>
   </tr>
 </table>

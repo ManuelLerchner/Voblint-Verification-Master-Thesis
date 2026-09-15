@@ -81,6 +81,27 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
     return settings
 
 
+def shown_source(source: str) -> str:
+    """The program a reader should see: without the runner's header, arithmetic
+    opt-in, and graph snapshot. Verdict and ARITH comments stay; they document it."""
+    lines = source.splitlines()
+    if lines and PARAM_RE.match(lines[0]):
+        lines = lines[1:]
+    kept: list[str] = []
+    in_graph = False
+    for line in lines:
+        text = line.strip()
+        if text == GRAPH_BEGIN:
+            in_graph = True
+        elif text == GRAPH_END:
+            in_graph = False
+        elif not in_graph and text != ARITHMETIC_HEADER:
+            kept.append(line)
+    while kept and not kept[0].strip():
+        kept.pop(0)
+    return "\n".join(kept).rstrip() + "\n"
+
+
 def expected_arithmetic(path: Path) -> Counter | None:
     """An opted-in fixture pins every (line, severity, operation) occurrence."""
     lines = path.read_text().splitlines()

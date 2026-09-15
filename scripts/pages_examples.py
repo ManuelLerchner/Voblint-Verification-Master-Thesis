@@ -22,9 +22,9 @@ from pathlib import Path
 from vimp_fixture import (
     ARITHMETIC_HEADER,
     GRAPH_BEGIN,
-    GRAPH_END,
     analysis_settings,
     param_args,
+    shown_source,
 )
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -122,23 +122,6 @@ def summary(lines: list[str]) -> str:
     return " ".join(words)
 
 
-def shown_source(lines: list[str]) -> str:
-    """The fixture without its header, arithmetic opt-in, and graph snapshot."""
-    kept: list[str] = []
-    in_graph = False
-    for line in lines[1:]:
-        text = line.strip()
-        if text == GRAPH_BEGIN:
-            in_graph = True
-        elif text == GRAPH_END:
-            in_graph = False
-        elif not in_graph and text != ARITHMETIC_HEADER:
-            kept.append(line)
-    while kept and not kept[0].strip():
-        kept.pop(0)
-    return "\n".join(kept).rstrip() + "\n"
-
-
 def example(path: Path) -> dict[str, object]:
     args = param_args(path)
     if args is None:
@@ -157,7 +140,7 @@ def example(path: Path) -> dict[str, object]:
         "analyses": settings.get("analyses", []),
         "settings": playground,
         "summary": summary(lines),
-        "source": shown_source(lines),
+        "source": shown_source(path.read_text()),
     }
 
 

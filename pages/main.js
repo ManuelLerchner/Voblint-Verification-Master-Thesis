@@ -3656,7 +3656,7 @@ function exampleCard(group, fixture, pick = null) {
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-  card.addEventListener("click", () => openExample(fixture));
+  card.addEventListener("click", () => openProgram(fixtureProgram(fixture)));
 
   return card;
 }
@@ -3749,25 +3749,42 @@ async function openExamples() {
 }
 
 /* Loads a fixture as its regression runs it: its source, then its header's settings. */
-function openExample(fixture) {
-  const settings = { ...FIXTURE_DEFAULTS, ...fixture.settings };
+function fixtureProgram(fixture) {
+  return {
+    source: fixture.source,
+    fileName: fixture.path.split("/").at(-1),
+    origin: { param: "fixture", value: fixture.path },
+    settings: { ...FIXTURE_DEFAULTS, ...fixture.settings },
+  };
+}
 
-  retireActiveRun("Analysis cancelled: another example was opened.");
+/*
+ * Where the editor's program came from, while it is unedited: a link to an unedited
+ * regression program or explainer example can name it instead of carrying its source.
+ */
+let openedProgram = null;
+
+/* Opens a program and runs it under the settings it carries; absent settings stay. */
+function openProgram({ source, fileName, origin = null, settings = {} }) {
+  retireActiveRun("Analysis cancelled: another program was opened.");
   examplesDialog.close();
 
   editor.dispatch({
-    changes: { from: 0, to: editor.state.doc.length, insert: fixture.source },
+    changes: { from: 0, to: editor.state.doc.length, insert: source },
     selection: { anchor: 0 },
   });
   editor.scrollDOM.scrollTo({ top: 0 });
-  editorFile.textContent = fixture.path.split("/").at(-1);
+  editorFile.textContent = fileName;
+  openedProgram = origin && { ...origin, source };
 
   selectIfOffered(analysisSelect, settings.analysis);
   selectIfOffered(globalsSelect, settings.globals);
   selectIfOffered(contextSelect, settings.context);
 
-  if (settings.k !== undefined) {
-    contextDepthInput.value = String(settings.k);
+  const depth = parseContextDepth(settings.k);
+
+  if (depth !== null) {
+    contextDepthInput.value = String(depth);
   }
 
   updateContextControls();
@@ -3793,7 +3810,7 @@ examplesDialog.addEventListener("click", (event) => {
 /*
  * The explainer's "Try it" links open a program and a configuration here:
  * playground.html?example=two-sites&globals=warrow. Every program below is one the
- * explainer or a README figure shows, so the run reproduces what the page claims.
+ * explainer shows, so the run reproduces what the page claims.
  */
 const LINKED_EXAMPLES = {
   "two-sites": `fun p(x) {
@@ -3895,43 +3912,6 @@ fun main() {
     __voblint_check(y == 4);
   }
 }`,
-  "while-loop": `fun main() {
-  x = 0;
-  while (x < 10) {
-    x = x + 1;
-  }
-  __voblint_check(0 < x);
-}`,
-  contexts: `fun bump(n) {
-  return n + 1;
-}
-
-fun main() {
-  a = bump(5);
-  b = bump(4);
-  __voblint_check(a == 6);
-  __voblint_check(b == 5);
-}`,
-  "int-refinement": `fun main() {
-  if (y + 1 == 3) {
-    x = 1;
-    __voblint_check(y == 2);
-  } else {
-    x = 0;
-  }
-}`,
-  "division-definite": `fun main() {
-  divisor = 0;
-  quotient = 7 / divisor;
-  remainder = 7 % divisor;
-  __voblint_check(quotient == 0);
-  __voblint_check(remainder == 7);
-}`,
-  "division-possible": `fun main() {
-  divisor = __voblint_nondet_int();
-  quotient = 7 / divisor;
-  __voblint_check(divisor != 0);
-}`,
   theorems: `fun main() {
   n = __voblint_nondet_int();
   if (n > 0) {
@@ -3951,34 +3931,142 @@ function selectIfOffered(select, value) {
   }
 }
 
-function applyLinkedConfiguration() {
-  const params = new URLSearchParams(location.search);
+/* -------------------------------------------------------------------------- */
+/* Shareable links                                                            */
+/* -------------------------------------------------------------------------- */
 
-  if (![...params.keys()].length) {
-    return;
+/*
+ * A link opens a program and a configuration. The program is named when it is an
+ * unedited regression program (?fixture=path) or explainer example (?example=name),
+ * and otherwise travels in the fragment (#code=...), raw-deflated and base64url
+ * encoded: the fragment never reaches a server and keeps a long program's link
+ * short. Settings in the query override the ones a named program carries.
+ * scripts/playground_link.py writes the same encoding for documentation.
+ */
+const LINK_SETTINGS = ["analysis", "globals", "context", "k"];
+
+const shareButton = query("#share-link");
+const shareLabel = query("#share-link-label");
+
+async function packSource(source) {
+  const deflated = new Blob([source]).stream().pipeThrough(new CompressionStream("deflate-raw"));
+  const bytes = new Uint8Array(await new Response(deflated).arrayBuffer());
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+async function unpackSource(packed) {
+  const binary = atob(packed.replaceAll("-", "+").replaceAll("_", "/"));
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const inflated = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+
+  return new Response(inflated).text();
+}
+
+async function findFixture(path) {
+  const { groups } = await loadExamples();
+
+  return groups.flatMap((group) => group.fixtures).find((fixture) => fixture.path === path);
+}
+
+/* The program a link names or carries, or null when it names nothing that exists. */
+async function linkedProgram(params, code) {
+  if (code !== null) {
+    return { source: await unpackSource(code), fileName: "shared.vimp" };
+  }
+
+  const fixturePath = params.get("fixture");
+
+  if (fixturePath !== null) {
+    const fixture = await findFixture(fixturePath);
+
+    return fixture ? fixtureProgram(fixture) : null;
   }
 
   const name = params.get("example");
-  const example =
-    name !== null && Object.hasOwn(LINKED_EXAMPLES, name) ? LINKED_EXAMPLES[name] : null;
 
-  if (example) {
-    editor.dispatch({ changes: { from: 0, to: editor.state.doc.length, insert: example } });
+  if (name !== null && Object.hasOwn(LINKED_EXAMPLES, name)) {
+    return {
+      source: LINKED_EXAMPLES[name],
+      fileName: "example.vimp",
+      origin: { param: "example", value: name },
+    };
   }
 
-  selectIfOffered(analysisSelect, params.get("analysis"));
-  selectIfOffered(globalsSelect, params.get("globals"));
-  selectIfOffered(contextSelect, params.get("context"));
-
-  const depth = parseContextDepth(params.get("k"));
-
-  if (depth !== null) {
-    contextDepthInput.value = String(depth);
-  }
-
-  updateContextControls();
-  updateGlobalsHelp();
-  run();
+  return name === null ? { source: editor.state.doc.toString(), fileName: "example.vimp" } : null;
 }
+
+async function applyLinkedConfiguration() {
+  const params = new URLSearchParams(location.search);
+  const code = new URLSearchParams(location.hash.slice(1)).get("code");
+
+  if (![...params.keys()].length && code === null) {
+    return;
+  }
+
+  let program;
+
+  try {
+    program = await linkedProgram(params, code);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+
+    showStatus(`The linked program could not be opened: ${detail}`, "error");
+    return;
+  }
+
+  if (!program) {
+    showStatus("The link names a program this playground does not have.", "error");
+    return;
+  }
+
+  const overrides = Object.fromEntries(
+    LINK_SETTINGS.filter((key) => params.has(key)).map((key) => [key, params.get(key)]),
+  );
+
+  openProgram({ ...program, settings: { ...program.settings, ...overrides } });
+}
+
+/* A path keeps its slashes, so a fixture link stays readable. */
+function linkParam(key, value) {
+  return `${key}=${encodeURIComponent(value).replaceAll("%2F", "/")}`;
+}
+
+async function shareLink() {
+  const source = editor.state.doc.toString();
+  const named = openedProgram?.source === source ? openedProgram : null;
+  const parameters = [
+    ...(named ? [linkParam(named.param, named.value)] : []),
+    linkParam("analysis", analysisSelect.value),
+    linkParam("globals", globalsSelect.value),
+    linkParam("context", contextSelect.value),
+    ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
+  ];
+  const url = new URL(location.href);
+
+  url.search = parameters.join("&");
+  url.hash = named ? "" : `code=${await packSource(source)}`;
+  history.replaceState(null, "", url);
+
+  let copied = true;
+
+  try {
+    await navigator.clipboard.writeText(url.href);
+  } catch {
+    copied = false;
+  }
+
+  shareLabel.textContent = copied ? "Link copied" : "Link in address bar";
+  setTimeout(() => {
+    shareLabel.textContent = "Share";
+  }, 2000);
+}
+
+shareButton.addEventListener("click", shareLink);
 
 applyLinkedConfiguration();
