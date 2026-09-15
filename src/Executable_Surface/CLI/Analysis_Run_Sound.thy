@@ -31,11 +31,12 @@ lemma check_in_result_checks_of:
   using assms by (auto simp: result_checks_of_def)
 
 lemma run_result_of_columns [simp]:
-  "res_cfg (run_result_of into ctx_key ctx_view targets classify r shared seed_at p)
+  "res_cfg (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
      = prog_cfg p"
-  "res_checks (run_result_of into ctx_key ctx_view targets classify r shared seed_at p)
+  "res_checks (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
      = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
-  "res_diagnostics (run_result_of into ctx_key ctx_view targets classify r shared seed_at p)
+  "res_diagnostics
+       (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
      = arithmetic_diagnostics (prog_cfg p) r classify"
   by (simp_all add: run_result_of_def Let_def)
 

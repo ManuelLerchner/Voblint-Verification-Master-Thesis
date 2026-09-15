@@ -107,7 +107,7 @@ text \<open>
 \<close>
 
 lemma run_result_sound:
-  assumes "res = run_result_of into ctx_key ctx_view targets classify r shared seed_at p"
+  assumes "res = run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p"
       and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"

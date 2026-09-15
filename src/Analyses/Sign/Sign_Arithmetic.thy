@@ -253,53 +253,36 @@ fun aval_sign :: "exp => (vname => sign) => sign" where
   | "aval_sign (Mod a b)  \<sigma> = sign_mod (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
   | "aval_sign (Less a b)   \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
-        else SNonNeg)"
+        else of_bool_option sign_of_int (sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>)))"
   | "aval_sign (LessEq a b)   \<sigma> =
-       (if is_empty (aval_sign b \<sigma>) \<or> is_empty (aval_sign a \<sigma>) then bot
-        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some False then SPos
-        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some True then SZero
-        else SNonNeg)"
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+        else of_bool_option sign_of_int
+               (map_option HOL.Not (sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>))))"
   | "aval_sign (Greater a b)   \<sigma> =
-       (if is_empty (aval_sign b \<sigma>) \<or> is_empty (aval_sign a \<sigma>) then bot
-        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some True then SPos
-        else if sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>) = Some False then SZero
-        else SNonNeg)"
+       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+        else of_bool_option sign_of_int (sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>)))"
   | "aval_sign (GreaterEq a b)   \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SPos
-        else if sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SZero
-        else SNonNeg)"
+        else of_bool_option sign_of_int
+               (map_option HOL.Not (sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>))))"
   | "aval_sign (NotEq a b) \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SPos
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SZero
-        else SNonNeg)"
+        else of_bool_option sign_of_int
+               (map_option HOL.Not (sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>))))"
   | "aval_sign (exp.Eq a b) \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some True then SPos
-        else if sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>) = Some False then SZero
-        else SNonNeg)"
+        else of_bool_option sign_of_int (sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>)))"
   | "aval_sign (exp.Not a)  \<sigma> =
        (if is_empty (aval_sign a \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some True then SZero
-        else if sign_tobool (aval_sign a \<sigma>) = Some False then SPos
-        else SNonNeg)"
+        else of_bool_option sign_of_int (map_option HOL.Not (sign_tobool (aval_sign a \<sigma>))))"
   | "aval_sign (And a b)    \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some False \<or> sign_tobool (aval_sign b \<sigma>) = Some False
-        then SZero
-        else if sign_tobool (aval_sign a \<sigma>) = Some True \<and> sign_tobool (aval_sign b \<sigma>) = Some True
-        then SPos
-        else SNonNeg)"
+        else of_bool_option sign_of_int
+               (and_opt (sign_tobool (aval_sign a \<sigma>)) (sign_tobool (aval_sign b \<sigma>))))"
   | "aval_sign (Or a b)     \<sigma> =
        (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else if sign_tobool (aval_sign a \<sigma>) = Some True \<or> sign_tobool (aval_sign b \<sigma>) = Some True
-        then SPos
-        else if sign_tobool (aval_sign a \<sigma>) = Some False \<and> sign_tobool (aval_sign b \<sigma>) = Some False
-        then SZero
-        else SNonNeg)"
+        else of_bool_option sign_of_int
+               (or_opt (sign_tobool (aval_sign a \<sigma>)) (sign_tobool (aval_sign b \<sigma>))))"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"

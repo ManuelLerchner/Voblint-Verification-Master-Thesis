@@ -7,9 +7,10 @@ begin
 section \<open>Regression: the entry-state solved-result table\<close>
 
 text \<open>
-  Acceptance witnesses for \<^const>\<open>analyse_interval_entry_state_result\<close>, the
-  context-sensitive reading of the entry-state D/G solution as an
-  \<^type>\<open>analysis_result\<close>. The two programs under test are the ones the
+  Acceptance witnesses for the entry-state result table
+  \<^const>\<open>routed_dg_pipeline.result\<close> of \<open>interval_es_rule\<close> at
+  \<^const>\<open>Globals_Warrow\<close>, the context-sensitive reading of the entry-state D/G
+  solution as an \<^type>\<open>analysis_result\<close>. The two programs under test are the ones the
   sibling entry-state regressions already solve: \<^const>\<open>gcall_prog\<close>, whose
   three calls to \<open>bump\<close> keep three activations of one callee apart while a
   declared global crosses each call boundary, and \<^const>\<open>fact_prog\<close>, whose
@@ -24,7 +25,7 @@ text \<open>
 \<close>
 
 definition gcall_result :: "(ivl list, ivl abs_state) analysis_result" where
-  "gcall_result = analyse_interval_entry_state_result gcall_prog"
+  "gcall_result = interval_es_rule.result Globals_Warrow gcall_gs gcall_prog"
 
 abbreviation bump_entry :: cfg_node where
   "bump_entry \<equiv> FunctionEntry (STR ''bump'')"
@@ -131,7 +132,7 @@ text \<open>
 \<close>
 
 definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
-  "fact_result = analyse_interval_entry_state_result fact_prog"
+  "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
 
 lemma fact_result_dead_branch_covered:
   "(Statement 2, ctx_a) \<in> result_keys fact_result"
@@ -206,7 +207,8 @@ lemma gcall_result_bump_live:
 subsection \<open>Routing a call from the table alone\<close>
 
 text \<open>
-  \<^const>\<open>entry_state_callee_ctx\<close> recomputes a call's callee context from the
+  \<^const>\<open>callee_ctx_of\<close> at Interval's own entry transfer
+  \<^const>\<open>enter_ivl_for\<close> recomputes a call's callee context from the
   caller's own \<^const>\<open>Lifted\<close> state, without reopening the solver's solution
   map. \<open>gcall_callee_ctx_at\<close> is the shape a consumer of the table uses: the
   \<^const>\<open>Bot\<close> case is decided first and answers \<^const>\<open>None\<close>, so no
@@ -218,7 +220,7 @@ definition gcall_callee_ctx_at :: "pp \<Rightarrow> call_action \<Rightarrow> iv
   "gcall_callee_ctx_at u ca =
      (case lookup_context gcall_result u [] of
         Bot \<Rightarrow> None
-      | Lifted st \<Rightarrow> entry_state_callee_ctx gcall_gs ca st)"
+      | Lifted st \<Rightarrow> callee_ctx_of enter_ivl_for gcall_gs ca st)"
 
 abbreviation gcall_call_first :: call_action where
   "gcall_call_first \<equiv> CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]"
@@ -239,9 +241,9 @@ lemma gcall_callee_ctx_at_values:
 
 text \<open>The same three contexts the solver routed with
   (\<^const>\<open>gcall_ctx_first\<close> and its siblings, each defined through
-  \<^const>\<open>entry_state_route\<close> on the raw solved state), so an edge drawn from a
-  recomputed context reaches the key the callee was actually materialized
-  under.\<close>
+  \<^const>\<open>routed_dg_pipeline.ctx_succ\<close> on the raw solved state), so an edge
+  drawn from a recomputed context reaches the key the callee was actually
+  materialized under.\<close>
 
 lemma gcall_callee_ctx_at_agrees_with_route:
   "gcall_callee_ctx_at (Statement 4) gcall_call_first = Some gcall_ctx_first"
@@ -292,7 +294,7 @@ definition twin_prog :: imp_prog where
    }"
 
 definition twin_result :: "(ivl list, ivl abs_state) analysis_result" where
-  "twin_result = analyse_interval_entry_state_result twin_prog"
+  "twin_result = interval_es_rule.result Globals_Warrow (declared_global twin_prog) twin_prog"
 
 definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list" where
   "twin_call_contexts =
@@ -301,7 +303,7 @@ definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list
              case lookup_context twin_result call [] of
                Bot \<Rightarrow> None
              | Lifted st \<Rightarrow>
-                 entry_state_callee_ctx (declared_global twin_prog) ca st))
+                 callee_ctx_of enter_ivl_for (declared_global twin_prog) ca st))
        (cfg_calls_list (prog_cfg twin_prog))"
 
 lemma twin_call_contexts_shared:
@@ -328,8 +330,8 @@ lemma twin_result_idf_contexts:
   "contexts_at twin_result (FunctionEntry (STR ''idf'')) = {[Ivl (Fin 5) (Fin 5)]}"
   by eval
 
-lemma twin_analyse_interval_entry_state:
-  "analyse_interval_entry_state twin_prog =
+lemma twin_verdict_report:
+  "interval_es_rule.verdict_report Globals_Warrow (declared_global twin_prog) twin_prog =
      [(Statement 4, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved),
       (Statement 5, exp.Eq (V (STR ''b'')) (exp.N 6), Decided Check_Proved)]"
   by eval

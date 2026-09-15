@@ -115,11 +115,12 @@ export_code
   Malformed_Program Analysed map_analysis_answer
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
-  state_point state_context state_value state_checks state_diagnostics
+  state_point state_context state_value state_checks state_diagnostics state_steps
   route_point route_context route_callee route_targets
   check_point check_exp check_verdict
   global_key global_state Global_Shared Global_Seed
-  diagnostic_point diagnostic_obligation diagnostic_verdict arithmetic_operation
+  diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
+  arithmetic_operation arithmetic_divisor
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
   cfg_entry cfg_node_list

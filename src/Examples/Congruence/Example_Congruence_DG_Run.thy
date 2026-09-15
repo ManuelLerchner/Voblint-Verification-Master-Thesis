@@ -1,6 +1,6 @@
 theory Example_Congruence_DG_Run
   imports
-    "Voblint_Analysis_Congruence.Congruence_Entry"
+    "Voblint_Analysis_Congruence.Congruence_Analyses"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -11,7 +11,8 @@ section \<open>End-to-end Congruence analysis on the D/G pipeline\<close>
 text \<open>
   This straight-line program keeps the witness small while exercising the full
   route: VIMP compilation, D/G equation generation, the verified solver, and
-  the published Congruence result table.  Reading both variables through one
+  the published Congruence result table of the unit-context registration
+  \<open>congruence_rule\<close> at \<^const>\<open>Globals_Join\<close>.  Reading both variables through one
   option distinguishes a live exit from \<open>Bot\<close> and pins informative values.
 \<close>
 
@@ -23,17 +24,21 @@ definition congruence_dg_program :: imp_prog where
      }
    }"
 
+abbreviation congruence_dg_gs :: "vname \<Rightarrow> bool" where
+  "congruence_dg_gs \<equiv> declared_global congruence_dg_program"
+
 definition congruence_dg_exit_xy :: "(congruence \<times> congruence) option" where
   "congruence_dg_exit_xy =
-     (case lookup_context (analyse_congruence_result congruence_dg_program)
+     (case lookup_context
+         (congruence_rule.result Globals_Join congruence_dg_gs congruence_dg_program)
          (cfg_exit (prog_cfg congruence_dg_program)) () of
         Bot \<Rightarrow> None
       | Lifted st \<Rightarrow> Some (st (STR ''x''), st (STR ''y'')))"
 
 lemma congruence_dg_terminates:
-  "congruence_conf_terminates_prog
-     (declared_global congruence_dg_program) congruence_dg_program"
-  by (rule congruence_conf_terminates_prog_via_solve_c;
+  "congruence_rule.terminates Globals_Join congruence_dg_gs congruence_dg_program"
+  unfolding congruence_rule.terminates_code
+  by (rule TD_side_rule_Interp.solve_dom_of_solve_c;
       unfold congruence_dg_program_def; eval)
 
 lemma congruence_dg_exit_informative:

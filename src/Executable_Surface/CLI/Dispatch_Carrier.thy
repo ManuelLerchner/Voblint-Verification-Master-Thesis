@@ -1,25 +1,22 @@
 theory Dispatch_Carrier
   imports
-    Voblint_Analysis_Sign.Sign_Entry
-    Voblint_Analysis_Interval.Interval_Entry
-    Voblint_Analysis_Int.Int_Entry
-    Voblint_Analysis_Parity.Parity_Entry
-    Voblint_Analysis_Congruence.Congruence_Entry
+    Voblint_Analysis_Sign.Sign_Analyses
+    Voblint_Analysis_Interval.Interval_Analyses
+    Voblint_Analysis_Int.Int_Analyses
+    Voblint_Analysis_Parity.Parity_Analyses
+    Voblint_Analysis_Congruence.Congruence_Analyses
 begin
 
-section \<open>One value type wide enough for every domain's report\<close>
+section \<open>One value type wide enough for every domain's result\<close>
 
 text \<open>
-  A report crosses the dispatcher without its caller knowing which analysis
-  produced it, so the per-check state has to have one type. \<open>abstract_value\<close> is
-  that type: a tagged union with one constructor per selectable domain, and
-  \<open>tag_states\<close> attaches a domain's tag to every state in a report, leaving the
-  verdicts and the unreachable flag untouched.
+  A run result crosses the dispatcher without its caller knowing which analysis
+  produced it, so every abstract value in it has to have one type.
+  \<open>abstract_value\<close> is that type: a tagged union with one constructor per
+  selectable domain.
 
   This is handwritten and stays handwritten. The datatype names each domain's
-  own abstract state type, which is domain content rather than registration, so
-  it is the one part of the dispatch surface the registry does not describe. The
-  generated tables read it.
+  own abstract value type, which is domain content rather than registration.
 \<close>
 
 datatype abstract_value =
@@ -28,11 +25,6 @@ datatype abstract_value =
   | IntDomValue int_dom
   | ParityValue parity
   | CongruenceValue congruence
-
-definition tag_states ::
-    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 's abs_state) list
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
-  "tag_states tag = map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, tag \<circ> s))"
 
 text \<open>
   How a value reads is its domain's business: each domain's \<^class>\<open>executable_domain\<close>

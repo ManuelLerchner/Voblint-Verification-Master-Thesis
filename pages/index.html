@@ -1936,6 +1936,18 @@
           <h4><i class="fa-solid fa-code-compare" aria-hidden="true"></i> Anything about Goblint's code</h4>
           <p>Voblint models Goblint's design. No theorem here speaks about Goblint's OCaml implementation.</p>
         </article>
+        <article class="guide-card caution">
+          <h4><i class="fa-solid fa-gauge-simple" aria-hidden="true"></i> Speed</h4>
+          <p>The generated OCaml is slow. Its code is purely functional and written for easy proofs, mostly over association lists, with red-black trees only in a few places.</p>
+        </article>
+        <article class="guide-card caution">
+          <h4><i class="fa-solid fa-file-code" aria-hidden="true"></i> That the parser reads your text right</h4>
+          <p>The theorems start from a parsed program. The lexer and parser are generated from one grammar and tested, not proved.</p>
+        </article>
+        <article class="guide-card caution">
+          <h4><i class="fa-solid fa-display" aria-hidden="true"></i> That the report shows the result faithfully</h4>
+          <p>Verdicts, JSON and the browser view are rendered by handwritten OCaml and JavaScript outside the proof.</p>
+        </article>
       </div>
 
       <h3 class="setting-title">Why this takes so long to prove</h3>

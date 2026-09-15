@@ -26,7 +26,4 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
     Congruence_Exec
     Congruence_Sound
     Congruence_Classify
-    Congruence_Assembly
     Congruence_Analyses
-    Congruence_Checks
-    Congruence_Entry

@@ -1,5 +1,5 @@
 theory Exec_Interval_Run
-  imports "Voblint_Analysis_Interval.Interval_Entry"
+  imports "Voblint_Analysis_Interval.Interval_Analyses"
             "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage
@@ -21,7 +21,7 @@ text \<open>
   @{text "x"} at the loop head --- not because of widening.
 
   This theory runs several fixpoint engines on the one canonical routed
-  equation system \<^const>\<open>interval_conf_eqs_prog\<close>: bounded Kleene iteration on
+  equation system \<^const>\<open>interval_rule.equations\<close>: bounded Kleene iteration on
   @{const eq}, @{const TD_side_warrowing_apinis_Interp_solve} (pointwise
   interval widening for solver termination), and each of the four vendored
   update rules directly.  All of them agree here, which is the point: the
@@ -50,7 +50,7 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
 definition loop_ivl_eqs ::
     "(pp \<times> unit, (unit, unit) routed_gk,
       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
-  "loop_ivl_eqs = interval_conf_eqs_prog loop_gs loop_prog"
+  "loop_ivl_eqs = interval_rule.equations loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
   component and read \<open>x\<close> out of it.\<close>
@@ -100,7 +100,7 @@ definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
        \<times> (pp \<times> unit + (unit, unit) routed_gk
           \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "loop_ivl_td_sol = interval_conf_sol_prog_warrow loop_gs loop_prog"
+  "loop_ivl_td_sol = interval_rule.solution Globals_Warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
   "loop_ivl_td_at pp = loop_read_x (snd loop_ivl_td_sol (Inl (pp, ())))"
@@ -151,25 +151,26 @@ lemma loop_head_warrow_per_origin:
 subsection \<open>Whole-program entry points, and a second program\<close>
 
 text \<open>
-  \<open>analyse_interval_result_join_for\<close> and \<open>analyse_interval_result_for\<close>
-  (\<open>Interval_Checks\<close>) are the whole-program convenience layer over the very
-  \<^const>\<open>interval_conf_eqs_prog\<close> system \<open>loop_ivl_eqs\<close> above is, under the join and the
-  Apinis-warrowing update rule respectively. A different program from
-  \<open>loop_prog\<close>, run through them: the entry points are not specialized to one
+  \<^const>\<open>interval_rule.result\<close> is the whole-program table over the very
+  \<^const>\<open>interval_rule.equations\<close> system \<open>loop_ivl_eqs\<close> above is, solved under the
+  chosen global update rule. A different program from \<open>loop_prog\<close>, run through it
+  under the join rule and then the warrowing one: the table is not specialized to one
   hard-coded example.\<close>
 
 definition analyse_interval_demo2_prog :: imp_prog where
   "analyse_interval_demo2_prog = program { fun main() { a = 3; b = a + 1; } }"
 
 lemma analyse_interval_demo2_terminates:
-  "interval_conf_terminates_prog (declared_global analyse_interval_demo2_prog)
+  "interval_rule.terminates Globals_Join (declared_global analyse_interval_demo2_prog)
      analyse_interval_demo2_prog"
-  by (rule interval_conf_terminates_prog_via_solve_c) eval
+  unfolding interval_rule.terminates_code
+  by (rule TD_side_rule_Interp.solve_dom_of_solve_c) eval
 
 definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =
      (case lookup_context
-             (analyse_interval_result_join analyse_interval_demo2_prog)
+             (interval_rule.result Globals_Join (declared_global analyse_interval_demo2_prog)
+                analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
@@ -178,15 +179,15 @@ lemma analyse_interval_demo2_result:
   by (simp add: analyse_interval_demo2_env_def) eval
 
 text \<open>
-  \<open>analyse_interval_result_for\<close> mirrors \<open>analyse_interval_result_join_for\<close>
-  but solves via the warrowing rule \<open>loop_ivl_td_sol\<close> uses above. On this
-  program the two agree exactly.
+  The same table under the warrowing rule \<open>loop_ivl_td_sol\<close> uses above. On this
+  program the two rules agree exactly.
 \<close>
 
 definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_td_demo2_env =
      (case lookup_context
-             (analyse_interval_result analyse_interval_demo2_prog)
+             (interval_rule.result Globals_Warrow (declared_global analyse_interval_demo2_prog)
+                analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 

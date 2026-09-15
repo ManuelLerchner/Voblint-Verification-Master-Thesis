@@ -263,11 +263,20 @@ text \<open>
   component reads the analysis-wide global, the third reads the seed a call
   published at a procedure entry under a context. Both are read back exactly as a
   table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
+
+  The fourth is what one edge's local step makes of a point's solved state: the term
+  that edge contributes to its target's equation, re-evaluated on the solution. A
+  target with several incoming edges stores only their join, so this is the one
+  place the contribution of a single edge can be read. It is the specification's
+  own step -- \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> sends every edge
+  action to \<open>tf_st\<close> under the same reachability lift -- applied to the stored
+  executable state, not a re-implementation of it.
 \<close>
 
 definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> ('c, 'a abs_state) analysis_result \<times> 'a abs_state lifted
-         \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)" where
+         \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)
+         \<times> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)" where
   "result_with_globals gs p =
      (let sol = solution gs p;
           gl = declared_global_vars p;
@@ -275,7 +284,9 @@ definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_
                           (canonicalize_lift (resolved_st_q_is_bot_for gl) d))
       in (dg_result_for gs gl sol,
           read (globs (snd sol (Inr gk0))),
-          (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx)))))))"
+          (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
+          (\<lambda>v ctx a. read (transfer_lift (resolved_st_q_is_bot_for gl) (tf_st gs a)
+                              (locals (snd sol (Inl (v, ctx))))))))"
 
 lemma fst_result_with_globals [simp]: "fst (result_with_globals gs p) = result gs p"
   by (simp add: result_with_globals_def result_def Let_def)

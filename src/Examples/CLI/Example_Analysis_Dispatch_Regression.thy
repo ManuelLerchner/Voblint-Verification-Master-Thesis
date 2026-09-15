@@ -97,5 +97,86 @@ lemma dispatch_demo_run_voblint_flat:
     | _ \<Rightarrow> False)"
   by eval
 
+subsection \<open>What one statement makes of its state\<close>
+
+text \<open>
+  \<open>i := 0\<close> and \<open>i := i + 1\<close> both flow into the loop head, which stores only the
+  join of the two, \<open>[0, 5]\<close>. Each statement's own step survives beside its source
+  state: the body's assignment makes \<open>[1, 5]\<close> of the \<open>[0, 4]\<close> the guard lets
+  through, and the assignment before the loop makes \<open>[0, 0]\<close>.
+\<close>
+
+definition step_demo_prog :: imp_prog where
+  "step_demo_prog =
+     program {
+       fun main() {
+         i = 0;
+         while (i < 5) {
+           i = i + 1;
+         }
+       }
+     }"
+
+text \<open>One variable's value at a point and after each of the point's steps, under Interval.\<close>
+
+definition step_view :: "imp_prog \<Rightarrow> vname \<Rightarrow> pp \<Rightarrow> (abstract_value option lifted
+    \<times> (pp \<times> abstract_value option lifted) list) list" where
+  "step_view p x v =
+     map (\<lambda>st. (map_lift (\<lambda>bs. map_of bs x) (state_value st),
+                map (\<lambda>(w, s). (w, map_lift (\<lambda>bs. map_of bs x) s)) (state_steps st)))
+       (filter (\<lambda>st. state_point st = v)
+          (res_states (analysis_result Interval_Analysis Globals_Warrow Ctx_None p)))"
+
+abbreviation step_demo_i :: "pp \<Rightarrow> (abstract_value option lifted
+    \<times> (pp \<times> abstract_value option lifted) list) list" where
+  "step_demo_i \<equiv> step_view step_demo_prog (STR ''i'')"
+
+lemma step_demo_body_step:
+  "step_demo_i (Statement 2) =
+     [(Lifted (Some (IntervalValue (Ivl (Fin 0) (Fin 4)))),
+       [(Statement 1, Lifted (Some (IntervalValue (Ivl (Fin 1) (Fin 5)))))])]"
+  by eval
+
+lemma step_demo_head_stores_join:
+  "step_demo_i (Statement 1) =
+     [(Lifted (Some (IntervalValue (Ivl (Fin 0) (Fin 5)))),
+       [(Statement 2, Lifted (Some (IntervalValue (Ivl (Fin 0) (Fin 4))))),
+        (Statement 3, Lifted (Some (IntervalValue (Ivl (Fin 5) (Fin 5)))))])]"
+  by eval
+
+lemma step_demo_before_loop_step:
+  "step_demo_i (Statement 0) =
+     [(Lifted (Some (IntervalValue (Ivl MinInf PlusInf))),
+       [(Statement 1, Lifted (Some (IntervalValue (Ivl (Fin 0) (Fin 0)))))])]"
+  by eval
+
+text \<open>
+  A guard no store satisfies has no successor. Its step reads back as \<^const>\<open>Bot\<close>,
+  as the solve's reachability lift makes it, not as a store of empty values, and the
+  dead branch then steps nowhere either.
+\<close>
+
+definition dead_step_prog :: imp_prog where
+  "dead_step_prog =
+     program {
+       fun main() {
+         x = 5;
+         if (x < 0) {
+           x = 1;
+         }
+       }
+     }"
+
+lemma dead_step_guard_is_bot:
+  "step_view dead_step_prog (STR ''x'') (Statement 1) =
+     [(Lifted (Some (IntervalValue (Ivl (Fin 5) (Fin 5)))),
+       [(Statement 2, Bot),
+        (Statement 4, Lifted (Some (IntervalValue (Ivl (Fin 5) (Fin 5)))))])]"
+  by eval
+
+lemma dead_step_branch_steps_nowhere:
+  "step_view dead_step_prog (STR ''x'') (Statement 2) = [(Bot, [(Statement 4, Bot)])]"
+  by eval
+
 end
 

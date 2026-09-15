@@ -11,7 +11,7 @@ text \<open>
   keyed D/G generator's buffered same-key \<^const>\<open>Side\<close> publication: recursive
   \<open>factorial\<close>, called at \<open>n=3\<close> and \<open>n=4\<close> from \<open>main\<close>, exercises four distinct entry-state
   contexts (\<open>n=[1,1]\<close>, \<open>[2,2]\<close>, \<open>[3,3]\<close>, \<open>[4,4]\<close>). Before the buffering fix,
-  \<^const>\<open>entry_state_eqs_prog\<close> never terminated on this program: two Side writes to the same
+  the entry-state equation system never terminated on this program: two Side writes to the same
   global key within one equation evaluation destabilized the update rule's per-origin gate.
   Before the reachability lift, the dead \<open>n<2\<close> base-case branch's own \<open>#ret := 1\<close>
   assignment still produced a non-bottom value from an already-unreachable predecessor,
@@ -43,12 +43,16 @@ abbreviation fact_gs :: "vname \<Rightarrow> bool" where "fact_gs \<equiv> decla
 definition fact_cfg :: cfg where
   "fact_cfg = compile_prog (prog_table fact_prog) (prog_procs fact_prog)"
 
-definition fact_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "fact_empty_pred = resolved_st_q_is_bot_for (declared_global_vars fact_prog)"
+text \<open>Every value below is Interval's entry-state registration \<open>interval_es_rule\<close> at
+  \<^const>\<open>Globals_Warrow\<close>. The routed callee context is
+  \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type omits the domain, so evaluation
+  inlines its body rather than looking for a code equation of its own.\<close>
+
+declare routed_dg_pipeline.ctx_succ_def [code_unfold]
 
 definition fact_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "fact_sol = entry_state_sol_prog fact_gs fact_prog"
+  "fact_sol = interval_es_rule.solution Globals_Warrow fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's
   own unknown space: \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> off the
@@ -56,35 +60,30 @@ text \<open>The same solution read through the public result table rather than t
   neither \<^const>\<open>Inl\<close> nor \<^const>\<open>locals\<close> nor the resolved-store representation.\<close>
 
 definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
-  "fact_result = analyse_interval_entry_state_result_for fact_gs fact_prog"
+  "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
 
 lemma fact_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs_prog fact_gs fact_prog)
+  "TD_side_rule_Interp_solve_c Globals_Warrow
+     (interval_es_rule.equations fact_gs fact_prog)
      (cfg_exit fact_cfg, []) \<noteq> None"
   by eval
 
 
 definition ctx_a :: "ivl list" where
-  "ctx_a = entry_state_route fact_gs fact_empty_pred
-             (entry_state_entered fact_gs fact_empty_pred
-                (locals (snd fact_sol (Inl (Statement 7, []))))
-                (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3]))
-             (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3])"
+  "ctx_a = interval_es_rule.ctx_succ Globals_Warrow fact_gs fact_prog
+             (Statement 7) [] (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3])
+             (STR ''factorial'')"
 
 definition ctx_b :: "ivl list" where
-  "ctx_b = entry_state_route fact_gs fact_empty_pred
-             (entry_state_entered fact_gs fact_empty_pred
-                (locals (snd fact_sol (Inl (Statement 8, []))))
-                (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
-             (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
+  "ctx_b = interval_es_rule.ctx_succ Globals_Warrow fact_gs fact_prog
+             (Statement 8) [] (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])
+             (STR ''factorial'')"
 
 definition ctx_rec :: "ivl list \<Rightarrow> ivl list" where
-  "ctx_rec caller_ctx = entry_state_route fact_gs fact_empty_pred
-                          (entry_state_entered fact_gs fact_empty_pred
-                             (locals (snd fact_sol (Inl (Statement 3, caller_ctx))))
-                             (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]))
-                          (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])"
+  "ctx_rec caller_ctx = interval_es_rule.ctx_succ Globals_Warrow fact_gs fact_prog
+                          (Statement 3) caller_ctx
+                          (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])
+                          (STR ''factorial'')"
 
 definition ctx_a2 :: "ivl list" where "ctx_a2 = ctx_rec ctx_a"
 definition ctx_a1 :: "ivl list" where "ctx_a1 = ctx_rec ctx_a2"
@@ -132,8 +131,8 @@ lemma fact_dead_branch_bot_ctx_a2:
 text \<open>Final acceptance value: the production check-report pipeline end to end, including
   the two \<open>main\<close>-level checks (\<open>a==6\<close>, \<open>b==24\<close>) whose precision depends on the dead
   branch never leaking into \<open>FunctionResult\<close>'s join.\<close>
-lemma fact_analyse_interval_entry_state:
-  "analyse_interval_entry_state fact_prog =
+lemma fact_verdict_report:
+  "interval_es_rule.verdict_report Globals_Warrow fact_gs fact_prog =
      [(Statement 0, Less (exp.N 0) (V (STR ''n'')), Decided Check_Proved),
       (Statement 4, Less (exp.N 0) (V (STR ''r'')), Decided Check_Proved),
       (Statement 9, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved),

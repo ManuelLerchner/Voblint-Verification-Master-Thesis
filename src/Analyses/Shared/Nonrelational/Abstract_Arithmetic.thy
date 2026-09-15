@@ -1,5 +1,6 @@
 theory Abstract_Arithmetic
   imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
+    "Voblint_Framework.Abstract_Checks"
 begin
 
 section \<open>Generic expression soundness\<close>
@@ -27,13 +28,14 @@ text \<open>
 
 text \<open>
   A comparison or logical result is always the concrete C truthiness value
-  \<open>0\<close>/\<open>1\<close>. Abstractly that becomes \<open>Some True \<Rightarrow> lit 1\<close> (definitely true),
-  \<open>Some False \<Rightarrow> lit 0\<close> (definitely false), \<open>None \<Rightarrow> lit 0 \<squnion> lit 1\<close> (unknown,
-  soundly covering both) -- exactly Goblint's \<open>id_binary_pred\<close>/\<open>id_unary_log\<close>/
-  \<open>id_binary_log\<close> pattern. \<open>And\<close>/\<open>Or\<close> additionally exploit the annihilator
-  case (a definitely-false conjunct settles the whole conjunction, a
-  definitely-true disjunct settles the whole disjunction) before falling back
-  to the fully unknown join, mirroring \<open>id_binary_log\<close>'s own short-circuit.
+  \<open>0\<close>/\<open>1\<close>. Goblint's integer domains move between the two readings with
+  \<open>of_bool\<close> and \<open>to_bool\<close>; here the three-valued answer of a query is read back
+  as a value by \<open>of_bool_option\<close>: \<open>Some True\<close> is \<open>lit 1\<close>, \<open>Some False\<close>
+  is \<open>lit 0\<close>, and an unknown answer joins both --- exactly Goblint's
+  \<open>id_binary_pred\<close>/\<open>id_unary_log\<close>/\<open>id_binary_log\<close> pattern. A negated relation
+  negates the query answer, and \<open>And\<close>/\<open>Or\<close> combine their operands' truthiness
+  with \<^const>\<open>and_opt\<close>/\<^const>\<open>or_opt\<close>, which settle on one definite annihilating
+  operand, mirroring \<open>id_binary_log\<close>'s own short-circuit.
 
   Each operand is queried through \<open>lt\<close>/\<open>eqb\<close>/\<open>tobool\<close> only when it is not
   itself \<open>is_empty\<close>: an \<open>is_empty\<close> operand denotes an unreachable value (its
@@ -46,6 +48,27 @@ text \<open>
   demanding an impossible monotonicity obligation from those queries at their
   own domain's bottom.
 \<close>
+
+fun of_bool_option :: "(int \<Rightarrow> 'a::sup) \<Rightarrow> bool option \<Rightarrow> 'a" where
+  "of_bool_option lit (Some b) = lit (if b then 1 else 0)"
+| "of_bool_option lit None = lit 0 \<squnion> lit 1"
+
+text \<open>
+  A definite answer survives widening the operands, so the combinators keep every
+  definite answer of their wider inputs.
+\<close>
+
+lemma and_opt_mono:
+  assumes "\<And>b. x2 = Some b \<Longrightarrow> x1 = Some b" and "\<And>b. y2 = Some b \<Longrightarrow> y1 = Some b"
+  shows "and_opt x2 y2 = Some b \<Longrightarrow> and_opt x1 y1 = Some b"
+  using assms(1)[of True] assms(1)[of False] assms(2)[of True] assms(2)[of False]
+  unfolding and_opt_def by (cases b) (auto split: if_splits)
+
+lemma or_opt_mono:
+  assumes "\<And>b. x2 = Some b \<Longrightarrow> x1 = Some b" and "\<And>b. y2 = Some b \<Longrightarrow> y1 = Some b"
+  shows "or_opt x2 y2 = Some b \<Longrightarrow> or_opt x1 y1 = Some b"
+  using assms(1)[of True] assms(1)[of False] assms(2)[of True] assms(2)[of False]
+  unfolding or_opt_def by (cases b) (auto split: if_splits)
 
 locale expression_domain_sound =
   fixes ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::sound_domain) \<Rightarrow> 'a"
@@ -67,53 +90,31 @@ locale expression_domain_sound =
     and ev_Mod[simp]: "ev (Mod e1 e2) sigma = rem (ev e1 sigma) (ev e2 sigma)"
     and ev_Less[simp]: "ev (Less e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if lt (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
-          else if lt (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (lt (ev e1 sigma) (ev e2 sigma)))"
     and ev_LessEq[simp]: "ev (LessEq e1 e2) sigma =
-         (if is_empty (ev e2 sigma) \<or> is_empty (ev e1 sigma) then bot
-          else if lt (ev e2 sigma) (ev e1 sigma) = Some False then lit 1
-          else if lt (ev e2 sigma) (ev e1 sigma) = Some True then lit 0
-          else lit 0 \<squnion> lit 1)"
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
+          else of_bool_option lit (map_option HOL.Not (lt (ev e2 sigma) (ev e1 sigma))))"
     and ev_Greater[simp]: "ev (Greater e1 e2) sigma =
-         (if is_empty (ev e2 sigma) \<or> is_empty (ev e1 sigma) then bot
-          else if lt (ev e2 sigma) (ev e1 sigma) = Some True then lit 1
-          else if lt (ev e2 sigma) (ev e1 sigma) = Some False then lit 0
-          else lit 0 \<squnion> lit 1)"
+         (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
+          else of_bool_option lit (lt (ev e2 sigma) (ev e1 sigma)))"
     and ev_GreaterEq[simp]: "ev (GreaterEq e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if lt (ev e1 sigma) (ev e2 sigma) = Some False then lit 1
-          else if lt (ev e1 sigma) (ev e2 sigma) = Some True then lit 0
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (map_option HOL.Not (lt (ev e1 sigma) (ev e2 sigma))))"
     and ev_NotEq[simp]: "ev (NotEq e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if eqb (ev e1 sigma) (ev e2 sigma) = Some False then lit 1
-          else if eqb (ev e1 sigma) (ev e2 sigma) = Some True then lit 0
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (map_option HOL.Not (eqb (ev e1 sigma) (ev e2 sigma))))"
     and ev_Eq[simp]: "ev (exp.Eq e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if eqb (ev e1 sigma) (ev e2 sigma) = Some True then lit 1
-          else if eqb (ev e1 sigma) (ev e2 sigma) = Some False then lit 0
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (eqb (ev e1 sigma) (ev e2 sigma)))"
     and ev_Not[simp]: "ev (exp.Not e) sigma =
          (if is_empty (ev e sigma) then bot
-          else if tobool (ev e sigma) = Some True then lit 0
-          else if tobool (ev e sigma) = Some False then lit 1
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (map_option HOL.Not (tobool (ev e sigma))))"
     and ev_And[simp]: "ev (And e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if tobool (ev e1 sigma) = Some False \<or> tobool (ev e2 sigma) = Some False
-          then lit 0
-          else if tobool (ev e1 sigma) = Some True \<and> tobool (ev e2 sigma) = Some True
-          then lit 1
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (and_opt (tobool (ev e1 sigma)) (tobool (ev e2 sigma))))"
     and ev_Or[simp]: "ev (Or e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
-          else if tobool (ev e1 sigma) = Some True \<or> tobool (ev e2 sigma) = Some True
-          then lit 1
-          else if tobool (ev e1 sigma) = Some False \<and> tobool (ev e2 sigma) = Some False
-          then lit 0
-          else lit 0 \<squnion> lit 1)"
+          else of_bool_option lit (or_opt (tobool (ev e1 sigma)) (tobool (ev e2 sigma))))"
     and lit_sound[simp]: "n \<in> gamma (lit n)"
     and plus_sound[intro]:
       "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i + j \<in> gamma (pls p q)"
@@ -131,17 +132,17 @@ locale expression_domain_sound =
 begin
 
 text \<open>
-  Every comparison and connective evaluates to the same guarded choice between
-  the literals \<open>0\<close>/\<open>1\<close> and their join. \<open>bool_lit_sound\<close> and
-  \<open>bool_lit_mono\<close> discharge that shape once, so each induction case supplies
-  only its own query facts.
+  Every comparison and connective reads its query answer back through
+  \<^const>\<open>of_bool_option\<close> behind the same emptiness guard. \<open>of_bool_option_sound\<close>
+  and \<open>of_bool_option_mono\<close> discharge that shape once, so each induction case
+  supplies only its own query facts.
 \<close>
 
-lemma bool_lit_sound:
-  assumes "\<not> E" and "C1 \<Longrightarrow> v = t1" and "C2 \<Longrightarrow> v = t2" and "v \<in> {0, 1}"
-  shows "v \<in> gamma
-    (if E then bot else if C1 then lit t1 else if C2 then lit t2 else lit 0 \<squnion> lit 1)"
-  using assms by (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
+lemma of_bool_option_sound:
+  assumes "\<not> E" and "\<And>b. r = Some b \<Longrightarrow> v = (if b then 1 else 0)" and "v \<in> {0, 1}"
+  shows "v \<in> gamma (if E then bot else of_bool_option lit r)"
+  using assms
+  by (cases r) (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
 
 lemma aval_dom_sound:
   "(\<forall>x. s x \<in> gamma (sigma x)) \<Longrightarrow> aval a s \<in> gamma (ev a sigma)"
@@ -150,58 +151,58 @@ proof (induction a arbitrary: s sigma)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using Less by simp_all
   show ?case unfolding ev_Less aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
 next
-
   case (LessEq e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using LessEq by simp_all
   show ?case unfolding ev_LessEq aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct lt_sound[where b=True, OF _ h2 h1]
-        lt_sound[where b=False, OF _ h2 h1] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
 next
   case (Greater e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using Greater by simp_all
   show ?case unfolding ev_Greater aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
 next
   case (GreaterEq e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using GreaterEq by simp_all
   show ?case unfolding ev_GreaterEq aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct lt_sound[where b=True, OF _ h1 h2]
-        lt_sound[where b=False, OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
 next
   case (NotEq e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using NotEq by simp_all
   show ?case unfolding ev_NotEq aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
-next  case (Eq e1 e2)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
+next
+  case (Eq e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using Eq by simp_all
   show ?case unfolding ev_Eq aval.simps
-    by (rule bool_lit_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
 next
   case (Not e)
   have h: "aval e s \<in> gamma (ev e sigma)" using Not by simp
   show ?case unfolding ev_Not aval.simps
-    by (rule bool_lit_sound) (use h is_empty_correct tobool_sound[OF _ h] in auto)
+    by (rule of_bool_option_sound) (use h is_empty_correct tobool_sound[OF _ h] in auto)
 next
   case (And e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using And by simp_all
   show ?case unfolding ev_And aval.simps
-    by (rule bool_lit_sound)
-       (use h1 h2 is_empty_correct tobool_sound[OF _ h1] tobool_sound[OF _ h2] in auto)
+    by (rule of_bool_option_sound)
+       (use h1 h2 is_empty_correct
+          and_opt_sound[OF _ tobool_sound[OF _ h1] tobool_sound[OF _ h2]] in auto)
 next
   case (Or e1 e2)
   have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
     using Or by simp_all
   show ?case unfolding ev_Or aval.simps
-    by (rule bool_lit_sound)
-       (use h1 h2 is_empty_correct tobool_sound[OF _ h1] tobool_sound[OF _ h2] in auto)
+    by (rule of_bool_option_sound)
+       (use h1 h2 is_empty_correct
+          or_opt_sound[OF _ tobool_sound[OF _ h1] tobool_sound[OF _ h2]] in auto)
 qed auto
 
 end
@@ -237,12 +238,10 @@ locale expression_domain_mono = expression_domain_sound +
       "\<not> is_empty p1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
 begin
 
-lemma bool_lit_mono:
-  assumes "E2 \<Longrightarrow> E1" and "\<not> E1 \<Longrightarrow> D1 \<Longrightarrow> C1" and "\<not> E1 \<Longrightarrow> D2 \<Longrightarrow> C2"
-    and "C1 \<Longrightarrow> \<not> C2" and "t1 \<in> {0, 1}" and "t2 \<in> {0, 1}"
-  shows "(if E1 then bot else if C1 then lit t1 else if C2 then lit t2 else lit 0 \<squnion> lit 1)
-    \<le> (if E2 then bot else if D1 then lit t1 else if D2 then lit t2 else lit 0 \<squnion> lit 1)"
-  using assms by auto
+lemma of_bool_option_mono:
+  assumes "E2 \<Longrightarrow> E1" and "\<And>b. \<not> E1 \<Longrightarrow> r2 = Some b \<Longrightarrow> r1 = Some b"
+  shows "(if E1 then bot else of_bool_option lit r1) \<le> (if E2 then bot else of_bool_option lit r2)"
+  using assms by (cases r1; cases r2) auto
 
 lemma aval_dom_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> ev a sigma1 \<le> ev a sigma2"
@@ -251,64 +250,64 @@ proof (induction a arbitrary: sigma1 sigma2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using Less by simp_all
   show ?case unfolding ev_Less
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] lt_mono[OF _ _ p q] in auto)
 next
-
   case (LessEq e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using LessEq by simp_all
   show ?case unfolding ev_LessEq
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] lt_mono[OF _ _ q p] in auto)
 next
   case (Greater e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using Greater by simp_all
   show ?case unfolding ev_Greater
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] lt_mono[OF _ _ q p] in auto)
 next
   case (GreaterEq e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using GreaterEq by simp_all
   show ?case unfolding ev_GreaterEq
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] lt_mono[OF _ _ p q] in auto)
 next
   case (NotEq e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using NotEq by simp_all
   show ?case unfolding ev_NotEq
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] eqb_mono[OF _ _ p q] in auto)
-next  case (Eq e1 e2)
+next
+  case (Eq e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using Eq by simp_all
   show ?case unfolding ev_Eq
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q] eqb_mono[OF _ _ p q] in auto)
 next
   case (Not e)
   have p: "ev e sigma1 \<le> ev e sigma2" using Not by simp
   show ?case unfolding ev_Not
-    by (rule bool_lit_mono) (use is_empty_antimono[OF p] tobool_mono[OF _ p] in auto)
+    by (rule of_bool_option_mono) (use is_empty_antimono[OF p] tobool_mono[OF _ p] in auto)
 next
   case (And e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using And by simp_all
   show ?case unfolding ev_And
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q]
-          tobool_mono[OF _ p] tobool_mono[OF _ q] in auto)
+          and_opt_mono[OF tobool_mono[OF _ p] tobool_mono[OF _ q]] in auto)
 next
   case (Or e1 e2)
   have p: "ev e1 sigma1 \<le> ev e1 sigma2" and q: "ev e2 sigma1 \<le> ev e2 sigma2"
     using Or by simp_all
   show ?case unfolding ev_Or
-    by (rule bool_lit_mono)
+    by (rule of_bool_option_mono)
        (use is_empty_antimono[OF p] is_empty_antimono[OF q]
-          tobool_mono[OF _ p] tobool_mono[OF _ q] in auto)
+          or_opt_mono[OF tobool_mono[OF _ p] tobool_mono[OF _ q]] in auto)
 qed (auto simp add: le_funD)
 
 end

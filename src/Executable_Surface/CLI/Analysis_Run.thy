@@ -40,6 +40,11 @@ text \<open>
   A route lists every callee context a call enters from one caller context: an
   entry specification may offer several alternatives, and each may land in its own
   context. The empty list is a call the caller context does not take.
+
+  A state also lists, for every edge leaving its point, that edge's target and what
+  the edge's own step makes of the state. Where the target is a join of several
+  incoming edges -- a loop head, the point after a branch -- this is the only place
+  the effect of one statement survives.
 \<close>
 
 datatype 'v analysis_context =
@@ -53,6 +58,7 @@ record 'v result_state =
   state_value :: "(vname \<times> 'v) list lifted"
   state_checks :: "(exp \<times> contextual_verdict) list"
   state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
+  state_steps :: "(pp \<times> (vname \<times> 'v) list lifted) list"
 
 record call_route =
   route_point :: pp
@@ -106,7 +112,9 @@ definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_st
        state_context = state_context st,
        state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st),
        state_checks = state_checks st,
-       state_diagnostics = state_diagnostics st \<rparr>"
+       state_diagnostics = state_diagnostics st,
+       state_steps =
+         map (\<lambda>(w, s). (w, map_lift (map (\<lambda>(x, v). (x, f v))) s)) (state_steps st) \<rparr>"
 
 definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
   "map_result_global f g =
@@ -216,17 +224,19 @@ definition run_result_of ::
        \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'c list)
        \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> ('c, 'a abs_state) analysis_result
        \<Rightarrow> 'a abs_state lifted \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)
+       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
        \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "run_result_of into ctx_key ctx_view targets classify r shared seed_at p =
+  "run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p =
      (let g = prog_cfg p;
           vars = program_vars p;
           view = map_lift (\<lambda>st. map (\<lambda>x. (x, into (st x))) vars);
           ctxs = ordered_by_key ctx_key (snd ` result_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g;
+          intra = cfg_intra_list g;
+          steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
           checks = group_by_key (\<lambda>(u, a, w). u)
-            (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None)
-            (cfg_intra_list g);
+            (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
           obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
           state_at = (\<lambda>i ctx v.
             \<lparr> state_point = v, state_context = i,
@@ -238,7 +248,9 @@ definition run_result_of ::
                 map (\<lambda>obligation. (obligation,
                                      classify_point classify (arithmetic_condition obligation)
                                        (lookup_context r v ctx)))
-                  (concat (group_lookup obligations v))
+                  (concat (group_lookup obligations v)),
+              state_steps =
+                map (\<lambda>(a, w). (w, view (step_at v ctx a))) (group_lookup steps v)
             \<rparr>);
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
@@ -301,11 +313,12 @@ definition unit_run_result ::
        \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
        \<Rightarrow> (unit, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
             \<times> (pname \<Rightarrow> unit \<Rightarrow> 'a abs_state lifted)
+            \<times> (pp \<Rightarrow> unit \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
        \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
   "unit_run_result into enter classify solved p =
-     (case solved of (r, shared, seed_at) \<Rightarrow>
+     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
         run_result_of into (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
-          (entered_targets enter (\<lambda>_ _ _ _. ()) p) classify r shared seed_at p)"
+          (entered_targets enter (\<lambda>_ _ _ _. ()) p) classify r shared seed_at step_at p)"
 
 definition entry_state_run_result ::
     "('a \<Rightarrow> abstract_value)
@@ -313,15 +326,16 @@ definition entry_state_run_result ::
        \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
        \<Rightarrow> ('a list, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
             \<times> (pname \<Rightarrow> 'a list \<Rightarrow> 'a abs_state lifted)
+            \<times> (pp \<Rightarrow> 'a list \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
        \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
   "entry_state_run_result into enter classify solved p =
-     (case solved of (r, shared, seed_at) \<Rightarrow>
+     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
         run_result_of into (\<lambda>ctx. Key_List (map (abstract_value_key \<circ> into) ctx))
           (\<lambda>ctx. Context_Entry (map into ctx))
           (entered_targets enter
              (\<lambda>_ _ entered ca.
                 case ca of CallEdge dst pars args \<Rightarrow> formals_context pars entered) p)
-          classify r shared seed_at p)"
+          classify r shared seed_at step_at p)"
 
 definition call_string_run_result ::
     "('a \<Rightarrow> abstract_value)
@@ -329,11 +343,13 @@ definition call_string_run_result ::
        \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
        \<Rightarrow> (call_string, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
             \<times> (pname \<Rightarrow> call_string \<Rightarrow> 'a abs_state lifted)
+            \<times> (pp \<Rightarrow> call_string \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
        \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
   "call_string_run_result into enter classify solved k p =
-     (case solved of (r, shared, seed_at) \<Rightarrow>
+     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
         run_result_of into (\<lambda>ctx. Key_List (map Key_Node ctx)) Context_Call_String
-          (entered_targets enter (\<lambda>u ctx _ _. take k (u # ctx)) p) classify r shared seed_at p)"
+          (entered_targets enter (\<lambda>u ctx _ _. take k (u # ctx)) p)
+          classify r shared seed_at step_at p)"
 
 subsection \<open>One configuration, one typed result\<close>
 

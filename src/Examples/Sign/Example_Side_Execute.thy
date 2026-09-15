@@ -1,5 +1,5 @@
 theory Example_Side_Execute
-  imports "Voblint_Analysis_Sign.Sign_Entry"
+  imports "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_Result.Source_Activation_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -8,10 +8,11 @@ section \<open>Running the certified sign analyzer on \<open>x := 1\<close>\<clo
 
 text \<open>
   The smallest end-to-end witness: compile \<open>x := 1\<close>, run the actual vendored
-  solver behind \<^const>\<open>analyse_sign_result_for\<close>, and read the certified
-  soundness off the program-parametric bridge in
-  @{theory Voblint_Analysis_Sign.Sign_Entry}.  The @{command value} / \<open>eval\<close> evaluates
-  at build time, so a green build is the execution proof.
+  solver behind Sign's unit-context registration \<open>sign_rule\<close> at
+  \<^const>\<open>Globals_Join\<close>, and read the certified soundness off that registration's
+  program-parametric endpoints in @{theory Voblint_Analysis_Sign.Sign_Analyses}.
+  The @{command value} / \<open>eval\<close> evaluates at build time, so a green build is the
+  execution proof.
 \<close>
 
 definition x1_prog :: imp_prog where
@@ -38,49 +39,49 @@ text \<open>
   domain.  The three closure facts are computed the same way.
 \<close>
 
-lemma x1_terminates: "sign_conf_terminates_prog x1_gs x1_prog"
-  by (rule sign_conf_terminates_prog_via_solve_c) eval
+lemma x1_terminates: "sign_rule.terminates Globals_Join x1_gs x1_prog"
+  unfolding sign_rule.terminates_code
+  by (rule TD_side_rule_Interp.solve_dom_of_solve_c) eval
 
 lemma x1_entry_cov:
-  "(cfg_entry (prog_cfg x1_prog), ())
-     \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  "(cfg_entry (prog_cfg x1_prog), ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
   by eval
 
 lemma x1_fwd_ok_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg x1_prog).
-     (u, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog) \<longrightarrow>
-     (w, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+     (u, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog \<longrightarrow>
+     (w, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
   by eval
 
 lemma x1_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  assumes "(u, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
     and "(u, a, w) \<in> intra (prog_cfg x1_prog)"
-  shows "(w, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  shows "(w, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
   using assms x1_fwd_ok_ball by (cases ctx) auto
 
 lemma x1_call_fwd_ok:
-  assumes "(u, ctx) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  assumes "(u, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
     and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(FunctionEntry q, ()) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  shows "(FunctionEntry q, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_comb_fwd_ok:
-  assumes "(cl, c1) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  assumes "(cl, c1) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
     and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(k, c1) \<in> fst (sign_conf_sol_prog x1_gs x1_prog)"
+  shows "(k, c1) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_node_sound:
   "ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) v
-     \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for x1_gs x1_prog) v () of
+     \<subseteq> \<lbrakk>case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog) v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
-  by (rule analyse_sign_result_node_sound_for
-        [OF x1_terminates x1_entry_cov
-            x1_fwd_ok x1_call_fwd_ok x1_comb_fwd_ok])
+  using sign_rule.result_node_sound_closure
+          [OF x1_terminates x1_fwd_ok x1_call_fwd_ok x1_comb_fwd_ok x1_entry_cov]
+  unfolding sign_rule.state_at_unfold .
 
 definition x1_exit_env :: "sign abs_state" where
   "x1_exit_env =
-     (case lookup_context (analyse_sign_result_for x1_gs x1_prog)
+     (case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog)
              (cfg_exit (prog_cfg x1_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 

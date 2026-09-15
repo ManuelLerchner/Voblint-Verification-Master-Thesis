@@ -731,6 +731,19 @@ function valueOf(node, name) {
 }
 
 /*
+ * The value a node's own steps give a name, one entry per step that writes it: the
+ * step's published state, or null where the step has no successor. Undefined when no
+ * step with a published state writes the name -- a call's result is not one.
+ */
+function valueAfterSteps(node, name) {
+  const values = node.next
+    .filter((step) => step.writes === name && "state" in step)
+    .map((step) => (step.state ? step.state.find(([x]) => x === name)?.[1] ?? null : null));
+
+  return values.length > 0 ? values : undefined;
+}
+
+/*
  * One hint per variable. Contexts that agree share a value; when they disagree,
  * each value is prefixed by the contexts it holds in, so `L18 [2,2] | L19 [3,3]`
  * cannot be read the wrong way round.
@@ -761,12 +774,11 @@ function formatHint(label, samples) {
  * A header shows each parameter as the procedure is entered, and a call shows
  * the parameters of the callee context it enters, prefixed with an arrow. A
  * `return e` shows the value it returns, and a call whose result is discarded
- * shows what its callee returned, both after a return arrow. A
- * statement shows what it assigns, read from the state after its step -- unless
- * other steps flow into that point too (a loop head, the point after a branch):
- * that state is a join, so its hint is marked as such rather than presented as
- * the assignment's own effect. A callee entry that other calls also enter is
- * marked the same way.
+ * shows what its callee returned, both after a return arrow. An assignment shows
+ * the value its own step produces, which run_voblint publishes beside the state it
+ * starts from -- not the target point's state, which is a join wherever other
+ * steps flow in too. A call's result is its continuation's state, the call's
+ * combine; that and a callee entry other calls also enter are marked as joins.
  */
 function valueHints(model) {
   const hints = [];
@@ -818,8 +830,18 @@ function valueHints(model) {
         }
       }
 
-      for (const step of node.next) {
-        const after = step.writes ? model.nodes.get(step.id) : null;
+      for (const step of node.next.filter((step) => step.writes)) {
+        if ("state" in step) {
+          const value = step.state?.find(([x]) => x === step.writes)?.[1];
+
+          if (value !== undefined) {
+            sample(writeLabel(step.writes), node.context_key, value, false);
+          }
+
+          continue;
+        }
+
+        const after = model.nodes.get(step.id);
         const value = after && isLive(after) ? valueOf(after, step.writes) : undefined;
 
         if (value !== undefined) {
@@ -1245,14 +1267,18 @@ function variableTooltip(name, statement, rows) {
   const where = document.createElement("span");
 
   where.className = "cm-variable-tooltip-where";
+  const assigned = rows.some(({ after }) => after);
+
   where.textContent = statement.formals
     ? `on entry \u00b7 line ${statement.line}`
-    : `before line ${statement.line} \u00b7 ${statement.point}`;
+    : assigned
+      ? `before \u2192 after line ${statement.line} \u00b7 ${statement.point}`
+      : `before line ${statement.line} \u00b7 ${statement.point}`;
   head.append(where);
 
   const table = document.createElement("table");
 
-  for (const { node, value } of rows) {
+  for (const { node, value, after } of rows) {
     const row = table.insertRow();
     const key = row.insertCell();
 
@@ -1264,6 +1290,13 @@ function variableTooltip(name, statement, rows) {
 
     cell.textContent = value ?? "unreachable";
     cell.className = value === null ? "cm-variable-tooltip-dead" : "cm-variable-tooltip-value";
+
+    if (after) {
+      const next = row.insertCell();
+
+      next.textContent = `\u2192 ${after.map((v) => v ?? "no successor").join(" | ")}`;
+      next.className = "cm-variable-tooltip-value";
+    }
   }
 
   tooltip.append(head, table);
@@ -1273,8 +1306,9 @@ function variableTooltip(name, statement, rows) {
 
 /*
  * A variable's value as the statement under the pointer is reached, in every
- * context that statement has. Names the statement's contexts do not bind -- a
- * procedure name, a keyword -- get no tooltip.
+ * context that statement has, and, where the statement assigns it, the value its
+ * step produces. Names the statement's contexts do not bind -- a procedure name, a
+ * keyword -- get no tooltip.
  */
 const variableHover = hoverTooltip(
   (view, pos) => {
@@ -1292,7 +1326,11 @@ const variableHover = hoverTooltip(
     const statement = statementAt(analysisModel, view.state.doc, pos);
 
     const rows = (statement?.nodes ?? [])
-      .map((node) => ({ node, value: isLive(node) ? valueOf(node, name) : null }))
+      .map((node) => ({
+        node,
+        value: isLive(node) ? valueOf(node, name) : null,
+        after: isLive(node) && !statement.formals ? valueAfterSteps(node, name) : undefined,
+      }))
       .filter(({ value }) => value !== undefined);
 
     if (!rows.some(({ value }) => value !== null)) {

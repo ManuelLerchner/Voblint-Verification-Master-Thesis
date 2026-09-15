@@ -146,11 +146,14 @@ module Generated : sig
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
   val state_value : ('a, 'b) result_state_ext -> ((string * 'a) list) lifted
+  val state_steps :
+    ('a, 'b) result_state_ext -> (cfg_node * ((string * 'a) list) lifted) list
   val state_point : ('a, 'b) result_state_ext -> cfg_node
   val map_analysis_answer :
     ('a -> 'b) -> 'a analysis_answer -> 'b analysis_answer
   val declared_global_vars : 'a imp_prog_ext -> string list
   val prog_cfg : unit imp_prog_ext -> unit cfg_ext
+  val arithmetic_divisor : arithmetic_obligation -> exp
   val run_voblint :
     analysis_domain ->
       globals_rule ->
@@ -167,6 +170,7 @@ module Generated : sig
   val diagnostic_verdict : arithmetic_diagnostic -> check_result
   val arithmetic_operation : arithmetic_obligation -> exp
   val diagnostic_obligation : arithmetic_diagnostic -> arithmetic_obligation
+  val diagnostic_occurrence : arithmetic_diagnostic -> nat
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -3604,6 +3608,13 @@ let rec equal_call_string_gka
 let equal_call_string_gk =
   ({equal = equal_call_string_gka} : call_string_gk equal);;
 
+type color = R | B;;
+
+type ('a, 'b) rbta = Empty |
+  Branch of color * ('a, 'b) rbta * 'a * 'b * ('a, 'b) rbta;;
+
+type ('b, 'a) rbt = RBT of ('b, 'a) rbta;;
+
 type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
@@ -3708,7 +3719,8 @@ type ('a, 'b) result_state_ext =
   Result_state_ext of
     cfg_node * nat * ((string * 'a) list) lifted *
       (exp * check_result lifted) list *
-      (arithmetic_obligation * check_result lifted) list * 'b;;
+      (arithmetic_obligation * check_result lifted) list *
+      (cfg_node * ((string * 'a) list) lifted) list * 'b;;
 
 type 'a result_check_ext =
   Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
@@ -3763,8 +3775,8 @@ type ('a, 'b, 'c, 'd) func_state =
                      ('a, 'b, 'c, 'd) ug_state_ext)))
   | I of ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                  ('a, 'b, 'c, 'd) ug_state_ext))
-  | R of ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
-                 ('a, 'b, 'c, 'd) ug_state_ext))
+  | Ra of ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
+                  ('a, 'b, 'c, 'd) ug_state_ext))
   | E of ('a * (('a, 'b, 'c) strategy_tree *
                  (('b -> 'c) *
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -3808,10 +3820,187 @@ let rec take
         (if equal_nata n zero_nat then []
           else x :: take (minus_nat n one_nat) xs);;
 
+let rec empty _A = RBT Empty;;
+
 let rec image f (Set xs) = Set (map f xs);;
 
 let rec foldr f x1 = match f, x1 with f, [] -> id
                 | f, x :: xs -> comp (f x) (foldr f xs);;
+
+let rec balance
+  x0 s t x3 = match x0, s, t, x3 with
+    Branch (R, a, w, x, b), s, t, Branch (R, c, y, z, d) ->
+      Branch (R, Branch (B, a, w, x, b), s, t, Branch (B, c, y, z, d))
+    | Branch (R, Branch (R, a, w, x, b), s, t, c), y, z, Empty ->
+        Branch (R, Branch (B, a, w, x, b), s, t, Branch (B, c, y, z, Empty))
+    | Branch (R, Branch (R, a, w, x, b), s, t, c), y, z,
+        Branch (B, va, vb, vc, vd)
+        -> Branch
+             (R, Branch (B, a, w, x, b), s, t,
+               Branch (B, c, y, z, Branch (B, va, vb, vc, vd)))
+    | Branch (R, Empty, w, x, Branch (R, b, s, t, c)), y, z, Empty ->
+        Branch (R, Branch (B, Empty, w, x, b), s, t, Branch (B, c, y, z, Empty))
+    | Branch (R, Branch (B, va, vb, vc, vd), w, x, Branch (R, b, s, t, c)), y,
+        z, Empty
+        -> Branch
+             (R, Branch (B, Branch (B, va, vb, vc, vd), w, x, b), s, t,
+               Branch (B, c, y, z, Empty))
+    | Branch (R, Empty, w, x, Branch (R, b, s, t, c)), y, z,
+        Branch (B, va, vb, vc, vd)
+        -> Branch
+             (R, Branch (B, Empty, w, x, b), s, t,
+               Branch (B, c, y, z, Branch (B, va, vb, vc, vd)))
+    | Branch (R, Branch (B, ve, vf, vg, vh), w, x, Branch (R, b, s, t, c)), y,
+        z, Branch (B, va, vb, vc, vd)
+        -> Branch
+             (R, Branch (B, Branch (B, ve, vf, vg, vh), w, x, b), s, t,
+               Branch (B, c, y, z, Branch (B, va, vb, vc, vd)))
+    | Empty, w, x, Branch (R, b, s, t, Branch (R, c, y, z, d)) ->
+        Branch (R, Branch (B, Empty, w, x, b), s, t, Branch (B, c, y, z, d))
+    | Branch (B, va, vb, vc, vd), w, x,
+        Branch (R, b, s, t, Branch (R, c, y, z, d))
+        -> Branch
+             (R, Branch (B, Branch (B, va, vb, vc, vd), w, x, b), s, t,
+               Branch (B, c, y, z, d))
+    | Empty, w, x, Branch (R, Branch (R, b, s, t, c), y, z, Empty) ->
+        Branch (R, Branch (B, Empty, w, x, b), s, t, Branch (B, c, y, z, Empty))
+    | Empty, w, x,
+        Branch (R, Branch (R, b, s, t, c), y, z, Branch (B, va, vb, vc, vd))
+        -> Branch
+             (R, Branch (B, Empty, w, x, b), s, t,
+               Branch (B, c, y, z, Branch (B, va, vb, vc, vd)))
+    | Branch (B, va, vb, vc, vd), w, x,
+        Branch (R, Branch (R, b, s, t, c), y, z, Empty)
+        -> Branch
+             (R, Branch (B, Branch (B, va, vb, vc, vd), w, x, b), s, t,
+               Branch (B, c, y, z, Empty))
+    | Branch (B, va, vb, vc, vd), w, x,
+        Branch (R, Branch (R, b, s, t, c), y, z, Branch (B, ve, vf, vg, vh))
+        -> Branch
+             (R, Branch (B, Branch (B, va, vb, vc, vd), w, x, b), s, t,
+               Branch (B, c, y, z, Branch (B, ve, vf, vg, vh)))
+    | Empty, s, t, Empty -> Branch (B, Empty, s, t, Empty)
+    | Empty, s, t, Branch (B, va, vb, vc, vd) ->
+        Branch (B, Empty, s, t, Branch (B, va, vb, vc, vd))
+    | Empty, s, t, Branch (v, Empty, vb, vc, Empty) ->
+        Branch (B, Empty, s, t, Branch (v, Empty, vb, vc, Empty))
+    | Empty, s, t, Branch (v, Branch (B, ve, vf, vg, vh), vb, vc, Empty) ->
+        Branch
+          (B, Empty, s, t,
+            Branch (v, Branch (B, ve, vf, vg, vh), vb, vc, Empty))
+    | Empty, s, t, Branch (v, Empty, vb, vc, Branch (B, vf, vg, vh, vi)) ->
+        Branch
+          (B, Empty, s, t,
+            Branch (v, Empty, vb, vc, Branch (B, vf, vg, vh, vi)))
+    | Empty, s, t,
+        Branch
+          (v, Branch (B, ve, vj, vk, vl), vb, vc, Branch (B, vf, vg, vh, vi))
+        -> Branch
+             (B, Empty, s, t,
+               Branch
+                 (v, Branch (B, ve, vj, vk, vl), vb, vc,
+                   Branch (B, vf, vg, vh, vi)))
+    | Branch (B, va, vb, vc, vd), s, t, Empty ->
+        Branch (B, Branch (B, va, vb, vc, vd), s, t, Empty)
+    | Branch (B, va, vb, vc, vd), s, t, Branch (B, ve, vf, vg, vh) ->
+        Branch (B, Branch (B, va, vb, vc, vd), s, t, Branch (B, ve, vf, vg, vh))
+    | Branch (B, va, vb, vc, vd), s, t, Branch (v, Empty, vf, vg, Empty) ->
+        Branch
+          (B, Branch (B, va, vb, vc, vd), s, t,
+            Branch (v, Empty, vf, vg, Empty))
+    | Branch (B, va, vb, vc, vd), s, t,
+        Branch (v, Branch (B, vi, vj, vk, vl), vf, vg, Empty)
+        -> Branch
+             (B, Branch (B, va, vb, vc, vd), s, t,
+               Branch (v, Branch (B, vi, vj, vk, vl), vf, vg, Empty))
+    | Branch (B, va, vb, vc, vd), s, t,
+        Branch (v, Empty, vf, vg, Branch (B, vj, vk, vl, vm))
+        -> Branch
+             (B, Branch (B, va, vb, vc, vd), s, t,
+               Branch (v, Empty, vf, vg, Branch (B, vj, vk, vl, vm)))
+    | Branch (B, va, vb, vc, vd), s, t,
+        Branch
+          (v, Branch (B, vi, vn, vo, vp), vf, vg, Branch (B, vj, vk, vl, vm))
+        -> Branch
+             (B, Branch (B, va, vb, vc, vd), s, t,
+               Branch
+                 (v, Branch (B, vi, vn, vo, vp), vf, vg,
+                   Branch (B, vj, vk, vl, vm)))
+    | Branch (v, Empty, vb, vc, Empty), s, t, Empty ->
+        Branch (B, Branch (v, Empty, vb, vc, Empty), s, t, Empty)
+    | Branch (v, Empty, vb, vc, Branch (B, ve, vf, vg, vh)), s, t, Empty ->
+        Branch
+          (B, Branch (v, Empty, vb, vc, Branch (B, ve, vf, vg, vh)), s, t,
+            Empty)
+    | Branch (v, Branch (B, vf, vg, vh, vi), vb, vc, Empty), s, t, Empty ->
+        Branch
+          (B, Branch (v, Branch (B, vf, vg, vh, vi), vb, vc, Empty), s, t,
+            Empty)
+    | Branch
+        (v, Branch (B, vf, vg, vh, vi), vb, vc, Branch (B, ve, vj, vk, vl)),
+        s, t, Empty
+        -> Branch
+             (B, Branch
+                   (v, Branch (B, vf, vg, vh, vi), vb, vc,
+                     Branch (B, ve, vj, vk, vl)),
+               s, t, Empty)
+    | Branch (v, Empty, vf, vg, Empty), s, t, Branch (B, va, vb, vc, vd) ->
+        Branch
+          (B, Branch (v, Empty, vf, vg, Empty), s, t,
+            Branch (B, va, vb, vc, vd))
+    | Branch (v, Empty, vf, vg, Branch (B, vi, vj, vk, vl)), s, t,
+        Branch (B, va, vb, vc, vd)
+        -> Branch
+             (B, Branch (v, Empty, vf, vg, Branch (B, vi, vj, vk, vl)), s, t,
+               Branch (B, va, vb, vc, vd))
+    | Branch (v, Branch (B, vj, vk, vl, vm), vf, vg, Empty), s, t,
+        Branch (B, va, vb, vc, vd)
+        -> Branch
+             (B, Branch (v, Branch (B, vj, vk, vl, vm), vf, vg, Empty), s, t,
+               Branch (B, va, vb, vc, vd))
+    | Branch
+        (v, Branch (B, vj, vk, vl, vm), vf, vg, Branch (B, vi, vn, vo, vp)),
+        s, t, Branch (B, va, vb, vc, vd)
+        -> Branch
+             (B, Branch
+                   (v, Branch (B, vj, vk, vl, vm), vf, vg,
+                     Branch (B, vi, vn, vo, vp)),
+               s, t, Branch (B, va, vb, vc, vd));;
+
+let rec rbt_ins _A
+  f k v x3 = match f, k, v, x3 with
+    f, k, v, Empty -> Branch (R, Empty, k, v, Empty)
+    | f, k, v, Branch (B, l, x, y, r) ->
+        (if less _A k x then balance (rbt_ins _A f k v l) x y r
+          else (if less _A x k then balance l x y (rbt_ins _A f k v r)
+                 else Branch (B, l, x, f k y v, r)))
+    | f, k, v, Branch (R, l, x, y, r) ->
+        (if less _A k x then Branch (R, rbt_ins _A f k v l, x, y, r)
+          else (if less _A x k then Branch (R, l, x, y, rbt_ins _A f k v r)
+                 else Branch (R, l, x, f k y v, r)));;
+
+let rec paint c x1 = match c, x1 with c, Empty -> Empty
+                | c, Branch (uu, l, k, v, r) -> Branch (c, l, k, v, r);;
+
+let rec rbt_insert_with_key _A f k v t = paint B (rbt_ins _A f k v t);;
+
+let rec rbt_insert _A = rbt_insert_with_key _A (fun _ _ nv -> nv);;
+
+let rec impl_of _B (RBT x) = x;;
+
+let rec insert _A
+  xc xd xe =
+    RBT (rbt_insert _A.order_linorder.preorder_order.ord_preorder xc xd
+          (impl_of _A xe));;
+
+let rec rbt_lookup _A
+  x0 k = match x0, k with Empty, k -> None
+    | Branch (uu, l, x, y, r), k ->
+        (if less _A k x then rbt_lookup _A l k
+          else (if less _A x k then rbt_lookup _A r k else Some y));;
+
+let rec lookup _A
+  x = rbt_lookup _A.order_linorder.preorder_order.ord_preorder (impl_of _A x);;
 
 let rec filtera
   p x1 = match p, x1 with p, [] -> []
@@ -3824,17 +4013,18 @@ let rec removeAll _A
     | x, y :: xs ->
         (if eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
 
-let rec inserta _A x xs = (if membera _A xs x then xs else x :: xs);;
+let rec insertb _A x xs = (if membera _A xs x then xs else x :: xs);;
 
-let rec insert _A x xa1 = match x, xa1 with x, Set xs -> Set (inserta _A x xs)
-                    | x, Coset xs -> Coset (removeAll _A x xs);;
+let rec inserta _A
+  x xa1 = match x, xa1 with x, Set xs -> Set (insertb _A x xs)
+    | x, Coset xs -> Coset (removeAll _A x xs);;
 
 let rec member _A x xa1 = match x, xa1 with x, Set xs -> membera _A xs x
                     | x, Coset xs -> not (membera _A xs x);;
 
 let rec remove _A
   x xa1 = match x, xa1 with x, Set xs -> Set (removeAll _A x xs)
-    | x, Coset xs -> Coset (inserta _A x xs);;
+    | x, Coset xs -> Coset (insertb _A x xs);;
 
 let rec update _A
   k v x2 = match k, v, x2 with k, v, [] -> [(k, v)]
@@ -4426,7 +4616,7 @@ let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec sup_set _A
-  x0 a = match x0, a with Set xs, a -> fold (insert _A) xs a
+  x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
     | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
 
 let bot_set : 'a set = Set [];;
@@ -4435,7 +4625,7 @@ let rec sup_seta _A (Set xs) = fold (sup_set _A) xs bot_set;;
 
 let rec exp_vnames
   = function N uu -> bot_set
-    | V x -> insert equal_literal x bot_set
+    | V x -> inserta equal_literal x bot_set
     | Plus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Minus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Times (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
@@ -4453,7 +4643,7 @@ let rec exp_vnames
 
 let rec com_vnames
   = function SKIP -> bot_set
-    | Assign (x, a) -> insert equal_literal x (exp_vnames a)
+    | Assign (x, a) -> inserta equal_literal x (exp_vnames a)
     | Check c -> exp_vnames c
     | Seq (c1, c2) -> sup_set equal_literal (com_vnames c1) (com_vnames c2)
     | If (b, c1, c2) ->
@@ -4463,7 +4653,7 @@ let rec com_vnames
     | Call (dst, uu, actuals) ->
         sup_set equal_literal
           (match dst with None -> bot_set
-            | Some x -> insert equal_literal x bot_set)
+            | Some x -> inserta equal_literal x bot_set)
           (sup_seta equal_literal (Set (map exp_vnames actuals)))
     | Return e -> (match e with None -> bot_set | Some a -> exp_vnames a)
     | Restore -> bot_set
@@ -5234,6 +5424,11 @@ let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | STop, SPos -> STop
                     | STop, STop -> STop;;
 
+let rec of_bool_option _A
+  lit x1 = match lit, x1 with
+    lit, Some b -> lit (if b then one_inta else zero_inta)
+    | lit, None -> sup _A (lit zero_inta) (lit one_inta);;
+
 let rec sign_of_int
   n = (if less_int n zero_inta then SNeg
         else (if equal_inta n zero_inta then SZero else SPos));;
@@ -5254,12 +5449,23 @@ let rec sign_div
   a b = (if equal_signa a SBot || equal_signa b SBot then SBot
           else sup_signa (times_sign a b) SZero);;
 
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
+
 let rec sign_lt
   a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
           else (if sign_le a SNonPos && sign_le b SPos then Some true
                  else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
                         else (if sign_le b SNeg && sign_le a SPos
                                then Some false else None))));;
+
+let rec and_opt
+  x y = (if equal_option equal_bool x (Some false) ||
+              equal_option equal_bool y (Some false)
+          then Some false
+          else (if equal_option equal_bool x (Some true) &&
+                     equal_option equal_bool y (Some true)
+                 then Some true else None));;
 
 let rec aval_sign
   x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
@@ -5273,110 +5479,59 @@ let rec aval_sign
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_lt (aval_sign a sigma) (aval_sign b sigma))
-                     (Some true)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_lt (aval_sign a sigma) (aval_sign b sigma))
-                            (Some false)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (sign_lt (aval_sign a sigma) (aval_sign b sigma)))
     | LessEq (a, b), sigma ->
-        (if is_empty_sign (aval_sign b sigma) ||
-              is_empty_sign (aval_sign a sigma)
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
-                     (Some false)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
-                            (Some true)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (map_option not
+                   (sign_lt (aval_sign b sigma) (aval_sign a sigma))))
     | Greater (a, b), sigma ->
-        (if is_empty_sign (aval_sign b sigma) ||
-              is_empty_sign (aval_sign a sigma)
+        (if is_empty_sign (aval_sign a sigma) ||
+              is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_lt (aval_sign b sigma) (aval_sign a sigma))
-                     (Some true)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_lt (aval_sign b sigma) (aval_sign a sigma))
-                            (Some false)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (sign_lt (aval_sign b sigma) (aval_sign a sigma)))
     | GreaterEq (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_lt (aval_sign a sigma) (aval_sign b sigma))
-                     (Some false)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_lt (aval_sign a sigma) (aval_sign b sigma))
-                            (Some true)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (map_option not
+                   (sign_lt (aval_sign a sigma) (aval_sign b sigma))))
     | NotEq (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
-                     (Some false)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
-                            (Some true)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (map_option not
+                   (sign_eqb (aval_sign a sigma) (aval_sign b sigma))))
     | Eq (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool
-                     (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
-                     (Some true)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
-                            (Some false)
-                        then SZero else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (sign_eqb (aval_sign a sigma) (aval_sign b sigma)))
     | Not a, sigma ->
         (if is_empty_sign (aval_sign a sigma) then bot_signa
-          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
-                     (Some true)
-                 then SZero
-                 else (if equal_option equal_bool
-                            (sign_tobool (aval_sign a sigma)) (Some false)
-                        then SPos else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (map_option not (sign_tobool (aval_sign a sigma))))
     | And (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
-                     (Some false) ||
-                     equal_option equal_bool (sign_tobool (aval_sign b sigma))
-                       (Some false)
-                 then SZero
-                 else (if equal_option equal_bool
-                            (sign_tobool (aval_sign a sigma)) (Some true) &&
-                            equal_option equal_bool
-                              (sign_tobool (aval_sign b sigma)) (Some true)
-                        then SPos else SNonNeg)))
+          else of_bool_option sup_sign sign_of_int
+                 (and_opt (sign_tobool (aval_sign a sigma))
+                   (sign_tobool (aval_sign b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
-          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
-                     (Some true) ||
-                     equal_option equal_bool (sign_tobool (aval_sign b sigma))
-                       (Some true)
-                 then SPos
-                 else (if equal_option equal_bool
-                            (sign_tobool (aval_sign a sigma)) (Some false) &&
-                            equal_option equal_bool
-                              (sign_tobool (aval_sign b sigma)) (Some false)
-                        then SZero else SNonNeg)));;
+          else of_bool_option sup_sign sign_of_int
+                 (or_opt (sign_tobool (aval_sign a sigma))
+                   (sign_tobool (aval_sign b sigma))));;
 
 let rec branch_sign_st
   gs e pol s =
@@ -5532,14 +5687,6 @@ let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = main_body (prog_table p);;
 
-let rec and_opt
-  x y = (if equal_option equal_bool x (Some false) ||
-              equal_option equal_bool y (Some false)
-          then Some false
-          else (if equal_option equal_bool x (Some true) &&
-                     equal_option equal_bool y (Some true)
-                 then Some true else None));;
-
 let rec min _A a b = (if less_eq _A a b then a else b);;
 
 let rec parity_lt uu uv = None;;
@@ -5634,31 +5781,37 @@ let rec map_result_global
 let rec state_diagnostics
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
-      more))
+      state_steps, more))
     = state_diagnostics;;
 
 let rec state_context
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
-      more))
+      state_steps, more))
     = state_context;;
 
 let rec state_checks
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
-      more))
+      state_steps, more))
     = state_checks;;
 
 let rec state_value
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
-      more))
+      state_steps, more))
     = state_value;;
+
+let rec state_steps
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_steps;;
 
 let rec state_point
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
-      more))
+      state_steps, more))
     = state_point;;
 
 let rec map_result_state
@@ -5666,7 +5819,10 @@ let rec map_result_state
     Result_state_ext
       (state_point st, state_context st,
         map_lift (map (fun (x, v) -> (x, f v))) (state_value st),
-        state_checks st, state_diagnostics st, ());;
+        state_checks st, state_diagnostics st,
+        map (fun (w, s) -> (w, map_lift (map (fun (x, v) -> (x, f v))) s))
+          (state_steps st),
+        ());;
 
 let rec map_run_result
   f res =
@@ -5712,34 +5868,25 @@ let rec wf_program_compile_input_exec
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
 
-let rec intra_predecessor_list
-  g v = map_filter
-          (fun x ->
-            (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
-              then Some (let (u, (a, _)) = x in (u, a)) else None))
-          (cfg_intra_list g);;
+let rec group_lookup _A
+  m k = (match lookup _A m k with None -> [] | Some ys -> ys);;
 
-let rec intra_predecessor_addr_list
-  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
+let rec group_by_key _B
+  key_of f xs =
+    foldr (fun x m ->
+            (match f x with None -> m
+              | Some y ->
+                insert _B (key_of x) (y :: group_lookup _B m (key_of x)) m))
+      xs (empty _B);;
 
-let rec call_target_at
-  v x1 = match v, x1 with
-    v, (c, (ca, (FunctionEntry p, k))) ->
-      (if equal_cfg_nodea k v then Some (c, (ca, p)) else None)
-    | v, (va, (vc, (Statement vg, vf))) -> None
-    | v, (va, (vc, (FunctionResult vg, vf))) -> None;;
-
-let rec call_target_list
-  g v = map_filter (call_target_at v) (cfg_calls_list g);;
-
-let rec call_site_list
-  g v = remdups (equal_prod equal_cfg_node equal_call_action)
-          (map (fun (c, (ca, _)) -> (c, ca)) (call_target_list g v));;
+let rec intra_predecessor_index
+  g = group_by_key linorder_cfg_node (fun (_, (_, w)) -> w)
+        (fun (u, (a, _)) -> Some (u, a)) (cfg_intra_list g);;
 
 let rec routed_contribution_trees _C _D
-  pred_sel route it cmb extra g ctx v =
+  pred_sel site_sel route it cmb extra g ctx v =
     map (fun (a, b) -> it ctx a b) (pred_sel g v ctx) @
-      map (fun (cc, ca) -> cmb route ctx ca cc v) (call_site_list g v) @
+      map (fun (cc, ca) -> cmb route ctx ca cc v) (site_sel g v) @
         extra route ctx v;;
 
 let rec flush_sides
@@ -5779,7 +5926,7 @@ let rec fold_rhs_contributions _A
 let rec sp_compile p = sp_compile_with id p;;
 
 let rec routed_node_rhs_buffered _B _C _D
-  pred_sel gkey route it_c cmb_c extra g bot0 s0d s0g =
+  pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g =
     (fun (v, c) ->
       (let acc0 =
          (if equal_cfg_nodea v (cfg_entry g)
@@ -5796,8 +5943,8 @@ let rec routed_node_rhs_buffered _B _C _D
                _C.semilattice_sup_bounded_semilattice_sup_bot
                _D.semilattice_sup_bounded_semilattice_sup_bot)
              acc0
-             (routed_contribution_trees _C _D pred_sel route it_c cmb_c extra g
-               c v))
+             (routed_contribution_trees _C _D pred_sel site_sel route it_c cmb_c
+               extra g c v))
          in
         buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
           (sp_lift_tree t
@@ -5808,6 +5955,18 @@ let rec routed_node_rhs_buffered _B _C _D
                      Answer
                        (DG (locals res,
                              bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
+
+let rec call_target_at
+  v x1 = match v, x1 with
+    v, (c, (ca, (FunctionEntry p, k))) ->
+      (if equal_cfg_nodea k v then Some (c, (ca, p)) else None)
+    | v, (va, (vc, (Statement vg, vf))) -> None
+    | v, (va, (vc, (FunctionResult vg, vf))) -> None;;
+
+let rec call_target_index
+  g = group_by_key linorder_cfg_node (fun (_, (_, (_, k))) -> k)
+        (fun (c, (ca, (ce, k))) -> call_target_at k (c, (ca, (ce, k))))
+        (cfg_calls_list g);;
 
 let rec routed_entry_seed_tree _C _D
   seed_key route ctx v =
@@ -5914,36 +6073,41 @@ let rec routed_call_tree _C _D
                    ca cc (locals caller_state))
               (resolve v cc ca (locals caller_state)))));;
 
-let rec static_targets
-  g v cc ca =
-    map_filter
-      (fun x ->
-        (if (let (c, (a, _)) = x in
-              equal_cfg_nodea c cc && equal_call_actiona a ca)
-          then Some (let (_, (_, p)) = x in p) else None))
-      (call_target_list g v);;
-
-let rec static_resolve g v cc ca d = static_targets g v cc ca;;
-
 let rec dg_spec_edge_tree _D _E
   s a src key = transfer_tree _D _E (dg_spec_step s a) src key;;
 
 let rec compiled_routed_eqs_for _A (_C1, _C2) _D
   global seed route s g initial initial_global =
-    routed_node_rhs_buffered _A _C2 _D intra_predecessor_addr_list
-      (fun _ -> global) route
-      (fun _ src a ->
-        dg_spec_edge_tree
-          _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
-          (fun _ -> global))
-      (routed_call_tree _C2 _D s global seed (static_resolve g)
-        (fun d ->
-          eq _C1 d
-            (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
-      (routed_entry_seed_tree _C2 _D seed) g
-      (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
-      initial_global;;
+    (let preds = intra_predecessor_index g in
+     let targets = call_target_index g in
+      routed_node_rhs_buffered _A _C2 _D
+        (fun _ v ctx ->
+          map (fun (u, a) -> (Inl (u, ctx), a))
+            (group_lookup linorder_cfg_node preds v))
+        (fun _ v ->
+          remdups (equal_prod equal_cfg_node equal_call_action)
+            (map (fun (c, (ca, _)) -> (c, ca))
+              (group_lookup linorder_cfg_node targets v)))
+        (fun _ -> global) route
+        (fun _ src a ->
+          dg_spec_edge_tree
+            _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
+            (fun _ -> global))
+        (routed_call_tree _C2 _D s global seed
+          (fun v cc ca _ ->
+            map_filter
+              (fun x ->
+                (if (let (c, (a, _)) = x in
+                      equal_cfg_nodea c cc && equal_call_actiona a ca)
+                  then Some (let (_, (_, p)) = x in p) else None))
+              (group_lookup linorder_cfg_node targets v))
+          (fun d ->
+            eq _C1 d
+              (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+        (routed_entry_seed_tree _C2 _D seed) g
+        (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
+        initial_global);;
 
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
@@ -6154,7 +6318,7 @@ let rec compile
     pi, p, SKIP, k, n ->
       (suc n,
         (Statement n,
-          (insert
+          (inserta
              (equal_prod equal_cfg_node
                (equal_prod equal_edge_action equal_cfg_node))
              (Statement n, (EA_Nop, k)) bot_set,
@@ -6162,7 +6326,7 @@ let rec compile
     | pi, p, Assign (x, a), k, n ->
         (suc n,
           (Statement n,
-            (insert
+            (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Assign (x, a), k)) bot_set,
@@ -6170,7 +6334,7 @@ let rec compile
     | pi, p, Check c, k, n ->
         (suc n,
           (Statement n,
-            (insert
+            (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Check c, k)) bot_set,
@@ -6198,12 +6362,12 @@ let rec compile
                     (sup_set
                       (equal_prod equal_cfg_node
                         (equal_prod equal_edge_action equal_cfg_node))
-                      (insert
+                      (inserta
                         (equal_prod equal_cfg_node
                           (equal_prod equal_edge_action equal_cfg_node))
                         (Statement n,
                           (EA_Assume b, (if equal_com c1 SKIP then k else en1)))
-                        (insert
+                        (inserta
                           (equal_prod equal_cfg_node
                             (equal_prod equal_edge_action equal_cfg_node))
                           (Statement n,
@@ -6223,11 +6387,11 @@ let rec compile
                  (sup_set
                     (equal_prod equal_cfg_node
                       (equal_prod equal_edge_action equal_cfg_node))
-                    (insert
+                    (inserta
                       (equal_prod equal_cfg_node
                         (equal_prod equal_edge_action equal_cfg_node))
                       (Statement n, (EA_Assume b, en1))
-                      (insert
+                      (inserta
                         (equal_prod equal_cfg_node
                           (equal_prod equal_edge_action equal_cfg_node))
                         (Statement n, (EA_AssumeNot b, k)) bot_set))
@@ -6239,7 +6403,7 @@ let rec compile
             (suc n,
               (Statement n,
                 (bot_set,
-                  insert
+                  inserta
                     (equal_prod equal_cfg_node
                       (equal_prod equal_call_action
                         (equal_prod equal_cfg_node equal_cfg_node)))
@@ -6252,7 +6416,7 @@ let rec compile
               with None ->
                 (suc n,
                   (Statement n,
-                    (insert
+                    (inserta
                        (equal_prod equal_cfg_node
                          (equal_prod equal_edge_action equal_cfg_node))
                        (Statement n, (EA_Nop, k)) bot_set,
@@ -6262,7 +6426,7 @@ let rec compile
                   with None ->
                     (suc n,
                       (Statement n,
-                        (insert
+                        (inserta
                            (equal_prod equal_cfg_node
                              (equal_prod equal_edge_action equal_cfg_node))
                            (Statement n, (EA_Nop, k)) bot_set,
@@ -6270,7 +6434,7 @@ let rec compile
                   | Some x ->
                     (suc n,
                       (Statement n,
-                        (insert
+                        (inserta
                            (equal_prod equal_cfg_node
                              (equal_prod equal_edge_action equal_cfg_node))
                            (Statement n, (EA_Special (sc, x), k)) bot_set,
@@ -6278,7 +6442,7 @@ let rec compile
     | pi, p, Return e, k, n ->
         (suc n,
           (Statement n,
-            (insert
+            (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
@@ -6286,7 +6450,7 @@ let rec compile
     | pi, p, Restore, k, n ->
         (suc n,
           (Statement n,
-            (insert
+            (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
@@ -6294,7 +6458,7 @@ let rec compile
     | pi, p, Unwind, k, n ->
         (suc n,
           (Statement n,
-            (insert
+            (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
@@ -6305,12 +6469,12 @@ let rec compile_proc
     (let r = plus_nat n (csize (body decl)) in
      let (_, (ben, (e, k))) = compile pi p (body decl) (Statement r) n in
       (suc r,
-        (insert
+        (inserta
            (equal_prod equal_cfg_node
              (equal_prod equal_edge_action equal_cfg_node))
            (FunctionEntry p, (EA_Body p, ben))
            (if falls_through (body decl)
-             then insert
+             then inserta
                     (equal_prod equal_cfg_node
                       (equal_prod equal_edge_action equal_cfg_node))
                     (Statement r, (EA_Ret (None, p), FunctionResult p)) e
@@ -6510,8 +6674,11 @@ let rec result_with_globals (_A1, _A2) _B
        in
       (dg_result_for _A1 gs gl sol,
         (read (globs (snd sol (Inr gk0))),
-          (fun f ctx ->
-            read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))))));;
+          ((fun f ctx ->
+             read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
+            (fun v ctx a ->
+              read (transfer_lift (resolved_st_q_is_bot_for _A1 gl) (tf_st gs a)
+                     (locals (snd sol (Inl (v, ctx))))))))));;
 
 let rec times_congruence_rep
   x0 uu = match x0, uu with None, uu -> None
@@ -6619,152 +6786,65 @@ let rec aval_congruence
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_lt (aval_congruence e1 sigma)
-                       (aval_congruence e2 sigma))
-                     (Some true)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_lt (aval_congruence e1 sigma)
-                              (aval_congruence e2 sigma))
-                            (Some false)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (congruence_lt (aval_congruence e1 sigma)
+                   (aval_congruence e2 sigma)))
     | LessEq (e1, e2), sigma ->
-        (if is_empty_congruence (aval_congruence e2 sigma) ||
-              is_empty_congruence (aval_congruence e1 sigma)
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_lt (aval_congruence e2 sigma)
-                       (aval_congruence e1 sigma))
-                     (Some false)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_lt (aval_congruence e2 sigma)
-                              (aval_congruence e1 sigma))
-                            (Some true)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (map_option not
+                   (congruence_lt (aval_congruence e2 sigma)
+                     (aval_congruence e1 sigma))))
     | Greater (e1, e2), sigma ->
-        (if is_empty_congruence (aval_congruence e2 sigma) ||
-              is_empty_congruence (aval_congruence e1 sigma)
+        (if is_empty_congruence (aval_congruence e1 sigma) ||
+              is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_lt (aval_congruence e2 sigma)
-                       (aval_congruence e1 sigma))
-                     (Some true)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_lt (aval_congruence e2 sigma)
-                              (aval_congruence e1 sigma))
-                            (Some false)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (congruence_lt (aval_congruence e2 sigma)
+                   (aval_congruence e1 sigma)))
     | GreaterEq (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_lt (aval_congruence e1 sigma)
-                       (aval_congruence e2 sigma))
-                     (Some false)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_lt (aval_congruence e1 sigma)
-                              (aval_congruence e2 sigma))
-                            (Some true)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (map_option not
+                   (congruence_lt (aval_congruence e1 sigma)
+                     (aval_congruence e2 sigma))))
     | NotEq (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_eqb (aval_congruence e1 sigma)
-                       (aval_congruence e2 sigma))
-                     (Some false)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_eqb (aval_congruence e1 sigma)
-                              (aval_congruence e2 sigma))
-                            (Some true)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (map_option not
+                   (congruence_eqb (aval_congruence e1 sigma)
+                     (aval_congruence e2 sigma))))
     | Eq (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_eqb (aval_congruence e1 sigma)
-                       (aval_congruence e2 sigma))
-                     (Some true)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_eqb (aval_congruence e1 sigma)
-                              (aval_congruence e2 sigma))
-                            (Some false)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (congruence_eqb (aval_congruence e1 sigma)
+                   (aval_congruence e2 sigma)))
     | Not e, sigma ->
         (if is_empty_congruence (aval_congruence e sigma) then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_tobool (aval_congruence e sigma)) (Some true)
-                 then congruence_of_int zero_inta
-                 else (if equal_option equal_bool
-                            (congruence_tobool (aval_congruence e sigma))
-                            (Some false)
-                        then congruence_of_int one_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (map_option not (congruence_tobool (aval_congruence e sigma))))
     | And (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_tobool (aval_congruence e1 sigma))
-                     (Some false) ||
-                     equal_option equal_bool
-                       (congruence_tobool (aval_congruence e2 sigma))
-                       (Some false)
-                 then congruence_of_int zero_inta
-                 else (if equal_option equal_bool
-                            (congruence_tobool (aval_congruence e1 sigma))
-                            (Some true) &&
-                            equal_option equal_bool
-                              (congruence_tobool (aval_congruence e2 sigma))
-                              (Some true)
-                        then congruence_of_int one_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))))
+          else of_bool_option sup_congruence congruence_of_int
+                 (and_opt (congruence_tobool (aval_congruence e1 sigma))
+                   (congruence_tobool (aval_congruence e2 sigma))))
     | Or (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
-          else (if equal_option equal_bool
-                     (congruence_tobool (aval_congruence e1 sigma))
-                     (Some true) ||
-                     equal_option equal_bool
-                       (congruence_tobool (aval_congruence e2 sigma))
-                       (Some true)
-                 then congruence_of_int one_inta
-                 else (if equal_option equal_bool
-                            (congruence_tobool (aval_congruence e1 sigma))
-                            (Some false) &&
-                            equal_option equal_bool
-                              (congruence_tobool (aval_congruence e2 sigma))
-                              (Some false)
-                        then congruence_of_int zero_inta
-                        else sup_congruencea (congruence_of_int zero_inta)
-                               (congruence_of_int one_inta))));;
-
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
+          else of_bool_option sup_congruence congruence_of_int
+                 (or_opt (congruence_tobool (aval_congruence e1 sigma))
+                   (congruence_tobool (aval_congruence e2 sigma))));;
 
 let rec congruence_truthy_query
   e d = map_option not
@@ -6881,6 +6961,8 @@ let rec interval_lt
   a b = (if interval_less_true a b then Some true
           else (if interval_less_false a b then Some false else None));;
 
+let rec ivl_of_int n = Ivl (Fin n, Fin n);;
+
 let rec ivl_mod_bound
   = function
     Ivl (Fin l, Fin u) ->
@@ -6955,7 +7037,7 @@ let rec ivl_mod
           else bot_ivla);;
 
 let rec aval_ivl
-  x0 sigma = match x0, sigma with N n, sigma -> Ivl (Fin n, Fin n)
+  x0 sigma = match x0, sigma with N n, sigma -> ivl_of_int n
     | V x, sigma -> sigma x
     | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
@@ -6965,112 +7047,52 @@ let rec aval_ivl
     | Less (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
-                     (Some true)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
-                            (Some false)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_lt (aval_ivl a sigma) (aval_ivl b sigma)))
     | LessEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
-                     (Some false)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
-                            (Some true)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))))
     | Greater (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl b sigma) || is_empty_ivl (aval_ivl a sigma)
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
-                     (Some true)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))
-                            (Some false)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_lt (aval_ivl b sigma) (aval_ivl a sigma)))
     | GreaterEq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
-                     (Some false)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
-                            (Some true)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))))
     | NotEq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
-                     (Some false)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
-                            (Some true)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))))
     | Eq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool
-                     (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
-                     (Some true)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
-                            (Some false)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma)))
     | Not a, sigma ->
         (if is_empty_ivl (aval_ivl a sigma) then bot_ivla
-          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
-                     (Some true)
-                 then Ivl (Fin zero_inta, Fin zero_inta)
-                 else (if equal_option equal_bool
-                            (interval_tobool (aval_ivl a sigma)) (Some false)
-                        then Ivl (Fin one_inta, Fin one_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not (interval_tobool (aval_ivl a sigma))))
     | And (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
-                     (Some false) ||
-                     equal_option equal_bool
-                       (interval_tobool (aval_ivl b sigma)) (Some false)
-                 then Ivl (Fin zero_inta, Fin zero_inta)
-                 else (if equal_option equal_bool
-                            (interval_tobool (aval_ivl a sigma)) (Some true) &&
-                            equal_option equal_bool
-                              (interval_tobool (aval_ivl b sigma)) (Some true)
-                        then Ivl (Fin one_inta, Fin one_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))))
+          else of_bool_option sup_ivl ivl_of_int
+                 (and_opt (interval_tobool (aval_ivl a sigma))
+                   (interval_tobool (aval_ivl b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
-          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
-                     (Some true) ||
-                     equal_option equal_bool
-                       (interval_tobool (aval_ivl b sigma)) (Some true)
-                 then Ivl (Fin one_inta, Fin one_inta)
-                 else (if equal_option equal_bool
-                            (interval_tobool (aval_ivl a sigma)) (Some false) &&
-                            equal_option equal_bool
-                              (interval_tobool (aval_ivl b sigma)) (Some false)
-                        then Ivl (Fin zero_inta, Fin zero_inta)
-                        else Ivl (Fin zero_inta, Fin one_inta))));;
+          else of_bool_option sup_ivl ivl_of_int
+                 (or_opt (interval_tobool (aval_ivl a sigma))
+                   (interval_tobool (aval_ivl b sigma))));;
 
 let rec interval_truthy_query
   e d = map_option not (interval_eq (aval_ivl e d) (aval_ivl (N zero_inta) d));;
@@ -7363,11 +7385,11 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
       with Q (y, (x, (state, ug_state))) ->
         bind (if member _A x (c state)
                then Some (sigma state (Inl x),
-                           (point_update (fun _ -> insert _A x (point state))
+                           (point_update (fun _ -> inserta _A x (point state))
                               state,
                              ug_state))
                else tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                      (I (x, (c_update (fun _ -> insert _A x (c state)) state,
+                      (I (x, (c_update (fun _ -> inserta _A x (c state)) state,
                                ug_state))))
           (fun (xd, (statea, ug_statea)) ->
             Some (xd, (infl_update
@@ -7378,7 +7400,7 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
       | I (x, (state, ug_state)) ->
         (if not (member _A x (stabl state))
           then bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                      (R (x, (state, ug_state))))
+                      (Ra (x, (state, ug_state))))
                  (fun (d_new, (state1, ug_state1)) ->
                    (let d_newa =
                       (if member _A x (point state)
@@ -7405,17 +7427,17 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                       (point_update (fun _ -> remove _A x (point state))
                          (c_update (fun _ -> remove _A x (c state)) state),
                         ug_state)))
-      | R (x, (state, ug_state)) ->
+      | Ra (x, (state, ug_state)) ->
         bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
                (E (x, (t x, ((fun _ ->
                                bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                              (stabl_update (fun _ -> insert _A x (stabl state))
-                                 state,
+                              (stabl_update
+                                 (fun _ -> inserta _A x (stabl state)) state,
                                 ug_state))))))
           (fun (xd, (statea, ug_statea)) ->
             (if member _A x (stabl statea) then Some (xd, (statea, ug_statea))
               else tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                     (R (x, (statea, ug_statea)))))
+                     (Ra (x, (statea, ug_statea)))))
       | E (_, (Answer d, (_, (state, ug_state)))) -> Some (d, (state, ug_state))
       | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
         bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
@@ -7463,7 +7485,7 @@ let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
 let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
   r t x =
     bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-           (I (x, (c_update (fun _ -> insert _A x (c (init_state (_C2, _C3))))
+           (I (x, (c_update (fun _ -> inserta _A x (c (init_state (_C2, _C3))))
                      (init_state (_C2, _C3)),
                     init_basic_ug_state
                       _C2.order_bot_bounded_semilattice_sup_bot))))
@@ -7595,117 +7617,59 @@ let rec aval_parity
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_lt (aval_parity a sigma) (aval_parity b sigma))
-                     (Some true)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_lt (aval_parity a sigma)
-                              (aval_parity b sigma))
-                            (Some false)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (parity_lt (aval_parity a sigma) (aval_parity b sigma)))
     | LessEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity b sigma) ||
-              is_empty_parity (aval_parity a sigma)
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
-                     (Some false)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_lt (aval_parity b sigma)
-                              (aval_parity a sigma))
-                            (Some true)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_lt (aval_parity b sigma) (aval_parity a sigma))))
     | Greater (a, b), sigma ->
-        (if is_empty_parity (aval_parity b sigma) ||
-              is_empty_parity (aval_parity a sigma)
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_lt (aval_parity b sigma) (aval_parity a sigma))
-                     (Some true)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_lt (aval_parity b sigma)
-                              (aval_parity a sigma))
-                            (Some false)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (parity_lt (aval_parity b sigma) (aval_parity a sigma)))
     | GreaterEq (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_lt (aval_parity a sigma) (aval_parity b sigma))
-                     (Some false)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_lt (aval_parity a sigma)
-                              (aval_parity b sigma))
-                            (Some true)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_lt (aval_parity a sigma) (aval_parity b sigma))))
     | NotEq (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_eqb (aval_parity a sigma) (aval_parity b sigma))
-                     (Some false)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_eqb (aval_parity a sigma)
-                              (aval_parity b sigma))
-                            (Some true)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_eqb (aval_parity a sigma) (aval_parity b sigma))))
     | Eq (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool
-                     (parity_eqb (aval_parity a sigma) (aval_parity b sigma))
-                     (Some true)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_eqb (aval_parity a sigma)
-                              (aval_parity b sigma))
-                            (Some false)
-                        then PEven else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (parity_eqb (aval_parity a sigma) (aval_parity b sigma)))
     | Not a, sigma ->
         (if is_empty_parity (aval_parity a sigma) then bot_paritya
-          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
-                     (Some true)
-                 then PEven
-                 else (if equal_option equal_bool
-                            (parity_tobool (aval_parity a sigma)) (Some false)
-                        then POdd else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not (parity_tobool (aval_parity a sigma))))
     | And (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
-                     (Some false) ||
-                     equal_option equal_bool
-                       (parity_tobool (aval_parity b sigma)) (Some false)
-                 then PEven
-                 else (if equal_option equal_bool
-                            (parity_tobool (aval_parity a sigma)) (Some true) &&
-                            equal_option equal_bool
-                              (parity_tobool (aval_parity b sigma)) (Some true)
-                        then POdd else PTop)))
+          else of_bool_option sup_parity parity_of_int
+                 (and_opt (parity_tobool (aval_parity a sigma))
+                   (parity_tobool (aval_parity b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
-          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
-                     (Some true) ||
-                     equal_option equal_bool
-                       (parity_tobool (aval_parity b sigma)) (Some true)
-                 then POdd
-                 else (if equal_option equal_bool
-                            (parity_tobool (aval_parity a sigma))
-                            (Some false) &&
-                            equal_option equal_bool
-                              (parity_tobool (aval_parity b sigma)) (Some false)
-                        then PEven else PTop)));;
+          else of_bool_option sup_parity parity_of_int
+                 (or_opt (parity_tobool (aval_parity a sigma))
+                   (parity_tobool (aval_parity b sigma))));;
 
 let rec parity_truthy_query
   e d = map_option not
@@ -7899,14 +7863,6 @@ let rec int_dom_of_int
             (int_sign_update (fun _ -> sign_of_int n)
               (top_int_dom_exta int_dom_record_lattice_unit))));;
 
-let int_dom_bool_unknown : unit int_dom_ext
-  = sup_int_dom_exta int_dom_record_lattice_unit (int_dom_of_int zero_inta)
-      (int_dom_of_int one_inta);;
-
-let rec int_dom_of_bool_option = function Some true -> int_dom_of_int one_inta
-                                 | Some false -> int_dom_of_int zero_inta
-                                 | None -> int_dom_bool_unknown;;
-
 let rec times_int_dom_raw
   a b = int_congruence_update
           (fun _ -> times_congruence (int_congruence a) (int_congruence b))
@@ -8008,95 +7964,72 @@ let rec aval_int_dom
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else int_dom_of_bool_option (int_dom_lt a b)))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (int_dom_lt a b)))
     | mode, LessEq (e1, e2), sigma ->
-        (let a = aval_int_dom mode e2 sigma in
-         let b = aval_int_dom mode e1 sigma in
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
-                   then int_dom_of_int one_inta
-                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
-                          then int_dom_of_int zero_inta
-                          else int_dom_bool_unknown))))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (map_option not (int_dom_lt b a))))
     | mode, Greater (e1, e2), sigma ->
-        (let a = aval_int_dom mode e2 sigma in
-         let b = aval_int_dom mode e1 sigma in
+        (let a = aval_int_dom mode e1 sigma in
+         let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else int_dom_of_bool_option (int_dom_lt a b)))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (int_dom_lt b a)))
     | mode, GreaterEq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_lt a b) (Some false)
-                   then int_dom_of_int one_inta
-                   else (if equal_option equal_bool (int_dom_lt a b) (Some true)
-                          then int_dom_of_int zero_inta
-                          else int_dom_bool_unknown))))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (map_option not (int_dom_lt a b))))
     | mode, NotEq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_eqb a b) (Some false)
-                   then int_dom_of_int one_inta
-                   else (if equal_option equal_bool (int_dom_eqb a b)
-                              (Some true)
-                          then int_dom_of_int zero_inta
-                          else int_dom_bool_unknown))))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (map_option not (int_dom_eqb a b))))
     | mode, Eq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else int_dom_of_bool_option (int_dom_eqb a b)))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (int_dom_eqb a b)))
     | mode, Not e, sigma ->
         (let a = aval_int_dom mode e sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_tobool a) (Some true)
-                   then int_dom_of_int zero_inta
-                   else (if equal_option equal_bool (int_dom_tobool a)
-                              (Some false)
-                          then int_dom_of_int one_inta
-                          else int_dom_bool_unknown))))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int (map_option not (int_dom_tobool a))))
     | mode, And (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_tobool a) (Some false) ||
-                       equal_option equal_bool (int_dom_tobool b) (Some false)
-                   then int_dom_of_int zero_inta
-                   else (if equal_option equal_bool (int_dom_tobool a)
-                              (Some true) &&
-                              equal_option equal_bool (int_dom_tobool b)
-                                (Some true)
-                          then int_dom_of_int one_inta
-                          else int_dom_bool_unknown))))
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int
+                   (and_opt (int_dom_tobool a) (int_dom_tobool b))))
     | mode, Or (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
           (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
                 is_empty_int_dom_ext int_dom_record_lattice_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
-            else (if equal_option equal_bool (int_dom_tobool a) (Some true) ||
-                       equal_option equal_bool (int_dom_tobool b) (Some true)
-                   then int_dom_of_int one_inta
-                   else (if equal_option equal_bool (int_dom_tobool a)
-                              (Some false) &&
-                              equal_option equal_bool (int_dom_tobool b)
-                                (Some false)
-                          then int_dom_of_int zero_inta
-                          else int_dom_bool_unknown))));;
+            else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
+                   int_dom_of_int
+                   (or_opt (int_dom_tobool a) (int_dom_tobool b))));;
 
 let rec branch_int_dom_fixpoint_st
   gs e pol s =
@@ -8473,7 +8406,7 @@ let rec scope_vnames
   p owner =
     sup_set equal_literal
       (sup_set equal_literal (Set (declared_global_vars p))
-        (insert equal_literal ret_var bot_set))
+        (inserta equal_literal ret_var bot_set))
       (match prog_table p owner with None -> bot_set
         | Some decl ->
           sup_set equal_literal (Set (formals decl)) (com_vnames (body decl)));;
@@ -8488,7 +8421,7 @@ let rec program_vars
         (maps (scope_vnames_list p) (prog_main_name :: prog_procs p));;
 
 let rec run_result_of _B
-  into ctx_key ctx_view targets classify r shared seed_at p =
+  into ctx_key ctx_view targets classify r shared seed_at step_at p =
     (let g = prog_cfg p in
      let vars = program_vars p in
      let view = map_lift (fun st -> map (fun x -> (x, into (st x))) vars) in
@@ -8497,30 +8430,37 @@ let rec run_result_of _B
          (image snd (result_keys r))
        in
      let indexed = enumerate zero_nat ctxs in
+     let nodes = cfg_node_list g in
+     let intra = cfg_intra_list g in
+     let steps =
+       group_by_key linorder_cfg_node (fun (u, (_, _)) -> u)
+         (fun (_, (a, w)) -> Some (a, w)) intra
+       in
+     let checks =
+       group_by_key linorder_cfg_node (fun (u, (_, _)) -> u)
+         (fun (_, (a, _)) ->
+           (if is_EA_Check a then Some (ea_check_cond a) else None))
+         intra
+       in
+     let obligations =
+       group_by_key linorder_cfg_node fst (comp (fun a -> Some a) snd)
+         (arithmetic_sites g)
+       in
      let state_at =
        (fun i ctx v ->
          Result_state_ext
            (v, i, view (lookup_context _B r v ctx),
-             map_filter
-               (fun x ->
-                 (if (let (u, (a, _)) = x in
-                       equal_cfg_nodea u v && is_EA_Check a)
-                   then Some (let (_, (a, _)) = x in
-                               (ea_check_cond a,
-                                 classify_point classify (ea_check_cond a)
-                                   (lookup_context _B r v ctx)))
-                   else None))
-               (cfg_intra_list g),
+             map (fun cond ->
+                   (cond,
+                     classify_point classify cond (lookup_context _B r v ctx)))
+               (group_lookup linorder_cfg_node checks v),
              map (fun obligation ->
                    (obligation,
                      classify_point classify (arithmetic_condition obligation)
                        (lookup_context _B r v ctx)))
-               (concat
-                 (map_filter
-                   (fun x ->
-                     (if (let (u, _) = x in equal_cfg_nodea u v)
-                       then Some (snd x) else None))
-                   (arithmetic_sites g))),
+               (concat (group_lookup linorder_cfg_node obligations v)),
+             map (fun (a, w) -> (w, view (step_at v ctx a)))
+               (group_lookup linorder_cfg_node steps v),
              ()))
        in
      let route_at =
@@ -8557,7 +8497,7 @@ let rec run_result_of _B
                      (if member (equal_prod equal_cfg_node _B) (x, ctx)
                            (result_keys r)
                        then Some (state_at i ctx x) else None))
-                   (cfg_node_list g))
+                   nodes)
             indexed,
           maps (fun (u, (ca, (ce, _))) ->
                  map_filter
@@ -8576,7 +8516,7 @@ let rec run_result_of _B
 
 let rec entry_state_run_result (_A1, _A2)
   into enter classify solved p =
-    (let (r, (shared, seed_at)) = solved in
+    (let (r, (shared, (seed_at, step_at))) = solved in
       run_result_of (equal_list _A2) into
         (fun ctx -> Key_List (map (comp abstract_value_key into) ctx))
         (fun ctx -> Context_Entry (map into ctx))
@@ -8584,16 +8524,16 @@ let rec entry_state_run_result (_A1, _A2)
           (fun _ _ entered (CallEdge (_, pars, _)) ->
             formals_context pars entered)
           p)
-        classify r shared seed_at p);;
+        classify r shared seed_at step_at p);;
 
 let rec call_string_run_result _A
   into enter classify solved k p =
-    (let (r, (shared, seed_at)) = solved in
+    (let (r, (shared, (seed_at, step_at))) = solved in
       run_result_of (equal_list equal_cfg_node) into
         (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))
         (fun a -> Context_Call_String a)
         (entered_targets _A enter (fun u ctx _ _ -> take k (u :: ctx)) p)
-        classify r shared seed_at p);;
+        classify r shared seed_at step_at p);;
 
 let rec sign_eq_false_of_intersection a b = is_empty_sign (meet_sign a b);;
 
@@ -8764,10 +8704,10 @@ let rec cs_route k u ctx d ca = take k (u :: ctx);;
 
 let rec unit_run_result _A
   into enter classify solved p =
-    (let (r, (shared, seed_at)) = solved in
+    (let (r, (shared, (seed_at, step_at))) = solved in
       run_result_of equal_unit into (fun _ -> Key_List [])
         (fun _ -> Context_Unit) (entered_targets _A enter (fun _ _ _ _ -> ()) p)
-        classify r shared seed_at p);;
+        classify r shared seed_at step_at p);;
 
 let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
@@ -9454,5 +9394,7 @@ let rec diagnostic_verdict (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x4;;
 let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
 
 let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
+
+let rec diagnostic_occurrence (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x2;;
 
 end;; (*struct Generated*)

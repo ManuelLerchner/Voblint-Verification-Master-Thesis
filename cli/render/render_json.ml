@@ -87,13 +87,18 @@ let status_name = function
    and so is not the effect of this step alone. A step out of an unreachable node
    contributes nothing and is not counted, nor is a combine edge: that is how a
    call's own continuation receives its result, not a second path. *)
-let node_json (graph : G.t) context_of context_key incoming entered exit_of (n : G.node) =
+let node_json (graph : G.t) context_of context_key incoming entered exit_of step_state
+    (n : G.node) =
   let step (e : G.edge) =
-    Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b}"
+    Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b%s}"
       (json_string e.dst)
       (json_string (match e.kind with G.Call_to_return -> "after call " ^ e.text | _ -> e.text))
       (json_option json_string e.writes)
       (Option.value ~default:0 (Hashtbl.find_opt incoming e.dst) > 1)
+      (match step_state n e with
+      | Some C.Bot -> ",\"state\":null"
+      | Some (C.Lifted bindings) -> ",\"state\":" ^ json_list binding_json bindings
+      | None -> "")
   in
   let steps =
     List.filter
@@ -155,7 +160,26 @@ let procedure_json program returns_value (name, (line, column, end_line, end_col
     (json_string (A.point_name (C.FunctionEntry name)))
     line column end_line end_column (json_list json_string formals) (returns_value name)
 
-let nodes_json (graph : G.t) context_key =
+(* What an intra step makes of its source's state, as run_voblint publishes it beside
+   that state. A point's steps follow its outgoing intra edges in CFG order, so they
+   are paired with those edges and a drawn edge finds its own by action and target;
+   the state is null when the step has no successor. A call step has none, since
+   its continuation's state is the call's combine rather than one edge's effect. *)
+let step_states result =
+  let g = C.res_cfg result in
+  let table = Hashtbl.create 64 in
+  List.iter
+    (fun st ->
+      let p = C.state_point st in
+      let edges = List.filter (fun (u, _, _) -> u = p) (A.intra_edges g) in
+      let steps = C.state_steps st in
+      if List.length edges = List.length steps then
+        Hashtbl.replace table (p, A.int_of_nat (C.state_context st))
+          (List.map2 (fun (_, a, _) (w, s) -> (A.action_text a, w, s)) edges steps))
+    (C.res_states result);
+  table
+
+let nodes_json result (graph : G.t) context_key =
   let context = Hashtbl.create 64 in
   List.iter
     (fun (c : G.cluster) -> List.iter (fun id -> Hashtbl.replace context id c.cluster_label) c.members)
@@ -187,8 +211,22 @@ let nodes_json (graph : G.t) context_key =
   let exit_of entry =
     Option.bind (Hashtbl.find_opt owners entry) (Hashtbl.find_opt exits)
   in
+  let points = Hashtbl.create 64 in
+  List.iter (fun (n : G.node) -> Hashtbl.replace points n.id n.point) graph.nodes;
+  let steps = step_states result in
+  let step_state (n : G.node) (e : G.edge) =
+    match e.kind, Hashtbl.find_opt points e.dst with
+    | G.Intra, Some w ->
+        Option.bind (Hashtbl.find_opt steps (n.point, n.context)) (fun entries ->
+            List.find_map
+              (fun (text, w', s) -> if w' = w && text = e.text then Some s else None)
+              entries)
+    | _ -> None
+  in
   let context_of id = Option.value ~default:"" (Hashtbl.find_opt context id) in
-  json_list (node_json graph context_of context_key incoming entered exit_of) graph.nodes
+  json_list
+    (node_json graph context_of context_key incoming entered exit_of step_state)
+    graph.nodes
 
 (* -------------------------------------------------------------------------- *)
 (* The run_voblint call, as data                                              *)
@@ -201,11 +239,8 @@ let nodes_json (graph : G.t) context_key =
    value, and a pair is a two-element array. Association lists stay arrays of
    pairs, so their order and any repeated key survive. Abstract values arrive
    as the strings run_voblint's own rendering produced, after Value_symbols
-   has replaced their ASCII symbol names with glyphs.
-
-   Two fields are absent because the export keeps their types abstract: an
-   arithmetic obligation's condition and an arithmetic diagnostic's second
-   component. Only the accessors the export publishes are read. *)
+   has replaced their ASCII symbol names with glyphs. The export keeps these
+   records abstract, so every field is read through the accessor it publishes. *)
 
 let json_pair f g (a, b) = "[" ^ f a ^ "," ^ g b ^ "]"
 
@@ -289,7 +324,12 @@ let check_result_json = function
   | C.Check_Refuted -> tagged "Check_Refuted" []
   | C.Check_Unknown -> tagged "Check_Unknown" []
 
-let obligation_json o = json_object [ ("arithmetic_operation", exp_json (C.arithmetic_operation o)) ]
+let obligation_json o =
+  json_object
+    [
+      ("arithmetic_operation", exp_json (C.arithmetic_operation o));
+      ("arithmetic_divisor", exp_json (C.arithmetic_divisor o));
+    ]
 
 let cfg_json g =
   json_object
@@ -319,6 +359,10 @@ let state_json st =
       ("state_checks", json_list (json_pair exp_json (lifted_json check_result_json)) (C.state_checks st));
       ( "state_diagnostics",
         json_list (json_pair obligation_json (lifted_json check_result_json)) (C.state_diagnostics st) );
+      ( "state_steps",
+        json_list
+          (json_pair cfg_node_json (lifted_json (json_list (json_pair json_string json_string))))
+          (C.state_steps st) );
     ]
 
 let route_json r =
@@ -353,6 +397,7 @@ let arithmetic_diagnostic_json d =
   json_object
     [
       ("diagnostic_point", cfg_node_json (C.diagnostic_point d));
+      ("diagnostic_occurrence", nat_json (C.diagnostic_occurrence d));
       ("diagnostic_obligation", obligation_json (C.diagnostic_obligation d));
       ("diagnostic_verdict", check_result_json (C.diagnostic_verdict d));
     ]
@@ -497,7 +542,7 @@ let result_json analysis_ms program ~check_positions ~stmt_positions ~header_pos
     analysis_ms checks diagnostics
     (json_list statement_json stmt_positions)
     (json_list (procedure_json program (returns_value result)) header_positions)
-    (nodes_json graph (context_key contexts stmt_positions))
+    (nodes_json result graph (context_key contexts stmt_positions))
     (seeds_json program result graph)
     raw
     (json_string (Render_dot.render graph))

@@ -340,9 +340,9 @@ text \<open>
   \<^locale>\<open>routed_context_base_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
   system a solver actually runs needs the same construction at the exec carrier
   \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>empty_pred\<close>
-  rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed
-  instance (Interval's own \<open>entry_state_route\<close>, \<open>Interval_Analyses\<close>)
-  reproves this exact projection and its commute lemma; stating it here once lets a
+  rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every EntryState-style routed
+  instance needs this exact projection and its commute lemma (\<open>exec_formals_route\<close>,
+  \<open>exec_formals_route_commute\<close>); stating it here once lets a
   domain interpret it instead of restating it, mirroring how \<open>Hstep_lifted_for\<close> etc.
   already generalize the step/enter/combine commute facts.
 

@@ -794,69 +794,45 @@ where
   | "aval_congruence (Mod e1 e2) sigma = congruence_mod (aval_congruence e1 sigma) (aval_congruence e2 sigma)"
 | "aval_congruence (Less e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma)))"
 | "aval_congruence (LessEq e1 e2) sigma =
-     (if is_empty (aval_congruence e2 sigma) \<or> is_empty (aval_congruence e1 sigma) then bot
-      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some False
-      then congruence_of_int 1
-      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some True
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
+      else of_bool_option congruence_of_int
+             (map_option HOL.Not
+                (congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma))))"
 | "aval_congruence (Greater e1 e2) sigma =
-     (if is_empty (aval_congruence e2 sigma) \<or> is_empty (aval_congruence e1 sigma) then bot
-      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
+      else of_bool_option congruence_of_int
+             (congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma)))"
 | "aval_congruence (GreaterEq e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 1
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (map_option HOL.Not
+                (congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma))))"
 | "aval_congruence (NotEq e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 1
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (map_option HOL.Not
+                (congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma))))"
 | "aval_congruence (exp.Eq e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma)))"
 | "aval_congruence (exp.Not e) sigma =
      (if is_empty (aval_congruence e sigma) then bot
-      else if congruence_tobool (aval_congruence e sigma) = Some True then congruence_of_int 0
-      else if congruence_tobool (aval_congruence e sigma) = Some False then congruence_of_int 1
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (map_option HOL.Not (congruence_tobool (aval_congruence e sigma))))"
 | "aval_congruence (And e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_tobool (aval_congruence e1 sigma) = Some False
-           \<or> congruence_tobool (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else if congruence_tobool (aval_congruence e1 sigma) = Some True
-           \<and> congruence_tobool (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (and_opt (congruence_tobool (aval_congruence e1 sigma))
+                (congruence_tobool (aval_congruence e2 sigma))))"
 | "aval_congruence (Or e1 e2) sigma =
      (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else if congruence_tobool (aval_congruence e1 sigma) = Some True
-           \<or> congruence_tobool (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_tobool (aval_congruence e1 sigma) = Some False
-           \<and> congruence_tobool (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+      else of_bool_option congruence_of_int
+             (or_opt (congruence_tobool (aval_congruence e1 sigma))
+                (congruence_tobool (aval_congruence e2 sigma))))"
 
 interpretation congruence_arith: expression_domain_mono
     aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod

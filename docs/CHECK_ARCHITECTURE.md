@@ -247,8 +247,10 @@ alone cannot.
 Every analysis produces one canonical, contextual `analysis_result`: a table
 from `(pp, ctx)` to `Lifted abs_state | Bot`. A context-free run
 (`--context none`) is not a special case -- its table has the single unit
-context. Everything downstream of the solver reads that one table, never the
-raw solver map:
+context. `run_result_of` (`Analysis_Run.thy`) reads that one table, never the
+raw solver map, and publishes it as a structured `run_result`; `run_voblint`
+applies `string_of_abstract_value` to every abstract value in it through
+`map_run_result`. Everything below that line is OCaml:
 
 ```text
                        verified solver
@@ -257,48 +259,86 @@ raw solver map:
                       analysis_result
                (pp, ctx) -> Lifted abs_state | Bot
                              |
-                +------------+------------+
-                |                         |
-                v                         v
-         contextual checks         contextual graph
-       (aggregate_verdicts)    one node per (pp, ctx),
-                                states never joined
-                |                         |
-                +------------+------------+
-                             |
+                             |  run_result_of, map_run_result   [Isabelle]
                              v
-                        CLI (voblint)
+                   String.literal run_result
+     res_cfg  res_contexts  res_states  res_routes
+     res_checks  res_globals  res_diagnostics
+                             |
+                +------------+-------------+                   [OCaml]
+                |                          |
+                v                          v
+     res_checks, res_diagnostics    Context_graph.build
+     (joined over contexts)         one node per (pp, ctx),
+                |                   states never joined
+                |                          |
+                |       +---------+--------+--------+
+                |       v         v                 v
+                |   Render_dot  Render_snapshot   Report_dir / Render_xml
+                |   (--dot)     (--graph-snapshot) (--html)
+                |       |
+                +-------+---------> Render_json (browser playground)
 ```
 
-`lookup_context`/`contexts_at` are the only reads the graph builder performs
-against the result. `analysis_graph_config.route` (partial -- `None` on an
-unreachable caller or an entered-bottom callee frame, never a real `'ctx`
-value doubling as a sentinel) decides which edges to draw, `context_key`
-decides presentation order, and `node_annotation` attaches check findings. None
-of that changes what the solver computed.
+`Context_graph.build` (`cli/result/context_graph.ml`) reads only the result:
 
-A node whose solved state is `Bot` carries `NS_Unreachable` as its structural
-status, set once in `export_node_of` from the config's `is_dead_local`. Renderers
-read that constructor; they never infer deadness from label text.
+- **Nodes.** One per `res_states` entry, i.e. per `(point, context index)` the
+  solve covered. The identifier is `<procedure>_<point>_ctx<n>`, where `n`
+  numbers the context within its procedure in the order the states list it, so
+  an identifier does not move when another procedure gains or loses a context.
+- **Clusters.** One per `(procedure, context)`, labelled
+  `<procedure> / <context>`; the context label comes from `res_contexts`
+  (`unit`, the rendered entry values, or `call-string=...`).
+- **Intra edges.** Each intra edge of `res_cfg`, drawn inside one context when
+  both endpoints are covered in it.
+- **Call edges.** At every covered caller node, `route_targets` of the matching
+  `res_routes` entry names the callee context indices the call enters. Each
+  target gets an `Enter` edge to the callee's entry and a `Combine` edge from
+  the callee's `FunctionResult` back to the continuation in the caller's
+  context; a `Call_to_return` edge joins caller and continuation in the caller's
+  context. OCaml never re-derives a route. `route_targets` is `[]` when the
+  caller state is `Bot` or entering yields a bottom frame (`entered_targets`),
+  and a live call with no target gets a `call ... [not entered]` finding.
+
+A node whose `state_value` is `Bot` carries `Unreachable` as its status, set
+once in `Context_graph.status_of`. Renderers read that constructor
+(`Render_dot.node_attrs`, the snapshot's `[unreachable]`, `Render_xml.is_dead`,
+the JSON `status` field); they never infer deadness from label text. A node's
+findings are `unreachable`, one `check <exp>` line per `state_checks` entry
+(suffixed `[dead]` when that context's verdict is `Bot`), one message per
+refuted or unknown division in `state_diagnostics`, and the unentered calls
+above.
 
 ### What a node shows, and where globals go
 
-A graph node's state lines are the enclosing procedure's formals, its locals,
-and its return slot, identically for `--context none`, `entry-state` and
-`call-string`. Declared globals are **not** repeated in node labels.
+A graph node's `bindings` are the enclosing procedure's formals, then the
+locals it assigns, identically for `--context none`, `entry-state` and
+`call-string`. Declared globals and the return slot `#ret` are **not** among
+them: the node record keeps both apart (`globals`, `ret`), and only the browser
+JSON emits them. `Render_dot` labels a node with its point and findings and
+puts the full state in the tooltip; `Render_snapshot` lists status, bindings
+and findings; `Report_dir` writes the same lines to `nodes/<id>.xml` through
+`Render_xml`, one `<analysis>` block per `--analysis` domain.
 
 `res_globals` lists the constraint system's global unknowns, the same set
-Goblint's globals pane iterates: the analysis-wide `Global` slot, then one seed
-per procedure entry per context the solve covered, holding the state calls push
-into that entry. A procedure no call reaches is listed once as unreachable. Each
-registration's `result_with_globals` reads the table and these unknowns off one
-solve; the OCaml report names the rows (`enter f`, `enter f @ <context>`).
+Goblint's globals pane iterates: `Global_Shared`, the analysis-wide slot, then
+for `main` and every procedure one `Global_Seed f (Some i)` per context index
+`i` its entry was solved at, holding the state calls push into that entry. A
+procedure no solved context enters is listed once as `Global_Seed f None` with
+state `Bot`. Each registration's `result_with_globals` returns the table and
+these unknowns off one solve. `Result_text.global_rows` names the rows
+(`Global`, `enter f`, `enter f @ <context>`) for the HTML globals pane; the
+browser JSON's `seeds` drops `Global_Shared` and links each seed to its entry
+node.
 
 ### CLI contract
 
 ```text
---context none|entry-state|call-string  context sensitivity (analysis-level)
---dot | --graph-snapshot | --html       what to render from the one result
+--context none|entry-state|call-string   context sensitivity (analysis-level)
+--context-depth N                        call-string bound
+--globals join|per-origin|warrow|warrow-per-origin
+                                         side-effect update rule
+--dot | --graph-snapshot | --html        what to render from the one result
 ```
 
 There is exactly one graph rendering. A check that is `Dead` in one context and

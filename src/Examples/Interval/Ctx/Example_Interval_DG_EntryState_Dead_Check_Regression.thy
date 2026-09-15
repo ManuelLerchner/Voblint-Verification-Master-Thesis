@@ -81,9 +81,14 @@ definition disagree_prog :: imp_prog where
      }
    }"
 
+text \<open>Every projection and report below is Interval's entry-state registration
+  \<open>interval_es_rule\<close> at \<^const>\<open>Globals_Warrow\<close>, at the program's own globals.\<close>
+
 abbreviation dead_check_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "dead_check_projection \<equiv> entry_state_check_projection dead_check_prog"
+  "dead_check_projection \<equiv>
+     interval_es_rule.check_projection Globals_Warrow
+       (declared_global dead_check_prog) dead_check_prog"
 
 text \<open>The unreachable branch's check is covered -- the solver reached the node
   under the caller's own context -- and dead there. Both facts matter: this is
@@ -109,8 +114,9 @@ lemma dead_check_live_sibling:
   "observations_at dead_check_projection (Statement 3) = {([], Decided Check_Proved)}"
   by eval
 
-lemma dead_check_analyse_interval_entry_state:
-  "analyse_interval_entry_state dead_check_prog =
+lemma dead_check_verdict_report:
+  "interval_es_rule.verdict_report Globals_Warrow
+     (declared_global dead_check_prog) dead_check_prog =
      [(Statement 2, exp.Eq (V (STR ''x'')) (exp.N 99), Dead),
       (Statement 3, exp.Eq (V (STR ''x'')) (exp.N 5), Decided Check_Proved)]"
   by eval
@@ -126,7 +132,9 @@ text \<open>
 
 abbreviation mixed_ctx_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "mixed_ctx_projection \<equiv> entry_state_check_projection mixed_ctx_prog"
+  "mixed_ctx_projection \<equiv>
+     interval_es_rule.check_projection Globals_Warrow
+       (declared_global mixed_ctx_prog) mixed_ctx_prog"
 
 text \<open>Three contexts reach the base-case check: the two outer activations
   (\<open>n = 3\<close>, \<open>n = 2\<close>) where the branch is dead, and the innermost one (\<open>n = 1\<close>)
@@ -156,8 +164,9 @@ lemma mixed_ctx_aggregate_from_live_context:
      = Decided Check_Proved"
   by eval
 
-lemma mixed_ctx_analyse_interval_entry_state:
-  "analyse_interval_entry_state mixed_ctx_prog =
+lemma mixed_ctx_verdict_report:
+  "interval_es_rule.verdict_report Globals_Warrow
+     (declared_global mixed_ctx_prog) mixed_ctx_prog =
      [(Statement 1, exp.Eq (V (STR ''n'')) (exp.N 1), Decided Check_Proved),
       (Statement 7, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved)]"
   by eval
@@ -170,7 +179,9 @@ text \<open>\<open>g\<close> is called at \<open>1\<close> and at \<open>5\<clos
 
 abbreviation disagree_projection ::
     "(pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
-  "disagree_projection \<equiv> entry_state_check_projection disagree_prog"
+  "disagree_projection \<equiv>
+     interval_es_rule.check_projection Globals_Warrow
+       (declared_global disagree_prog) disagree_prog"
 
 lemma disagree_observations_retained:
   "observations_at disagree_projection (Statement 0) =
@@ -183,8 +194,9 @@ lemma disagree_aggregate_unknown:
      = Decided Check_Unknown"
   by eval
 
-lemma disagree_analyse_interval_entry_state:
-  "analyse_interval_entry_state disagree_prog =
+lemma disagree_verdict_report:
+  "interval_es_rule.verdict_report Globals_Warrow
+     (declared_global disagree_prog) disagree_prog =
      [(Statement 0, Less (V (STR ''n'')) (exp.N 3), Decided Check_Unknown)]"
   by eval
 

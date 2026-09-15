@@ -44,6 +44,24 @@ definition result_demo_prog :: imp_prog where
        }
      }"
 
+text \<open>
+  The production tables under test are the unit registrations' own results: Interval
+  and \<open>int_dom\<close> warrowing side-effected globals (\<^const>\<open>Globals_Warrow\<close>), Sign
+  joining them (\<^const>\<open>Globals_Join\<close>).
+\<close>
+
+abbreviation result_demo_interval :: "(unit, ivl abs_state) analysis_result" where
+  "result_demo_interval \<equiv>
+     interval_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
+
+abbreviation result_demo_sign :: "(unit, sign abs_state) analysis_result" where
+  "result_demo_sign \<equiv>
+     sign_rule.result Globals_Join (declared_global result_demo_prog) result_demo_prog"
+
+abbreviation result_demo_int :: "(unit, int_dom abs_state) analysis_result" where
+  "result_demo_int \<equiv>
+     int_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
+
 subsection \<open>Interval: the four reachability cases\<close>
 
 text \<open>
@@ -56,23 +74,24 @@ text \<open>
 
 lemma result_demo_interval_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_result result_demo_prog) (Statement 1) ())
+     (lookup_context result_demo_interval (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_interval_stmt1_contexts:
-  "contexts_at (analyse_interval_result result_demo_prog) (Statement 1) = {()}"
+  "contexts_at result_demo_interval (Statement 1) = {()}"
   by eval
 
 lemma result_demo_interval_stmt1_joined:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_joined_state (analyse_interval_result result_demo_prog) (Statement 1))
+     (lookup_joined_state result_demo_interval (Statement 1))
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_interval_stmt1_live:
-  "node_live_ex (analyse_interval_result result_demo_prog) (Statement 1)"
+  "node_live_ex result_demo_interval (Statement 1)"
   by eval
+
 
 text \<open>
   Case B --- a covered key whose raw stored state is \<^const>\<open>Lifted\<close> and yet
@@ -156,21 +175,20 @@ lemma result_demo_interval_stmt2_stored_bot:
   by eval
 
 lemma result_demo_interval_stmt2_covered:
-  "contexts_at (analyse_interval_result result_demo_prog) (Statement 2) = {()}"
+  "contexts_at result_demo_interval (Statement 2) = {()}"
   by eval
 
 lemma result_demo_interval_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_interval_result result_demo_prog)
-                          (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_context result_demo_interval (Statement 2) ())"
   by eval
 
 lemma result_demo_interval_stmt2_unreachable:
-  "lookup_context (analyse_interval_result result_demo_prog) (Statement 2) () = Bot"
+  "lookup_context result_demo_interval (Statement 2) () = Bot"
   using result_demo_interval_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma result_demo_interval_stmt2_not_live:
-  "\<not> node_live_ex (analyse_interval_result result_demo_prog) (Statement 2)"
+  "\<not> node_live_ex result_demo_interval (Statement 2)"
   by eval
 
 text \<open>
@@ -181,24 +199,23 @@ text \<open>
 \<close>
 
 lemma result_demo_interval_absent_key:
-  "(Statement 99, ()) \<notin> result_keys (analyse_interval_result result_demo_prog)"
+  "(Statement 99, ()) \<notin> result_keys result_demo_interval"
   by eval
 
 lemma result_demo_interval_absent_unreachable:
-  "lookup_context (analyse_interval_result result_demo_prog) (Statement 99) () = Bot"
+  "lookup_context result_demo_interval (Statement 99) () = Bot"
   by (rule lookup_context_absent[OF result_demo_interval_absent_key])
 
 lemma result_demo_interval_absent_contexts:
-  "contexts_at (analyse_interval_result result_demo_prog) (Statement 99) = {}"
+  "contexts_at result_demo_interval (Statement 99) = {}"
   by eval
 
 lemma result_demo_interval_absent_joined:
-  "lookup_joined_state (analyse_interval_result result_demo_prog) (Statement 99)
-   = Bot"
+  "lookup_joined_state result_demo_interval (Statement 99) = Bot"
   by (rule lookup_joined_state_absent[OF result_demo_interval_absent_contexts])
 
 lemma result_demo_interval_absent_not_live:
-  "\<not> node_live_ex (analyse_interval_result result_demo_prog) (Statement 99)"
+  "\<not> node_live_ex result_demo_interval (Statement 99)"
   by eval
 
 text \<open>
@@ -334,35 +351,35 @@ text \<open>
 
 lemma result_demo_sign_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_sign_result result_demo_prog) (Statement 1) ())
+     (lookup_context result_demo_sign (Statement 1) ())
    = Lifted SPos"
   by eval
 
 lemma result_demo_sign_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_sign_result result_demo_prog) (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_context result_demo_sign (Statement 2) ())"
   by eval
 
 lemma result_demo_sign_stmt2_unreachable:
-  "lookup_context (analyse_sign_result result_demo_prog) (Statement 2) () = Bot"
+  "lookup_context result_demo_sign (Statement 2) () = Bot"
   using result_demo_sign_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma result_demo_sign_absent_unreachable:
-  "lookup_context (analyse_sign_result result_demo_prog) (Statement 99) () = Bot"
+  "lookup_context result_demo_sign (Statement 99) () = Bot"
   by (rule lookup_context_absent) eval
 
 lemma result_demo_int_stmt1_reachable:
   "map_lift (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_result result_demo_prog) (Statement 1) ())
+     (lookup_context result_demo_int (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_int_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_int_result result_demo_prog) (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_context result_demo_int (Statement 2) ())"
   by eval
 
 lemma result_demo_int_absent_unreachable:
-  "lookup_context (analyse_int_result result_demo_prog) (Statement 99) () = Bot"
+  "lookup_context result_demo_int (Statement 99) () = Bot"
   by (rule lookup_context_absent) eval
 
 text \<open>Solver-specific adapter routing is covered by the CLI solver-choice regression group.
