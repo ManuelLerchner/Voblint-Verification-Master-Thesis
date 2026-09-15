@@ -574,7 +574,7 @@ let () =
               let result = result_for k in
               ( Context_graph.build prog result,
                 C.res_checks result,
-                List.map (fun g -> (C.global_var g, [ C.global_val g ])) (C.res_globals result),
+                A.global_rows result,
                 C.res_diagnostics result )
             in
             let payloads =

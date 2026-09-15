@@ -54,7 +54,10 @@ record call_route        = route_point :: pp, route_context :: nat,
                             enter alternatives)
 record result_check      = check_point :: pp, check_exp :: exp,
                            check_verdict :: contextual_verdict
-record 'a result_global  = global_name :: vname, global_value :: 'a
+record 'a result_global  = global_key :: result_global_key,
+                           global_state :: "(vname * 'a) list lifted"
+datatype result_global_key = Global_Shared | Global_Seed pname "nat option"
+                           (None = a procedure no solved context enters)
 datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)
                            (diagnostic_occurrence :: nat)
                            (diagnostic_obligation :: arithmetic_obligation)

@@ -259,6 +259,27 @@ definition globals_at :: "(pp \<Rightarrow> 'c list) \<Rightarrow> (pname \<Righ
        (seed_global_keys gk0 seed ctxs label p)"
 
 text \<open>
+  The result table and the global unknowns beside it, off one solve. The second
+  component reads the analysis-wide global, the third reads the seed a call
+  published at a procedure entry under a context. Both are read back exactly as a
+  table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
+\<close>
+
+definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+    \<Rightarrow> ('c, 'a abs_state) analysis_result \<times> 'a abs_state lifted
+         \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)" where
+  "result_with_globals gs p =
+     (let sol = solution gs p;
+          gl = declared_global_vars p;
+          read = (\<lambda>d. readback_result_value gs
+                          (canonicalize_lift (resolved_st_q_is_bot_for gl) d))
+      in (dg_result_for gs gl sol,
+          read (globs (snd sol (Inr gk0))),
+          (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx)))))))"
+
+lemma fst_result_with_globals [simp]: "fst (result_with_globals gs p) = result gs p"
+  by (simp add: result_with_globals_def result_def Let_def)
+text \<open>
   The contextual publication surface: one verdict per context at a check, and
   the aggregate a caller prints. Both are \<^const>\<open>classify_checks_ctx\<close> and
   \<^const>\<open>classify_checks_verdicts\<close> unchanged -- they are generic in the context
@@ -319,6 +340,7 @@ declare routed_dg_pipeline.sol_env_def [code]
 declare routed_dg_pipeline.reader_def [code]
 declare routed_dg_pipeline.result_def [code]
 declare routed_dg_pipeline.globals_at_def [code]
+declare routed_dg_pipeline.result_with_globals_def [code]
 declare routed_dg_pipeline.check_projection_def [code]
 declare routed_dg_pipeline.verdict_report_def [code]
 

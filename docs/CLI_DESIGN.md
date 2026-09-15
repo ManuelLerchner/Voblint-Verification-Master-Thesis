@@ -43,7 +43,7 @@ voblint --help
   slot) and its check findings; a context-free run has the single unit
   context. Declared globals are not repeated per node (see
   [`docs/CHECK_ARCHITECTURE.md`](CHECK_ARCHITECTURE.md) for what the HTML
-  report's globals pane shows today). `--graph-snapshot`
+  report's globals pane shows). `--graph-snapshot`
   emits a deterministic, DOT-free textual form of that graph (the regression
   corpus's structural oracle, see `tests/run.py`). `--html` writes a browsable
   result directory instead (see `docs/HTML_REPORT.md`).

@@ -333,8 +333,16 @@ let result_check_json c =
       ("check_verdict", lifted_json check_result_json (C.check_verdict c));
     ]
 
+let result_global_key_json = function
+  | C.Global_Shared -> tagged "Global_Shared" []
+  | C.Global_Seed (f, i) -> tagged "Global_Seed" [ json_string f; json_option nat_json i ]
+
 let result_global_json g =
-  json_object [ ("global_var", json_string (C.global_var g)); ("global_val", json_string (C.global_val g)) ]
+  json_object
+    [
+      ("global_key", result_global_key_json (C.global_key g));
+      ("global_state", lifted_json (json_list (json_pair json_string json_string)) (C.global_state g));
+    ]
 
 let arithmetic_diagnostic_json d =
   json_object

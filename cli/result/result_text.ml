@@ -44,6 +44,30 @@ let context_label = function
   | C.Context_Call_String points ->
       "call-string=" ^ String.concat " " (List.map point_name points)
 
+(* One row per global unknown: its name, then the bindings of the state it holds. A
+   seed is named by its procedure and, when a run has several contexts, by the
+   context it was entered at. *)
+let global_rows result =
+  let contexts = Array.of_list (C.res_contexts result) in
+  List.map
+    (fun g ->
+      let key =
+        match C.global_key g with
+        | C.Global_Shared -> "Global"
+        | C.Global_Seed (f, None) -> "enter " ^ f
+        | C.Global_Seed (f, Some i) -> (
+            match contexts.(int_of_nat i) with
+            | C.Context_Unit -> "enter " ^ f
+            | ctx -> "enter " ^ f ^ " @ " ^ context_label ctx)
+      in
+      let lines =
+        match C.global_state g with
+        | C.Bot -> [ "unreachable" ]
+        | C.Lifted bindings -> List.map (fun (x, v) -> x ^ "=" ^ v) bindings
+      in
+      (key, lines))
+    (C.res_globals result)
+
 let special_text dst = function
   | C.Nondet_Int -> dst ^ " := __voblint_nondet_int()"
   | C.Min (a, b) ->

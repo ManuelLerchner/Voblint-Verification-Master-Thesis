@@ -277,10 +277,12 @@ A graph node's state lines are the enclosing procedure's formals, its locals,
 and its return slot, identically for `--context none`, `entry-state` and
 `call-string`. Declared globals are **not** repeated in node labels.
 
-`res_globals` is not yet filled: every context policy's builder passes an empty
-list, so neither the report's globals pane nor the browser shows declared
-globals' solved values. Filling it from each registration's `Global` unknown is
-the remaining step of moving presentation out of Isabelle.
+`res_globals` lists the constraint system's global unknowns, the same set
+Goblint's globals pane iterates: the analysis-wide `Global` slot, then one seed
+per procedure entry per context the solve covered, holding the state calls push
+into that entry. A procedure no call reaches is listed once as unreachable. Each
+registration's `result_with_globals` reads the table and these unknowns off one
+solve; the OCaml report names the rows (`enter f`, `enter f @ <context>`).
 
 ### CLI contract
 

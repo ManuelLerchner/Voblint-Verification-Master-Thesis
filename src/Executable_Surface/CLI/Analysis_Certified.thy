@@ -107,39 +107,50 @@ text \<open>
 \<close>
 
 lemma run_result_sound:
-  assumes "res = run_result_of into ctx_key ctx_view targets classify r globals p"
+  assumes "res = run_result_of into ctx_key ctx_view targets classify r shared seed_at p"
       and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
   shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
   by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) (simp_all add: assms(1))
 
+text \<open>
+  Each builder reads the table half of its solve; the global unknowns beside it carry
+  no claim.
+\<close>
+
 lemma unit_run_result_sound:
-  assumes "sound_table p r classify"
+  assumes "fst solved = r"
+      and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
   shows "table_covers r v s
-         \<and> checks_sound_at (unit_run_result into enter classify r p) v s
-         \<and> diagnostics_sound_at (unit_run_result into enter classify r p) p v s"
-  unfolding unit_run_result_def by (rule run_result_sound [OF refl assms])
+         \<and> checks_sound_at (unit_run_result into enter classify solved p) v s
+         \<and> diagnostics_sound_at (unit_run_result into enter classify solved p) p v s"
+  unfolding unit_run_result_def prod.case_eq_if assms(1)
+  by (rule run_result_sound [OF refl assms(2,3)])
 
 lemma entry_state_run_result_sound:
-  assumes "sound_table p r classify"
+  assumes "fst solved = r"
+      and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
   shows "table_covers r v s
-         \<and> checks_sound_at (entry_state_run_result into enter classify r p) v s
-         \<and> diagnostics_sound_at (entry_state_run_result into enter classify r p) p v s"
-  unfolding entry_state_run_result_def by (rule run_result_sound [OF refl assms])
+         \<and> checks_sound_at (entry_state_run_result into enter classify solved p) v s
+         \<and> diagnostics_sound_at (entry_state_run_result into enter classify solved p) p v s"
+  unfolding entry_state_run_result_def prod.case_eq_if assms(1)
+  by (rule run_result_sound [OF refl assms(2,3)])
 
 lemma call_string_run_result_sound:
-  assumes "sound_table p r classify"
+  assumes "fst solved = r"
+      and "sound_table p r classify"
       and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
                 (cinit_stores (declared_global p)) v"
   shows "table_covers r v s
-         \<and> checks_sound_at (call_string_run_result into enter classify r k p) v s
-         \<and> diagnostics_sound_at (call_string_run_result into enter classify r k p) p v s"
-  unfolding call_string_run_result_def by (rule run_result_sound [OF refl assms])
+         \<and> checks_sound_at (call_string_run_result into enter classify solved k p) v s
+         \<and> diagnostics_sound_at (call_string_run_result into enter classify solved k p) p v s"
+  unfolding call_string_run_result_def prod.case_eq_if assms(1)
+  by (rule run_result_sound [OF refl assms(2,3)])
 
 text \<open>
   One line per domain and context policy. Every table asks for well-formedness and
@@ -157,62 +168,81 @@ lemma analysis_result_sound:
   using terminates
 proof (cases D; cases ctx)
   assume "D = Sign_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis by (simp add: unit_run_result_sound [OF sign_rule_table [OF wf] mem])
+  then show ?thesis
+    by (simp add: unit_run_result_sound
+          [OF sign_rule.fst_result_with_globals sign_rule_table [OF wf] mem])
 next
   assume "D = Sign_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: entry_state_run_result_sound [OF sign_es_rule_table [OF wf] mem])
+    by (simp add: entry_state_run_result_sound
+          [OF sign_es_rule.fst_result_with_globals sign_es_rule_table [OF wf] mem])
 next
   fix k assume "D = Sign_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: call_string_run_result_sound [OF sign_cs_rule_table [OF wf] mem])
+    by (simp add: call_string_run_result_sound
+          [OF sign_cs_rule.fst_result_with_globals sign_cs_rule_table [OF wf] mem])
 next
   assume "D = Interval_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis by (simp add: unit_run_result_sound [OF interval_rule_table [OF wf] mem])
+  then show ?thesis
+    by (simp add: unit_run_result_sound
+          [OF interval_rule.fst_result_with_globals interval_rule_table [OF wf] mem])
 next
   assume "D = Interval_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: entry_state_run_result_sound [OF interval_es_rule_table [OF wf] mem])
+    by (simp add: entry_state_run_result_sound
+          [OF interval_es_rule.fst_result_with_globals interval_es_rule_table [OF wf] mem])
 next
   fix k
   assume "D = Interval_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: call_string_run_result_sound [OF interval_cs_rule_table [OF wf] mem])
+    by (simp add: call_string_run_result_sound
+          [OF interval_cs_rule.fst_result_with_globals interval_cs_rule_table [OF wf] mem])
 next
   assume "D = Int_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis by (simp add: unit_run_result_sound [OF int_rule_table [OF wf] mem])
+  then show ?thesis
+    by (simp add: unit_run_result_sound
+          [OF int_rule.fst_result_with_globals int_rule_table [OF wf] mem])
 next
   assume "D = Int_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: entry_state_run_result_sound [OF int_es_rule_table [OF wf] mem])
+    by (simp add: entry_state_run_result_sound
+          [OF int_es_rule.fst_result_with_globals int_es_rule_table [OF wf] mem])
 next
   fix k assume "D = Int_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: call_string_run_result_sound [OF int_cs_rule_table [OF wf] mem])
+    by (simp add: call_string_run_result_sound
+          [OF int_cs_rule.fst_result_with_globals int_cs_rule_table [OF wf] mem])
 next
   assume "D = Parity_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis by (simp add: unit_run_result_sound [OF parity_rule_table [OF wf] mem])
+  then show ?thesis
+    by (simp add: unit_run_result_sound
+          [OF parity_rule.fst_result_with_globals parity_rule_table [OF wf] mem])
 next
   assume "D = Parity_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: entry_state_run_result_sound [OF parity_es_rule_table [OF wf] mem])
+    by (simp add: entry_state_run_result_sound
+          [OF parity_es_rule.fst_result_with_globals parity_es_rule_table [OF wf] mem])
 next
   fix k assume "D = Parity_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: call_string_run_result_sound [OF parity_cs_rule_table [OF wf] mem])
+    by (simp add: call_string_run_result_sound
+          [OF parity_cs_rule.fst_result_with_globals parity_cs_rule_table [OF wf] mem])
 next
   assume "D = Congruence_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: unit_run_result_sound [OF congruence_rule_table [OF wf] mem])
+    by (simp add: unit_run_result_sound
+          [OF congruence_rule.fst_result_with_globals congruence_rule_table [OF wf] mem])
 next
   assume "D = Congruence_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: entry_state_run_result_sound [OF congruence_es_rule_table [OF wf] mem])
+    by (simp add: entry_state_run_result_sound
+          [OF congruence_es_rule.fst_result_with_globals congruence_es_rule_table [OF wf] mem])
 next
   fix k
   assume "D = Congruence_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
   then show ?thesis
-    by (simp add: call_string_run_result_sound [OF congruence_cs_rule_table [OF wf] mem])
+    by (simp add: call_string_run_result_sound
+          [OF congruence_cs_rule.fst_result_with_globals congruence_cs_rule_table [OF wf] mem])
 qed
 
 text \<open>
@@ -223,7 +253,8 @@ text \<open>
 lemma analysis_result_check_sites:
   "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks (analysis_result D rule ctx p))
      = check_sites (prog_cfg p)"
-  by (cases D; cases ctx) (simp_all add: run_result_builder_defs result_checks_of_sites)
+  by (cases D; cases ctx)
+     (simp_all add: run_result_builder_defs prod.case_eq_if result_checks_of_sites)
 
 text \<open>
   The same claims read through \<^const>\<open>run_voblint\<close>: an analysed answer was only
