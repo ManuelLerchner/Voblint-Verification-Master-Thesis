@@ -304,8 +304,11 @@ pre-commit:
           - name: pages-links
             glob:
               - "pages/**"
-              - "docs/images/**"
+              - "docs/**"
+              - "README.md"
+              - "tests/regression/**"
               - "scripts/check_pages_links.py"
+              - "scripts/vimp_fixture.py"
               - "scripts/mk/pages-site.sh"
             run: pixi run pages-links
 

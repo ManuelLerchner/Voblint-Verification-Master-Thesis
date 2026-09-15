@@ -14,6 +14,13 @@ decays differently:
 Links are read from `pages/*.html` and from the page scripts (`explainer.js`,
 `figures/*.js`), which build some definition links at runtime.
 
+Every playground link -- in the pages, the README and docs/ -- is also checked for
+what it opens, in every mode and without a build: its settings are values the
+playground offers, an `example=` names a program in main.js's LINKED_EXAMPLES, a
+`fixture=` names a regression file, and a `#code=` program decodes. A README
+program link must carry one of the committed figure programs in docs/readme-figures,
+so a figure, its program and its link cannot drift apart.
+
     scripts/check_pages_links.py --sources                   internal links, no build needed
     scripts/check_pages_links.py --site build/github-pages   internal links, local build
     scripts/check_pages_links.py --live                      everything, deployed site
@@ -32,15 +39,18 @@ than broken.
 from __future__ import annotations
 
 import argparse
+import base64
 import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_thesis_links import fetch, pages_base  # noqa: E402
+from vimp_fixture import shown_source  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 PAGES = REPO / "pages"
@@ -90,6 +100,115 @@ def collected() -> dict[str, set[str]]:
                 str(script.relative_to(PAGES)),
             )
     return links
+
+
+PLAYGROUND_KEYS = {"example", "fixture", "analysis", "globals", "context", "k"}
+PLAYGROUND_SELECTS = {
+    "analysis": "analysis-select",
+    "globals": "globals-select",
+    "context": "context-select",
+}
+MARKDOWN_PLAYGROUND = re.compile(
+    r"(?:https?://[^\s\"'<>()]*/)?playground\.html[^\s\"'<>()]*"
+)
+FIGURE_PROGRAMS = REPO / "docs" / "readme-figures"
+REGRESSION = REPO / "tests" / "regression"
+
+
+def playground_vocabulary() -> dict[str, object]:
+    """What a playground link may name, read from the playground itself."""
+    html = (PAGES / "playground.html").read_text()
+    script = (PAGES / "main.js").read_text()
+    options = {}
+    for key, select in PLAYGROUND_SELECTS.items():
+        block = re.search(rf'<select id="{select}"[^>]*>(.*?)</select>', html, re.S)
+        options[key] = (
+            set(re.findall(r'<option value="([^"]+)"', block.group(1)))
+            if block
+            else set()
+        )
+    examples = re.search(r"^const LINKED_EXAMPLES = \{(.*?)^\};", script, re.S | re.M)
+    depth = re.search(r"^const MAX_CONTEXT_DEPTH = (\d+);", script, re.M)
+    return {
+        "options": options,
+        "examples": set(re.findall(r'^  "?([\w-]+)"?: `', examples.group(1), re.M))
+        if examples
+        else set(),
+        "max_depth": int(depth.group(1)) if depth else 0,
+    }
+
+
+def unpack_code(packed: str) -> str:
+    """A `#code=` program: raw deflate, base64url without padding."""
+    padded = packed + "=" * (-len(packed) % 4)
+    return zlib.decompress(base64.urlsafe_b64decode(padded), wbits=-15).decode()
+
+
+def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> list[str]:
+    """What is wrong with the program and settings a playground link opens."""
+    parsed = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+    problems = [
+        f"unknown parameter {key}" for key in query if key not in PLAYGROUND_KEYS
+    ]
+
+    for key, allowed in vocabulary["options"].items():
+        for value in query.get(key, []):
+            if value not in allowed:
+                problems.append(f"{key}={value} is not a playground option")
+
+    for value in query.get("k", []):
+        if not value.isdigit() or int(value) > vocabulary["max_depth"]:
+            problems.append(f"k={value} is outside 0..{vocabulary['max_depth']}")
+
+    for name in query.get("example", []):
+        if name not in vocabulary["examples"]:
+            problems.append(f"example={name} is not in LINKED_EXAMPLES")
+
+    for path in query.get("fixture", []):
+        if not (REGRESSION / path).is_file():
+            problems.append(f"fixture={path} is not a regression file")
+
+    code = urllib.parse.parse_qs(parsed.fragment).get("code", [])
+    named = [key for key in ("example", "fixture") if key in query] + (
+        ["code"] if code else []
+    )
+    if len(named) > 1:
+        problems.append(f"names its program twice ({', '.join(named)})")
+
+    for packed in code:
+        try:
+            program = unpack_code(packed)
+        except (ValueError, zlib.error, UnicodeDecodeError) as error:
+            problems.append(f"#code= does not decode: {error}")
+            continue
+        if source == "README.md" and not any(
+            program == shown_source(figure.read_text())
+            for figure in FIGURE_PROGRAMS.glob("*.vimp")
+        ):
+            problems.append(
+                f"#code= program is none of {FIGURE_PROGRAMS.relative_to(REPO)}/*.vimp"
+            )
+
+    return problems
+
+
+def playground_links(page_links: dict[str, set[str]]) -> dict[str, set[str]]:
+    """Every playground link, from the pages and from the Markdown documentation."""
+    found = {
+        url: sources
+        for url, sources in page_links.items()
+        if "playground.html?" in url or "playground.html#" in url
+    }
+    documents = [REPO / "README.md", *sorted((REPO / "docs").rglob("*.md"))]
+    for document in documents:
+        if "history" in document.parts or "generated" in document.parts:
+            continue
+        for match in MARKDOWN_PLAYGROUND.finditer(document.read_text()):
+            url = match.group(0).replace("&amp;", "&")
+            if "?" in url or "#" in url:
+                found.setdefault(url, set()).add(str(document.relative_to(REPO)))
+    return found
 
 
 def split(url: str) -> tuple[str, str]:
@@ -214,6 +333,12 @@ def main() -> int:
 
     links = collected()
     broken: list[str] = []
+    vocabulary = playground_vocabulary()
+    playground = playground_links(links)
+    for url, sources in sorted(playground.items()):
+        for source in sorted(sources):
+            for problem in check_playground(url, source, vocabulary):
+                broken.append(f"  {url[:120]} ({source}): {problem}")
     unverified: list[str] = []
     cache: dict[str, str | None] = {}
     skipped: list[str] = []
@@ -273,7 +398,10 @@ def main() -> int:
         print(f"check_pages_links: {len(broken)} broken link(s):")
         print("\n".join(broken))
         return 1
-    print(f"check_pages_links: {len(links)} link(s) checked, none broken")
+    print(
+        f"check_pages_links: {len(links)} link(s) and {len(playground)} playground link(s) "
+        "checked, none broken"
+    )
     return 0
 
 

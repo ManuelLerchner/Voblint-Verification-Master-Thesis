@@ -43,7 +43,7 @@ def test_flags_in_any_order_override_the_header(tmp_path):
     url = playground_link.program_link(path, flags)
     assert open_browser
     assert "?analysis=sign&globals=join&context=entry-state#" in url
-    assert unpack(url.split("#code=")[1]) == "fun main() {}\n"
+    assert unpack(url.split("#code=")[1]) == "fun main() {}"
 
 
 def test_a_program_without_header_keeps_its_first_line(tmp_path):
@@ -51,3 +51,30 @@ def test_a_program_without_header_keeps_its_first_line(tmp_path):
     program.write_text("// my own comment\nfun main() {}\n")
     url = playground_link.program_link(program, ["--analysis", "interval"])
     assert unpack(url.split("#code=")[1]).startswith("// my own comment")
+
+
+def test_link_check_rejects_what_the_playground_cannot_open():
+    import check_pages_links as check
+
+    vocabulary = check.playground_vocabulary()
+    figure = next((check.FIGURE_PROGRAMS).glob("*.vimp"))
+    good = playground_link.program_link(figure, ["--analysis", "interval"])
+    assert check.check_playground(good, "README.md", vocabulary) == []
+
+    other = playground_link.link("fun main() {}", "interval")
+    cases = {
+        "playground.html?example=no-such-example": "not in LINKED_EXAMPLES",
+        "playground.html?fixture=00-sanity/none.vimp": "not a regression file",
+        "playground.html?context=entrystate": "not a playground option",
+        "playground.html?k=99": "outside",
+        "playground.html?colour=red": "unknown parameter",
+        "playground.html?analysis=interval#code=!!!": "does not decode",
+        "playground.html?example=theorems#code=" + other.split("#code=")[1]: "twice",
+    }
+    for url, expected in cases.items():
+        problems = check.check_playground(url, "pages/index.html", vocabulary)
+        assert any(expected in problem for problem in problems), (url, problems)
+
+    # Any program may be shared from a page, but a README link must carry a figure.
+    assert check.check_playground(other, "pages/index.html", vocabulary) == []
+    assert check.check_playground(other, "README.md", vocabulary)
