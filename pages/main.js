@@ -2826,6 +2826,29 @@ fun main() {
 fun main() {
   f(0);
 }`,
+  "recursion-bounded": `fun f(x) {
+  __voblint_check(x >= 0);
+  if (x < 10) {
+    f(x + 1);
+  }
+}
+
+fun main() {
+  f(0);
+}`,
+  "multiples-of-three": `fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  if (x > 0) {
+    if (x < 3) {
+      __voblint_check(x == 1);
+    }
+  } else {
+    if (x > 5) {
+      __voblint_check(x == 6);
+    }
+  }
+}`,
   "recursion-shrinks": `fun f(a) {
   if (a < 4) {
     f(9 / (a + 2));

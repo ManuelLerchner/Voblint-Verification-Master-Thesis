@@ -1,0 +1,194 @@
+.scene-source-morph {
+  position: relative;
+}
+
+.scene-source-morph .sm-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.scene-source-morph .sm-panel {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+.scene-source-morph .sm-code {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.scene-source-morph .sm-line {
+  display: inline-block;
+  min-width: 100%;
+  padding-inline: 6px;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  transition: opacity 400ms ease, transform 400ms ease, background 250ms ease;
+}
+
+.scene-source-morph .sm-line.is-current {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  transform: translateX(10px);
+}
+
+.scene-source-morph .sm-line.is-peeled {
+  opacity: 0.35;
+  transform: translateX(22px);
+}
+
+.scene-source-morph .sm-rule {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border-strong);
+}
+
+.scene-source-morph .sm-rule-name {
+  margin: 0 0 6px;
+}
+
+.scene-source-morph .sm-rule-clause {
+  margin: 0;
+  padding: 10px 12px;
+  color: var(--primary);
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.scene-source-morph .sm-svg {
+  max-width: 380px;
+}
+
+.scene-source-morph .sm-arrow-head {
+  fill: var(--text-muted);
+}
+
+.scene-source-morph .sm-edge line,
+.scene-source-morph .sm-edge path {
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 1.6;
+}
+
+.scene-source-morph .sm-edge text {
+  fill: var(--text-muted);
+  font: 11.5px var(--mono);
+}
+
+.scene-source-morph .sm-node rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 2;
+}
+
+.scene-source-morph .sm-special rect {
+  fill: #fffbea;
+  stroke: #d99a2b;
+}
+
+.scene-source-morph .sm-node text {
+  fill: var(--text);
+  font: 700 12.5px var(--mono);
+}
+
+.scene-source-morph .sm-node text:not([text-anchor]) {
+  text-anchor: middle;
+}
+
+.scene-source-morph .sm-node .sm-num {
+  fill: var(--text-faint);
+  font: 10.5px var(--mono);
+}
+
+.scene-source-morph .sm-node .sm-num:not([text-anchor="middle"]) {
+  text-anchor: end;
+}
+
+.scene-source-morph .sm-node,
+.scene-source-morph .sm-edge {
+  transition: opacity 450ms ease;
+}
+
+.scene-source-morph .is-hidden {
+  opacity: 0;
+}
+
+.scene-source-morph .sm-node.is-pending {
+  opacity: 0.7;
+}
+
+.scene-source-morph .sm-node.is-pending rect {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-dasharray: 5 4;
+}
+
+.scene-source-morph .sm-node.is-pending text {
+  fill: var(--text-faint);
+}
+
+.scene-source-morph .sm-node.is-new rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.scene-source-morph .sm-edge.is-new line,
+.scene-source-morph .sm-edge.is-new path {
+  stroke: var(--accent);
+  stroke-width: 2.6;
+}
+
+.scene-source-morph .sm-edge.is-new text {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+.scene-source-morph .sm-ghost {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 8px;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  font: 700 0.85rem var(--mono);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: transform 800ms cubic-bezier(0.3, 0.7, 0.2, 1), opacity 800ms ease-in;
+}
+
+.scene-source-morph .sm-caption {
+  min-height: 3.4em;
+}
+
+.scene-source-morph .sm-claim {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  color: var(--success);
+  background: var(--success-soft);
+  border-radius: var(--radius-sm);
+  font-weight: 650;
+  opacity: 0.35;
+  transition: opacity 400ms ease;
+}
+
+.scene-source-morph.is-final .sm-claim,
+.scene-source-morph:not(:has(.sm-controls:not([hidden]))) .sm-claim {
+  opacity: 1;
+}
+
+@media (max-width: 900px) {
+  .scene-source-morph .sm-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

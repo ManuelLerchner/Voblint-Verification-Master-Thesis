@@ -1,0 +1,187 @@
+.scene-particles .pt-modes {
+  margin-bottom: 14px;
+}
+
+.scene-particles .pt-replay {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 6px 13px;
+  color: var(--primary);
+  background: var(--surface-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.scene-particles .pt-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.scene-particles .pt-code {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+  font-size: 0.76rem;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+.scene-particles .pt-svg {
+  max-width: 760px;
+}
+
+.scene-particles .pt-arrow-head {
+  fill: var(--border-strong);
+}
+
+.scene-particles .pt-edges line,
+.scene-particles .pt-edges path {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.scene-particles .pt-edges text {
+  fill: var(--text-faint);
+  font: 11px var(--mono);
+}
+
+.scene-particles .pt-label-box {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.scene-particles .is-bot .pt-label-box {
+  stroke: var(--border-strong);
+  stroke-dasharray: 4 3;
+}
+
+.scene-particles .pt-label {
+  fill: var(--text);
+  font: 700 11.5px var(--mono);
+  text-anchor: middle;
+}
+
+.scene-particles .pt-verdict {
+  font: 800 11px var(--mono);
+}
+
+.scene-particles .pt-verdict.unknown { fill: var(--warning); }
+.scene-particles .pt-verdict.dead { fill: var(--text-faint); }
+
+.scene-particles .pt-axis {
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+}
+
+.scene-particles .pt-tick {
+  fill: var(--text-faint);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+
+.scene-particles .pt-value {
+  fill: var(--primary);
+  font: 700 12px var(--mono);
+  text-anchor: middle;
+  transition: opacity 400ms ease;
+}
+
+.scene-particles .pt-band {
+  fill: var(--primary-soft);
+  fill-opacity: 0.85;
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  transition: opacity 500ms ease;
+}
+
+.scene-particles .pt-band-tail {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  transition: opacity 500ms ease;
+}
+
+.scene-particles .pt-dot {
+  fill: var(--accent);
+  opacity: 0;
+  transition: opacity 300ms ease, fill 400ms ease, stroke 400ms ease;
+}
+
+.scene-particles .pt-dot.is-landed {
+  opacity: 1;
+}
+
+/* Integers an interval admits although no run has them. */
+.scene-particles .pt-hole {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  transition: opacity 400ms ease;
+}
+
+.scene-particles[data-mode="concrete"] .pt-hole {
+  opacity: 0;
+}
+
+.scene-particles .pt-legend {
+  justify-content: flex-start;
+  margin-top: 10px;
+}
+
+.scene-particles .pt-swatch-run {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+}
+
+.scene-particles .pt-swatch-hole {
+  width: 8px;
+  height: 8px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.scene-particles .pt-particle {
+  fill: var(--accent);
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+/* Concrete: only the dots. Abstract: the regions, with the dots as faint outlines inside. */
+.scene-particles[data-mode="concrete"] .pt-band,
+.scene-particles[data-mode="concrete"] .pt-band-tail,
+.scene-particles[data-mode="concrete"] .pt-value {
+  opacity: 0;
+}
+
+.scene-particles[data-mode="abstract"] .pt-dot.is-landed {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+
+.scene-particles[data-mode="both"] .pt-band {
+  fill-opacity: 0.6;
+}
+
+.scene-particles .pt-note {
+  min-height: 3em;
+  margin: 12px 0 0;
+}
+
+@media (max-width: 900px) {
+  .scene-particles .pt-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

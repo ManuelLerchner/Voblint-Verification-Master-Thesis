@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Voblint — Visualization lab</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+  >
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="explainer.css">
+  <link rel="stylesheet" href="lab/lab.css">
+  <link rel="stylesheet" href="lab/source-morph.css">
+  <link rel="stylesheet" href="lab/particles.css">
+  <link rel="stylesheet" href="lab/recursion-spiral.css">
+  <link rel="stylesheet" href="lab/strata.css">
+  <!-- Classic scripts: explainer.js defines the helpers every figure shares. -->
+  <script src="explainer.js" defer></script>
+  <script src="lab/source-morph.js" defer></script>
+  <script src="lab/particles.js" defer></script>
+  <script src="lab/recursion-spiral.js" defer></script>
+  <script src="lab/strata.js" defer></script>
+</head>
+
+<body>
+  <nav class="site-nav" aria-label="Site">
+    <div class="page-shell site-nav-inner">
+      <a class="site-brand" href="index.html">
+        <img src="assets/favicon.png" alt="" width="28" height="28">
+        <span>Voblint</span>
+      </a>
+      <ul class="site-links">
+        <li><a href="index.html">How it works</a></li>
+        <li><a href="Voblint/index.html">Formalization</a></li>
+        <li><a href="thesis.pdf">Thesis</a></li>
+        <li>
+          <a class="nav-cta" href="playground.html">
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Playground
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="explainer-hero">
+    <div class="page-shell">
+      <p class="eyebrow">Visualization lab</p>
+      <h1>Candidate figures</h1>
+      <p class="hero-lead">
+        Figures under consideration for the explainer. Each one states what it shows and where it
+        would go. Those that earn a place move into <a href="index.html">How it works</a>; the
+        rest stay here or go.
+      </p>
+      <nav class="lab-toc" aria-label="Candidates">
+      <div class="lab-group"><p class="td-panel-title">Compiler and semantics</p><ol><li><a href="#source-morph">Watch the compiler take a program apart</a></li><li><a href="#particles">Many runs in, one region per node out</a></li></ol></div>
+      <div class="lab-group"><p class="td-panel-title">Solver and recursion</p><ol><li><a href="#recursion-spiral">A call that never stops calling</a></li></ol></div>
+      <div class="lab-group"><p class="td-panel-title">Architecture</p><ol><li><a href="#strata">The formalization in cross-section</a></li></ol></div>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell doc-main lab-main">
+    <h2 class="lab-group-heading">Compiler and semantics</h2>
+<section class="section lab-item" id="source-morph" aria-labelledby="source-morph-heading">
+  <div class="section-heading">
+    <p class="eyebrow">Source → graph morph</p>
+    <h2 id="source-morph-heading">Watch the compiler take a program apart</h2>
+    <p class="section-intro">
+      The compiler reads a procedure one statement at a time and turns each statement into a
+      numbered node with outgoing edges. Its target is already known before that statement is
+      compiled: every statement is compiled against the number of the statement after it. This
+      figure replays that walk on the counting loop, with the node numbers and edge labels the
+      real compiler produces. It would sit in "What a run is", before the step-through, where
+      the page currently takes the graph as given.
+    </p>
+  </div>
+
+  <figure class="scene scene-source-morph" data-step="7">
+    <div class="sm-layout">
+      <div class="sm-panel sm-source">
+        <p class="td-panel-title">Source</p>
+        <pre class="sm-code"><code><span class="sm-line" data-line="1">fun main() {</span>
+<span class="sm-line" data-line="2">  i = 0;</span>
+<span class="sm-line" data-line="3">  while (i &lt; 5) {</span>
+<span class="sm-line" data-line="4">    i = i + 1;</span>
+<span class="sm-line" data-line="3">  }</span>
+<span class="sm-line" data-line="5">  __voblint_check(i == 5);</span>
+<span class="sm-line" data-line="6">}</span></code></pre>
+
+        <div class="sm-rule">
+          <p class="td-panel-title">The clause that fires</p>
+          <p class="sm-rule-name"><code>compile_proc</code></p>
+          <pre class="sm-rule-clause">compile_proc Π p decl n =
+  (let r = n + csize (body decl); …
+   in … insert (FunctionEntry p, EA_Body p, ben)
+          (if falls_through (body decl)
+           then insert (Statement r, EA_Ret None p, FunctionResult p) E
+           else E) …)</pre>
+        </div>
+      </div>
+
+      <div class="sm-panel sm-graph">
+        <p class="td-panel-title">Compiled graph</p>
+        <svg class="sm-svg" viewBox="0 0 380 566" role="img"
+          aria-label="The compiled graph of the counting loop: entry_main, then pp0 assigning i := 0, the loop head pp1 with an assume edge to the body pp2 and an assume-not edge to the check pp3, pp2 looping back to pp1 by i := i + 1, pp3 checking i == 5 into the epilogue pp4, and pp4 returning to exit_main.">
+          <defs>
+            <marker id="sm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" class="sm-arrow-head"/>
+            </marker>
+          </defs>
+
+          <g class="sm-edges">
+            <g class="sm-edge" data-built="1"><line x1="140" y1="52" x2="140" y2="110" marker-end="url(#sm-arrow)"/><text x="150" y="86">body(main)</text></g>
+            <g class="sm-edge" data-built="2"><line x1="140" y1="144" x2="140" y2="210" marker-end="url(#sm-arrow)"/><text x="150" y="182">i := 0</text></g>
+            <g class="sm-edge" data-built="3"><line x1="170" y1="238" x2="276" y2="298" marker-end="url(#sm-arrow)"/><text x="232" y="256">[i &lt; 5]</text></g>
+            <g class="sm-edge" data-built="3"><line x1="140" y1="244" x2="140" y2="350" marker-end="url(#sm-arrow)"/><text x="130" y="302" text-anchor="end">![i &lt; 5]</text></g>
+            <g class="sm-edge sm-back" data-built="4"><path d="M332 298 C 356 240, 300 200, 190 222" marker-end="url(#sm-arrow)"/><text x="322" y="214">i := i + 1</text></g>
+            <g class="sm-edge" data-built="5"><line x1="140" y1="384" x2="140" y2="444" marker-end="url(#sm-arrow)"/><text x="150" y="420">check(i == 5)</text></g>
+            <g class="sm-edge" data-built="6"><line x1="140" y1="478" x2="140" y2="514" marker-end="url(#sm-arrow)"/><text x="150" y="502">return</text></g>
+          </g>
+
+          <g class="sm-nodes">
+            <g class="sm-node sm-special" data-built="1" data-origin="1"><rect x="80" y="18" width="120" height="34" rx="17"/><text x="140" y="40">entry_main</text></g>
+            <g class="sm-node" data-built="2" data-pending="1" data-origin="2"><rect x="92" y="110" width="96" height="34" rx="7"/><text x="140" y="132">pp0</text><text class="sm-num" x="84" y="132">Statement 0</text></g>
+            <g class="sm-node" data-built="3" data-pending="2" data-origin="3"><rect x="92" y="210" width="96" height="34" rx="7"/><text x="140" y="232">pp1</text><text class="sm-num" x="84" y="232">Statement 1</text></g>
+            <g class="sm-node" data-built="4" data-pending="3" data-origin="4"><rect x="264" y="298" width="96" height="34" rx="7"/><text x="312" y="320">pp2</text><text class="sm-num" x="312" y="350" text-anchor="middle">Statement 2</text></g>
+            <g class="sm-node" data-built="5" data-pending="3" data-origin="5"><rect x="92" y="350" width="96" height="34" rx="7"/><text x="140" y="372">pp3</text><text class="sm-num" x="84" y="372">Statement 3</text></g>
+            <g class="sm-node" data-built="6" data-pending="1" data-origin="6"><rect x="92" y="444" width="96" height="34" rx="7"/><text x="140" y="466">pp4</text><text class="sm-num" x="84" y="466">Statement 4</text></g>
+            <g class="sm-node sm-special" data-built="1"><rect x="80" y="514" width="120" height="34" rx="17"/><text x="140" y="536">exit_main</text></g>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <p class="td-caption sm-caption" aria-live="polite">
+      Every statement has become a node, and every node's outgoing edges point where the source
+      would go next.
+    </p>
+
+    <p class="sm-claim">
+      <i class="fa-solid fa-route" aria-hidden="true"></i>
+      Every source execution has a matching route through this graph:
+      <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>
+    </p>
+
+    <div class="loop-controls sm-controls" hidden>
+      <button type="button" class="loop-play" aria-label="Pause">
+        <i class="fa-solid fa-pause" aria-hidden="true"></i>
+      </button>
+      <div class="loop-chips sm-steps" role="group" aria-label="Compilation steps">
+        <button type="button" data-goto="0">source</button>
+        <button type="button" data-goto="1">procedure</button>
+        <button type="button" data-goto="2">i = 0</button>
+        <button type="button" data-goto="3">while</button>
+        <button type="button" data-goto="4">body</button>
+        <button type="button" data-goto="5">check</button>
+        <button type="button" data-goto="6">epilogue</button>
+        <button type="button" data-goto="7" class="done">✓ graph</button>
+      </div>
+    </div>
+
+    <figcaption>
+      Node names and edge labels are the playground's for this program (<code>ppN</code> is
+      <code>Statement N</code>); the clauses are
+      <a href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile%7Cconst"><code>compile</code></a>
+      and
+      <a href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile_proc%7Cconst"><code>compile_proc</code></a>,
+      shortened. Dashed nodes are numbers the compiler has already handed out as a continuation
+      but not yet compiled. The <code>Seq</code> clause that strings the statements together adds
+      no node of its own.
+      <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">See this graph in the playground ↗</a>
+    </figcaption>
+  </figure>
+</section>
+<section class="section lab-item" id="particles" aria-labelledby="particles-heading">
+  <div class="section-heading">
+    <p class="eyebrow">Particles and regions</p>
+    <h2 id="particles-heading">Many runs in, one region per node out</h2>
+    <p class="section-intro">
+      Every dot is one run of the program, dropped at the value of <code>x</code> it has at each
+      node it reaches. Switch to the abstract view and the dots give way to the one interval the
+      analysis keeps per node. No interval leaves a dot out, which is soundness. But the runs only
+      ever reach multiples of three, and an interval cannot say so: every band also covers
+      integers no run has. On the left that makes a node look reachable that no run reaches; on
+      the right the guard rules everything out, and the analysis marks the check DEAD.
+      This would sit after the collecting-semantics rungs of "The proof chain", or replace the
+      opening testing-versus-abstraction figure.
+    </p>
+  </div>
+
+  <figure class="scene scene-particles" data-mode="both">
+    <div class="call-modes pt-modes" role="tablist" aria-label="View" hidden>
+      <button type="button" role="tab" data-mode="concrete" aria-selected="false">Concrete runs</button>
+      <button type="button" role="tab" data-mode="abstract" aria-selected="false">Abstract states</button>
+      <button type="button" role="tab" data-mode="both" aria-selected="true">Both</button>
+      <button type="button" class="pt-replay"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Replay runs</button>
+    </div>
+
+    <div class="pt-layout">
+      <pre class="pt-code"><code>fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  if (x &gt; 0) {
+    if (x &lt; 3) {
+      __voblint_check(x == 1);
+    }
+  } else {
+    if (x &gt; 5) {
+      __voblint_check(x == 6);
+    }
+  }
+}</code></pre>
+
+      <svg class="pt-svg" viewBox="0 0 760 600" role="img"
+        aria-label="The graph of the program with a number line for x at each node. Runs with x a multiple of three from -12 to 12 enter at the first branch; positive values go left and skip the check x == 1, which no run reaches although its interval is [1, 2]; the others go right and skip the check x == 6, whose node the analysis proves unreachable. Each node's interval contains every dot that reaches it, and also integers that no run has.">
+        <defs>
+          <marker id="pt-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" class="pt-arrow-head"/>
+          </marker>
+        </defs>
+        <g class="pt-edges">
+          <line data-from="pp2" data-to="pp3" x1="330" y1="146" x2="240" y2="194" marker-end="url(#pt-arrow)"/><text x="276" y="160" text-anchor="end">[x &gt; 0]</text>
+          <line data-from="pp2" data-to="pp6" x1="430" y1="146" x2="520" y2="194" marker-end="url(#pt-arrow)"/><text x="484" y="160">![x &gt; 0]</text>
+          <line data-from="pp3" data-to="pp4" x1="190" y1="296" x2="190" y2="344" marker-end="url(#pt-arrow)"/><text x="200" y="324">[x &lt; 3]</text>
+          <line data-from="pp6" data-to="pp7" x1="570" y1="296" x2="570" y2="344" marker-end="url(#pt-arrow)"/><text x="580" y="324">[x &gt; 5]</text>
+          <line data-from="pp4" data-to="pp9" x1="236" y1="446" x2="330" y2="494" marker-end="url(#pt-arrow)"/><text x="272" y="462" text-anchor="end">check(x == 1)</text>
+          <line data-from="pp7" data-to="pp9" x1="524" y1="446" x2="430" y2="494" marker-end="url(#pt-arrow)"/><text x="488" y="462">check(x == 6)</text>
+          <path data-from="pp3" data-to="pp9" d="M66 240 C 8 340, 24 492, 278 512" marker-end="url(#pt-arrow)"/><text x="70" y="482">![x &lt; 3]</text>
+          <path data-from="pp6" data-to="pp9" d="M694 240 C 752 340, 736 492, 482 512" marker-end="url(#pt-arrow)"/><text x="690" y="482" text-anchor="end">![x &gt; 5]</text>
+        </g>
+        <g class="pt-nodes"></g>
+        <g class="pt-routes" visibility="hidden"></g>
+        <g class="pt-flight"></g>
+      </svg>
+    </div>
+
+    <ul class="gamma-legend pt-legend">
+      <li><span class="swatch pt-swatch-run"></span>a run's value</li>
+      <li><span class="swatch pt-swatch-hole"></span>inside the interval, reached by no run</li>
+    </ul>
+
+    <p class="pt-note" aria-live="polite">
+      No run ever reaches <code>pp4</code>, but the interval at <code>pp3</code>,
+      <code>[1, +∞]</code>, admits <code>1</code> and <code>2</code>, so the guard
+      <code>x &lt; 3</code> leaves <code>[1, 2]</code> and the check there is UNKNOWN instead of
+      DEAD. At <code>pp7</code> the guard <code>x &gt; 5</code> contradicts <code>[−∞, 0]</code>
+      outright: the value is <code>⊥</code> and the check is DEAD, which means no run gets there.
+      The Int product, whose congruence component tracks <code>x ≡ 0 (mod 3)</code>, marks both
+      checks DEAD.
+    </p>
+
+    <noscript>
+      <p class="pt-note">
+        Intervals for <code>x</code>: <code>pp2</code> ⊤, <code>pp3</code> <code>[1, +∞]</code>,
+        <code>pp4</code> <code>[1, 2]</code> (UNKNOWN, no run), <code>pp6</code> <code>[−∞, 0]</code>,
+        <code>pp7</code> ⊥ (DEAD), <code>pp9</code> ⊤. The animation needs JavaScript.
+      </p>
+    </noscript>
+
+    <figcaption>
+      Nine runs with <code>x</code> from −12 to 12 stand in for all of them; every interval
+      continues past the drawn range. The intervals and verdicts are the interval analyzer's result
+      for this program (no context); with <code>--analysis int</code> both checks are DEAD. The
+      collecting semantics
+      <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
+      is the set of all dots a node could ever receive.
+      <a class="try-link" href="playground.html?example=multiples-of-three&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
+    </figcaption>
+  </figure>
+</section>
+    <h2 class="lab-group-heading">Solver and recursion</h2>
+<section class="section lab-item" id="recursion-spiral">
+  <div class="section-heading">
+    <p class="eyebrow">Recursion as a spiral</p>
+    <h2>A call that never stops calling</h2>
+    <p class="section-intro">
+      <code>f(x)</code> calls <code>f(x + 1)</code> forever, so real runs wind outward on an endless
+      spiral: <code>f(0)</code>, <code>f(1)</code>, <code>f(2)</code>, each turn wider than the last.
+      The analysis has to describe every turn with finitely many contexts. Whether it can depends on
+      the settings: Join and entry-state contexts follow the spiral and never finish, warrowing cuts
+      across it. Switch to the same function stopped at <code>x = 10</code> and every setting
+      finishes. It belongs next to the “Growing recursion” row of “Which Globals setting should you
+      pick?”, or to the price of precision.
+    </p>
+  </div>
+
+  <figure class="scene scene-recursion-spiral" data-program="grows" data-mode="warrow">
+    <div class="spiral-top">
+      <div class="spiral-program">
+        <div class="call-modes spiral-programs" role="tablist" aria-label="Program" hidden>
+          <button type="button" role="tab" data-program="grows" aria-selected="true">Endless</button>
+          <button type="button" role="tab" data-program="bounded" aria-selected="false">Stops at 10</button>
+        </div>
+        <pre class="spiral-code"><code>fun f(x) {
+  __voblint_check(x &gt;= 0);
+  f(x + 1);
+}
+
+fun main() {
+  f(0);
+}</code></pre>
+      </div>
+      <div class="spiral-controls">
+        <div class="call-modes spiral-modes" role="tablist" aria-label="Settings">
+          <button type="button" role="tab" data-mode="join" aria-selected="false">Join, no context</button>
+          <button type="button" role="tab" data-mode="warrow" aria-selected="true">Warrow, no context</button>
+          <button type="button" role="tab" data-mode="cs" aria-selected="false">Warrow, call string</button>
+          <button type="button" role="tab" data-mode="entry" aria-selected="false">Warrow, entry state</button>
+        </div>
+        <div class="spiral-k" role="group" aria-label="Call-string depth" hidden>
+          <span>k =</span>
+          <button type="button" data-k="1" aria-pressed="false">1</button>
+          <button type="button" data-k="2" aria-pressed="true">2</button>
+          <button type="button" data-k="3" aria-pressed="false">3</button>
+        </div>
+        <div class="spiral-verdict">
+          <p class="td-panel-title">What the analyzer reports</p>
+          <p class="spiral-result"><span class="verdict proved">PROVED</span> <code>x ∈ [0, +∞]</code></p>
+          <p class="spiral-timer" hidden></p>
+        </div>
+      </div>
+    </div>
+
+    <svg class="spiral-svg" viewBox="0 0 900 540" role="img"
+      aria-label="A spiral of calls f(0), f(1), f(2) and further, narrow at the first call and wider with every deeper one. Chips mark the contexts the analysis keeps; a widening arrow cuts across the turns it summarizes.">
+      <g class="spiral-turns"></g>
+      <g class="spiral-bands"></g>
+      <g class="spiral-calls"></g>
+      <g class="spiral-bridge">
+        <path d="M832 68 C 890 128, 890 438, 832 498"/>
+        <text x="890" y="283">∇ widen</text>
+      </g>
+      <g class="spiral-chips"></g>
+    </svg>
+
+    <p class="td-caption spiral-caption" aria-live="polite">
+      One context covers every depth. Its entry value keeps growing, so warrowing jumps to
+      <code>[0, +∞]</code> instead of following the spiral outward, and <code>x &gt;= 0</code> is
+      proved for every turn.
+    </p>
+
+    <p class="td-panel-title spiral-table-title">Every setting, measured: result for <code>x &gt;= 0</code></p>
+    <div class="table-scroll">
+      <table class="spiral-table">
+        <thead>
+          <tr><th scope="col">Globals \ context</th><th scope="col">none</th><th scope="col">call string k=1</th><th scope="col">k=2</th><th scope="col">k=3</th><th scope="col">entry state</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Join</th><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td></tr>
+          <tr><th scope="row">Join per origin</th><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td></tr>
+          <tr><th scope="row">Warrow</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
+          <tr><th scope="row">Warrow per origin</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figcaption>
+      Measured with <code>cli/voblint --analysis interval --timeout 60</code>: every value is
+      PROVED, with one interval per context; “no answer” means the run was killed after 60 s.
+      Settings that finish do so in under a second. On the endless program every finishing setting
+      also reports <code>f</code>'s exit and the code after the call as unreachable, which is
+      right: that recursion never returns. The turns are depths of real runs; how many solver
+      rounds pass before warrowing jumps is not drawn.
+      <a class="try-link spiral-try" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
+    </figcaption>
+  </figure>
+</section>
+    <h2 class="lab-group-heading">Architecture</h2>
+<section class="section lab-item" id="strata" aria-labelledby="strata-heading">
+  <div class="section-heading">
+    <p class="eyebrow">Geological strata</p>
+    <h2 id="strata-heading">The formalization in cross-section</h2>
+    <p class="section-intro">
+      Every Isabelle session is a rock layer lying just above the highest session it builds on,
+      from the logic at the bottom to the examples at the surface. Hover a session and the layers
+      it rests on light up. A layer's thickness grows with its line count, so the drill core also
+      shows where the weight sits: the vendored solver, the examples, the framework. It would fit
+      beside the iceberg in “Why this takes so long to prove”, which counts volume but not
+      structure.
+    </p>
+  </div>
+
+  <figure class="scene scene-strata">
+    <div class="strata-layout">
+      <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
+        aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI, code export, and the example sessions at the surface. Thickness grows with line count.">
+          <g class="stratum stratum-examples" data-layer="examples">
+            <text class="stratum-name" x="196" y="52" text-anchor="end">Examples and regressions</text>
+            <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_* (10 sessions)" data-meta="10 sessions · 65 theories · 14,382 lines · 877 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, each parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG, which needs only the compiler."><rect x="210.0" y="14" width="760.0" height="68"/><text x="590.0" y="52">10 example sessions</text></a>
+          </g>
+          <g class="stratum stratum-d11" data-layer="d11">
+            <text class="stratum-name" x="196" y="97" text-anchor="end">Code export</text>
+            <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="1 theory · 152 lines · 0 lemmas" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module. Built last, on top of Voblint_CLI."><rect x="210.0" y="82" width="760.0" height="22"/><text x="590.0" y="97">Codegen</text></a>
+          </g>
+          <g class="stratum stratum-d10" data-layer="d10">
+            <text class="stratum-name" x="196" y="122" text-anchor="end">Entry point</text>
+            <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="7 theories · 2,098 lines · 67 lemmas" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="210.0" y="104" width="760.0" height="29"/><text x="590.0" y="122">CLI</text></a>
+          </g>
+          <g class="stratum stratum-d9" data-layer="d9">
+            <text class="stratum-name" x="196" y="156" text-anchor="end">Int product</text>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="12 theories · 5,324 lines · 238 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits one layer higher because it imports all four component domains."><rect x="210.0" y="133" width="760.0" height="39"/><text x="590.0" y="156">Int</text></a>
+          </g>
+          <g class="stratum stratum-d8" data-layer="d8">
+            <text class="stratum-name" x="196" y="202" text-anchor="end">Per-variable domains</text>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="10 theories · 1,964 lines · 93 lemmas" data-rests="TD Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The sign domain and its instantiation of the shared endpoints."><rect x="210.0" y="172" width="152.0" height="53"/><text x="286.0" y="202">Sign</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="14 theories · 3,107 lines · 163 lemmas" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The interval domain with widening and narrowing, and its instantiation of the shared endpoints."><rect x="362.0" y="172" width="240.5" height="53"/><text x="482.2" y="202">Interval</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="8 theories · 1,187 lines · 64 lemmas" data-rests="TD Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The parity domain and its instantiation of the shared endpoints."><rect x="602.5" y="172" width="104.0" height="53"/><text x="654.5" y="202">Parity</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="12 theories · 3,405 lines · 132 lemmas" data-rests="TD Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The congruence domain with backward filtering, and its instantiation of the shared endpoints."><rect x="706.5" y="172" width="263.5" height="53"/><text x="838.2" y="202">Congruence</text></a>
+          </g>
+          <g class="stratum stratum-d7" data-layer="d7">
+            <text class="stratum-name" x="196" y="242" text-anchor="end">Nonrelational reuse</text>
+            <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="5 theories · 1,617 lines · 45 lemmas" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="The reuse locales every per-variable domain interprets: abstract arithmetic, special operations and non-relational transfers."><rect x="210.0" y="225" width="760.0" height="27"/><text x="590.0" y="242">Nonrelational</text></a>
+          </g>
+          <g class="stratum stratum-d6" data-layer="d6">
+            <text class="stratum-name" x="196" y="271" text-anchor="end">Result</text>
+            <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="6 theories · 2,575 lines · 90 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="210.0" y="252" width="760.0" height="30"/><text x="590.0" y="271">Result</text></a>
+          </g>
+          <g class="stratum stratum-d5" data-layer="d5">
+            <text class="stratum-name" x="196" y="299" text-anchor="end">Routing and relational</text>
+            <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="4 theories · 649 lines · 10 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: no context, entry-state and call-string contexts, and key-space finiteness."><rect x="210.0" y="282" width="402.6" height="26"/><text x="411.3" y="299">Routing</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="1 theory · 576 lines · 22 lemmas" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable reuse locales are unavailable to it."><rect x="612.6" y="282" width="357.4" height="26"/><text x="791.3" y="299">Relational</text></a>
+          </g>
+          <g class="stratum stratum-d4" data-layer="d4">
+            <text class="stratum-name" x="196" y="327" text-anchor="end">Executable carrier</text>
+            <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="11 theories · 2,413 lines · 124 lemmas" data-rests="Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="210.0" y="308" width="760.0" height="30"/><text x="590.0" y="327">Exec</text></a>
+          </g>
+          <g class="stratum stratum-d3" data-layer="d3">
+            <text class="stratum-name" x="196" y="376" text-anchor="end">Compiler and framework</text>
+            <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="10 theories · 5,813 lines · 233 lemmas" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="210.0" y="338" width="309.3" height="68"/><text x="364.6" y="376">Compile</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="26 theories · 8,471 lines · 366 lemmas" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="519.3" y="338" width="450.7" height="68"/><text x="744.6" y="376">Framework</text></a>
+          </g>
+          <g class="stratum stratum-d2" data-layer="d2">
+            <text class="stratum-name" x="196" y="430" text-anchor="end">Graph, values, solver interface</text>
+            <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="8 theories · 2,023 lines · 112 lemmas" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution cstep, activation-local traces and the collecting semantics ltr_collect. It never mentions the compiler."><rect x="210.0" y="406" width="255.6" height="41"/><text x="337.8" y="430">CFG</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="8 theories · 2,733 lines · 132 lemmas" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering."><rect x="465.6" y="406" width="345.3" height="41"/><text x="638.3" y="430">Domain</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="7 theories · 1,259 lines · 104 lemmas" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="810.9" y="406" width="159.1" height="41"/><text x="890.5" y="430">Solver</text></a>
+          </g>
+          <g class="stratum stratum-d1" data-layer="d1">
+            <text class="stratum-name" x="196" y="514" text-anchor="end">Foundations</text>
+            <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="26 theories · 31,328 lines · 541 lemmas" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL alone."><rect x="210.0" y="447" width="656.0" height="127"/><text x="538.0" y="514">TD</text></a>
+            <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="8 theories · 1,507 lines · 75 lemmas" data-rests="" data-info="The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="866.0" y="447" width="104.0" height="127"/><text x="918.0" y="514">VIMP</text></a>
+          </g>
+          <g class="stratum stratum-bedrock" data-layer="bedrock">
+            <text class="stratum-name" x="196" y="596" text-anchor="end">Bedrock</text>
+            <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="210.0" y="574" width="760.0" height="36"/><text x="590.0" y="596">Isabelle/HOL · HOL-IMP · Deriving</text></a>
+          </g>
+      </svg>
+
+      <div class="strata-info" aria-live="polite">
+        <p class="td-panel-title">Core sample</p>
+        <p class="strata-info-name"><code>Voblint_Framework</code></p>
+        <p class="strata-info-meta">26 theories · 8,471 lines · 366 lemmas</p>
+        <p class="strata-info-rests">Rests on <code>TD</code>, <code>CFG</code>, <code>Domain</code>, <code>Solver</code>, <code>VIMP</code></p>
+        <p class="strata-info-text">The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
+        <p class="strata-info-hint">Hover a layer to take a sample: the sessions it rests on light up. Click to open the session.</p>
+      </div>
+    </div>
+
+    <figcaption>
+      Each session from <code>ROOTS</code> lies one layer above the highest session it builds on,
+      where building on means its <code>ROOT</code> parent or a session one of its theories imports;
+      both are read from the sources, and every import stays inside what the session's
+      <code>ROOT</code> makes available. A layer therefore shows order, not every contact: hover a
+      session to see what it actually rests on. The example sessions are drawn together at the
+      surface. Lines are counted per <code>ROOT</code> directory with the scanner behind
+      <code>pixi run theory-stats</code>: 61,255 in <code>src</code> plus 31,328 across the 26
+      theory files in the vendored solver's directory. A layer is 22&nbsp;px plus a height
+      proportional to its lines; sessions sharing a layer are as wide as their share of its lines,
+      but at least 104&nbsp;px so every name fits. The bedrock is not to scale, and lemmas count
+      the proofs the scanner finds.
+    </figcaption>
+  </figure>
+</section>
+  </main>
+</body>
+</html>

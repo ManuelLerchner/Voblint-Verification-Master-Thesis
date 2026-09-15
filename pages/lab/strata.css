@@ -1,0 +1,155 @@
+.scene-strata {
+  --strata-bedrock: #5b5048;
+  --strata-d1: #8a6d52;
+  --strata-d2: #a47d58;
+  --strata-d3: #b98f63;
+  --strata-d4: #c9a57a;
+  --strata-d5: #b7ad85;
+  --strata-d6: #9fae8b;
+  --strata-d7: #7fa38f;
+  --strata-d8: #8fb3b0;
+  --strata-d9: #a9c4c9;
+  --strata-d10: #c4d6d8;
+  --strata-d11: #d9c8a2;
+  --strata-examples: #7e9b5f;
+}
+
+.scene-strata .strata-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 20px;
+  align-items: start;
+}
+
+.scene-strata .strata-svg {
+  max-width: 1000px;
+}
+
+.scene-strata .stratum-part {
+  cursor: pointer;
+  outline: none;
+}
+
+.scene-strata .stratum-part rect {
+  stroke: rgb(40 30 20 / 0.35);
+  stroke-width: 1;
+  transition: filter 150ms ease, stroke-width 150ms ease;
+}
+
+.scene-strata .stratum-bedrock rect { fill: var(--strata-bedrock); }
+.scene-strata .stratum-d1 rect { fill: var(--strata-d1); }
+.scene-strata .stratum-d2 rect { fill: var(--strata-d2); }
+.scene-strata .stratum-d3 rect { fill: var(--strata-d3); }
+.scene-strata .stratum-d4 rect { fill: var(--strata-d4); }
+.scene-strata .stratum-d5 rect { fill: var(--strata-d5); }
+.scene-strata .stratum-d6 rect { fill: var(--strata-d6); }
+.scene-strata .stratum-d7 rect { fill: var(--strata-d7); }
+.scene-strata .stratum-d8 rect { fill: var(--strata-d8); }
+.scene-strata .stratum-d9 rect { fill: var(--strata-d9); }
+.scene-strata .stratum-d10 rect { fill: var(--strata-d10); }
+.scene-strata .stratum-d11 rect { fill: var(--strata-d11); }
+.scene-strata .stratum-examples rect { fill: var(--strata-examples); }
+
+.scene-strata .stratum-bedrock rect {
+  stroke-dasharray: 3 3;
+}
+
+.scene-strata .stratum-part text {
+  fill: #1c1a17;
+  font: 700 12px var(--mono);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.scene-strata .stratum-bedrock .stratum-part text,
+.scene-strata .stratum-d1 .stratum-part text {
+  fill: #fdf8f0;
+}
+
+.scene-strata .stratum-name {
+  fill: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.scene-strata .stratum-part:hover rect,
+.scene-strata .stratum-part:focus-visible rect,
+.scene-strata .stratum-part.is-current rect {
+  filter: brightness(1.12) saturate(1.2);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.scene-strata .stratum.is-current .stratum-name {
+  fill: var(--accent);
+}
+
+/* Hovering a session lights the sessions it rests on and fades the rest. */
+.scene-strata .strata-svg.has-current .stratum-part rect {
+  opacity: 0.45;
+  transition: opacity 150ms ease;
+}
+
+.scene-strata .strata-svg.has-current .stratum-part.is-current rect,
+.scene-strata .strata-svg.has-current .stratum-part.is-support rect {
+  opacity: 1;
+}
+
+.scene-strata .stratum-part.is-support rect {
+  stroke: var(--primary);
+  stroke-width: 2.5;
+  stroke-dasharray: 6 3;
+}
+
+.scene-strata .strata-info-rests {
+  margin-top: 8px;
+  font-size: 0.84rem;
+}
+
+.scene-strata .strata-info-rests code {
+  font-size: 0.76rem;
+}
+
+.scene-strata .strata-info {
+  position: sticky;
+  top: 90px;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+.scene-strata .strata-info p {
+  margin: 0;
+}
+
+.scene-strata .strata-info-name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.scene-strata .strata-info-meta {
+  margin-top: 2px;
+  color: var(--primary);
+  font: 700 0.78rem var(--mono);
+}
+
+.scene-strata .strata-info-text {
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.scene-strata .strata-info-hint {
+  margin-top: 10px;
+  color: var(--text-faint);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .scene-strata .strata-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .scene-strata .strata-info {
+    position: static;
+  }
+}
