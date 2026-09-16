@@ -381,7 +381,7 @@ def main() -> int:
     if stale:
         print(
             f"check_pages_links: warning: {len(stale)} theory link(s) not found in build/isabelle-html; "
-            "rebuild it with `pixi run isabelle-docs-build` if the names are new:"
+            "rebuild it with `pixi run isabelle-html-build` if the names are new:"
         )
         print("\n".join(stale))
     if skipped:

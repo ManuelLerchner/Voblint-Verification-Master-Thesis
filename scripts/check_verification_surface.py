@@ -44,6 +44,9 @@ RETIRED_TASKS = {
     "codegen-api",
     "codegen-modules",
     "docs-lint",
+    # Renamed to isabelle-html-build, to sit beside isabelle-pdf-build:
+    # "docs" named the format of neither output.
+    "isabelle-docs-build",
     "docs-overview",
     "gen-assembly",
     "gen-grammar-isabelle",
