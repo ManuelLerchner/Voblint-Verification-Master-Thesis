@@ -5,11 +5,13 @@ description: 'Setup Isabelle: checkout the AFP, set environment variables, cache
 inputs:
   use-cache:
     description: >-
-      Restore/save the cross-run heap cache. Set to 'false' for split jobs
-      that instead receive an exact heap state via a same-run workflow
-      artifact (see build-isabelle in ci.yml) -- only one job per workflow
-      run should write the cross-run cache, to avoid multiple writers
-      racing to save the same key.
+      How this job uses the cross-run heap cache. 'true' restores and saves
+      it; only one job per workflow run may do that, to avoid multiple
+      writers racing to save the same key (build-isabelle in ci.yml is that
+      job). 'restore' restores without saving, for jobs that run alongside
+      build-isabelle rather than after it and so have no same-run heap to
+      inherit. 'false' does neither, for jobs that receive an exact heap
+      state via a same-run workflow artifact.
     required: false
     default: 'true'
 runs:
@@ -90,6 +92,18 @@ runs:
     - name: Restore/save Isabelle heap cache
       if: inputs.use-cache == 'true'
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+        key: isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-${{ github.sha }}
+        restore-keys: |
+          isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-
+
+    # Same key and fallbacks as above, restore half only: a job running
+    # concurrently with build-isabelle warms itself from the previous run's
+    # heaps and leaves the saving to build-isabelle.
+    - name: Restore Isabelle heap cache (read-only)
+      if: inputs.use-cache == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ env.ISABELLE_HOME_USER }}/heaps/
         key: isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-${{ github.sha }}

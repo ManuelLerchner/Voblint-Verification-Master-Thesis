@@ -27,13 +27,16 @@ concurrency:
 jobs:
   # build-isabelle is the sole cross-run heap-cache writer (see #103): a
   # plain incremental build (no -c) that both validates and warms the
-  # cache, then hands its exact heap state to the jobs below as a
-  # same-run workflow artifact (use-cache: false on all of them, so only
-  # one job ever writes the cross-run cache). Every consumer still runs
-  # its real `isabelle build`/`isabelle lint` command -- the artifact
-  # only changes how much of that is incremental, never whether it runs,
-  # so a stale or restored-from-a-different-commit heap can never make a
-  # broken source tree look green.
+  # cache, then hands its exact heap state to the jobs that wait on it
+  # (isabelle-lint, codegen-check) as a same-run workflow artifact, with
+  # use-cache: false on each. html and formalization-pdf do not wait --
+  # neither is made faster by a freshly built heap -- and read the same
+  # cross-run cache with use-cache: restore, so build-isabelle remains the
+  # only writer either way. Every consumer still runs its real
+  # `isabelle build`/`isabelle lint` command; the heap only changes how
+  # much of that is incremental, never whether it runs, so a stale or
+  # restored-from-a-different-commit heap can never make a broken source
+  # tree look green.
   build-isabelle:
     runs-on: ubuntu-latest
     container:
@@ -208,8 +211,13 @@ jobs:
             exit 1
           fi
 
+  # Runs alongside build-isabelle rather than after it. html.sh's -c deletes
+  # every Voblint_* heap before building, so the same-run artifact this job
+  # used to wait for was discarded unread; only the ancestors outside that
+  # selection (TD, HOL-Library, Root_Balanced_Tree) are reused, and the
+  # cross-run cache supplies those. Restore-only, so build-isabelle stays
+  # the sole writer.
   html:
-    needs: build-isabelle
     runs-on: ubuntu-latest
     container:
       image: makarius/isabelle:Isabelle2025-2
@@ -239,7 +247,7 @@ jobs:
       - name: Setup Isabelle
         uses: $/.github/actions/setup-isabelle-action
         with:
-          use-cache: 'false'
+          use-cache: 'restore'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
@@ -247,16 +255,9 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
-      - name: Download exact heap state from build-isabelle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: isabelle-heaps
-          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
-
-      # Still a clean build (-c) internally, for browser_info's own
-      # every-session-presented requirement -- consuming build-isabelle's
-      # heaps here doesn't avoid that, it just keeps that cost isolated
-      # to this job instead of gating the fast validation jobs on it.
+      # A clean build (-c) internally, for browser_info's own
+      # every-session-presented requirement. That cost is unavoidable and
+      # stays isolated to this job.
       - name: Build HTML docs (clean build of every session)
         run: pixi run isabelle-docs-build
 
@@ -574,8 +575,12 @@ jobs:
       - name: HTML report sweep over the domain/solver/context space
         run: pixi run html-report-config-audit
 
+  # Unpinned from build-isabelle for the same reason as html, by a different
+  # mechanism: Voblint_Document re-elaborates all 223 theories from HOL (the
+  # session's own 32 min; its document step is 23s of that), so the inherited
+  # heaps never shortened it. Measured across runs, this job takes 22-34 min
+  # whether build-isabelle rebuilt for 41 min or skipped entirely.
   formalization-pdf:
-    needs: build-isabelle
     runs-on: ubuntu-latest
     container:
       image: makarius/isabelle:Isabelle2025-2
@@ -608,19 +613,13 @@ jobs:
       - name: Setup Isabelle
         uses: $/.github/actions/setup-isabelle-action
         with:
-          use-cache: 'false'
+          use-cache: 'restore'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
-
-      - name: Download exact heap state from build-isabelle
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: isabelle-heaps
-          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
 
       - name: Check PDF theory selection
         run: pixi run isabelle-pdf-selection-check
