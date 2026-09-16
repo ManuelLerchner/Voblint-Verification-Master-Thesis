@@ -11,6 +11,11 @@ That failure is disproportionate to its cause: jEdit will not start, so the
 mistake presents as a dead editor rather than as an error in the file that
 caused it. It costs nothing to catch here.
 
+A `Session.Theory` entry is the one exception to "a name, never a path": it
+builds another session's theory into this heap without importing it, so it is
+resolved against that session's search path instead. An entry naming a session
+outside the scan (vendored, or HOL) is left alone.
+
 Also checked: every `directories` entry exists; every theory entry resolves to a
 file on that session's search path; and every .thy on that search path is
 *reached* by the session that owns it, either by being listed or by being
@@ -95,6 +100,28 @@ def reached(listed, search):
     return seen
 
 
+SESSION = re.compile(r"^session\s+([A-Za-z0-9_-]+)\b", re.M)
+
+
+def session_search_paths(all_roots):
+    """session name -> its search path, for resolving qualified theory entries.
+
+    A `theories` entry may name another session's theory as `Session.Theory`,
+    which builds it into this session's heap without importing it. Resolving
+    that needs the *owning* session's search path, not this one's.
+    """
+    paths = {}
+    for root_file in all_roots:
+        text = root_file.read_text()
+        m = SESSION.search(COMMENT.sub("", text))
+        if not m:
+            continue
+        base = root_file.parent
+        dirs = [e for b, e in entries(text) if b == "directories"]
+        paths[m.group(1)] = [base] + [base / d for d in dirs]
+    return paths
+
+
 def owned_theories(base, dirs, all_roots):
     """The .thy files this session owns: those on its search path that no
     nested session claims first."""
@@ -121,7 +148,21 @@ def check(root_file, all_roots):
             problems.append(f"{root_file}: directories entry '{d}' is not a directory")
 
     search = [base] + [base / d for d in dirs]
+    owners = session_search_paths(all_roots)
     for t in theories:
+        if "." in t:
+            # Session-qualified: another session owns the file, so resolve it
+            # there. An unscanned session (vendored, or HOL) cannot be checked,
+            # which is the same exemption owned_theories makes for vendor/.
+            owner, name = t.rsplit(".", 1)
+            if owner in owners and not any(
+                (d / f"{name}.thy").is_file() for d in owners[owner]
+            ):
+                problems.append(
+                    f"{root_file}: theory entry '{t}' has no .thy on "
+                    f"{owner}'s search path"
+                )
+            continue
         if "/" in t:
             fix = t.rsplit("/", 1)[1]
             problems.append(

@@ -258,7 +258,18 @@ jobs:
       # heaps here doesn't avoid that, it just keeps that cost isolated
       # to this job instead of gating the fast validation jobs on it.
       - name: Build HTML docs (clean build of every session)
-        run: pixi run isabelle-docs-build
+        shell: bash
+        run: |
+          set -o pipefail
+          pixi run isabelle-docs-build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      # Only a clean build of every session sees every elaboration, which is
+      # why this lives here and not in build-isabelle (which skips when no
+      # theory changed). A library session re-elaborated instead of inherited
+      # costs real time and shows no other symptom -- it was 19% of a clean
+      # build before the budgets in the script were met.
+      - name: Library re-elaboration stays within budget
+        run: pixi run reelaboration-check "$RUNNER_TEMP/build.log"
 
       # This job has the only freshly rendered tree in CI, so it is where the
       # link map is regenerated. It reports drift rather than gating: the
@@ -443,6 +454,9 @@ jobs:
 
       - name: Session ROOT structure and theory reachability
         run: pixi run sessions-check
+
+      - name: Site links' theory anchors match the theory sources
+        run: pixi run theory-anchors-check
 
       - name: Generated analysis assembly drift
         run: pixi run assembly-check
