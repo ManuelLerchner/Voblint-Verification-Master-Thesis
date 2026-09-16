@@ -171,7 +171,7 @@ isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
 isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = [
   "vendor-init",
 ], description = "Build Voblint_Examples and its complete Isabelle dependency closure." }
-isabelle-docs-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
+isabelle-html-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
   "vendor-init",
 ], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
 pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
@@ -367,7 +367,7 @@ verify = { depends-on = [
   # ------------------------------------------------------------------------
   # Expensive rendered artifacts
   # ------------------------------------------------------------------------
-  "isabelle-docs-build",
+  "isabelle-html-build",
   "isabelle-pdf-build",
 ], description = "Run the supported local verification gate, cheapest fail-fast checks first; GitHub CI runs the same leaf checks separately." }
 [feature.thesis.dependencies]

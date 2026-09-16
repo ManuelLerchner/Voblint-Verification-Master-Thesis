@@ -295,7 +295,7 @@ def main() -> int:
         if not HTML.is_dir() or not any(HTML.rglob("*.html")):
             return skip_or_fail(
                 "no rendered theories under build/isabelle-html -- build them with "
-                "`pixi run isabelle-docs-build`",
+                "`pixi run isabelle-html-build`",
                 args.lenient,
             )
 
@@ -306,7 +306,7 @@ def main() -> int:
             "anchor:\n"
             + "\n".join(unresolved)
             + "\nEither the name is stale, or build/isabelle-html predates it "
-            "(rebuild with: pixi run isabelle-docs-build)"
+            "(rebuild with: pixi run isabelle-html-build)"
         )
         return skip_or_fail(detail, args.lenient)
 
