@@ -207,7 +207,7 @@ codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", desc
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
 sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
-reelaboration-check = { cmd = "python3 scripts/check_build_reelaboration.py build/isabelle-build.log", description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
+reelaboration-check = { cmd = "python3 scripts/check_build_reelaboration.py", description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
 # Everything the export exposes is decided by its root list, and a missing
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.

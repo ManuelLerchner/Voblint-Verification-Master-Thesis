@@ -35,6 +35,7 @@ Usage: python3 scripts/check_build_reelaboration.py build.log [--top N]
 import collections
 import re
 import sys
+from pathlib import Path
 
 # Library sessions with their own heaps. Re-elaborating one is always waste:
 # unlike a project session, nothing here is ours to restructure, and the fix is
@@ -48,6 +49,8 @@ BUDGET = {
     "HOL-IMP": 1,  # one theory, under a second
 }
 
+DEFAULT_LOG = "build/isabelle-build.log"
+
 LINE = re.compile(r"(\S+): theory (\S+)\.(\S+) 100% \(([\d.]+)s cumulated time\)")
 
 
@@ -56,15 +59,23 @@ def main():
     top = 10
     if "--top" in sys.argv:
         top = int(sys.argv[sys.argv.index("--top") + 1])
-    if not args:
-        print(__doc__.strip().splitlines()[-1], file=sys.stderr)
+    # The default lives here, not in the Pixi task's cmd: a caller that passes
+    # its own log would otherwise have it appended after the baked-in one, and
+    # only the first is read.
+    log = args[0] if args else DEFAULT_LOG
+    if not Path(log).is_file():
+        print(
+            f"{log}: no such build log. Produce one with `pixi run isabelle-build`, "
+            "or pass the path of an `isabelle build -v` log.",
+            file=sys.stderr,
+        )
         return 2
 
     per_lib = collections.Counter()
     lib_cost = collections.defaultdict(float)
     per_thy = collections.defaultdict(list)
     total = 0.0
-    for line in open(args[0], errors="replace"):
+    for line in open(log, errors="replace"):
         m = LINE.search(line)
         if not m:
             continue
@@ -87,7 +98,7 @@ def main():
         # budgets below would pass without having looked at anything. Say so:
         # the deciding run is a clean build (CI's html job), not this one.
         print(
-            f"{args[0]} has no theory elaboration lines -- nothing was rebuilt, "
+            f"{log} has no theory elaboration lines -- nothing was rebuilt, "
             "so this run proves nothing. A clean build (isabelle build -c) is "
             "what exercises the budgets."
         )
@@ -101,7 +112,7 @@ def main():
         ),
         reverse=True,
     )
-    print(f"re-elaboration in {args[0]} ({total / 3600:.1f}h of theory elaboration)\n")
+    print(f"re-elaboration in {log} ({total / 3600:.1f}h of theory elaboration)\n")
     print(f"{'theory':<52}{'x':>3}{'wasted':>9}")
     for w, o, t, c in waste[:top]:
         print(f"{o + '.' + t:<52}{c:>3}{w:>8.0f}s")
