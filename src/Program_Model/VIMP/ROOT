@@ -1,6 +1,12 @@
 chapter Voblint
 
-session Voblint_VIMP in "." = HOL +
+(* Parented on HOL-Library, not HOL: the library is otherwise a *sibling* of
+   this chain, so every "HOL-Library.X" import below re-elaborates X inside the
+   importing session instead of reading it from the library's own prebuilt heap.
+   Eight sessions were paying that, 31 elaborations between them. As an ancestor
+   it costs nothing -- heap ancestry preloads, it does not import, so no theory
+   context changes. *)
+session Voblint_VIMP in "." = "HOL-Library" +
   description "VIMP syntax, small-step, and procedure language"
   sessions
     Deriving

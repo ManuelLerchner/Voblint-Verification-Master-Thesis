@@ -213,6 +213,17 @@ pre-commit:
             glob: "**/*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}
 
+          # The rendered-HTML anchor check only runs in pages-site, the last CI
+          # job. This derives the locale qualification from the theory source
+          # instead, which is the part that silently rots: both spellings name a
+          # real fact in a real file, so nothing else notices.
+          - name: theory-anchors
+            glob:
+              - "pages/**/*.html"
+              - "pages/**/*.js"
+              - "src/**/*.thy"
+            run: pixi run theory-anchors-check
+
           # ROOT mistakes are cheap to detect and can otherwise make jEdit or
           # Isabelle fail far away from the actual edit.
           - name: sessions

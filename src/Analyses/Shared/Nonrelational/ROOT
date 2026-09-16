@@ -11,7 +11,14 @@ session Voblint_Nonrelational in "." = "Voblint_Result" +
     "Voblint_Domain"
     "Voblint_Framework"
     "Voblint_Exec"
+    "HOL-Computational_Algebra"
   theories
+    (* Elaborated here rather than imported, for the same reason Voblint_VIMP
+       is parented on HOL-Library: HOL-Computational_Algebra is a sibling of
+       this chain, so Congruence_Backward's import of it was re-elaborated in
+       both Analysis_Congruence and Analysis_Int. This is their nearest common
+       ancestor. *)
+    "HOL-Computational_Algebra.Euclidean_Algorithm"
     Abstract_Arithmetic
     Special_Ops
     Nonrelational_Transfer

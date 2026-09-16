@@ -15,6 +15,15 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     "Result"
     "Checks"
   theories
+    (* Elaborated here, not imported: the two solver theories that reach
+       TD_side_upd_rule first appear at the Analysis_* layer, where five
+       sibling domains and Voblint_Examples_Relational each paid for that
+       2400-line theory separately. Building them into this heap -- the
+       nearest common ancestor of all six -- costs one elaboration and
+       saves the other five, exactly as TD_side already works. Nothing
+       here imports them, so the proof dependency graph is unchanged. *)
+    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     CFG_Enumeration
     DG_State
     DG_Constraint_Trees

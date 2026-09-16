@@ -207,6 +207,7 @@ codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", desc
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
 sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
+reelaboration-check = { cmd = "python3 scripts/check_build_reelaboration.py build/isabelle-build.log", description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
 # Everything the export exposes is decided by its root list, and a missing
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.
@@ -315,6 +316,7 @@ verify = { depends-on = [
   "toml-format-check",
   "pages-lint",
   "pages-links",
+  "theory-anchors-check",
   "pages-scripts-check",
   "regression-lint",
   "isabelle-ascii-check",
@@ -357,6 +359,7 @@ verify = { depends-on = [
   # they can reuse the populated heap store.
   # ------------------------------------------------------------------------
   "isabelle-build",
+  "reelaboration-check",
   "thesis-facts",
   "codegen-check",
   "isabelle-lint",
@@ -436,5 +439,6 @@ thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", de
 # the deployed pages, so it cannot run until GitHub Pages has published them.
 thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
 pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
+theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }

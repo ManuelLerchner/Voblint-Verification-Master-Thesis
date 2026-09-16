@@ -39,7 +39,13 @@ def inventory():
         by_name = {path.stem: path for path in owned}
         if len(by_name) != len(owned):
             raise ValueError(f"Duplicate theory filenames in {root}")
-        listed = [name for block, name in blocks if block == "theories"]
+        # A session-qualified entry builds another session's theory into this
+        # heap; that session still owns it, presents it, and gives it its LaTeX
+        # basename. Counting it here would report it unresolved against this
+        # session's own files, and then duplicate it in the document.
+        listed = [
+            name for block, name in blocks if block == "theories" and "." not in name
+        ]
         missing = set(listed) - by_name.keys()
         if missing:
             raise ValueError(f"Unresolved theories in {root}: {sorted(missing)}")
