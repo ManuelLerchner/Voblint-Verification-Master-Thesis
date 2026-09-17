@@ -1,0 +1,71 @@
+# Explanatory SVGs lifted from the explainer page into thesis assets.
+#
+# SCOPE. These are *not* thesis figures. A figure drawn for a web page has a
+# different job from one drawn for print: it is persuasive, it simplifies
+# deliberately, and it was composed for a screen. Every figure the thesis needs
+# is drawn for the thesis, in Typst, from the theories and the analyzer.
+#
+# What stays here is the small set that carries *measured data* rather than
+# composition -- line counts, theory counts, the session layering -- where
+# re-deriving the numbers by hand would be the only alternative and would drift.
+# Even these are references: check the numbers before a redraw ships.
+#
+# `thesis/tools/explainer_svg.py` reads this file, pulls each figure out of
+# pages/index.html, inlines the stylesheet rules that apply, and rewrites the
+# site palette into the thesis one.  pages/ is never written to.
+#
+#   aria_prefix   a prefix of the figure's aria-label -- the stable handle,
+#                 since no <svg> on the page carries an id.  Must match exactly
+#                 one figure; two matches is an error, not a first-wins.
+#   svg_class     alternative handle, for a figure whose aria-label it shares
+#                 with another.  Must also be unique.
+#   css           figure stylesheet modules under pages/figures/ whose rules
+#                 style this figure.  pages/style.css is always included.
+#   drop_classes  elements to remove, for a figure whose page shows them only
+#                 in another state.  Choosing the frame is editorial; record it.
+#   chapter       where the figure is intended to land (docs/THESIS_BLUEPRINT.md §7)
+#   why           what the figure is for -- quoted back by a failing check
+
+# ---------------------------------------------------------------- Part II --
+
+
+[figures.iceberg]
+aria_prefix = "Two icebergs"
+css = ["iceberg"]
+chapter = "11.4, 12.1"
+why = "Generated code above the waterline, the proof that justifies it below."
+
+[figures.strata]
+aria_prefix = "A cross-section of rock layers"
+css = ["strata"]
+chapter = "12.1"
+why = "The formalization in cross-section: one stratum per session, sized by its proof."
+
+# Not extractable, deliberately absent
+# -----------------------------------
+# These figures are empty <svg> shells in the page; pages/figures/*.js builds
+# their contents at run time, so a static copy yields nothing.  The extractor
+# detects and rejects them rather than writing a blank file.
+#
+#   gamma             "What an abstract value stands for"   (gamma.js)
+#   strategy-tree     "What an equation is made of"          (trees.js)
+#   timeline-of-runs  the literature time axis               (timeline.js)
+#   recursion         the call spiral                        (recursion-spiral.js)
+#
+# One more is excluded for a different reason.  `contexts` ("how many copies of
+# a procedure") is not a shell -- its markup holds 46 elements -- but the page
+# builds the per-context boxes as HTML overlaid on the SVG and switches frames
+# with a CSS-only radio tab, so a static copy renders the root node and nothing
+# else.  A figure whose content is not in the SVG cannot be lifted out of it.
+# `program-and-values` ("many runs in, one region out") fails the same way:
+# particles.js draws the nodes, so the extract has the edges and the guard
+# labels and no program points at all.
+#
+# For the thesis: capture these with scripts/capture_readme_figures.mjs, which
+# already drives Chrome with the scripts running, or redraw it in fletcher from
+# the call-string example in Example_Sign_DG_CallString_K1/K2.
+#
+# For the thesis: gamma and the strategy tree are better drawn natively anyway
+# (fletcher/curryst, payload from Abstract_Domain.thy and Basics_side.thy); the
+# literature timeline is bibliography data and belongs in Chapter 13 as a table
+# or a generated plot, not as a lifted web figure.

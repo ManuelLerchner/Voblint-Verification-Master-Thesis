@@ -399,6 +399,11 @@ thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", desc
 thesis-facts = { cmd = "python3 thesis/tools/facts.py --check", description = "Check thesis theorem statements against a built Isabelle session." }
 thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", description = "Regenerate thesis theorem statements from a built Isabelle session." }
 
+# Explanatory figures already drawn for the explainer page, lifted into thesis
+# assets with the site palette rewritten. Reads pages/, never writes to it.
+thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
+thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
+
 # Warnings are failures; an unresolved reference must not scroll past unread.
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
 
@@ -416,12 +421,14 @@ thesis-generated = { depends-on = [
   "thesis-snippets-write",
   "thesis-claims-write",
   "thesis-facts-write",
+  "thesis-figures-write",
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
 # Every drift check, in one name.
 thesis-check = { depends-on = [
   "thesis-refs",
   "thesis-snippets",
+  "thesis-figures",
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
