@@ -84,12 +84,23 @@ for (const toc of document.querySelectorAll(".doc-toc")) {
 
   const update = () => {
     frame = 0;
+    const probe = window.innerHeight * 0.35;
     const box = main.getBoundingClientRect();
-    const read = Math.min(1, Math.max(0, (window.innerHeight * 0.35 - box.top) / box.height));
+
+    /* The bar fills as the article passes the probe, but its last screenful never
+       reaches it: nothing below the article is tall enough to scroll that far. So
+       the range ends wherever scrolling stops, and the foot of the page reads 100%. */
+    const top = box.top + window.scrollY;
+    const start = top - probe;
+    const end = Math.min(
+      top + box.height - probe,
+      document.documentElement.scrollHeight - window.innerHeight,
+    );
+    const read =
+      end > start ? Math.min(1, Math.max(0, (window.scrollY - start) / (end - start))) : 1;
     fill.style.height = `${(read * 100).toFixed(1)}%`;
     percent.textContent = String(Math.round(read * 100));
 
-    const probe = window.innerHeight * 0.35;
     let current = 0;
 
     links.forEach(({ section }, i) => {
