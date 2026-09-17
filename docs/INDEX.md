@@ -60,8 +60,9 @@ match the tree.
 - [`solve_dom` total-correctness route](P1_TOTAL_CORRECTNESS_ROUTE.md) and
   [`TD_side` termination sketch](TD_SIDE_TERMINATION_SKETCH.md) — why solver
   termination stays a hypothesis.
-- [Thesis scope memo](THESIS_SCOPE_MEMO.md) and the
-  [trace-pivot chapter draft](thesis/trace-pivot-and-history-sensitive-globals.md).
+- [Thesis blueprint](THESIS_BLUEPRINT.md), the architecture the thesis is
+  written from; supersedes the scope memo.
+- [Thesis scope memo](THESIS_SCOPE_MEMO.md), historical.
 
 ## Isabelle development
 
