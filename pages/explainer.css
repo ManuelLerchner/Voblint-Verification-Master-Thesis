@@ -889,6 +889,13 @@
   white-space: nowrap;
 }
 
+/* Keeping the arrow with the last word is worth one line, not an overflowing one. */
+@media (max-width: 640px) {
+  .try-link {
+    white-space: normal;
+  }
+}
+
 /* -------------------------------------------------------------------------- */
 /* What an abstract value stands for                                          */
 /* -------------------------------------------------------------------------- */

@@ -2085,6 +2085,50 @@ a:focus-visible {
   }
 }
 
+/* A sticky bar that wraps to three rows costs a phone a sixth of its screen for the
+   whole page, so below this width the call to action shares the brand's row and the
+   links keep one of their own. */
+@media (max-width: 560px) {
+  /* The toolbar's groups do not fit one phone row, and the file name is the one
+     label nothing else depends on. */
+  .editor-toolbar {
+    flex-wrap: wrap;
+    padding-block: 6px;
+  }
+
+  .editor-file {
+    display: none;
+  }
+
+  /* Truncated to two or three glyphs the outline says nothing; the panel below
+     still holds the whole term. */
+  .raw-call {
+    display: none;
+  }
+
+  .site-nav-inner {
+    position: relative;
+    min-height: 0;
+    padding: 8px 0;
+    gap: 4px;
+  }
+
+  .site-links {
+    flex: 1 1 100%;
+    gap: 2px 14px;
+  }
+
+  .site-links a {
+    font-size: 0.86rem;
+  }
+
+  .site-links li:last-child {
+    position: absolute;
+    top: 8px;
+    right: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .page-shell {
     width: min(100% - 28px, 1600px);

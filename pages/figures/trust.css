@@ -75,23 +75,23 @@
 
 /* Each delay is when the packet reaches that box: its center's share of the path times 70% of 9s. */
 :where(.scene-trust) .st-parser rect {
-  animation-delay: 1.1s;
+  animation-delay: 1.01s;
 }
 
 :where(.scene-trust) .st-cfg rect {
-  animation-delay: 2.24s;
+  animation-delay: 2.07s;
 }
 
 :where(.scene-trust) .st-eqs rect {
-  animation-delay: 3.17s;
+  animation-delay: 3.07s;
 }
 
 :where(.scene-trust) .st-solver rect {
-  animation-delay: 4.09s;
+  animation-delay: 4.07s;
 }
 
 :where(.scene-trust) .st-result rect {
-  animation-delay: 5.03s;
+  animation-delay: 4.94s;
 }
 
 :where(.scene-trust) .st-view rect {
@@ -127,12 +127,12 @@
     opacity: 1;
   }
   70% {
-    transform: translate(1000px, 160px);
+    transform: translate(1075px, 160px);
     opacity: 1;
   }
   78%,
   100% {
-    transform: translate(1000px, 160px);
+    transform: translate(1075px, 160px);
     opacity: 0;
   }
 }

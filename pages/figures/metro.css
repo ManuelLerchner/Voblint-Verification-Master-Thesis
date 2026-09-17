@@ -157,6 +157,7 @@
 
 :where(.scene-metro) .metro-info-name span {
   margin-left: 8px;
+  overflow-wrap: anywhere;
   color: var(--text-muted);
   font: 0.78rem var(--mono);
 }
