@@ -186,9 +186,13 @@ isabelle-pdf-full-build = { cmd = "bash scripts/mk/pdf.sh --include-examples", d
   "vendor-init",
 ], description = "Render all theories and example sessions into output/document-full.pdf." }
 isabelle-pdf-selection-check = { cmd = "python3 tests/test_pdf_session.py", description = "Check PDF theory selection, certificate inclusion, and preserved proof imports." }
+# Outside `verify` and outside CI, on purpose: the community linter has never
+# reported a finding on this tree, and it installs itself from the linter's
+# master branch, so what it checks is not pinned to anything here. Run it by
+# hand when the style rules are the question.
 isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = [
   "vendor-init",
-], description = "Run the Isabelle community linter over all project sessions." }
+], description = "Run the Isabelle community linter over all project sessions; manual, not part of verify or CI." }
 isabelle-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = [
   "vendor-init",
 ], description = "Launch Isabelle/jEdit with the AFP, solver, and project session roots." }
@@ -362,7 +366,6 @@ verify = { depends-on = [
   "reelaboration-check",
   "thesis-facts",
   "codegen-check",
-  "isabelle-lint",
 
   # ------------------------------------------------------------------------
   # Expensive rendered artifacts
