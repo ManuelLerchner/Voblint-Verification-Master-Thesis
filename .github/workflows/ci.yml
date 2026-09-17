@@ -373,18 +373,60 @@ jobs:
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
 
+      # Both checks below are functions of the theories, the session structure and
+      # the two files the thesis facts are compared against, so a tree identical
+      # to one that already passed has nothing to re-check. The marker this
+      # restores carries no result: its presence under an exact key IS the
+      # result, which is why the key must name everything the checks read. It is
+      # computed before Setup Isabelle so a hit also skips the AFP checkout and
+      # the heap download, which is most of this job's wall clock.
+      #
+      # `isabelle version` goes into the digest because the linter and the
+      # `isabelle console` the facts check drives both come from the container,
+      # and it can be read before the setup action runs. What the digest cannot
+      # see is the linter itself: isabelle-lint.sh installs it from master,
+      # unpinned, so an unchanged tree stops being re-linted against new upstream
+      # rules until something in the digest moves.
+      - name: Digest what the lint job checks
+        id: sources
+        shell: bash
+        run: |
+          digest=$(
+            {
+              /home/isabelle/Isabelle/bin/isabelle version
+              git ls-files -s -- src ROOTS pixi.toml \
+                scripts/mk/isabelle-lint.sh scripts/mk/sessions.sh \
+                scripts/mk/require-afp.sh thesis/tools/facts.py \
+                thesis/shared/facts.toml thesis/shared/generated/facts.json \
+                vendor/td-verification .github/actions/setup-isabelle-action
+            } | sha256sum | cut -c1-32
+          )
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Lint input digest: $digest"
+
+      - name: Restore the marker of an earlier passing run
+        id: lint-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ci-marker/isabelle-lint
+          key: isabelle-lint-${{ runner.os }}-${{ runner.arch }}-${{ steps.sources.outputs.digest }}
+
       - name: Setup Isabelle
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from isabelle-build
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: isabelle-heaps
@@ -394,10 +436,31 @@ jobs:
       # session and diffed. This is the Typst template's replacement for
       # Isabelle's @{thm} antiquotation, so it needs the heaps this job has.
       - name: Thesis theorem statements match what Isabelle proves
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         run: pixi run thesis-facts
 
       - name: Isabelle community linter
+        if: steps.lint-cache.outputs.cache-hit != 'true'
         run: pixi run isabelle-lint
+
+      - name: Report the reused result
+        if: steps.lint-cache.outputs.cache-hit == 'true'
+        run: echo "Inputs unchanged since these checks passed; skipping them."
+
+      # Written only after both checks passed, and only from main, so a marker
+      # can never outrun the result it stands for.
+      - name: Record the passing run
+        if: steps.lint-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-marker"
+          echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-marker/isabelle-lint"
+
+      - name: Save the marker for later runs
+        if: steps.lint-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ci-marker/isabelle-lint
+          key: ${{ steps.lint-cache.outputs.cache-primary-key }}
 
   codegen-check:
     needs: isabelle-build
@@ -427,25 +490,79 @@ jobs:
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
 
+      # This check regenerates the export and diffs it against the tracked copy,
+      # so the key names both sides. The generated side comes from
+      # codegen-hash.sh, which is the repository's own definition of "codegen's
+      # inputs" and is already shared by regenerate-codegen.sh and cli-build.sh;
+      # spelling that list out again here would make this the third definition
+      # of it, which is the thing that script exists to prevent. The tracked side
+      # and the vendored solver (which codegen-hash.sh does not reach) are named
+      # separately. Computed before Setup Isabelle, so a hit skips the AFP
+      # checkout and the heap download as well as the check.
+      - name: Digest what the codegen check compares
+        id: sources
+        shell: bash
+        run: |
+          digest=$(
+            {
+              /home/isabelle/Isabelle/bin/isabelle version
+              sh scripts/mk/codegen-hash.sh
+              git ls-files -s -- codegen/generated pixi.toml \
+                scripts/mk/check-clean.sh scripts/mk/require-afp.sh \
+                vendor/td-verification .github/actions/setup-isabelle-action
+            } | sha256sum | cut -c1-32
+          )
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Codegen input digest: $digest"
+
+      - name: Restore the marker of an earlier passing run
+        id: codegen-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ci-marker/codegen-check
+          key: codegen-check-${{ runner.os }}-${{ runner.arch }}-${{ steps.sources.outputs.digest }}
+
       - name: Setup Isabelle
+        if: steps.codegen-cache.outputs.cache-hit != 'true'
         uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
+        if: steps.codegen-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
+        if: steps.codegen-cache.outputs.cache-hit != 'true'
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from isabelle-build
+        if: steps.codegen-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
 
       - name: Codegen drift check
+        if: steps.codegen-cache.outputs.cache-hit != 'true'
         run: pixi run codegen-check
+
+      - name: Report the reused result
+        if: steps.codegen-cache.outputs.cache-hit == 'true'
+        run: echo "Inputs unchanged since this check passed; skipping it."
+
+      - name: Record the passing run
+        if: steps.codegen-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p "$RUNNER_TEMP/ci-marker"
+          echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-marker/codegen-check"
+
+      - name: Save the marker for later runs
+        if: steps.codegen-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/ci-marker/codegen-check
+          key: ${{ steps.codegen-cache.outputs.cache-primary-key }}
 
   regression-drivers:
     runs-on: ubuntu-latest
