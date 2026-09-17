@@ -1,5 +1,8 @@
-#import "lib/tum.typ": thesis
+#import "lib/tum.typ": front-chapter, thesis
+#import "lib/theme.typ": vb
+#import "@preview/codly:1.3.0": codly, codly-init
 #import "lib/theorems.typ": thm-counter
+#import "lib/figures.typ": part, part-outline-entry
 #import "@preview/glossarium:0.5.10": make-glossary, print-glossary, register-glossary
 #import "lib/glossary.typ": entries as glossary-entries
 
@@ -17,6 +20,25 @@
   date: "01.12.2026",
 )
 
+// Listings: codly draws the frame and the line numbers for every raw block,
+// so lib/code.typ hands it bare `raw` content. A language tag names what a
+// block is in the thesis's terms, not the highlighter's: the VIMP programs
+// are highlighted as C.
+#show: codly-init.with()
+#codly(
+  zebra-fill: none,
+  fill: vb.bg,
+  stroke: 0.7pt + vb.frame,
+  radius: 3pt,
+  display-icon: false,
+  number-format: n => text(fill: vb.muted, size: 0.75em, str(n)),
+  languages: (
+    c: (name: "VIMP", color: vb.keyword),
+    isabelle: (name: "Isabelle", color: vb.accent),
+    ocaml: (name: "OCaml", color: vb.trusted),
+  ),
+)
+
 // Theorem numbering restarts at every chapter.
 #show heading.where(level: 1): it => {
   thm-counter.update(0)
@@ -26,30 +48,46 @@
 // Front matter chapters are unnumbered.
 #set heading(numbering: none)
 
-#include "content/acknowledgements.typ"
-#include "content/abstract.typ"
+#front-chapter({
+  include "content/acknowledgements.typ"
+  include "content/abstract.typ"
+})
 
-#outline(depth: 2)
+#show outline.entry.where(level: 1): part-outline-entry
+// The template leaves 11pt more between the title and the first entry than
+// between a chapter title and its text.
+#heading(outlined: false)[Contents]
+#v(10.9pt)
+#outline(title: none, depth: 3)
 
 // ------------------------------------------------------------ main matter --
 #pagebreak(to: "odd")
 #set page(numbering: "1")
 #counter(page).update(1)
-#set heading(numbering: "1.1")
+#set heading(numbering: "1.1.")
 #counter(heading).update(0)
 
+#part("The Problem")
 #include "content/01-introduction.typ"
 #include "content/02-background.typ"
+
+#part("What Must Be Over-Approximated")
 #include "content/03-program-model.typ"
 #include "content/04-traces.typ"
+
+#part("The Analyzer")
 #include "content/05-domains.typ"
 #include "content/06-analysis-interface.typ"
 #include "content/07-equations.typ"
 #include "content/08-solving.typ"
 #include "content/09-results.typ"
+
+#part("Instances and Practice")
 #include "content/10-instances.typ"
 #include "content/11-executable.typ"
 #include "content/12-evaluation.typ"
+
+#part("Assessment")
 #include "content/13-related.typ"
 #include "content/14-conclusion.typ"
 

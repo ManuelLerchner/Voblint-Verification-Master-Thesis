@@ -345,3 +345,90 @@
   },
   ..args,
 )
+
+
+// ------------------------------------------------------------------ parts --
+// A part divider groups the chapters that follow it. It is a level-1 heading,
+// so the outline lists it and PDF readers bookmark it, with `numbering: none`
+// so it takes no chapter number; an unnumbered heading does not advance the
+// heading counter, so the chapters keep their numbers. The chapter show rule
+// would force the heading onto a fresh page with a chapter's typography, so a
+// scoped rule renders it as a divider page instead. Only the title goes into
+// the heading body: the outline reproduces that body, so a kicker or spacing
+// placed there would show up in the contents as a second, blank entry. The
+// roman numeral comes from `part-counter`, which the contents entry reads back
+// at the heading's location.
+#let part-counter = counter("voblint-part")
+
+#let part(title) = {
+  pagebreak(to: "odd", weak: true)
+  part-counter.step()
+  {
+    show heading.where(level: 1): it => {
+      v(1fr)
+      align(center, {
+        text(0.9em, fill: vb.muted, tracking: 2pt)[PART #context part-counter.display("I")]
+        v(0.6em)
+        // Full text width and no hyphenation: a title such as "What Must Be
+        // Over-Approximated" must not be broken at its hyphen.
+        block(width: 100%, {
+          set par(justify: false)
+          text(
+            font: "Latin Modern Roman 12",
+            size: 20.74pt,
+            weight: "bold",
+            hyphenate: false,
+            it.body,
+          )
+        })
+      })
+      v(1.6fr)
+    }
+    heading(level: 1, numbering: none, supplement: [Part], title)
+  }
+  pagebreak(weak: true)
+}
+
+// The contents entry for a part: a bold, unnumbered group line without a page
+// number, set off from the chapters it groups. Every other level-1 entry is
+// left to the default.
+#let part-outline-entry(it) = {
+  if it.element.supplement == [Part] {
+    let n = part-counter.at(it.element.location()).first()
+    block(above: 17pt, below: 0pt, link(it.element.location(), text(
+      font: "Latin Modern Sans",
+      weight: "bold",
+    )[Part #numbering("I", n): #it.element.body]))
+  } else {
+    it
+  }
+}
+
+
+// ------------------------------------------------------- playground runs --
+// A README playground figure, read from the copy tools/playground_figures.py
+// keeps under shared/generated/playground/ together with the link that
+// reopens the run. The caption ends with that link, so a reader of the PDF can
+// open the same program at the same settings.
+#let _playground = json("/shared/generated/playground/playground.json")
+
+#let playground-settings(name) = {
+  let r = _playground.at(name)
+  let parts = ("analysis " + r.analysis, "globals " + r.globals, "context " + r.context)
+  if "k" in r { parts.push("k = " + r.k) }
+  raw(parts.join(", "))
+}
+
+#let playground-figure(name, caption, width: 100%, label: none) = {
+  let r = _playground.at(name)
+  figure(
+    image("/shared/generated/playground/" + r.image, width: width),
+    caption: [#caption #h(0.4em) #link(r.url, text(fill: vb.accent, size: 0.9em)[open this run]).],
+  )
+}
+
+// The program a playground figure was run on, as a listing.
+#let playground-program(name) = {
+  let r = _playground.at(name)
+  raw(read("/shared/generated/playground/" + r.program), lang: "c", block: true)
+}

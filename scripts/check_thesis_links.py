@@ -54,8 +54,14 @@ KIND_ANCHORS = {
     "const": ("const",),
     "type": ("type",),
     "locale": ("locale",),
+    # A theorem environment's `isa:` name: whatever the theories say it is.
+    "any": ("fact", "thm", "const", "type", "locale"),
 }
 TYPST_REF = re.compile(r"\bisa(thm|const|type|locale)\(\"([^\"]*)\"\)")
+# `isa: "name"` on a theorem environment, and `oblig("NAME")` for a named
+# assumption of `ltr_coverage`, which the HTML anchors as a fact of the locale.
+ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
+OBLIG = re.compile(r"\boblig\(\"([A-Z]+)\"(?:,\s*of:\s*\"([A-Za-z_]+)\")?\)")
 ANCHOR = re.compile(r'id="([A-Za-z][A-Za-z0-9_.\']*)\|([a-z]+)"')
 
 
@@ -156,6 +162,14 @@ def cited() -> list[tuple[Path, int, str, str]]:
         for m in TYPST_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, m.group(1), m.group(2)))
+        for m in ISA_ARG.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            refs.append((path, line, "any", m.group(1)))
+        for m in OBLIG.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            refs.append(
+                (path, line, "thm", f"{m.group(2) or 'ltr_coverage'}.{m.group(1)}")
+            )
     return refs
 
 

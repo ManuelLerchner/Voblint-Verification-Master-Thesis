@@ -27,23 +27,11 @@
 
 #let isabelle-syntax = "../assets/isabelle.sublime-syntax"
 
-// A framed Isabelle snippet. Pass a raw block; its text is decoded first.
+// An Isabelle snippet. Pass a raw block; its text is decoded first. The frame
+// and line numbers come from codly, configured once in thesis.typ.
 #let isa(body, breakable: false) = {
   let src = if type(body) == str { body } else { body.text }
-  block(
-    width: 100%,
-    fill: vb.bg,
-    stroke: 0.7pt + vb.frame,
-    radius: 3pt,
-    inset: 8pt,
-    breakable: breakable,
-    align(left, text(font: isabelle-font, raw(
-      decode-isabelle(src),
-      lang: "isabelle",
-      block: true,
-      syntaxes: isabelle-syntax,
-    ))),
-  )
+  raw(decode-isabelle(src), lang: "isabelle", block: true, syntaxes: isabelle-syntax)
 }
 
 // Inline Isabelle: `#isai("a \<sqsubseteq> b")`
@@ -53,18 +41,10 @@
   syntaxes: isabelle-syntax,
 ))
 
-// Generic framed listing for the other languages in the thesis.
+// A listing in one of the other languages of the thesis.
 #let listing(body, lang: none, breakable: false) = {
   let src = if type(body) == str { body } else { body.text }
-  block(
-    width: 100%,
-    fill: vb.bg,
-    stroke: 0.7pt + vb.frame,
-    radius: 3pt,
-    inset: 8pt,
-    breakable: breakable,
-    align(left, raw(src, lang: lang, block: true)),
-  )
+  raw(src, lang: lang, block: true)
 }
 
 // References to entities that exist in the formalization. The typographic
@@ -86,18 +66,59 @@
   } else { none }
 }
 
-#let entity(name, color, kind: none) = {
-  let body = text(fill: color, font: "DejaVu Sans Mono", size: 0.85em, name)
+// A name is coloured by what it is only when it is also a link to it; a name
+// the map could not resolve stays in the plain identifier colour, so colour on
+// the page means "click here".
+#let entity(name, color, kind: none, display: none) = {
   let href = if kind == none { none } else { _url(kind, name) }
+  let fill = if href == none { vb.plain } else { color }
+  let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if display == none {
+    name
+  } else { display })
   if href == none { body } else { link(href, body) }
 }
-#let isathm(name) = entity(name, vb.proved, kind: "thm")
-#let isaconst(name) = entity(name, black, kind: "const")
-#let isatype(name) = entity(name, vb.neutral, kind: "type")
-#let isalocale(name) = entity(name, vb.accent, kind: "locale")
+#let isathm(name) = entity(name, vb.thm, kind: "thm")
+#let isaconst(name) = entity(name, vb.const, kind: "const")
+#let isatype(name) = entity(name, vb.type, kind: "type")
+#let isalocale(name) = entity(name, vb.locale, kind: "locale")
 #let isacmd(name) = entity(name, vb.trusted)   // an Isabelle command
 #let isasession(n) = entity(n, vb.muted)
 #let isafile(p) = entity(p, vb.muted)
+
+// The Isabelle name a theorem environment carries. Its kind is whatever the
+// rendered theories say it is: the checker records the resolved kind under
+// `any:<name>` and the colour follows it.
+#let isaname(name) = {
+  let key = "any:" + name
+  if _links.base != "" and key in _links.links {
+    let kind = _links.links.at(key).split("%7C").last()
+    let color = (fact: vb.thm, thm: vb.thm, const: vb.const, type: vb.type, locale: vb.locale).at(
+      kind,
+      default: vb.plain,
+    )
+    link(_links.base + _links.links.at(key), text(
+      fill: color,
+      font: "DejaVu Sans Mono",
+      size: 0.85em,
+      name,
+    ))
+  } else {
+    text(fill: vb.plain, font: "DejaVu Sans Mono", size: 0.85em, name)
+  }
+}
+
+// One of a locale's named assumptions, such as INIT of the coverage locale: small
+// capitals in the locale colour, linking to the assumption's own anchor.
+#let oblig(name, of: "ltr_coverage") = {
+  let href = _url("thm", of + "." + name)
+  // Latin Modern's small capitals are a face of their own, as cmcsc10 is.
+  let body = text(
+    font: "Latin Modern Roman Caps",
+    fill: if href == none { vb.plain } else { vb.locale },
+    lower(name),
+  )
+  if href == none { body } else { link(href, body) }
+}
 
 // The Concrete Semantics marker: a small boxed `thy` beside a heading, linking
 // to the rendered theory the section is about. Renders as plain text until the
