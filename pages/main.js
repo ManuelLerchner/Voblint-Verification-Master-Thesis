@@ -3732,6 +3732,17 @@ examplesDialog.addEventListener("click", (event) => {
  * explainer shows, so the run reproduces what the page claims.
  */
 const LINKED_EXAMPLES = {
+  "remainder-sign": `fun main() {
+  n = __voblint_nondet_int();
+  x = 6 * n + 5;
+  a = x % 6;
+  __voblint_check(a >= 0);
+  if (a < 0) {
+    __voblint_check(a == -1);
+  } else {
+    __voblint_check(a == 5);
+  }
+}`,
   "two-sites": `fun p(x) {
   __voblint_check(x <= 2);
 }
