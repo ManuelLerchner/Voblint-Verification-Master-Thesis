@@ -40,7 +40,26 @@
 
 #include "content/01-introduction.typ"
 #include "content/02-background.typ"
-#include "content/03-gallery.typ"
+#include "content/03-program-model.typ"
+#include "content/04-traces.typ"
+#include "content/05-domains.typ"
+#include "content/06-analysis-interface.typ"
+#include "content/07-equations.typ"
+#include "content/08-solving.typ"
+#include "content/09-results.typ"
+#include "content/10-instances.typ"
+#include "content/11-executable.typ"
+#include "content/12-evaluation.typ"
+#include "content/13-related.typ"
+#include "content/14-conclusion.typ"
+
+// The figure gallery is a working reference, not thesis content: one instance
+// of every figure kind, with placeholder payloads. Build it with
+// `typst compile --input gallery=1 ...` while drafting; it is never part of the
+// document proper, and it is deleted before submission.
+#if sys.inputs.at("gallery", default: none) != none {
+  include "content/03-gallery.typ"
+}
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)

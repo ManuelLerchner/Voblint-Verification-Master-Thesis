@@ -29,7 +29,8 @@ needs a best abstraction:
 ]
 
 Widening $widen$ and narrowing $narrow$ enforce termination over lattices of
-infinite height; @fig:widening shows both on a single loop head.
+infinite height. TODO: a figure showing both on a single loop head; its
+prototype is `fig:widening` in the draft-only figure gallery.
 
 == Side-effecting constraint systems
 

@@ -40,6 +40,11 @@
   set par(justify: true, leading: 0.62em, spacing: 1.0em)
   set heading(numbering: "1.1")
 
+  // A reference to a top-level heading says "Chapter", not "Section". Typst's
+  // default supplement is "Section" at every level, which silently mislabels
+  // every cross-chapter reference.
+  show heading.where(level: 1): set heading(supplement: [Chapter])
+
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
     v(2.2cm)
