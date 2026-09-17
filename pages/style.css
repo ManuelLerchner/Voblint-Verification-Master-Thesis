@@ -44,6 +44,60 @@
   --shadow-hover: 0 2px 4px rgb(20 47 54 / 0.06), 0 14px 34px rgb(20 47 54 / 0.1);
 
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Syntax colours for code on a light surface. A dark block redefines the set
+     below, so one span class serves both and no snippet carries its own hues. */
+  --tok-keyword: #a8452a;
+  --tok-builtin: #8a5a12;
+  --tok-number: #6b3fa0;
+  --tok-operator: #1d6b63;
+  --tok-comment: #7a8a90;
+  --tok-name: #17323a;
+  --tok-punct: #6b7c83;
+}
+
+.mock-editor,
+.thm-program,
+.loop-code,
+.cm-editor {
+  --tok-keyword: #f08a65;
+  --tok-builtin: #f0c674;
+  --tok-number: #c4a7e7;
+  --tok-operator: #8bd5ca;
+  --tok-comment: #718b91;
+  --tok-name: #f7faf9;
+  --tok-punct: #a7bbc0;
+}
+
+.tok-keyword {
+  color: var(--tok-keyword);
+  font-weight: 650;
+}
+
+.tok-builtin {
+  color: var(--tok-builtin);
+  font-weight: 600;
+}
+
+.tok-number {
+  color: var(--tok-number);
+}
+
+.tok-operator {
+  color: var(--tok-operator);
+}
+
+.tok-comment {
+  color: var(--tok-comment);
+  font-style: italic;
+}
+
+.tok-variableName {
+  color: var(--tok-name);
+}
+
+.tok-punctuation {
+  color: var(--tok-punct);
 }
 
 * {
@@ -2082,6 +2136,54 @@ a:focus-visible {
   .footer-content {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+/* A sticky bar that wraps to three rows costs a phone a sixth of its screen for the
+   whole page, so below this width the call to action shares the brand's row and the
+   links keep one of their own. */
+@media (max-width: 560px) {
+  /* The toolbar's groups do not fit one phone row, and the file name is the one
+     label nothing else depends on. */
+  .editor-toolbar {
+    flex-wrap: wrap;
+    padding-block: 6px;
+  }
+
+  .editor-file {
+    display: none;
+  }
+
+  /* Truncated to two or three glyphs the outline says nothing; the panel below
+     still holds the whole term. */
+  .raw-call {
+    display: none;
+  }
+
+  .raw-result summary {
+    flex-wrap: wrap;
+  }
+
+  .site-nav-inner {
+    position: relative;
+    min-height: 0;
+    padding: 8px 0;
+    gap: 4px;
+  }
+
+  .site-links {
+    flex: 1 1 100%;
+    gap: 2px 14px;
+  }
+
+  .site-links a {
+    font-size: 0.86rem;
+  }
+
+  .site-links li:last-child {
+    position: absolute;
+    top: 8px;
+    right: 0;
   }
 }
 

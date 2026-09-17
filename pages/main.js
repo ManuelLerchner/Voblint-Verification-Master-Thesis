@@ -1,5 +1,4 @@
 import { json } from "https://esm.sh/@codemirror/lang-json@6.0.2";
-
 import {
   HighlightStyle,
   StreamLanguage,
@@ -24,6 +23,7 @@ import {
 } from "https://esm.sh/@codemirror/view@^6.0.0";
 import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
+import { vimpStreamParser } from "./code-tokens.js";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -142,113 +142,40 @@ fun main() {
 /* VIMP syntax highlighting                                                   */
 /* -------------------------------------------------------------------------- */
 
-const vimpLanguage = StreamLanguage.define({
-  startState() {
-    return {
-      blockComment: false,
-    };
-  },
-
-  copyState(state) {
-    return { ...state };
-  },
-
-  token(stream, state) {
-    if (state.blockComment) {
-      if (stream.skipTo("*/")) {
-        stream.match("*/");
-        state.blockComment = false;
-      } else {
-        stream.skipToEnd();
-      }
-
-      return "comment";
-    }
-
-    if (stream.eatSpace()) {
-      return null;
-    }
-
-    if (stream.match("//")) {
-      stream.skipToEnd();
-      return "comment";
-    }
-
-    if (stream.match("/*")) {
-      if (stream.skipTo("*/")) {
-        stream.match("*/");
-      } else {
-        state.blockComment = true;
-        stream.skipToEnd();
-      }
-
-      return "comment";
-    }
-
-    if (stream.match(/^\d+/)) {
-      return "number";
-    }
-
-    if (stream.match(/^__voblint_[A-Za-z0-9_]*/)) {
-      return "builtin";
-    }
-
-    if (stream.match(/^(fun|global|if|else|while|return)\b/)) {
-      return "keyword";
-    }
-
-    if (stream.match(/^(==|!=|<=|>=|&&|\|\||[+\-*/%<>=!])/)) {
-      return "operator";
-    }
-
-    if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*/)) {
-      return "variableName";
-    }
-
-    if (stream.match(/^[(){}[\],;]/)) {
-      return "punctuation";
-    }
-
-    /*
-     * Always consume one character, including on malformed input.
-     */
-    stream.next();
-    return null;
-  },
-});
+const vimpLanguage = StreamLanguage.define(vimpStreamParser);
 
 /* Shared by the VIMP editor and the raw JSON views; each language uses its own tags. */
 const codeHighlight = HighlightStyle.define([
   {
     tag: tags.keyword,
-    color: "#f08a65",
+    color: "var(--tok-keyword)",
     fontWeight: "650",
   },
   {
     tag: tags.number,
-    color: "#c4a7e7",
+    color: "var(--tok-number)",
   },
   {
     tag: tags.operator,
-    color: "#8bd5ca",
+    color: "var(--tok-operator)",
   },
   {
     tag: tags.comment,
-    color: "#718b91",
+    color: "var(--tok-comment)",
     fontStyle: "italic",
   },
   {
     tag: tags.standard(tags.variableName),
-    color: "#f0c674",
+    color: "var(--tok-builtin)",
     fontWeight: "600",
   },
   {
     tag: tags.variableName,
-    color: "#f7faf9",
+    color: "var(--tok-name)",
   },
   {
     tag: tags.punctuation,
-    color: "#a7bbc0",
+    color: "var(--tok-punct)",
   },
   {
     tag: tags.propertyName,
