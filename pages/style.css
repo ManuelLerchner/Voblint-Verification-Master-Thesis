@@ -58,6 +58,7 @@
 
 .mock-editor,
 .thm-program,
+.loop-code,
 .cm-editor {
   --tok-keyword: #f08a65;
   --tok-builtin: #f0c674;

@@ -43,7 +43,7 @@ function highlightTextNode(node, language) {
   node.replaceWith(fragment);
 }
 
-for (const block of document.querySelectorAll("pre[data-lang], code[data-lang]")) {
+function highlight(block) {
   const language = block.dataset.lang;
   const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
@@ -66,5 +66,44 @@ for (const block of document.querySelectorAll("pre[data-lang], code[data-lang]")
 
   for (const node of nodes) {
     highlightTextNode(node, language);
+  }
+}
+
+const blocks = [...document.querySelectorAll("[data-lang]")];
+
+for (const block of blocks) {
+  highlight(block);
+}
+
+/*
+ * A figure that swaps its own program in -- the recursion spiral has two --
+ * writes plain text over the spans, so the block is coloured again afterwards.
+ * The observer is off while that happens, or it would answer its own writes.
+ */
+if ("MutationObserver" in window) {
+  const observer = new MutationObserver((records) => {
+    const touched = new Set(
+      records
+        .map((record) => record.target)
+        .map((node) => (node.closest ? node : node.parentElement)),
+    );
+
+    observer.disconnect();
+
+    for (const node of touched) {
+      const block = node?.closest("[data-lang]");
+
+      if (block) {
+        highlight(block);
+      }
+    }
+
+    for (const block of blocks) {
+      observer.observe(block, { childList: true, subtree: true, characterData: true });
+    }
+  });
+
+  for (const block of blocks) {
+    observer.observe(block, { childList: true, subtree: true, characterData: true });
   }
 }

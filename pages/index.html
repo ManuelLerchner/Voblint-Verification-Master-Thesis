@@ -1018,7 +1018,7 @@
 
       <figure class="scene scene-loop" data-step="6" data-steps="7">
         <div class="loop-layout">
-          <div class="loop-code" aria-hidden="true">
+          <div class="loop-code" data-lang="vimp" aria-hidden="true">
             <span class="lc lc-1">i = 0;</span>
             <span class="lc lc-2">while (i &lt; 5) {</span>
             <span class="lc lc-3">  i = i + 1;</span>
@@ -1296,7 +1296,7 @@
       <figure class="scene scene-call" data-mode="entry" data-step="5">
         <div class="call-top">
           <div class="call-code">
-            <pre><code>fun f(n) {
+            <pre data-lang="vimp"><code>fun f(n) {
   if (n &lt; 2) {
     return 1;
   } else {
@@ -1304,7 +1304,7 @@
     return n * r;
   }
 }</code></pre>
-            <pre><code>fun main() {
+            <pre data-lang="vimp"><code>fun main() {
   <mark>a = f(2);</mark>
   __voblint_check(a == 2);
 }</code></pre>
@@ -2452,7 +2452,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>theorem run_voblint_certified_source_sound:
+<pre data-lang="isabelle">theorem run_voblint_certified_source_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "star (pstep (declared_global p) (prog_table p))
              (main_body (prog_table p), s0, []) (residual, s, frs)"
@@ -2483,7 +2483,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>theorem run_voblint_check_sound:
+<pre data-lang="isabelle">theorem run_voblint_check_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "star (pstep (declared_global p) (prog_table p))
              (main_body (prog_table p), s0, []) (residual, s, frs)"
@@ -2515,7 +2515,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>corollary run_voblint_dead_check_unreached:
+<pre data-lang="isabelle">corollary run_voblint_dead_check_unreached:
   assumes "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
       and "chk ∈ set (res_checks res)"
@@ -2542,7 +2542,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>theorem run_voblint_arithmetic_safe:
+<pre data-lang="isabelle">theorem run_voblint_arithmetic_safe:
   assumes "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
       and "s ∈ ltr_collect (declared_global p) (prog_cfg p)
@@ -2567,7 +2567,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>corollary run_voblint_check_sites:
+<pre data-lang="isabelle">corollary run_voblint_check_sites:
   assumes "run_voblint D rule ctx p = Analysed res"
   shows "map (λchk. (check_point chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
@@ -3681,6 +3681,15 @@ qed</code></pre>
               <a href="https://doi.org/10.1145/2676726.2676966" target="_blank" rel="noreferrer">A Formally-Verified C Static Analyzer</a>
               <span class="reading-meta">Jacques-Henri Jourdan, Vincent Laporte, Sandrine Blazy, Xavier Leroy, David Pichardie · POPL 2015</span>
               <span class="reading-why">Verasco: abstract interpretation of real C, verified in Coq against CompCert's semantics.</span>
+            </li>
+            <li id="ref-franceschino-2021" data-year="2021">
+              <a href="https://doi.org/10.1007/978-3-030-88806-0_6" target="_blank" rel="noreferrer">Verified Functional Programming of an Abstract Interpreter</a>
+              <span class="reading-meta">Lucas Franceschino, David Pichardie, Jean-Pierre Talpin · SAS 2021</span>
+              <span class="reading-why">The nearest neighbour of this project: a verified interval analysis of an IMP-like
+                language, with backward expression analysis and widening. It is written in F*, where an SMT
+                prover discharges most obligations, and it iterates loops along the program text rather than
+                through a CFG and a solver. Its analyzer also
+                <a href="https://w95psp.github.io/verified-abstract-interpreter/" target="_blank" rel="noreferrer">runs in a browser</a>.</span>
             </li>
           </ul>
         </div>
