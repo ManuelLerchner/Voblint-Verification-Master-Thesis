@@ -51,9 +51,9 @@
   --tok-builtin: #8a5a12;
   --tok-number: #6b3fa0;
   --tok-operator: #1d6b63;
-  --tok-comment: #7a8a90;
+  --tok-comment: #5f6e74;
   --tok-name: #17323a;
-  --tok-punct: #6b7c83;
+  --tok-punct: #59696f;
 }
 
 .mock-editor,
@@ -98,6 +98,18 @@
 
 .tok-punctuation {
   color: var(--tok-punct);
+}
+
+/* A token span carries colour and nothing else. Several snippets draw their
+   lines as spans and style them as full-width rows; without this, the spans
+   the highlighter nests inside a line would each become a row of their own. */
+[data-lang] [class^="tok-"] {
+  display: inline;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
 }
 
 * {
