@@ -255,14 +255,50 @@ jobs:
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
+      # The rendered tree is a function of the theory sources, the session
+      # structure and the toolchain, and of nothing else, so a run whose
+      # inputs are byte-identical to one already rendered restores that tree
+      # instead of paying the clean build again. `git ls-files -s` prints the
+      # blob SHA of every tracked file under those paths and the gitlink SHA
+      # of the vendored solver, so the digest covers the submodule pointer
+      # without reading its content, and untracked build output cannot enter
+      # it. The setup action is in there because it pins the AFP revision.
+      - name: Digest the sources the HTML is rendered from
+        id: sources
+        shell: bash
+        run: |
+          digest=$(git ls-files -s -- src ROOTS scripts/mk/html.sh pixi.toml \
+            vendor/td-verification .github/actions/setup-isabelle-action \
+            | sha256sum | cut -c1-32)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "HTML source digest: $digest"
+
+      # Exact key, no restore-keys: a near miss would be a different tree
+      # presented as this commit's, and a hit skips the build outright. The
+      # heap cache can fall back because every consumer there still runs its
+      # own `isabelle build`; here the cache *is* the answer.
+      - name: Restore a previously rendered HTML tree
+        id: html-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/isabelle-html
+          key: isabelle-html-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-${{ steps.sources.outputs.digest }}
+
       # A clean build (-c) internally, for browser_info's own
       # every-session-presented requirement. That cost is unavoidable and
       # stays isolated to this job.
       - name: Build HTML docs (clean build of every session)
+        if: steps.html-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -o pipefail
           pixi run isabelle-html-build 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Reuse the cached HTML tree
+        if: steps.html-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "Sources unchanged since a rendered tree was cached; skipping the build."
+          du -sh build/isabelle-html
 
       # Only a clean build of every session sees every elaboration, which is
       # why this lives here and not in isabelle-build (which skips when no
@@ -270,7 +306,19 @@ jobs:
       # costs real time and shows no other symptom -- it was 19% of a clean
       # build before the budgets in the script were met.
       - name: Library re-elaboration stays within budget
+        if: steps.html-cache.outputs.cache-hit != 'true'
         run: pixi run reelaboration-check "$RUNNER_TEMP/build.log"
+
+      # Saved only from main, and only when this run built the tree: a branch
+      # writing its own entry per push would churn the repository's 10 GB
+      # cache budget against the heap cache, which is the expensive one. A
+      # pull request still restores main's entries.
+      - name: Save the rendered HTML tree for later runs
+        if: steps.html-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/isabelle-html
+          key: ${{ steps.html-cache.outputs.cache-primary-key }}
 
       # This job has the only freshly rendered tree in CI, so it is where the
       # link map is regenerated. It reports drift rather than gating: the
@@ -638,8 +686,44 @@ jobs:
       - name: Check PDF theory selection
         run: pixi run isabelle-pdf-selection-check
 
+      # Same digest scheme as the HTML job, over what this document is made
+      # from: the theories, the session structure, the LaTeX root and the
+      # README the title pages carry, and the scripts that assemble them.
+      - name: Digest the sources the PDF is rendered from
+        id: sources
+        shell: bash
+        run: |
+          digest=$(git ls-files -s -- src ROOTS document README.md pixi.toml \
+            scripts/mk/pdf.sh scripts/gen_pdf_session.py \
+            scripts/build_readme_pdf.py scripts/pdf_readme.lua \
+            vendor/td-verification .github/actions/setup-isabelle-action \
+            | sha256sum | cut -c1-32)
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "PDF source digest: $digest"
+
+      - name: Restore a previously rendered PDF
+        id: pdf-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: output/document.pdf
+          key: isabelle-pdf-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-2-${{ steps.sources.outputs.digest }}
+
       - name: Build formalization PDF with certificate appendix
+        if: steps.pdf-cache.outputs.cache-hit != 'true'
         run: pixi run isabelle-pdf-build
+
+      - name: Reuse the cached PDF
+        if: steps.pdf-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "Sources unchanged since a PDF was cached; skipping the render."
+          ls -lh output/document.pdf
+
+      - name: Save the rendered PDF for later runs
+        if: steps.pdf-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: output/document.pdf
+          key: ${{ steps.pdf-cache.outputs.cache-primary-key }}
 
       - name: Upload formalization PDF
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
