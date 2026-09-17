@@ -1,0 +1,218 @@
+/* What does it tell you? */
+
+:where(.scene-answers) .ans-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 1.15fr);
+  gap: 36px;
+  align-items: center;
+}
+
+/* Arrows on the box, so the three columns read as one direction of travel. */
+:where(.scene-answers) .ans-box::before,
+:where(.scene-answers) .ans-box::after {
+  position: absolute;
+  color: var(--text-faint);
+  font-size: 1.4rem;
+  line-height: 1;
+  content: "\2192";
+}
+
+:where(.scene-answers) .ans-box::before {
+  right: calc(100% + 11px);
+}
+
+:where(.scene-answers) .ans-box::after {
+  left: calc(100% + 11px);
+}
+
+:where(.scene-answers) .ans-label {
+  margin: 0 0 8px !important;
+  color: var(--accent);
+  font: 700 0.72rem var(--mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+:where(.scene-answers) .ans-in {
+  display: grid;
+  gap: 18px;
+}
+
+:where(.scene-answers) .ans-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:where(.scene-answers) .ans-settings li {
+  padding: 3px 10px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font: 0.78rem var(--mono);
+}
+
+:where(.scene-answers) .ans-settings b {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* The box is opaque on purpose: the sections after this one open it. */
+:where(.scene-answers) .ans-box {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 26px 22px;
+  color: var(--editor-text);
+  background: var(--surface-dark);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+:where(.scene-answers) .ans-box-name {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 !important;
+  font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+:where(.scene-answers) .ans-box-name img {
+  border-radius: 6px;
+}
+
+/* One slow turn: the box is working, and that is all the figure claims about it. */
+:where(.scene-answers) .ans-gear {
+  color: #8fb3ba;
+  font-size: 0.86rem;
+  animation: ans-gear-turn 7s linear infinite;
+}
+
+@keyframes ans-gear-turn {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.scene-answers) .ans-gear {
+    animation: none;
+  }
+}
+
+:where(.scene-answers) .ans-box-note {
+  margin: 0 !important;
+  color: #8fb3ba;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+:where(.scene-answers) .ans-out {
+  display: grid;
+  gap: 10px;
+}
+
+/* The badge takes its own line: beside the verdict it squeezed the text into
+   breaking a short term across two lines. */
+:where(.scene-answers) .ans-row {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+  padding: 11px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--row-color, var(--border-strong));
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-answers) .ans-row-verdict {
+  justify-self: stretch;
+  margin: 0 !important;
+  font: 0.84rem / 1.6 var(--mono);
+}
+
+:where(.scene-answers) .ans-row-verdict code {
+  white-space: nowrap;
+}
+
+:where(.scene-answers) .ans-row-verdict b {
+  color: var(--row-color, var(--primary));
+  font-weight: 700;
+}
+
+/* Who asked for this line: nothing, or a check in the source. */
+:where(.scene-answers) .ans-who {
+  padding: 2px 9px;
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+:where(.scene-answers) .ans-who-free {
+  color: var(--success);
+  background: var(--success-soft);
+}
+
+:where(.scene-answers) .ans-row-warn {
+  --row-color: var(--warning);
+}
+
+:where(.scene-answers) .ans-row-proved {
+  --row-color: var(--success);
+}
+
+:where(.scene-answers) .ans-row-dead {
+  --row-color: var(--text-faint);
+}
+
+:where(.scene-answers) .ans-row-shown {
+  --row-color: var(--border-strong);
+  background: var(--surface-muted);
+}
+
+/* The three rows above quote the tool; this one describes what it displays. */
+:where(.scene-answers) .ans-row-shown .ans-row-verdict {
+  font-family: inherit;
+  font-size: 0.88rem;
+}
+
+/* The three rows above that are claims name the theorem that backs them. */
+:where(.scene-answers) .ans-warrant {
+  max-width: none !important;
+  margin: 20px 0 0 !important;
+  padding: 14px 16px;
+  color: var(--text-muted);
+  background: var(--success-soft);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+:where(.scene-answers) .ans-warrant code {
+  font-size: 0.86em;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-answers) .ans-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  :where(.scene-answers) .ans-box {
+    padding: 16px 22px;
+  }
+
+  :where(.scene-answers) .ans-box::before,
+  :where(.scene-answers) .ans-box::after {
+    display: none;
+  }
+}

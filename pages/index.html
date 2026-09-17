@@ -30,6 +30,7 @@
   >
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="explainer.css">
+  <link rel="stylesheet" href="figures/answers.css">
   <link rel="stylesheet" href="figures/runs.css">
   <link rel="stylesheet" href="figures/particles.css">
   <link rel="stylesheet" href="figures/gamma.css">
@@ -166,6 +167,7 @@
       </nav>
 
       <nav class="explainer-toc" aria-label="On this page">
+        <a href="#what">What it tells you</a>
         <a href="#stakes">What if the analyzer is wrong?</a>
         <a href="#abstract-interpretation">Abstract interpretation</a>
         <a href="#values">Abstract values</a>
@@ -198,21 +200,22 @@
       <div class="doc-toc-body">
         <div class="doc-toc-track" aria-hidden="true"><div class="doc-toc-fill"></div></div>
         <ol>
-          <li class="doc-toc-part">The stakes</li>
+          <li class="doc-toc-part">I · What it answers</li>
+          <li><a href="#what" data-target="what">What does it tell you?</a></li>
           <li><a href="#stakes" data-target="stakes">What if the analyzer is wrong?</a></li>
-          <li class="doc-toc-part">I · The idea</li>
+          <li class="doc-toc-part">II · The idea</li>
           <li><a href="#abstract-interpretation" data-target="abstract-interpretation">What is abstract interpretation?</a></li>
           <li><a href="#values" data-target="values">What an abstract value stands for</a></li>
-          <li class="doc-toc-part">II · How it works</li>
+          <li class="doc-toc-part">III · How it works</li>
           <li><a href="#solver" data-target="solver">From a graph to equations to values</a></li>
           <li><a href="#settings" data-target="settings">Procedures: contexts and globals</a></li>
-          <li class="doc-toc-part">III · Why you can trust it</li>
+          <li class="doc-toc-part">IV · Why you can trust it</li>
           <li><a href="#verified" data-target="verified">What does “verified” mean?</a></li>
           <li><a href="#semantics" data-target="semantics">What a run is</a></li>
           <li><a href="#chain" data-target="chain">The proof chain</a></li>
           <li><a href="#theorems" data-target="theorems">The flagship theorems</a></li>
           <li><a href="#pipeline" data-target="pipeline">From Isabelle to your browser tab</a></li>
-          <li class="doc-toc-part">IV · In context</li>
+          <li class="doc-toc-part">V · In context</li>
           <li><a href="#goblint" data-target="goblint">Voblint and Goblint, side by side</a></li>
           <li><a href="#limits" data-target="limits">What Voblint can't do</a></li>
           <li><a href="#further-reading" data-target="further-reading">Further reading</a></li>
@@ -226,6 +229,100 @@
     </aside>
 
   <main class="doc-main">
+    <!-- ================================================================== -->
+    <section class="section" id="what" aria-labelledby="what-heading">
+      <div class="section-heading">
+        <p class="eyebrow">The output</p>
+        <h2 id="what-heading">What does it tell you?</h2>
+        <p class="section-intro">
+          Voblint reads a program and answers questions about it without running it. It checks
+          every division for a zero divisor on its own. A verdict about some condition of your own
+          comes from a check you wrote.
+        </p>
+      </div>
+
+      <figure class="scene scene-answers">
+        <div class="ans-flow">
+          <div class="ans-in">
+            <div>
+              <p class="ans-label">Your program</p>
+              <pre class="mock-editor"><span class="ml">fun main() {</span>
+<span class="ml">  k = 10;</span>
+<span class="ml">  q = 100 / k;</span>
+<span class="ml">  d = __voblint_nondet_int();</span>
+<span class="ml warning">  y = 100 / d;</span>
+<span class="ml proved">  __voblint_check(0 &lt; q);</span>
+<span class="ml">  if (k &lt; 0) {</span>
+<span class="ml dead">    __voblint_check(q == 0);</span>
+<span class="ml">  }</span>
+<span class="ml">}</span></pre>
+            </div>
+
+            <div>
+              <p class="ans-label">Settings</p>
+              <ul class="ans-settings">
+                <li>domain <b>interval</b></li>
+                <li>contexts <b>none</b></li>
+                <li>globals <b>warrow</b></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="ans-box">
+            <p class="ans-box-name">
+              <img src="assets/favicon.png" alt="" width="26" height="26">
+              Voblint
+              <i class="fa-solid fa-gear ans-gear" aria-hidden="true"></i>
+            </p>
+            <p class="ans-box-note">never runs<br>your program</p>
+          </div>
+
+          <div class="ans-out">
+            <div class="ans-row ans-row-warn">
+              <p class="ans-row-verdict"><b>WARNING</b> possible division by zero: <code>100 / d</code></p>
+              <span class="ans-who ans-who-free">automatic</span>
+            </div>
+
+            <div class="ans-row ans-row-proved">
+              <p class="ans-row-verdict"><b>PROVED</b> <code>0 &lt; q</code>, where <code>q = [10, 10]</code></p>
+              <span class="ans-who">your check</span>
+            </div>
+
+            <div class="ans-row ans-row-dead">
+              <p class="ans-row-verdict"><b>DEAD</b> <code>q == 0</code> sits where no run arrives</p>
+              <span class="ans-who">your check</span>
+            </div>
+
+            <div class="ans-row ans-row-shown">
+              <p class="ans-row-verdict">At that same check, the whole state:
+                <code>k = [10, 10]</code> &middot; <code>q = [10, 10]</code> &middot;
+                <code>d = &#8868;</code> &middot; <code>y = &#8868;</code></p>
+              <span class="ans-who">not a claim</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="ans-warrant">
+          The first three lines are claims, and each one is a theorem:
+          <code>run_voblint_arithmetic_safe</code> for the divisor,
+          <code>run_voblint_check_sound</code> for the verdict,
+          <code>run_voblint_dead_check_unreached</code> for the dead point. All three assume the
+          analyzer's own solver finished. The last line is the state the analysis computed, and no
+          theorem says those strings read back what the state means.
+        </p>
+
+        <figcaption>
+          A real run at <code>--analysis interval</code> with the default settings. Voblint checks
+          every division and remainder whether you ask or not, so the divisor warning needs no
+          annotation. <code>__voblint_check</code> is how you ask about a condition of your own,
+          and the same annotation reports <code>DEAD</code> when no run reaches it. Nothing else is
+          reported inside the branch under <code>k &lt; 0</code>: a division by zero written there
+          would stay silent, because no run performs it.
+          <a class="try-link" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=ZY1BCoAgFAX3neItbZWty7NIpZJYPwQLIrp734JatJvhDTy3EubOkyhxFECAQi0bpniTRIWQ1bBqvS395ClpWsjYpBlFmdf9jU3WLxxGOwQh0SLeoXcQgU0-d_-UbxWvuT2L8wI">Run it ↗</a>
+        </figcaption>
+      </figure>
+    </section>
+
     <!-- ================================================================== -->
     <section class="section" id="stakes" aria-labelledby="stakes-heading">
       <div class="section-heading">
@@ -2239,8 +2336,8 @@
       <h3 class="setting-title">Take a pillar away</h3>
       <p class="setting-copy">
         The chain is a bridge from real runs to the verdicts, and five facts hold it up: two
-        theorems and three obligations the analyzer has to discharge. None of them is decoration.
-        Remove one and see which honest-looking answer becomes a lie.
+        theorems and three obligations the analyzer has to discharge. Remove one to see which
+        answers stop being covered.
       </p>
 
       <figure class="scene scene-bridge" data-broken="">
@@ -2736,7 +2833,7 @@ proof (cases a; cases b)
 qed</code></pre>
                 <p>
                   A case split on whether each of the four bounds is finite, each case closed by
-                  <code>auto</code>. Isabelle's kernel replays every inference, and the zoom ends here.
+                  <code>auto</code>. Isabelle's kernel replays every inference.
                 </p>
               </li>
             </ol>
@@ -3258,7 +3355,7 @@ qed</code></pre>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-right-left" aria-hidden="true"></i> Two-way compiler equivalence</h4>
-          <p>The compiler is proved correct in one direction, a forward simulation: every source run is matched in the graph. That is exactly what soundness needs, and no more.</p>
+          <p>The compiler is proved correct in one direction, a forward simulation: every source run is matched in the graph. Soundness needs that direction only, and the backward direction is not proved.</p>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-code-compare" aria-hidden="true"></i> Anything about Goblint's code</h4>
