@@ -44,6 +44,59 @@
   --shadow-hover: 0 2px 4px rgb(20 47 54 / 0.06), 0 14px 34px rgb(20 47 54 / 0.1);
 
   --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Syntax colours for code on a light surface. A dark block redefines the set
+     below, so one span class serves both and no snippet carries its own hues. */
+  --tok-keyword: #a8452a;
+  --tok-builtin: #8a5a12;
+  --tok-number: #6b3fa0;
+  --tok-operator: #1d6b63;
+  --tok-comment: #7a8a90;
+  --tok-name: #17323a;
+  --tok-punct: #6b7c83;
+}
+
+.mock-editor,
+.thm-program,
+.cm-editor {
+  --tok-keyword: #f08a65;
+  --tok-builtin: #f0c674;
+  --tok-number: #c4a7e7;
+  --tok-operator: #8bd5ca;
+  --tok-comment: #718b91;
+  --tok-name: #f7faf9;
+  --tok-punct: #a7bbc0;
+}
+
+.tok-keyword {
+  color: var(--tok-keyword);
+  font-weight: 650;
+}
+
+.tok-builtin {
+  color: var(--tok-builtin);
+  font-weight: 600;
+}
+
+.tok-number {
+  color: var(--tok-number);
+}
+
+.tok-operator {
+  color: var(--tok-operator);
+}
+
+.tok-comment {
+  color: var(--tok-comment);
+  font-style: italic;
+}
+
+.tok-variableName {
+  color: var(--tok-name);
+}
+
+.tok-punctuation {
+  color: var(--tok-punct);
 }
 
 * {

@@ -66,6 +66,7 @@
   <!-- Written by the site build; absent when the page opens from the source tree. -->
   <script src="assets/site-stats.js" defer></script>
   <script src="explainer.js" defer></script>
+  <script src="highlight.js" type="module"></script>
   <script src="figures/particles.js" defer></script>
   <script src="figures/gamma.js" defer></script>
   <script src="figures/reduce.js" defer></script>
@@ -246,7 +247,7 @@
           <div class="ans-in">
             <div>
               <p class="ans-label">Your program</p>
-              <pre class="mock-editor"><span class="ml">fun main() {</span>
+              <pre class="mock-editor" data-lang="vimp"><span class="ml">fun main() {</span>
 <span class="ml">  k = 10;</span>
 <span class="ml">  q = 100 / k;</span>
 <span class="ml">  d = __voblint_nondet_int();</span>
@@ -297,7 +298,7 @@
               <p class="ans-row-verdict">At that same check, the whole state:
                 <code>k = [10, 10]</code> &middot; <code>q = [10, 10]</code> &middot;
                 <code>d = &#8868;</code> &middot; <code>y = &#8868;</code></p>
-              <span class="ans-who">not a claim</span>
+              <span class="ans-who ans-who-free">for free</span>
             </div>
           </div>
         </div>
@@ -364,7 +365,7 @@
         <div class="bug-panes">
           <div class="bug-pane wrong">
             <p class="bug-pane-title"><img class="inline-logo" src="assets/logos/goblint.svg" alt="" width="20" height="20"> Goblint, before the fix</p>
-            <pre class="mock-editor bug-editor"><span class="ml">main() {</span>
+            <pre class="mock-editor bug-editor" data-lang="vimp"><span class="ml">main() {</span>
 <span class="ml">  int top;</span>
 <span class="ml rl rl-1">  int c = -5;<span class="mh">c = −5</span></span>
 <span class="ml">  if (top) {</span>
@@ -379,7 +380,7 @@
 
           <div class="bug-pane right">
             <p class="bug-pane-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Voblint</p>
-            <pre class="mock-editor bug-editor"><span class="ml">fun main() {</span>
+            <pre class="mock-editor bug-editor" data-lang="vimp"><span class="ml">fun main() {</span>
 <span class="ml">  top = __voblint_nondet_int();</span>
 <span class="ml rl rl-1">  c = -5;<span class="mh">c = −5</span></span>
 <span class="ml">  if (top) {</span>
@@ -520,7 +521,7 @@
         </div>
 
         <div class="pt-layout">
-          <pre class="pt-code"><code>fun main() {
+          <pre class="pt-code" data-lang="vimp"><code>fun main() {
       n = __voblint_nondet_int();
       x = 3 * n;
       if (x &gt; 0) {
@@ -727,7 +728,7 @@
         <div class="reduce-layout">
           <div class="reduce-side">
             <p class="td-panel-title">Program</p>
-            <pre class="reduce-code"><code>fun main() {
+            <pre class="reduce-code" data-lang="vimp"><code>fun main() {
   n = __voblint_nondet_int();
   x = 4 * n + 1;
   if (x &gt;= 0) {
@@ -832,7 +833,7 @@
         <div class="sm-layout">
           <div class="sm-panel sm-source">
             <p class="td-panel-title">Source</p>
-            <pre class="sm-code"><code><span class="sm-line" data-line="1">fun main() {</span>
+            <pre class="sm-code" data-lang="vimp"><code><span class="sm-line" data-line="1">fun main() {</span>
     <span class="sm-line" data-line="2">  i = 0;</span>
     <span class="sm-line" data-line="3">  while (i &lt; 5) {</span>
     <span class="sm-line" data-line="4">    i = i + 1;</span>
@@ -843,7 +844,7 @@
             <div class="sm-rule">
               <p class="td-panel-title">The clause that fires</p>
               <p class="sm-rule-name"><code>compile_proc</code></p>
-              <pre class="sm-rule-clause">compile_proc Π p decl n =
+              <pre class="sm-rule-clause" data-lang="isabelle">compile_proc Π p decl n =
       (let r = n + csize (body decl); …
        in … insert (FunctionEntry p, EA_Body p, ben)
               (if falls_through (body decl)
@@ -1104,16 +1105,16 @@
         <div class="trees-layout">
           <div class="trees-panel">
             <p class="td-panel-title">Do-notation</p>
-            <pre class="trees-code" data-for="edge"><code><span data-n="1">do {</span>
+            <pre class="trees-code" data-lang="isabelle" data-for="edge"><code><span data-n="1">do {</span>
 <span data-n="1">  h ← read H;</span>
 <span data-n="2">  return (assume (i ≥ 5) h)</span>
 <span data-n="2">}</span></code></pre>
-            <pre class="trees-code" data-for="loop" hidden><code><span data-n="1">do {</span>
+            <pre class="trees-code" data-lang="isabelle" data-for="loop" hidden><code><span data-n="1">do {</span>
 <span data-n="1">  e ← read E;</span>
 <span data-n="2">  b ← read B;</span>
 <span data-n="3">  return ([i := 0] e ⊔ [i := i + 1] b)</span>
 <span data-n="3">}</span></code></pre>
-            <pre class="trees-code" data-for="call" hidden><code><span data-n="1">do {</span>
+            <pre class="trees-code" data-lang="isabelle" data-for="call" hidden><code><span data-n="1">do {</span>
 <span data-n="1">  caller ← read (pp5, c);</span>
 <span data-n="2">  let entry = enter f(2) caller;</span>
 <span data-n="2">  let c' = route entry;</span>
@@ -1121,12 +1122,12 @@
 <span data-n="3">  callee ← read (exit_f, c');</span>
 <span data-n="4">  return (combine caller callee)</span>
 <span data-n="4">}</span></code></pre>
-            <pre class="trees-code" data-for="entry" hidden><code><span data-n="1">do {</span>
+            <pre class="trees-code" data-lang="isabelle" data-for="entry" hidden><code><span data-n="1">do {</span>
 <span data-n="1">  seed ← read_global (Seed entry_f c);</span>
 <span data-n="2">  return seed</span>
 <span data-n="2">}</span></code></pre>
             <p class="td-panel-title">The datatype</p>
-            <pre class="trees-datatype"><code>datatype ('x, 'g, 'd) strategy_tree =
+            <pre class="trees-datatype" data-lang="isabelle"><code>datatype ('x, 'g, 'd) strategy_tree =
     Answer 'd
   | QueryL 'x ('d ⇒ ('x, 'g, 'd) strategy_tree)
   | QueryG 'g ('d ⇒ ('x, 'g, 'd) strategy_tree)
@@ -1754,7 +1755,7 @@
               <tr>
                 <th scope="row">
                   <span class="guide-name">Two call sites</span>
-                  <code>p(1); p(2);</code> checks <code>x &lt;= 2</code> in <code>p</code>
+                  <code data-lang="vimp">p(1); p(2);</code> checks <code data-lang="vimp">x &lt;= 2</code> in <code data-lang="vimp">p</code>
                 </th>
                 <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
@@ -1764,7 +1765,7 @@
               <tr>
                 <th scope="row">
                   <span class="guide-name">Call inside a loop</span>
-                  <code>while (x &lt; 10) { g(x); … }</code> checks <code>x &lt; 10</code> in <code>g</code>
+                  <code data-lang="vimp">while (x &lt; 10) { g(x); … }</code> checks <code data-lang="vimp">x &lt; 10</code> in <code data-lang="vimp">g</code>
                 </th>
                 <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
@@ -1774,7 +1775,7 @@
               <tr>
                 <th scope="row">
                   <span class="guide-name">Growing recursion</span>
-                  <code>f(x) { f(x + 1); }</code> called as <code>f(0)</code>
+                  <code data-lang="vimp">f(x) { f(x + 1); }</code> called as <code data-lang="vimp">f(0)</code>
                 </th>
                 <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
                 <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
@@ -1784,7 +1785,7 @@
               <tr>
                 <th scope="row">
                   <span class="guide-name">Recursion that shrinks</span>
-                  <code>f(a) { if (a &lt; 4) { f(9 / (a + 2)); } }</code> from <code>f(-1)</code>, checks <code>a &lt;= 9</code>
+                  <code data-lang="vimp">f(a) { if (a &lt; 4) { f(9 / (a + 2)); } }</code> from <code data-lang="vimp">f(-1)</code>, checks <code data-lang="vimp">a &lt;= 9</code>
                 </th>
                 <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
@@ -1858,7 +1859,7 @@
               <button type="button" role="tab" data-program="grows" aria-selected="true">Endless</button>
               <button type="button" role="tab" data-program="bounded" aria-selected="false">Stops at 10</button>
             </div>
-            <pre class="spiral-code"><code>fun f(x) {
+            <pre class="spiral-code" data-lang="vimp"><code>fun f(x) {
       __voblint_check(x &gt;= 0);
       f(x + 1);
     }
@@ -2076,7 +2077,7 @@
         <div class="run-layout">
           <div class="run-panel run-source">
             <p class="td-panel-title">Source <code>pstep</code></p>
-            <pre class="run-code"><code><span data-line="f" data-nodes="entry_f exit_f">fun f(n) {</span>
+            <pre class="run-code" data-lang="vimp"><code><span data-line="f" data-nodes="entry_f exit_f">fun f(n) {</span>
 <span data-line="if" data-nodes="pp0">  if (n &lt; 2) {</span>
 <span data-line="ret1" data-nodes="pp1">    return 1;</span>
 <span data-nodes="">  } else {</span>
@@ -2575,7 +2576,7 @@
         </div>
 
           <div class="thm-cfg">
-            <pre class="thm-program" aria-label="Example program"><span class="pl">fun main() {</span>
+            <pre class="thm-program" data-lang="vimp" aria-label="Example program"><span class="pl">fun main() {</span>
 <span class="pl">  n = __voblint_nondet_int();</span>
 <span class="pl">  if (n &gt; 0) {</span>
 <span class="pl">    q = 10 / n;</span>
@@ -2732,7 +2733,7 @@
             <ol class="zoom-levels">
               <li class="zoom-level" data-level="0">
                 <p class="zoom-kicker">What you see</p>
-                <pre class="zoom-code"><code>i = 0;
+                <pre class="zoom-code" data-lang="vimp"><code>i = 0;
 while (i &lt; 5) {
   i = i + 1;
 }
@@ -2742,7 +2743,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="1">
                 <p class="zoom-kicker">The flagship theorem</p>
-                <pre class="zoom-formal">check_verdict c = Decided Check_Proved ⟶ truthy (aval e s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">check_verdict c = Decided Check_Proved ⟶ truthy (aval e s)</pre>
                 <p>
                   For every store <code>s</code> a source run has when it is about to run the check,
                   a listed check for <code>i == 5</code> sits at a node <code>s</code> reaches, and
@@ -2753,7 +2754,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="2">
                 <p class="zoom-kicker">Why the verdict may say PROVED</p>
-                <pre class="zoom-formal">classify c d = Check_Proved ⟹ s ∈ ⟦d⟧ ⟹ truthy (aval c s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">classify c d = Check_Proved ⟹ s ∈ ⟦d⟧ ⟹ truthy (aval c s)</pre>
                 <p>
                   The analysis says PROVED only when every store its state <code>d</code> describes
                   satisfies the check. At the check, <code>d</code> is <code>i ∈ [5, 5]</code>: one
@@ -2764,7 +2765,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="3">
                 <p class="zoom-kicker">Why the run is described by <code>d</code></p>
-                <pre class="zoom-formal">ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v ⊆ ⟦state_at ugs p v⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v ⊆ ⟦state_at ugs p v⟧</pre>
                 <p>
                   Every store the collecting semantics reaches at the check's node lies in the
                   concretization of the result there. Our run's store, <code>i = 5</code>, is in
@@ -2775,7 +2776,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="4">
                 <p class="zoom-kicker">Why every node is covered</p>
-                <pre class="zoom-formal">activation_collect gs R startcontext g S v c ⊆ cover v c</pre>
+                <pre class="zoom-formal" data-lang="isabelle">activation_collect gs R startcontext g S v c ⊆ cover v c</pre>
                 <p>
                   By induction along the run's trace <code>E → H → B → H → … → X</code>: if one
                   store is covered by the solver's value at its node, the next store is covered at
@@ -2787,7 +2788,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="5">
                 <p class="zoom-kicker">One step: the edge <code>i := i + 1</code></p>
-                <pre class="zoom-formal">s ∈ ⟦σ⟧ ⟹ s(x := aval a s) ∈ ⟦asn x a σ⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := aval a s) ∈ ⟦asn x a σ⟧</pre>
                 <p>
                   On its last pass the run is at <code>B</code> with <code>i = 4</code>, inside
                   <code>σ(B) = [0, 4]</code>. This is the contract every transfer meets: the
@@ -2800,7 +2801,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="6">
                 <p class="zoom-kicker">The right-hand side <code>i + 1</code></p>
-                <pre class="zoom-formal">(∀x. s x ∈ γ (σ x)) ⟹ aval e s ∈ γ (ev e σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">(∀x. s x ∈ γ (σ x)) ⟹ aval e s ∈ γ (ev e σ)</pre>
                 <p>
                   If every variable's value is covered by the abstract state, evaluating the
                   expression abstractly covers evaluating it concretely: <code>4 + 1 = 5</code>
@@ -2811,7 +2812,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="7">
                 <p class="zoom-kicker">One operator: interval addition</p>
-                <pre class="zoom-formal">i ∈ γ a ⟹ j ∈ γ b ⟹ i + j ∈ γ (a + b)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">i ∈ γ a ⟹ j ∈ γ b ⟹ i + j ∈ γ (a + b)</pre>
                 <p>
                   With <code>i = 4 ∈ γ [0, 4]</code> and <code>j = 1 ∈ γ [1, 1]</code>, the lemma
                   gives <code>5 ∈ γ [1, 5]</code>. Everything above rests on lemmas of this size.
@@ -2821,7 +2822,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="8">
                 <p class="zoom-kicker">The bottom: a proof</p>
-                <pre class="zoom-code"><code>lemma ivl_plus_sound:
+                <pre class="zoom-code" data-lang="isabelle"><code>lemma ivl_plus_sound:
   assumes "i ∈ gamma_ivl a" "j ∈ gamma_ivl b"
   shows "i + j ∈ gamma_ivl (a + b)"
 proof (cases a; cases b)
