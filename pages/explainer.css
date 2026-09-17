@@ -1165,7 +1165,9 @@
   content: "";
   position: absolute;
   top: 7px;
-  left: -19px;
+  /* Centred on the 3px track: the body's 18px padding minus 20px puts the
+     13px marker (9px plus two 2px borders) at the track's own centre. */
+  left: -20px;
   width: 9px;
   height: 9px;
   background: var(--bg);

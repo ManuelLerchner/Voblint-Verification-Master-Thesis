@@ -20,7 +20,7 @@
   overflow-x: auto;
 }
 
-:where(.scene-run) .run-code span {
+:where(.scene-run) .run-code [data-nodes] {
   display: inline-block;
   min-width: 100%;
   padding-inline: 4px;
@@ -29,7 +29,7 @@
   cursor: default;
 }
 
-:where(.scene-run) .run-code span.is-current {
+:where(.scene-run) .run-code [data-nodes].is-current {
   background: var(--accent-soft);
   border-left-color: var(--accent);
 }

@@ -55,7 +55,7 @@
   overflow-x: auto;
 }
 
-:where(.scene-trees) .trees-code span {
+:where(.scene-trees) .trees-code [data-n] {
   display: inline-block;
   min-width: 100%;
   padding-inline: 4px;
@@ -64,7 +64,7 @@
   transition: background 200ms ease;
 }
 
-:where(.scene-trees) .trees-code span.is-current {
+:where(.scene-trees) .trees-code [data-n].is-current {
   background: var(--accent-soft);
 }
 

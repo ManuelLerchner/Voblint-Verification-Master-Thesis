@@ -116,7 +116,6 @@
   </nav>
   <header class="explainer-hero">
     <div class="page-shell">
-      <p class="eyebrow">How it works</p>
       <h1>Static analysis you can trust, and why</h1>
       <p class="hero-byline">
         <span>Manuel Lerchner</span>
@@ -2452,7 +2451,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre data-lang="isabelle">theorem run_voblint_certified_source_sound:
+<pre>theorem run_voblint_certified_source_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "star (pstep (declared_global p) (prog_table p))
              (main_body (prog_table p), s0, []) (residual, s, frs)"
@@ -2483,7 +2482,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre data-lang="isabelle">theorem run_voblint_check_sound:
+<pre>theorem run_voblint_check_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "star (pstep (declared_global p) (prog_table p))
              (main_body (prog_table p), s0, []) (residual, s, frs)"
@@ -2515,7 +2514,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre data-lang="isabelle">corollary run_voblint_dead_check_unreached:
+<pre>corollary run_voblint_dead_check_unreached:
   assumes "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
       and "chk ∈ set (res_checks res)"
@@ -2542,7 +2541,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre data-lang="isabelle">theorem run_voblint_arithmetic_safe:
+<pre>theorem run_voblint_arithmetic_safe:
   assumes "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
       and "s ∈ ltr_collect (declared_global p) (prog_cfg p)
@@ -2567,7 +2566,7 @@
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre data-lang="isabelle">corollary run_voblint_check_sites:
+<pre>corollary run_voblint_check_sites:
   assumes "run_voblint D rule ctx p = Analysed res"
   shows "map (λchk. (check_point chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
