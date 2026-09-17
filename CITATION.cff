@@ -4,9 +4,36 @@ title: >-
   Voblint: A Verified Goblint-Style Static Analysis Pipeline in
   Isabelle/HOL
 type: software
+version: 1.1.0
+date-released: "2026-09-15"
 license: BSD-3-Clause
 authors:
   - family-names: Lerchner
     given-names: Manuel
 repository-code: >-
   https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis
+url: >-
+  https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/
+abstract: >-
+  Voblint is a machine-checked Isabelle/HOL framework for building, running
+  and verifying interprocedural abstract interpreters, modelled on Goblint's
+  D/G architecture. It chains verified compilation of a small imperative
+  language to a procedure-aware control-flow graph, an activation-local
+  operational semantics, executable equation generation, and a vendored
+  verified side-effecting top-down solver into one soundness statement about
+  the analyzer's own output. The statement covers every configuration the
+  tool offers -- five abstract domains, four global update rules, and
+  context-insensitive, entry-state and call-string context policies -- and is
+  stated about the same operation that is exported to OCaml and runs in the
+  command-line tool and the browser playground. Solver termination is a
+  per-program premise; lexing, parsing, code generation and rendering lie
+  outside the proved chain.
+keywords:
+  - abstract interpretation
+  - static analysis
+  - formal verification
+  - Isabelle/HOL
+  - interprocedural analysis
+  - context sensitivity
+  - Goblint
+  - code generation

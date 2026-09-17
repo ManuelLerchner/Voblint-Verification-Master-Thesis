@@ -82,7 +82,19 @@ ANON = re.compile(r'^\s*(?:lemma|theorem|corollary)\s+["\\]')
 # `  field :: "type"` lines inside a record / datatype body.
 FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
 
+# A datatype's constructors are constants too, and prose cites them as often as
+# it cites the type: `EA_Assign`, `Root`, `CallEdge`.  They are capitalised and
+# introduced either after `=` on the datatype line or after a leading `|`.
+CONSTRUCTOR = re.compile(r"^\s*(?:\||=)\s*([A-Z][A-Za-z0-9_']*)", re.M)
+
 TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\)")
+
+# The theorem environments in lib/theorems.typ carry the Isabelle name they
+# state as `isa: "..."`, and render it in the margin.  That is a reference like
+# any other and is checked the same way; it is not wrapped in an isa*() call
+# only because the environment already knows it is a name.  The kind is left
+# open, since a definition may name a constant, a type or a locale.
+ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
 
 # Names that deliberately do not resolve, with the reason.
 ALLOWED = {
@@ -122,7 +134,7 @@ def isabelle_commands() -> set[str] | None:
     return names or None
 
 
-def build_inventory() -> tuple[dict[str, set[str]], set[str]]:
+def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
     """Map every declared name to the kinds it is declared with."""
     kinds: dict[str, set[str]] = defaultdict(set)
     for root in ("src", "vendor"):
@@ -142,6 +154,20 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str]]:
                         if f.group(0).lstrip().startswith(("record", "datatype")):
                             break
                         kinds[f.group(1)].add("const")
+                if m.group(1) == "datatype":
+                    # Constructors run until the next top-level command.
+                    rest = text[m.end() :]
+                    stop = re.search(r"^\S", rest, re.M)
+                    for c in CONSTRUCTOR.finditer(
+                        rest[: stop.start() if stop else len(rest)]
+                    ):
+                        kinds[c.group(1)].add("const")
+
+    # Theory names, so a figure that labels a node with a theory is not
+    # mistaken for one naming a declaration that does not exist.
+    theories: set[str] = {
+        path.stem for root in ("src", "vendor") for path in (REPO / root).rglob("*.thy")
+    }
 
     sessions: set[str] = set()
     for roots in REPO.rglob("ROOT"):
@@ -153,7 +179,7 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str]]:
             re.M,
         ):
             sessions.add(m.group(1))
-    return kinds, sessions
+    return kinds, sessions, theories
 
 
 def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
@@ -165,7 +191,60 @@ def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
         for m in TYPST_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, m.group(1), m.group(2)))
+        for m in ISA_ARG.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            refs.append((path, line, "any", m.group(1)))
     return refs
+
+
+# A backticked token inside a .typ file that looks like an Isabelle name.
+# Figure payloads are written as raw literals (`Constraint_System`) rather than
+# through isathm/isaconst/isatype/isalocale, so nothing checked them; six of
+# the names in the figure gallery had gone stale unnoticed.
+RAW_NAME = re.compile(r"`([A-Za-z][A-Za-z0-9_]*)`")
+
+# Three ways to say "this literal is code, but not an Isabelle name".  They are
+# mechanisms, not an exclusion list: a growing list of excused identifiers would
+# decay into noise, while each of these says *why* the token is exempt.
+#
+#   1. a language-tagged raw block -- ```ocaml, ```c, ```sh, ... -- is another
+#      language by construction;
+#   2. a `raw(..., lang: "...")` call, the same thing written as a function;
+#   3. `// thesis-refs: ignore` on the line or the line before it, for a one-off
+#      that is genuinely code and genuinely untagged.
+FENCED_RAW = re.compile(r"```[A-Za-z][A-Za-z0-9+-]*.*?```", re.S)
+RAW_CALL = re.compile(
+    r'raw\((?:[^()]|\([^()]*\))*?\blang:\s*"[^"]+"(?:[^()]|\([^()]*\))*?\)', re.S
+)
+IGNORE_MARK = re.compile(r"//\s*thesis-refs:\s*ignore")
+
+
+def _blank(match: re.Match[str]) -> str:
+    """Replace a span with newline-preserving blanks, so line numbers survive."""
+    return re.sub(r"[^\n]", " ", match.group(0))
+
+
+def collect_raw_names(thesis: Path) -> list[tuple[Path, int, str]]:
+    out = []
+    for path in sorted(thesis.rglob("*")):
+        if path.suffix != ".typ" or not path.is_file():
+            continue
+        text = path.read_text(errors="ignore")
+        text = FENCED_RAW.sub(_blank, text)
+        text = RAW_CALL.sub(_blank, text)
+        lines = text.splitlines()
+        for m in RAW_NAME.finditer(text):
+            name = m.group(1)
+            # Only names shaped like an Isabelle declaration: a multi-word
+            # identifier.  A single lowercase word is prose or pseudocode.
+            if "_" not in name:
+                continue
+            line = text.count("\n", 0, m.start()) + 1
+            near = " ".join(lines[max(0, line - 2) : line])
+            if IGNORE_MARK.search(near):
+                continue
+            out.append((path, line, name))
+    return out
 
 
 def main() -> int:
@@ -178,7 +257,7 @@ def main() -> int:
         print(f"check_thesis_refs: no such directory: {thesis}", file=sys.stderr)
         return 1
 
-    kinds, sessions = build_inventory()
+    kinds, sessions, theories = build_inventory()
     commands = isabelle_commands()
     if not kinds:
         print(
@@ -187,6 +266,17 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+
+    raw = collect_raw_names(thesis)
+    stale_raw = [
+        (path, line, name)
+        for path, line, name in raw
+        if name not in kinds
+        and name not in sessions
+        and name not in theories
+        and name not in ALLOWED
+    ]
+    unwrapped = len(raw) - len(stale_raw)
 
     refs = collect_refs(thesis)
     missing: list[str] = []
@@ -213,6 +303,16 @@ def main() -> int:
                     f"  {site}: session {name} is not declared in any ROOT{hint}"
                 )
             continue
+        if kind == "any":
+            # A theorem environment's own `isa:` name: it must exist, but the
+            # environment does not claim which kind it is.
+            if name not in kinds and name not in theories:
+                near = difflib.get_close_matches(
+                    name, sorted(set(kinds) | theories), 1, 0.7
+                )
+                hint = f" -- did you mean {near[0]}?" if near else ""
+                missing.append(f'  {site}: isa: "{name}" does not exist{hint}')
+            continue
         have = kinds.get(name)
         if have is None:
             near = difflib.get_close_matches(name, sorted(kinds), 1, 0.75)
@@ -223,6 +323,14 @@ def main() -> int:
                 f"  {site}: {name} is cited as a {kind}, but the sources declare "
                 f"it as {'/'.join(sorted(have))}"
             )
+
+    for path, line, name in stale_raw:
+        near = difflib.get_close_matches(name, sorted(set(kinds) | theories), 1, 0.7)
+        hint = f" -- did you mean {near[0]}?" if near else ""
+        missing.append(
+            f"  {path.relative_to(REPO)}:{line}: `{name}` is written as a raw "
+            f"literal and names no declaration, theory or session{hint}"
+        )
 
     if missing or deviated:
         if missing:
@@ -245,7 +353,15 @@ def main() -> int:
         )
         return 1
 
-    print(f"check_thesis_refs: {len(refs)} reference(s) resolve against the sources")
+    note = ""
+    if unwrapped:
+        note = (
+            f"; {unwrapped} raw `identifier` literal(s) resolve but bypass the "
+            "kind check -- wrap them in isathm/isaconst/isatype/isalocale"
+        )
+    print(
+        f"check_thesis_refs: {len(refs)} reference(s) resolve against the sources{note}"
+    )
     if skipped_cmds:
         print(
             f"  ({len(set(skipped_cmds))} \\isacmd reference(s) unchecked: "

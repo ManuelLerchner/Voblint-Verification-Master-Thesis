@@ -47,9 +47,9 @@
 #let config(c, s, k) = $lr(⟨ #c, #s, #k ⟩)$
 
 // =================================================================== CFG ====
-#let FunEntry(p) = $sans("Entry") #p$
-#let FunResult(p) = $sans("Result") #p$
-#let Stmt(n) = $sans("Stmt") #n$
+#let FunEntry(p) = $sans("Entry") thin #p$
+#let FunResult(p) = $sans("Result") thin #p$
+#let Stmt(n) = $sans("Stmt") thin #n$
 #let cfgedge(u, a, v) = $#u attach(arrow.r.long, t: #a) #v$
 #let cfgcall(u, a, p, v) = $#u attach(arrow.r.dashed, t: #[#a, #p]) #v$
 #let cfg = $cal(G)$
@@ -61,8 +61,28 @@
 #let ltrcollect = $cal(C)$
 #let actcollect = $cal(C)_"act"$
 #let keyfun = $beta$
-#let sinkstore = $italic("sink")$
+#let sinkstore = $italic("state")$
+#let sinknode = $italic("node")$
+#let tracepath = $italic("path")$
 #let callerof = $italic("caller")$
+#let Root(p) = $sans("Root") thick #p$
+#let CallT(t, p) = $sans("Call") thick #t med #p$
+#let ResumeT(t, u, p) = $sans("Resume") thick #t med #u med #p$
+#let extend(t, x) = $#t med dot.c med #x$
+
+// Concrete transfers: what an edge, a call and a return do to a store.
+#let edgecollect = $italic("step")$
+#let callenter = $italic("enter")$
+#let combinecollect = $italic("combine")$
+#let cinit = $Sigma_0$
+
+// Calling context, as a relation on concrete calls.
+#let ctxrel = $cal(R)$
+#let admits = $italic("admits")$
+#let tracectx = $italic("ctx")$
+#let ctxtotal = $italic("total")$
+#let startctx = $c_0$
+#let cover = $italic("cov")$
 
 // ========================================== equation system and solver ======
 #let Unk = $cal(X)$
