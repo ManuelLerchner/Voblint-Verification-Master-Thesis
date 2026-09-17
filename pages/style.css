@@ -2106,6 +2106,10 @@ a:focus-visible {
     display: none;
   }
 
+  .raw-result summary {
+    flex-wrap: wrap;
+  }
+
   .site-nav-inner {
     position: relative;
     min-height: 0;
