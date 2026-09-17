@@ -83,7 +83,7 @@ the activation that created it, which is what the next section defines.
     thesis's.]
 ]
 
-== Three views of one run <sec:three-views>
+=== Three views of one run <sec:three-views>
 
 Before the definition, it is worth naming what already exists. This development
 says what a program does three times, at three levels, and the proofs connect
@@ -121,7 +121,9 @@ soundness is stated against, because it is the only one of the three that
 records which activation a store belongs to. #isathm("csim_step") relates the
 first two and #isathm("source_run_has_ltr") relates the second to the third.
 
-== Activation-local traces <sec:ltr>
+== Traces <sec:traces>
+
+=== Activation-local traces <sec:ltr>
 
 An _activation-local trace_ is one activation of one procedure, together with
 the activation that called it and the calls it has already finished.
@@ -151,7 +153,7 @@ execution is therefore not a single object here. It is a family of traces linked
 by those fields, and the one that is "currently running" is the one whose path is
 being extended.
 
-*The caller is stored, not searched for.* Because a $sans("Call")$ carries the
+*The caller is stored, not searched for.* Because a $ctor("Call")$ carries the
 exact caller value — frozen at the moment of the call, with its path ending at
 the call node — a completed callee can be composed back into precisely the
 activation that spawned it. Nothing has to scan a stack for a compatible frame.
@@ -219,16 +221,16 @@ semantics without redefining it.
   kind: image,
   caption: [One activation-local trace for the recursive factorial
     program below, after the inner call to #raw("f(1)") has returned. The
-    running activation is the outermost $sans("Resume")$; the blue chain is
-    #callerof, which descends through the $sans("Resume")$ to the $sans("Call")$
-    that created the activation and on to $sans("Root")$, while the finished
+    running activation is the outermost $ctor("Resume")$; the blue chain is
+    #callerof, which descends through the $ctor("Resume")$ to the $ctor("Call")$
+    that created the activation and on to $ctor("Root")$, while the finished
     callee hangs off to the right. A path through the CFG would be a single
     line. This is a tree, and the difference is exactly what lets the semantics
     tell the two activations of #raw("f") apart — both of which end at the same
-    node $sans("Result") f$.],
+    node $ctor("Result") f$.],
 ) <fig:ltr-tree>
 
-== Valid traces <sec:valid>
+=== Valid traces <sec:valid>
 
 Not every term of the shape above describes an execution. Validity is the
 inductive set of traces that the graph can actually produce, with one rule per
@@ -246,7 +248,7 @@ phenomenon the graph has.
     row-gutter: 1.4em,
     prooftree(rule(
       name: [Init],
-      $sans("Root") thick [(v_0, s)] in cal(V)$,
+      $ctor("Root") thick [(v_0, s)] in cal(V)$,
       $s in S$,
       $v_0 = italic("entry")(cal(G))$,
     )),
@@ -259,18 +261,18 @@ phenomenon the graph has.
     )),
     prooftree(rule(
       name: [Call],
-      $sans("Call") thick tau thick [(sans("Entry") thin p, e)] in cal(V)$,
+      $ctor("Call") thick tau thick [(ctor("Entry") thin p, e)] in cal(V)$,
       $tau in cal(V)$,
-      $italic("node")(tau) attach(arrow.r.dashed, t: a) sans("Entry") thin p$,
+      $italic("node")(tau) attach(arrow.r.dashed, t: a) ctor("Entry") thin p$,
       $e = italic("enter")(a, italic("state")(tau))$,
     )),
     prooftree(rule(
       name: [Return],
-      $sans("Resume") thick tau thick tau' thick (italic("path")(tau) med dot.c med (k, s'')) in cal(V)$,
+      $ctor("Resume") thick tau thick tau' thick (italic("path")(tau) med dot.c med (k, s'')) in cal(V)$,
       $tau' in cal(V)$,
       $italic("caller")(tau') = tau$,
-      $italic("node")(tau') = sans("Result") thin p$,
-      $italic("node")(tau) attach(arrow.r.dashed, t: a) sans("Entry") thin p med [k]$,
+      $italic("node")(tau') = ctor("Result") thin p$,
+      $italic("node")(tau) attach(arrow.r.dashed, t: a) ctor("Entry") thin p med [k]$,
       $s'' = italic("combine")(a, italic("state")(tau), italic("state")(tau'))$,
     )),
   ),
@@ -313,7 +315,7 @@ are worth extracting, because later proofs turn on them.
     [Call: a *new* trace, holding the caller],
 
     [return],
-    [at $sans("Result") p$, *pop* the top frame and combine],
+    [at $ctor("Result") p$, *pop* the top frame and combine],
     [Resume: a *third* trace, holding caller and callee],
 
     table.hline(stroke: 0.5pt),
@@ -338,8 +340,8 @@ cannot be mistaken for a local edge by a side condition failing to hold; it
 cannot be expressed as one at all.
 
 *A return follows no edge.* The Return rule does not look for an edge out of
-$sans("Result") p$. It recovers the continuation $k$ from the very
-#isaconst("calls") tuple that created the activation. One $sans("Result") p$ node
+$ctor("Result") p$. It recovers the continuation $k$ from the very
+#isaconst("calls") tuple that created the activation. One $ctor("Result") p$ node
 therefore serves every caller of $p$, and recursion needs no duplicated nodes.
 
 *The caller is recovered structurally.* The premise $#callerof (tau') = tau$ is
@@ -358,12 +360,12 @@ callee's own structure.
   ```)
 
   produces the trace drawn in @fig:ltr-tree. Both activations of #raw("f")
-  reach the same node $sans("Result") f$, with different stores, under different
+  reach the same node $ctor("Result") f$, with different stores, under different
   caller chains. No set of reachable $(v, s)$ pairs distinguishes them; the two
   traces do.
 ]
 
-== The collecting semantics <sec:collect>
+=== The collecting semantics <sec:collect>
 
 With validity fixed, the set an analysis must over-approximate is immediate.
 
@@ -380,9 +382,9 @@ facts the rest of the development uses about it.
 Two consequences of the definition are easy to miss.
 
 There is *no global exit node*. Whole-program completion is collection at
-$sans("Result") italic("main")$, and a procedure's result is an ordinary collected
+$ctor("Result") italic("main")$, and a procedure's result is an ordinary collected
 node rather than a separate summary mechanism. Whatever the analysis says about
-$sans("Result") p$ it says in the same way it speaks about any other node.
+$ctor("Result") p$ it says in the same way it speaks about any other node.
 
 And $#ltrcollect$ *forgets the structure it was built from*. It is a
 function from nodes to store sets, exactly like the intraprocedural collecting
@@ -430,7 +432,7 @@ A trace's context is then read off its structure.
   $#tracectx (tau, c)$ — "$tau$ may carry $c$" — is
   inductively defined by
   #set enum(numbering: "(i)")
-  + a $sans("Root")$ carries the initial context $#startctx$;
+  + a $ctor("Root")$ carries the initial context $#startctx$;
   + a $#CallT($tau'$, $pi$)$ carries any $c'$ that $#admits$ allows for the transition
     out of a context $tau'$ carries;
   + a $#ResumeT($tau'$, $tau''$, $pi$)$ carries whatever $tau'$ carries.
@@ -498,29 +500,29 @@ $#cover$ was computed.
 
 #definition(name: [Coverage contract], isa: "ltr_coverage")[
   #set enum(numbering: "1.")
-  + *INIT.* Every initial store is covered at the entry node in the initial
+  + #oblig("INIT"). Every initial store is covered at the entry node in the initial
     context.
-  + *INTRA.* If $s$ is covered at $u$ in context $c$ and
+  + #oblig("INTRA"). If $s$ is covered at $u$ in context $c$ and
     $cfgedge(u, a, v) in cfg$, then every $s' in #edgecollect (a, s)$ is covered at
     $v$ in the *same* context $c$.
-  + *CALL.* If $s$ is covered at a call site $u$ in $c$, and $c'$ is admissible
+  + #oblig("CALL"). If $s$ is covered at a call site $u$ in $c$, and $c'$ is admissible
     for that call, then the entered store is covered at the callee's entry in
     $c'$.
-  + *RETURN.* If $s$ is covered at a call site $u$ in $c_1$, the context $c'$ is
+  + #oblig("RETURN"). If $s$ is covered at a call site $u$ in $c_1$, the context $c'$ is
     admissible for that call *from $c_1$*, and $t$ is covered at the callee's
     result in $c'$, then $#combinecollect (a, s, t)$ is covered at the
     continuation in $c_1$.
-  + *TOTAL.* $#ctxtotal$.
+  + #oblig("TOTAL"). $#ctxtotal$.
 ]
 
 Four of these are unsurprising; two deserve argument.
 
-*INTRA preserves the context.* An ordinary edge never changes which activation
+*#oblig("INTRA") preserves the context.* An ordinary edge never changes which activation
 is running, so it never changes the context. This is why intra-procedural flow
 needs no routing machinery at all, and why @ch:equations's generator can discharge
 INTRA generically before it knows what the context policy is.
 
-*RETURN is the load-bearing obligation.* Read it again: the callee is read at a
+*#oblig("RETURN") is the load-bearing obligation.* Read it again: the callee is read at a
 context admissible *for the transition out of the caller's own context $c_1$* —
 not at any context that happens to cover that callee's result. Without that
 correlation, a claim could satisfy the other four obligations and still be
@@ -529,7 +531,7 @@ into a different caller, which is precisely the unsoundness context sensitivity
 is supposed to prevent. The correlation is not an extra hypothesis to assume;
 #isathm("trace_context_caller_entry") makes it a theorem about $#validltr$.
 
-*TOTAL makes the buckets meaningful rather than merely safe.* Without it a
+*#oblig("TOTAL") makes the buckets meaningful rather than merely safe.* Without it a
 resumed caller may carry a context under which its callee was never assigned
 one. The callee's result would then be bounded by no bucket, and the combined
 store by nothing — and the claim would still be "sound", because it would be
@@ -571,7 +573,7 @@ context-insensitive collection is exactly the union of the buckets.
         $s$,
         $italic("enter")(a, s)$,
         $italic("cov")(u, c)$,
-        $italic("cov")(sans("Entry") thin p, c')$,
+        $italic("cov")(ctor("Entry") thin p, c')$,
         $italic("enter")(a)$,
       )],
     [#text(0.8em, weight: "bold")[RETURN] #h(0.6em) #text(
@@ -582,7 +584,7 @@ context-insensitive collection is exactly the union of the buckets.
       #_sq(
         $(s, t)$,
         $italic("combine")(a, s, t)$,
-        $italic("cov")(u, c_1) times italic("cov")(sans("Result") p, c')$,
+        $italic("cov")(u, c_1) times italic("cov")(ctor("Result") p, c')$,
         $italic("cov")(k, c_1)$,
         $italic("combine")(a)$,
       )],
@@ -603,7 +605,7 @@ context-insensitive collection is exactly the union of the buckets.
     entered.],
 ) <fig:obligations>
 
-== What the contract buys <sec:consequences>
+=== What the contract buys <sec:consequences>
 
 The point of the contract is that it is _sufficient_. Nothing further is needed:
 no property of the analysis, no shape of the claim, no assumption about how it
@@ -686,7 +688,9 @@ Soundness requires every real execution to appear in the graph; it does not
 require every graph execution to come from a real one. @sec:asymmetry discusses what
 that asymmetry costs.
 
-== Notation, and what it stands for <sec:notation>
+== Notation and summary <sec:closing>
+
+=== Notation, and what it stands for <sec:notation>
 
 The theorem environments above carry the Isabelle name each result is stated
 under, and `thesis-refs` checks that the name exists. That check guarantees the
@@ -707,7 +711,7 @@ denotes it. This table is the human half of the translation.
     $#tracepath (tau)$, [#isaconst("path")], [the activation-local path],
     $#sinknode (tau)$, [#isaconst("sink_node")], [node of the last entry],
     $#sinkstore (tau)$, [#isaconst("sink_store")], [store of the last entry],
-    $#callerof (tau)$, [#isaconst("caller_of")], [partial; #sym.bot at a $sans("Root")$],
+    $#callerof (tau)$, [#isaconst("caller_of")], [partial; #sym.bot at a $ctor("Root")$],
     $cal(V)$, [#isaconst("valid_ltr")], [written $#validltr$ in prose],
     $#ltrcollect (v)$, [#isaconst("ltr_collect")], [classifier, graph and seed set suppressed],
     $#actcollect (v, c)$,
@@ -739,7 +743,7 @@ denotes it. This table is the human half of the translation.
     would obscure the ones that vary.],
 ) <tab:notation>
 
-== Summary
+=== Summary
 
 The concrete object an analysis must over-approximate is
 $#ltrcollect$, the stores that valid activation-local traces hold at each

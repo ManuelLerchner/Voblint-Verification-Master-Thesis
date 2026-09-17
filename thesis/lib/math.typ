@@ -1,3 +1,4 @@
+#import "theme.typ": vb
 // Notation library. Same rule as on the LaTeX side: never write a semantic
 // bracket, a sharp, or a lattice symbol directly in the text -- go through a
 // binding here, so a notational decision is one edit.
@@ -37,7 +38,13 @@
 #let Var = $italic("Var")$
 #let Val = $italic("Val")$
 #let Store = $Sigma$
-#let keyw(x) = $bold(#x)$
+// VIMP keywords and datatype constructors are coloured like the identifiers
+// of code.typ: keywords in the listing keyword colour, constructors in the
+// colour of the type they build.
+// Both are text, not math alphabets: the math font's sans and bold ranges
+// are not what a reader expects a keyword or a constructor to look like.
+#let keyw(x) = text(weight: "bold", fill: vb.keyword, x)
+#let ctor(x) = text(font: "Latin Modern Sans", fill: vb.type, x)
 #let skipC = keyw("skip")
 #let assign(x, e) = $#x := #e$
 #let pstep = $arrow.r_p$
@@ -47,9 +54,9 @@
 #let config(c, s, k) = $lr(⟨ #c, #s, #k ⟩)$
 
 // =================================================================== CFG ====
-#let FunEntry(p) = $sans("Entry") thin #p$
-#let FunResult(p) = $sans("Result") thin #p$
-#let Stmt(n) = $sans("Stmt") thin #n$
+#let FunEntry(p) = $ctor("Entry") thin #p$
+#let FunResult(p) = $ctor("Result") thin #p$
+#let Stmt(n) = $ctor("Stmt") thin #n$
 #let cfgedge(u, a, v) = $#u attach(arrow.r.long, t: #a) #v$
 #let cfgcall(u, a, p, v) = $#u attach(arrow.r.dashed, t: #[#a, #p]) #v$
 #let cfg = $cal(G)$
@@ -65,9 +72,9 @@
 #let sinknode = $italic("node")$
 #let tracepath = $italic("path")$
 #let callerof = $italic("caller")$
-#let Root(p) = $sans("Root") thick #p$
-#let CallT(t, p) = $sans("Call") thick #t med #p$
-#let ResumeT(t, u, p) = $sans("Resume") thick #t med #u med #p$
+#let Root(p) = $ctor("Root") thick #p$
+#let CallT(t, p) = $ctor("Call") thick #t med #p$
+#let ResumeT(t, u, p) = $ctor("Resume") thick #t med #u med #p$
 #let extend(t, x) = $#t med dot.c med #x$
 
 // Concrete transfers: what an edge, a call and a return do to a store.

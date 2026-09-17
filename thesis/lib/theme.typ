@@ -14,6 +14,14 @@
   fresh: rgb("#FFFFFF"),
   called: rgb("#5E35B1"),
 
+  // notation and identifiers: what a reader can click is coloured by kind;
+  // a name with no resolved link is set in `plain`.
+  const: rgb("#1565C0"), // a constant or function of the formalization
+  thm: rgb("#2E7D32"), // a proved fact
+  type: rgb("#6A1B9A"), // a type, and the constructors of a datatype
+  locale: rgb("#00695C"), // a locale, and the obligations it names
+  plain: rgb("#37474F"),
+
   // listings
   keyword: rgb("#7F0055"),
   ident: rgb("#0000C0"),
