@@ -15,8 +15,13 @@ ROOTS       text eol=lf
 
 # ── GitHub syntax highlighting ─────────────────────────────────────
 
-# VIMP is C-like.
+# VIMP is C-like, so C highlighting reads well. But the repository contains no
+# C, and the 283 regression fixtures are test data: counting them as C put C
+# third in the language bar and claimed 9% of a repository that has none.
+# `linguist-detectable=false` keeps the highlighting and drops them from the
+# statistics.
 *.vimp linguist-language=C
+*.vimp linguist-detectable=false
 
 
 # ── Generated code ─────────────────────────────────────────────────
@@ -25,10 +30,20 @@ ROOTS       text eol=lf
 codegen/generated/** linguist-generated=true
 
 # The VIMP frontend (manifests/vimp-grammar.yaml -> scripts/gen_vimp_menhir.py),
-# unrelated to Isabelle codegen -- kept in cli/ next to its consumer
-# (main.ml, vimp_frontend.ml) rather than under codegen/generated/.
-cli/vimp_parser.mly linguist-generated=true
-cli/vimp_lexer.mll linguist-generated=true
+# unrelated to Isabelle codegen -- kept next to its consumer in cli/frontend/
+# rather than under codegen/generated/.
+cli/frontend/vimp_parser.mly linguist-generated=true
+cli/frontend/vimp_lexer.mll linguist-generated=true
+cli/frontend/vimp_printer.ml linguist-generated=true
+
+# Generated Isabelle: the per-domain registrations (manifests/analyses.yaml ->
+# scripts/gen_analysis_assembly.py) and the grammar theory
+# (manifests/vimp-grammar.yaml -> scripts/gen_vimp_isabelle.py).
+src/Analyses/*/generated/** linguist-generated=true
+src/Program_Model/VIMP/VIMP_Grammar_Generated.thy linguist-generated=true
+
+# Thesis artifacts extracted from the theories, the analyzer and the explainer.
+thesis/shared/generated/** linguist-generated=true
 
 # ── Vendored / third-party code ────────────────────────────────────
 
@@ -37,3 +52,9 @@ vendor/** linguist-vendored=true
 # ── Documentation ──────────────────────────────────────────────────
 
 docs/** linguist-documentation=true
+
+# The explainer and the browser playground. Hand-written, and a real part of the
+# project -- but they explain and demonstrate the formalization rather than
+# constituting it, and at ~17% of the tree they otherwise crowd the language bar
+# with the presentation layer.
+pages/** linguist-documentation=true
