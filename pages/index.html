@@ -802,6 +802,40 @@
         </figcaption>
       </figure>
 
+      <h3 class="setting-title">A bound that looks wrong</h3>
+      <p class="setting-copy">
+        Take an unconstrained <code>n</code>, set <code>x = 6n + 5</code>, and ask for
+        <code>x % 6</code>. The answer should be <code>5</code>, but Voblint reports the interval
+        <code>[−1, 5]</code>. Is this an error in Voblint?
+      </p>
+
+      <figure class="scene">
+        <pre class="mock-editor" data-lang="vimp" aria-label="A remainder that goes negative"><span class="ml">fun main() {</span>
+<span class="ml">  n = __voblint_nondet_int();<span class="mh">interval: [−∞,+∞]</span></span>
+<span class="ml">  x = 6 * n + 5;<span class="mh">interval: [−∞,+∞] · congruence: 5+6ℤ</span></span>
+<span class="ml">  a = x % 6;<span class="mh">interval: [−1,5] · congruence: 5+6ℤ · together: {−1, 5}</span></span>
+<span class="ml unknown">  __voblint_check(a &gt;= 0);<span class="mb">? UNKNOWN</span></span>
+<span class="ml">  if (a &lt; 0) {<span class="mh">a narrows to −1</span></span>
+<span class="ml proved">    __voblint_check(a == -1);<span class="mb">✓ PROVED</span></span>
+<span class="ml">  } else {<span class="mh">a narrows to 5</span></span>
+<span class="ml proved">    __voblint_check(a == 5);<span class="mb">✓ PROVED</span></span>
+<span class="ml">  }</span>
+<span class="ml">}</span></pre>
+        <figcaption>
+          No. C gives a remainder the sign of its dividend, so <code>n = −1</code> makes
+          <code>x = −1</code> and <code>x % 6</code> is <code>−1</code>. That run is real, and a
+          bound without <code>−1</code> in it would be unsound, which is why
+          <code>a &gt;= 0</code> comes back UNKNOWN. The bound is also refinement at work, and no
+          component reaches it alone: Interval on its own stops at <code>[−5, 5]</code>, because
+          it never learns <code>x ≡ 5 (mod 6)</code>, while Congruence keeps that class and
+          nothing about magnitude, so the sign guard tells it nothing. Run this under
+          <code>interval</code>, <code>congruence</code>, <code>parity</code> or <code>sign</code>
+          and both arms come back UNKNOWN. Together the class and the bounds leave
+          <code>{−1, 5}</code>, which the guard splits into one value per arm.
+          <a class="try-link" href="playground.html?example=remainder-sign&amp;analysis=int&amp;context=none">Run it in the playground ↗</a>
+        </figcaption>
+      </figure>
+
     </section>
 
     <!-- ================================================================== -->

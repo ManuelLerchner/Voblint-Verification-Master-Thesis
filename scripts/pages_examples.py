@@ -71,6 +71,12 @@ SHOWCASE = [
         "remainder no component decides alone.",
     ),
     (
+        "10-arithmetic/precision/11-remainder_sign_follows_dividend.vimp",
+        "A remainder that goes negative",
+        "x % 6 lands in [-1,5], not [0,5]: C gives a remainder the sign of its "
+        "dividend, and a guard on that sign splits the two feasible values.",
+    ),
+    (
         "22-congruence/precision/04-crt_narrows_shared_class.vimp",
         "The Chinese remainder theorem",
         "Intersecting x = 1 (mod 4) with y = 3 (mod 6) gives 9 (mod 12), which "

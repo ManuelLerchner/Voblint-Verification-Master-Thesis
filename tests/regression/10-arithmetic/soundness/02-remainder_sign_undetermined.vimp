@@ -1,0 +1,13 @@
+// PARAM: --analysis int
+// The usual reading of x % 6 is "somewhere in 0..5", and for an unconstrained
+// dividend C does not promise that: with x = 6n + 5, n = 0 gives a = 5 and
+// n = -1 gives a = -1. Both a satisfying and a violating execution exist for
+// each check below, so UNKNOWN is the only sound answer here, not a lost
+// bound. The precision case next door shows what a guard on the sign recovers.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 6 * n + 5;
+  a = x % 6;
+  __voblint_check(a >= 0); // UNKNOWN
+  __voblint_check(a == 5); // UNKNOWN
+}

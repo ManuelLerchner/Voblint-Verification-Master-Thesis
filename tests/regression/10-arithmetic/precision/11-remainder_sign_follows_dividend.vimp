@@ -1,0 +1,25 @@
+// PARAM: --analysis int
+// C's remainder carries the sign of its dividend, so x % 6 is 5 where x is
+// positive and -1 where x is negative. For an unconstrained x = 6n + 5 both
+// happen, and Interval answers [-1,5]. That bound reads like a bug and is the
+// correct one: n = -1 gives x = -1, and -1 % 6 is -1, not 5.
+//
+// Congruence keeps the class 5 (mod 6), which leaves exactly -1 and 5 inside
+// those bounds, so a guard on the sign splits the two and each arm holds a
+// singleton. Neither component decides an arm alone: Interval on its own stops
+// at [-5,5] because it never learns the class, and Congruence never learns the
+// sign, so the guard tells it nothing. Under interval, congruence, parity or
+// sign every check here is UNKNOWN.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 6 * n + 5;
+  a = x % 6;
+  __voblint_check(a >= -1); // PROVED
+  __voblint_check(a <= 5); // PROVED
+  __voblint_check(a != 0); // PROVED
+  if (a < 0) {
+    __voblint_check(a == -1); // PROVED
+  } else {
+    __voblint_check(a == 5); // PROVED
+  }
+}
