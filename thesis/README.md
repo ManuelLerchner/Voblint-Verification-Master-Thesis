@@ -126,6 +126,21 @@ analyzer output; `tools/claims.py --check` re-runs every one and fails on a
 diff, quoting the `why` line so the failure names the sentence that is now
 wrong.
 
+### `pixi run thesis-playground` -- is this still the run the README shows?
+
+The README's playground figures are captured, not drawn, and each links to the
+run it shows. `shared/playground-figures.toml` names the screenshot, the
+program and the settings of every figure the thesis places;
+`tools/playground_figures.py` copies image and program under
+`shared/generated/playground/` (Typst reads nothing above its root) and derives
+the link with the encoder the playground's Share button uses. A recaptured
+figure or an edited program fails the check until the copy is regenerated.
+
+```typst
+#playground-figure("contexts", [The same two calls, without and with contexts])
+#playground-program("contexts")      // the program, as a listing
+```
+
 ### `pixi run thesis-links` -- does this link reach the definition?
 
 Isabelle's HTML output carries a per-entity anchor

@@ -191,6 +191,11 @@ thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", descriptio
 thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
 thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
 
+# The README's playground figures, copied under the thesis root with the link
+# that reopens each run derived from the program and settings it shows.
+thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check", description = "Check the thesis's playground figures against docs/images and docs/readme-figures." }
+thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", description = "Copy the README playground figures and their programs into thesis assets." }
+
 # Warnings are failures; an unresolved reference must not scroll past unread.
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
 
@@ -209,6 +214,7 @@ thesis-generated = { depends-on = [
   "thesis-claims-write",
   "thesis-facts-write",
   "thesis-figures-write",
+  "thesis-playground-write",
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
 # Every drift check, in one name.
@@ -216,6 +222,7 @@ thesis-check = { depends-on = [
   "thesis-refs",
   "thesis-snippets",
   "thesis-figures",
+  "thesis-playground",
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
