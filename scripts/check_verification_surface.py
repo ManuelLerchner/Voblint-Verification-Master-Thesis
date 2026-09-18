@@ -29,6 +29,8 @@ CI_SETUP_TASKS = {
 # They operate on generated or deployed artifacts and therefore are not part
 # of the supported local `verify` aggregate.
 CI_ONLY_TASKS = {
+    "ci-digest",
+    "ci-prune-caches",
     "pages-links-live",
     "pages-site-build",
     "pages-site-links",

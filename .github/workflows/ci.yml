@@ -39,6 +39,11 @@ jobs:
   # tree look green.
   isabelle-build:
     runs-on: ubuntu-latest
+    # Writes the heap cache, and is therefore also where the heaps it
+    # superseded are removed.
+    permissions:
+      contents: read
+      actions: write
     container:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
@@ -127,6 +132,18 @@ jobs:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
           retention-days: 1
+
+      # A restore falls back to the key prefix and lands on the newest entry, so
+      # every older heap is unreachable weight -- 7 GB of a 10 GB budget,
+      # evicting the HTML tree and the PDF to hold heaps nothing can select.
+      # This run's own heap is saved in the job's post phase, after this step,
+      # so what it leaves behind is the newest few plus that one. Only from
+      # main: a branch does not clean up shared state.
+      - name: Prune superseded heap caches
+        if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: pixi run ci-prune-caches --apply
 
   # Isabelle cancels the remaining theories in a session after an error. If
   # the integration build fails, retry each example leaf in its own build
@@ -258,18 +275,13 @@ jobs:
       # The rendered tree is a function of the theory sources, the session
       # structure and the toolchain, and of nothing else, so a run whose
       # inputs are byte-identical to one already rendered restores that tree
-      # instead of paying the clean build again. `git ls-files -s` prints the
-      # blob SHA of every tracked file under those paths and the gitlink SHA
-      # of the vendored solver, so the digest covers the submodule pointer
-      # without reading its content, and untracked build output cannot enter
-      # it. The setup action is in there because it pins the AFP revision.
+      # instead of paying the clean build again. What counts as an input is
+      # in scripts/ci_digest.py, for every cached artifact at once.
       - name: Digest the sources the HTML is rendered from
         id: sources
         shell: bash
         run: |
-          digest=$(git ls-files -s -- src ROOTS scripts/mk/html.sh pixi.toml \
-            vendor/td-verification .github/actions/setup-isabelle-action \
-            | sha256sum | cut -c1-32)
+          digest=$(pixi run ci-digest html)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "HTML source digest: $digest"
 
@@ -379,22 +391,17 @@ jobs:
       # marker this restores carries no result: its presence under an exact key
       # IS the result, which is why the key must name everything the check reads.
       # It is computed before Setup Isabelle so a hit also skips the AFP checkout
-      # and the heap download, which is most of this job's wall clock.
-      # `isabelle version` is in the digest because the `isabelle console` the
-      # check drives comes from the container, and it can be read before the
-      # setup action runs.
+      # and the heap download, which is most of this job's wall clock. pixi
+      # comes first because the digest is a pixi task: seconds on a hit,
+      # against the minutes that hit still skips.
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
       - name: Digest what the facts check compares
         id: sources
         shell: bash
         run: |
-          digest=$(
-            {
-              /home/isabelle/Isabelle/bin/isabelle version
-              git ls-files -s -- src ROOTS pixi.toml thesis/tools/facts.py \
-                thesis/shared/facts.toml thesis/shared/generated/facts.json \
-                vendor/td-verification .github/actions/setup-isabelle-action
-            } | sha256sum | cut -c1-32
-          )
+          digest=$(pixi run ci-digest thesis-facts)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "Facts input digest: $digest"
 
@@ -414,10 +421,6 @@ jobs:
       - name: Bridge AFP_COMPONENT_BASE to AFP
         if: steps.facts-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
-
-      - name: Set up pixi
-        if: steps.facts-cache.outputs.cache-hit != 'true'
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from isabelle-build
         if: steps.facts-cache.outputs.cache-hit != 'true'
@@ -488,20 +491,16 @@ jobs:
       # of it, which is the thing that script exists to prevent. The tracked side
       # and the vendored solver (which codegen-hash.sh does not reach) are named
       # separately. Computed before Setup Isabelle, so a hit skips the AFP
-      # checkout and the heap download as well as the check.
+      # checkout and the heap download as well as the check; pixi comes first
+      # because the digest is a pixi task.
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
       - name: Digest what the codegen check compares
         id: sources
         shell: bash
         run: |
-          digest=$(
-            {
-              /home/isabelle/Isabelle/bin/isabelle version
-              sh scripts/mk/codegen-hash.sh
-              git ls-files -s -- codegen/generated pixi.toml \
-                scripts/mk/check-clean.sh scripts/mk/require-afp.sh \
-                vendor/td-verification .github/actions/setup-isabelle-action
-            } | sha256sum | cut -c1-32
-          )
+          digest=$(pixi run ci-digest codegen)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "Codegen input digest: $digest"
 
@@ -521,10 +520,6 @@ jobs:
       - name: Bridge AFP_COMPONENT_BASE to AFP
         if: steps.codegen-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
-
-      - name: Set up pixi
-        if: steps.codegen-cache.outputs.cache-hit != 'true'
-        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from isabelle-build
         if: steps.codegen-cache.outputs.cache-hit != 'true'
@@ -793,18 +788,14 @@ jobs:
       - name: Check PDF theory selection
         run: pixi run isabelle-pdf-selection-check
 
-      # Same digest scheme as the HTML job, over what this document is made
-      # from: the theories, the session structure, the LaTeX root and the
-      # README the title pages carry, and the scripts that assemble them.
+      # Same scheme as the HTML job, over what this document is made from:
+      # the theories, the session structure, the LaTeX root and the README the
+      # title pages carry, and the scripts that assemble them.
       - name: Digest the sources the PDF is rendered from
         id: sources
         shell: bash
         run: |
-          digest=$(git ls-files -s -- src ROOTS document README.md pixi.toml \
-            scripts/mk/pdf.sh scripts/gen_pdf_session.py \
-            scripts/build_readme_pdf.py scripts/pdf_readme.lua \
-            vendor/td-verification .github/actions/setup-isabelle-action \
-            | sha256sum | cut -c1-32)
+          digest=$(pixi run ci-digest pdf)
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "PDF source digest: $digest"
 
