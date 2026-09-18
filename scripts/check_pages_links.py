@@ -31,9 +31,11 @@ Theory anchors are compared with build/isabelle-html when it exists, but only
 warned about: a working copy's rendered theories are often older than its
 sources, so the deployed check is the one that decides. `--site` needs `pixi run pages-site-build` first; external URLs are only
 checked with `--external`. `--live` checks all three kinds against the published
-site, after deployment, which is the moment the links are real. Hosts that
-throttle automated clients (HTTP 403/429) are reported as unverified rather
-than broken.
+site, after deployment, which is the moment the links are real. A host that
+answers is believed: a 404 is rot and fails. A host that refuses automated
+clients (403/429), or that never completes a connection across several
+attempts, is reported as unverified instead -- neither has said anything about
+the link.
 """
 
 from __future__ import annotations
@@ -42,6 +44,7 @@ import argparse
 import base64
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -76,6 +79,10 @@ THEORY_PREFIXES = ("Voblint/", "Unsorted/", "HOL/", "Pure/")
 
 ATTR = re.compile(r'\b(?:href|src)="([^"]+)"')
 IS_A_CONST = re.compile(r'isaConst\("([^"]+)", "([^"]+)", "([^"]+)"\)')
+# Passes over a transient failure (dropped connection, 5xx) before a link is
+# called broken; a status code the host actually returned is not retried.
+EXTERNAL_ATTEMPTS = 3
+
 USER_AGENT = "voblint-link-check (+https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis)"
 
 
@@ -283,10 +290,13 @@ def check_internal_live(
     return None
 
 
-def check_external(url: str) -> tuple[str, str | None]:
-    """Returns ("ok" | "unverified" | "broken", detail)."""
-    target = urllib.parse.urlunsplit(urllib.parse.urlsplit(url)._replace(fragment=""))
+def reach_external(target: str) -> tuple[str, str | None]:
+    """One pass over HEAD then GET.
+
+    Returns ("ok" | "unverified" | "transient" | "broken", detail).
+    """
     refused: str | None = None
+    transient: str | None = None
     for method in ("HEAD", "GET"):
         request = urllib.request.Request(
             target, method=method, headers={"User-Agent": USER_AGENT}
@@ -301,10 +311,48 @@ def check_external(url: str) -> tuple[str, str | None]:
                 continue
             if method == "HEAD" and error.code in (400, 404, 405, 501):
                 continue
+            if error.code >= 500:
+                transient = f"HTTP {error.code}"
+                continue
             return "broken", f"HTTP {error.code}"
+        # A dropped HEAD says nothing about the link: isabelle.in.tum.de
+        # announces a body length and then closes, so the GET below is what
+        # answers. Only a pass that never completed at all is transient.
         except (urllib.error.URLError, OSError) as error:
-            return "broken", str(getattr(error, "reason", error))
-    return ("unverified", refused) if refused else ("broken", "no successful response")
+            transient = str(getattr(error, "reason", error))
+            continue
+    if refused:
+        return "unverified", refused
+    if transient:
+        return "transient", transient
+    return "broken", "no successful response"
+
+
+def check_external(
+    url: str, attempts: int = EXTERNAL_ATTEMPTS
+) -> tuple[str, str | None]:
+    """Returns ("ok" | "unverified" | "broken", detail).
+
+    A status code under 500 is the host's answer about the link and stands
+    after one pass: a 404 is this repository's rot and fails the run.
+
+    A host that never completes a connection, or answers 5xx, has said nothing
+    about the link, so exhausting the retries reports it unverified rather than
+    broken -- the same conclusion, for the same reason, as a host that refuses
+    automated clients outright. isabelle.in.tum.de served a 200 and then
+    connection timeouts within the same minutes, and a check that goes red for
+    that is reporting the network, not the links.
+    """
+    target = urllib.parse.urlunsplit(urllib.parse.urlsplit(url)._replace(fragment=""))
+    detail: str | None = None
+    for attempt in range(attempts):
+        status, detail = reach_external(target)
+        if status != "transient":
+            return status, detail
+        if attempt < attempts - 1:
+            time.sleep(2**attempt)
+    plural = "" if attempts == 1 else "s"
+    return "unverified", f"{detail}, {attempts} attempt{plural}"
 
 
 def main() -> int:
