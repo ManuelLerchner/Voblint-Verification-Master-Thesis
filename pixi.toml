@@ -287,6 +287,15 @@ grammar-id-position-check = { cmd = "python3 -m pytest tests/test_gen_isabelle_i
 
 # Fast repository checks used directly by hooks and CI.
 isabelle-ascii-check = { cmd = "python3 scripts/check_isabelle_ascii.py", description = "Check Isabelle theory sources for forbidden Unicode syntax." }
+# Takes the artifact name (html, pdf, thesis-facts, codegen). CI reads the
+# cache key from here so the input set of each cached artifact is stated
+# once, in a file that can be read and run locally.
+ci-digest = { cmd = "python3 scripts/ci_digest.py", description = "Print the CI cache-key digest for one artifact: html, pdf, thesis-facts or codegen." }
+# The heap caches are the only entries that grow without bound (one per
+# commit, 200 MB each). Left alone they hold the repository at its 10 GB
+# ceiling, where least-recently-used eviction takes the small artifact
+# caches -- the ones whose whole value is surviving between runs.
+ci-prune-caches = { cmd = "python3 scripts/prune_ci_caches.py", description = "Delete the heap caches beyond the newest few, which is all a restore can reach." }
 verification-surface-check = { cmd = "python3 scripts/check_verification_surface.py", description = "Check task descriptions, retired task names, and verify/GitHub CI parity." }
 
 # Supported local verification gate. GitHub CI invokes the same named leaf
