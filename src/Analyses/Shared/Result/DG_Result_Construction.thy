@@ -2,7 +2,7 @@ theory DG_Result_Construction
   imports
     "Voblint_Framework.Analysis_Result"
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_Framework.Routed_Call_Trees"
+    "Voblint_Framework.Routed_Call_Programs"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Exec.Exec_Result_Readback"

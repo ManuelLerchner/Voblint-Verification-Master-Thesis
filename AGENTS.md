@@ -475,7 +475,7 @@ carrier's locations. It is not a framework parameter, and the invariant is:
 
 The checkable form of that is narrower and has no exceptions:
 `Framework/Constraints` must not depend on ownership-split semantics.
-`CFG_Enumeration`, `DG_Constraint_Trees` and `DG_Keyed_Generator` mention `gs` zero
+`CFG_Enumeration`, `DG_Constraint_Programs` and `DG_Keyed_Generator` mention `gs` zero
 times, as do `DG_Spec` and `DG_Manager`.
 
 The boundary statement above has exactly one known exception, and it is

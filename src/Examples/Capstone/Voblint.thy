@@ -26,7 +26,7 @@ theory Voblint
     "Voblint_Analysis_Congruence.Congruence_Analyses"
     "Voblint_Analysis_Int.Int_Analyses"
     "Voblint_CLI.Analysis_Run_Ctx_Sound"
-    "Voblint_Framework.DG_Constraint_Trees"
+    "Voblint_Framework.DG_Constraint_Programs"
     "Voblint_Framework.DG_Spec_Sound"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Analysis_Sign.Sign_Transfer"
@@ -397,7 +397,7 @@ text \<open>
       \<^verbatim>\<open>dg_spec\<close> record, with one manager-native transfer
       per edge action, plus the \<^verbatim>\<open>dg_state\<close> copy lattice and
       seeded keyed generator in
-      @{theory Voblint_Framework.DG_Constraint_Trees}.
+      @{theory Voblint_Framework.DG_Constraint_Programs}.
     \<^item> @{theory Voblint_Framework.DG_Spec_Sound} --- native
       heterogeneous soundness over opaque carriers
       (\<^verbatim>\<open>sound_dg_spec_core\<close>). The routed context locales in
@@ -583,9 +583,9 @@ text \<open>
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> \<^bold>\<open>Named global unknowns\<close> --- a keyed global family is the routed D/G
-      context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
-      @{thm dep_aux_dg_edge_tree_at} names the source address and the one
-      global slot, nothing else.
+      context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge
+      program reads: @{thm dep_dg_edge_program_at} names the source address and the
+      one global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml
       renderers from \<^const>\<open>run_voblint\<close>'s structured result, outside any theory.
       A rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the

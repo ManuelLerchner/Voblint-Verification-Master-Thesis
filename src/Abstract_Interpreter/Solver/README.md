@@ -10,13 +10,13 @@ A right-hand side is a `strategy_tree` over the solver's four instructions:
 publishes a value under a global key, `Answer` yields the result. This
 session gives that language a typed continuation-passing frontend whose
 intermediate values need not be the solver carrier, a way to fold a
-right-hand side from contribution trees, and the per-key buffering that keeps
+right-hand side from contribution programs, and the per-key buffering that keeps
 repeated `Side` writes from destabilising an update rule.
 
 | File | Role |
 | --- | --- |
 | `Strategy_Tree_Properties.thy` | `env_indep_deps`/`mono_tree_deps`: query-set dependency predicates on a tree *value*, independent of how the tree was built |
-| `Strategy_Tree_Fold.thy` | `fold_rhs_projected` and its identity instance `fold_rhs_contributions`: a right-hand side as a join-fold over contribution trees |
+| `Strategy_Program_Fold.thy` | `fold_rhs_program_projected` and its identity instance `fold_rhs_program`: a right-hand side as a join-fold over contribution programs |
 | `Strategy_Tree_Post_Solution.thy` | `tree_covered_at`: what one unknown owes a `part_post_solution` |
 | `Strategy_Tree_Program.thy` | `strategy_program`, a typed continuation-passing frontend with do-notation: `sp_bind`'s intermediate type need not be the solver carrier `'d`, only the final answer `sp_compile`/`sp_compile_with` encodes does. `sp_lift_tree` embeds an already-built vendor tree by recursing over its constructors directly |
 | `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |

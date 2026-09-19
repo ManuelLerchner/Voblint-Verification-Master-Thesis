@@ -62,11 +62,15 @@ def test_link_check_rejects_what_the_playground_cannot_open():
     assert check.check_playground(good, "README.md", vocabulary) == []
 
     other = playground_link.link("fun main() {}", "interval")
+    # Derived, not written out: the depth control's bound moves when the
+    # explainer needs a deeper setting, and a literal here would pass as a
+    # rejection long after that value became legal.
+    too_deep = vocabulary["max_depth"] + 1
     cases = {
         "playground.html?example=no-such-example": "not in LINKED_EXAMPLES",
         "playground.html?fixture=00-sanity/none.vimp": "not a regression file",
         "playground.html?context=entrystate": "not a playground option",
-        "playground.html?k=99": "outside",
+        f"playground.html?k={too_deep}": "outside",
         "playground.html?colour=red": "unknown parameter",
         "playground.html?analysis=interval#code=!!!": "does not decode",
         "playground.html?example=theorems#code=" + other.split("#code=")[1]: "twice",

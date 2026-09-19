@@ -181,7 +181,7 @@ text \<open>
   The core carries everything that is independent of how a call is compiled:
   the ordinary edge transfers and the return combine. Entry is not here. A
   \<^const>\<open>dgs_enter\<close> answers a list, which is not an equation's answer, so what
-  makes it sound is a property of the tree the routed generator builds from
+  makes it sound is a property of the program the routed generator builds from
   it, stated through \<^const>\<open>entry_pairs_cover\<close> against the routed alternative
   the solved system actually selects --- a property this locale alone cannot
   state, since it never mentions how a call compiles.
@@ -199,24 +199,24 @@ subsection \<open>Proof-level compiled combine form\<close>
 text \<open>
   A return combine compiled the way an edge transfer is: read the caller
   continuation and the callee exit from two unknowns, and run the composed
-  combine against them. No generator builds this. The routed call tree already
+  combine against them. No generator builds this. The routed call program already
   holds the alternative's own continuation, so it runs
   \<^const>\<open>dg_spec_combine_transfer\<close> against that value directly and never reads
   a caller unknown a second time.
 
   It lives here, ahead of the locale that consumes it, because \<^emph>\<open>stating\<close>
   the return obligation at a pair of addresses is all it is for: a proof that
-  quantifies over the pair needs a tree to quantify over. Reading it in
+  quantifies over the pair needs a program to quantify over. Reading it in
   \<^theory>\<open>Voblint_Framework.DG_Spec\<close>, among the formers a generator really
   does build, invited exactly the wrong conclusion.
 
   Both levels earn their place, which is why there are two of them.
-  \<open>combine_transfer_tree\<close> is used at an arbitrary
+  \<open>combine_transfer_program\<close> is used at an arbitrary
   \<^type>\<open>man_combine_transfer\<close> --- by the ownership-split observation
   equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
-  \<open>dg_spec_combine_tree\<close> is used at a selected specification, by
+  \<open>dg_spec_combine_program\<close> is used at a selected specification, by
   \<open>DG_Ctx_Activation\<close>'s own \<open>dg_ctx_act_comb_covered\<close> downstream, whose two
-  bounds are assumptions about this tree at two \<^emph>\<open>solver addresses\<close>.
+  bounds are assumptions about this program at two \<^emph>\<open>solver addresses\<close>.
   That last part is what the value form cannot express: the caller
   supplies those bounds from a post-solution at \<open>Inl (cl, c1)\<close> and
   \<open>Inl (ex, c2)\<close>, so the obligation has to name the addresses, not the values
@@ -236,19 +236,19 @@ where
        transfer (mk_dg_man dc key) de
      }"
 
-definition combine_transfer_tree ::
+definition combine_transfer_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "combine_transfer_tree T src_cc src_ex key =
-     sp_compile_with (\<lambda>d. DG d bot) (combine_program_at T src_cc src_ex key)"
+  "combine_transfer_program T src_cc src_ex key =
+     sp_map (\<lambda>d. DG d bot) (combine_program_at T src_cc src_ex key)"
 
-definition dg_spec_combine_tree ::
+definition dg_spec_combine_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "dg_spec_combine_tree S ci src_cc src_ex key =
-     combine_transfer_tree (dg_spec_combine_transfer S ci) src_cc src_ex key"
+  "dg_spec_combine_program S ci src_cc src_ex key =
+     combine_transfer_program (dg_spec_combine_transfer S ci) src_cc src_ex key"
 
 text \<open>
   What compilation costs an observation here: the two source reads, and then
@@ -257,75 +257,76 @@ text \<open>
   reason.
 \<close>
 
-lemma traverse_combine_transfer_tree:
-  "traverse_rhs (combine_transfer_tree T src_cc src_ex key) \<tau>
+lemma traverse_combine_transfer_program:
+  "traverse_program (combine_transfer_program T src_cc src_ex key) \<tau>
      = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
          (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
-  by (simp add: combine_transfer_tree_def combine_program_at_def sp_compile_with_def
+  by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
-lemma sides_combine_transfer_tree:
-  "sides_of_rhs (combine_transfer_tree T src_cc src_ex key) \<tau>
+lemma sides_combine_transfer_program:
+  "sides_of_program (combine_transfer_program T src_cc src_ex key) \<tau>
      = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
          (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
-  by (simp add: combine_transfer_tree_def combine_program_at_def sp_compile_with_def
+  by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
-lemma dep_aux_combine_transfer_tree:
-  "dep_aux \<tau> (combine_transfer_tree T src_cc src_ex key)
+lemma dep_combine_transfer_program:
+  "dep_program \<tau> (combine_transfer_program T src_cc src_ex key)
      = insert src_cc (insert src_ex
          (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot)
             (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex))))))"
-  by (simp add: combine_transfer_tree_def combine_program_at_def sp_compile_with_def
+  by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
 text \<open>What the compiled form observes when both stages are local, and the two
   reads it always makes --- the combine counterparts of the edge-tree facts in
   \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
 
-lemma traverse_local_combine_tree [simp]:
-  "traverse_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau>
+lemma traverse_local_combine_program [simp]:
+  "traverse_program (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk) \<tau>
      = DG (h (locals (\<tau> src_cc)) (locals (\<tau> src_ex))) bot"
-  by (simp add: traverse_combine_transfer_tree local_combine_transfer_def
+  by (simp add: traverse_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
 
-lemma sides_local_combine_tree [simp]:
-  "sides_of_rhs (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk) \<tau> k
+lemma sides_local_combine_program [simp]:
+  "sides_of_program (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk) \<tau> k
      = bot"
-  by (simp add: sides_combine_transfer_tree local_combine_transfer_def
+  by (simp add: sides_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
 
-lemma dep_aux_local_combine_tree [simp]:
-  "dep_aux \<tau> (combine_transfer_tree (local_combine_transfer h) src_cc src_ex gk)
+lemma dep_local_combine_program [simp]:
+  "dep_program \<tau> (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk)
      = {src_cc, src_ex}"
-  by (simp add: dep_aux_combine_transfer_tree local_combine_transfer_def
+  by (simp add: dep_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
 
-lemma dep_aux_combine_transfer_tree_sources:
-  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (combine_transfer_tree T src_cc src_ex gk)"
-  by (simp add: dep_aux_combine_transfer_tree)
+lemma dep_combine_transfer_program_sources:
+  "{src_cc, src_ex} \<subseteq> dep_program \<tau> (combine_transfer_program T src_cc src_ex gk)"
+  by (simp add: dep_combine_transfer_program)
 
-lemma dep_aux_dg_spec_combine_tree_sources:
-  "{src_cc, src_ex} \<subseteq> dep_aux \<tau> (dg_spec_combine_tree S ci src_cc src_ex gk)"
-  unfolding dg_spec_combine_tree_def by (rule dep_aux_combine_transfer_tree_sources)
+lemma dep_dg_spec_combine_program_sources:
+  "{src_cc, src_ex} \<subseteq> dep_program \<tau> (dg_spec_combine_program S ci src_cc src_ex gk)"
+  unfolding dg_spec_combine_program_def by (rule dep_combine_transfer_program_sources)
 
 subsection \<open>What a manager-native specification owes\<close>
 
-text \<open>The contract a specification signs: its concretization is monotone, an edge's tree
+text \<open>The contract a specification signs: its concretization is monotone, an edge's program
   over-approximates the concrete edge step, and its combine over-approximates the concrete
   return.  Both soundness obligations read the shared slot through the same valuation the
-  tree does, which is what lets an analysis publish to that slot and still be covered.\<close>
+  program does, which is what lets an analysis publish to that slot and still be covered.\<close>
 locale sound_dg_spec_core =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
-  assumes gammaDG_mono:
+  assumes spec_wf: "dg_spec_wf S"
+    and gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG d g \<subseteq> gammaDG d' g'"
     and step_sound:
       "edge_collect a (gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
-         \<subseteq> gammaDG (locals (traverse_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau>))
-                   (globs (sides_of_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
+         \<subseteq> gammaDG (locals (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
+                   (globs (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and combine_sound:
       "\<lbrakk>s \<in> gammaDG dc (globs (\<tau> (Inr gk)));
         t \<in> gammaDG de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
@@ -344,18 +345,18 @@ text \<open>
   lost for a generator that reads both sides from unknowns.
 \<close>
 
-lemma (in sound_dg_spec_core) combine_sound_tree:
+lemma (in sound_dg_spec_core) combine_sound_program:
   assumes sc: "s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
     and se: "t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
   shows "combine_collect gs (ci_dst ci) s t
-          \<in> gammaDG (locals (traverse_rhs
-                (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
-                    (globs (sides_of_rhs (dg_spec_combine_tree S ci src_cc src_ex (\<lambda>_. gk))
+          \<in> gammaDG (locals (traverse_program
+                (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
+                    (globs (sides_of_program (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk))
                                           \<tau> (Inr gk)))"
   using combine_sound[where dc = "locals (\<tau> src_cc)" and de = "locals (\<tau> src_ex)"
       and \<tau> = \<tau> and gk = gk and ci = ci, OF sc se]
-  by (simp add: dg_spec_combine_tree_def traverse_combine_transfer_tree
-      sides_combine_transfer_tree)
+  by (simp add: dg_spec_combine_program_def traverse_combine_transfer_program
+      sides_combine_transfer_program)
 
 section \<open>The collapsed obligations of a local-only specification\<close>
 
@@ -391,13 +392,18 @@ begin
 
 theorem local_spec_core_sound:
   "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
-proof (unfold_locales, goal_cases mono step comb)
+proof (unfold_locales, goal_cases wf mono step comb)
+  case wf
+  then show ?case
+    by (simp add: dg_spec_wf_def local_transfer_def local_enter_transfer_def
+        local_combine_transfer_def)
+next
   case mono
   then show ?case by (meson gammaD_mono)
 next
   case step
   then show ?case
-    by (simp add: dg_spec_edge_tree_def step_sound_local)
+    by (simp add: dg_spec_edge_program_def step_sound_local)
 next
   case comb
   then show ?case

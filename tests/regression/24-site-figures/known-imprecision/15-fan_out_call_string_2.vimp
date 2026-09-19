@@ -1,11 +1,10 @@
-// PARAM: --analysis interval --context entry-state
+// PARAM: --analysis interval --context call-string --context-depth 2
 // Backs a row of the site's "The price of precision" fan-out chart
-// (entry state): keying on the argument separates f0's copies exactly as a
-// full-depth call string does, at fewer contexts, so the check lands.
+// (call string 2): four short of the call depth, so f0's copies still merge.
 
 
 fun f0(x) {
-  __voblint_check(x <= 22); // PROVED
+  __voblint_check(x <= 22); // UNKNOWN
 }
 fun f1(x) { f0(x); f0(x + 1); }
 fun f2(x) { f1(x); f1(x + 2); }

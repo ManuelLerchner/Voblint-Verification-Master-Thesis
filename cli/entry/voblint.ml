@@ -292,7 +292,11 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           exit exit_code
       | pid ->
           let deadline = Unix.gettimeofday () +. timeout in
-          let rec wait_loop () =
+          (* Back off from a short first sleep rather than polling at a flat
+             50ms. An analysis that finishes in single-digit milliseconds used
+             to wait out one whole 50ms tick, which was most of the CLI's wall
+             clock on a small program and hid what the analysis itself cost. *)
+          let rec wait_loop nap =
             match Unix.waitpid [ Unix.WNOHANG ] pid with
             | 0, _ ->
                 if Unix.gettimeofday () > deadline then begin
@@ -303,8 +307,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                        "analysis did not finish within %.0fs (killed)" timeout)
                 end
                 else begin
-                  ignore (Unix.select [] [] [] 0.05);
-                  wait_loop ()
+                  ignore (Unix.select [] [] [] nap);
+                  wait_loop (Float.min 0.05 (nap *. 2.))
                 end
             | _, Unix.WEXITED 0 -> (
                 let ic = open_in tmp in
@@ -351,7 +355,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                   (Printf.sprintf "analysis subprocess terminated by signal %d"
                      s)
           in
-          wait_loop ())
+          wait_loop 0.0005)
 
 (* --context/--context-depth are two independent flags that can arrive in
    either order, but Ctx_CallString needs the depth at construction time --

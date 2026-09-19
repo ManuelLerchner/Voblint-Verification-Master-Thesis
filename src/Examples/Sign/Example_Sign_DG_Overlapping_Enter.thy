@@ -127,6 +127,26 @@ lemma dgs_enter_ov_spec [simp]:
   "enter\<^sup># (ov_spec gs ep) ci = local_enter_transfer (ov_enter gs ep ci)"
   by (simp add: ov_spec_def)
 
+text \<open>The override runs its continuation once wherever the stock specification
+  does: only the entry changed, and it answers its alternatives outright.\<close>
+
+lemma dg_spec_wf_ov_spec [intro, simp]: "dg_spec_wf (ov_spec gs ep)"
+proof (unfold dg_spec_wf_def, intro conjI allI)
+  fix a d key
+  show "sp_wf (dg_spec_step (ov_spec gs ep) a (mk_dg_man d key))"
+    by (simp add: dg_spec_wf_step[OF dg_spec_wf_sign_conf_spec])
+next
+  fix ci d key
+  show "sp_wf (enter\<^sup># (ov_spec gs ep) ci (mk_dg_man d key))"
+    by (simp add: local_enter_transfer_def)
+next
+  fix ci d key ex
+  show "sp_wf (dg_spec_combine_transfer (ov_spec gs ep) ci (mk_dg_man d key) ex)"
+    unfolding dg_spec_combine_transfer_def dgs_combine_env_ov_spec dgs_combine_assign_ov_spec
+    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def
+        local_combine_transfer_def)
+qed
+
 text \<open>Entry is absent from \<^locale>\<open>sound_dg_spec_core\<close>, so the override inherits the
   stock core soundness outright.\<close>
 
@@ -138,14 +158,16 @@ proof -
     by (rule sign_conf_sound_exec[OF exact])
   show ?thesis
   proof (unfold_locales, goal_cases)
-    case (1 d d' g g') then show ?case by (rule stock.gammaDG_mono)
+    case 1 show ?case by (rule dg_spec_wf_ov_spec)
   next
-    case (2 a \<tau> src gk)
-    show ?case using stock.step_sound by (simp add: dg_spec_edge_tree_def)
+    case (2 d d' g g') then show ?case by (rule stock.gammaDG_mono)
   next
-    case (3 s dc \<tau> gk t de ci)
+    case (3 a \<tau> src gk)
+    show ?case using stock.step_sound by (simp add: dg_spec_edge_program_def)
+  next
+    case (4 s dc \<tau> gk t de ci)
     show ?case using stock.combine_sound[where ci = ci and dc = dc and de = de
-          and \<tau> = \<tau> and gk = gk, OF 3(1) 3(2)]
+          and \<tau> = \<tau> and gk = gk, OF 4(1) 4(2)]
       by (simp add: dg_spec_combine_transfer_def)
   qed
 qed
@@ -161,10 +183,10 @@ definition ov_eqs ::
   "ov_eqs =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
-       (\<lambda>ctx' src a. dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+       (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
+       (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
           (static_resolve ov_cfg) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Activation_Seed)
+       (routed_entry_seed_programs Activation_Seed)
        ov_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition ov_sol ::
@@ -191,8 +213,8 @@ definition ov_alt_answer :: "nat \<Rightarrow> sign exec_dg_st lifted" where
   "ov_alt_answer i =
      (let caller = locals (snd ov_sol (Inl (Statement 3, [])));
           alts = ov_enter ov_gs ov_ep (call_info_of ov_ca (STR ''p'')) caller
-      in locals (traverse_rhs
-           (routed_call_alternative_tree (ov_spec ov_gs ov_ep) (Analysis_Global ())
+      in locals (traverse_program
+           (routed_call_alternative_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
               Activation_Seed (exec_formals_route ov_gs) (\<lambda>d. d = Bot)
               [] ov_ca (Statement 3) (STR ''p'') (alts ! i))
            (snd ov_sol)))"
@@ -219,8 +241,8 @@ lemma ov_solution_snapshot_raw:
         alt_answer = (\<lambda>i.
           let caller = locals (snd sol (Inl (Statement 3, [])));
               alts = ov_enter ov_gs ov_ep (call_info_of ov_ca (STR ''p'')) caller
-          in locals (traverse_rhs
-            (routed_call_alternative_tree (ov_spec ov_gs ov_ep) (Analysis_Global ())
+          in locals (traverse_program
+            (routed_call_alternative_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
               Activation_Seed (exec_formals_route ov_gs) (\<lambda>d. d = Bot)
               [] ov_ca (Statement 3) (STR ''p'') (alts ! i))
             (snd sol)))
@@ -420,10 +442,10 @@ definition ov_empty_eqs ::
   "ov_empty_eqs =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
-       (\<lambda>ctx' src a. dg_spec_edge_tree ov_empty_spec a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_tree ov_empty_spec (Analysis_Global ()) Activation_Seed
+       (\<lambda>ctx' src a. dg_spec_edge_program ov_empty_spec a src (\<lambda>_. Analysis_Global ()))
+       (routed_call_program ov_empty_spec (Analysis_Global ()) Activation_Seed
           (static_resolve ov_cfg) (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Activation_Seed)
+       (routed_entry_seed_programs Activation_Seed)
        ov_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition ov_empty_sol ::
@@ -665,8 +687,8 @@ lemma ov_pp_st:
   unfolding ov_sol_def by simp
 
 lemma ov_intra_side_free:
-  "sides_of_rhs (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src g) \<tau> z = bot"
-  unfolding dg_spec_edge_tree_def dg_spec_step_ov_spec sign_conf_spec_def
+  "sides_of_program (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src g) \<tau> z = bot"
+  unfolding dg_spec_edge_program_def dg_spec_step_ov_spec sign_conf_spec_def
   by (simp add: dg_spec_step_local_state_st_for_lifted)
 
 lemma dg_spec_combine_transfer_ov_spec [simp]:
@@ -675,9 +697,9 @@ lemma dg_spec_combine_transfer_ov_spec [simp]:
   by (simp add: dg_spec_combine_transfer_def)
 
 lemma ov_cmb_side_free_at_gk0:
-  "sides_of_rhs (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  "sides_of_program (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
       (static_resolve ov_cfg) (\<lambda>d. d = Bot) route ctx ca cc v) sigma (Inr (Analysis_Global ())) = bot"
-proof (rule routed_call_tree_side_free_at_gk0)
+proof (rule routed_call_program_side_free_at_gk0[OF dg_spec_wf_ov_spec])
   show "\<And>ci d pairs pub. enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ci)
           (mk_dg_man d (\<lambda>_. Analysis_Global ())) sigma pairs pub \<Longrightarrow> pub (Inr (Analysis_Global ())) = bot"
     unfolding dgs_enter_ov_spec
@@ -708,107 +730,133 @@ lemma ov_pp_routed:
   "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
         (exec_formals_route ov_gs)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
-        (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+        (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
+        (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
            (static_resolve ov_cfg) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree Activation_Seed)
+        (routed_entry_seed_programs Activation_Seed)
         ov_cfg Bot (Lifted cinit_sign_st) Bot)
      (cfg_exit ov_cfg, []) (snd ov_sol) (fst ov_sol)"
 proof (rule part_post_solution_routed_node_rhs_buffered
     [where it_c =
       "\<lambda>ctx' src a.
-        dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src
+        dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
           (\<lambda>_. Analysis_Global ())"
-       and cmb_c = "routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+       and cmb_c = "routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
                       (static_resolve ov_cfg) (\<lambda>d. d = Bot)"])
-  show "\<And>c' src a \<tau>. locals (traverse_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)
-         = locals (traverse_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)"
+  show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs
+           intra_predecessor_addr_list call_site_list (exec_formals_route ov_gs)
+           (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
+              (\<lambda>_. Analysis_Global ()))
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+              (static_resolve ov_cfg) (\<lambda>d. d = Bot))
+           (routed_entry_seed_programs Activation_Seed) ov_cfg c' w). sp_wf p"
+    by (rule routed_contribution_programs_wf)
+       (auto intro: sp_wf_dg_spec_edge_program[OF dg_spec_wf_ov_spec]
+         sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
+next
+  show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs
+           intra_predecessor_addr_list call_site_list (exec_formals_route ov_gs)
+           (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
+              (\<lambda>_. Analysis_Global ()))
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+              (static_resolve ov_cfg) (\<lambda>d. d = Bot))
+           (routed_entry_seed_programs Activation_Seed) ov_cfg c' w). sp_wf p"
+    by (rule routed_contribution_programs_wf)
+       (auto intro: sp_wf_dg_spec_edge_program[OF dg_spec_wf_ov_spec]
+         sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
+next
+  show "\<And>c' src a \<tau>. locals (traverse_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)
+         = locals (traverse_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)"
     by (rule refl)
 next
-  show "\<And>c' src a \<tau>. locals (sides_of_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
+  show "\<And>c' src a \<tau>. locals (sides_of_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
            (Inr (Analysis_Global ()))) = bot"
     by (simp add: ov_intra_side_free bot_dg_state_def)
 next
-  show "\<And>c' src a \<tau>. globs (traverse_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)
-         = globs (sides_of_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
+  show "\<And>c' src a \<tau>. globs (traverse_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)
+         = globs (sides_of_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
            (Inr (Analysis_Global ())))"
-    by (simp add: ov_intra_side_free dg_spec_edge_tree_def sign_conf_spec_def
+    by (simp add: ov_intra_side_free dg_spec_edge_program_def sign_conf_spec_def
         dg_spec_step_local_state_st_for_lifted bot_dg_state_def)
 next
-  show "\<And>c' src a \<tau>. sides_of_rhs
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
+  show "\<And>c' src a \<tau>. sides_of_program
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
            (Inr (Analysis_Global ())) = bot"
     by (rule ov_intra_side_free)
 next
   show "\<And>c' src a \<tau> z. z \<noteq> Inr (Analysis_Global ()) \<Longrightarrow>
-         sides_of_rhs (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau> z
-           = sides_of_rhs
-               (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src
+         sides_of_program
+             (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau> z
+           = sides_of_program
+               (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
                  (\<lambda>_. Analysis_Global ())) \<tau> z"
     by (rule refl)
 next
-  show "\<And>c' src a \<tau>. dep_aux \<tau>
-           (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
-         = dep_aux \<tau> (dg_spec_edge_tree (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))"
+  show "\<And>c' src a \<tau>. dep_program \<tau>
+           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
+         = dep_program \<tau>
+             (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))"
     by (rule refl)
 next
-  show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  show "\<And>c' ca cc ex \<tau>. locals (traverse_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)
-         = locals (traverse_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+         = locals (traverse_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)"
     by (rule refl)
 next
-  show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  show "\<And>c' ca cc ex \<tau>. locals (sides_of_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ()))) = bot"
     by (simp add: ov_cmb_side_free_at_gk0 bot_dg_state_def)
 next
-  show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  show "\<And>c' ca cc ex \<tau>. globs (traverse_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)
-         = globs (sides_of_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+         = globs (sides_of_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ())))"
-    by (simp add: routed_call_tree_global_free ov_cmb_side_free_at_gk0 bot_dg_state_def)
+    by (simp add: routed_call_program_global_free ov_cmb_side_free_at_gk0 bot_dg_state_def)
 next
-  show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  show "\<And>c' ca cc ex \<tau>. sides_of_program
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ())) = bot"
     by (rule ov_cmb_side_free_at_gk0)
 next
   show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (Analysis_Global ()) \<Longrightarrow>
-         sides_of_rhs (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+         sides_of_program
+             (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau> z
-           = sides_of_rhs
-               (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ())
+           = sides_of_program
+               (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
                  Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau> z"
     by (rule refl)
 next
-  show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-           (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  show "\<And>c' ca cc ex \<tau>. dep_program \<tau>
+           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex)
-         = dep_aux \<tau> (routed_call_tree (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+         = dep_program \<tau>
+             (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex)"
     by (rule refl)
 next
-  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_tree Activation_Seed
-           (exec_formals_route ov_gs) c' w) \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-    by (rule routed_entry_seed_tree_free)
+  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs Activation_Seed
+           (exec_formals_route ov_gs) c' w) \<Longrightarrow> sides_of_program x \<tau> z = bot"
+    by (rule routed_entry_seed_programs_free)
 next
-  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_tree Activation_Seed
-           (exec_formals_route ov_gs) c' w) \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-    by (rule routed_entry_seed_tree_local_only)
+  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_programs Activation_Seed
+           (exec_formals_route ov_gs) c' w) \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
+    by (rule routed_entry_seed_programs_local_only)
 qed (rule ov_pp_st[unfolded ov_eqs_def])
 
 interpretation ov_core: sound_dg_spec_core "ov_spec ov_gs ov_ep" "sign_conf_gamma ov_gs" ov_gs
@@ -828,8 +876,12 @@ interpretation ov_routed: routed_context_base_hetero
   "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for ov_gs) m)" ov_R
 proof (rule routed_context_base_hetero.intro
     [OF dg_ctx_activation_base.intro[OF sound_dg_spec_core_ov_spec[OF ov_exact]]],
-  unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique
+  unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
+  case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
+next
+  case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
+next
   case FinE show ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)
 next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF ov_pp_routed])

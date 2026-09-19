@@ -1,7 +1,7 @@
-// PARAM: --analysis interval --context entry-state
+// PARAM: --analysis interval --context call-string --context-depth 6
 // Backs a row of the site's "The price of precision" fan-out chart
-// (entry state): keying on the argument separates f0's copies exactly as a
-// full-depth call string does, at fewer contexts, so the check lands.
+// (call string 6): six call sites of memory match the call depth main -> f6 ->
+// ... -> f0, so every copy of f0 sees one exact argument and the check lands.
 
 
 fun f0(x) {

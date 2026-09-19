@@ -177,6 +177,177 @@ lemma sp_compile_with_read_at [simp]:
 lemma sp_compile_sp_lift_tree [simp]: "sp_compile (sp_lift_tree t) = t"
   by (induction t) (simp_all add: sp_compile_def sp_compile_with_def)
 
+subsection \<open>Programs that run their continuation once\<close>
+
+text \<open>
+  A \<^typ>\<open>('x,'g,'d,'a) strategy_program\<close> is any function from a continuation to a
+  tree, so nothing stops one from ignoring its continuation, or from using it
+  twice. Such a program has no semantics the tree vocabulary can describe: what
+  it publishes and what it reads would depend on the continuation it is handed.
+
+  \<open>sp_wf p\<close> names the programs that do not do this. It says \<open>p\<close> commutes with
+  grafting: continuing into \<open>k\<close> and then grafting \<open>h\<close> onto every leaf of the
+  result is the same as continuing into \<open>k\<close> already grafted. A program that
+  dropped its continuation would lose \<open>h\<close> on the left and keep it on the
+  right; one that used it twice would duplicate the grafting. Everything the
+  generator builds runs its continuation once, and this is the condition under
+  which asking a program what it publishes is a well-posed question at all.
+
+  Stating it this way rather than as \<open>p = sp_lift_tree (sp_compile p)\<close> is what
+  lets it apply to a transfer, whose answer type is the analysis' own \<open>'dl\<close>
+  rather than the solver's \<open>'d\<close>: there is no tree whose leaves carry a \<open>'dl\<close>,
+  so a transfer has no compilation to be recoverable from, but it commutes with
+  grafting all the same. For a program that does answer \<open>'d\<close> the two agree, which
+  is \<open>sp_wfD\<close>.
+\<close>
+
+lemma sp_lift_tree_sp_lift_tree:
+  "sp_lift_tree (sp_lift_tree t g) k = sp_lift_tree t (\<lambda>v. sp_lift_tree (g v) k)"
+  by (induction t) simp_all
+
+definition sp_wf :: "('x,'g,'d,'a) strategy_program \<Rightarrow> bool" where
+  "sp_wf p \<longleftrightarrow> (\<forall>k h. p (\<lambda>v. sp_lift_tree (k v) h) = sp_lift_tree (p k) h)"
+
+lemma sp_wfI:
+  "(\<And>k h. p (\<lambda>v. sp_lift_tree (k v) h) = sp_lift_tree (p k) h) \<Longrightarrow> sp_wf p"
+  by (simp add: sp_wf_def)
+
+lemma sp_wf_graft:
+  "sp_wf p \<Longrightarrow> p (\<lambda>v. sp_lift_tree (k v) h) = sp_lift_tree (p k) h"
+  by (simp add: sp_wf_def)
+
+text \<open>
+  The homogeneous reading: a program answering the solver's own value type is
+  recoverable from the tree it compiles to. This is the form every consumer
+  below uses, and \<open>sp_compile\<close> only accepts such a program in the first place.
+\<close>
+
+lemma sp_wfD:
+  assumes "sp_wf p"
+  shows "p k = sp_lift_tree (sp_compile p) k"
+  using sp_wf_graft[OF assms, where k = Answer and h = k]
+  by (simp add: sp_compile_def sp_compile_with_def)
+
+text \<open>Closure under the constructors a generator actually builds with, so a
+  well-formedness side condition discharges by \<open>simp\<close> at the use site instead
+  of being threaded through as a hypothesis.\<close>
+
+lemma sp_wf_lift_tree [intro, simp]: "sp_wf (sp_lift_tree t)"
+  by (simp add: sp_wf_def sp_lift_tree_sp_lift_tree)
+
+lemma sp_wf_return [intro, simp]: "sp_wf (sp_return a)"
+  by (simp add: sp_wf_def sp_return_def)
+
+lemma sp_wf_read_local [intro, simp]: "sp_wf (sp_read_local x)"
+  by (simp add: sp_wf_def sp_read_local_def)
+
+lemma sp_wf_read_global [intro, simp]: "sp_wf (sp_read_global g)"
+  by (simp add: sp_wf_def sp_read_global_def)
+
+lemma sp_wf_publish [intro, simp]: "sp_wf (sp_publish g d)"
+  by (simp add: sp_wf_def sp_publish_def)
+
+lemma sp_wf_read_at [intro, simp]: "sp_wf (sp_read_at src)"
+  by (cases src) simp_all
+
+lemma sp_wf_bind [intro]:
+  assumes "sp_wf p" and "\<And>v. sp_wf (f v)"
+  shows "sp_wf (p \<bind> f)"
+proof (rule sp_wfI)
+  fix k h
+  have "(p \<bind> f) (\<lambda>v. sp_lift_tree (k v) h) = p (\<lambda>v. sp_lift_tree (f v k) h)"
+    by (simp add: sp_bind_def sp_wf_graft[OF assms(2)])
+  also have "\<dots> = sp_lift_tree (p (\<lambda>v. f v k)) h"
+    by (rule sp_wf_graft[OF assms(1)])
+  finally show "(p \<bind> f) (\<lambda>v. sp_lift_tree (k v) h) = sp_lift_tree ((p \<bind> f) k) h"
+    by (simp add: sp_bind_def)
+qed
+
+text \<open>
+  Post-composing a program's answer with an encoding, so a transfer answering
+  \<open>'dl\<close> becomes a contribution answering the packed \<open>('dl,'dg) dg_state\<close> the
+  generator folds. It is \<^const>\<open>sp_compile_with\<close>'s program-level counterpart:
+  compiling it is compiling through the same encoding.
+\<close>
+
+definition sp_map ::
+  "('a \<Rightarrow> 'b) \<Rightarrow> ('x,'g,'d,'a) strategy_program \<Rightarrow> ('x,'g,'d,'b) strategy_program"
+where
+  "sp_map e p = (\<lambda>k. p (\<lambda>v. k (e v)))"
+
+lemma sp_map_apply [simp]: "sp_map e p k = p (\<lambda>v. k (e v))"
+  by (simp add: sp_map_def)
+
+lemma sp_compile_with_sp_map [simp]:
+  "sp_compile_with e' (sp_map e p) = sp_compile_with (e' \<circ> e) p"
+  by (simp add: sp_map_def sp_compile_with_def comp_def)
+
+lemma sp_compile_sp_map [simp]: "sp_compile (sp_map e p) = sp_compile_with e p"
+  by (simp add: sp_compile_def sp_compile_with_def comp_def)
+
+lemma sp_wf_map [intro, simp]: "sp_wf p \<Longrightarrow> sp_wf (sp_map e p)"
+  by (simp add: sp_wf_def)
+
+lemma sp_compile_bind_wf:
+  assumes "sp_wf p"
+  shows "sp_compile (p \<bind> f) = sp_lift_tree (sp_compile p) (\<lambda>v. sp_compile (f v))"
+  using sp_wfD[OF assms, where k = "\<lambda>v. sp_compile (f v)"]
+  by (simp add: sp_bind_def sp_compile_def sp_compile_with_def)
+
+text \<open>
+  What a well-formed program answers, publishes and reads, asked of the program
+  rather than of a tree. Each is the tree vocabulary applied to its compilation,
+  so the three carry over unchanged --- and the point of stating them is that a
+  characterization of a combinator can now speak one vocabulary on both sides,
+  instead of a program on the left and its contributions' trees on the right.
+\<close>
+
+abbreviation traverse_program ::
+  "('x,'g,'d::bot,'d) strategy_program \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
+  where "traverse_program p \<sigma> \<equiv> traverse_rhs (sp_compile p) \<sigma>"
+
+abbreviation sides_of_program ::
+  "('x,'g,'d::bounded_semilattice_sup_bot,'d) strategy_program
+   \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'x + 'g \<Rightarrow> 'd"
+  where "sides_of_program p \<sigma> \<equiv> sides_of_rhs (sp_compile p) \<sigma>"
+
+abbreviation dep_program ::
+  "('x + 'g \<Rightarrow> 'd::bot) \<Rightarrow> ('x,'g,'d,'d) strategy_program \<Rightarrow> ('x + 'g) set"
+  where "dep_program \<sigma> p \<equiv> dep_aux \<sigma> (sp_compile p)"
+
+text \<open>Running a well-formed program under any continuation: its own effects
+  happen, then the continuation runs on the value it answered.
+
+  Left bare. Their left-hand sides are \<open>f (p k) \<sigma>\<close> with both \<open>p\<close> and \<open>k\<close>
+  schematic, which is not a higher-order pattern: as \<open>simp\<close> rules they match any
+  application under one of the three observers and spawn an \<open>sp_wf\<close> subgoal for
+  it --- including their own right-hand sides, where \<open>sides_of_program p \<sigma>\<close>
+  unfolds to \<open>sides_of_rhs (sp_compile p) \<sigma>\<close> and matches at \<open>?p := sp_compile\<close>.
+  Nothing loops while \<open>sp_wf sp_compile\<close> is unprovable by the simpset, but that is
+  an accident to rely on, so each use cites the rule.\<close>
+
+lemma traverse_rhs_sp_wf:
+  assumes "sp_wf p"
+  shows "traverse_rhs (p k) \<sigma> = traverse_rhs (k (traverse_program p \<sigma>)) \<sigma>"
+  by (subst sp_wfD[OF assms]) simp
+
+lemma dep_aux_sp_wf:
+  assumes "sp_wf p"
+  shows "dep_aux \<sigma> (p k) = dep_program \<sigma> p \<union> dep_aux \<sigma> (k (traverse_program p \<sigma>))"
+  by (subst sp_wfD[OF assms]) simp
+
+lemma sides_of_rhs_sp_wf:
+  fixes p :: "('x,'g,'d::bounded_semilattice_sup_bot,'d) strategy_program"
+  assumes "sp_wf p"
+  shows "sides_of_rhs (p k) \<sigma>
+           = sides_of_program p \<sigma> \<squnion> sides_of_rhs (k (traverse_program p \<sigma>)) \<sigma>"
+  by (subst sp_wfD[OF assms]) simp
+
+text \<open>The three together: what a proof that has just exposed \<open>p k\<close> under an
+  observer needs, cited as one name.\<close>
+
+lemmas sp_wf_observes = traverse_rhs_sp_wf sides_of_rhs_sp_wf dep_aux_sp_wf
+
 text \<open>
   The \<open>id\<close>-specialized counterparts of the \<open>sp_compile_with_*\<close> equations above,
   stated directly against \<open>sp_compile\<close> so a proof reasoning about compiled
@@ -221,6 +392,9 @@ text \<open>
   above preserve the program abstraction and give the simplifier the
   vendor-tree constructors it needs.
 \<close>
+
+lemma sp_compile_bind: "sp_compile (m \<bind> f) = m (\<lambda>x. sp_compile (f x))"
+  by (simp add: sp_compile_def sp_compile_with_def sp_bind_def)
 
 lemma sp_compile_with_bind: "sp_compile_with encode (m \<bind> f) = m (\<lambda>x. sp_compile_with encode (f x))"
   by (simp add: sp_compile_with_def sp_bind_def)

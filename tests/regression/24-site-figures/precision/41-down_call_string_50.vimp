@@ -1,7 +1,6 @@
-// PARAM: --analysis interval --context call-string --context-depth 1
+// PARAM: --analysis interval --context call-string --context-depth 50
 // Backs a row of the site's "The price of precision" recursion chart
-// (call string 1): 3 contexts, and the one standing for the rest of the
-// recursion is still bounded.
+// (call string 50): 52 contexts, half the recursion kept apart.
 
 fun down(n) {
   __voblint_check(n >= 0); // PROVED

@@ -62,5 +62,5 @@ the call-string bound `k`.
 | --- | --- | --- |
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
-| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_tree_def`/`routed_entry_seed_tree_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |
+| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_call_program_def`/`routed_entry_seed_programs_def`/`routed_node_rhs` still generate the expected equation shape at a genuine call continuation |
 | `Example_Interval_Call_String_Generic_Parity.thy` | regression | the call-string registration at a runtime `k` reproduces every solved value the K1/K2 instances pin, at the same query points |

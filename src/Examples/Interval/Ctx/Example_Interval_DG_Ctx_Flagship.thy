@@ -132,7 +132,7 @@ lemma y_computed:
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.  The
-  heterogeneous seed channel (\<^const>\<open>routed_call_tree\<close> / \<^const>\<open>routed_entry_seed_tree\<close>)
+  heterogeneous seed channel (\<^const>\<open>routed_call_program\<close> / \<^const>\<open>routed_entry_seed_programs\<close>)
   carries that store in the seed unknown's \<^const>\<open>locals\<close> half, the same carrier the
   callee entry reads it back on.\<close>
 lemma seed_call1:

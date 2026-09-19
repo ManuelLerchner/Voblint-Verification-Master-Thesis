@@ -10,7 +10,6 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
-
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
 text \<open>
@@ -48,7 +47,6 @@ where
   "sign_combine_env_callee_join =
      local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
 
-
 subsection \<open>The Sign specification that uses it\<close>
 
 definition sign_dg_spec_callee_join ::
@@ -82,7 +80,6 @@ lemma dgs_combine_env_sign_dg_spec_callee_join [simp]:
   "combine_env\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
      = (\<lambda>ci. sign_combine_env_callee_join)"
   by (simp add: sign_dg_spec_callee_join_def)
-
 
 subsection \<open>The merge really differs from the stock one\<close>
 
@@ -126,7 +123,6 @@ proof
     using stock_env_keeps_caller callee_join_env_publishes_top by simp
 qed
 
-
 subsection \<open>The same merge at the abstract representation, and its soundness\<close>
 
 text \<open>
@@ -167,6 +163,7 @@ definition sign_dg_spec_env_join ::
        \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs gs) \<rparr>"
 
 declare sign_dg_spec_env_join_def [code_unfold]
+
 lemma dg_spec_step_sign_dg_spec_env_join [simp]:
   "dg_spec_step (sign_dg_spec_env_join gs) a
      = dg_spec_step (ownership_split_lift gs (sign_base_spec gs)) a"
@@ -176,6 +173,32 @@ lemma dgs_enter_sign_dg_spec_env_join [simp]:
   "enter\<^sup># (sign_dg_spec_env_join gs)
      = enter\<^sup># (ownership_split_lift gs (sign_base_spec gs))"
   by (simp add: sign_dg_spec_env_join_def)
+
+lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
+  "dg_spec_wf (ownership_split_lift gs (sign_base_spec gs))"
+  by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+
+lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
+  "dg_spec_wf (sign_dg_spec_env_join gs)"
+proof (unfold dg_spec_wf_def, intro conjI allI)
+  fix a d key
+  show "sp_wf (dg_spec_step (sign_dg_spec_env_join gs) a (mk_dg_man d key))"
+    unfolding dg_spec_step_sign_dg_spec_env_join
+    by (rule dg_spec_wf_step[OF dg_spec_wf_ownership_split_lift_sign_base])
+next
+  fix ci d key
+  show "sp_wf (enter\<^sup># (sign_dg_spec_env_join gs) ci (mk_dg_man d key))"
+    by (simp only: dgs_enter_sign_dg_spec_env_join
+        dg_spec_wf_enter[OF dg_spec_wf_ownership_split_lift_sign_base])
+next
+  fix ci d key ex
+  show "sp_wf (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci (mk_dg_man d key) ex)"
+    unfolding dg_spec_combine_transfer_def
+    by (auto simp: sign_dg_spec_env_join_def combine_env_callee_join_abs_def
+        local_combine_transfer_def
+        intro!: sp_wf_bind
+          sp_wf_dgs_combine_assign_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+qed
 
 text \<open>
   Both specifications run the same wrapped combine; they differ only in the
@@ -308,21 +331,22 @@ proof -
     by (rule sign_tf.ownership_split_lift_core_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)
-    case (1 d d' g g')
+    case 1 show ?case by (rule dg_spec_wf_sign_dg_spec_env_join)
+  next
+    case (2 d d' g g')
     then show ?case by (rule gamma_ownership_split_mono)
   next
-    case (2 a \<tau> src gk)
-    show ?case using stock.step_sound by (simp add: dg_spec_edge_tree_def)
+    case (3 a \<tau> src gk)
+    show ?case using stock.step_sound by (simp add: dg_spec_edge_program_def)
   next
-    case (3 s dc \<tau> gk t de ci)
+    case (4 s dc \<tau> gk t de ci)
     from stock.combine_sound[where dc = dc and de = de and \<tau> = \<tau> and gk = gk and ci = ci,
-        OF 3(1) 3(2)]
+        OF 4(1) 4(2)]
     show ?case
       by (rule subsetD[OF gamma_ownership_split_mono
             [OF traverse_combine_env_join_ge sides_combine_env_join_ge]])
   qed
 qed
-
 
 subsection \<open>The solved result really differs\<close>
 

@@ -151,10 +151,10 @@ definition sign_nest_1_eqs ::
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 1)
-       (\<lambda>ctx' src a. dg_spec_edge_tree sign_nest_S_st a src (\<lambda>_. Global))
-       (routed_call_tree sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
+       (\<lambda>ctx' src a. dg_spec_edge_program sign_nest_S_st a src (\<lambda>_. Global))
+       (routed_call_program sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
           (\<lambda>d. d = Bot))
-       (routed_entry_seed_tree Seed)
+       (routed_entry_seed_programs Seed)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
 
 definition sign_nest_1_sol ::
@@ -275,8 +275,14 @@ interpretation sign_nest_1_cs: call_string_routed_context
     "\<lambda>d. d = Bot"
     "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) m)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
-       goal_cases FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
+       goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
+  case CmbWf
+  show ?case by (rule sp_wf_routed_call_program) (simp add: sign_nest_S_st_def)
+next
+  case ExtraWf
+  then show ?case by (rule sp_wf_routed_entry_seed_programs)
+next
   case FinE
   show ?case by (rule sign_nest_finE)
 next

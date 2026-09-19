@@ -30,19 +30,21 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-                  \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
-      \<comment> \<open>one tree per call site: the site's own resolver decides which callees it folds\<close>
+                  \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
+      \<comment> \<open>one program per call site: the site's own resolver decides which callees it folds\<close>
     and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
-                  \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list"
+                  \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
-  assumes finE: "finite (intra g)"
+  assumes cmb_wf: "\<And>c ca cc v. sp_wf (cmb route c ca cc v)"
+    and extra_wf: "\<And>c v q. q \<in> set (extra route c v) \<Longrightarrow> sp_wf q"
+    and finE: "finite (intra g)"
     and pp: "post_bounded
                (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
-                  route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
+                  route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> gammaM (sg (Inl (v, c))) =
@@ -57,16 +59,24 @@ begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
   "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
-           route (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
+           route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
   "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
 
-abbreviation trees :: "pp \<Rightarrow> 'c
-    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list" where
-  "trees v ctx \<equiv>
-     routed_contribution_trees intra_predecessor_addr_list call_site_list route
-       (\<lambda>c src a. dg_spec_edge_tree S a src (\<lambda>_. gk0)) cmb extra g ctx v"
+abbreviation contribs :: "pp \<Rightarrow> 'c
+    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list" where
+  "contribs v ctx \<equiv>
+     routed_contribution_programs intra_predecessor_addr_list call_site_list route
+       (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g ctx v"
+
+text \<open>Every contribution the routed generator folds here runs its continuation
+  once: the edge hook is a compiled specification step, and the call and extra
+  hooks carry their own well-formedness as locale assumptions.\<close>
+
+lemma contribs_wf [simp]: "\<forall>q \<in> set (contribs v ctx). sp_wf q"
+  by (rule routed_contribution_programs_wf)
+     (auto intro: sp_wf_dg_spec_edge_program[OF spec_wf] cmb_wf extra_wf)
 
 subsection \<open>Post-solution elimination\<close>
 
@@ -104,7 +114,7 @@ lemma pp_entry_s0d_bound:
   shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
 proof -
   have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
-    by (simp add: eq_routed_node_rhs)
+    by (simp add: eq_routed_node_rhs[OF contribs_wf])
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
   also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
     using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
@@ -118,37 +128,37 @@ text \<open>At the entry the generator wraps its fold in one extra \<open>Side\<
   proved against the fold therefore transport to \<^const>\<open>routed_node_rhs\<close> without a separate
   entry case.\<close>
 lemma sides_fold_le_Gen:
-  "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma k
+  "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx))) sigma k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
   unfolding routed_node_rhs_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
 
 subsection \<open>EDGE: the routed intra bounds and the guarded transport\<close>
 
-text \<open>Every intra predecessor of \<open>v\<close> contributes its compiled edge tree to \<open>v\<close>'s own fold, so
+text \<open>Every intra predecessor of \<open>v\<close> contributes its edge program to \<open>v\<close>'s own fold, so
   both bounds below are the post-solution read off that one membership.\<close>
 
-lemma edge_tree_mem_trees:
+lemma edge_program_mem_contribs:
   assumes e: "(u, a, v) \<in> intra g"
-  shows "dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0) \<in> set (trees v ctx)"
+  shows "dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0) \<in> set (contribs v ctx)"
 proof -
   have "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
     using e by (force simp: intra_predecessor_addr_list_def
         set_intra_predecessor_list[OF finE] intra_predecessors_def)
-  thus ?thesis by (force simp: routed_contribution_trees_def)
+  thus ?thesis by (force simp: routed_contribution_programs_def)
 qed
 
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
+  shows "locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
            \<le> locals (sigma (Inl (v, ctx)))"
 proof -
-  have "locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
-      \<le> side_acc_dg (acc0 v) sigma (trees v ctx)"
-    using locals_traverse_le_side_acc_dg[OF edge_tree_mem_trees[OF e]] .
+  have "locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
+      \<le> side_acc_dg (acc0 v) sigma (contribs v ctx)"
+    using locals_traverse_le_side_acc_dg[OF edge_program_mem_contribs[OF e]] .
   also have "\<dots> = locals (eq Gen (v, ctx) sigma)"
-    by (simp add: eq_routed_node_rhs)
+    by (simp add: eq_routed_node_rhs[OF contribs_wf])
   also have "\<dots> \<le> locals (sigma (Inl (v, ctx)))"
     using pp_eq_bound[OF cov_v] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
@@ -157,12 +167,16 @@ qed
 lemma edge_bound_global:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma (Inr gk0))
+  shows "globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
+                  sigma (Inr gk0))
            \<le> globs (sigma (Inr gk0))"
 proof -
-  have "globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma (Inr gk0))
-      \<le> globs (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (trees v ctx))) sigma (Inr gk0))"
-    using sides_le_side_rhs_fold_dg[OF edge_tree_mem_trees[OF e], where k = "Inr gk0"]
+  have "globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
+                 sigma (Inr gk0))
+      \<le> globs (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx)))
+                   sigma (Inr gk0))"
+    using sides_le_side_rhs_fold_dg[OF contribs_wf edge_program_mem_contribs[OF e],
+        where k = "Inr gk0"]
     by (simp add: less_eq_dg_state_def)
   also have "\<dots> \<le> globs (sides_of_rhs (Gen (v, ctx)) sigma (Inr gk0))"
     using sides_fold_le_Gen[where k = "Inr gk0"]
@@ -194,8 +208,9 @@ next
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
   ultimately have "s' \<in> edge_collect a (gammaDG ?d ?g)" by blast
   hence "s' \<in> gammaDG
-      (locals (traverse_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma))
-      (globs (sides_of_rhs (dg_spec_edge_tree S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma (Inr gk0)))"
+      (locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma))
+      (globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
+                sigma (Inr gk0)))"
     using step_sound[of a sigma "Inl (u, ctx)" gk0] by blast
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
@@ -209,7 +224,7 @@ subsection \<open>COMB: the guarded combine transport\<close>
 text \<open>The caller, callee-result and continuation slots are transported independently; which
   caller a return belongs to is settled by the trace semantics, so this layer never has to
   reconstruct the activation pairing itself.  The two bounds are assumptions because the
-  combine tree that establishes them is built by the routed call generator, not here.\<close>
+  combine program that establishes them is built by the routed call generator, not here.\<close>
 
 lemma dg_ctx_act_comb_covered:
   assumes covCl: "(cl, c1) \<in> vars"
@@ -218,12 +233,12 @@ lemma dg_ctx_act_comb_covered:
     and s: "s \<in> gammaM (sg (Inl (cl, c1)))"
     and t: "t \<in> gammaM (sg (Inl (ex, c2)))"
     and bound_local:
-      "locals (traverse_rhs
-                 (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma)
+      "locals (traverse_program
+                 (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma)
        \<le> locals (sigma (Inl (v, cv)))"
     and bound_global:
-      "globs (sides_of_rhs
-                (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
+      "globs (sides_of_program
+                (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                 (Inr gk0))
        \<le> globs (sigma (Inr gk0))"
   shows "combine_collect gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
@@ -237,12 +252,12 @@ proof -
     using t covEx by simp
   have "combine_collect gs (ci_dst ci) s t
         \<in> gammaDG
-            (locals (traverse_rhs
-               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma))
-            (globs (sides_of_rhs
-               (dg_spec_combine_tree S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
+            (locals (traverse_program
+               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma))
+            (globs (sides_of_program
+               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                (Inr gk0)))"
-    using combine_sound_tree[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
+    using combine_sound_program[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
         and src_ex = "Inl (ex, c2)" and gk = gk0 and ci = ci, OF sin tin] .
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, cv)))) ?G"
     by (rule gammaDG_mono[OF bound_local bound_global])

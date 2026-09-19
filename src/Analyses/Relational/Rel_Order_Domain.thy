@@ -110,7 +110,7 @@ text \<open>Registers the sort intersection under its named synonym -- the vendo
   by name, not the raw \<open>{bounded_semilattice_sup_bot, warrowing}\<close> sort, and
   Isabelle does not compose that registration automatically from the two
   separate instances above.  \<^type>\<open>dg_state\<close> already carries the same
-  explicit step generically (\<open>DG_Constraint_Trees\<close>) once its component types
+  explicit step generically (\<open>DG_Constraint_Programs\<close>) once its component types
   have it.\<close>
 instance relc :: bounded_warrowing ..
 
@@ -360,18 +360,18 @@ text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answ
   what \<^locale>\<open>sound_dg_spec_core\<close> is stated against.\<close>
 
 lemma traverse_rel_transfer [simp]:
-  "locals (traverse_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
+  "locals (traverse_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
-     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
+     (simp_all add: transfer_program_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
 lemma sides_rel_transfer [simp]:
-  "globs (sides_of_rhs (transfer_tree (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
+  "globs (sides_of_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
      = fst (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
   by (cases src)
-     (simp_all add: transfer_tree_def transfer_program_at_def rel_transfer_def
+     (simp_all add: transfer_program_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
@@ -393,6 +393,25 @@ text \<open>The unknown and global-key types occur only inside this specificatio
   cannot be a generated value. It is a construction-time description, unfolded where it
   is used.\<close>
 declare rel_order_spec_def [code_unfold]
+
+text \<open>Every field reads the shared slot, publishes once and answers, so the
+  specification runs its continuation once wherever the generator runs it.\<close>
+
+lemma dg_spec_wf_rel_order_spec [intro, simp]: "dg_spec_wf rel_order_spec"
+proof (unfold dg_spec_wf_def, intro conjI allI)
+  fix a :: edge_action and d :: relc and key :: "unit \<Rightarrow> 'b"
+  show "sp_wf (dg_spec_step rel_order_spec a (mk_dg_man d key))"
+    by (cases a) (auto simp: rel_order_spec_def rel_transfer_def Let_def)
+next
+  fix ci and d :: relc and key :: "unit \<Rightarrow> 'b"
+  show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d key))"
+    by (auto simp: rel_order_spec_def rel_enter_transfer_def Let_def)
+next
+  fix ci and d :: relc and key :: "unit \<Rightarrow> 'b" and ex :: relc
+  show "sp_wf (dg_spec_combine_transfer rel_order_spec ci (mk_dg_man d key) ex)"
+    by (auto simp: rel_order_spec_def dg_spec_combine_transfer_def rel_combine_transfer_def
+        local_combine_transfer_def Let_def)
+qed
 
 named_theorems rel_order_simps
 
@@ -525,26 +544,28 @@ lemma dg_spec_combine_transfer_rel_order_spec [simp]:
      (simp add: local_transfer_def local_combine_transfer_def rel_combine_transfer_def)
 
 lemma traverse_rel_combine [simp]:
-  "locals (traverse_rhs
-             (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
+  "locals (traverse_program
+             (combine_transfer_program (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = snd (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
+     (simp_all add: combine_transfer_program_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 lemma sides_rel_combine [simp]:
-  "globs (sides_of_rhs
-            (combine_transfer_tree (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk))
+  "globs (sides_of_program
+            (combine_transfer_program (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk))
             \<tau> (Inr gk))
      = fst (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
-     (simp_all add: combine_transfer_tree_def combine_program_at_def rel_combine_transfer_def
+     (simp_all add: combine_transfer_program_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 subsection \<open>The interpretation\<close>
 
 interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel gs
 proof unfold_locales
+  show "dg_spec_wf rel_order_spec" by (rule dg_spec_wf_rel_order_spec)
+next
   fix d d' :: relc and g g' :: relc
   show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_rel d g \<subseteq> gammaDG_rel d' g'"
     by (rule gammaDG_rel_mono)
@@ -552,11 +573,11 @@ next
   fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
   show "edge_collect a (gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
           \<subseteq> gammaDG_rel
-              (locals (traverse_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk)) \<tau>))
-              (globs (sides_of_rhs (dg_spec_edge_tree rel_order_spec a src (\<lambda>_. gk))
+              (locals (traverse_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk)) \<tau>))
+              (globs (sides_of_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk))
                         \<tau> (Inr gk)))"
     using step_sound_rel[of a "locals (\<tau> src)" "globs (\<tau> (Inr gk))"]
-    by (simp add: dg_spec_edge_tree_def split: prod.splits)
+    by (simp add: dg_spec_edge_program_def split: prod.splits)
 next
   fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
   show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));

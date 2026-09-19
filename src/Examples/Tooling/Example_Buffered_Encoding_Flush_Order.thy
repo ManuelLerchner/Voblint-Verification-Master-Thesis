@@ -47,10 +47,10 @@ definition fo_direct ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "fo_direct =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ()) route_unit
-       (\<lambda>c src a. dg_spec_edge_tree fo_spec a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_tree fo_spec (Analysis_Global ()) Activation_Seed (static_resolve fo_cfg)
+       (\<lambda>c src a. dg_spec_edge_program fo_spec a src (\<lambda>_. Analysis_Global ()))
+       (routed_call_program fo_spec (Analysis_Global ()) Activation_Seed (static_resolve fo_cfg)
           (\<lambda>d. d = bot))
-       (routed_entry_seed_tree Activation_Seed)
+       (routed_entry_seed_programs Activation_Seed)
        fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition fo_buffered ::

@@ -19,59 +19,71 @@ text \<open>
 subsection \<open>What a routed equation reads\<close>
 
 lemma dep_aux_routed_node_rhs:
-  "dep_aux \<tau> (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, cx))
-     = (\<Union>t\<in>set (routed_contribution_trees pred_sel site_sel route it cmb extra g cx v).
-          dep_aux \<tau> t)"
+  assumes wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel site_sel route
+                     it cmb extra g cx w). sp_wf q"
+  shows "dep_aux \<tau> (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g
+           (v, cx))
+     = (\<Union>q\<in>set (routed_contribution_programs pred_sel site_sel route it cmb extra g cx v).
+          dep_program \<tau> q)"
   by (cases "v = cfg_entry g")
-     (simp_all add: routed_node_rhs_def Let_def dep_aux_side_rhs_fold_dg_char)
+     (simp_all add: routed_node_rhs_def Let_def dep_program_side_rhs_fold_dg_char[OF wf])
 
 lemma dep_L_routed_node_rhs_intra:
   assumes fin: "finite (intra g)" and e: "(u, a, v) \<in> intra g"
+    and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs
+                     intra_predecessor_addr_list call_site_list route
+                     (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs intra_predecessor_addr_list call_site_list gkey route
-            (\<lambda>cx src a. dg_spec_edge_tree S a src slot) cmb extra g bot0 s0d s0g) \<tau> (v, cx)"
+            (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g bot0 s0d s0g) \<tau> (v, cx)"
 proof -
-  have "dg_spec_edge_tree S a (Inl (u, cx)) slot
-          \<in> set (routed_contribution_trees intra_predecessor_addr_list call_site_list route
-                   (\<lambda>cx src a. dg_spec_edge_tree S a src slot) cmb extra g cx v)"
+  have "dg_spec_edge_program S a (Inl (u, cx)) slot
+          \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list route
+                   (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g cx v)"
     using e fin
-    by (force simp: routed_contribution_trees_def intra_predecessor_addr_list_def
+    by (force simp: routed_contribution_programs_def intra_predecessor_addr_list_def
         intra_predecessors_def)
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
-    using dep_aux_dg_spec_edge_tree_source[of "Inl (u, cx)" \<tau> S a slot]
-    by (auto simp: dep_aux_routed_node_rhs)
+    using dep_dg_spec_edge_program_source[of "Inl (u, cx)" \<tau> S a slot]
+    by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
-lemma dep_aux_routed_call_tree:
-  "dep_aux \<tau> (routed_call_tree S gk0 seed_key resolve is_bot route ctx ca cc v)
+lemma dep_program_routed_call_program:
+  assumes wfS: "dg_spec_wf S"
+  shows "dep_program \<tau> (routed_call_program S gk0 seed_key resolve is_bot route ctx ca cc v)
      = insert (Inl (cc, ctx))
          (\<Union>q\<in>set (resolve v cc ca (locals (\<tau> (Inl (cc, ctx))))).
-            dep_aux \<tau> (routed_callee_call_tree S gk0 seed_key route is_bot ctx ca cc
+            dep_program \<tau> (routed_callee_call_program S gk0 seed_key route is_bot ctx ca cc
                         (locals (\<tau> (Inl (cc, ctx)))) q))"
-  by (simp add: routed_call_tree_def dep_aux_side_rhs_fold_dg_char)
+  by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes
+      dep_program_side_rhs_fold_dg_char[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
-lemma routed_call_tree_mem:
+lemma routed_call_program_mem:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-  shows "routed_call_tree S gk0 seed_key resolve is_bot route cx ca u k
-           \<in> set (routed_contribution_trees pred_sel call_site_list route it
-                    (routed_call_tree S gk0 seed_key resolve is_bot) extra g cx k)"
+  shows "routed_call_program S gk0 seed_key resolve is_bot route cx ca u k
+           \<in> set (routed_contribution_programs pred_sel call_site_list route it
+                    (routed_call_program S gk0 seed_key resolve is_bot) extra g cx k)"
 proof -
   have "(u, ca) \<in> set (call_site_list g k)" using e fin by auto
-  then show ?thesis by (rule routed_contribution_trees_combineI)
+  then show ?thesis by (rule routed_contribution_programs_combineI)
 qed
 
 lemma dep_L_routed_node_rhs_call_site:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
+    and wfS: "dg_spec_wf S"
+    and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
+                     (routed_call_program S gk0 seed_key resolve is_bot) extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list gkey route it
-            (routed_call_tree S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+            (routed_call_program S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
-  have "Inl (u, cx) \<in> dep_aux \<tau> (routed_call_tree S gk0 seed_key resolve is_bot route cx ca u k)"
-    by (simp add: dep_aux_routed_call_tree)
+  have "Inl (u, cx)
+          \<in> dep_program \<tau> (routed_call_program S gk0 seed_key resolve is_bot route cx ca u k)"
+    by (simp add: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
-    using routed_call_tree_mem
+    using routed_call_program_mem
             [OF fin e, of S gk0 seed_key resolve is_bot route cx pred_sel it extra]
-    by (auto simp: dep_aux_routed_node_rhs)
+    by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
 lemma dep_L_routed_node_rhs_callee_result:
@@ -80,34 +92,40 @@ lemma dep_L_routed_node_rhs_callee_result:
     and enter: "enter\<^sup># S (call_info_of ca q) = local_enter_transfer (\<lambda>d. [(d, f d)])"
     and res: "q \<in> set (resolve k u ca (locals (\<tau> (Inl (u, cx)))))"
     and nb: "\<not> is_bot (f (locals (\<tau> (Inl (u, cx)))))"
+    and wfS: "dg_spec_wf S"
+    and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
+                     (routed_call_program S gk0 seed_key resolve is_bot) extra g cx w). sp_wf q"
   shows "(FunctionResult q, route u cx (f (locals (\<tau> (Inl (u, cx))))) ca)
            \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list gkey route it
-                (routed_call_tree S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+                (routed_call_program S gk0 seed_key resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   let ?d = "locals (\<tau> (Inl (u, cx)))"
-  have callee: "dep_aux \<tau> (routed_callee_call_tree S gk0 seed_key route is_bot cx ca u ?d q)
+  have callee: "dep_program \<tau> (routed_callee_call_program S gk0 seed_key route is_bot cx ca u ?d q)
       = dep_aux \<tau> (sp_compile (side_rhs_fold_dg bot
-          (map (routed_call_alternative_tree S gk0 seed_key route is_bot cx ca u q)
+          (map (routed_call_alternative_program S gk0 seed_key route is_bot cx ca u q)
              [(?d, f ?d)])))"
-    unfolding routed_callee_call_tree_def enter
+    unfolding routed_callee_call_program_def enter sp_compile_bind
     by (rule enter_depsD[OF enter_deps_local_enter_transfer_mk_dg_man, simplified])
   have "Inl (FunctionResult q, route u cx (f ?d) ca)
-          \<in> dep_aux \<tau> (routed_callee_call_tree S gk0 seed_key route is_bot cx ca u ?d q)"
+          \<in> dep_program \<tau> (routed_callee_call_program S gk0 seed_key route is_bot cx ca u ?d q)"
   proof -
     have "Inl (FunctionResult q, route u cx (f ?d) ca)
-            \<in> dep_aux \<tau> (routed_call_alternative_tree S gk0 seed_key route is_bot cx ca u q
+            \<in> dep_program \<tau> (routed_call_alternative_program S gk0 seed_key route is_bot cx ca u q
                            (?d, f ?d))"
-      using nb by (simp add: routed_call_alternative_tree_def Let_def)
-    then show ?thesis unfolding callee dep_aux_side_rhs_fold_dg_char by simp
+      using nb by (simp add: routed_call_alternative_program_def Let_def)
+    then show ?thesis
+      unfolding callee
+        dep_program_side_rhs_fold_dg_char[OF sp_wf_routed_call_alternative_programs[OF wfS]]
+      by simp
   qed
   then have "Inl (FunctionResult q, route u cx (f ?d) ca)
-               \<in> dep_aux \<tau> (routed_call_tree S gk0 seed_key resolve is_bot route cx ca u k)"
-    using res by (auto simp: dep_aux_routed_call_tree)
+               \<in> dep_program \<tau> (routed_call_program S gk0 seed_key resolve is_bot route cx ca u k)"
+    using res by (auto simp: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
-    using routed_call_tree_mem
+    using routed_call_program_mem
             [OF fin e, of S gk0 seed_key resolve is_bot route cx pred_sel it extra]
-    by (auto simp: dep_aux_routed_node_rhs)
+    by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
 subsection \<open>Keys of a solve whose activation returned\<close>
@@ -122,16 +140,24 @@ lemma analysis_spec_enter:
                    (enter_st gs ci) d)])"
   by (simp add: analysis_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def)
 
+lemma analysis_contribs_wf [simp]:
+  "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
+       (route gs)
+       (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec gs p) a src (\<lambda>_. gk0))
+       (routed_call_program (analysis_spec gs p) gk0 seed rsv (\<lambda>d. d = Bot))
+       (routed_entry_seed_programs seed) cfg cx w). sp_wf q"
+  by (rule routed_contribution_programs_wf) auto
+
 lemma sol_vars_dep_closed:
   assumes solves: "terminates (declared_global p) p"
     and x: "x \<in> sol_vars (declared_global p) p"
     and y: "y \<in> dep\<^sub>L
        (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
           (route (declared_global p))
-          (\<lambda>ctx' src a. dg_spec_edge_tree (analysis_spec (declared_global p) p) a src (\<lambda>_. gk0))
-          (routed_call_tree (analysis_spec (declared_global p) p) gk0 seed
+          (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src (\<lambda>_. gk0))
+          (routed_call_program (analysis_spec (declared_global p) p) gk0 seed
              (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
-          (routed_entry_seed_tree seed)
+          (routed_entry_seed_programs seed)
           (prog_cfg p) Bot (Lifted init_st) Bot)
        (sol_env (declared_global p) p) x"
   shows "y \<in> sol_vars (declared_global p) p"
@@ -144,7 +170,8 @@ lemma sol_vars_back_intra:
   assumes solves: "terminates (declared_global p) p"
     and v: "(v, cx) \<in> sol_vars (declared_global p) p" and e: "(u, a, v) \<in> intra (prog_cfg p)"
   shows "(u, cx) \<in> sol_vars (declared_global p) p"
-  by (rule sol_vars_dep_closed[OF solves v dep_L_routed_node_rhs_intra[OF prog_cfg_finite(1) e]])
+  by (rule sol_vars_dep_closed
+        [OF solves v dep_L_routed_node_rhs_intra[OF prog_cfg_finite(1) e analysis_contribs_wf]])
 
 lemma sol_vars_back_call_site:
   assumes solves: "terminates (declared_global p) p"
@@ -152,7 +179,8 @@ lemma sol_vars_back_call_site:
     and e: "(u, ca, FunctionEntry q, k) \<in> calls (prog_cfg p)"
   shows "(u, cx) \<in> sol_vars (declared_global p) p"
   by (rule sol_vars_dep_closed
-        [OF solves k dep_L_routed_node_rhs_call_site[OF prog_cfg_finite(2) e]])
+        [OF solves k dep_L_routed_node_rhs_call_site
+           [OF prog_cfg_finite(2) e dg_spec_wf_analysis_spec analysis_contribs_wf]])
 
 lemma sol_vars_callee_result:
   assumes solves: "terminates (declared_global p) p"
@@ -173,7 +201,7 @@ proof -
         rule dep_L_routed_node_rhs_callee_result[where resolve = "static_resolve (prog_cfg p)"
             and \<tau> = "sol_env (declared_global p) p" and cx = cx,
           OF prog_cfg_finite(2) e analysis_spec_enter[of "declared_global p" p] res])
-       (use nb in simp)
+       (use nb in simp, rule dg_spec_wf_analysis_spec, rule analysis_contribs_wf)
 qed
 
 lemma sol_vars_back_reach:
@@ -325,9 +353,13 @@ lemma routed_analysis_sound_live_keys:
      (declared_global p) (prog_cfg p) gk0 (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_keys p) (root_query p) seed (\<lambda>d. d = Bot) R
      (map_lift (fun_of_resolved_st_q_for (declared_global p))) classify"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
+    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
     ClProved ClRefuted VarsFin)
+  case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
+next
+  case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
+next
   case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
 next
   case PP show ?case

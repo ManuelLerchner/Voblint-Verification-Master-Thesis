@@ -37,6 +37,9 @@ where
   "sign_conf_spec gs empty_pred =
      local_state_dg_spec_st_for_lifted gs empty_pred (sign_tf_st_for gs) (sign_enter_st_for gs)"
 
+lemma dg_spec_wf_sign_conf_spec [intro, simp]: "dg_spec_wf (sign_conf_spec gs empty_pred)"
+  by (simp add: sign_conf_spec_def)
+
 definition sign_conf_abs_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"

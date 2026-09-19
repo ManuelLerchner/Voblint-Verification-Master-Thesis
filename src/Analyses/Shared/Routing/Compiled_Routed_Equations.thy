@@ -43,9 +43,9 @@ where
   "compiled_routed_eqs_for global seed route S g initial initial_global =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list
        (\<lambda>_. global) route
-       (\<lambda>ctx' src a. dg_spec_edge_tree S a src (\<lambda>_. global))
-       (routed_call_tree S global seed (static_resolve g) (\<lambda>d. d = bot))
-       (routed_entry_seed_tree seed)
+       (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
+       (routed_call_program S global seed (static_resolve g) (\<lambda>d. d = bot))
+       (routed_entry_seed_programs seed)
        g bot initial initial_global"
 
 subsection \<open>Per-node edge indexes\<close>
@@ -133,12 +133,12 @@ lemma compiled_routed_eqs_for_code [code]:
            (\<lambda>_ v ctx. map (\<lambda>(u, a). (Inl (u, ctx), a)) (group_lookup preds v))
            (\<lambda>_ v. remdups (map (\<lambda>(c, ca, p). (c, ca)) (group_lookup targets v)))
            (\<lambda>_. global) route
-           (\<lambda>ctx' src a. dg_spec_edge_tree S a src (\<lambda>_. global))
-           (routed_call_tree S global seed
+           (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
+           (routed_call_program S global seed
               (\<lambda>v cc ca d. map (\<lambda>(c, a, p). p)
                  (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (group_lookup targets v)))
               (\<lambda>d. d = bot))
-           (routed_entry_seed_tree seed)
+           (routed_entry_seed_programs seed)
            g bot initial initial_global)"
 proof -
   note preds = map_group_lookup_intra_predecessor_index
@@ -151,7 +151,7 @@ proof -
     by (intro ext) (simp add: static_resolve_def static_targets_def group_lookup_call_target_index)
   show ?thesis
     unfolding compiled_routed_eqs_for_def routed_node_rhs_buffered_def
-      routed_contribution_trees_def Let_def
+      routed_contribution_programs_def Let_def
     by (simp only: preds sites resolve)
 qed
 
