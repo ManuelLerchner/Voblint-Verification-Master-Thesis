@@ -439,7 +439,7 @@
           <p class="bug-kicker">A real bug, replayed</p>
           <p class="bug-links">
             <a href="https://github.com/goblint/analyzer/pull/1161" target="_blank" rel="noreferrer">
-              <img class="inline-logo" src="assets/logos/goblint.svg" alt="" width="18" height="18"> goblint/analyzer #1161: Congruences: make <code>%</code> sound
+              <img class="inline-logo" src="assets/logos/goblint.svg" alt="" width="18" height="18"> goblint/analyzer #1161: Congruences: Make <code>%</code> sound by restricting cases where we return a constant
             </a>
             <a href="https://github.com/goblint/analyzer/issues/1156" target="_blank" rel="noreferrer">#1156</a>
           </p>
@@ -496,12 +496,12 @@
         </ol>
 
         <figcaption>
-          The left pane is Goblint's own output at
-          <a href="https://github.com/goblint/analyzer/commit/8440ff01c6f63e9480b578e79bb7dc28893ed5e1" target="_blank" rel="noreferrer"><code>8440ff0</code></a>,
-          the commit before the fix, with the test's own flags, <code>--enable ana.int.congruence
-          --set sem.int.signed_overflow assume_none</code>; its congruence
-          trace reads <code>join -5 -7 -&gt; 1+2ℤ</code> and then <code>rem : 1+2ℤ 2 -&gt; 1</code>.
-          After the fix both checks come out UNKNOWN.
+          The left pane is Goblint before that pull request, on its own regression test
+          <a href="https://github.com/goblint/analyzer/blob/master/tests/regression/37-congruence/14-negative.c" target="_blank" rel="noreferrer"><code>37-congruence/14-negative.c</code></a>,
+          with that test's flags, <code>--enable ana.int.congruence
+          --set sem.int.signed_overflow assume_none</code>. The fix restricts when the congruence
+          domain may answer a constant for <code>%</code>; after it the test expects UNKNOWN for
+          <code>c % 2 == 1</code>, and <code>c % 2 == -1</code> is still out of reach.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a>
         </figcaption>
@@ -886,8 +886,9 @@
           which is why a reduced value is sound whenever the unreduced one was. One round is
           <a href="Voblint/Voblint_Analysis_Int/Int_Refinement.html#Int_Refinement.refine_round%7Cconst"><code>refine_round</code></a>,
           and Int runs rounds to a fixpoint after every arithmetic operation and every guard. Here
-          two rounds is as deep as it goes: the congruence step moves the bounds, the new bounds
-          move the sign, and a sign read off an interval can never narrow that interval again.
+          two rounds is as deep as it goes, and a third finds nothing. Nothing bounds that number
+          in general: <a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_fix%7Cconst"><code>refine_fix</code></a> iterates until the tuple stops moving, and answers
+          the value it started from if it never does.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/02-int_reduction_int.vimp&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a>
         </figcaption>
       </figure>
@@ -1363,8 +1364,9 @@ datatype ltr =
           <code>v</code>, and what does memory hold there?&rdquo; is answered by looking at the end
           of one path. On the flat list the same question means scanning an interleaved sequence
           and deciding, for every occurrence of <code>v</code>, whether it belongs to the
-          activation being reasoned about. The analysis answers one value per node, so that first
-          question is the one every soundness proof in the chain has to ask, and a trace is local
+          activation being reasoned about. The analysis answers per program point &#8212; per
+          point and context, once a policy keeps copies of a procedure apart &#8212; so that
+          first question is the one every soundness proof in the chain has to ask, and a trace is local
           precisely so that asking it is a projection rather than a reconstruction.
         </p>
         <p>
@@ -1653,8 +1655,9 @@ datatype ltr =
       <div class="prose-block">
         <h3>From one run to one answer per node</h3>
         <p>
-          The figure above is one run. The analyzer never sees a run: what it produces is a table,
-          one abstract value per node, with nothing in it about paths, calls or activations. So
+          The figure above is one run. The analyzer never sees a run: what it produces is a
+          table keyed by program point, with nothing in it about paths, calls or activations
+          (contexts split those keys further, and the section on procedures does that). So
           the concrete side has to be put into that shape. Take every local trace the graph
           admits, which is what
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>
@@ -1814,7 +1817,7 @@ datatype ltr =
           term per incoming edge, each applying that edge's action to the value at its source;
           procedures will key unknowns by node and context. A solver then finds a value for every
           unknown. To the rest of the pipeline the solver is a black box: equations go in, one
-          abstract value per node comes out.
+          abstract value per unknown comes out.
         </p>
       </div>
 
@@ -3252,10 +3255,8 @@ fun main() {
             <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/10-down_call_string_99.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=99">See the dip at k = 99 &#8599;</a>
           </p>
           <p class="cost-explain">
-            Entry state sits off the time series for the same reason as before: its key is not a
-            call string. It reaches the same 102 contexts as <code>k = 100</code>
-            in 79.8 ms rather than 184.7, by keying on <code>n</code> itself instead of on the path
-            that produced it.
+            Entry state sits off the series again, and reaches the same 102 contexts as
+            <code>k = 100</code> in 79.8 ms rather than 184.7.
           </p>
         </figure>
       </div>
@@ -4127,44 +4128,14 @@ fun main() {
 
       <h3 class="setting-title">Why not always Join, then</h3>
       <p class="setting-copy">
-        Because its cost follows the chain. Joining never widens, so a value that climbs is walked
-        one step at a time, and the solver needs a round for each. Widening takes
-        the same chain in one step. A recursion with a bound makes the difference plain: every
-        setting proves the check, and only two of them stay flat as the bound grows.
+        Because its cost follows the chain. Joining never widens, so a value that climbs is
+        walked one step at a time and the solver needs a round for each; widening takes the
+        same chain in one step. On <code>f(x) { if (x &lt; N) f(x + 1); }</code> from
+        <code>f(0)</code> every rule proves <code>x &lt;= N</code>, but as <code>N</code> goes
+        from 64 to 4096 the two joining rules go from 5&nbsp;ms to about 240, while the two
+        widening rules stay at 4. Take the bound away and that growth has no end, which is the
+        <em>no answer</em> in the table below.
       </p>
-
-      <div class="prose-block">
-        <pre class="prose-code" data-lang="vimp"><code>fun f(x) {
-  __voblint_check(x &lt;= N);
-  if (x &lt; N) { r = f(x + 1); return r; }
-  return 0;
-}
-
-fun main() { q = f(0); }</code></pre>
-      </div>
-
-      <figure class="scene scene-guide">
-        <div class="table-scroll">
-          <table class="guide-table">
-            <thead>
-              <tr><th scope="col">N</th><th scope="col">Join</th><th scope="col">Join per origin</th><th scope="col">Warrow</th><th scope="col">Warrow per origin</th></tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row"><span class="guide-name">64</span></th><td class="ok">5 ms</td><td class="ok">5 ms</td><td class="ok">4 ms</td><td class="ok">4 ms</td></tr>
-              <tr><th scope="row"><span class="guide-name">256</span></th><td class="ok">8 ms</td><td class="ok">7 ms</td><td class="ok">4 ms</td><td class="ok">4 ms</td></tr>
-              <tr><th scope="row"><span class="guide-name">1024</span></th><td class="meh">41 ms</td><td class="meh">38 ms</td><td class="ok">4 ms</td><td class="ok">4 ms</td></tr>
-              <tr><th scope="row"><span class="guide-name">4096</span></th><td class="meh">237 ms</td><td class="meh">235 ms</td><td class="ok">4 ms</td><td class="ok">4 ms</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <figcaption>
-          Wall clock, best of five runs of <code>cli/voblint --analysis interval
-          --context none</code>. All sixteen runs answer PROVED; what changes is how long
-          it takes. The two joining rules grow with <code>N</code> because they walk the
-          chain; the two widening rules do not notice it. Take the bound away and that
-          growth has no end, which is the <em>no answer</em> in the table below.
-        </figcaption>
-      </figure>
 
       <h3 class="setting-title">Which Globals setting should you pick?</h3>
       <p class="setting-copy">
@@ -4280,37 +4251,16 @@ fun main() { q = f(0); }</code></pre>
 
       <h3 class="setting-title">Both settings at once</h3>
       <p class="setting-copy">
-        Every combination of the two settings on the program above: how many of its three
-        checks come out PROVED, and how many nodes the solved graph has. The two axes show
-        up separately. Cost moves down the rows only &#8212; within a row the node count does
-        not change at all, because this setting never adds or removes an unknown. Precision
-        moves both ways, and the coarser the context, the more damage a widening does: Warrow
-        proves one check with no contexts and all three once entry states keep the writers
-        apart.
+        Run every combination of the two settings on the program above and the axes separate
+        cleanly. Cost moves down the rows only: the solved graph has 24 nodes with no contexts,
+        34 at either call-string depth and 38 under entry states, and within a row that count
+        never moves, because this setting adds and removes no unknown. Precision moves both
+        ways, and the coarser the context the more damage a widening does &#8212; Warrow proves
+        one of the three checks with no contexts and all three once entry states keep the
+        writers apart, while both joining rules prove all three everywhere. The cheapest fully
+        precise cell is <code>None</code> with <code>Join</code>, which is also the combination
+        that never finishes on a recursion whose argument climbs.
       </p>
-
-      <figure class="scene scene-guide">
-        <div class="table-scroll">
-          <table class="guide-table">
-            <thead>
-              <tr><th scope="col">Context</th><th scope="col">Nodes</th><th scope="col">Join</th><th scope="col">Join per origin</th><th scope="col">Warrow</th><th scope="col">Warrow per origin</th></tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row"><span class="guide-name">None</span></th><td>24</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td><td class="bad">1 of 3</td><td class="meh">2 of 3</td></tr>
-              <tr><th scope="row"><span class="guide-name">Call string, k = 1</span></th><td>34</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td><td class="meh">2 of 3</td><td class="ok">3 of 3</td></tr>
-              <tr><th scope="row"><span class="guide-name">Call string, k = 2</span></th><td>34</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td><td class="meh">2 of 3</td><td class="ok">3 of 3</td></tr>
-              <tr><th scope="row"><span class="guide-name">Entry state</span></th><td>38</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td><td class="ok">3 of 3</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <figcaption>
-          Measured with <code>cli/voblint --analysis interval</code> on the program at the
-          top of this section. The cheapest cell is also a fully precise one, which is not
-          a recommendation: <code>None</code> with <code>Join</code> is exactly the
-          combination that never finishes on a recursion whose argument climbs. Nothing here
-          is ordered by quality, only by what each axis costs and buys.
-        </figcaption>
-      </figure>
 
       <h3 class="setting-title">A call that never stops calling</h3>
       <p class="setting-copy">
@@ -4686,7 +4636,11 @@ fun main() {
           <code>export_code</code> writes the whole reachable program into one module,
           <code>Generated</code>, beside two of HOL's own serializer preludes. The lexer and parser
           are generated from the grammar manifest by an unverified generator, then built with
-          Menhir and ocamllex; the adapter that calls <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> and the JSON
+          Menhir and ocamllex. No theorem covers them: one manifest generates both the Menhir
+          front end and the Isabelle syntax, and what stands behind them is testing, not proof
+          &#8212; a drift check that regenerates both on every commit, the <code>.vimp</code>
+          regression corpus, and parser fuzzing. The proved chain starts at an
+          already-built AST, so how that AST was made is outside every theorem here; the adapter that calls <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> and the JSON
           rendering are handwritten. <code>wasm_of_ocaml</code> compiles all of it into the bundle
           the worker loads, and the worker keeps a long analysis from freezing the page. The Pages
           build compiles the checked-in export rather than running <code>export_code</code>; a
@@ -5235,7 +5189,8 @@ fun main() {
             <li><button type="button" data-goto="5">one transfer</button></li>
             <li><button type="button" data-goto="6">expression</button></li>
             <li><button type="button" data-goto="7">one operator</button></li>
-            <li><button type="button" data-goto="8">the proof</button></li>
+            <li><button type="button" data-goto="8">what &#947; is</button></li>
+            <li><button type="button" data-goto="9">the proof</button></li>
           </ol>
 
           <div class="zoom-lens">
@@ -5330,6 +5285,22 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
               </li>
 
               <li class="zoom-level" data-level="8">
+                <p class="zoom-kicker">What <span class="zoom-gamma">&#947;</span> is</p>
+                <pre class="zoom-formal" data-lang="isabelle">gamma_ivl (Ivl l u) = {n. l &#8804; Fin n &#8743; Fin n &#8804; u}</pre>
+                <p>
+                  Every rung above is an <code>&#8712; &#947;</code> claim, and this is where
+                  &#947; stops being a symbol. An interval is two
+                  <a href="Voblint/Voblint_Analysis_Interval/Interval_Bounds.html#Interval_Bounds.eint%7Ctype"><code>eint</code></a>
+                  bounds &#8212; <code>MinInf</code>, <code>Fin</code> of an integer, or
+                  <code>PlusInf</code> &#8212; so <code>[0, 4]</code> is
+                  <code>Ivl (Fin 0) (Fin 4)</code>, and the set it stands for is the
+                  comprehension above: <code>{0, 1, 2, 3, 4}</code>. Nothing below this. The
+                  integers are HOL's, and the order on <code>eint</code> is three cases.
+                </p>
+                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Lattice.html#Interval_Lattice.gamma_ivl%7Cconst">gamma_ivl &#8599;</a>
+              </li>
+
+              <li class="zoom-level" data-level="9">
                 <p class="zoom-kicker">The bottom: a proof</p>
                 <pre class="zoom-code" data-lang="isabelle"><code>lemma ivl_plus_sound:
   assumes "i ∈ gamma_ivl a" "j ∈ gamma_ivl b"
@@ -5352,7 +5323,7 @@ qed</code></pre>
 
         <div class="loop-controls zoom-controls" hidden>
           <button type="button" class="zoom-out" aria-label="Zoom out"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
-          <input class="zoom-range" type="range" min="0" max="8" value="0" aria-label="Depth">
+          <input class="zoom-range" type="range" min="0" max="9" value="0" aria-label="Depth">
           <button type="button" class="zoom-in" aria-label="Zoom in"><i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
         </div>
 
@@ -5629,6 +5600,20 @@ qed</code></pre>
           Voblint names link to the theory in the formalization.
         </figcaption>
       </figure>
+
+      <div class="prose-block">
+        <p>
+          One row above understates itself. Every shipped domain keeps a pointwise state, one
+          abstract value per variable, so it is fair to ask whether the framework only works for
+          that shape. It does not, and there is a witness:
+          <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Domain.html"><code>Rel_Order_Domain</code></a>
+          carries a set of known pairs <code>x &#8804; y</code> instead &#8212; no
+          <code>vname &#8658; 'a</code> anywhere in the carrier &#8212; and interprets
+          <a href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.sound_dg_spec_core%7Clocale"><code>sound_dg_spec_core</code></a>
+          with no change to the framework. It is a deliberately useless analysis, precise only on
+          a guard and forgetful everywhere else. Its job is to be relational and still fit.
+        </p>
+      </div>
     </section>
 
     <!-- ================================================================== -->
@@ -5699,6 +5684,12 @@ qed</code></pre>
           <p>Every soundness guarantee assumes the solve terminates. Proving that in general is out of scope; for intervals, the join-based rules can run forever, and entry-state contexts can under any rule.</p>
         </article>
         <article class="guide-card caution">
+          <h4><i class="fa-solid fa-door-closed" aria-hidden="true"></i> Anything about a program it turned down</h4>
+          <p>A program failing <a href="Voblint/Voblint_Compile/Compile_Invariants.html#Compile_Invariants.wf_program_compile_input_exec%7Cconst"><code>wf_program_compile_input_exec</code></a>
+          is answered <code>Malformed_Program</code> and never analysed. That is what the
+          <code>Analysed res</code> premise carries: a rejected program gets no guarantee.</p>
+        </article>
+        <article class="guide-card caution">
           <h4><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Precision</h4>
           <p>There is no completeness claim. A correct result may still say <code>UNKNOWN</code> for a check that holds.</p>
         </article>
@@ -5716,10 +5707,6 @@ qed</code></pre>
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">this page</a>)
             are unverified.
           </p>
-        </article>
-        <article class="guide-card caution">
-          <h4><i class="fa-solid fa-right-left" aria-hidden="true"></i> Two-way compiler equivalence</h4>
-          <p>The compiler is proved correct in one direction, a forward simulation: every source run is matched in the graph. Soundness needs that direction only, and the backward direction is not proved.</p>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-code-compare" aria-hidden="true"></i> Anything about Goblint's code</h4>
@@ -5785,7 +5772,7 @@ qed</code></pre>
               <text class="muted" x="40" y="196">outside the proof</text>
             </g>
             <g class="berg-label corpus">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">288</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">289</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
               <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">434</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
               <text class="muted" x="40" y="336">tested, not proved</text>
             </g>

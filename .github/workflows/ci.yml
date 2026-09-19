@@ -501,6 +501,9 @@ jobs:
       - name: Site repository figures are derived and current
         run: pixi run pages-stats
 
+      - name: Every Isabelle name the site uses is linked into the theory HTML
+        run: pixi run pages-terms
+
       - name: Fixture reader, example corpus and playground links
         run: pixi run pages-scripts-check
 

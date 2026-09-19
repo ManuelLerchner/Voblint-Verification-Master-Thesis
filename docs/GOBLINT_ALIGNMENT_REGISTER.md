@@ -106,7 +106,7 @@ the two compute the same fixpoint).
 | local unknown `(node, context)` | `Inl (pp, ctx)` | implemented |
 | `sidel (FunctionEntry f, fc) callee_state` | `Side` into the global proxy `Inr (Seed (FunctionEntry f) ctx)`, read back into the local `(FunctionEntry f, ctx)` by `routed_entry_seed_programs` | proxied; recorded deviation (#142 W2). The vendored solver has no `sidel` and will not be forked |
 | `getl (Function f, fc)` | routed callee-exit read `Inl (ex, route ...)` in the combine | implemented, batch-green |
-| `combine_env` then `combine_assign` | Two separate `dg_spec` fields, `dgs_combine_env` and `dgs_combine_assign` (`DG_Spec.thy`), with `dgs_combine` the derived composition. On the *concrete* side `combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)` stays fixed. | implemented as two analysis-supplied hooks abstractly, composed concretely. Caveat: the split is nominal -- `local_state_dg_spec_for` (`DG_Local_State_Spec.thy`) sets `dgs_combine_env` to the identity on the caller continuation and lets `dgs_combine_assign` do both the global merge and the destination write, so the field names match Goblint's while the factorization does not |
+| `combine_env` then `combine_assign` | Two separate `dg_spec` fields, `dgs_combine_env` and `dgs_combine_assign` (`DG_Spec.thy`), with `dgs_combine` the derived composition. On the *concrete* side `combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)` stays fixed. | implemented as two analysis-supplied hooks abstractly, composed concretely. Caveat, and it applies to the proof side only: `local_state_dg_spec_for` (`DG_Local_State_Spec.thy`) sets `dgs_combine_env` to the identity on the caller continuation and lets `dgs_combine_assign` do both the global merge and the destination write, so there the field names match Goblint's while the factorization does not. The executed specification does split them: `local_state_dg_spec_st_for_lifted` (`Exec/Spec/DG_Local_State_Exec.thy`) gives `dgs_combine_env` a real merge (`combine_resolved_st_q`) and `dgs_combine_assign` the destination write, and Sign, Interval and `Routed_DG_Analysis` all build from it |
 
 Two corrections worth keeping separate.
 
@@ -135,9 +135,9 @@ Known simplifications (future faithfulness, not blockers): every instance pins
 `static_resolve`, so no analysis-driven or indirect call is expressible; the
 context selector sees the caller context and entered frame, not a full
 manager/query interface and not the resolved callee; `D.t` is a store, not a
-product of relational / heap / thread / path-sensitive domains; the shipped
+product of relational / heap / thread / path-sensitive domains; the proof-side
 whole-state specifications leave `dgs_combine_env` the identity and do the whole
-return merge in `dgs_combine_assign`.
+return merge in `dgs_combine_assign`, though the executed ones split the two.
 
 Unproved equivalence, distinct from the above: the callee-entry unknown is a
 global proxy plus a mirror read, where Goblint has one local unknown. The
