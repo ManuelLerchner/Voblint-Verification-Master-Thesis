@@ -499,16 +499,21 @@
           The left pane is Goblint before that pull request, on its own regression test
           <a href="https://github.com/goblint/analyzer/blob/master/tests/regression/37-congruence/14-negative.c" target="_blank" rel="noreferrer"><code>37-congruence/14-negative.c</code></a>,
           with that test's flags, <code>--enable ana.int.congruence
-          --set sem.int.signed_overflow assume_none</code>. The fix restricts when the congruence
-          domain may answer a constant for <code>%</code>: only when the remainder is zero, when the
-          dividend is already a single value, or when the type is unsigned. None of those holds
-          for a signed <code>c</code> known merely to be odd, so <code>c % 2</code> comes back as
-          the class <code>1+2ℤ</code> rather than a constant. That is sound, and it still
-          contains both <code>1</code> and <code>-1</code>, so neither assertion is proved after
-          the fix: the test expects unknown for <code>c % 2 == 1</code> and marks
-          <code>c % 2 == -1</code> <code>TODO</code>, its annotation for a check the analyzer
-          ought to get and does not. Nothing about machine words is at work &#8212; congruence
-          alone simply carries no sign, which is what the next two sections are about.
+          --set sem.int.signed_overflow assume_none</code>. The fix keeps the constant answer for
+          <code>%</code> only when the remainder is zero, the dividend is already a single value,
+          or the type is unsigned. None of those holds for a signed <code>c</code> known merely to
+          be odd, so <code>c % 2</code> comes back as the class <code>1+2ℤ</code>, which is
+          sound and contains both <code>1</code> and <code>-1</code>: neither assertion is decided
+          after the fix. Nothing about machine words is at work, and Goblint's own test names what
+          is missing, marking the second check <code>TODO (Track information that c is
+          negative)</code>. The two panes are not the same configuration, and the comparison is
+          about the bug rather than a scoreboard: that test enables congruence on top of Goblint's
+          defaults, which leave <code>ana.int.interval</code> off and
+          <code>ana.int.refinement</code> at <code>never</code>, while the Voblint pane runs
+          <code>--analysis int</code>, four components refined to a fixpoint. The unsoundness on
+          the left is a bug at any setting; the decided verdicts on the right are a reduced
+          product doing what a reduced product does, not a claim that Goblint could not reach them
+          under other flags.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a>
         </figcaption>
