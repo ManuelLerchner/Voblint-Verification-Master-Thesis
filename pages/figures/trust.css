@@ -196,3 +196,30 @@
     opacity: 1;
   }
 }
+
+/* The semantics the proved box is stated against: an input to it, not a stage in it. */
+:where(.scene-trust) .semantics-input rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+:where(.scene-trust) .semantics-input text {
+  fill: var(--text);
+  font: 700 13px var(--mono);
+}
+
+:where(.scene-trust) .semantics-input .semantics-sub {
+  fill: var(--text-muted);
+  font: 400 11px var(--mono);
+}
+
+:where(.scene-trust) .semantics-wire {
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-trust) .semantics-link:hover .semantics-input rect {
+  fill: var(--primary-soft);
+}

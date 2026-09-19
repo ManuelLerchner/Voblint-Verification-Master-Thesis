@@ -39,6 +39,7 @@ layer without embedding line numbers that drift.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
+| `trace` | One activation's record: a list of `(cfg_node, store)` pairs. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |

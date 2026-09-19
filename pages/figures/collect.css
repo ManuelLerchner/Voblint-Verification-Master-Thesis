@@ -82,3 +82,66 @@
     display: none;
   }
 }
+
+/* Why one node holds several stores: more than one edge in, more than one activation on them. */
+:where(.scene-collect) .cl-inset {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.scene.scene-collect .cl-inset svg {
+  width: 100%;
+  max-width: 300px;
+  margin: 0;
+}
+
+:where(.scene-collect) .cl-inset p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+:where(.scene-collect) .cl-edges line {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-collect) .cl-edges text {
+  fill: var(--text-faint);
+  font: 10px var(--mono);
+}
+
+:where(.scene-collect) .cl-nodes rect {
+  fill: var(--surface);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+:where(.scene-collect) .cl-nodes .is-v rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}
+
+.scene-collect .cl-nodes text {
+  fill: var(--text);
+  font: 700 11px var(--mono);
+  text-anchor: middle;
+}
+
+.scene-collect .cl-note {
+  fill: var(--text-faint);
+  font: 10px var(--mono);
+}
+
+@media (width <= 760px) {
+  :where(.scene-collect) .cl-inset {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

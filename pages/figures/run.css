@@ -436,9 +436,37 @@
 /* The map alone: code beside the graph it compiles to. */
 :where(.scene-cfgmap) .cfgmap-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 16px;
   align-items: start;
+}
+
+/* The graph is the point of this figure, so it gets the room the code does not need.
+   It is taken out of flow inside its panel, which leaves the row height to the code
+   beside it and scales the drawing down to whatever that leaves. `.scene svg` is
+   (0,1,1), hence the doubled class here. */
+:where(.scene-cfgmap) .cfgmap-layout {
+  align-items: stretch;
+}
+
+:where(.scene-cfgmap) .cfgmap-graph {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.scene-cfgmap) .cfgmap-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  margin-top: 6px;
+}
+
+.scene.scene-cfgmap .run-cfg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
 }
 
 :where(.scene-cfgmap) .run-panel {

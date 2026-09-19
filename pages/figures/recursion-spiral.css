@@ -1,8 +1,24 @@
-.scene-recursion-spiral .spiral-top {
+/* Tabs across the top, then the program and its verdict beside the spiral, both
+   columns running to the same height. */
+.scene-recursion-spiral .spiral-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.scene-recursion-spiral .spiral-body {
   display: grid;
-  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 0.62fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
   margin-bottom: 8px;
+}
+
+.scene-recursion-spiral .spiral-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .scene-recursion-spiral .spiral-program {
@@ -13,6 +29,13 @@
 
 .scene-recursion-spiral .spiral-programs[hidden] {
   display: none;
+}
+
+/* The two programs differ by two lines and the verdict grows a timer line when a run is
+   killed, so both are reserved at their tallest and the figure keeps its height. */
+.scene-recursion-spiral .spiral-side .spiral-code {
+  flex: 1;
+  min-height: 250px;
 }
 
 .scene-recursion-spiral .spiral-code {
@@ -65,6 +88,7 @@
 }
 
 .scene-recursion-spiral .spiral-verdict {
+  min-height: 92px;
   padding: 10px 14px;
   background: var(--surface-muted);
   border-radius: var(--radius);
@@ -87,8 +111,10 @@
   font: 600 0.8rem var(--mono);
 }
 
+/* Drawn at 900 wide; capped below that so a wide window does not scale it up. */
 .scene-recursion-spiral .spiral-svg {
-  max-width: 940px;
+  max-width: 700px;
+  align-self: center;
 }
 
 .scene-recursion-spiral .turn-back {
@@ -196,7 +222,6 @@
 .scene-recursion-spiral .spiral-table td {
   padding: 6px 10px;
   border-bottom: 1px solid var(--border);
-  text-align: left;
   white-space: nowrap;
 }
 
@@ -212,7 +237,7 @@
 }
 
 @media (max-width: 900px) {
-  .scene-recursion-spiral .spiral-top {
+  .scene-recursion-spiral .spiral-body {
     grid-template-columns: minmax(0, 1fr);
   }
 }

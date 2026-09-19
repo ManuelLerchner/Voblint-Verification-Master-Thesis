@@ -35,17 +35,23 @@ text \<open>
     \<open>callee\<close> is the retained completed callee subtree; \<open>p\<close> is the continued path.
 \<close>
 
+text \<open>A \<open>trace\<close> is what a run leaves behind with no procedures in the picture: which node
+  control stood at, and what the store held there.  A local trace is one of these per
+  activation, with the surrounding activations beside it rather than on it.\<close>
+
+type_synonym trace = "(cfg_node * store) list"
+
 datatype ltr =
-    Root "(cfg_node * store) list"
-  | Call (ltr_caller: ltr) "(cfg_node * store) list"
-  | Resume (ltr_current: ltr) (ltr_callee: ltr) "(cfg_node * store) list"
+    Root trace
+  | Call (ltr_caller: ltr) trace
+  | Resume (ltr_current: ltr) (ltr_callee: ltr) trace
 
 subsection \<open>Observers\<close>
 
 text \<open>\<open>path\<close> is the activation-local control-flow path.  \<open>sink_node\<close> and \<open>sink_store\<close>
   return its final program point and final store.\<close>
 
-fun path :: "ltr \<Rightarrow> (cfg_node * store) list" where
+fun path :: "ltr \<Rightarrow> trace" where
   "path (Root p)       = p"
 | "path (Call _ p)     = p"
 | "path (Resume _ _ p) = p"
