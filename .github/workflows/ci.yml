@@ -495,6 +495,12 @@ jobs:
       - name: Site links and what playground links open (no build needed)
         run: pixi run pages-links
 
+      # The published page fills these from the build; this is what keeps the
+      # fallbacks in the markup, and any figure typed straight into the prose,
+      # from drifting away from what the repository measures.
+      - name: Site repository figures are derived and current
+        run: pixi run pages-stats
+
       - name: Fixture reader, example corpus and playground links
         run: pixi run pages-scripts-check
 

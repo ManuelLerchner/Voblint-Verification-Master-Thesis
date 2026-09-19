@@ -193,5 +193,12 @@
 @media (max-width: 900px) {
   .scene-particles .pt-layout {
     grid-template-columns: minmax(0, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  /* A floor under the label size; the row scrolls rather than shrinking further. */
+  .scene-particles .pt-svg {
+    min-width: 560px;
   }
 }

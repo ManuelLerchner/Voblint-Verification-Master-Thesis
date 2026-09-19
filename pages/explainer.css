@@ -469,6 +469,19 @@
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* Below the prose column the labels would shrink past reading size, so the figure
+   keeps a floor and the frame scrolls, as the timeline axis already does. */
+@media (max-width: 720px) {
+  .scene {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .scene > svg {
+    min-width: 640px;
+  }
+}
+
 .scene figcaption {
   max-width: var(--prose);
   margin-top: 16px;

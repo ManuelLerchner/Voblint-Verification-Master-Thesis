@@ -143,7 +143,7 @@
         "keywords": "static analysis, abstract interpretation, formal verification, Isabelle/HOL, machine-checked proof, soundness, Goblint, interprocedural analysis, context sensitivity, widening and narrowing, top-down solver, interval domain, congruence domain",
         "isBasedOn": {
           "@type": "Thesis",
-          "name": "Voblint: a verified abstract interpreter",
+          "name": "Voblint: Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL",
           "inSupportOf": "Master's degree",
           "author": {
             "@type": "Person",
@@ -214,12 +214,12 @@
       </p>
       <p class="hero-lead">
         Voblint answers questions about every run of a program without running it, and
-        Isabelle/HOL checks that those answers are right. This page builds up the idea, how the
+        Isabelle/HOL proves those answers sound. This page covers the idea, how the
         analysis computes its answer, and <a href="#stakes">why an analyzer's own bugs matter</a>.
       </p>
       <p class="hero-claim">
         Machine-checked theorems connect the source program to the verdicts, and the analyzer in the
-        playground is the code Isabelle exported from the same definitions.
+        playground runs the code Isabelle exported from the same definitions.
       </p>
       <nav class="actions" aria-label="Project links">
         <a class="primary" href="playground.html">
@@ -327,9 +327,9 @@
         <p class="eyebrow">The output</p>
         <h2 id="what-heading">What does it tell you?</h2>
         <p class="section-intro">
-          Voblint reads a program and answers questions about it without running it. It checks
-          every division for a zero divisor on its own. A verdict about some condition of your own
-          comes from a check you wrote.
+          Voblint reads a program and answers questions about it without running it. Every
+          division and remainder is checked for a zero divisor automatically. Anything else you
+          want a verdict on, you write as a check.
         </p>
       </div>
 
@@ -395,12 +395,14 @@
         </div>
 
         <p class="ans-warrant">
-          The first three lines are claims, and each one is a theorem:
-          <code>run_voblint_arithmetic_safe</code> for the divisor,
-          <code>run_voblint_check_sound</code> for the verdict,
-          <code>run_voblint_dead_check_unreached</code> for the dead point. All three assume the
-          analyzer's own solver finished. The last line is the state the analysis computed, and no
-          theorem says those strings read back what the state means.
+          The first three rows are claims, and a theorem stands behind each.
+          <code>run_voblint_check_sound</code> covers the verdict and
+          <code>run_voblint_dead_check_unreached</code> the dead point.
+          <code>run_voblint_arithmetic_safe</code> points the other way: it covers the divisions
+          that go <em>unflagged</em>, and says no run divides by zero at one of those. The
+          <code>WARNING</code> itself only says the analysis could not rule the divisor out. All
+          three assume the analyzer's own solver finished. The last line is the state the analysis
+          computed, and no theorem says those strings read back what the state means.
         </p>
 
         <figcaption>
@@ -421,8 +423,8 @@
         <p class="eyebrow">The stakes</p>
         <h2 id="stakes-heading">What if the analyzer is wrong?</h2>
         <p class="section-intro">
-          Analyzers are programs, and programs have bugs. An analyzer bug is worse than
-          most: it reports <code>PROVED</code> for a check that real runs violate, or <code>DEAD</code>
+          Analyzers are programs, and programs have bugs. An unsound one is worse than
+          most: the analyzer reports <code>PROVED</code> for a check that real runs violate, or <code>DEAD</code>
           for code that runs, and nobody looks again. Mature analyzers track these as their own
           category; Goblint's issue tracker has
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">a label for them</a>.
@@ -444,7 +446,7 @@
         </div>
 
         <p class="bug-intro">
-          In C, <code>%</code> truncates toward zero, so a negative <code>c</code> gives
+          In C, <code>%</code> truncates toward zero, so a negative odd <code>c</code> gives
           <code>c % 2 = −1</code>. Goblint's congruence domain read <code>c % 2</code> as the
           constant <code>1</code> for every <code>c</code> it knew to be odd, sign included. Here
           <code>c</code> is −5 or −7, so it reported a check that every run violates as succeeding,
@@ -680,7 +682,8 @@
           for this program (no context); with <code>--analysis int</code> both checks are DEAD. The
           collecting semantics
           <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
-          is the set of all dots a node could ever receive.
+          is the set of stores a node could ever receive; each dot is one of them, read at
+          <code>x</code>.
           <a class="try-link" href="playground.html?example=multiples-of-three&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
         </figcaption>
       </figure>
@@ -703,18 +706,16 @@
           Then the analyzer computes with the sets instead of with integers. Where a run holds
           <code>x = 7</code> and executes <code>x = x + 1</code>, the analyzer holds
           <code>x ∈ [0, 9]</code> and produces <code>[1, 10]</code>: one step of arithmetic
-          standing for every run at once. That is the whole trick, and it is why the analyzer
-          terminates on a program whose runs are unbounded.
+          standing for every run at once.
         </p>
         <p class="section-intro">
           The price is precision. A domain has only so many values, so the answer is usually
           wider than the truth: the real set of values at a point may not be nameable at all, and
-          even when it is, the cheapest route to it may overshoot. This is not a gap to be closed
-          by working harder. Rice's theorem says every non-trivial question about what a program
-          computes is undecidable, so no analyzer answers all of them exactly, and one that always
-          terminates and never lies has to err on the safe side sometimes. The bet abstract
-          interpretation makes is that erring wide still settles the questions worth asking, and
-          the rest of this page is about how often that bet pays.
+          even when it is, the cheapest route to it may overshoot. Rice's theorem says every
+          non-trivial question about what a program computes is undecidable, so no analyzer
+          answers all of them exactly, and one that always terminates and never lies has to err
+          on the safe side sometimes. Whether erring wide still settles the questions worth
+          asking is what the rest of this page is about.
         </p>
       </div>
 
@@ -733,7 +734,7 @@
           marked with <code>…</code> continues the same way beyond them. Note how differently the
           domains carve up the same integers: <code>even</code> and <code>1 (mod 3)</code> name
           sets no interval can name, and no single one of them names <code>{1, 7}</code>, which is
-          why the last preset needs four domains at once.
+          why the Int-product preset needs all four domains to pin it down.
         </figcaption>
       </figure>
 
@@ -847,7 +848,7 @@
           </div>
 
           <div class="reduce-main">
-            <p class="td-panel-title">What each component says about <code>x</code> at the checks</p>
+            <p class="td-panel-title">What each component says about <code>x</code> at the check</p>
             <div class="reduce-rows">
           <div class="reduce-row" data-comp="sign"><span class="reduce-name">sign</span><code class="reduce-val"></code><svg class="reduce-line" viewBox="0 0 330 24" aria-hidden="true"></svg></div>
           <div class="reduce-row" data-comp="interval"><span class="reduce-name">interval</span><code class="reduce-val"></code><svg class="reduce-line" viewBox="0 0 330 24" aria-hidden="true"></svg></div>
@@ -884,9 +885,9 @@
           (<a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_reductive%7Cfact"><code>refine_reductive</code></a>),
           which is why a reduced value is sound whenever the unreduced one was. One round is
           <a href="Voblint/Voblint_Analysis_Int/Int_Refinement.html#Int_Refinement.refine_round%7Cconst"><code>refine_round</code></a>,
-          and Int runs rounds to a fixpoint after every arithmetic operation and every guard. Two
-          rounds is as deep as this ever goes: only the congruence step can move a bound, only the
-          new bounds can move the sign, and a sign can never narrow the interval it came from.
+          and Int runs rounds to a fixpoint after every arithmetic operation and every guard. Here
+          two rounds is as deep as it goes: the congruence step moves the bounds, the new bounds
+          move the sign, and a sign read off an interval can never narrow that interval again.
           <a class="try-link" href="playground.html?example=int-reduction&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a>
         </figcaption>
       </figure>
@@ -894,7 +895,7 @@
       <h3 class="setting-title">A bound that looks wrong</h3>
       <p class="setting-copy">
         Take an unconstrained <code>n</code>, set <code>x = 6n + 5</code>, and ask for
-        <code>x % 6</code>. The answer should be <code>5</code>, but Voblint reports the interval
+        <code>x % 6</code>. You would expect <code>5</code>, but Voblint reports the interval
         <code>[−1, 5]</code>. Is this an error in Voblint?
       </p>
 
@@ -933,7 +934,7 @@
         <p class="eyebrow">The foundation</p>
         <h2 id="trace-heading">A trace, and what makes it local</h2>
         <p class="section-intro">
-          Every theorem on this page is a statement about traces. A trace is the record a single
+          The soundness theorems on this page are statements about traces. A trace is the record a single
           run leaves behind: the nodes control passed through, and the store at each of them. One trace is one concrete run, written down.
           Nothing is approximated yet, and nothing is quantified over yet.
         </p>
@@ -1116,9 +1117,7 @@
           is on it. What surrounds the activation sits beside that trace instead, and it sits there as
           local traces of the same kind: the one belonging to the caller that started this
           activation, and one per callee that has already returned into it. The definition is
-          recursive because the thing it describes is. At every level: a trace, plus the
-          activations around it, each of them again a trace plus the activations around
-          <em>it</em>.
+          recursive because the thing it describes is.
         </p>
       </div>
 
@@ -1197,9 +1196,9 @@
           </p>
         </div>
         <figcaption>
-          Exactly the steps of the list above, in the same order, and neither form is more or
-          less precise than the other. The difference is only where the activation structure
-          lives: recovered by whoever reads the list, or carried by the value itself.
+          Exactly the steps of the list above, in the same order. The difference is where the
+          activation structure lives: recovered by whoever reads the list, or carried by the
+          value itself.
         </figcaption>
       </figure>
 
@@ -1223,16 +1222,15 @@
         <p class="eyebrow">The interface</p>
         <h2 id="observers-heading">What you can ask a trace</h2>
         <p class="section-intro">
-          A type is only as good as what you can read off it. Everything the rest of the page asks
-          of a run goes through six observers, each one line on top of the datatype, and the
-          soundness statements are written in them and nothing else.
+          Everything the rest of the page asks of a run goes through six observers, a few lines
+          each on top of the datatype, and the soundness statements read a run only through them.
         </p>
       </div>
 
       <div class="prose-block">
         <p>
-          Start from the type. It is three lines, and now that <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> has a name in the
-          theory it says its own shape: a local trace is one trace plus the activations around it.
+          Start from the type. It is three lines, and with <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> named it says its own
+          shape: a local trace is one trace plus the activations around it.
         </p>
         <pre class="prose-code" data-lang="isabelle"><code>type_synonym trace = "(cfg_node &times; store) list"
 
@@ -1244,8 +1242,8 @@ datatype ltr =
           One constructor per situation an activation can be in. <code>Root</code> is
           <code>main</code>, which nobody called, so it carries a trace and nothing else.
           <code>Call</code> is an activation that is running and will have to return to its
-          <code>caller</code>, which it holds. <code>Resume</code> is that same activation after a
-          callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_current</code></a> is the caller frozen at its call node and
+          <code>ltr_caller</code>, which it holds. <code>Resume</code> is that same activation after
+          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_current</code></a> is that activation frozen at its call node and
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
           path, which is why a returned call is still one box you can ask questions about.
         </p>
@@ -1385,13 +1383,12 @@ datatype ltr =
           None of which means the analyzer builds one. It would be a poor thing to build: every
           trace is finite, but nothing bounds how long or how deeply nested it gets, a recursion
           has one activation per level, and the set of all of them is infinite as soon as the
-          program reads an unconstrained input. Recording every step of every activation and
-          discarding none is the exact opposite of what an analyzer does for a living.
+          program reads an unconstrained input.
         </p>
         <p>
           A local trace is a value in the logic and nowhere else. It exists so that soundness has
           something to be a statement <em>about</em>, and the proofs quantify over the set without
-          anything ever enumerating it. The evidence is the compiler output: of the 9,406 lines of
+          anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">9,406</span> lines of
           OCaml exported from these theories, the number that mention <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a>,
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> or
           <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> is zero. The specification does not ship.
@@ -1413,12 +1410,12 @@ datatype ltr =
           Voblint writes one down three times, because the three things it has to relate are
           different shapes. A <strong>source</strong> step (<a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a>) rewrites a program
           that is still program text, carrying the store and a stack of caller frames. A
-          <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through the compiled
+          <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through a
           control-flow graph, carrying a stack of return points. The third does not step at
           all. <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a> is the local trace of the previous section, and
           <strong><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></strong> is a rule that says which of those values the
-          graph actually admits: a whole run in one value, accepted or not, rather than a move
-          from one state to the next.
+          graph actually admits: one activation with its whole history in a single value,
+          accepted or not, rather than a move from one state to the next.
         </p>
         <p class="section-intro">
           Soundness is stated against the third, and the reason is shape. The analysis answers one
@@ -1574,8 +1571,9 @@ datatype ltr =
 
         <figcaption>
           The same program and graph as above, now with one run walking them. Stores list only
-          the variables the current activation uses; locals start at <code>0</code> in a callee,
-          and <code>x</code> in <code>main</code> starts at any value.
+          the variables the current activation uses; a callee's locals start at <code>0</code>
+          except its formals, which take the actuals, and <code>x</code> in <code>main</code>
+          starts at any value.
           The source rules are
           <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a>,
           the graph rules
@@ -1629,8 +1627,8 @@ datatype ltr =
           The repeated answers are facts about those stacks. A configuration is a snapshot, so
           there is no path to read off it. The frames hold the <em>callers'</em> stores, so an
           activation's own entry store is gone the moment it assigns anything. And a frame names a
-          return point, not a run. The flat <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> is missing nothing; it just charges
-          a scan for every answer.
+          return point, not a run. The flat <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> has the steps but not the
+          grouping, so every answer costs a scan.
         </p>
         <p>
           The last row is why the proofs use it. Closing a call has to say that <em>this</em>
@@ -1642,7 +1640,7 @@ datatype ltr =
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.entry_store%7Cconst"><code>entry_store</code></a> for the store it was entered with.
         </p>
         <p>
-          Which is the general shape of the choice. A claim can only be as fine as the semantics
+          That is the general shape of the choice. A claim can only be as fine as the semantics
           it quantifies over, so the concrete side has to tell apart at least as much as the
           abstract side intends to: an analyzer that keeps activations apart needs a semantics
           that keeps them apart, or the theorem has no way to say what it covers. Picking the
@@ -1668,8 +1666,8 @@ datatype ltr =
         <p>
           One bucket per node, holding the stores a real run can be in there. Neither of the other
           two semantics can be asked for this: over <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> there is no <code>v</code>
-          to index by, and over <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> it can be written but buckets by stack rather
-          than by activation.
+          to index by, and over <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> it can be written, but the only thing there
+          to index it more finely by is the call stack, not the activation.
         </p>
         <p>
           It is also where the grouping of the last two sections is deliberately spent. A trace had
@@ -1779,8 +1777,8 @@ datatype ltr =
         </div>
         <figcaption>
           Four nodes of the run from above, with the activation colours carried over. The middle
-          column is the whole of <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> at that node for this one program: the
-          stores a real run holds there, activation forgotten. The right column is what
+          column is <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> at that node for this one program, on the variables
+          shown: the stores a real run holds there, activation forgotten. The right column is what
           <code>voblint --analysis interval --context none</code> will answer at those nodes once
           the next sections have built it. Every answer is wider than the set beside it, and none
           of them misses a store: that containment, at every node, is soundness.
@@ -1798,7 +1796,7 @@ datatype ltr =
           and each gets a section of its own later: the three activations of <code>sum</code> were
           merged into a single entry before anything was computed, and the merged lower bound then
           kept moving downwards, so the solver stopped chasing it rather than iterate forever. The
-          check at <code>pp10</code> comes back UNKNOWN on a program whose only run makes it true.
+          check at <code>pp10</code> comes back UNKNOWN on a program whose every run makes it true.
           Everything from here on is about that gap: how an answer wide enough to be sound is
           computed at all, and what can be spent to make it narrower.
         </p>
@@ -1962,7 +1960,7 @@ datatype ltr =
 
         <figcaption>
           Four of the system's unknowns: the real one has an unknown per node, seven here, plus
-          the analysis global, and <code>E</code> stands for the entry chain the solver starts
+          the analysis global and a seed key at the procedure entry, and <code>E</code> stands for the entry chain the solver starts
           from. Nothing is solved yet; these are the equations a solver will later be handed.
         </figcaption>
       </figure>
@@ -1995,17 +1993,17 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           <span class="pipe-stage"><code>σ</code><small>a value per unknown</small></span>
         </div>
         <p>
-          Building such a tree directly is the awkward part. Because a query holds the rest of the
+          Building such a tree directly is awkward. Because a query holds the rest of the
           tree as a function, every read the generator emits has to be written <em>inside</em> the
           continuation of the one before it, so the nesting grows with the number of reads and the
           last step ends up deepest. Voblint therefore generates each right-hand side as a
-          <em>strategy program</em>, which is not yet a tree: it is a tree still waiting for the
-          continuation that consumes its result. Two of them compose by handing the first one the
-          second as its continuation, and composing is what <code>do</code>-notation writes down,
+          <em>strategy program</em>: a tree still missing the continuation that consumes its
+          result, so it is a function from that continuation to a tree. Two of them compose by
+          handing the first one the second as its continuation, and composing is what
+          <code>do</code>-notation writes down,
           so the generator states its reads in the order it performs them.
           <a href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.sp_compile%7Cconst"><code>sp_compile</code></a>
           then closes the last continuation with <code>Answer</code> and a tree falls out.
-          Nothing of this reaches the solver, which sees only that tree.
         </p>
         <p>
           The two are easy to confuse, so from here on the shape says which one is on screen: a
@@ -2026,14 +2024,13 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           <span class="pipe-stage"><code>σ</code><small>a value per unknown</small></span>
         </div>
         <p>
-          Only the dashed stage is Voblint's. It is gone before the solver runs, which is what
-          keeps the vendored correctness proof applicable: whatever notation the generator was
-          written in, the solver receives a tree like any other.
+          Only the dashed stage is Voblint's, and it is gone before the solver runs, so the
+          vendored correctness proof applies unchanged: the solver receives a tree like any other.
         </p>
         <p>
           The generator works one edge at a time, then one node at a time.
           <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec_edge_program%7Cconst"><code>dg_spec_edge_program</code></a>
-          turns a single CFG edge into the smallest program there is: read the unknown at the
+          turns a single CFG edge into a small program: read the unknown at the
           edge's source, apply the edge's transfer, answer. A node with several incoming edges
           gets one such program per edge, and
           <a href="Voblint/Voblint_Solver/Strategy_Program_Fold.html#Strategy_Program_Fold.fold_rhs_program%7Cconst"><code>fold_rhs_program</code></a>
@@ -2098,7 +2095,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
   return (cinit ⊔ locals s)
 }</code></pre>
                 </li>
-                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. <code>cinit</code> is the state a run starts in &mdash; every declared global <code>0</code>, every local unknown (<a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores%7Cconst"><code>cinit_stores</code></a> is the set of concrete stores it stands for). This program declares no global, so here it is plain <code>⊤</code>.
+                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. <code>cinit</code> is shorthand here rather than a name in the theory: the abstract entry state the fold starts from, over-approximating every store a run can start in &mdash; each declared global <code>0</code>, each local unconstrained (<a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores%7Cconst"><code>cinit_stores</code></a> is that set of concrete stores). This program declares no global, so here it is plain <code>⊤</code>.
                   <pre class="gen-code" data-lang="isabelle"><code>eqs E =
   QueryG (Seed E c) (λs.
     Answer (cinit ⊔ locals s))</code></pre>
@@ -2197,9 +2194,9 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
 
       <div class="prose-block">
         <p>
-          Compiling all four of the counting loop's blocks gives its
+          Compiling all four of the counting loop's nodes gives its
           <a href="Unsorted/TD/Basics_side.html#Basics_side.eqsT%7Ctype"><code>eqsT</code></a>,
-          and that one function is the entire input the solver receives. Every equation is now a
+          and that one function is the whole equation system the solver is given. Every equation is now a
           chain of reads ending in an answer: the <code>⊔</code> and the <code>assume</code> that
           the equations above displayed are gone from the top, buried inside the answer where
           they are just arithmetic on a domain the solver knows nothing about.
@@ -2231,7 +2228,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
 
       <div class="prose-block">
         <p>
-          Nothing solves all four. The TD solver is <em>demand-driven</em>: it is asked for one
+          The TD solver is <em>demand-driven</em>: it is asked for one
           unknown, evaluates that unknown's tree, and every <code>QueryL</code> it meets on the way
           asks for another one, recursively. What it computes is whatever the first question turned
           out to need, and no more. Voblint always asks the same question, the end of the entry
@@ -2244,8 +2241,9 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           therefore a <em>partial</em>
           <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst">post-solution</a>:
           it covers the question, its covered set is closed under the dependencies the trees take,
-          and for every covered unknown the tree's answer and each of its side contributions stay
-          below <code>σ</code>. That middle clause is only one step deep;
+          and for every covered unknown the tree's answer stays below <code>σ</code>'s value there,
+          with its side contributions below <code>σ</code> at the globals they write. That middle
+          clause is only one step deep;
           <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution_implies_trans_dep_subsumed%7Cfact"><code>part_post_solution_implies_trans_dep_subsumed</code></a>
           lifts it to all of them, so everything transitively reachable from the question is
           inside the covered set.
@@ -2307,8 +2305,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         </div>
 
         <figcaption>
-          The counting loop's four unknowns, solved. The operations are here rather than beside
-          the equations because this is the first place the page computes with them.
+          The counting loop's four unknowns, solved.
         </figcaption>
       </figure>
 
@@ -2483,8 +2480,8 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.iterate%7Cconst"><code>iterate</code></a>
           in the vendored solver, simplified to one variable and without side effects. Two details are
           easy to get wrong: the round that discovers a loop point still updates plainly, and
-          an unknown that is itself being computed is marked unstable but not recomputed on the
-          spot.
+          an unknown that is already being computed is marked a loop point and answered from its
+          current value rather than recomputed.
           <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">Run the loop ↗</a>
         </figcaption>
       </figure>
@@ -2501,8 +2498,8 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           entry state arrives from somewhere else in the equation system, and several call sites can
           reach the same copy of it. One mechanism handles both, the solver's side effects, and two
           settings tune it: how many separate copies of a procedure the analysis keeps apart, and
-          how the values several call sites send into one copy are combined. This section is the
-          first of them; the second follows once the system those copies live in is clear. Each
+          how the values several call sites send into one copy are combined. This section covers
+          the first; the second comes once the system those copies live in is clear. Each
           changes precision and whether a run finishes, never soundness.
         </p>
       </div>
@@ -2527,25 +2524,26 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <code>sidel</code>, which is a <a href="#goblint">recorded difference</a>, not an accident.
       </p>
       <p class="setting-copy">
-        Both settings in this section act on that one publication. <strong>Contexts</strong> decide
+        Both settings act on that one publication. <strong>Contexts</strong> decide
         which key a call publishes under, and so how many copies of a procedure exist.
         <strong>Globals</strong> decides how several publications to the same key are merged.
       </p>
 
       <h3 class="setting-title">What a call adds to one procedure's equations</h3>
       <p class="setting-copy">
-        An analysis does not hard-code what a call does. It supplies three operations:
+        An analysis does not hard-code what a call does. Three pieces decide it:
         <code>enter</code> builds the callee's entry state from the caller's, a context policy
         picks which copy of the callee that state goes to, and <code>combine</code> merges the
-        callee's exit state back into the caller. The framework wires them into equations the same
-        way for every domain, and each wire carries its own soundness obligation.
+        callee's exit state back into the caller. <code>enter</code> and <code>combine</code> come
+        from the analysis; the policy is a run setting. The framework wires all three into equations
+        the same way for every domain, and each wire carries its own soundness obligation.
       </p>
       <p class="setting-copy">
         The wiring is more local than it sounds. Building the equations is a walk over one
         procedure's nodes, one equation per node, and a call site is just a node whose contribution
         happens to publish and query. The walk never goes into the callee. That is why a recursive
-        call needs no special case, and why the system stays finite however deep the recursion runs:
-        depth is the solver's problem, not the generator's. A real run does go into <code>f</code>, and
+        call needs no special case, and why generating the equations never follows the recursion
+        down: depth is the solver's problem, not the generator's. A real run does go into <code>f</code>, and
         <a href="#semantics">What a run is: source, graph, local trace</a> steps one through a
         program with calls.
       </p>
@@ -2637,9 +2635,9 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
     Answer (body(main) s))</code></pre>
             <pre class="walk-eq" data-lang="isabelle"><code>eqs pp6 =
   QL pp5 (&#955;caller.
-    QL exit_f (&#955;callee.
-      Side (Seed entry_f) (enter f(2) caller)
-        (Answer (combine caller callee))))</code></pre>
+    Side (Seed entry_f) (enter f(2) caller)
+      (QL exit_f (&#955;callee.
+        Answer (combine caller callee))))</code></pre>
             <pre class="walk-eq" data-lang="isabelle"><code>eqs pp7 =
   QL pp6 (&#955;s.
     Answer (check(a == 2) s))</code></pre>
@@ -2671,10 +2669,10 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           and a call site contributes one program that publishes and reads
           (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>).
           <code>enter</code> and <code>combine</code> are the analysis's, fields of
-          <a href="Voblint/Voblint_Framework/DG_Spec.html"><code>dg_spec</code></a>; Goblint calls
-          them <code>enter</code> and <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a>/<a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>, and
-          writes the two ports with <code>sidel</code> and a query of the callee's exit. Every key
-          above is written bare, which is the one simplification here: each carries a context too,
+          <a href="Voblint/Voblint_Framework/DG_Spec.html"><code>dg_spec</code></a>, where combining is
+          two fields as it is in Goblint, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint
+          writes the two ports with <code>sidel</code> and a query of the callee's exit. The keys
+          above are written bare: each carries a context too,
           and that is next.
           <a class="try-link" href="playground.html?example=factorial&amp;analysis=interval&amp;context=entry-state">Run this program &#8599;</a>
         </figcaption>
@@ -2822,7 +2820,8 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
 
       <h3 class="setting-title">How the strategy changes precision</h3>
       <p class="setting-copy">
-        Four strategies ship, and they differ only in what they use as the key. Here is the part of
+        Three strategies ship, and they differ only in what they use as the key; the call string
+        also takes a depth, so the figure below compares four settings. Here is the part of
         the playground's default program the figure is about: <code>wrap</code> passes its argument
         straight to <code>scale</code>, which doubles it, so <code>a</code> is 2 and <code>b</code>
         is 8.
@@ -3181,8 +3180,8 @@ fun main() {
             <a class="try-link" href="playground.html?example=fan-out&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=5">See it miss at k = 5 &#8599;</a>
           </p>
           <p class="cost-explain">
-            Times are wall clock, best of 60 runs on one laptop. Entry state is the row to read
-            twice: it proves the same check for 337 nodes and 37.1 ms, against 575 and 79.0 for the
+            Times are wall clock, best of 60 runs on one laptop. Entry state proves the same check
+            for 337 nodes and 37.1 ms, against 575 and 79.0 for the
             full-depth call string, by keying on the argument instead of on the path that produced
             it. The line stops before it because its key is not a call string at all.
           </p>
@@ -3281,8 +3280,9 @@ fun main() {
         <p>
           A program point is a <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a>: a numbered statement, or a procedure's entry or result
           under a name that is just a string. A context is whatever the policy keys copies by: a
-          <a href="Voblint/Voblint_Framework/Call_String_Context.html#Call_String_Context.call_string%7Ctype"><code>call_string</code></a>, which is a list of call sites, or under <a href="Voblint/Voblint_Routing/Entry_State_Routed_Context.html#Entry_State_Routed_Context.pure_entry_routed_context%7Clocale">entry states</a> the entered
-          <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a> itself. Neither type is finite, neither has a first or a last element, and
+          <a href="Voblint/Voblint_Framework/Call_String_Context.html#Call_String_Context.call_string%7Ctype"><code>call_string</code></a>, which is a list of call sites, or under <a href="Voblint/Voblint_Routing/Entry_State_Routed_Context.html#Entry_State_Routed_Context.pure_entry_routed_context%7Clocale">entry states</a> the list of abstract values
+          the call binds to the callee's formals, read off the entered
+          <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a>. Neither type is finite, and
           <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a>
           answers at every pair of them. There is no step at which the equations get built, no
           table to allocate and no enumeration to bound: the system is already there, and a solve
@@ -3302,8 +3302,7 @@ fun main() {
         <p>
           What the source does not say is how many copies of each the analysis will keep, or which
           keys they get. That is the context policy's business, and it is why the filled cells
-          below are a shape you can only see after a run, not one you can read off the program
-          itself.
+          below are a shape you only see after a run.
         </p>
       </div>
 
@@ -3802,13 +3801,13 @@ fun main() {
             <line class="mx-spine" x1="595" y1="615" x2="595" y2="659"/>
             <line class="mx-spine" x1="105" y1="697" x2="105" y2="763"/>
             <g class="mx-brace is-absent" opacity="0.3"><path d="M76 92 L68 92 L68 132 L76 132"/><text x="62" y="116" text-anchor="end">aaa</text><title>aaa: a procedure the type allows and this program does not have</title></g>
-            <g class="mx-brace" opacity="0.58"><path d="M76 152 L68 152 L68 192 L76 192"/><text x="62" y="176" text-anchor="end">h</text><title>h: 2 program points, reached in 2 contexts</title></g>
+            <g class="mx-brace" opacity="0.58"><path d="M76 152 L68 152 L68 192 L76 192"/><text x="62" y="176" text-anchor="end">h</text><title>h: 2 program points drawn, reached in 2 contexts</title></g>
             <g class="mx-brace is-absent" opacity="0.82"><path d="M76 212 L68 212 L68 252 L76 252"/><text x="62" y="236" text-anchor="end">pp</text><title>pp: a procedure the type allows and this program does not have</title></g>
-            <g class="mx-brace" opacity="1"><path d="M76 272 L68 272 L68 334 L76 334"/><text x="62" y="307" text-anchor="end">g</text><title>g: 3 program points, reached in 2 contexts</title></g>
-            <g class="mx-brace" opacity="1"><path d="M76 354 L68 354 L68 504 L76 504"/><text x="62" y="433" text-anchor="end">f</text><title>f: 7 program points, reached in 4 contexts</title></g>
+            <g class="mx-brace" opacity="1"><path d="M76 272 L68 272 L68 334 L76 334"/><text x="62" y="307" text-anchor="end">g</text><title>g: 3 program points drawn, reached in 2 contexts</title></g>
+            <g class="mx-brace" opacity="1"><path d="M76 354 L68 354 L68 504 L76 504"/><text x="62" y="433" text-anchor="end">f</text><title>f: 7 program points drawn, reached in 4 contexts</title></g>
             <g class="mx-brace is-absent" opacity="1"><path d="M76 524 L68 524 L68 586 L76 586"/><text x="62" y="559" text-anchor="end">zz</text><title>zz: a procedure the type allows and this program does not have</title></g>
-            <g class="mx-brace" opacity="0.82"><path d="M76 606 L68 606 L68 668 L76 668"/><text x="62" y="641" text-anchor="end">w</text><title>w: 3 program points, reached in 1 contexts</title></g>
-            <g class="mx-brace" opacity="0.58"><path d="M76 688 L68 688 L68 772 L76 772"/><text x="62" y="734" text-anchor="end">main</text><title>main: 4 program points, reached in 1 contexts</title></g>
+            <g class="mx-brace" opacity="0.82"><path d="M76 606 L68 606 L68 668 L76 668"/><text x="62" y="641" text-anchor="end">w</text><title>w: 3 program points drawn, reached in 1 context</title></g>
+            <g class="mx-brace" opacity="0.58"><path d="M76 688 L68 688 L68 772 L76 772"/><text x="62" y="734" text-anchor="end">main</text><title>main: 4 program points drawn, reached in 1 context</title></g>
             <g class="mx-brace is-absent" opacity="0.3"><path d="M76 792 L68 792 L68 832 L76 832"/><text x="62" y="816" text-anchor="end">bb</text><title>bb: a procedure the type allows and this program does not have</title></g>
             <path class="mx-side" d="M114 719 Q350 595 586 615" marker-end="url(#mx-side-arrow)"/>
             <path class="mx-side" d="M604 637 C638 637 638 615 604 615" marker-end="url(#mx-side-arrow)"/>
@@ -3855,11 +3854,11 @@ fun main() {
           moving, which is what a fixpoint is. Only the coordinates
           this drawing names are drawn: one column per context, one row per program point. The
           <span aria-hidden="true">&#8734;</span> marks are axis breaks: across one the spacing
-          means nothing, and what they leave out is not a long list but a space no drawing can
-          enumerate. Both index types are infinite. A context is
-          an
-          <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a>,
-          which has no first and no last; a program point is a
+          means nothing, and no drawing can enumerate what they leave out. Both index types are
+          infinite: a context is the list of abstract values a call binds to the callee's formals,
+          projected out of an
+          <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a>;
+          a program point is a
           <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a>
           whose procedure name is any string, which is why <code>aaa</code>, <code>pp</code>, <code>zz</code> and <code>bb</code> are
           rows of this system although the program has no such procedure, and why most of
@@ -3877,8 +3876,8 @@ fun main() {
           <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a>
           defines one such function, and a function is total: it has a value at every argument of
           its type. So for every pair of a program point and a context the right-hand side is
-          already there. Nobody constructs it; the solver looks it up. Being infinite costs this
-          design nothing, because having a value everywhere is what being a total function means.
+          already there. Nobody constructs it; the solver looks it up, and being infinite costs the
+          design nothing.
         </p>
         <p>
           Querying it is the only thing that produces anything finite. The solver is handed the
@@ -3889,11 +3888,10 @@ fun main() {
           the system was ever small.
         </p>
         <p>
-          And getting a value back is not itself the guarantee. Read any key the solver never
-          touched and you get bottom, the same bottom a genuinely dead point answers, and it means
-          neither &#8212; it means the key is outside what was claimed. What separates a real
-          answer from that is not the value but the theorem: soundness is stated over the
-          stabilised keys, so an answer is worth something exactly when it is one of them.
+          Getting a value back is not itself the guarantee. Read a key the solver never touched and
+          you get bottom, the same bottom a genuinely dead point answers with, and nothing in the
+          value tells the two apart. The theorem does: soundness is stated over the stabilised
+          keys, so an answer is worth something exactly when its key is one of them.
         </p>
       </div>
 
@@ -3910,16 +3908,18 @@ fun main() {
           the columns: which unknowns exist, and how many copies of a procedure you get. This one
           decides what a cell holds where several writers land on one key. It never adds a key and
           never removes one, so it can stop a value climbing forever and cannot stop the copies
-          themselves multiplying &#8212; and nothing here substitutes for the other.
+          themselves multiplying.
         </p>
       </div>
 
       <h3 class="setting-title">Where the writes meet</h3>
       <p class="setting-copy">
-        The name is the solver's global unknowns, not the program's global variables. It is the
-        seed channel the section above drew as a dashed arrow: a call site writes the callee's
-        entry key, and the callee's own entry equation reads it back. This setting is what happens
-        where several writes meet at one key.
+        The name is the solver's global unknowns, not VIMP's <code>global</code> declarations.
+        The two do meet at one point: a program's globals sit in the state a call publishes, so
+        they cross a call through a solver global. That channel is the one the section above drew
+        as a dashed arrow, a call site writing the callee's entry key and the callee's own entry
+        equation reading it back. Those entry keys are what the rest of this section measures, and
+        this setting is what happens where several writes meet at one of them.
       </p>
 
       <div class="prose-block">
@@ -3928,8 +3928,8 @@ fun main() {
           fourth is a recursion whose argument never stops climbing, and it cannot sit beside
           them: whether that one finishes at all is the first thing this setting decides.
           Each call site is lettered, because a site is what writes a key: <em>A</em> and
-          <em>B</em> both write <code>p</code>'s entry, <em>C</em> writes <code>g</code>'s ten
-          times over, and <em>D</em> and <em>E</em> both write <code>s</code>'s.
+          <em>B</em> both write <code>p</code>'s entry, <em>C</em> is <code>g</code>'s only writer
+          but publishes more than once, and <em>D</em> and <em>E</em> both write <code>s</code>'s.
         </p>
 
       </div>
@@ -4017,7 +4017,7 @@ fun main() {
 
       <div class="prose-block">
         <p>
-          Every key here has more than one writer, so all four settings have something to do, and
+          Every key here takes several contributions, so all four settings have something to do, and
           they do not agree. Warrow widens <code>p</code>'s and <code>g</code>'s entry away and
           loses both checks. Warrow per origin keeps those two and loses <code>s</code>. Join and Join
           per origin keep all three, and neither of them finishes on a recursion whose argument
@@ -4047,9 +4047,10 @@ fun main() {
       <p class="setting-copy">
         One site can send several times. A right-hand side is not run once; the solver
         re-evaluates it whenever an unknown it reads has moved, and each re-evaluation publishes
-        again at the same key from the same origin. Site <em>C</em> above does that once per turn
-        of the loop, as <code>i</code> climbs. A contribution comes back <em>smaller</em> when
-        narrowing has pulled a widened value down and the site is recomputed from it.
+        again at the same key from the same origin. Site <em>C</em> above does that each time the
+        loop head's value moves, which is a few rounds however many turns the loop runs for. A
+        contribution comes back <em>smaller</em> when narrowing has pulled a widened value down and
+        the site is recomputed from it.
       </p>
 
       <p class="setting-copy">
@@ -4057,8 +4058,9 @@ fun main() {
         program's; they are picked so that <em>A</em> sends three times, smaller and then larger,
         which is what it takes to tell all four rules apart: step 2 separates Warrow from the rest,
         step 3 Join from Join per origin, step 4 Join from Warrow per origin. They are intervals
-        because the rules hold for any domain with a join and a widening, and Interval is the one
-        where a widening is visible: on Sign or Parity the lattice is too short for one to fire.
+        because the rules hold for any domain with a join, a widening and a narrowing, and Interval
+        is the one where the widening does something the join does not: Sign and Parity are short
+        enough lattices that their widening is defined as the join.
       </p>
 
       <figure class="scene scene-solver">
@@ -4125,8 +4127,8 @@ fun main() {
 
       <h3 class="setting-title">Why not always Join, then</h3>
       <p class="setting-copy">
-        Because its cost follows the chain. Joining never widens, so a value that climbs is
-        climbed one step at a time, and the solver needs a round for each. Widening takes
+        Because its cost follows the chain. Joining never widens, so a value that climbs is walked
+        one step at a time, and the solver needs a round for each. Widening takes
         the same chain in one step. A recursion with a bound makes the difference plain: every
         setting proves the check, and only two of them stay flat as the bound grows.
       </p>
@@ -4414,8 +4416,8 @@ fun main() {
           VIMP's <code>%</code> is <a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.c_mod%7Cconst"><code>c_mod</code></a>, and the congruence domain has to prove that
           <code>c_mod i j</code> lands inside &#947; of whatever it answers, which an operation
           that rounds the wrong way cannot do. Voblint's analysis is written in Isabelle/HOL, and
-          theorems there state that its answer covers every store a real run can have. Isabelle checks each step of those proofs down to the axioms of
-          its logic. What that buys is exact, and so is what it leaves out.
+          theorems there state that, once the solve finishes, its answer covers every store a real
+          run can have. Isabelle checks each step of those proofs down to the axioms of its logic.
         </p>
       </div>
 
@@ -4424,20 +4426,22 @@ fun main() {
         <p>
           Every theorem here assumes one thing about your program: what a run of it does. That is
           <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> and the operators it runs on, down
-          to <a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.c_mod%7Cconst"><code>c_mod</code></a> truncating toward zero as C does.
+          to <a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.c_mod%7Cconst"><code>c_mod</code></a> taking its sign from the dividend, as C does.
           Isabelle checks that the analyzer's answers cover every run those definitions admit. It
           cannot check that they are the definitions you meant, and whether <code>pstep</code> is
           really what a C-like language does is a reading task no proof discharges.
         </p>
         <p>
-          That is the whole of it. The graph and trace semantics are not on the list: they are
-          reached from <code>pstep</code> by proof
-          (<a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact"><code>source_reaches_ltr_collect</code></a>),
-          which ties them to it.
+          The graph and trace semantics are not on that list: they are reached from
+          <code>pstep</code> by proof
+          (<a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact"><code>source_reaches_ltr_collect</code></a>).
         </p>
         <p>
-          What is left to read is six theories, 963 lines out of the 62,098 in <code>src/</code>,
-          and <code>pstep</code> itself is 63 of them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
+          What is left to read is <span data-stat="semantics.theories">6</span> theories,
+          <span data-stat="semantics.lines">963</span> lines out of the
+          <span data-stat="isabelle.lines">62,098</span> in <code>src/</code>, with
+          <code>pstep</code>'s <span data-stat="semantics.pstep_rules">14</span> rules among
+          them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
           the equation generator, the solver, the five domains and the result table, the kernel
           has already checked against them. Review is bounded by the size of the semantics, not by
           the size of the analyzer.
@@ -5338,8 +5342,8 @@ proof (cases a; cases b)
     by (cases l1; cases l2; cases u1; cases u2) auto
 qed</code></pre>
                 <p>
-                  A case split on whether each of the four bounds is finite, each case closed by
-                  <code>auto</code>. Isabelle's kernel replays every inference.
+                  A three-way case split on each of the four bounds (−∞, a number, +∞), every
+                  case closed by <code>auto</code>. Isabelle's kernel replays every inference.
                 </p>
               </li>
             </ol>
@@ -5376,7 +5380,7 @@ qed</code></pre>
 
       <figure class="scene scene-metro">
         <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three or four stations and meet at interchanges; the result line leaves the central interchange and ends at three terminals: PROVED, DEAD and SAFE.">
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; the result line leaves the central interchange and ends at three terminals: PROVED, DEAD and SAFE.">
           <g class="metro-lines">
             <path class="line-sem" d="M70 70 H 580"/>
             <path class="line-comp" d="M70 165 H 960 V 380"/>
@@ -5440,7 +5444,7 @@ qed</code></pre>
               <circle cx="390" cy="470" r="8"/><text x="390" y="496">TD solve</text></a>
             <a class="metro-station" href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact" data-name="partial_post_solution" data-theory="TD.TD_side_upd_rule" data-info="The vendored solver's own promise, and the fact each domain's registration uses: whatever the global update rule, a terminating solve answers with a post-solution.">
               <circle cx="560" cy="470" r="8"/><text x="560" y="496">partial_post_solution</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.routed_domain_exec.pp_st%7Cfact" data-name="pp_st" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver answers over association-list states, and this transports its post-solution to the function-valued states the framework is stated over.">
+            <a class="metro-station" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.routed_domain_exec.pp_st%7Cfact" data-name="pp_st" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver runs the buffered form of the equation generator, and this carries its post-solution to the form the framework's soundness is stated over.">
               <circle cx="640" cy="440" r="8"/><text x="632" y="424" text-anchor="middle">pp_st</text></a>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
@@ -5520,7 +5524,7 @@ qed</code></pre>
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168-L263" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Spec</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
             <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html" title="Theory in the formalization">dg_spec</a>
-            <span class="align-note">An analysis is a record of transfer functions, one per edge action.</span>
+            <span class="align-note">An analysis is a record of transfer functions, one per edge action, matching Goblint's method-per-construct shape. Spec's startstate, exitstate and morphstate have no counterpart.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L170-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">D / G lattices</a>
@@ -5633,8 +5637,8 @@ qed</code></pre>
         <p class="eyebrow">The fine print</p>
         <h2 id="limits-heading">What Voblint can't do, and why proving is hard</h2>
         <p class="section-intro">
-          A proof is only as wide as its statement. Voblint's guarantee is strong inside a small
-          language and a precise set of assumptions, and this section is about the edges.
+          A proof is only as wide as its statement. Voblint's soundness theorems hold for a small
+          language under a fixed set of assumptions; this section is about what sits outside them.
         </p>
       </div>
 
@@ -5642,7 +5646,7 @@ qed</code></pre>
       <p class="setting-copy">
         Goblint analyzes C. Voblint analyzes VIMP, a language small enough that its semantics
         could be written down and every analysis step proved against it. Hover a region to see
-        what it would take.
+        what VIMP leaves out.
       </p>
 
       <figure class="scene scene-island">
@@ -5765,8 +5769,8 @@ qed</code></pre>
               <text class="mono" x="685" y="440" text-anchor="middle">Voblint_Solver</text>
             </g>
             <g class="berg-label below">
-              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">61,255</tspan> lines of Isabelle</text></a>
-              <text x="660" y="272"><tspan data-stat="isabelle.theories">223</tspan> theories · <tspan data-stat="isabelle.proofs">2,947</tspan> lemmas · <tspan data-stat="isabelle.defs">1,380</tspan> definitions</text>
+              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">62,098</tspan> lines of Isabelle</text></a>
+              <text x="660" y="272"><tspan data-stat="isabelle.theories">223</tspan> theories · <tspan data-stat="isabelle.proofs">3,012</tspan> lemmas · <tspan data-stat="isabelle.defs">1,389</tspan> definitions</text>
               <line x1="655" y1="258" x2="615" y2="250"/>
             </g>
             <g class="berg-label solver">
@@ -5776,19 +5780,19 @@ qed</code></pre>
               <line x1="695" y1="480" x2="777" y2="482"/>
             </g>
             <g class="berg-label side">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli" target="_blank" rel="noreferrer"><text x="40" y="160"><tspan data-stat="handwritten_ocaml">3,311</tspan> lines of handwritten OCaml</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli" target="_blank" rel="noreferrer"><text x="40" y="160"><tspan data-stat="handwritten_ocaml">3,315</tspan> lines of handwritten OCaml</text></a>
               <text x="40" y="178">parser glue, renderers, CLI, browser glue</text>
               <text class="muted" x="40" y="196">outside the proof</text>
             </g>
             <g class="berg-label corpus">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">283</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">288</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
               <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">434</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
               <text class="muted" x="40" y="336">tested, not proved</text>
             </g>
           </g>
           <g class="berg-label above">
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/codegen/generated/ml" target="_blank" rel="noreferrer">
-              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,400</tspan> lines</text>
+              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,406</tspan> lines</text>
               <text x="560" y="60">generated OCaml: the analyzer that runs</text>
             </a>
             <line x1="555" y1="66" x2="486" y2="120"/>
@@ -5948,7 +5952,7 @@ qed</code></pre>
           everything below that, reached through those, in a lighter dotted line. The example sessions
           are drawn together at the surface. Lines are counted per <code>ROOT</code> directory with the
           scanner behind <code>pixi run theory-stats</code>:
-          <span data-stat="isabelle.lines">61,255</span> in <code>src</code> plus
+          <span data-stat="isabelle.lines">62,098</span> in <code>src</code> plus
           <span data-stat="solver.lines">31,328</span> across the
           <span data-stat="solver.theories">26</span> theory files in the vendored solver's directory,
           of which Voblint's imports reach <span data-stat="solver.used.theories">5</span> theories and

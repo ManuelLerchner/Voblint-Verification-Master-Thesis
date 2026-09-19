@@ -567,6 +567,25 @@ runner, the HTML-report audit, the playground's example corpus and
 differently from the runner. A new voblint analysis flag goes into its
 `SETTING_FLAGS` or `OUTPUT_FLAGS`; an unknown flag is an error by design.
 
+## Repository figures on the site are derived, never typed
+
+Any number on a site page that measures this repository -- lines of Isabelle,
+theory or lemma counts, corpus size, generated or handwritten OCaml, the size of
+the source semantics -- comes from `scripts/pages_stats.py`, which measures the
+tree at site-build time and writes `window.VOBLINT_STATS`. The page fills every
+`<span data-stat="path.into.stats">` from it, page-wide, in `pages/explainer.js`.
+
+The literal inside the span is only the fallback a source checkout renders, so it
+drifts silently. `pixi run pages-stats` fails on both failure modes: a measured
+figure typed into the prose with no `data-stat` around it, and a fallback that no
+longer matches what the repository measures. `--fix` refreshes stale fallbacks;
+it never invents a `data-stat`, because where one belongs is a judgement about
+the sentence.
+
+A new figure therefore means a new key in `pages_stats.py`'s `collect()`, not a
+number in the HTML. `semantics` is the worked example: the six theories a reader
+must audit, their line count, and `pstep`'s rule count, all read off the sources.
+
 ## README figures and playground links
 
 The README's figures are runs of the browser playground, regenerated rather than

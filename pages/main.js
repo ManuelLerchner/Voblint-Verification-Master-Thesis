@@ -3841,10 +3841,9 @@ fun main() {
   "int-reduction": `fun main() {
   n = __voblint_nondet_int();
   x = 4 * n + 1;
-  if (x >= 0) {
+  if (x >= -2) {
     if (x <= 10) {
-      __voblint_check(x >= 1);
-      __voblint_check(x <= 9);
+      __voblint_check(x >= 1 && x <= 9);
     }
   }
 }`,

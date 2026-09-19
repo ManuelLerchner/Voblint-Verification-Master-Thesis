@@ -32,7 +32,7 @@
         gamma: "c₁ ↦ n ∈ [2, 2]   c₂ ↦ n ∈ [1, 1]",
       },
       link: "every trace has a context, so the buckets together are exactly the set",
-      note: "Each depth of the recursion has its own context, so the set splits into two buckets and each bucket gets an exact interval. No value of `n` enters between rungs 3 and 4, and the check in `main` is proved.",
+      note: "Each depth of the recursion has its own context, so the set splits into two buckets and each bucket gets an exact interval. No value of `n` enters between rungs 3 and 4.",
     },
   };
 
