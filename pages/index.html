@@ -472,18 +472,18 @@
           </div>
 
           <div class="bug-pane right">
-            <p class="bug-pane-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Voblint</p>
+            <p class="bug-pane-title"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Voblint, congruence only</p>
             <pre class="mock-editor bug-editor" data-lang="vimp"><span class="ml">fun main() {</span>
 <span class="ml">  top = __voblint_nondet_int();</span>
 <span class="ml rl rl-1">  c = -5;<span class="mh">c = −5</span></span>
 <span class="ml">  if (top) {</span>
-<span class="ml rl rl-2">    c = -7;<span class="mh">c ∈ [−7,−5], 1+2ℤ</span></span>
+<span class="ml rl rl-2">    c = -7;<span class="mh">−5 ⊔ −7 = 1+2ℤ</span></span>
 <span class="ml">  }</span>
-<span class="ml">  <span class="mh">↳ congruence 1+2ℤ, interval [−1,0], together −1</span></span>
-<span class="ml rl rl-4 refuted">  __voblint_check(c % 2 == 1);<span class="mb">✓ REFUTED</span></span>
-<span class="ml rl rl-5 proved">  __voblint_check(c % 2 == -1);<span class="mb">✓ PROVED</span></span>
+<span class="ml">  <span class="mh">↳ 1+2ℤ % 2 = 1+2ℤ  ✓ holds −1 and 1 both</span></span>
+<span class="ml rl rl-4 unknown">  __voblint_check(c % 2 == 1);<span class="mb">? UNKNOWN</span></span>
+<span class="ml rl rl-5 unknown">  __voblint_check(c % 2 == -1);<span class="mb">? UNKNOWN</span></span>
 <span class="ml">}</span></pre>
-            <p class="bug-verdict-line right"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Both verdicts match every run: REFUTED for the first, PROVED for the second.</span></p>
+            <p class="bug-verdict-line right"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> <span>Neither check is decided, and neither is wrong. The same domain, on the same program, cannot reach the answers on the left.</span></p>
           </div>
         </div>
 
@@ -501,20 +501,16 @@
           with that test's flags, <code>--enable ana.int.congruence
           --set sem.int.signed_overflow assume_none</code>. The fix keeps the constant answer for
           <code>%</code> only when the remainder is zero, the dividend is already a single value,
-          or the type is unsigned. None of those holds for a signed <code>c</code> known merely to
-          be odd, so <code>c % 2</code> comes back as the class <code>1+2ℤ</code>, which is
-          sound and contains both <code>1</code> and <code>-1</code>: neither assertion is decided
-          after the fix. Nothing about machine words is at work, and Goblint's own test names what
-          is missing, marking the second check <code>TODO (Track information that c is
-          negative)</code>. The two panes are not the same configuration, and the comparison is
-          about the bug rather than a scoreboard: that test enables congruence on top of Goblint's
-          defaults, which leave <code>ana.int.interval</code> off and
-          <code>ana.int.refinement</code> at <code>never</code>, while the Voblint pane runs
-          <code>--analysis int</code>, four components refined to a fixpoint. The unsoundness on
-          the left is a bug at any setting; the decided verdicts on the right are a reduced
-          product doing what a reduced product does, not a claim that Goblint could not reach them
-          under other flags.
-          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
+          or the type is unsigned, so a signed <code>c</code> known merely to be odd now yields the
+          class <code>1+2ℤ</code>. Both sides run the congruence domain and land there; what
+          separates them is that the right-hand one is
+          <a href="Voblint/Voblint_Analysis_Congruence/Congruence_Arithmetic.html#Congruence_Arithmetic.congruence_mod_sound%7Cfact"><code>congruence_mod_sound</code></a>,
+          proved, so the answers on the left are not available to it. Neither analyzer decides the
+          checks from congruence alone, and Goblint's test says why, marking the second one
+          <code>TODO (Track information that c is negative)</code>. Sign is what is missing, not
+          anything about machine words &#8212; which is what the Int product supplies when it
+          <a href="#values">decides both</a>.
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=congruence&amp;context=none">Run the congruence side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a>
         </figcaption>
       </figure>
@@ -1255,9 +1251,9 @@ datatype ltr =
           One constructor per situation an activation can be in. <code>Root</code> is
           <code>main</code>, which nobody called, so it carries a trace and nothing else.
           <code>Call</code> is an activation that is running and will have to return to its
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_caller%7Cconst"><code>ltr_caller</code></a>, which it holds. <code>Resume</code> is that same activation after
-          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_current%7Cconst"><code>ltr_current</code></a> is that activation frozen at its call node and
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_callee%7Cconst"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
+          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_caller</code></a>, which it holds. <code>Resume</code> is that same activation after
+          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_current</code></a> is that activation frozen at its call node and
+          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
           path, which is why a returned call is still one box you can ask questions about.
         </p>
       </div>

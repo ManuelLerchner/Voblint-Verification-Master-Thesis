@@ -31,6 +31,11 @@ IDENT = re.compile(r"[a-z][A-Za-z0-9_']*")
 # Isabelle's own commands and HOL names: real in the sources, but the reader is
 # not being pointed at a Voblint definition, so a link would mislead.
 EXEMPT = {"export_code", "module_name", "code_unfold", "by_eval"}
+# Isabelle renders a datatype's selectors on the datatype's own anchor and gives
+# them none of their own, so `#LTR_Def.ltr|type` is where `ltr_caller` lives and a
+# per-selector anchor would 404. Checked against build/isabelle-html.
+SELECTORS_ON_THEIR_DATATYPE = {"ltr_caller", "ltr_callee", "ltr_current"}
+EXEMPT |= SELECTORS_ON_THEIR_DATATYPE
 
 
 def named_in(text):
