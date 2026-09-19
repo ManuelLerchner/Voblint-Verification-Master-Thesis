@@ -4,12 +4,6 @@
   fill: var(--primary);
 }
 
-:where(.scene-reduce) .reduce-line .dot-extra {
-  fill: var(--accent-soft);
-  stroke: var(--accent);
-  stroke-width: 2.5;
-}
-
 :where(.scene-reduce) .reduce-line .dot-out {
   fill: var(--surface);
   stroke: var(--border-strong);
@@ -23,50 +17,28 @@
     r 250ms ease;
 }
 
+/* Both panels run to the row height so the two boxes end on the same line; the code
+   simply has room to spare. */
 :where(.scene-reduce) .reduce-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   gap: 16px;
+  align-items: stretch;
 }
 
 :where(.scene-reduce) .reduce-layout > div {
+  min-width: 0;
   padding: 14px 16px;
   background: var(--surface-muted);
   border-radius: var(--radius);
 }
 
 :where(.scene-reduce) .reduce-code {
-  margin: 0 0 14px;
-  font-size: 0.8rem;
+  margin: 0;
+  font-size: 0.78rem;
   line-height: 1.5;
-  white-space: pre;
   overflow-x: auto;
-}
-
-:where(.scene-reduce) .reduce-alone {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.84rem;
-}
-
-:where(.scene-reduce) .reduce-alone th {
-  padding: 3px 8px 3px 0;
-  text-align: left;
-  font-weight: 600;
-}
-
-:where(.scene-reduce) .reduce-alone td {
-  padding: 3px 0;
-}
-
-:where(.scene-reduce) .reduce-alone td:last-child {
-  text-align: right;
-}
-
-:where(.scene-reduce) .reduce-alone tr.int th,
-:where(.scene-reduce) .reduce-alone tr.int td {
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
+  white-space: pre;
 }
 
 :where(.scene-reduce) .reduce-rows {
@@ -124,30 +96,20 @@
   text-anchor: middle;
 }
 
+/* Three lines at the widest layout, which is what each state's text wraps to, so the
+   controls below it do not move as the states change. */
 :where(.scene-reduce) .reduce-caption {
-  min-height: 4.8em;
-  margin: 14px 0 8px;
-}
-
-:where(.scene-reduce) .reduce-legend {
-  justify-content: flex-start;
-  margin: 0 0 10px;
-  font-size: 0.78rem;
+  min-height: 5em;
+  margin: 14px 0 4px;
 }
 
 :where(.scene-reduce) .reduce-checks {
   display: flex;
+  margin-top: 12px;
   flex-wrap: wrap;
   gap: 8px 20px;
-  margin: 0;
   padding: 0;
   list-style: none;
-}
-
-@media (max-width: 1100px) {
-  :where(.scene-reduce) .reduce-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 640px) {
@@ -157,5 +119,17 @@
 
   :where(.scene-reduce) .reduce-axis {
     grid-template-columns: 11.5rem minmax(0, 1fr);
+  }
+}
+
+@media (width <= 1000px) {
+  :where(.scene-reduce) .reduce-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* One column gives the caption a width where the first state wraps a line
+     shorter than the other two. */
+  :where(.scene-reduce) .reduce-caption {
+    min-height: 6.8em;
   }
 }

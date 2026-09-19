@@ -20,7 +20,7 @@ do not match the concepts: the executable state (`Exec_St`) sits under
 holds the abstract D/G spine, its executable transport, its context
 instances, and the result table at once, and the four per-domain reuse
 locales are spread over two folders. Five theories exceed the 1500-line cap
-(`DG_Constraint_Trees` 2472, `DG_Soundness` 2317, `Exec_St` 2231,
+(`DG_Constraint_Programs` 2472, `DG_Soundness` 2317, `Exec_St` 2231,
 `Abstract_Domain` 2110, `Exec_DG_Generator` 1718).
 
 The session also mixes three things a reader wants kept apart:
@@ -82,8 +82,8 @@ Findings that decide the phases:
 | Import edge | What crosses it | Verdict |
 | --- | --- | --- |
 | `Abstract_Domain -> Voblint_CFG.CFG_Def` | `type_synonym pp = cfg_node`, one line | move `pp` |
-| `DG_Constraint_Trees -> Exec_Placement` | nothing | drop |
-| `DG_Constraint_Trees -> Exec_St` | the `bounded_warrowing` class, three mentions | move the class |
+| `DG_Constraint_Programs -> Exec_Placement` | nothing | drop |
+| `DG_Constraint_Programs -> Exec_St` | the `bounded_warrowing` class, three mentions | move the class |
 | `Context_Refinement -> Constraint_System` | `part_post_solution_iff_se_constraint_holds`, one lemma | move the block |
 | `CFG_Enumeration -> Voblint_Compile.VIMP_Proc_to_CFG` | no compiler name | repoint |
 | `Analysis_Result -> Exec_St` | `normalize_point`, lines 133-250 | move the readback |
@@ -93,17 +93,17 @@ Findings that decide the phases:
 Usage counts (`rg -w` over `src/`):
 
 - `td_cfg_side_solver_dg` with `cfg_pkg_dg`, `stabl_at`, `nu_at`
-  (`DG_Constraint_Trees` 2365-2470): no user outside the file.
+  (`DG_Constraint_Programs` 2365-2470): no user outside the file.
 - `sound_dg_hooks`, `sound_dg_hooks_ltr`, `hook_gen`, `gamma_join`,
   `ownership_split_dg_spec_placed`: reached only from `Example_Sign_Placement` and
   `Example_Interval_Placement`. The spec route (`sound_dg_spec_core`, interpreted
   12 times) is what Analysis and Soundness use.
-- `Exec_Placement` (1134 lines): imported by `DG_Constraint_Trees`, which uses nothing
+- `Exec_Placement` (1134 lines): imported by `DG_Constraint_Programs`, which uses nothing
   from it, and reached through that import by `Exec_DG_Refines`,
   `Exec_DG_Trees` and `Exec_DG_Generator`, which use 70 of its names (see
   "Decisions and corrections"). It is the executable transport's support
   algebra.
-- Fourteen of `DG_Constraint_Trees`'s 45 definitions and nine of `DG_Soundness`'s
+- Fourteen of `DG_Constraint_Programs`'s 45 definitions and nine of `DG_Soundness`'s
   27 have no use outside their file.
 - `routed_context_hetero` restates all six assumptions of
   `routed_context_base_hetero` verbatim and then declares it a sublocale;
@@ -114,7 +114,7 @@ Usage counts (`rg -w` over `src/`):
 
 Style baseline for the proof half: 45 `metis` (19 in `Exec_DG_Generator`,
 13 in `Exec_St`), 61 `apply` lines (14 `Routed_Domain_Exec`, 12 each
-`DG_Constraint_Trees` and `DG_Soundness`, 10 `Activation_Local_Sound`), four
+`DG_Constraint_Programs` and `DG_Soundness`, 10 `Activation_Local_Sound`), four
 `[rule_format]`, 31 lemmas named `...I`/`...E`/`...D` without their
 attribute, three theories without an orientation block. The two longest
 proofs are `dg_post_solution_postfix` (272 lines) and
@@ -129,7 +129,7 @@ until Phase 2 deletes what it holds.
 | --- | --- | --- | --- |
 | `Voblint_Domain` | `goblint.domain` | `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, `Nonrelational_Reachability`, `Backward_Domain`, `Abstract_Numeric_Queries` | `Voblint_VIMP`, `TD` |
 | `Voblint_Solver` | `goblint.constraint`, `goblint.solver` | `Strategy_Tree_Monad` (absorbing `Strategy_Tree_Do`, `Solver_Mono`), `Strategy_Tree_Rhs`, `Strategy_Tree_Relabel`, `Strategy_Tree_Combinators`, `Side_Buffering`, `Post_Solution` (new), `Context_Refinement` | `TD` only |
-| `Voblint_Framework` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Constraint_Trees`, `DG_Ownership_Split_Spec`, `DG_Keyed_Generator`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Local_State_Spec`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
+| `Voblint_Framework` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Constraint_Programs`, `DG_Ownership_Split_Spec`, `DG_Keyed_Generator`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Local_State_Spec`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
 | `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Local_State_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `TD_Solver_Menu`, `Result_Normalization` | `Voblint_Framework`, `Voblint_Compile` |
 | into `Voblint_Analysis` | `analyses/base.ml`, `lifters/` | `Abstract_Arithmetic`, `Special_Ops`, `Numeric_Ops`, `Exec_Backward`; `Context_Space_Finite`, `Call_String_Routed_Context`, `Entry_State_Routed_Context` | |
 | into `Voblint_Examples` | none | the hooks route: `sound_dg_hooks` and the hook-parametric section (`DG_Soundness` 968-1508), `sound_dg_hooks_ltr`, `gamma_join`, `ownership_split_dg_spec_placed`, as a `Placement/` group next to the two examples that use them | |
@@ -157,12 +157,12 @@ what a later phase deletes.
 | # | Step | Status |
 | --- | --- | --- |
 | 0.1 | Move `type_synonym pp = cfg_node` from `Abstract_Domain` to `CFG_Def`; drop `Abstract_Domain`'s `CFG_Def` import. | landed |
-| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Constraint_Trees`'s `Exec_St` and `Exec_Placement` imports. | landed |
+| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Constraint_Programs`'s `Exec_St` and `Exec_Placement` imports. | landed |
 | 0.3 | Move the `se_constraint_holds` block (`Constraint_System` 1008-1053: definition, two `[dest]` halves, `part_post_solution_imp_se_constraint_holds`, `part_post_solution_iff_se_constraint_holds`) to a new `Solver/Strategy_Tree/Post_Solution.thy` importing `Strategy_Tree_Rhs`. Repoint `Context_Refinement`. | landed |
 | 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
 | 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Result_Normalization`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
-| 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Constraint_Trees` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
-| 0.7 | Delete the other zero-use definitions in `DG_Constraint_Trees` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | closed: every candidate named here has since been deleted, and `DG_Soundness` with them. Recorded at the time: open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work. `gamma_dg` is closed (2026-09-04 decision entry): it was a self-contained cluster whose five lemmas nothing outside `DG_Soundness` cited, and it is deleted |
+| 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Constraint_Programs` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
+| 0.7 | Delete the other zero-use definitions in `DG_Constraint_Programs` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | closed: every candidate named here has since been deleted, and `DG_Soundness` with them. Recorded at the time: open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work. `gamma_dg` is closed (2026-09-04 decision entry): it was a self-contained cluster whose five lemmas nothing outside `DG_Soundness` cited, and it is deleted |
 | 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
 
 Gate: `AFP=$HOME/afp/thys pixi run isabelle-build`, `pixi run codegen`,
@@ -203,7 +203,7 @@ Spike before committing to it.
 | # | Step | Status |
 | --- | --- | --- |
 | 3.1 | One `dead_code_lift :: ('dl, 'dg) dg_spec => ('dl lifted, 'dg) dg_spec` with `sound_dg_spec_core S ==> sound_dg_spec_core (dead_code_lift S)`; `local_state_dg_spec_for_lifted`, `ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted` and `local_state_dg_spec_st_for_lifted` become instances. This is Goblint's `DeadCodeLifter`, stated once. Design the seam so widening delay and context gas can use it. | retired: `dead_code_lift`, `lift_gamma`, `dead_code_normalize` and `dg_spec_commute` are in `scripts/retired_identifiers.txt`, no `Framework/Lifters/` directory exists, and `local_state_dg_spec_for_lifted` remains a direct construction. Recorded at the time: open -- and narrower than written: the merge/split research (2026-09-01 decision entry, `docs/history/MERGE_SPLIT_GENERALIZATION.md`) found this step was conflating two axes. The merge/split axis (unit vs placed routing) is handled by that document's own generalization and is no longer on 2.3's critical path; what remains for 3.1 is only the orthogonal Bot-carrier wrapper `('dl,'dg) dg_spec => ('dl lifted,'dg) dg_spec` with `sound_dg_spec_core S ==> sound_dg_spec_core (dead_code_lift S)`, which then wraps one unlifted core instead of two, with the four `*_for_lifted` constructions as its instances. Design pass complete (2026-09-01): the external carrier-architecture review and the follow-up lifter-pipeline session fixed the shape -- reachability-first functor with `lift_gamma`, normalization as a separate layer over an explicit emptiness interface, one executable commute-preservation theorem per lifter, `\|>` pipe bundle deferred until a second lifter exists; see "External review" and "Lifter pipeline design" in `docs/history/MERGE_SPLIT_GENERALIZATION.md`. Core landed (2026-09-01, uncommitted): `src/Abstract_Interpreter/Framework/Lifters/DG_Dead_Code_Lift.thy` holds `dead_code_lift` + `lift_gamma` + `dead_code_lift_sound`, `sound_dg_spec_core_cong`, `dead_code_normalize` + its soundness, and the `dg_spec_commute` naturality theorems (`dead_code_lift_commute`, `dead_code_normalize_commute`); `DG_Local_State_Spec` gains the unlifted `local_state_dg_spec_for` and re-derives `local_state_dg_spec_for_lifted_core_sound` through the functor chain, deleting its three hand-rolled obligation walls. The unit-lifted family (`ownership_split_step_for_lifted`, `ownership_split_dg_spec_for_lifted`, `gamma_ownership_split_lifted` + walls, `assemble_env_abs`; ~460 lines) turned out consumer-free -- absent from every other theory and the generated OCaml -- and is deleted rather than subsumed; the canonical dead-code-aware unit analysis is now the one-expression functor application (see the design doc's resolved finding 3a). Remaining: wire the Base executable records onto `dg_spec_commute` when a second lifter lands; batch gate at phase end. Step 3.3 progress: DG_Soundness's four `apply` sites converted to structured Isar in the same pass. |
-| 3.2 | Split `DG_Constraint_Trees`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split the domain foundation at the reachability lift. | landed: `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, and `Nonrelational_Reachability` separate value semantics, generic reachability, pointwise stores, and their composition; `combine_env` is the sole pointwise selector and `State_Restriction` derives projections from it. `DG_Constraint_Trees` (2230 lines) split three ways: the file itself keeps only the carrier-agnostic core (`dg_state`, `dg_edge_tree`/`dg_combine_tree`, the fold combinators `side_rhs_fold_dg`/`side_acc_dg`, the `dg_spec` record and `apply_dg_spec`) at 951 lines; `DG_Ownership_Split_Spec.thy` (327 lines) holds the homogeneous `ownership_split_dg_spec_for`/`unit_combine_step_*` instantiation; `DG_Keyed_Generator.thy` (995 lines) holds the keyed generators, the buffered-generator correspondence proof, and the generic instance's `threefold_mono` discharge. All three under the 1500-line cap. Only two theories anywhere directly `imports DG_Constraint_Trees`'s pre-split content and needed repointing (`DG_Soundness`, `Example_Keyed_Solver_Update_Rule_Regression`); everything else reached it transitively through `DG_Soundness` and needed no change |
+| 3.2 | Split `DG_Constraint_Programs`: the homogeneous unit analysis (685-956) and the keyed generators (1393-end) are separate concerns from the `dg_spec` record and edge trees. Split the domain foundation at the reachability lift. | landed: `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, and `Nonrelational_Reachability` separate value semantics, generic reachability, pointwise stores, and their composition; `combine_env` is the sole pointwise selector and `State_Restriction` derives projections from it. `DG_Constraint_Programs` (2230 lines) split three ways: the file itself keeps only the carrier-agnostic core (`dg_state`, `dg_edge_tree`/`dg_combine_tree`, the fold combinators `side_rhs_fold_dg`/`side_acc_dg`, the `dg_spec` record and `apply_dg_spec`) at 951 lines; `DG_Ownership_Split_Spec.thy` (327 lines) holds the homogeneous `ownership_split_dg_spec_for`/`unit_combine_step_*` instantiation; `DG_Keyed_Generator.thy` (995 lines) holds the keyed generators, the buffered-generator correspondence proof, and the generic instance's `threefold_mono` discharge. All three under the 1500-line cap. Only two theories anywhere directly `imports DG_Constraint_Programs`'s pre-split content and needed repointing (`DG_Soundness`, `Example_Keyed_Solver_Update_Rule_Regression`); everything else reached it transitively through `DG_Soundness` and needed no change |
 | 3.3 | Retire `metis`: after Phase 2 the count is 26; `Abstract_State` holds 13. Retire the 61 `apply` lines; `Activation_Local_Sound`'s 10 and `Routed_Domain_Exec`'s 14 first. | open: 4 `metis` (all in `DG_Reader_Transport`) and 2 `apply` lines (`Exec_St_Reachability`, `Routed_Context`) remain in `src/Abstract_Interpreter`; the theories named in the step no longer exist |
 | 3.4 | Hoist `dg_post_solution_postfix` (272 lines) and `routed_node_rhs_buffered_correspondence` (249) into helper lemmas with named subgoals. | open for `routed_node_rhs_buffered_correspondence` (`DG_Keyed_Generator`); `dg_post_solution_postfix` no longer exists |
 | 3.5 | Tag the 31 untagged `...I`/`...E`/`...D` lemmas or rename them; remove the four `[rule_format]`; add orientation blocks where missing; move the `section` heading below the `theory` header in the four `Exec_DG_*` survivors, if any survive. | landed: repo-wide sweep of `src/Abstract_Interpreter/Framework` and `src/Analysis` found 23 untagged `I`/`E`/`D`-named lemmas (down from 31, some already fixed by earlier passes). 21 tagged (`[dest]`: `vars_cover_edgeD`/`_enterD`/`_combineD`, `dg_postfix_entryD`/`_edgeD`/`_enterD`/`_combineD`, `hook_postfix_entryD`, `le_dg_state_localsD`/`_globsD`, `special_min_soundD`/`_max_soundD`/`_min_monoD`/`_max_monoD`, `ev_soundD`/`_monoD`, `calls_source_uniqueD`; `[elim]`: `first_deciding_SomeE`, `first_deciding2_SomeE`, `int_dom_not_bot_componentsE`; `[intro]`: `distinct_map_filterI`). Two left deliberately bare: `gamma_ivlD` is a genuine multi-conclusion `D` bundle (`shows "l <= Fin x" and "Fin x <= u"`) -- tagging would spawn both facts from every occurrence of its premise, the same exception `wf_compile_inputD(8)` gets; `ivl_exhaustE` already carries its own comment explaining it is deliberately cited explicitly rather than left to `auto`/`blast`'s uncontrolled case-splitting. Batch build green with the new attributes (no automation loop or broken proof anywhere downstream). `[rule_format]` checked: every occurrence repo-wide (`Exec_St` x2, `Interval_Warrowing` x1, `Activation_Context` x2) is an inline use-site citation (`fact[rule_format, of ...]` instantiating an already-proved quantified fact at one call site), not a lemma *declared* with `[rule_format]` in place of proper `fixes`/`assumes`/`shows` -- the actual anti-pattern the style rule bans. No lemma anywhere is declared that way. "Remove the four" was based on a shallow count that didn't distinguish the two shapes; there is nothing here to remove without breaking the proof that cites it. The `Exec_DG_*` heading-placement item is landed: `Exec_DG_Generator`, `Exec_DG_Refines`, and `Exec_DG_Trees` (the only three survivors -- `Exec_DG_Bridge` is deleted, so "four" is now three) each had their `section`/orientation `text` block sitting before the `theory ... imports ... begin` header instead of after `begin` like every other theory in the codebase; moved all three, batch build green. A repo-wide orientation-block survey across `src/Abstract_Interpreter/Framework`, `src/Abstract_Interpreter/Solver`, `src/Abstract_Interpreter/Domain`, `src/Abstract_Interpreter/Exec` found only two real gaps out of 51 theories: `Exec_Placement.thy` had none at all (added one covering `scoped_location`, `scope_locations`, `effective_support`/`raw_support`/`resolved_default`, and the lax/strict `project_resolved_on` pair -- the support algebra the executable D/G transport's owner-aware readback builds on); `Exec_St.thy` had a good orientation block, but a stray lemma (`normalized_lift_sup_over_origins`, bridging `Voblint_Domain.Reachability_Lift`'s `normalized_lift` with the vendored `sup_over_origins`) sat before it. That lemma turned out to have zero citations anywhere in the repo and no automation attribute, so it was dead, not merely misplaced -- deleted rather than relocated. Batch build green. Step 3.5 fully closed |
@@ -355,7 +355,7 @@ and mark it `superseded (see below)`.
   session, so they follow the first green build of the moved tree rather
   than precede it. `Exec_Placement` itself moved to `Examples/Placement/`.
 - 2026-08-30: **`Exec_Placement` is not example-only.** The survey measured
-  it only against `DG_Constraint_Trees` (zero names) and counted three Example
+  it only against `DG_Constraint_Programs` (zero names) and counted three Example
   importers; but `Exec_DG_Refines`, `Exec_DG_Trees` and `Exec_DG_Generator`
   reached it transitively and use `scoped_location`, `effective_support`,
   `resolved_default` and the projection algebra (28, 20 and 20 mentions).
@@ -658,7 +658,7 @@ and mark it `superseded (see below)`.
   `Strategy_Tree_Monad`. Its `hide_const (open) \<sigma>` guard against
   `TD.TD_side`'s own record field moved with it, onto `DG_Keyed_Generator`'s
   own `"TD.TD_side"` import (the file's `@{const TD_side_mono}` antiquotation
-  is what actually needs that theory; `DG_Constraint_Trees` no longer imports
+  is what actually needs that theory; `DG_Constraint_Programs` no longer imports
   `Solver_Mono` and does not need it transitively).
 - 2026-09-01: `map_ltree`/`map_gtree` (`Strategy_Tree_Relabel`) renamed to
   `relabel_ltree`/`relabel_gtree` to match the theory's own name and stop
@@ -671,13 +671,13 @@ and mark it `superseded (see below)`.
   `simp add:` citation, which a wider default simp set changes out from
   under them. Left untagged; a future attempt should budget for repairing
   those call sites rather than treating the tag as safe by inspection.
-- 2026-09-01: `dg_combine_tree_at` landed in `DG_Constraint_Trees` (definition plus
+- 2026-09-01: `dg_combine_tree_at` landed in `DG_Constraint_Programs` (definition plus
   `traverse_dg_combine_tree_at`, `sides_dg_combine_tree_at`,
   `sides_dg_combine_tree_at_other`, `dep_aux_dg_combine_tree_at`, and the
   bridge lemma `dg_combine_tree_as_at` connecting it back to the bare
   `dg_combine_tree`/`relabel_gtree` form), mirroring `dg_edge_tree_at`'s
   existing shape: `dg_edge_tree step u = dg_edge_tree_at step (Inl u) ()`
-  (`DG_Constraint_Trees.thy:305`). This is a pure addition -- nothing else in the
+  (`DG_Constraint_Programs.thy:305`). This is a pure addition -- nothing else in the
   session references it yet -- verified clean (0 errors) against both
   `DG_Soundness` and `DG_Keyed_Generator`.
   Migrating the actual consumers off `relabel_ltree`/`relabel_gtree` remains
@@ -764,7 +764,7 @@ and mark it `superseded (see below)`.
   `dep_aux_relabel_gtree` in `Exec_DG_Generator` looked like the same kind of
   dead local restatement, but `dep_aux_dg_edge_tree` is genuinely relied on
   by `DG_Coverage` through name shadowing across the session boundary
-  (`DG_Constraint_Trees` in Core defines the same name; the Exec-local copy shadows
+  (`DG_Constraint_Programs` in Core defines the same name; the Exec-local copy shadows
   it for anything importing through `Exec_DG_Generator`) -- deleting it would
   have been a real regression. `dep_aux_dg_combine_tree`/`dep_aux_relabel_gtree`
   were safe because `DG_Coverage` carries its own separate local copy of the
@@ -786,10 +786,10 @@ and mark it `superseded (see below)`.
   and the newly-added `dg_spec_combine_tree_relabel_as_at`, which never
   ended up load-bearing anywhere), and `relabel_ltree`/`relabel_gtree`
   themselves went unreachable from every consumer in the tree.
-  `Strategy_Tree_Relabel.thy` deleted whole; `DG_Constraint_Trees`'s import of it
+  `Strategy_Tree_Relabel.thy` deleted whole; `DG_Constraint_Programs`'s import of it
   dropped. Full batch build green (`Voblint_Codegen` finished, exit 0);
   committed as `4e9a30e5`. One process note: the first build attempt failed
-  with "Cannot load theory Strategy_Tree_Relabel" from `DG_Constraint_Trees` even
+  with "Cannot load theory Strategy_Tree_Relabel" from `DG_Constraint_Programs` even
   though I/Q diagnostics had shown 0 errors for the import removal -- the
   edit was verified in the I/Q buffer but never actually saved to disk
   before the file was deleted, so batch (which reads disk) built the
@@ -835,7 +835,7 @@ and mark it `superseded (see below)`.
 - **2026-09-01, later same day** -- a four-agent architecture audit (Solver
   boundary, `_at` cleanup, Goblint manager comparison, Phase 2.7 Exec
   classification) converged on three independent commits, all batch-green:
-  1. `dg_edge_tree`/`dg_combine_tree` (`DG_Constraint_Trees.thy`) redefined as
+  1. `dg_edge_tree`/`dg_combine_tree` (`DG_Constraint_Programs.thy`) redefined as
      literal specializations of `dg_edge_tree_at`/`dg_combine_tree_at`
      (`dg_edge_tree step u == dg_edge_tree_at step (Inl u) ()`), with the
      "Edge formers over a solution address"/"Combine formers over a

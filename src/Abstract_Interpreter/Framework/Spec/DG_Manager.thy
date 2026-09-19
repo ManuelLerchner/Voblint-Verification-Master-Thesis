@@ -140,6 +140,19 @@ lemma sides_dg_sideg [simp]:
   "sides_of_rhs (dg_sideg gk gd K) \<tau> = sides_of_rhs (K ()) \<tau> \<squnion> bot(Inr gk := DG bot gd)"
   by (simp add: dg_sideg_def sp_publish_def Let_def fun_eq_iff sup_fun_def)
 
+text \<open>Each primitive runs its continuation once, so a transfer assembled from
+  them does too and the fold's well-formedness side conditions discharge by
+  \<open>simp\<close> wherever a concrete transfer is in hand.\<close>
+
+lemma sp_wf_dg_read_at [intro, simp]: "sp_wf (dg_read_at src)"
+  unfolding dg_read_at_def by (intro sp_wf_bind) (simp_all add: comp_def)
+
+lemma sp_wf_dg_read_global [intro, simp]: "sp_wf (dg_read_global gk)"
+  unfolding dg_read_global_def by (intro sp_wf_bind) (simp_all add: comp_def)
+
+lemma sp_wf_dg_sideg [intro, simp]: "sp_wf (dg_sideg gk gd)"
+  by (simp add: dg_sideg_def)
+
 text \<open>Reading an unknown depends on it, whatever the program does next --- now
   an instance of the law above rather than its own case analysis.\<close>
 

@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context call-string --context-depth 5
+// Backs a row of the site's "The price of precision" fan-out chart
+// (call string 5): one call site short of the call depth, and that is still
+// enough for two arguments to meet in each copy of f0.
+
+
+fun f0(x) {
+  __voblint_check(x <= 22); // UNKNOWN
+}
+fun f1(x) { f0(x); f0(x + 1); }
+fun f2(x) { f1(x); f1(x + 2); }
+fun f3(x) { f2(x); f2(x + 3); }
+fun f4(x) { f3(x); f3(x + 4); }
+fun f5(x) { f4(x); f4(x + 5); }
+fun f6(x) { f5(x); f5(x + 6); }
+
+fun main() { f6(1); }

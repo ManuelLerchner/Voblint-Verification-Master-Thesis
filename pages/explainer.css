@@ -76,6 +76,11 @@
   margin-top: 52px;
 }
 
+.prose-block h4 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
 .prose-block h3,
 .setting-title {
   margin: 0 0 10px;
@@ -87,6 +92,354 @@
   max-width: var(--measure);
   margin: 0;
   color: var(--text-muted);
+}
+
+/* Most setting blurbs are one paragraph, so the base rule zeroes the margin.
+   Where a blurb runs to several, they still need to read as paragraphs. */
+.setting-copy + .setting-copy {
+  margin-top: 0.9em;
+}
+
+/* A declaration the reader needs before the figure, and therefore cannot live
+   inside it: every other code block on this page belongs to a figure panel. */
+.prose-code {
+  max-width: var(--prose);
+  margin: 14px 0 0;
+  padding: 14px 18px;
+  overflow-x: auto;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.prose-block p + .prose-code {
+  margin-top: 16px;
+}
+
+/* The names a following formula is written in. One column of terms, so their
+   definitions line up and the formula can then be read straight through. */
+.prose-terms {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  max-width: var(--measure);
+  margin: 14px 0 0;
+}
+
+.prose-terms dt {
+  color: var(--text);
+  font: 0.78rem var(--mono);
+}
+
+.prose-terms dd {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+@media (width <= 600px) {
+  .prose-terms {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .prose-terms dd {
+    margin-bottom: 8px;
+  }
+}
+
+/* Paragraphs carry no margin of their own, so two in a row would touch. */
+.prose-block p + p {
+  margin-top: 14px;
+}
+
+/* Two readings of one thing, side by side: the notation and what it denotes. */
+.side-by-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  max-width: var(--prose);
+  margin: 18px 0 0;
+}
+
+.side-by-side .prose-code {
+  height: 100%;
+  margin: 0;
+}
+
+/* One equation per card, as the equations figure sets them: the reader is meant
+   to recognize this as the same system, so it is not a second notation. */
+.eq-system {
+  height: 100%;
+  padding: 14px 18px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+.eq-system p {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 8px;
+  font: 0.82rem / 1.6 var(--mono);
+}
+
+.eq-system p:last-child {
+  margin-bottom: 0;
+}
+
+.eq-system b {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.eq-rel {
+  margin: 0 4px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 720px) {
+  .side-by-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Query-answer trees: one equation system, drawn                             */
+/* -------------------------------------------------------------------------- */
+
+.qat-frame {
+  position: relative;
+  height: 100%;
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+/* The band names the system once and each tree's unknown above its own box, so
+   a tree is read as the right-hand side of the equation for that name. */
+/* A fixed first track, not `auto`: the two grids size their tracks
+   independently, so an `auto` column set by the word "eqs" in one and by an
+   empty cell in the other would leave every name off-centre over its box. */
+.qat,
+.qat-row {
+  display: grid;
+  grid-template-columns: 52px repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* On a phone six trees in six columns leave about 50px each, which is narrower
+   than a single node label. Scroll the frame instead of shrinking the trees: both
+   grids sit inside it, so the band stays aligned over its own row. */
+@media (max-width: 720px) {
+  .qat-frame {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .qat-frame .qat,
+  .qat-frame .qat-row {
+    min-width: max-content;
+    grid-template-columns: 52px repeat(4, minmax(150px, 1fr));
+  }
+
+  .qat-frame .qat-2 {
+    grid-template-columns: 52px repeat(2, minmax(150px, 1fr));
+  }
+
+  .qat-frame .qat-5 {
+    grid-template-columns: 52px repeat(5, minmax(150px, 1fr));
+  }
+
+  .qat-frame .qat-6 {
+    grid-template-columns: 52px repeat(6, minmax(150px, 1fr));
+  }
+}
+
+/* A system with a different number of unknowns than the counting loop's four. */
+.qat-2 {
+  grid-template-columns: 52px repeat(2, minmax(0, 1fr));
+}
+
+.qat-5 {
+  grid-template-columns: 52px repeat(5, minmax(0, 1fr));
+}
+
+.qat-6 {
+  grid-template-columns: 52px repeat(6, minmax(0, 1fr));
+}
+
+/* A second procedure's row, under the first. */
+.qat-frame .qat + .qat-row + .qat {
+  margin-top: 16px;
+}
+
+.qat {
+  align-items: center;
+  padding-block: 5px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
+
+.qat-system,
+.qat-name {
+  text-align: center;
+  font: 700 0.78rem var(--mono);
+}
+
+.qat-system {
+  padding-left: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: left;
+}
+
+.qat-row {
+  margin-top: 8px;
+}
+
+/* Keeps the trees' columns under the band's: the band's first cell is the
+   system's name, which no tree sits under. */
+.qat-row::before {
+  content: "";
+}
+
+.qat-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.qat-svg {
+  width: 100%;
+  height: auto;
+}
+
+.qat-node rect {
+  fill: var(--surface-muted);
+  stroke: var(--border-strong);
+}
+
+.qat-answer rect {
+  stroke: var(--accent);
+}
+
+.qat-label {
+  fill: var(--text);
+  font: 0.5rem var(--mono);
+}
+
+.qat-kind {
+  fill: var(--accent);
+  font-weight: 700;
+}
+
+.qat-edge {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.qat-note {
+  max-width: var(--measure);
+  margin: 14px 0 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.qat-edge-label {
+  fill: var(--text-muted);
+  font: italic 0.5rem var(--mono);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Pipeline: what goes into a stage and what comes out                        */
+/* -------------------------------------------------------------------------- */
+
+.pipe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  max-width: var(--prose);
+  margin: 18px 0 0;
+}
+
+/* Content-sized, not stretched: the second pipeline is the first with a stage
+   in front, and that only reads if the shared stages keep the same size. */
+.pipe-stage {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: 4px;
+  justify-content: center;
+  min-width: 128px;
+  padding: 12px 14px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.pipe-stage code,
+.pipe-stage strong {
+  font-size: 0.86rem;
+}
+
+.pipe-stage small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+/* The solver is the one stage that is not a value being carried along. */
+.pipe-engine {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* The stage the second pipeline adds in front of the first. */
+.pipe-added {
+  border-style: dashed;
+  border-color: var(--accent);
+}
+
+.pipe-arrow {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--text-muted);
+}
+
+.pipe-arrow i {
+  font-size: 0.9rem;
+}
+
+.pipe-arrow small {
+  font: 600 0.66rem / 1 var(--mono);
+}
+
+@media (max-width: 720px) {
+  .pipe {
+    flex-direction: column;
+  }
+
+  .pipe-arrow {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .pipe-arrow i {
+    rotate: 90deg;
+  }
 }
 
 .setting-title {
@@ -114,6 +467,19 @@
   height: auto;
   margin-inline: auto;
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Below the prose column the labels would shrink past reading size, so the figure
+   keeps a floor and the frame scrolls, as the timeline axis already does. */
+@media (max-width: 720px) {
+  .scene {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .scene > svg {
+    min-width: 640px;
+  }
 }
 
 .scene figcaption {
@@ -949,11 +1315,6 @@
   background: var(--primary);
 }
 
-.swatch.extra {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 2.5px var(--accent);
-}
-
 /* -------------------------------------------------------------------------- */
 /* Inside the top-down solver                                                 */
 /* -------------------------------------------------------------------------- */
@@ -1022,22 +1383,6 @@
   margin-top: 20px;
 }
 
-.cost-data {
-  margin-top: 14px;
-}
-
-.cost-data summary {
-  color: var(--primary);
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.cost-data table {
-  margin-top: 10px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
 /* -------------------------------------------------------------------------- */
 /* Limits                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -1070,8 +1415,8 @@
 @media (min-width: 1200px) {
   .doc-layout {
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    column-gap: 44px;
+    grid-template-columns: 145px minmax(0, 1fr);
+    column-gap: 32px;
     align-items: start;
   }
 
@@ -1096,11 +1441,28 @@
   }
 }
 
+/* A little more room once the prose does not have to give any up for it. */
+@media (min-width: 1400px) {
+  .doc-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    column-gap: 20px;
+  }
+}
+
+/* Wide enough for the longest entry to sit on one line: 268px of text plus the
+   timeline's inset. Only where the prose gives up nothing for it. */
+@media (min-width: 1750px) {
+  .doc-layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+    column-gap: 40px;
+  }
+}
+
 .doc-toc-title {
   margin: 0 0 10px;
   color: var(--text-muted);
-  font: 700 0.66rem var(--mono);
-  letter-spacing: 0.14em;
+  font: 700 0.62rem var(--mono);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -1155,9 +1517,10 @@
   display: block;
   padding: 3px 0;
   color: var(--text-faint);
-  font-size: 0.78rem;
-  line-height: 1.35;
+  font-size: 0.73rem;
+  line-height: 1.32;
   text-decoration: none;
+  overflow-wrap: break-word;
   transition: color 150ms ease;
 }
 
@@ -1208,34 +1571,17 @@
   font: 600 0.7rem var(--mono);
 }
 
-.doc-toc-build {
-  flex-shrink: 0;
-  margin: auto 0 4px 18px;
-  padding-top: 24px;
-}
-
-/* Not a timeline entry: no marker, and none of the entries' spacing. */
-.doc-toc .doc-toc-build a::before {
-  content: none;
-}
-
-.doc-toc .doc-toc-build a {
+/* Which commit the site was built from: a footnote in the footer, not a nav entry. */
+.doc-toc-build a {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 9px;
+  gap: 5px;
   color: var(--text-muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 650;
   text-decoration: none;
 }
 
-.doc-toc .doc-toc-build a:hover {
+.doc-toc-build a:hover {
   color: var(--primary);
-  border-color: var(--border-strong);
 }
 
 .doc-toc-build code {
@@ -1243,6 +1589,7 @@
   color: inherit;
   background: none;
   border: 0;
+  font-size: 0.92em;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1262,13 +1609,49 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
+  box-shadow: var(--shadow);
   font-weight: 700;
   cursor: pointer;
   list-style: none;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.blackbox > summary:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-hover);
+}
+
+.blackbox > summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
 }
 
 .blackbox > summary::-webkit-details-marker {
   display: none;
+}
+
+/* The pill alone reads as a link to somewhere else. The chevron, and the word
+   that flips with it, are what say the panel opens in place. */
+.blackbox-chevron {
+  margin-left: 2px;
+  font-size: 0.78em;
+  transition: transform 150ms ease;
+}
+
+.blackbox[open] > summary .blackbox-chevron {
+  transform: rotate(180deg);
+}
+
+.blackbox > summary .blackbox-label::before {
+  content: "Open ";
+}
+
+.blackbox[open] > summary .blackbox-label::before {
+  content: "Close ";
 }
 
 .blackbox[open] > summary {
@@ -1379,14 +1762,6 @@
 }
 
 /* -------------------------------------------------------------------------- */
-/* What a run is: source, graph, trace                                        */
-/* -------------------------------------------------------------------------- */
-
-.run-facts {
-  margin-top: 20px;
-}
-
-/* -------------------------------------------------------------------------- */
 /* The proof chain                                                            */
 /* -------------------------------------------------------------------------- */
 
@@ -1395,4 +1770,20 @@
   border-radius: 7px;
   background: var(--primary-soft);
   box-shadow: inset 0 0 0 1.2px var(--primary);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Comparison tables                                                          */
+/* -------------------------------------------------------------------------- */
+
+/* Every table that puts settings against outcomes reads as a grid, so the cells
+   being compared sit centred under their heading and only the label column,
+   which the eye runs down, stays left. */
+:is(.guide-table, .solver-table, .spiral-table, .obs-table) :is(th, td) {
+  text-align: center;
+  vertical-align: middle;
+}
+
+:is(.guide-table, .solver-table, .spiral-table, .obs-table) :is(tbody th, thead th:first-child) {
+  text-align: left;
 }

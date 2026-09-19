@@ -66,8 +66,9 @@
   overflow-x: auto;
 }
 
+/* Drawn tall and narrow; capped well below its 380 so the figure is not mostly graph. */
 .scene-source-morph .sm-svg {
-  max-width: 380px;
+  max-width: 296px;
 }
 
 .scene-source-morph .sm-arrow-head {

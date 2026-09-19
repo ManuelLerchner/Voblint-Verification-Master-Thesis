@@ -46,9 +46,10 @@ text \<open>
   routing hooks resolve to the identical closed term regardless of which call edge or
   caller state produced them (so \<open>route_unit\<close>/\<open>enterc_unit\<close> are interchangeable in any
   proof obligation, not merely equal pointwise). Deeper equivalence --- that
-  \<open>routed_call_tree\<close>/\<open>routed_entry_seed_tree\<close> instantiated here compute the same solved local/global
-  contributions as the Base route's own call and seed hooks --- is not
-  attempted: the two trees have different shapes (Base reads the callee entry directly;
+  \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close> instantiated here compute
+  the same solved local/global contributions as the Base route's own call and seed
+  hooks --- is not attempted: the two programs have different shapes (Base reads the
+  callee entry directly;
   here the entry is published through \<open>seed_key\<close> and read back), so any such equivalence
   is a solved-system/solver argument, not a local rewrite.
 \<close>

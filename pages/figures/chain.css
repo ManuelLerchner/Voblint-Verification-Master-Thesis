@@ -154,3 +154,10 @@
     grid-row: auto;
   }
 }
+
+/* The step that spends the chain: from the last set to the verdict on screen. */
+:where(.scene-chain) .chain-close {
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}

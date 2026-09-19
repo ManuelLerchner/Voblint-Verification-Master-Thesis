@@ -17,10 +17,12 @@
   cursor: pointer;
 }
 
+/* The graph is twice the program's height, so the program sits against its middle
+   rather than floating at the top of a tall row. */
 .scene-particles .pt-layout {
   display: grid;
   grid-template-columns: minmax(0, 18rem) minmax(0, 1fr);
-  align-items: start;
+  align-items: center;
   gap: 16px;
 }
 
@@ -34,8 +36,9 @@
   overflow-x: auto;
 }
 
+/* Drawn at 760; capped below that so the graph does not tower over the program beside it. */
 .scene-particles .pt-svg {
-  max-width: 760px;
+  max-width: 620px;
 }
 
 .scene-particles .pt-arrow-head {
@@ -190,5 +193,12 @@
 @media (max-width: 900px) {
   .scene-particles .pt-layout {
     grid-template-columns: minmax(0, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  /* A floor under the label size; the row scrolls rather than shrinking further. */
+  .scene-particles .pt-svg {
+    min-width: 560px;
   }
 }

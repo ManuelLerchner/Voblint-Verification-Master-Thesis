@@ -1,0 +1,15 @@
+// PARAM: --analysis interval --context call-string --context-depth 100
+// Backs a row of the site's "The price of precision" recursion chart
+// (call string 100): the string is as long as the recursion, so every context
+// holds one call. 102 contexts.
+
+fun down(n) {
+  __voblint_check(n >= 0); // PROVED
+  if (n > 0) {
+    down(n - 1);
+  }
+}
+
+fun main() {
+  down(100);
+}

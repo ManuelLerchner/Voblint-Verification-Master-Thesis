@@ -14,6 +14,7 @@ The OCaml counts are plain line counts.
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import date
@@ -32,11 +33,46 @@ EXAMPLES_DIR = REPO_ROOT / "src" / "Examples"
 CORPUS_KINDS = ("precision", "soundness", "known-imprecision")
 # Emitted from manifests/vimp-grammar.yaml, so not handwritten.
 GENERATED_CLI = {"vimp_printer.ml", "vimp_parser.mly", "vimp_lexer.mll"}
+# The theories a reader has to audit to believe the source semantics: everything
+# else in the development is checked against them. The explainer cites their size
+# and pstep's rule count, so both are derived rather than written down twice.
+VIMP_DIR = REPO_ROOT / "src" / "Program_Model" / "VIMP"
+SEMANTICS_THEORIES = (
+    "VIMP_Syntax",
+    "VIMP_Expr",
+    "VIMP_Special",
+    "VIMP_Globals",
+    "VIMP_Program",
+    "VIMP_Proc",
+)
 
 
 def count_lines(path: Path) -> int:
     with path.open(encoding="utf-8", errors="replace") as f:
         return sum(1 for _ in f)
+
+
+def pstep_rules() -> int:
+    """Introduction rules of the `pstep` inductive, counted from its source.
+
+    The block runs from `inductive` to the first blank line after the last rule;
+    each rule is a named clause at the start of a line (`Assign:` or `| Call:`).
+    """
+    text = (VIMP_DIR / "VIMP_Proc.thy").read_text(encoding="utf-8")
+    lines = text.split("\n")
+    start = next(
+        i
+        for i, line in enumerate(lines)
+        if line.startswith("inductive") and "cases" not in line
+    )
+    where = next(i for i in range(start, len(lines)) if lines[i].strip() == "where")
+    rules = 0
+    for line in lines[where + 1 :]:
+        if not line.strip():
+            break
+        if re.match(r"(\| )?[A-Z][A-Za-z0-9_]*:", line.strip()):
+            rules += 1
+    return rules
 
 
 def git(*args: str) -> str | None:
@@ -153,6 +189,13 @@ def collect() -> dict:
             },
         },
         "sessions": session_graph.collect(),
+        "semantics": {
+            "theories": len(SEMANTICS_THEORIES),
+            "lines": sum(
+                count_lines(VIMP_DIR / f"{t}.thy") for t in SEMANTICS_THEORIES
+            ),
+            "pstep_rules": pstep_rules(),
+        },
         "generated_ocaml": count_lines(GENERATED_ML),
         "handwritten_ocaml": sum(count_lines(p) for p in handwritten),
         "corpus": {

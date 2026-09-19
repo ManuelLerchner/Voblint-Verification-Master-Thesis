@@ -1,26 +1,27 @@
-/* What a run is: source, graph, trace */
+/* What a run is: source, graph, trace. `.scene-cfgmap` is the same code-and-graph pair
+   without the stepper, and shares every rule here that draws one of them. */
 
-:where(.scene-run) .run-layout {
+:where(.scene-run, .scene-cfgmap) .run-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 14px;
 }
 
-:where(.scene-run) .run-panel {
+:where(.scene-run, .scene-cfgmap) .run-panel {
   min-width: 0;
   padding: 14px 14px 12px;
   background: var(--surface-muted);
   border-radius: var(--radius);
 }
 
-:where(.scene-run) .run-code {
+:where(.scene-run, .scene-cfgmap) .run-code {
   margin: 0;
   font-size: 0.78rem;
   line-height: 1.5;
   overflow-x: auto;
 }
 
-:where(.scene-run) .run-code [data-nodes] {
+:where(.scene-run, .scene-cfgmap) .run-code [data-nodes] {
   display: inline-block;
   min-width: 100%;
   padding-inline: 4px;
@@ -29,82 +30,122 @@
   cursor: default;
 }
 
-:where(.scene-run) .run-code [data-nodes].is-current {
+:where(.scene-run, .scene-cfgmap) .run-code [data-nodes].is-current {
   background: var(--accent-soft);
   border-left-color: var(--accent);
 }
 
-:where(.scene-run) .run-label {
+:where(.scene-run, .scene-cfgmap) .run-label {
   margin: 12px 0 4px;
   color: var(--text-muted);
   font-size: 0.74rem;
   font-weight: 650;
 }
 
-:where(.scene-run) .run-label code {
+:where(.scene-run, .scene-cfgmap) .run-label code {
   padding: 0;
   background: none;
   border: 0;
   font-weight: 400;
 }
 
-:where(.scene-run) .run-residual {
+:where(.scene-run, .scene-cfgmap) .run-residual {
   display: flex;
   flex-wrap: wrap;
+  align-content: start;
+  align-items: start;
   gap: 4px;
 }
 
-:where(.scene-run) .run-residual code {
-  padding: 2px 6px;
-  font-size: 0.74rem;
+:where(.scene-run, .scene-cfgmap) .run-residual code {
+  padding: 1px 8px;
   background: var(--surface);
+  border-radius: 999px;
+  font-size: 0.7rem;
 }
 
-:where(.scene-run) .run-residual code.runtime {
+:where(.scene-run, .scene-cfgmap) .run-residual code.runtime {
   color: #6b5ca5;
   border-style: dashed;
 }
 
-:where(.scene-run) .run-residual code.is-next {
+:where(.scene-run, .scene-cfgmap) .run-residual code.is-next {
   color: var(--text);
   background: var(--accent-soft);
   border-color: var(--accent);
 }
 
-:where(.scene-run) .run-stack {
+/* A stack drawn as a stack: blocks piled newest-first on a floor, so pushing and
+   popping is a shape rather than a list that got longer. */
+:where(.scene-run, .scene-cfgmap) .run-stack {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   margin: 0;
-  padding: 0;
+  padding: 0 0 4px;
+  border-bottom: 2px solid var(--border-strong);
   list-style: none;
 }
 
-:where(.scene-run) .run-stack li code {
+:where(.scene-run, .scene-cfgmap) .run-stack li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-depth {
+  color: var(--text-faint);
+  font: 0.66rem var(--mono);
+  text-align: right;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-slab {
+  padding: 3px 7px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+}
+
+:where(.scene-run, .scene-cfgmap) .run-stack li.top .run-slab {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+:where(.scene-run, .scene-cfgmap) .run-stack li code {
+  background: none;
   font-size: 0.74rem;
 }
 
-:where(.scene-run) .run-stack li.empty code {
-  color: var(--text-faint);
+:where(.scene-run, .scene-cfgmap) .run-stack li.empty {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:where(.scene-run, .scene-cfgmap) .run-stack li.empty .run-slab {
   background: none;
   border-style: dashed;
+  border-color: var(--border);
 }
 
-.scene-run .run-cfg {
-  max-width: 380px;
+:where(.scene-run, .scene-cfgmap) .run-stack li.empty code {
+  color: var(--text-faint);
 }
 
-:where(.scene-run) .run-cluster {
+:is(.scene-run, .scene-cfgmap) .run-cfg {
+  max-width: 470px;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-cluster {
   fill: rgb(255 255 255 / 0.6);
   stroke: var(--border-strong);
   stroke-dasharray: 4 4;
 }
 
-.scene-run .run-cluster-label {
+:is(.scene-run, .scene-cfgmap) .run-cluster-label {
   fill: var(--text-muted);
   font: 700 11px var(--mono);
 }
 
-:where(.scene-run) .run-nodes rect {
+:where(.scene-run, .scene-cfgmap) .run-nodes rect {
   fill: var(--surface);
   stroke: var(--primary);
   stroke-width: 1.5;
@@ -113,30 +154,30 @@
     stroke 250ms ease;
 }
 
-:where(.scene-run) .run-nodes .special rect {
+:where(.scene-run, .scene-cfgmap) .run-nodes .special rect {
   fill: #fffbea;
   stroke: #d99a2b;
 }
 
-:where(.scene-run) .run-nodes .is-hover rect {
+:where(.scene-run, .scene-cfgmap) .run-nodes .is-hover rect {
   fill: var(--primary-soft);
   stroke-width: 2.5;
 }
 
-:where(.scene-run) .run-nodes .is-current rect {
+:where(.scene-run, .scene-cfgmap) .run-nodes .is-current rect {
   fill: var(--accent-soft);
   stroke: var(--accent);
   stroke-width: 3;
 }
 
-.scene-run .run-nodes text {
+:is(.scene-run, .scene-cfgmap) .run-nodes text {
   fill: var(--text);
   font: 700 11px var(--mono);
   text-anchor: middle;
 }
 
-:where(.scene-run) .run-edges line,
-:where(.scene-run) .run-edges path {
+:where(.scene-run, .scene-cfgmap) .run-edges line,
+:where(.scene-run, .scene-cfgmap) .run-edges path {
   fill: none;
   stroke: var(--border-strong);
   stroke-width: 1.5;
@@ -145,44 +186,44 @@
     stroke-width 250ms ease;
 }
 
-:where(.scene-run) .run-edges .call path {
+:where(.scene-run, .scene-cfgmap) .run-edges .call path {
   stroke: #9b87d6;
 }
 
-:where(.scene-run) .run-edges .resume path {
+:where(.scene-run, .scene-cfgmap) .run-edges .resume path {
   stroke: #8fb3d9;
   stroke-dasharray: 5 4;
 }
 
-:where(.scene-run) .run-edges .cont line {
+:where(.scene-run, .scene-cfgmap) .run-edges .cont line {
   stroke-dasharray: 2 4;
 }
 
-:where(.scene-run) .arrow-call {
+:where(.scene-run, .scene-cfgmap) .arrow-call {
   fill: #9b87d6;
 }
 
-.scene-run .run-edges text {
+:is(.scene-run, .scene-cfgmap) .run-edges text {
   fill: var(--text-faint);
   font: 10px var(--mono);
 }
 
-:where(.scene-run) .run-edges .is-taken line,
-:where(.scene-run) .run-edges .is-taken path {
+:where(.scene-run, .scene-cfgmap) .run-edges .is-taken line,
+:where(.scene-run, .scene-cfgmap) .run-edges .is-taken path {
   stroke: var(--accent);
   stroke-width: 3;
 }
 
-.scene-run .run-edges .is-taken text {
+:is(.scene-run, .scene-cfgmap) .run-edges .is-taken text {
   fill: var(--accent);
   font-weight: 700;
 }
 
-:where(.scene-run) .run-tree {
+:where(.scene-run, .scene-cfgmap) .run-tree {
   font-size: 0.8rem;
 }
 
-:where(.scene-run) .run-act {
+:where(.scene-run, .scene-cfgmap) .run-act {
   margin-top: 6px;
   padding: 6px 8px;
   background: var(--surface);
@@ -190,108 +231,250 @@
   border-radius: 10px;
 }
 
-:where(.scene-run) .run-tree > .run-act {
+:where(.scene-run, .scene-cfgmap) .run-tree > .run-act {
   margin-top: 0;
 }
 
-:where(.scene-run) .run-act.is-sink {
+:where(.scene-run, .scene-cfgmap) .run-act.is-sink {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
-:where(.scene-run) .run-act.is-done {
+:where(.scene-run, .scene-cfgmap) .run-act.is-done {
   background: var(--surface-muted);
   border-style: dashed;
   opacity: 0.75;
 }
 
-:where(.scene-run) .run-act-head {
+:where(.scene-run, .scene-cfgmap) .run-act-head {
   margin: 0 0 4px;
   line-height: 1.3;
 }
 
-:where(.scene-run) .run-act-head code {
+:where(.scene-run, .scene-cfgmap) .run-act-head code {
   padding: 0 5px;
   color: #6b5ca5;
   font-size: 0.72rem;
   font-weight: 700;
 }
 
-:where(.scene-run) .run-act-head span {
+:where(.scene-run, .scene-cfgmap) .run-act-head span {
   font-weight: 650;
 }
 
-:where(.scene-run) .run-act-head small {
+:where(.scene-run, .scene-cfgmap) .run-act-head small {
   color: var(--text-faint);
 }
 
-:where(.scene-run) .run-path {
+:where(.scene-run, .scene-cfgmap) .run-path {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
 }
 
-:where(.scene-run) .run-path span {
+:where(.scene-run, .scene-cfgmap) .run-path span {
   padding: 0 5px;
   background: var(--surface-muted);
   border-radius: 4px;
   font: 0.7rem / 1.6 var(--mono);
 }
 
-:where(.scene-run) .run-path span.is-last {
+:where(.scene-run, .scene-cfgmap) .run-path span.is-last {
   color: #ffffff;
   background: var(--accent);
 }
 
-:where(.scene-run) .run-rules {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.2fr);
-  gap: 10px;
-  margin-top: 14px;
-}
-
-:where(.scene-run) .run-rules > div {
-  display: grid;
-  gap: 2px;
-  padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-}
-
-:where(.scene-run) .run-rule-kind {
+:where(.scene-run, .scene-cfgmap) .run-rule-kind {
   color: var(--text-muted);
   font: 700 0.66rem var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-:where(.scene-run) .run-rules code {
-  padding: 0;
-  background: none;
-  border: 0;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-:where(.scene-run) .run-rules code.none {
-  color: var(--text-faint);
-  font-weight: 400;
-}
-
-:where(.scene-run) .run-caption {
+:where(.scene-run, .scene-cfgmap) .run-caption {
   min-height: 4.8em;
 }
 
-:where(.scene-run) .run-steps button {
+:where(.scene-run, .scene-cfgmap) .run-steps button {
   min-width: 34px;
 }
 
 @media (max-width: 1100px) {
-  :where(.scene-run) .run-layout {
+  :where(.scene-run, .scene-cfgmap) .run-layout {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
-  :where(.scene-run) .run-rules {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+/* The three stacks side by side and aligned, because their whole point is that they
+   line up entry for entry. */
+:where(.scene-run, .scene-cfgmap) .run-stacks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-run, .scene-cfgmap) .run-stacks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Room for the deepest stack and the tallest tree, so stepping never moves the page.
+   The stack sits on its floor and grows up into that room. */
+:where(.scene-run, .scene-cfgmap) .run-stack {
+  min-height: 116px;
+  align-content: end;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-tree {
+  min-height: 440px;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-residual {
+  min-height: 92px;
+}
+
+/* One store, shared by all three semantics, so it sits under all three rather than
+   beside them as a fourth column. */
+:where(.scene-run, .scene-cfgmap) .run-store-box {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-store {
+  background: none;
+  color: var(--text);
+  font: 700 0.92rem var(--mono);
+}
+
+/* Which rule of the inductive definition fired, at the head of the column it belongs to. */
+:where(.scene-run, .scene-cfgmap) .run-rulebox {
+  display: grid;
+  gap: 2px;
+  min-height: 52px;
+  align-content: start;
+  padding: 7px 10px;
+  background: var(--surface);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* The rule that fired is not part of the state below it, so it is tinted and ruled off. */
+:where(.scene-run, .scene-cfgmap) .run-rulebox .run-rule-kind {
+  color: var(--primary);
+  opacity: 0.75;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-sep {
+  margin: 12px -14px 12px;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+:where(.scene-run, .scene-cfgmap) .run-rule {
+  background: none;
+  color: var(--primary);
+  font: 700 0.8rem var(--mono);
+  overflow-wrap: anywhere;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-rule.none {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+/* Commentary under the pillar it describes. */
+:where(.scene-run, .scene-cfgmap) .run-caption.is-split {
+  display: grid;
+  min-height: 122px;
+  align-content: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-say {
+  margin: 0;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-say b {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--primary);
+  font: 700 0.68rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-run, .scene-cfgmap) .run-caption.is-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+:where(.scene-run, .scene-cfgmap) .run-label.is-under {
+  margin: 6px 0 0;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-act {
+  cursor: help;
+}
+
+:where(.scene-run, .scene-cfgmap) .run-hint {
+  margin: 10px 0 0;
+  color: var(--text-faint);
+  font-size: 0.74rem;
+  font-style: italic;
+}
+
+/* The map alone: code beside the graph it compiles to. */
+:where(.scene-cfgmap) .cfgmap-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* The graph is the point of this figure, so it gets the room the code does not need.
+   It is taken out of flow inside its panel, which leaves the row height to the code
+   beside it and scales the drawing down to whatever that leaves. `.scene svg` is
+   (0,1,1), hence the doubled class here. */
+:where(.scene-cfgmap) .cfgmap-layout {
+  align-items: stretch;
+}
+
+:where(.scene-cfgmap) .cfgmap-graph {
+  display: flex;
+  flex-direction: column;
+}
+
+:where(.scene-cfgmap) .cfgmap-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 220px;
+  margin-top: 6px;
+}
+
+.scene.scene-cfgmap .run-cfg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+:where(.scene-cfgmap) .run-panel {
+  padding: 14px;
+}
+
+@media (width <= 760px) {
+  :where(.scene-cfgmap) .cfgmap-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

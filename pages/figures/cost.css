@@ -1,3 +1,75 @@
+/* Wall clock as a second series against its own axis on the right. Accent is
+   free here: the bars are primary, and the verdict marks success and warning. */
+:where(.scene-cost) .cost-time path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+:where(.scene-cost) .cost-time circle {
+  fill: var(--accent);
+}
+
+/* The count sits under its label, not over the bar: the time series runs through
+   the plot area and used to cross the taller bars' numbers. */
+:where(.scene-cost) .bar-value {
+  font-size: 11px;
+}
+
+/* Entry state is a different strategy, not a longer call string, so the time
+   series stops before it. The rule says the break is meant. */
+:where(.scene-cost) .cost-divider {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+:where(.scene-cost) .cost-divider-note {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 8.5px;
+}
+
+:where(.scene-cost) .axis-unit {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+:where(.scene-cost) .axis-unit.nodes {
+  fill: var(--primary);
+}
+
+:where(.scene-cost) .axis-unit.ms,
+:where(.scene-cost) .axis-label.ms {
+  fill: var(--accent) !important;
+}
+
+/* The recursion card has room the fan-out card does not, so it spends it on
+   why every depth but one proves the check. */
+:where(.scene-cost) .cost-explain {
+  max-width: none;
+  margin: 12px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+/* The program each chart was measured on, so the counts can be read against
+   the calls that produce them. Both are pinned by fixtures under
+   tests/regression/24-site-figures. */
+:where(.scene-cost) .cost-code {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
 /* The price of precision */
 
 :where(.scene-cost) .cost-title {

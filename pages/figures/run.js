@@ -4,21 +4,35 @@
    * it to and the trace constructors valid_ltr applies. Residuals flatten the nested Seq;
    * trees list each activation's path, its live callee and whether it has returned.
    */
-  const FRAME_MAIN = "Frame {a = ?} a";
-  const FRAME_F2 = "Frame {n = 2, r = 0} r";
-  const RET_MAIN = "(pp6, a, {a = ?})";
-  const RET_F2 = "(pp3, r, {n = 2, r = 0})";
-  const CHECK = "check(a == 2)";
+  const FRAME_MAIN = "Frame {x = ?} x";
+  const FRAME_S2 = "Frame {n = 2, m = 0, r = 0} m";
+  const FRAME_S1 = "Frame {n = 1, m = 0, r = 0} m";
+  const RET_MAIN = "(pp10, x, {x = ?})";
+  const RET_S2 = "(pp6, m, {n = 2, m = 0, r = 0})";
+  const RET_S2b = "(pp7, r, {n = 2, m = 1, r = 0})";
+  const RET_S1 = "(pp6, m, {n = 1, m = 0, r = 0})";
+  const RET_S1b = "(pp7, r, {n = 1, m = 0, r = 0})";
+  const CHECK = "check(x == 3)";
 
-  const act = (name, ctor, path, child = null, done = false) => ({ name, ctor, path, child, done });
+  /* `kept` are the callees that have returned; a `Resume` holds on to them, so they stay
+     drawn inside the activation that made the call. */
+  const act = (name, ctor, path, child = null, done = false, kept = []) => ({
+    name,
+    ctor,
+    path,
+    child,
+    done,
+    kept,
+  });
 
   const RUN_STEPS = [
     {
-      line: "calla",
+      entry: "x = ?",
+      line: "callsum",
       edges: ["body_main"],
-      node: "pp5",
-      store: "a = ?",
-      residual: ["a = f(2)", CHECK],
+      node: "pp9",
+      store: "x = ?",
+      residual: ["x = sum(2)", CHECK],
       frames: [],
       rets: [],
       callers: [],
@@ -27,276 +41,610 @@
         graph: "Intra body(main)",
         trace: "Root, intra",
       },
-      tree: act("main", "Root", ["entry_main", "pp5"]),
-      text: "The run starts in `main` with no frames. The source is about to run `a = f(2)`. The matching graph configuration already sits at `pp5`: its trace starts with `Root` at `entry_main` and has taken `main`'s body edge.",
+      tree: act("main", "Root", ["entry_main", "pp9"], null, false, []),
+      text: "**Source**: the rest of the program is `x = sum(2)` then the check, with no frames yet. **CFG**: `main`'s body edge has been taken, so the run sits at `pp9`. **Trace**: a single `Root` activation whose path is `entry_main`, `pp9`.",
     },
     {
+      entry: "n = 2, m = 0, r = 0",
       line: "if",
-      edges: ["call_main", "body_f"],
-      node: "pp0",
-      store: "n = 2, r = 0",
-      residual: ["if (n < 2) …", "Restore", CHECK],
-      frames: [FRAME_MAIN],
-      rets: [RET_MAIN],
-      callers: ["main"],
-      rules: { source: "Call", graph: "Call, Intra body(f)", trace: "call, intra" },
-      tree: act("main", "Root", ["entry_main", "pp5"], act("f(2)", "Call", ["entry_f", "pp0"])),
-      text: "The source `Call` evaluates `2`, binds it to `n` in a fresh store, pushes a frame that remembers the caller's store and the destination `a`, and runs `f`'s body followed by `Restore`. The graph takes the call edge, pushes the return point `pp6` and follows `f`'s body edge. The trace opens a new activation, `Call main …`.",
-    },
-    {
-      line: "call",
-      edges: ["ge"],
+      edges: ["call_main", "body_sum"],
       node: "pp2",
-      store: "n = 2, r = 0",
-      residual: ["r = f(n - 1)", "return n * r", "Restore", CHECK],
+      store: "n = 2, m = 0, r = 0",
+      residual: ["if (n < 1) …", "m = dec(n)", "r = sum(m)", "return r + n", "Restore", CHECK],
       frames: [FRAME_MAIN],
       rets: [RET_MAIN],
       callers: ["main"],
-      rules: { source: "IfFalse", graph: "Intra ¬ n < 2", trace: "intra" },
+      rules: { source: "Call", graph: "Call, Intra body(sum)", trace: "call, intra" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
-        act("f(2)", "Call", ["entry_f", "pp0", "pp2"]),
+        ["entry_main", "pp9"],
+        act("sum(2)", "Call", ["entry_sum", "pp2"], null, false, []),
+        false,
+        [],
       ),
-      text: "`n < 2` is false. Both sides take the else branch, and the trace extends its path.",
+      text: "**Source**: `Call` evaluates `2`, binds it to `n` in a fresh store and pushes a frame that remembers `main`'s store and the destination `x`. **CFG**: the call edge into `entry_sum`, then `sum`'s body edge, with `pp10` pushed as the return point. **Trace**: a `Call` activation opens under the root. All three stacks grew by exactly one.",
     },
     {
-      line: "if",
-      edges: ["call_f", "body_f"],
+      entry: "n = 2, m = 0, r = 0",
+      line: "mdec",
+      edges: ["ge"],
+      node: "pp5",
+      store: "n = 2, m = 0, r = 0",
+      residual: ["m = dec(n)", "r = sum(m)", "return r + n", "Restore", CHECK],
+      frames: [FRAME_MAIN],
+      rets: [RET_MAIN],
+      callers: ["main"],
+      rules: { source: "IfFalse", graph: "Intra ¬ n < 1", trace: "intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act("sum(2)", "Call", ["entry_sum", "pp2", "pp5"], null, false, []),
+        false,
+        [],
+      ),
+      text: "**Source**: `IfFalse` drops the then-branch, leaving `m = dec(n)` next. **CFG**: the `¬ n < 1` edge to `pp5`. **Trace**: the same activation extends its path. Nothing pushed anywhere: a branch happens inside one activation.",
+    },
+    {
+      entry: "x = 2",
+      line: "retdec",
+      edges: ["call_dec", "body_dec"],
       node: "pp0",
-      store: "n = 1, r = 0",
-      residual: ["if (n < 2) …", "Restore", "return n * r", "Restore", CHECK],
-      frames: [FRAME_F2, FRAME_MAIN],
-      rets: [RET_F2, RET_MAIN],
-      callers: ["f(2)", "main"],
-      rules: { source: "Call", graph: "Call, Intra body(f)", trace: "call, intra" },
+      store: "x = 2",
+      residual: ["return x - 1", "Restore", "r = sum(m)", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Call", graph: "Call, Intra body(dec)", trace: "call, intra" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
-        act("f(2)", "Call", ["entry_f", "pp0", "pp2"], act("f(1)", "Call", ["entry_f", "pp0"])),
-      ),
-      text: "The recursive call. Each side grows its stack by one entry, a frame, a return point `pp3`, a trace nested one level deeper: `Call (Call (Root …) …) …`. The graph reuses the same node `entry_f`.",
-    },
-    {
-      line: "ret1",
-      edges: ["lt"],
-      node: "pp1",
-      store: "n = 1, r = 0",
-      residual: ["return 1", "Restore", "return n * r", "Restore", CHECK],
-      frames: [FRAME_F2, FRAME_MAIN],
-      rets: [RET_F2, RET_MAIN],
-      callers: ["f(2)", "main"],
-      rules: { source: "IfTrue", graph: "Intra n < 2", trace: "intra" },
-      tree: act(
-        "main",
-        "Root",
-        ["entry_main", "pp5"],
+        ["entry_main", "pp9"],
         act(
-          "f(2)",
+          "sum(2)",
           "Call",
-          ["entry_f", "pp0", "pp2"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1"]),
+          ["entry_sum", "pp2", "pp5"],
+          act("dec(2)", "Call", ["entry_dec", "pp0"], null, false, []),
+          false,
+          [],
         ),
+        false,
+        [],
       ),
-      text: "Now `n = 1`, so `n < 2` holds.",
+      text: "**Source**: a second `Call`, this time binding `2` to `dec`'s `x`, so the frame stack is three deep. **CFG**: the call edge to `entry_dec` and `dec`'s body edge, with `pp6` pushed. **Trace**: a `Call` nested inside the one for `sum(2)`.",
     },
     {
-      line: "ret1",
-      edges: ["ret1"],
-      node: "exit_f",
-      store: "n = 1, r = 0, #ret = 1",
-      residual: ["Unwind", "Restore", "return n * r", "Restore", CHECK],
-      frames: [FRAME_F2, FRAME_MAIN],
-      rets: [RET_F2, RET_MAIN],
-      callers: ["f(2)", "main"],
-      rules: { source: "ReturnSome", graph: "Intra return 1", trace: "intra" },
+      entry: "x = 2",
+      line: "retdec",
+      edges: ["ret_dec"],
+      node: "exit_dec",
+      store: "x = 2",
+      residual: ["Restore", "r = sum(m)", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Return", graph: "Intra return x - 1", trace: "intra" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
+        ["entry_main", "pp9"],
         act(
-          "f(2)",
+          "sum(2)",
           "Call",
-          ["entry_f", "pp0", "pp2"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"]),
+          ["entry_sum", "pp2", "pp5"],
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, false, []),
+          false,
+          [],
         ),
+        false,
+        [],
       ),
-      text: "`return 1` writes the return variable `#ret` and turns the rest of the body into `Unwind`. The graph reaches `exit_f`, the one result node that every activation of `f` shares.",
+      text: "**Source**: `Return` leaves `Restore` at the head of the program. **CFG**: the `return x - 1` edge lands on `exit_dec`. **Trace**: the innermost activation's path now ends at its exit. Nothing has popped on any side yet.",
     },
     {
-      line: "call",
-      edges: ["resume_f"],
-      node: "pp3",
-      store: "n = 2, r = 1",
-      residual: ["SKIP", "return n * r", "Restore", CHECK],
+      entry: "n = 2, m = 0, r = 0",
+      line: "rsum",
+      edges: ["resume_dec"],
+      node: "pp6",
+      store: "n = 2, m = 1, r = 0",
+      residual: ["r = sum(m)", "return r + n", "Restore", CHECK],
       frames: [FRAME_MAIN],
       rets: [RET_MAIN],
       callers: ["main"],
-      rules: { source: "UnwindAct", graph: "Return", trace: "ret: Resume" },
+      rules: { source: "Restore", graph: "Resume m := dec(n)", trace: "resume" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
-        act(
-          "f(2)",
-          "Resume",
-          ["entry_f", "pp0", "pp2", "pp3"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
-        ),
+        ["entry_main", "pp9"],
+        act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6"], null, false, [
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+        ]),
+        false,
+        [],
       ),
-      text: "The source pops its frame: the caller's locals come back and `r := #ret`. The graph pops its return point, jumps to `pp3` without following an edge, and applies `combine_collect`. The trace builds `Resume`: the caller's path continues at `pp3`, and the finished callee stays inside it.",
+      text: "**Source**: `Restore` pops the frame and writes `1` into `m`. **CFG**: the resume edge back to `pp6`, popping the return point. **Trace**: `dec(2)` is finished and kept inside a `Resume`. This is the pop the recursion has not reached yet.",
     },
     {
+      entry: "n = 1, m = 0, r = 0",
+      line: "if",
+      edges: ["call_sum", "body_sum"],
+      node: "pp2",
+      store: "n = 1, m = 0, r = 0",
+      residual: [
+        "if (n < 1) …",
+        "m = dec(n)",
+        "r = sum(m)",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        CHECK,
+      ],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2b, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Call", graph: "Call, Intra body(sum)", trace: "call, intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act("sum(1)", "Call", ["entry_sum", "pp2"], null, false, []),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: the recursive `Call`, binding `1` to a fresh `n`. **CFG**: the call edge into `entry_sum` again, the very same node as the first activation. **Trace**: a `Call` nested inside the `Resume`, so the finished `dec(2)` is still there beneath it.",
+    },
+    {
+      entry: "n = 1, m = 0, r = 0",
+      line: "mdec",
+      edges: ["ge"],
+      node: "pp5",
+      store: "n = 1, m = 0, r = 0",
+      residual: [
+        "m = dec(n)",
+        "r = sum(m)",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        CHECK,
+      ],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2b, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "IfFalse", graph: "Intra ¬ n < 1", trace: "intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act("sum(1)", "Call", ["entry_sum", "pp2", "pp5"], null, false, []),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: `IfFalse` again, since `1 < 1` does not hold. **CFG**: the `¬ n < 1` edge to `pp5`. **Trace**: the live activation extends its path, and the stacks stay where they are.",
+    },
+    {
+      entry: "x = 1",
+      line: "retdec",
+      edges: ["call_dec", "body_dec", "ret_dec"],
+      node: "exit_dec",
+      store: "x = 1",
+      residual: [
+        "Restore",
+        "r = sum(m)",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        CHECK,
+      ],
+      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      rets: [RET_S1, RET_S2b, RET_MAIN],
+      callers: ["sum(1)", "sum(2)", "main"],
+      rules: {
+        source: "Call, Return",
+        graph: "Call, Intra body(dec), Intra return",
+        trace: "call, intra",
+      },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act(
+            "sum(1)",
+            "Call",
+            ["entry_sum", "pp2", "pp5"],
+            act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, false, []),
+            false,
+            [],
+          ),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: `Call` then `Return`, so `dec` is entered and finished in one move. **CFG**: the call edge, `dec`'s body and its return edge. **Trace**: a fourth activation, the deepest the run gets.",
+    },
+    {
+      entry: "n = 1, m = 0, r = 0",
+      line: "rsum",
+      edges: ["resume_dec"],
+      node: "pp6",
+      store: "n = 1, m = 0, r = 0",
+      residual: ["r = sum(m)", "return r + n", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2b, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Restore", graph: "Resume m := dec(n)", trace: "resume" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act("sum(1)", "Resume", ["entry_sum", "pp2", "pp5", "pp6"], null, false, [
+            act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+          ]),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: `Restore` writes `0` into `m` and pops. **CFG**: the resume edge to `pp6`. **Trace**: the second `dec` closes into a `Resume`. Push, pop, push again: a run is not a stack that only grows.",
+    },
+    {
+      entry: "n = 0, m = 0, r = 0",
+      line: "if",
+      edges: ["call_sum", "body_sum"],
+      node: "pp2",
+      store: "n = 0, m = 0, r = 0",
+      residual: ["if (n < 1) …", "return r + n", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      rets: [RET_S1b, RET_S2b, RET_MAIN],
+      callers: ["sum(1)", "sum(2)", "main"],
+      rules: { source: "Call", graph: "Call, Intra body(sum)", trace: "call, intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6"],
+            act("sum(0)", "Call", ["entry_sum", "pp2"], null, false, []),
+            false,
+            [act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+          ),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: the third `Call` of `sum`, with `n` bound to `0`. **CFG**: the same `entry_sum` and the same body edge as the other two. **Trace**: `Call (Call (Root …) …) …`. The nesting lives in the trace, not in the graph.",
+    },
+    {
+      entry: "n = 0, m = 0, r = 0",
+      line: "ret0",
+      edges: ["lt", "ret0"],
+      node: "exit_sum",
+      store: "n = 0, m = 0, r = 0",
+      residual: [
+        "return 0",
+        "Restore",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        CHECK,
+      ],
+      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      rets: [RET_S1b, RET_S2b, RET_MAIN],
+      callers: ["sum(1)", "sum(2)", "main"],
+      rules: { source: "IfTrue, Return", graph: "Intra n < 1, Intra return 0", trace: "intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6"],
+            act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, false, []),
+            false,
+            [act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+          ),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: `IfTrue` this time, and `Return` hands back `0`. **CFG**: the `n < 1` edge to `pp3` and the `return 0` edge to `exit_sum`. **Trace**: this activation's path ends at the exit and the recursion stops growing.",
+    },
+    {
+      entry: "n = 1, m = 0, r = 0",
       line: "retn",
-      edges: [],
-      node: "pp3",
-      store: "n = 2, r = 1",
-      residual: ["return n * r", "Restore", CHECK],
-      frames: [FRAME_MAIN],
-      rets: [RET_MAIN],
-      callers: ["main"],
-      rules: { source: "Seq1", graph: "no step", trace: "no step" },
+      edges: ["resume_sum"],
+      node: "pp7",
+      store: "n = 1, m = 0, r = 0",
+      residual: ["return r + n", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2b, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Restore", graph: "Resume r := sum(m)", trace: "resume" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
+        ["entry_main", "pp9"],
         act(
-          "f(2)",
+          "sum(2)",
           "Resume",
-          ["entry_f", "pp0", "pp2", "pp3"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act("sum(1)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7"], null, false, [
+            act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+            act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+          ]),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
         ),
+        false,
+        [],
       ),
-      text: "`Seq SKIP c` steps to `c`, and the graph does not move. The simulation allows zero graph steps: `csim` relates both source configurations to `pp3`.",
+      text: "**Source**: `Restore` writes `0` into `r` and pops a frame. **CFG**: the resume edge to `pp7`. **Trace**: `sum(0)` is retained, finished, inside a `Resume`.",
     },
     {
+      entry: "n = 1, m = 0, r = 0",
       line: "retn",
       edges: ["retn"],
-      node: "exit_f",
-      store: "n = 2, r = 1, #ret = 2",
-      residual: ["Unwind", "Restore", CHECK],
-      frames: [FRAME_MAIN],
-      rets: [RET_MAIN],
-      callers: ["main"],
-      rules: { source: "ReturnSome", graph: "Intra return n * r", trace: "intra" },
+      node: "exit_sum",
+      store: "n = 1, m = 0, r = 0",
+      residual: ["return r + n", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2, FRAME_MAIN],
+      rets: [RET_S2b, RET_MAIN],
+      callers: ["sum(2)", "main"],
+      rules: { source: "Return", graph: "Intra return r + n", trace: "intra" },
       tree: act(
         "main",
         "Root",
-        ["entry_main", "pp5"],
+        ["entry_main", "pp9"],
         act(
-          "f(2)",
+          "sum(2)",
           "Resume",
-          ["entry_f", "pp0", "pp2", "pp3", "exit_f"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
+          ["entry_sum", "pp2", "pp5", "pp6"],
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+            null,
+            false,
+            [
+              act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+              act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+            ],
+          ),
+          false,
+          [act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, [])],
         ),
+        false,
+        [],
       ),
-      text: "`return n * r` writes `#ret = 2`. The graph reaches `exit_f` again, this time for the outer activation.",
+      text: "**Source**: `Return` evaluates `r + n` to `1`. **CFG**: the `return r + n` edge to `exit_sum`, the same exit all three activations use. **Trace**: the path of `sum(1)` now ends there too.",
     },
     {
-      line: "calla",
-      edges: ["resume_main"],
-      node: "pp6",
-      store: "a = 2",
-      residual: ["SKIP", CHECK],
-      frames: [],
-      rets: [],
-      callers: [],
-      rules: { source: "UnwindAct", graph: "Return", trace: "ret: Resume" },
+      entry: "n = 2, m = 0, r = 0",
+      line: "retn",
+      edges: ["resume_sum"],
+      node: "pp7",
+      store: "n = 2, m = 1, r = 1",
+      residual: ["return r + n", "Restore", CHECK],
+      frames: [FRAME_MAIN],
+      rets: [RET_MAIN],
+      callers: ["main"],
+      rules: { source: "Restore", graph: "Resume r := sum(m)", trace: "resume" },
       tree: act(
         "main",
-        "Resume",
-        ["entry_main", "pp5", "pp6"],
-        act(
-          "f(2)",
-          "Resume",
-          ["entry_f", "pp0", "pp2", "pp3", "exit_f"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
-          true,
-        ),
+        "Root",
+        ["entry_main", "pp9"],
+        act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7"], null, false, [
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+            null,
+            true,
+            [
+              act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+              act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+            ],
+          ),
+        ]),
+        false,
+        [],
       ),
-      text: "The second `Resume` returns to `main` with `a = 2`. All three stacks are empty again, and `main`'s trace holds both calls, one inside the other.",
+      text: "**Source**: `Restore` writes `1` into `r` in `sum(2)` and pops. **CFG**: the resume edge to `pp7`. **Trace**: `sum(1)` closes into a `Resume`, carrying `sum(0)` inside it.",
     },
     {
+      entry: "n = 2, m = 0, r = 0",
+      line: "retn",
+      edges: ["retn"],
+      node: "exit_sum",
+      store: "n = 2, m = 1, r = 1",
+      residual: ["return r + n", "Restore", CHECK],
+      frames: [FRAME_MAIN],
+      rets: [RET_MAIN],
+      callers: ["main"],
+      rules: { source: "Return", graph: "Intra return r + n", trace: "intra" },
+      tree: act(
+        "main",
+        "Root",
+        ["entry_main", "pp9"],
+        act(
+          "sum(2)",
+          "Resume",
+          ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+          null,
+          false,
+          [
+            act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+            act(
+              "sum(1)",
+              "Resume",
+              ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+              null,
+              true,
+              [
+                act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+                act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+              ],
+            ),
+          ],
+        ),
+        false,
+        [],
+      ),
+      text: "**Source**: `Return` evaluates `r + n` to `3`. **CFG**: the `return r + n` edge to `exit_sum`. **Trace**: the outermost `sum` activation reaches its exit.",
+    },
+    {
+      entry: "x = ?",
       line: "check",
-      edges: [],
-      node: "pp6",
-      store: "a = 2",
+      edges: ["resume_main"],
+      node: "pp10",
+      store: "x = 3",
       residual: [CHECK],
       frames: [],
       rets: [],
       callers: [],
-      rules: { source: "Seq1", graph: "no step", trace: "no step" },
-      tree: act(
-        "main",
-        "Resume",
-        ["entry_main", "pp5", "pp6"],
-        act(
-          "f(2)",
-          "Resume",
-          ["entry_f", "pp0", "pp2", "pp3", "exit_f"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
-          true,
-        ),
-      ),
-      text: "Another source step with no graph counterpart.",
+      rules: { source: "Restore", graph: "Resume x := sum(2)", trace: "resume" },
+      tree: act("main", "Resume", ["entry_main", "pp9", "pp10"], null, false, [
+        act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"], null, true, [
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+            null,
+            true,
+            [
+              act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+              act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+            ],
+          ),
+        ]),
+      ]),
+      text: "**Source**: the last `Restore` pops the final frame and writes `3` into `x`. **CFG**: the resume edge to `pp10`. **Trace**: the whole call tree survives inside the root's `Resume`, and every stack is empty again.",
     },
     {
+      entry: "x = ?",
       line: "check",
       edges: ["check"],
-      node: "pp7",
-      store: "a = 2",
+      node: "pp11",
+      store: "x = 3",
       residual: ["SKIP"],
       frames: [],
       rets: [],
       callers: [],
-      rules: { source: "Check", graph: "Intra check(a == 2)", trace: "intra" },
-      tree: act(
-        "main",
-        "Resume",
-        ["entry_main", "pp5", "pp6", "pp7"],
-        act(
-          "f(2)",
-          "Resume",
-          ["entry_f", "pp0", "pp2", "pp3", "exit_f"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
-          true,
-        ),
-      ),
-      text: "The check runs in the store `a = 2`. That store is one element of `ltr_collect pp6`, the set the analysis result at `pp6` has to contain.",
+      rules: { source: "Check", graph: "Intra check(x == 3)", trace: "intra" },
+      tree: act("main", "Resume", ["entry_main", "pp9", "pp10", "pp11"], null, false, [
+        act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"], null, true, [
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+            null,
+            true,
+            [
+              act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+              act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+            ],
+          ),
+        ]),
+      ]),
+      text: "**Source**: `Check` runs in the store `x = 3`. **CFG**: the check edge to `pp11`. **Trace**: the root's path reaches `pp10`, so this store belongs to what a sound answer at `pp10` must contain.",
     },
     {
+      entry: "x = ?",
       line: null,
       edges: ["ret_main"],
       node: "exit_main",
-      store: "a = 2",
+      store: "x = 3",
       residual: ["SKIP"],
       frames: [],
       rets: [],
       callers: [],
       rules: { source: "done (SKIP, s, [])", graph: "Intra return", trace: "intra" },
-      tree: act(
-        "main",
-        "Resume",
-        ["entry_main", "pp5", "pp6", "pp7", "exit_main"],
-        act(
-          "f(2)",
-          "Resume",
-          ["entry_f", "pp0", "pp2", "pp3", "exit_f"],
-          act("f(1)", "Call", ["entry_f", "pp0", "pp1", "exit_f"], null, true),
-          true,
-        ),
-      ),
-      text: "The source has finished. The graph still takes `main`'s implicit return edge to `exit_main`, and `source_completes_ltr_collect_exit` puts the final store into the collecting semantics there.",
+      tree: act("main", "Resume", ["entry_main", "pp9", "pp10", "pp11", "exit_main"], null, false, [
+        act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"], null, true, [
+          act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+          act(
+            "sum(1)",
+            "Resume",
+            ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"],
+            null,
+            true,
+            [
+              act("dec(1)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
+              act("sum(0)", "Call", ["entry_sum", "pp2", "pp3", "exit_sum"], null, true, []),
+            ],
+          ),
+        ]),
+      ]),
+      text: "**Source**: nothing is left to do. **CFG**: `main`'s implicit return edge still fires, landing on `exit_main`. **Trace**: the root's path ends at the exit, which is where `source_completes_ltr_collect_exit` puts the final store.",
     },
   ];
 
-  function renderActivation(a, sink) {
+  /* What the observers answer about this one activation. The store is only known for the
+     activation the run is currently inside, so the others say what they can. */
+  function observerTitle(a, sink, store, caller) {
+    const end = a.path[a.path.length - 1];
+    const lines = [
+      `path t = ${a.path.length} nodes, ${a.path.join(" -> ")}`,
+      `sink_node t = ${end}`,
+      a === sink ? `sink_store t = {${store}}` : "sink_store t = the store it ended with",
+      `caller_of t = ${caller ?? "None"}`,
+    ];
+    return lines.join("\n");
+  }
+
+  function renderActivation(a, sink, store, caller = null) {
     const box = document.createElement("div");
     box.className = "run-act";
     box.classList.toggle("is-done", a.done);
     box.classList.toggle("is-sink", a === sink);
+    box.title = observerTitle(a, sink, store, caller);
 
     const head = document.createElement("p");
     head.className = "run-act-head";
@@ -313,8 +661,12 @@
 
     box.append(head, path);
 
+    for (const done of a.kept ?? []) {
+      box.append(renderActivation(done, sink, store, a.name));
+    }
+
     if (a.child) {
-      box.append(renderActivation(a.child, sink));
+      box.append(renderActivation(a.child, sink, store, a.name));
     }
 
     return box;
@@ -324,12 +676,24 @@
     return a.child && !a.child.done ? sinkOf(a.child) : a;
   }
 
+  /* Newest entry on top, oldest resting on the floor, so the two stacks can be read
+     against each other entry by entry. */
   function fillStack(list, items, empty) {
     list.replaceChildren(
-      ...(items.length ? items : [empty]).map((text) => {
+      ...(items.length ? items : [empty]).map((text, i) => {
         const item = document.createElement("li");
-        item.innerHTML = withCode(`\`${text}\``);
+        if (items.length) {
+          const depth = document.createElement("span");
+          depth.className = "run-depth";
+          depth.textContent = String(items.length - i);
+          item.append(depth);
+        }
+        const body = document.createElement("span");
+        body.className = "run-slab";
+        body.innerHTML = withCode(`\`${text}\``);
+        item.append(body);
         item.classList.toggle("empty", !items.length);
+        item.classList.toggle("top", Boolean(items.length) && i === 0);
         return item;
       }),
     );
@@ -379,16 +743,33 @@
       fillStack(figure.querySelector(".run-cframes"), state.rets, "[]");
       fillStack(figure.querySelector(".run-callers"), state.callers, "None");
 
-      tree.replaceChildren(renderActivation(state.tree, sinkOf(state.tree)));
+      tree.replaceChildren(renderActivation(state.tree, sinkOf(state.tree), state.store));
 
-      for (const [kind, text] of Object.entries(state.rules)) {
+      for (const [kind, text] of Object.entries(state.rules ?? {})) {
         const rule = figure.querySelector(`[data-rule="${kind}"]`);
-        rule.textContent = text;
-        rule.classList.toggle("none", text === "no step");
+        if (rule) {
+          rule.textContent = text;
+          rule.classList.toggle("none", text === "no step");
+        }
       }
 
       figure.querySelector(".run-store").textContent = `{${state.store}}`;
-      caption.innerHTML = withCode(state.text);
+      /* The commentary is one sentence per pillar, laid out under the pillar it is about. */
+      const said = state.text.split(/\*\*(Source|CFG|Trace)\*\*:\s*/).filter(Boolean);
+      if (said.length === 6) {
+        caption.replaceChildren(
+          ...[0, 2, 4].map((i) => {
+            const cell = document.createElement("p");
+            cell.className = "run-say";
+            cell.innerHTML = `<b>${said[i]}</b> ${withCode(said[i + 1].trim())}`;
+            return cell;
+          }),
+        );
+        caption.classList.add("is-split");
+      } else {
+        caption.classList.remove("is-split");
+        caption.innerHTML = withCode(state.text);
+      }
     };
 
     for (const line of lines) {
@@ -406,5 +787,20 @@
       interval: 4200,
       autoplay: false,
     });
+  }
+
+  /* The same code-and-graph pair with no run on it: hovering a line still lights its nodes. */
+  for (const figure of document.querySelectorAll(".scene-cfgmap")) {
+    const nodes = figure.querySelectorAll(".run-nodes [data-node]");
+    for (const line of figure.querySelectorAll(".run-code [data-nodes]")) {
+      const names = line.dataset.nodes.split(" ").filter(Boolean);
+      const light = (on) => {
+        for (const node of nodes) {
+          node.classList.toggle("is-hover", on && names.includes(node.dataset.node));
+        }
+      };
+      line.addEventListener("pointerenter", () => light(true));
+      line.addEventListener("pointerleave", () => light(false));
+    }
   }
 }

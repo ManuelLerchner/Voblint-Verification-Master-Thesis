@@ -14,10 +14,29 @@
     content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
   >
   <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:site_name" content="Voblint">
+  <meta property="og:url" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
+  <meta property="og:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/playground-overview.png">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Voblint Playground">
+  <meta
+    name="twitter:description"
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser."
+  >
+  <meta name="twitter:image" content="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/assets/playground-overview.png">
+  <meta name="author" content="Manuel Lerchner">
+  <meta
+    name="keywords"
+    content="static analysis playground, abstract interpretation online, verified static analyzer, Isabelle/HOL, Goblint, interval domain, congruence domain, sign domain, parity domain, context sensitivity, call strings, widening and narrowing, control-flow graph viewer, WebAssembly, VIMP"
+  >
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <meta name="theme-color" content="#f4f7f6">
 
-  <title>Voblint Playground</title>
+  <title>Voblint Playground — run a verified abstract interpreter in your browser</title>
 
+  <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
+  <link rel="sitemap" type="application/xml" href="sitemap.xml">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link
     rel="stylesheet"
@@ -151,14 +170,14 @@
                   id="context-depth"
                   type="number"
                   min="0"
-                  max="16"
+                  max="100"
                   step="1"
                   value="1"
                   inputmode="numeric"
                   aria-describedby="context-depth-help"
                 >
                 <span id="context-depth-help" class="visually-hidden">
-                  Number of recent call sites kept in each context, from 0 to 16.
+                  Number of recent call sites kept in each context, from 0 to 100.
                 </span>
               </div>
 
@@ -256,7 +275,7 @@
           </summary>
 
           <p class="raw-result-note">
-            The call exactly as the Isabelle-generated <code>run_voblint</code> received
+            The call exactly as the Isabelle-generated <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> received
             it, and the typed answer it returned, serialized field by field with Isabelle's
             own field and constructor names. Abstract values arrive as strings rendered by
             <code>run_voblint</code> itself; the presentation layer only replaces ASCII
@@ -493,7 +512,7 @@
 
   <footer class="site-footer">
     <div class="page-shell footer-content">
-      <span>Master&apos;s thesis · Manuel Lerchner · supervised by Alexandra Graß</span>
+      <span>Master&apos;s thesis &middot; Manuel Lerchner &middot; supervised by <a href="https://www.cs.cit.tum.de/pl/personen/alexandra-grass/" target="_blank" rel="noreferrer">Alexandra Gra&szlig;</a></span>
       <a
         href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis"
         target="_blank"

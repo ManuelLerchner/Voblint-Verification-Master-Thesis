@@ -1452,6 +1452,7 @@ function renderInspectorContext(node) {
 
     key.className = "inspector-context-key";
     key.textContent = node.context_key;
+    key.title = node.context_key;
     header.append(key);
   }
 
@@ -2850,9 +2851,11 @@ function updateGlobalsHelp() {
 
 /*
  * Every extra call site kept multiplies the contexts a recursive program can
- * reach; none of the explainer's examples needs more than two.
+ * reach, so the control is bounded rather than open. The explainer's recursion
+ * chart runs to k = 100, which is where this sits: a run is cancellable and
+ * warns at SLOW_RUN_MS, so a deep setting costs time rather than the page.
  */
-const MAX_CONTEXT_DEPTH = 16;
+const MAX_CONTEXT_DEPTH = 100;
 
 function parseContextDepth(text) {
   const trimmed = String(text ?? "").trim();
@@ -3726,137 +3729,6 @@ examplesDialog.addEventListener("click", (event) => {
 /* Links from the explainer                                                   */
 /* -------------------------------------------------------------------------- */
 
-/*
- * The explainer's "Try it" links open a program and a configuration here:
- * playground.html?example=two-sites&globals=warrow. Every program below is one the
- * explainer shows, so the run reproduces what the page claims.
- */
-const LINKED_EXAMPLES = {
-  "remainder-sign": `fun main() {
-  n = __voblint_nondet_int();
-  x = 6 * n + 5;
-  a = x % 6;
-  __voblint_check(a >= 0);
-  if (a < 0) {
-    __voblint_check(a == -1);
-  } else {
-    __voblint_check(a == 5);
-  }
-}`,
-  "two-sites": `fun p(x) {
-  __voblint_check(x <= 2);
-}
-
-fun main() {
-  p(1);
-  p(2);
-}`,
-  "loop-call": `fun g(x) {
-  __voblint_check(x < 10);
-}
-
-fun main() {
-  x = 0;
-  while (x < 10) {
-    g(x);
-    x = x + 1;
-  }
-}`,
-  "recursion-grows": `fun f(x) {
-  __voblint_check(x >= 0);
-  f(x + 1);
-}
-
-fun main() {
-  f(0);
-}`,
-  "recursion-bounded": `fun f(x) {
-  __voblint_check(x >= 0);
-  if (x < 10) {
-    f(x + 1);
-  }
-}
-
-fun main() {
-  f(0);
-}`,
-  "multiples-of-three": `fun main() {
-  n = __voblint_nondet_int();
-  x = 3 * n;
-  if (x > 0) {
-    if (x < 3) {
-      __voblint_check(x == 1);
-    }
-  } else {
-    if (x > 5) {
-      __voblint_check(x == 6);
-    }
-  }
-}`,
-  "recursion-shrinks": `fun f(a) {
-  if (a < 4) {
-    f(9 / (a + 2));
-  }
-  __voblint_check(a <= 9);
-}
-
-fun main() {
-  f(-1);
-}`,
-  factorial: `fun f(n) {
-  if (n < 2) {
-    return 1;
-  } else {
-    r = f(n - 1);
-    return n * r;
-  }
-}
-
-fun main() {
-  a = f(2);
-  __voblint_check(a == 2);
-}`,
-  "int-reduction": `fun main() {
-  n = __voblint_nondet_int();
-  x = 4 * n + 1;
-  if (x >= 0) {
-    if (x <= 10) {
-      __voblint_check(x >= 1);
-      __voblint_check(x <= 9);
-    }
-  }
-}`,
-  "counting-loop": `fun main() {
-  i = 0;
-  while (i < 5) {
-    i = i + 1;
-  }
-  __voblint_check(i == 5);
-}`,
-  "goblint-1161": `// goblint/analyzer #1161: Goblint's regression test for the fix, in VIMP.
-// Before the fix Goblint read c % 2 as the constant 1, so it got both checks backwards.
-fun main() {
-  top = __voblint_nondet_int();
-  c = -5;
-  if (top) {
-    c = -7;
-  }
-  __voblint_check(c % 2 == 1);
-  __voblint_check(c % 2 == -1);
-}`,
-  theorems: `fun main() {
-  n = __voblint_nondet_int();
-  if (n > 0) {
-    q = 10 / n;
-    __voblint_check(n >= 1);
-  } else {
-    if (n > 5) {
-      __voblint_check(n == 0);
-    }
-  }
-}`,
-};
-
 function selectIfOffered(select, value) {
   if (value !== null && [...select.options].some((option) => option.value === value)) {
     select.value = value;
@@ -3873,7 +3745,7 @@ function selectIfOffered(select, value) {
  * a shared link keeps showing what the sender saw: the fragment never reaches a server,
  * and a named program can change under a link that only names it. Links written by
  * hand or by scripts/playground_link.py may instead name a regression program
- * (?fixture=path) or an explainer example (?example=name), which this page still opens;
+ * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
 const LINK_SETTINGS = ["analysis", "globals", "context", "k"];
@@ -3921,16 +3793,7 @@ async function linkedProgram(params, code) {
     return fixture ? fixtureProgram(fixture) : null;
   }
 
-  const name = params.get("example");
-
-  if (name !== null && Object.hasOwn(LINKED_EXAMPLES, name)) {
-    return {
-      source: LINKED_EXAMPLES[name],
-      fileName: "example.vimp",
-    };
-  }
-
-  return name === null ? { source: editor.state.doc.toString(), fileName: "example.vimp" } : null;
+  return { source: editor.state.doc.toString(), fileName: "example.vimp" };
 }
 
 async function applyLinkedConfiguration() {

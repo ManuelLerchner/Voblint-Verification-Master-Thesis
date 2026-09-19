@@ -16,7 +16,7 @@ text \<open>
   What a program answers with depends on the field. An edge transfer and a
   combine stage answer the successor local value, so their compiled tree is an
   equation's right-hand side outright. Entry answers a list of alternatives
-  instead, which no equation carries: the routed call tree consumes that list,
+  instead, which no equation carries: the routed call program consumes that list,
   running one activation and return combine per alternative and joining what
   they contribute.
 
@@ -124,7 +124,7 @@ subsection \<open>Compiling a specification to right-hand sides\<close>
 text \<open>
   An edge equation reads the source unknown, builds the manager around it with
   the routed key closed in, and runs the specification's transfer. Every
-  generator's edge right-hand side is a \<open>dg_spec_edge_tree\<close>.
+  generator's edge right-hand side is a \<open>dg_spec_edge_program\<close>.
 \<close>
 
 text \<open>
@@ -143,17 +143,17 @@ where
        transfer (mk_dg_man d key)
      }"
 
-definition transfer_tree ::
+definition transfer_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "transfer_tree T src key = sp_compile_with (\<lambda>d. DG d bot) (transfer_program_at T src key)"
+  "transfer_program T src key = sp_map (\<lambda>d. DG d bot) (transfer_program_at T src key)"
 
-definition dg_spec_edge_tree ::
+definition dg_spec_edge_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
-   \<Rightarrow> ('x,'k,('dl,'dg) dg_state) strategy_tree"
+   \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "dg_spec_edge_tree S a src key = transfer_tree (dg_spec_step S a) src key"
+  "dg_spec_edge_program S a src key = transfer_program (dg_spec_step S a) src key"
 
 text \<open>
   What compilation costs an observation: exactly the source read, and then the
@@ -168,21 +168,69 @@ text \<open>
   everywhere.
 \<close>
 
-lemma traverse_transfer_tree:
-  "traverse_rhs (transfer_tree T src key) \<tau>
+lemma traverse_transfer_program:
+  "traverse_program (transfer_program T src key) \<tau>
      = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
-  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+  by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
 
-lemma sides_transfer_tree:
-  "sides_of_rhs (transfer_tree T src key) \<tau>
+lemma sides_transfer_program:
+  "sides_of_program (transfer_program T src key) \<tau>
      = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
-  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+  by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
 
-lemma dep_aux_transfer_tree:
-  "dep_aux \<tau> (transfer_tree T src key)
+lemma dep_transfer_program:
+  "dep_program \<tau> (transfer_program T src key)
      = insert src
          (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))))"
-  by (simp add: transfer_tree_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+  by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
+
+subsection \<open>Specifications whose transfers run their continuation once\<close>
+
+text \<open>
+  A \<^type>\<open>man_transfer\<close> is a function from a continuation to a tree, so a
+  specification could in principle write one that drops or duplicates it.
+  \<^const>\<open>sp_wf\<close> rules that out, and the generator's fold needs it: what a
+  contribution publishes is only well posed for a transfer that runs its
+  continuation once.
+
+  \<open>dg_spec_wf\<close> asks it of the three ways a specification is run --- an edge
+  step, the entry alternatives, and the two-stage combine --- and only at the
+  managers that actually occur, the ones \<^const>\<open>mk_dg_man\<close> builds. That
+  restriction is not a weakening: a transfer never meets any other manager,
+  and an arbitrary one has opaque capability fields about which nothing could
+  be said. A specification written with the manager's own primitives satisfies
+  all three by \<open>simp\<close>, since every primitive and every combinator carries a
+  closure lemma.
+\<close>
+
+definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" where
+  "dg_spec_wf S \<longleftrightarrow>
+     (\<forall>a d key. sp_wf (dg_spec_step S a (mk_dg_man d key)))
+     \<and> (\<forall>ci d key. sp_wf (enter\<^sup># S ci (mk_dg_man d key)))
+     \<and> (\<forall>ci d key ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d key) ex))"
+
+lemma dg_spec_wf_step:
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_step S a (mk_dg_man d key))"
+  by (simp add: dg_spec_wf_def)
+
+lemma dg_spec_wf_enter:
+  "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup># S ci (mk_dg_man d key))"
+  by (simp add: dg_spec_wf_def)
+
+lemma dg_spec_wf_combine:
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d key) ex)"
+  by (simp add: dg_spec_wf_def)
+
+lemma sp_wf_transfer_program [intro]:
+  assumes "\<And>d. sp_wf (T (mk_dg_man d key))"
+  shows "sp_wf (transfer_program T src key)"
+  unfolding transfer_program_def transfer_program_at_def
+  by (intro sp_wf_map sp_wf_bind sp_wf_dg_read_at assms)
+
+lemma sp_wf_dg_spec_edge_program [intro]:
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_edge_program S a src key)"
+  unfolding dg_spec_edge_program_def
+  by (intro sp_wf_transfer_program) (rule dg_spec_wf_step)
 
 subsection \<open>Writing a transfer\<close>
 
@@ -205,7 +253,7 @@ text \<open>
       \<open>man.sideg\<close>, and returns a \<open>D.t\<close>.
     \<^item> An entry transfer answers the list of alternatives instead of one
       value: \<open>sp_return [(continuation, entry), ...]\<close>, possibly after the same
-      capability calls. It never folds that list; the routed call tree does.
+      capability calls. It never folds that list; the routed call program does.
 \<close>
 
 subsection \<open>Local-only transfers\<close>
@@ -235,25 +283,26 @@ definition local_enter_transfer ::
 where
   "local_enter_transfer f m = sp_return (f (man_local m))"
 
-lemma transfer_tree_local_transfer:
-  "transfer_tree (local_transfer f) (Inl x) key
+lemma sp_compile_transfer_program_local_transfer:
+  "sp_compile (transfer_program (local_transfer f) (Inl x) key)
      = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  "transfer_tree (local_transfer f) (Inr g) key
+  "sp_compile (transfer_program (local_transfer f) (Inr g) key)
      = QueryG g (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  by (simp_all add: transfer_tree_def transfer_program_at_def local_transfer_def
-      dg_read_at_def sp_bind_assoc)
+  by (simp_all add: transfer_program_def transfer_program_at_def local_transfer_def
+      dg_read_at_def sp_bind_assoc sp_compile_def sp_compile_with_def
+      sp_bind_def sp_return_def sp_read_local_def sp_read_global_def)
 
-lemma traverse_local_transfer_tree [simp]:
-  "traverse_rhs (transfer_tree (local_transfer f) src key) \<tau> = DG (f (locals (\<tau> src))) bot"
-  by (cases src) (simp_all add: transfer_tree_local_transfer)
+lemma traverse_local_transfer_program [simp]:
+  "traverse_program (transfer_program (local_transfer f) src key) \<tau> = DG (f (locals (\<tau> src))) bot"
+  by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
-lemma sides_local_transfer_tree [simp]:
-  "sides_of_rhs (transfer_tree (local_transfer f) src key) \<tau> k = bot"
-  by (cases src) (simp_all add: transfer_tree_local_transfer)
+lemma sides_local_transfer_program [simp]:
+  "sides_of_program (transfer_program (local_transfer f) src key) \<tau> k = bot"
+  by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
-lemma dep_aux_local_transfer_tree [simp]:
-  "dep_aux \<tau> (transfer_tree (local_transfer f) src key) = {src}"
-  by (cases src) (simp_all add: transfer_tree_local_transfer)
+lemma dep_local_transfer_program [simp]:
+  "dep_program \<tau> (transfer_program (local_transfer f) src key) = {src}"
+  by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
 subsection \<open>Local-only combine\<close>
 
@@ -291,13 +340,13 @@ text \<open>
   dependency set that would hold only for one kind of specification.
 \<close>
 
-lemma dep_aux_transfer_tree_source:
-  "src \<in> dep_aux \<tau> (transfer_tree T src gk)"
-  by (simp add: dep_aux_transfer_tree)
+lemma dep_transfer_program_source:
+  "src \<in> dep_program \<tau> (transfer_program T src gk)"
+  by (simp add: dep_transfer_program)
 
-lemma dep_aux_dg_spec_edge_tree_source:
-  "src \<in> dep_aux \<tau> (dg_spec_edge_tree S a src gk)"
-  unfolding dg_spec_edge_tree_def by (rule dep_aux_transfer_tree_source)
+lemma dep_dg_spec_edge_program_source:
+  "src \<in> dep_program \<tau> (dg_spec_edge_program S a src gk)"
+  unfolding dg_spec_edge_program_def by (rule dep_transfer_program_source)
 
 subsection \<open>A default specification, and overriding its fields\<close>
 
@@ -473,5 +522,10 @@ lemma dg_spec_combine_transfer_local_dg_spec [simp]:
      = local_combine_transfer (\<lambda>dc de. ca ci (ce ci dc de) de)"
   by (intro ext)
      (simp add: dg_spec_combine_transfer_local local_combine_transfer_def)
+
+lemma dg_spec_wf_local_dg_spec [intro, simp]:
+  "dg_spec_wf (local_dg_spec sk asn sp br bd rt en ev ce ca)"
+  by (simp add: dg_spec_wf_def local_transfer_def local_enter_transfer_def
+      local_combine_transfer_def)
 
 end

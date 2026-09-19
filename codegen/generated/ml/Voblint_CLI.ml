@@ -2990,20 +2990,6 @@ let rec bounded_warrowing_resolved_st_q _A =
      warrowing_bounded_warrowing = (warrowing_resolved_st_q _A)}
     : 'a resolved_st_q bounded_warrowing);;
 
-type ('a, 'b) routed_gk = Analysis_Global of 'a |
-  Activation_Seed of cfg_node * 'b;;
-
-let rec equal_routed_gka _A _B
-  x0 x1 = match x0, x1 with
-    Analysis_Global x1, Activation_Seed (x21, x22) -> false
-    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
-    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
-        equal_cfg_nodea x21 y21 && eq _B x22 y22
-    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
-
-let rec equal_routed_gk _A _B =
-  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
-
 type congruence = Abs_congruence of (int * int) option;;
 
 let rec rep_congruence (Abs_congruence x) = x;;
@@ -3473,6 +3459,20 @@ let rec executable_domain_int_dom_ext _A =
      is_empty = is_empty_int_dom_ext _A; is_full = is_full_int_dom_ext _A;
      to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
+
+type ('a, 'b) routed_gk = Analysis_Global of 'a |
+  Activation_Seed of cfg_node * 'b;;
+
+let rec equal_routed_gka _A _B
+  x0 x1 = match x0, x1 with
+    Analysis_Global x1, Activation_Seed (x21, x22) -> false
+    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
+    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
+        equal_cfg_nodea x21 y21 && eq _B x22 y22
+    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
+
+let rec equal_routed_gk _A _B =
+  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
 
 type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
   If of exp * com * com | While of exp * com |
@@ -4734,17 +4734,6 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return locals);;
 
-let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
-
-let rec transfer_program_at _D
-  transfer src key =
-    sp_bind (dg_read_at src) (fun d -> transfer (mk_dg_man _D d key));;
-
-let rec transfer_tree _D _E
-  t src key =
-    sp_compile_with (fun d -> DG (d, bot _E))
-      (transfer_program_at _D t src key);;
-
 let rec int_less_true
   a b = is_empty_int_dom_ext int_dom_record_lattice_unit
           (fst (inv_less_int_dom Refine_Fixpoint false a b)) ||
@@ -5883,15 +5872,32 @@ let rec intra_predecessor_index
   g = group_by_key linorder_cfg_node (fun (_, (_, w)) -> w)
         (fun (u, (a, _)) -> Some (u, a)) (cfg_intra_list g);;
 
-let rec routed_contribution_trees _C _D
+let rec routed_entry_seed_programs _C _D
+  seed_key route ctx v =
+    (match v with Statement _ -> []
+      | FunctionEntry _ ->
+        [sp_bind (sp_read_global (seed_key v ctx))
+           (fun seed_state ->
+             sp_return
+               (DG (locals seed_state,
+                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
+      | FunctionResult _ -> []);;
+
+let rec routed_contribution_programs _C _D
   pred_sel site_sel route it cmb extra g ctx v =
     map (fun (a, b) -> it ctx a b) (pred_sel g v ctx) @
       map (fun (cc, ca) -> cmb route ctx ca cc v) (site_sel g v) @
         extra route ctx v;;
 
-let rec flush_sides
+let rec flush_sides _B
   x0 t = match x0, t with [], t -> t
-    | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
+    | kv :: kvs, t ->
+        (if less_eq
+              _B.order_bot_bounded_semilattice_sup_bot.order_order_bot.preorder_order.ord_preorder
+              (snd kv)
+              (bot _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          then flush_sides _B kvs t
+          else Side (fst kv, snd kv, flush_sides _B kvs t));;
 
 let rec acc_add _A _B
   k d x2 = match k, d, x2 with k, d, [] -> [(k, d)]
@@ -5903,12 +5909,19 @@ let rec acc_add _A _B
           else (k, d) :: acc_add _A _B ka da kvs);;
 
 let rec buffer_aux _A _B
-  acc x1 = match acc, x1 with acc, Answer d -> flush_sides acc (Answer d)
+  acc x1 = match acc, x1 with acc, Answer d -> flush_sides _B acc (Answer d)
     | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
     | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
     | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
 
 let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
+
+let rec fold_rhs_program _A
+  acc x1 = match acc, x1 with acc, [] -> sp_return acc
+    | acc, p :: ps ->
+        sp_bind p
+          (fun res ->
+            fold_rhs_program _A (sup _A.sup_semilattice_sup acc res) ps);;
 
 let rec sp_lift_tree
   x0 k = match x0, k with Answer d, k -> k d
@@ -5916,12 +5929,7 @@ let rec sp_lift_tree
     | QueryG (g, f), k -> QueryG (g, (fun d -> sp_lift_tree (f d) k))
     | Side (g, d, t), k -> Side (g, d, sp_lift_tree t k);;
 
-let rec fold_rhs_contributions _A
-  acc x1 = match acc, x1 with acc, [] -> sp_return acc
-    | acc, t :: ts ->
-        sp_bind (sp_lift_tree t)
-          (fun res ->
-            fold_rhs_contributions _A (sup _A.sup_semilattice_sup acc res) ts);;
+let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
 
 let rec sp_compile p = sp_compile_with id p;;
 
@@ -5938,13 +5946,13 @@ let rec routed_node_rhs_buffered _B _C _D
          in
        let t =
          sp_compile
-           (fold_rhs_contributions
+           (fold_rhs_program
              (semilattice_sup_dg_state
                _C.semilattice_sup_bounded_semilattice_sup_bot
                _D.semilattice_sup_bounded_semilattice_sup_bot)
              acc0
-             (routed_contribution_trees _C _D pred_sel site_sel route it_c cmb_c
-               extra g c v))
+             (routed_contribution_programs _C _D pred_sel site_sel route it_c
+               cmb_c extra g c v))
          in
         buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
           (sp_lift_tree t
@@ -5968,17 +5976,6 @@ let rec call_target_index
         (fun (c, (ca, (ce, k))) -> call_target_at k (c, (ca, (ce, k))))
         (cfg_calls_list g);;
 
-let rec routed_entry_seed_tree _C _D
-  seed_key route ctx v =
-    (match v with Statement _ -> []
-      | FunctionEntry _ ->
-        [sp_lift_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
-           (fun seed_state ->
-             Answer
-               (DG (locals seed_state,
-                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
-      | FunctionResult _ -> []);;
-
 let rec dgs_combine_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
@@ -6001,11 +5998,13 @@ let rec dg_spec_combine_transfer
       (fun d_env ->
         dgs_combine_assign s ci (man_local_update (fun _ -> d_env) m) exit);;
 
-let rec routed_call_alternative_tree _C _D
+let rec sp_map e p = (fun k -> p (fun v -> k (e v)));;
+
+let rec routed_call_alternative_program _C _D
   s gk0 seed_key route is_bot ctx ca cc p alt =
     (let (cont, entry) = alt in
       (if is_bot entry
-        then sp_compile_with
+        then sp_map
                (fun d ->
                  DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                (dg_spec_combine_transfer s (call_info_of ca p)
@@ -6014,34 +6013,34 @@ let rec routed_call_alternative_tree _C _D
                    (fun _ -> gk0))
                  (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
         else (let ctxa = route cc ctx entry ca in
-               Side (seed_key (FunctionEntry p) ctxa,
-                      DG (entry,
-                           bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                      QueryL
-                        ((FunctionResult p, ctxa),
-                          (fun callee_state ->
-                            sp_compile_with
-                              (fun d ->
-                                DG (d, bot
- _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-                              (dg_spec_combine_transfer s (call_info_of ca p)
-                                (mk_dg_man
-                                  _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                                  cont (fun _ -> gk0))
-                                (locals callee_state))))))));;
+               sp_bind
+                 (sp_publish (seed_key (FunctionEntry p) ctxa)
+                   (DG (entry,
+                         bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+                 (fun _ ->
+                   sp_bind (sp_read_local (FunctionResult p, ctxa))
+                     (fun callee_state ->
+                       sp_map
+                         (fun d ->
+                           DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                         (dg_spec_combine_transfer s (call_info_of ca p)
+                           (mk_dg_man
+                             _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                             cont (fun _ -> gk0))
+                           (locals callee_state)))))));;
 
-let rec side_rhs_fold_dg _A _D
+let rec side_rhs_fold_dg _A _B
   acc x1 = match acc, x1 with
     acc, [] ->
       sp_return
-        (DG (acc, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
-    | acc, t :: ts ->
-        sp_bind (sp_lift_tree t)
+        (DG (acc, bot _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+    | acc, p :: ps ->
+        sp_bind p
           (fun res ->
-            side_rhs_fold_dg _A _D
+            side_rhs_fold_dg _A _B
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc (locals res))
-              ts);;
+              ps);;
 
 let rec dgs_enter
   (Dg_spec_ext
@@ -6049,32 +6048,39 @@ let rec dgs_enter
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_enter;;
 
-let rec routed_callee_call_tree _C _D
+let rec routed_callee_call_program _C _D
   s gk0 seed_key route is_bot ctx ca cc caller p =
-    dgs_enter s (call_info_of ca p)
-      (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
-        (fun _ -> gk0))
+    sp_bind
+      (dgs_enter s (call_info_of ca p)
+        (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
+          (fun _ -> gk0)))
       (fun pairs ->
-        sp_compile
-          (side_rhs_fold_dg _C _D
-            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-            (map (routed_call_alternative_tree _C _D s gk0 seed_key route is_bot
-                   ctx ca cc p)
-              pairs)));;
+        side_rhs_fold_dg _C _D
+          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_call_alternative_program _C _D s gk0 seed_key route
+                 is_bot ctx ca cc p)
+            pairs));;
 
-let rec routed_call_tree _C _D
+let rec routed_call_program _C _D
   s gk0 seed_key resolve is_bot route ctx ca cc v =
-    sp_lift_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
+    sp_bind (sp_read_local (cc, ctx))
       (fun caller_state ->
-        sp_compile
-          (side_rhs_fold_dg _C _D
-            (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-            (map (routed_callee_call_tree _C _D s gk0 seed_key route is_bot ctx
-                   ca cc (locals caller_state))
-              (resolve v cc ca (locals caller_state)))));;
+        side_rhs_fold_dg _C _D
+          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_callee_call_program _C _D s gk0 seed_key route is_bot ctx
+                 ca cc (locals caller_state))
+            (resolve v cc ca (locals caller_state))));;
 
-let rec dg_spec_edge_tree _D _E
-  s a src key = transfer_tree _D _E (dg_spec_step s a) src key;;
+let rec transfer_program_at _D
+  transfer src key =
+    sp_bind (dg_read_at src) (fun d -> transfer (mk_dg_man _D d key));;
+
+let rec transfer_program _D _E
+  t src key =
+    sp_map (fun d -> DG (d, bot _E)) (transfer_program_at _D t src key);;
+
+let rec dg_spec_edge_program _D _E
+  s a src key = transfer_program _D _E (dg_spec_step s a) src key;;
 
 let rec compiled_routed_eqs_for _A (_C1, _C2) _D
   global seed route s g initial initial_global =
@@ -6090,11 +6096,11 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
               (group_lookup linorder_cfg_node targets v)))
         (fun _ -> global) route
         (fun _ src a ->
-          dg_spec_edge_tree
+          dg_spec_edge_program
             _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
             _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
             (fun _ -> global))
-        (routed_call_tree _C2 _D s global seed
+        (routed_call_program _C2 _D s global seed
           (fun v cc ca _ ->
             map_filter
               (fun x ->
@@ -6105,7 +6111,7 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
           (fun d ->
             eq _C1 d
               (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
-        (routed_entry_seed_tree _C2 _D seed) g
+        (routed_entry_seed_programs _C2 _D seed) g
         (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
         initial_global);;
 

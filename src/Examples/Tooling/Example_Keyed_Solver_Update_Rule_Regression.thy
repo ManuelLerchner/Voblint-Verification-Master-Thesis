@@ -15,11 +15,11 @@ text \<open>
   \<^typ>\<open>cfg\<close> with no edges of its own (\<open>intra = {}\<close>, \<open>calls = {}\<close>) paired with a
   hand-supplied \<open>pred_sel\<close> that reports two intra predecessors for one node --
   exactly the shape a real merge node with two incoming intra edges produces
-  (\<^theory>\<open>Voblint_Framework.DG_Constraint_Trees\<close>'s own \<open>intra\<close> fold), collapsed to its
+  (\<^theory>\<open>Voblint_Framework.DG_Constraint_Programs\<close>'s own \<open>intra\<close> fold), collapsed to its
   essential two-write pattern.
 
   The two predecessor edges carry different \<open>edge_action\<close>s (\<open>EA_Nop\<close> vs.
-  \<open>EA_Assign\<close>) against \<open>keyed_step\<close> below, so their \<^const>\<open>dg_edge_tree_at\<close>
+  \<open>EA_Assign\<close>) against \<open>keyed_step\<close> below, so their \<^const>\<open>dg_edge_program_at\<close>
   contributions publish genuinely different global values -- reproducing the
   same per-origin-gate destabilization \<^const>\<open>update_global_warrowing_apinis\<close>
   exhibits, from two \<open>intra\<close> list entries of the same equation.
@@ -27,7 +27,7 @@ text \<open>
 
 text \<open>An edge step in the framework's own \<open>'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl\<close> shape rather
   than a \<^type>\<open>dg_spec\<close>: what is under test is the generator's \<open>Side\<close> discipline, so
-  the step is supplied directly to \<^const>\<open>dg_edge_tree_at\<close> and its Side-free
+  the step is supplied directly to \<^const>\<open>dg_edge_program_at\<close> and its Side-free
   analogue. Only \<open>EA_Assign\<close> raises the published global, so the two predecessor
   edges below publish different values.\<close>
 definition keyed_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
@@ -38,7 +38,7 @@ definition keyed_dummy_cfg :: cfg where
   "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
 
 text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Statement 0\<close>, with different
-  \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_tree_at\<close> contributions differ.\<close>
+  \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_program_at\<close> contributions differ.\<close>
 definition keyed_pred_sel ::
   "cfg \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> ((pp \<times> unit + unit) \<times> edge_action) list" where
   "keyed_pred_sel g v ctx =
@@ -50,15 +50,15 @@ definition keyed_pred_sel ::
 text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>calls = {}\<close> makes
   \<open>return_call_action_list\<close>/\<open>entry_call_list\<close> empty for every node.\<close>
 definition keyed_cmb :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree" where
-  "keyed_cmb route ctx ca cc ex = Answer (DG bot bot)"
+    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
+  "keyed_cmb route ctx ca cc ex = sp_return (DG bot bot)"
 
 definition keyed_cmb_c :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree" where
-  "keyed_cmb_c route ctx ca cc ex = Answer (DG bot bot)"
+    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
+  "keyed_cmb_c route ctx ca cc ex = sp_return (DG bot bot)"
 
 definition keyed_extra :: "(pp \<Rightarrow> unit \<Rightarrow> ivl \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> pp
-    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state) strategy_tree list" where
+    \<Rightarrow> (pp \<times> unit, unit, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program list" where
   "keyed_extra route ctx v = []"
 
 text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issues two \<open>Side ()\<close>
@@ -68,17 +68,17 @@ text \<open>The unbuffered generator: \<open>Statement 1\<close>'s equation issu
 definition keyed_multiwrite_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_eqs =
      routed_node_rhs keyed_pred_sel call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       (\<lambda>ctx' src a. dg_edge_tree_at (keyed_step a) src ())
+       (\<lambda>ctx' src a. dg_edge_program_at (keyed_step a) src ())
        keyed_cmb keyed_extra keyed_dummy_cfg bot bot bot"
 
 text \<open>The buffered generator: the same two predecessor contributions, folded
-  Side-free via \<^const>\<open>dg_edge_contribution_tree_at\<close> and \<^const>\<open>fold_rhs_contributions\<close>,
+  Side-free via \<^const>\<open>dg_edge_contribution_program_at\<close> and \<^const>\<open>fold_rhs_program\<close>,
   published exactly once. Terminates under the completely unmodified vendored
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve_c\<close>.\<close>
 definition keyed_multiwrite_buffered_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "keyed_multiwrite_buffered_eqs =
      routed_node_rhs_buffered keyed_pred_sel call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       (\<lambda>ctx' src a. dg_edge_contribution_tree_at (keyed_step a) src ())
+       (\<lambda>ctx' src a. dg_edge_contribution_program_at (keyed_step a) src ())
        keyed_cmb_c keyed_extra keyed_dummy_cfg bot bot bot"
 
 lemma keyed_multiwrite_buffered_terminates:
@@ -117,7 +117,7 @@ definition merge_cfg :: cfg where
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-       (\<lambda>ctx' src a. dg_edge_contribution_tree_at (merge_step a) src ())
+       (\<lambda>ctx' src a. dg_edge_contribution_program_at (merge_step a) src ())
        keyed_cmb_c keyed_extra merge_cfg bot bot bot"
 
 lemma merge_terminates:
@@ -132,7 +132,7 @@ lemma merge_global_value:
 section \<open>Routed enter regression: one entered frame, keyed and published together\<close>
 
 text \<open>
-  \<^const>\<open>routed_call_tree\<close> selects the callee's context and publishes the callee's
+  \<^const>\<open>routed_call_program\<close> selects the callee's context and publishes the callee's
   entry state. Both must read the \<^emph>\<open>same\<close> entered frame: the frame entered
   from the caller's local state \<^bold>\<open>and\<close> the solver's global unknown. A route
   reading anything else -- the caller's own local state, or a frame entered
@@ -176,36 +176,38 @@ text \<open>The call site resolves to the single callee \<open>f\<close>. Stated
 definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> ivl \<Rightarrow> pname list" where
   "w0_resolve v cc ca d = [STR ''f'']"
 
-definition w0_tree :: "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state) strategy_tree" where
-  "w0_tree =
-     routed_call_tree w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
+definition w0_program ::
+  "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
+  "w0_program =
+     routed_call_program w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
        (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>
 lemma w0_seed_at_entered_frame:
-  "sides_of_rhs w0_tree w0_sigma
+  "sides_of_program w0_program w0_sigma
      (Inr (W0Seed (FunctionEntry (STR ''f'')) (Ivl (Fin 7) (Fin 7))))
    = DG (Ivl (Fin 7) (Fin 7)) bot"
-  unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def by eval
+  unfolding w0_program_def w0_sigma_def w0_spec_def w0_route_def by eval
 
 text \<open>Nothing is published at the key a caller-state route would have chosen.\<close>
 lemma w0_no_seed_at_caller_frame:
-  "sides_of_rhs w0_tree w0_sigma
+  "sides_of_program w0_program w0_sigma
      (Inr (W0Seed (FunctionEntry (STR ''f'')) (Ivl (Fin 1) (Fin 1)))) = bot"
-  unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def by eval
+  unfolding w0_program_def w0_sigma_def w0_spec_def w0_route_def by eval
 
 text \<open>The callee-exit unknown the combine reads back is the same entered
   context, so the return leg and the seed agree on which activation they
   are talking about.\<close>
 lemma w0_dep_at_entered_frame:
-  "dep_aux w0_sigma w0_tree
+  "dep_program w0_sigma w0_program
    = {Inl (Statement 0, bot), Inr W0Global,
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
-  unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
-  by (simp add: routed_call_tree_def routed_callee_call_tree_def routed_call_alternative_tree_def w0_resolve_def
+  unfolding w0_program_def w0_sigma_def w0_spec_def w0_route_def
+  by (simp add: routed_call_program_def routed_callee_call_program_def
+        routed_call_alternative_program_def w0_resolve_def
         dg_spec_combine_transfer_def mk_dg_man_def
         dg_read_global_def local_transfer_def local_combine_transfer_def
         Let_def insert_commute sp_compile_def sp_compile_with_bind sp_read_global_def
-        sp_bind_def sp_return_def comp_def bot_ivl_def)
+        sp_publish_def sp_read_local_def sp_bind_def sp_return_def comp_def bot_ivl_def)
 
 end

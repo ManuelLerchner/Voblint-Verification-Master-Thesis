@@ -89,11 +89,26 @@ subsection \<open>Buffering a right-hand side\<close>
 text \<open>The traversal that does the buffering: writes are collected into the accumulator on
   the way down and emitted once at each answer, so a query branch cannot lose the writes
   made before it, and no key is written twice on any path.\<close>
+text \<open>
+  A key whose completed contribution is \<^const>\<open>bot\<close> is not flushed. Publishing
+  it would be a no-op for every consumer --- \<open>sides_of_rhs\<close> joins it in, and a
+  join with \<^const>\<open>bot\<close> changes nothing --- while still costing the solver an
+  update-rule application and a destabilization of that global's readers. The
+  generator appends the publication to every answer path without asking whether
+  the transfer wrote anything, so on a node that touches no global this is the
+  only place the emptiness is known.
+\<close>
 primrec flush_sides ::
-  "('g \<times> 'd) list \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('x, 'g, 'd) strategy_tree"
+  "('g \<times> 'd::bounded_semilattice_sup_bot) list \<Rightarrow> ('x, 'g, 'd) strategy_tree
+   \<Rightarrow> ('x, 'g, 'd) strategy_tree"
 where
   "flush_sides [] t = t"
-| "flush_sides (kv # kvs) t = Side (fst kv) (snd kv) (flush_sides kvs t)"
+| "flush_sides (kv # kvs) t =
+     (if snd kv \<le> bot then flush_sides kvs t
+      else Side (fst kv) (snd kv) (flush_sides kvs t))"
+
+abbreviation flushed :: "('g \<times> 'd::bounded_semilattice_sup_bot) list \<Rightarrow> ('g \<times> 'd) list"
+  where "flushed acc \<equiv> filter (\<lambda>kv. \<not> snd kv \<le> bot) acc"
 
 primrec buffer_aux ::
   "('g \<times> 'd) list
@@ -136,7 +151,8 @@ lemma traverse_rhs_buffer_sides [simp]:
 
 lemma sides_of_rhs_flush_sides [simp]:
   "sides_of_rhs (flush_sides acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
-  by (induction acc arbitrary: z) (auto simp add: Let_def acc_val_Cons ac_simps)
+  by (induction acc arbitrary: z)
+     (auto simp add: Let_def acc_val_Cons ac_simps dest!: le_bot)
 
 lemma sides_of_rhs_buffer_aux [simp]:
   "sides_of_rhs (buffer_aux acc t) \<sigma> z = sides_of_rhs t \<sigma> z \<squnion> acc_val acc z"
@@ -176,16 +192,31 @@ primrec side_path ::
 | "side_path \<sigma> (Side y d t) = y # side_path \<sigma> t"
 
 lemma side_path_flush_sides [simp]:
-  "side_path \<sigma> (flush_sides acc t) = map fst acc @ side_path \<sigma> t"
+  "side_path \<sigma> (flush_sides acc t) = map fst (flushed acc) @ side_path \<sigma> t"
   by (induction acc) simp_all
 
 lemma distinct_side_path_buffer_aux:
   "distinct (map fst acc) \<Longrightarrow> distinct (side_path \<sigma> (buffer_aux acc t))"
-  by (induction t arbitrary: acc) (auto simp add: distinct_acc_add)
+  by (induction t arbitrary: acc)
+     (auto simp add: distinct_acc_add distinct_map_filter)
 
 theorem distinct_side_path_buffer_sides:
   "distinct (side_path \<sigma> (buffer_sides t))"
   by (simp add: buffer_sides_def distinct_side_path_buffer_aux)
+
+text \<open>The elision, pinned at both polarities: a completed contribution of
+  \<^const>\<open>bot\<close> costs the evaluation no write, and one carrying a value still
+  costs exactly one. Stated over \<open>side_path\<close> because the writes an evaluation
+  performs are what the elision is for.\<close>
+
+lemma side_path_flush_sides_bot [simp]:
+  "side_path \<sigma> (flush_sides [(k, bot)] t) = side_path \<sigma> t"
+  by simp
+
+lemma side_path_flush_sides_value:
+  assumes "\<not> d \<le> bot"
+  shows "side_path \<sigma> (flush_sides [(k, d)] t) = k # side_path \<sigma> t"
+  using assms by simp
 
 text \<open>
   So a buffered system writes each key at most once per evaluation: every key
@@ -199,6 +230,11 @@ text \<open>
 
 subsection \<open>Buffering is idempotent\<close>
 
+text \<open>The entries a flush drops are exactly the ones it would have skipped, so
+  flushing the filtered accumulator is the same tree.\<close>
+lemma flush_sides_flushed [simp]: "flush_sides (flushed acc) t = flush_sides acc t"
+  by (induction acc) simp_all
+
 lemma acc_add_fold_append:
   "distinct (map fst (acc0 @ acc))
      \<Longrightarrow> foldl (\<lambda>a kv. acc_add (fst kv) (snd kv) a) acc0 acc = acc0 @ acc"
@@ -206,13 +242,15 @@ lemma acc_add_fold_append:
 
 lemma buffer_aux_flush_sides:
   "buffer_aux acc0 (flush_sides acc t)
-     = buffer_aux (foldl (\<lambda>a kv. acc_add (fst kv) (snd kv) a) acc0 acc) t"
+     = buffer_aux (foldl (\<lambda>a kv. acc_add (fst kv) (snd kv) a) acc0 (flushed acc)) t"
   by (induction acc arbitrary: acc0) simp_all
 
 lemma buffer_sides_idem [simp]: "buffer_sides (buffer_sides t) = buffer_sides t"
 proof -
   have "\<And>acc. distinct (map fst acc) \<Longrightarrow> buffer_aux [] (buffer_aux acc t) = buffer_aux acc t"
-    by (induction t) (auto simp add: buffer_aux_flush_sides acc_add_fold_append distinct_acc_add)
+    by (induction t)
+       (auto simp add: buffer_aux_flush_sides acc_add_fold_append distinct_acc_add
+             distinct_map_filter)
   then show ?thesis by (simp add: buffer_sides_def)
 qed
 

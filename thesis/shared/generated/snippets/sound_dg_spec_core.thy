@@ -4,12 +4,13 @@ locale sound_dg_spec_core =
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
-  assumes gammaDG_mono:
+  assumes spec_wf: "dg_spec_wf S"
+    and gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG d g \<subseteq> gammaDG d' g'"
     and step_sound:
       "edge_collect a (gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
-         \<subseteq> gammaDG (locals (traverse_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau>))
-                   (globs (sides_of_rhs (dg_spec_edge_tree S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
+         \<subseteq> gammaDG (locals (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
+                   (globs (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and combine_sound:
       "\<lbrakk>s \<in> gammaDG dc (globs (\<tau> (Inr gk)));
         t \<in> gammaDG de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>

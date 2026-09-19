@@ -75,6 +75,10 @@ lemma dg_spec_step_local_state_st_for_lifted:
      = local_transfer (transfer_lift empty_pred (tf_st a))"
   by (simp add: local_state_dg_spec_st_for_lifted_def local_spec_step_transfer_lift_tf_st)
 
+lemma dg_spec_wf_local_state_dg_spec_st_for_lifted [intro, simp]:
+  "dg_spec_wf (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)"
+  by (simp add: local_state_dg_spec_st_for_lifted_def)
+
 lemma dgs_enter_local_state_st_for_lifted:
   "enter\<^sup># (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (enter_st ci) d)])"

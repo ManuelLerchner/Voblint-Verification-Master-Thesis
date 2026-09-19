@@ -60,6 +60,21 @@ const REPO_URL = "https://github.com/ManuelLerchner/Voblint-Verification-Master-
 /* Reading progress, and the commit the site was built from                   */
 /* -------------------------------------------------------------------------- */
 
+/* Repository figures are never written into the markup by hand: scripts/pages_stats.py
+   derives them at site-build time and the page fills every [data-stat] from that.
+   The literal in the markup is the fallback a source checkout renders, so it goes
+   stale silently -- data-stat is what keeps the published page honest. The figure
+   scripts fill their own scopes too; filling twice writes the same value. */
+for (const element of document.querySelectorAll("[data-stat]")) {
+  const value = element.dataset.stat
+    .split(".")
+    .reduce((obj, key) => obj?.[key], window.VOBLINT_STATS);
+
+  if (value !== undefined) {
+    element.textContent = typeof value === "number" ? value.toLocaleString("en-US") : value;
+  }
+}
+
 /* The site build writes the commit into window.VOBLINT_STATS; without it the link stays hidden. */
 for (const build of document.querySelectorAll(".doc-toc-build")) {
   const stats = window.VOBLINT_STATS;

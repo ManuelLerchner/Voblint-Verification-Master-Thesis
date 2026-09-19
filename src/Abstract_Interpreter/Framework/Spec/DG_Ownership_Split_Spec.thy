@@ -168,39 +168,39 @@ text \<open>
 \<close>
 
 lemma locals_traverse_ownership_split_transfer_gen [simp]:
-  "locals (traverse_rhs
-             (transfer_tree (ownership_split_transfer_gen cmb rg rl (local_transfer f))
+  "locals (traverse_program
+             (transfer_program (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                 src (\<lambda>_. gk)) \<tau>)
      = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
-  by (simp add: traverse_transfer_tree ownership_split_transfer_gen_def
+  by (simp add: traverse_transfer_program ownership_split_transfer_gen_def
       local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
 lemma globs_sides_ownership_split_transfer_gen [simp]:
-  "globs (sides_of_rhs
-            (transfer_tree (ownership_split_transfer_gen cmb rg rl (local_transfer f))
+  "globs (sides_of_program
+            (transfer_program (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                src (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
-  by (simp add: sides_transfer_tree ownership_split_transfer_gen_def
+  by (simp add: sides_transfer_program ownership_split_transfer_gen_def
       local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
 lemma locals_traverse_ownership_split_combine_transfer_gen [simp]:
-  "locals (traverse_rhs
-             (combine_transfer_tree
+  "locals (traverse_program
+             (combine_transfer_program
                 (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                 src_cc src_ex (\<lambda>_. gk)) \<tau>)
      = rl (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
-  by (simp add: traverse_combine_transfer_tree ownership_split_combine_transfer_gen_def
+  by (simp add: traverse_combine_transfer_program ownership_split_combine_transfer_gen_def
       local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
 lemma globs_sides_ownership_split_combine_transfer_gen [simp]:
-  "globs (sides_of_rhs
-            (combine_transfer_tree
+  "globs (sides_of_program
+            (combine_transfer_program
                (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
      = rg (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
              (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
-  by (simp add: sides_combine_transfer_tree ownership_split_combine_transfer_gen_def
+  by (simp add: sides_combine_transfer_program ownership_split_combine_transfer_gen_def
       local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
 subsection \<open>The ownership rule at the pointwise carrier\<close>
@@ -338,12 +338,37 @@ lemma dg_spec_step_ownership_split_lift [simp]:
   "dg_spec_step (ownership_split_lift gs S) a = ownership_split_transfer gs (dg_spec_step S a)"
   unfolding ownership_split_lift_def by (cases a) simp_all
 
+lemma dgs_enter_ownership_split_lift [simp]:
+  "enter\<^sup># (ownership_split_lift gs S) ci = ownership_split_enter_transfer gs (enter\<^sup># S ci)"
+  unfolding ownership_split_lift_def by simp
+
 lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
   "dg_spec_combine_transfer (ownership_split_lift gs S) ci
      = ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)"
   unfolding dg_spec_combine_transfer_def ownership_split_lift_def
   by (simp add: local_transfer_def local_combine_transfer_def)
 
+
+text \<open>The lifter preserves well-formedness: it reads the shared slot, runs the
+  wrapped transfer at a manager built the same way, publishes once and answers.
+  Every step of that is a closure lemma.\<close>
+
+lemma sp_wf_dgs_combine_assign_ownership_split_lift [intro]:
+  assumes "dg_spec_wf S"
+  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift gs S) ci (mk_dg_man d key) ex)"
+  unfolding ownership_split_lift_def
+  by (auto simp: ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
+      intro!: sp_wf_bind dg_spec_wf_combine[OF assms])
+
+lemma dg_spec_wf_ownership_split_lift [intro]:
+  assumes "dg_spec_wf S"
+  shows "dg_spec_wf (ownership_split_lift gs S)"
+  unfolding dg_spec_wf_def
+  by (auto simp: ownership_split_transfer_def ownership_split_transfer_gen_def
+      ownership_split_enter_transfer_def ownership_split_enter_transfer_gen_def
+      ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
+      intro!: sp_wf_bind dg_spec_wf_step[OF assms] dg_spec_wf_enter[OF assms]
+        dg_spec_wf_combine[OF assms])
 
 section \<open>What a split point means\<close>
 
@@ -435,7 +460,7 @@ text \<open>
   wrapper feeds it a local value the environment never held: an argument that read
   a global of its own would read it at a slot this concretization does not account
   for. A whole-state analysis makes no such read, which is exactly what
-  \<^const>\<open>local_state_dg_spec_for\<close> guarantees about its trees.
+  \<^const>\<open>local_state_dg_spec_for\<close> guarantees about its programs.
 
   The callee exit is merged before the wrapped combine sees it, so the return slot
   is read off a whole state like every other name and no \<open>reserved_ret_var\<close>
@@ -447,16 +472,19 @@ theorem (in sound_transfer_for) ownership_split_lift_core_sound:
      (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
      (gamma_ownership_split gs) gs"
 proof (unfold_locales, goal_cases)
-  case (1 d d' g g')
+  case 1
+  show ?case by (rule dg_spec_wf_ownership_split_lift) simp
+next
+  case (2 d d' g g')
   then show ?case by (rule gamma_ownership_split_mono)
 next
-  case (2 a \<tau> src gk)
+  case (3 a \<tau> src gk)
   show ?case
-    unfolding dg_spec_edge_tree_def dg_spec_step_ownership_split_lift
+    unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_lift
       dg_spec_step_local_state_for ownership_split_transfer_def gamma_ownership_split_def
     by (simp add: step_sound_for)
 next
-  case (3 s \<tau> src_cc gk t src_ex ci)
+  case (4 s \<tau> src_cc gk t src_ex ci)
   then show ?case
     unfolding dg_spec_combine_transfer_ownership_split_lift
       local_state_dg_spec_for_def dg_spec_combine_transfer_local_dg_spec

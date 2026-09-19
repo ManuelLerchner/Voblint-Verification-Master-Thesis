@@ -157,6 +157,9 @@ definition analysis_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
      local_state_dg_spec_st_for_lifted gs
        (resolved_st_q_is_bot_for (declared_global_vars p)) (tf_st gs) (enter_st gs)"
 
+lemma dg_spec_wf_analysis_spec [intro, simp]: "dg_spec_wf (analysis_spec gs p)"
+  by (simp add: analysis_spec_def)
+
 text \<open>
   The unknown the solver is asked for. It is the program exit at the root
   context: a demand-driven solver is started at the answer a caller wants and
@@ -232,7 +235,7 @@ definition ctx_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Righ
 
 text \<open>
   Where a call leads when it contributes at all: \<open>None\<close> when the entered state is
-  bottom, which is exactly when the routed call tree drops the alternative, and
+  bottom, which is exactly when the routed call program drops the alternative, and
   otherwise the context \<^const>\<open>ctx_succ\<close> names.
 \<close>
 
@@ -545,10 +548,10 @@ theorem pp_routed:
   assumes solves: "terminates pgs p"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) (route pgs)
-        (\<lambda>ctx' src a. dg_spec_edge_tree (analysis_spec pgs p) a src (\<lambda>_. gk0))
-        (routed_call_tree (analysis_spec pgs p) gk0 seed
+        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src (\<lambda>_. gk0))
+        (routed_call_program (analysis_spec pgs p) gk0 seed
            (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_tree seed)
+        (routed_entry_seed_programs seed)
         (prog_cfg p) Bot (Lifted init_st) Bot)
      (root_query p) (sol_env pgs p) (sol_vars pgs p)"
   unfolding analysis_spec_def
@@ -629,9 +632,13 @@ lemma routed_analysis_sound_of_live:
   shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) classify"
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC CallsUnique SeedKey
-    IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
+    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
     ClProved ClRefuted VarsFin)
+  case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
+next
+  case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
+next
   case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
 next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp_routed[OF solves]])

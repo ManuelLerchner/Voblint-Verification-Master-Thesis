@@ -3088,3 +3088,104 @@ sign_unit_terminates
 sign_unit_vars
 solved_eq
 unit_seed_global_keys
+# --- fold_rhs_contributions / fold_rhs_projected renamed to carry the type
+# --- they return: both build a strategy_program from a list of trees, and
+# --- the old names said only what went in (2026-09-18) ---
+fold_rhs_contributions
+fold_rhs_projected
+# --- contributions became strategy_program, so every constant and lemma that
+# --- named a "tree" now names a program (2026-09-18) ---
+routed_contribution_trees
+routed_contribution_trees_combineI
+routed_contribution_trees_extraI
+routed_contribution_treesE
+transfer_tree
+transfer_tree_def
+transfer_tree_local_transfer
+traverse_transfer_tree
+sides_transfer_tree
+dep_aux_transfer_tree
+dep_aux_transfer_tree_source
+traverse_local_transfer_tree
+sides_local_transfer_tree
+dep_aux_local_transfer_tree
+dg_spec_edge_tree
+dep_aux_dg_spec_edge_tree_source
+dg_spec_combine_tree
+combine_transfer_tree
+traverse_combine_transfer_tree
+sides_combine_transfer_tree
+dep_aux_combine_transfer_tree
+dep_aux_combine_transfer_tree_sources
+dep_aux_dg_spec_combine_tree_sources
+traverse_local_combine_tree
+sides_local_combine_tree
+dep_aux_local_combine_tree
+combine_sound_tree
+routed_call_tree
+routed_callee_call_tree
+routed_call_alternative_tree
+routed_call_alternative_tree_bot
+routed_call_alternative_tree_nonbot
+routed_entry_seed_tree
+routed_entry_seed_tree_free
+routed_entry_seed_tree_local_only
+dg_tree_st_commute_side_rhs_fold_dg
+dg_tree_st_commute_routed_call_tree
+dg_tree_st_commute_routed_callee_call_tree
+dg_tree_st_commute_routed_call_alternative_tree
+dg_tree_st_commute_routed_entry_seed_tree
+dg_edge_tree_at
+dg_edge_contribution_tree_at
+dep_aux_dg_edge_tree_at
+w0_tree
+# --- lemma names that went with the tree -> program rename (2026-09-18).
+# --- The locale abbreviation `trees` (now `contribs`) is deliberately NOT listed:
+# --- this check greps raw theory text, and "trees" is an ordinary English word in
+# --- prose. `pixi run locale-parameters-check` is the guard for that failure mode.
+fold_rhs_contributions_simps
+dep_aux_fold_rhs_contributions_char
+dep_aux_fold_rhs_projected_acc_indep
+dep_aux_fold_rhs_projected_char
+env_indep_deps_fold_rhs_projected
+mono_tree_deps_fold_rhs_projected
+sides_of_rhs_fold_rhs_contributions_char
+sides_of_rhs_fold_rhs_projected_acc_indep
+sides_of_rhs_fold_rhs_projected_bot
+sides_of_rhs_fold_rhs_projected_char
+sides_of_rhs_fold_rhs_projected_mono
+traverse_fold_rhs_contributions_char
+traverse_fold_rhs_contributions_char_foldr
+traverse_fold_rhs_projected_char
+traverse_fold_rhs_projected_mono
+routed_call_tree_global_free
+routed_call_tree_mem
+routed_call_tree_side_free_at_gk0
+routed_call_tree_sides_ge_at
+routed_callee_call_tree_side_free_at_gk0
+routed_callee_call_tree_sides_ge_combine
+routed_callee_call_tree_sides_ge_prefix
+routed_callee_call_tree_sides_ge_seed
+routed_callee_call_tree_traverse_ge
+dep_aux_routed_call_tree
+# --- lemma names that read dep_aux_/sides_of_rhs_ over program conclusions (2026-09-18) ---
+dep_aux_fold_rhs_program_char
+dep_aux_fold_rhs_program_projected_acc_indep
+dep_aux_fold_rhs_program_projected_char
+dep_aux_side_rhs_fold_dg_acc_indep
+dep_aux_side_rhs_fold_dg_char
+edge_tree_mem_trees
+sides_of_rhs_fold_rhs_program_char
+sides_of_rhs_fold_rhs_program_projected_acc_indep
+sides_of_rhs_fold_rhs_program_projected_bot
+sides_of_rhs_fold_rhs_program_projected_char
+sides_of_rhs_fold_rhs_program_projected_mono
+sides_of_rhs_side_rhs_fold_dg_acc_indep
+sides_of_rhs_side_rhs_fold_dg_char
+
+# --- Two theories renamed once their contents became strategy programs. The
+# names are listed here because an import that survives a rename is exactly
+# what a green build hides: Isabelle resolves the old name from a stale heap
+# and never looks at the ROOT.
+DG_Constraint_Trees
+Routed_Call_Trees

@@ -205,10 +205,18 @@ lemma local_spec_step_transfer_lift:
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (cases a) simp_all
 
+lemma dg_spec_wf_local_state_dg_spec_for [intro, simp]:
+  "dg_spec_wf (local_state_dg_spec_for gs sk asn sp br bd rt en ev)"
+  by (simp add: local_state_dg_spec_for_def)
+
 lemma dg_spec_step_local_state_for_lifted:
   "dg_spec_step (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) a
      = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a))"
   by (simp add: local_state_dg_spec_for_lifted_def local_spec_step_transfer_lift)
+
+lemma dg_spec_wf_local_state_dg_spec_for_lifted [intro, simp]:
+  "dg_spec_wf (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)"
+  by (simp add: local_state_dg_spec_for_lifted_def)
 
 lemma dgs_enter_local_state_for_lifted:
   "enter\<^sup># (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci

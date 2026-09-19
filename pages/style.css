@@ -53,6 +53,8 @@
   --tok-operator: #1d6b63;
   --tok-comment: #5f6e74;
   --tok-name: #17323a;
+  --tok-ctor: #1f5f8b;
+  --global-link: #7a3fa8;
   --tok-punct: #59696f;
 }
 
@@ -66,6 +68,8 @@
   --tok-operator: #8bd5ca;
   --tok-comment: #718b91;
   --tok-name: #f7faf9;
+  --tok-ctor: #8fc4e8;
+  --global-link: #c9a2e8;
   --tok-punct: #a7bbc0;
 }
 
@@ -90,6 +94,11 @@
 .tok-comment {
   color: var(--tok-comment);
   font-style: italic;
+}
+
+.tok-constructor {
+  color: var(--tok-ctor);
+  font-weight: 600;
 }
 
 .tok-variableName {
@@ -879,6 +888,7 @@ p.inspector-message {
   justify-content: space-between;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   padding: 0;
   color: var(--text);
   background: none;
@@ -900,12 +910,22 @@ p.inspector-message {
   margin-left: auto;
 }
 
+/* A call string of any depth arrives as one unbreakable token. Left alone it
+   runs past the card and takes the whole inspector off-screen with it, so it
+   wraps inside the card and is capped at a few lines; the full key stays on the
+   element's title. */
 .inspector-context-key {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-height: 3.4em;
   padding: 0 6px;
+  overflow: hidden;
   color: var(--surface);
   background: var(--primary);
   border-radius: 4px;
   font-size: 0.7rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
 .inspector-table th.global {

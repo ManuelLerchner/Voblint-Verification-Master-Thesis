@@ -1,5 +1,5 @@
 theory Exec_DG_State
-  imports Exec_St_Restriction_Refinement "Voblint_Framework.DG_Constraint_Trees"
+  imports Exec_St_Restriction_Refinement "Voblint_Framework.DG_Constraint_Programs"
 begin
 
 section \<open>The executable carrier and its readback\<close>

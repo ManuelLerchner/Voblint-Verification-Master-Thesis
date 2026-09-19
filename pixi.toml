@@ -14,8 +14,6 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = ">=3.10"
-binaryen = ">=119"
-
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
@@ -135,14 +133,125 @@ pages-lint = { cmd = "biome ci", description = "Check the site's JavaScript and 
 hooks-install = { cmd = "lefthook install", description = "Install the repository's Lefthook Git hooks." }
 # Over every file, `stage_fixed` would stage unrelated worktree edits.
 pre-commit = { cmd = "lefthook run pre-commit --all-files --no-stage-fixed", description = "Run every pre-commit hook against the full repository." }
+
+# GitHub Pages and browser tooling. Binaryen supplies wasm-opt for the
+# wasm_of_ocaml browser build; ripgrep is used by the source-level term-link
+# checker. Keeping both here avoids installing site-only tools in lint, test,
+# thesis, grammar, report, or benchmark environments.
+[feature.pages.dependencies]
+binaryen = ">=119"
+ripgrep = "*"
+[feature.pages.tasks]
+browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to WebAssembly." }
+pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
+  "vendor-init",
+  "browser-build",
+], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
+pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
+
+# Source-level and assembled-site link/metadata checks.
+pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
+pages-stats = { cmd = "python3 scripts/check_pages_stats.py", description = "Check that the site's repository figures are derived (data-stat) and their fallbacks are current." }
+pages-terms = { cmd = "python3 scripts/check_pages_terms.py", description = "Check that every Isabelle name the site pages set in code is linked into the theory HTML." }
+theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
+pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
+pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
+
+[feature.thesis.dependencies]
+typst = ">=0.15"
+[feature.thesis.tasks]
+# The thesis names constants, lemmas, locales and types that live in the
+# theories. `check_thesis_refs` resolves each one against the command that
+# declares it, so a rename shows up as a build failure rather than as a
+# sentence about something that no longer exists.
+thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", description = "Check thesis entity references against Isabelle declarations and sessions." }
+
+# Figures built from analyzer output are regenerated and diffed, so a thesis
+# claim cannot outlive the behaviour it describes.
+thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = [
+  "cli-build",
+], description = "Check thesis analyzer figures against current CLI output." }
+thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-on = [
+  "cli-build",
+], description = "Regenerate thesis analyzer figures from current CLI output." }
+
+# Declarations the thesis shows are lifted out of the theories by name, never
+# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
+thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
+thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
+
+# Theorem statements are exported from a built session, which is what gives the
+# Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
+# Needs the session in facts.toml to be built.
+thesis-facts = { cmd = "python3 thesis/tools/facts.py --check", description = "Check thesis theorem statements against a built Isabelle session." }
+thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", description = "Regenerate thesis theorem statements from a built Isabelle session." }
+
+# Explanatory figures already drawn for the explainer page, lifted into thesis
+# assets with the site palette rewritten. Reads pages/, never writes to it.
+thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
+thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
+
+# Warnings are failures; an unresolved reference must not scroll past unread.
+thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
+
+# Same build, but warnings do not stop it -- for drafting.
+thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", description = "Build the thesis PDF while allowing warnings during drafting." }
+
+# Live rebuild while writing.
+thesis-watch = { cmd = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Voblint_Thesis.pdf", description = "Watch thesis sources and rebuild the PDF." }
+
+# Isabelle's symbol table, turned into the lookup the template decodes with.
+thesis-symbols = { cmd = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/lib/isabelle-symbols.typ", description = "Generate the Isabelle symbol table used by the thesis." }
+
+# Everything the thesis quotes from the formalization or the analyzer.
+thesis-generated = { depends-on = [
+  "thesis-snippets-write",
+  "thesis-claims-write",
+  "thesis-facts-write",
+  "thesis-figures-write",
+], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
+
+# Every drift check, in one name.
+thesis-check = { depends-on = [
+  "thesis-refs",
+  "thesis-snippets",
+  "thesis-figures",
+  "thesis-claims",
+  "thesis-facts",
+  "thesis-typst",
+  "thesis-links",
+], description = "Run all thesis drift and theorem checks." }
+
+# Entity citations link to their definition in the rendered theories, anchor by
+# anchor. Locally this is advisory: a working copy rarely has a current
+# build/isabelle-html, and a link cannot be validated before the theories are built.
+thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Check thesis entity links against available generated HTML." }
+thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
+thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }
+
+# The gate that matters, and the only one that can be honest: it runs against
+# the deployed pages, so it cannot run until GitHub Pages has published them.
+thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
+
 [environments]
-default = ["ir", "grammar", "test", "lint", "report", "bench", "thesis"]
-thesis = ["thesis"]
-lint = ["lint"]
-test = ["test"]
+default = [
+  "ir",
+  "grammar",
+  "test",
+  "lint",
+  "report",
+  "bench",
+  "thesis",
+  "pages",
+]
+ir = ["ir"]
 grammar = ["grammar"]
+test = ["test"]
+lint = ["lint"]
 report = ["report"]
 bench = ["bench"]
+thesis = ["thesis"]
+pages = ["pages"]
 
 # --------------------------------------------------------------------------
 # Repository task graph. Tasks here need only python3/bash/git (top-level
@@ -174,11 +283,6 @@ isabelle-build = { cmd = "bash scripts/mk/build.sh", depends-on = [
 isabelle-html-build = { cmd = "bash scripts/mk/html.sh", depends-on = [
   "vendor-init",
 ], description = "Clean-build Isabelle browser documentation for every session into build/isabelle-html/." }
-pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
-  "vendor-init",
-  "browser-build",
-], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
-pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
 isabelle-pdf-build = { cmd = "bash scripts/mk/pdf.sh", depends-on = [
   "vendor-init",
 ], description = "Render the formalization with a certificate appendix into output/document.pdf." }
@@ -233,7 +337,6 @@ format = { depends-on = [
 
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
-browser-build = { cmd = "bash scripts/mk/browser-build.sh", description = "Compile the generated analyzer and browser adapter to WebAssembly." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
@@ -329,6 +432,8 @@ verify = { depends-on = [
   "toml-format-check",
   "pages-lint",
   "pages-links",
+  "pages-stats",
+  "pages-terms",
   "theory-anchors-check",
   "pages-scripts-check",
   "regression-lint",
@@ -382,82 +487,3 @@ verify = { depends-on = [
   "isabelle-html-build",
   "isabelle-pdf-build",
 ], description = "Run the supported local verification gate, cheapest fail-fast checks first; GitHub CI runs the same leaf checks separately." }
-[feature.thesis.dependencies]
-typst = ">=0.15"
-[feature.thesis.tasks]
-# The thesis names constants, lemmas, locales and types that live in the
-# theories. `check_thesis_refs` resolves each one against the command that
-# declares it, so a rename shows up as a build failure rather than as a
-# sentence about something that no longer exists.
-thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", description = "Check thesis entity references against Isabelle declarations and sessions." }
-
-# Figures built from analyzer output are regenerated and diffed, so a thesis
-# claim cannot outlive the behaviour it describes.
-thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = [
-  "cli-build",
-], description = "Check thesis analyzer figures against current CLI output." }
-thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-on = [
-  "cli-build",
-], description = "Regenerate thesis analyzer figures from current CLI output." }
-
-# Declarations the thesis shows are lifted out of the theories by name, never
-# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
-thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
-thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
-
-# Theorem statements are exported from a built session, which is what gives the
-# Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
-# Needs the session in facts.toml to be built.
-thesis-facts = { cmd = "python3 thesis/tools/facts.py --check", description = "Check thesis theorem statements against a built Isabelle session." }
-thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", description = "Regenerate thesis theorem statements from a built Isabelle session." }
-
-# Explanatory figures already drawn for the explainer page, lifted into thesis
-# assets with the site palette rewritten. Reads pages/, never writes to it.
-thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
-thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
-
-# Warnings are failures; an unresolved reference must not scroll past unread.
-thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
-
-# Same build, but warnings do not stop it -- for drafting.
-thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", description = "Build the thesis PDF while allowing warnings during drafting." }
-
-# Live rebuild while writing.
-thesis-watch = { cmd = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Voblint_Thesis.pdf", description = "Watch thesis sources and rebuild the PDF." }
-
-# Isabelle's symbol table, turned into the lookup the template decodes with.
-thesis-symbols = { cmd = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/lib/isabelle-symbols.typ", description = "Generate the Isabelle symbol table used by the thesis." }
-
-# Everything the thesis quotes from the formalization or the analyzer.
-thesis-generated = { depends-on = [
-  "thesis-snippets-write",
-  "thesis-claims-write",
-  "thesis-facts-write",
-  "thesis-figures-write",
-], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
-
-# Every drift check, in one name.
-thesis-check = { depends-on = [
-  "thesis-refs",
-  "thesis-snippets",
-  "thesis-figures",
-  "thesis-claims",
-  "thesis-facts",
-  "thesis-typst",
-  "thesis-links",
-], description = "Run all thesis drift and theorem checks." }
-
-# Entity citations link to their definition in the rendered theories, anchor by
-# anchor. Locally this is advisory: a working copy rarely has a current
-# build/isabelle-html, and a link cannot be validated before the theories are built.
-thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Check thesis entity links against available generated HTML." }
-thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
-thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }
-
-# The gate that matters, and the only one that can be honest: it runs against
-# the deployed pages, so it cannot run until GitHub Pages has published them.
-thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
-pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
-theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
-pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
-pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }

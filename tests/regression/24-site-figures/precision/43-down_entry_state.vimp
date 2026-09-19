@@ -1,0 +1,15 @@
+// PARAM: --analysis interval --context entry-state
+// Backs a row of the site's "The price of precision" recursion chart
+// (entry state): keying on n reaches the same 102 contexts as a full-depth call
+// string, for less than half the time.
+
+fun down(n) {
+  __voblint_check(n >= 0); // PROVED
+  if (n > 0) {
+    down(n - 1);
+  }
+}
+
+fun main() {
+  down(100);
+}

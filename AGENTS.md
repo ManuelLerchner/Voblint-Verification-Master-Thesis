@@ -475,7 +475,7 @@ carrier's locations. It is not a framework parameter, and the invariant is:
 
 The checkable form of that is narrower and has no exceptions:
 `Framework/Constraints` must not depend on ownership-split semantics.
-`CFG_Enumeration`, `DG_Constraint_Trees` and `DG_Keyed_Generator` mention `gs` zero
+`CFG_Enumeration`, `DG_Constraint_Programs` and `DG_Keyed_Generator` mention `gs` zero
 times, as do `DG_Spec` and `DG_Manager`.
 
 The boundary statement above has exactly one known exception, and it is
@@ -567,6 +567,25 @@ runner, the HTML-report audit, the playground's example corpus and
 differently from the runner. A new voblint analysis flag goes into its
 `SETTING_FLAGS` or `OUTPUT_FLAGS`; an unknown flag is an error by design.
 
+## Repository figures on the site are derived, never typed
+
+Any number on a site page that measures this repository -- lines of Isabelle,
+theory or lemma counts, corpus size, generated or handwritten OCaml, the size of
+the source semantics -- comes from `scripts/pages_stats.py`, which measures the
+tree at site-build time and writes `window.VOBLINT_STATS`. The page fills every
+`<span data-stat="path.into.stats">` from it, page-wide, in `pages/explainer.js`.
+
+The literal inside the span is only the fallback a source checkout renders, so it
+drifts silently. `pixi run pages-stats` fails on both failure modes: a measured
+figure typed into the prose with no `data-stat` around it, and a fallback that no
+longer matches what the repository measures. `--fix` refreshes stale fallbacks;
+it never invents a `data-stat`, because where one belongs is a judgement about
+the sentence.
+
+A new figure therefore means a new key in `pages_stats.py`'s `collect()`, not a
+number in the HTML. `semantics` is the worked example: the six theories a reader
+must audit, their line count, and `pstep`'s rule count, all read off the sources.
+
 ## README figures and playground links
 
 The README's figures are runs of the browser playground, regenerated rather than
@@ -582,10 +601,11 @@ the image lives in `docs/images/`, and the link under it carries that program.
 - Write a README link to a playground run with `scripts/playground_link.py`, from
   the program file, never by hand. `pixi run pages-links` fails when a README
   `#code=` link carries anything but a program in `docs/readme-figures/`, and when
-  any playground link names an example, fixture or setting the playground lacks.
-- The explainer's `playground.html?example=<name>` links name keys of
-  `LINKED_EXAMPLES` in `pages/main.js`. Renaming a key breaks them; the same check
-  reports it.
+  any playground link names a fixture or setting the playground lacks.
+- The explainer's "run it" links name a regression case,
+  `playground.html?fixture=<path under tests/regression>`, so the program a claim
+  links to is the one the runner executes. Moving or renaming a fixture breaks
+  them; the same check reports it.
 
 ## Style
 
