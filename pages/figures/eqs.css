@@ -2,7 +2,7 @@
 
 :where(.scene-eqs) .eqs-layout {
   display: grid;
-  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr) minmax(220px, 0.7fr);
+  grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.2fr);
   gap: 16px;
 }
 
@@ -217,4 +217,67 @@
 :where(.scene-eqs) .eqs-result code {
   padding: 0;
   border: 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The solved figure: what the run returned                                    */
+/* -------------------------------------------------------------------------- */
+
+:where(.scene-eqs) .eqs-said {
+  max-width: var(--measure);
+  margin: 0;
+  color: var(--text-muted);
+}
+
+/* The run reads left to right like the pipelines earlier in the section, so the
+   result is a band rather than a tall column beside two lines of text. */
+:where(.scene-eqs) .eqs-run {
+  align-items: center;
+  margin-top: 18px;
+}
+
+:where(.scene-eqs) .eqs-run .eqs-result {
+  flex: 0 0 auto;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* The edges are cell padding, not table padding: a table's own padding is not
+   reliably honoured, and the two columns then set their own sides. */
+:where(.scene-eqs) .eqs-run .eqs-result th {
+  width: auto;
+  padding: 4px 0 4px 20px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+:where(.scene-eqs) .eqs-run .eqs-result td {
+  padding: 4px 20px 4px 18px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+:where(.scene-eqs) .eqs-ops {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-eqs) .eqs-ops ul {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+}
+
+:where(.scene-eqs) .eqs-ops li {
+  margin-top: 4px;
+}
+
+:where(.scene-eqs) .eqs-ops p:last-child {
+  margin: 0;
+  color: var(--text-muted);
 }

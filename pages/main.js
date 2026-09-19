@@ -1452,6 +1452,7 @@ function renderInspectorContext(node) {
 
     key.className = "inspector-context-key";
     key.textContent = node.context_key;
+    key.title = node.context_key;
     header.append(key);
   }
 
@@ -2850,9 +2851,11 @@ function updateGlobalsHelp() {
 
 /*
  * Every extra call site kept multiplies the contexts a recursive program can
- * reach; none of the explainer's examples needs more than two.
+ * reach, so the control is bounded rather than open. The explainer's recursion
+ * chart runs to k = 100, which is where this sits: a run is cancellable and
+ * warns at SLOW_RUN_MS, so a deep setting costs time rather than the page.
  */
-const MAX_CONTEXT_DEPTH = 16;
+const MAX_CONTEXT_DEPTH = 100;
 
 function parseContextDepth(text) {
   const trimmed = String(text ?? "").trim();
@@ -3769,6 +3772,25 @@ fun main() {
 
 fun main() {
   f(0);
+}`,
+  "fan-out": `fun f0(x) { __voblint_check(x <= 22); }
+fun f1(x) { f0(x); f0(x + 1); }
+fun f2(x) { f1(x); f1(x + 2); }
+fun f3(x) { f2(x); f2(x + 3); }
+fun f4(x) { f3(x); f3(x + 4); }
+fun f5(x) { f4(x); f4(x + 5); }
+fun f6(x) { f5(x); f5(x + 6); }
+
+fun main() { f6(1); }`,
+  "recursion-down": `fun down(n) {
+  __voblint_check(n >= 0);
+  if (n > 0) {
+    down(n - 1);
+  }
+}
+
+fun main() {
+  down(100);
 }`,
   "recursion-bounded": `fun f(x) {
   __voblint_check(x >= 0);

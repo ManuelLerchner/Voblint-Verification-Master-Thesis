@@ -1,0 +1,142 @@
+/* The index type, not a list of unknowns: rows stop because the graph is finite,
+   columns do not, and the filled cells are what a solve turned out to read. */
+.scene.scene-infinite svg,
+.scene.scene-meet svg {
+  max-width: 1000px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-cell rect {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-cell.is-near rect {
+  stroke: var(--border-strong);
+  stroke-dasharray: none;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-cell.is-read rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-dasharray: none;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-spine {
+  stroke: var(--accent);
+  stroke-width: 1.2;
+  opacity: 0.55;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-brace path {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-brace text {
+  fill: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-axis {
+  fill: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-more {
+  fill: var(--text-faint);
+  font-size: 18px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-dep {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.2;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-dep-head {
+  fill: var(--primary);
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-root {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 1.8;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-colhead {
+  fill: var(--text);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-brace-label {
+  fill: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-gap {
+  font-size: 13px;
+}
+
+/* One island per copy the run reached: land in a sea of equations it never read. */
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-island {
+  fill: var(--surface-muted);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+/* A band the type allows and the program does not have. */
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-brace.is-absent path {
+  stroke-dasharray: 4 4;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-brace.is-absent text {
+  fill: var(--text-faint);
+}
+
+/* Axis breaks: the lattice continues, and the gap stands for coordinates no
+   drawing can enumerate. */
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-break {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-inf {
+  fill: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 15px;
+}
+
+/* The other half of a call: the seed it publishes at the callee's entry. */
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-side {
+  fill: none;
+  stroke: var(--warning);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 3;
+}
+
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-side-head {
+  fill: var(--warning);
+}
+
+/* Read, and the answer is bottom: the guard in front of it is not taken here. */
+:where(.scene-infinite, .scene-meet, .scene-context) .mx-cell.is-dead rect {
+  fill: none;
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+  opacity: 0.65;
+}
+
+/* The one key several call sites write into. */
+:where(.scene-meet) .mx-shared {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+}

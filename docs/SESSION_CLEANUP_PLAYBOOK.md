@@ -142,9 +142,9 @@ Scripts that helped (recreate under the scratchpad as needed):
 ## Traps from the Core split
 
 - **Measure an import edge against every theory that reaches it, not the
-  one that writes it.** `DG_Constraint_Trees imports Exec_Placement` used zero
+  one that writes it.** `DG_Constraint_Programs imports Exec_Placement` used zero
   names from it, so the survey called `Exec_Placement` example-only. Three
-  theories *behind* `DG_Constraint_Trees` used 70 of its names through that same
+  theories *behind* `DG_Constraint_Programs` used 70 of its names through that same
   import. Before dropping an import, grep the imported theory's definitions
   against the whole downstream closure of the importer.
 - **A `\<^theory>`/`\<^const>` antiquotation in prose is a dependency.**
@@ -339,7 +339,7 @@ exceeds 1500 lines):
 | theories with no orientation block | 3 | 6 | 2 | 6 |
 
 The largest theories then were `Example_Interval_Placement` (2901),
-`DG_Constraint_Trees` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
+`DG_Constraint_Programs` (2472), `DG_Soundness` (2317), `Exec_St` (2231) and
 `Abstract_Domain` (2110); all have since been split or deleted.
 
 ## CFG and Compile status after the pass

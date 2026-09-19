@@ -7,57 +7,8 @@
   margin-bottom: 14px;
 }
 
-:where(.scene-solver) .flow-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  color: var(--text);
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 0.88rem;
-  animation: flow-step 9s ease infinite backwards;
-}
-
-:where(.scene-solver) .flow-step b {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  color: #ffffff;
-  background: var(--primary);
-  border-radius: 50%;
-  font-size: 0.72rem;
-}
-
-:where(.scene-solver) .flow-step.f2 {
-  animation-delay: 3s;
-}
-
-:where(.scene-solver) .flow-step.f3 {
-  animation-delay: 6s;
-}
-
-@keyframes flow-step {
-  0% {
-    border-color: var(--border);
-    background: var(--surface-muted);
-  }
-  3%,
-  30% {
-    border-color: var(--primary);
-    background: var(--primary-soft);
-  }
-  36%,
-  100% {
-    border-color: var(--border);
-    background: var(--surface-muted);
-  }
-}
-
 :where(.scene-solver) .solver-table {
-  min-width: 640px;
+  min-width: 760px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -83,34 +34,73 @@
 
 :where(.scene-solver) .solver-table .c1,
 :where(.scene-solver) .solver-table .c2,
-:where(.scene-solver) .solver-table .c3 {
+:where(.scene-solver) .solver-table .c3,
+:where(.scene-solver) .solver-table .c4 {
   text-align: center;
 }
 
 /* The column of the step being played gets a soft highlight; every value stays readable. */
+:where(.scene-solver) .solver-table thead th small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+:where(.scene-solver) .solver-table thead th small code {
+  background: transparent;
+  font-size: 0.72rem;
+}
+
+:where(.scene-solver) .solver-table th.c1 {
+  animation: column-now 12s ease infinite backwards;
+}
+
+:where(.scene-solver) .solver-table th.c2 {
+  animation: column-now 12s ease infinite backwards;
+  animation-delay: 3s;
+}
+
+:where(.scene-solver) .solver-table th.c3 {
+  animation: column-now 12s ease infinite backwards;
+  animation-delay: 6s;
+}
+
+:where(.scene-solver) .solver-table th.c4 {
+  animation: column-now 12s ease infinite backwards;
+  animation-delay: 9s;
+}
+
 :where(.scene-solver) .solver-table td.c1 {
-  animation: column-now 9s ease infinite backwards;
+  animation: column-now 12s ease infinite backwards;
 }
 
 :where(.scene-solver) .solver-table td.c2 {
-  animation: column-now 9s ease infinite backwards;
+  animation: column-now 12s ease infinite backwards;
   animation-delay: 3s;
 }
 
 :where(.scene-solver) .solver-table td.c3 {
-  animation: column-now 9s ease infinite backwards;
+  animation: column-now 12s ease infinite backwards;
   animation-delay: 6s;
+}
+
+:where(.scene-solver) .solver-table td.c4 {
+  animation: column-now 12s ease infinite backwards;
+  animation-delay: 9s;
 }
 
 @keyframes column-now {
   0% {
     box-shadow: none;
   }
-  3%,
-  30% {
+  2%,
+  22% {
     box-shadow: inset 0 0 0 999px rgb(23 75 87 / 0.07);
   }
-  36%,
+  27%,
   100% {
     box-shadow: none;
   }

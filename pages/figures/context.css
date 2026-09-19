@@ -55,75 +55,10 @@
   font-weight: 700;
 }
 
-/* Scoped to the scene: GraphViz also names its edge groups "edge". */
-.scene-context .edge {
-  fill: none;
-  stroke: var(--text-muted);
-  stroke-width: 2;
-  stroke-dasharray: 7 5;
-  animation: edge-flow 1.2s linear infinite;
-}
-
-.scene-context .edge.a {
-  stroke: var(--accent);
-}
-
-.scene-context .edge.b {
-  stroke: #3f6fb0;
-}
-
-.scene-context .edge.mixed {
-  stroke: #8a5fb0;
-}
-
 @keyframes edge-flow {
   to {
     stroke-dashoffset: -12;
   }
-}
-
-:where(.scene-context) .site {
-  fill: var(--text-muted) !important;
-  font-family: var(--mono);
-  font-size: 12px !important;
-  font-weight: 700;
-}
-
-:where(.scene-context) .site.a {
-  fill: var(--accent-hover) !important;
-}
-
-:where(.scene-context) .site.b {
-  fill: #3f6fb0 !important;
-}
-
-:where(.scene-context) .ctx-box {
-  stroke-width: 2;
-}
-
-:where(.scene-context) .ctx-box.a {
-  fill: var(--accent-soft);
-  stroke: var(--accent);
-}
-
-:where(.scene-context) .ctx-box.b {
-  fill: #e9f0fa;
-  stroke: #3f6fb0;
-}
-
-:where(.scene-context) .ctx-box.mixed {
-  fill: #f4eef6;
-  stroke: #8a5fb0;
-}
-
-:where(.scene-context) .ctx-key {
-  font-family: var(--mono);
-  font-weight: 700;
-}
-
-:where(.scene-context) .ctx-val {
-  fill: var(--text-muted) !important;
-  font-family: var(--mono);
 }
 
 :where(.scene-context) .ctx-verdict {
@@ -131,47 +66,36 @@
   font-weight: 700;
 }
 
-:where(.scene-context) .merged-note {
-  fill: var(--warning) !important;
+/* The program beside the lattice it is about, so the call sites the columns name
+   s1, s2 and s3 can be found in the source without leaving the figure. */
+:where(.scene-context) .context-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.6fr);
+  gap: 18px;
+  align-items: center;
 }
 
-:where(.scene-context) .split-note {
-  fill: var(--success) !important;
+:where(.scene-context) .context-code {
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.76rem;
+  line-height: 1.6;
 }
 
-:where(.scene-context) .ctx-set,
-:where(.scene-context) .ctx-key,
-:where(.scene-context) .edges,
-:where(.scene-context) .ctx-verdict {
-  display: none;
+:where(.scene-context) .context-layout .context-svg {
+  min-width: 0;
+  max-width: none;
 }
 
-/* The merged wrap box names no mode, so it shows whenever that set does. */
-:where(.scene-context) .wrap-merged .ctx-key {
-  display: inline;
-}
-
-/* None: every call shares one context. */
-/* Entry state: arguments tell the calls apart at both levels. */
-/* k = 1: wrap splits by call site, scale has only one. */
-/* k = 2: scale's key also remembers wrap's call site. */
-.scene-context:has(#ctx-none:checked)
-:is(.wrap-merged, .scale-merged, .key-none, .main-edges-merged, .edges-merged, .merged-note),
-.scene-context:has(#ctx-entry:checked)
-  :is(.wrap-split, .scale-split, .key-entry, .main-edges-split, .edges-split, .split-note),
-.scene-context:has(#ctx-k1:checked)
-  :is(
-    .wrap-split,
-    .key-cs,
-    .scale-merged,
-    .key-k1,
-    .main-edges-split,
-    .edges-split-merge,
-    .merged-note
-  ),
-.scene-context:has(#ctx-k2:checked)
-  :is(.wrap-split, .key-cs, .scale-split, .key-k2, .main-edges-split, .edges-split, .split-note) {
-  display: inline;
+@media (max-width: 860px) {
+  :where(.scene-context) .context-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 :where(.scene-context) .context-notes {
@@ -181,11 +105,14 @@
   margin: 14px 0 0;
 }
 
+/* Each card is the same object as a context box in the figure above: a box with
+   its key on it. Same border, same radius, same key styling, so the comparison
+   reads as four contexts rather than four unrelated notes. */
 :where(.scene-context) .context-notes > div {
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--surface-muted);
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius);
   opacity: 0.55;
   transition:
     opacity 150ms ease,
@@ -193,13 +120,13 @@
 }
 
 :where(.scene-context) .context-notes dt {
-  color: var(--primary);
-  font-size: 0.86rem;
-  font-weight: 700;
+  color: var(--accent);
+  font: 700 0.72rem var(--mono);
+  letter-spacing: 0.04em;
 }
 
 :where(.scene-context) .context-notes dd {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
   color: var(--text-muted);
   font-size: 0.82rem;
   line-height: 1.45;
@@ -209,7 +136,7 @@
 .scene-context:has(#ctx-entry:checked) .note-entry,
 .scene-context:has(#ctx-k1:checked) .note-k1,
 .scene-context:has(#ctx-k2:checked) .note-k2 {
-  border-color: var(--primary);
+  border-color: var(--accent);
   opacity: 1;
 }
 
@@ -218,4 +145,29 @@
   color: inherit;
   background: none;
   border: 0;
+}
+
+/* One lattice per mode: same rows every time, and only the columns change. */
+:where(.scene-context) .lat {
+  display: none;
+}
+
+.scene-context:has(#ctx-none:checked) .lat-none,
+.scene-context:has(#ctx-entry:checked) .lat-entry,
+.scene-context:has(#ctx-k1:checked) .lat-k1,
+.scene-context:has(#ctx-k2:checked) .lat-k2 {
+  display: block;
+}
+
+/* What the mode buys, said once per lattice. */
+:where(.scene-context) .lat-verdict {
+  font: 700 11px var(--mono);
+}
+
+:where(.scene-context) .lat-verdict.is-ok {
+  fill: var(--success);
+}
+
+:where(.scene-context) .lat-verdict.is-meh {
+  fill: var(--caution);
 }

@@ -68,7 +68,7 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge trees, one tree per call site, and the analysis's extra trees (`routed_contribution_trees`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
+| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the analysis's extra programs (`routed_contribution_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 

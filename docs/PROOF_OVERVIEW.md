@@ -63,7 +63,8 @@ covers `ltr_collect`.
 
 ## Solver integration
 
-Effectful transfers produce strategy trees for the verified side-effecting
+Effectful transfers produce strategy programs, compiled by `sp_compile` into the
+strategy trees the verified side-effecting
 top-down solver. Executable finite-map states are related to function states by
 representation morphisms. Solver correctness yields a partial post-solution;
 the transport lemmas expose it as an abstract post-solution.

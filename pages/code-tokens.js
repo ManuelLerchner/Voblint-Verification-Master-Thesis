@@ -244,6 +244,7 @@ const ISABELLE_KEYWORDS = new Set([
   "then",
   "theorem",
   "theory",
+  "type_synonym",
   "unfolding",
   "using",
   "where",
@@ -324,7 +325,15 @@ function tokenizeIsabelle(source) {
     const word = rest.match(/^[A-Za-z_][A-Za-z0-9_.']*/);
 
     if (word) {
-      push(word[0], ISABELLE_KEYWORDS.has(word[0]) ? "keyword" : "variableName");
+      /* Isabelle capitalizes datatype constructors, so Answer and QueryL read
+         as the shape of a term while eqs and sigma read as names. */
+      const kind = ISABELLE_KEYWORDS.has(word[0])
+        ? "keyword"
+        : /^[A-Z]/.test(word[0])
+          ? "constructor"
+          : "variableName";
+
+      push(word[0], kind);
       i += word[0].length;
       continue;
     }

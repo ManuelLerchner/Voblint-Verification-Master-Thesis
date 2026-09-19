@@ -7,7 +7,7 @@ Goal: every OCaml tool and library Voblint builds with installs through
 `pixi.toml`, so `ocaml-deps-install` (opam) and `ocaml/setup-ocaml` in CI can go.
 Targets `osx-arm64`, `osx-64`, `linux-64`, matching `[workspace].platforms`.
 
-Snapshot: 2026-09-17. Versions in the tables are what the local opam switch
+Snapshot: 2026-09-18. Versions in the tables are what the local opam switch
 (`~/.opam/5.4.1`) has installed, so they are known to build Voblint.
 
 ## Who needs what
@@ -27,7 +27,7 @@ osx-arm64 with OCaml 5.4.0.
 | conda package | Version | Covers | Notes |
 | --- | --- | --- | --- |
 | `ocaml` | 5.4.0 | compiler, `str` | weak run-export `>=5.4.0,<5.4.1` |
-| `ocaml-dune` | 3.24.2 | `dune` binary only | no `dune-configurator`, `dune-build-info`, `csexp` outputs; `dune --version` printed `n/a`. **Unusable on linux**: needs glibc 2.38 undeclared, see ocaml-dune#17 |
+| `ocaml-dune` | 3.24.2 build 2 | `dune` binary only | no `dune-configurator`, `dune-build-info`, `csexp` outputs; `dune --version` printed `n/a`. glibc and `OCAMLPATH` bugs fixed upstream |
 | `ocaml-menhir` | 20250912 | menhir, menhirLib, menhirSdk, menhirCST | opam has 20260209; Voblint sets no lower bound |
 | `ocaml-cppo` | 1.8.0 | cppo | not needed by Voblint directly |
 | `ocamlbuild` | 0.16.1 | ocamlbuild | build dep of topkg-based packages |
@@ -70,10 +70,10 @@ Naming follows the existing `ocaml-<opam name>` convention, `_` -> `-`.
 `ocaml-compiler-libs` risks reading as part of the compiler package; ask
 conda-forge reviewers before claiming the name.
 
-**Blocked (#6):** cannot build against `ocaml` 5.4.0 at all. Its build links
-`compiler-libs` natively, which trips ocaml-feedstock#132. Recipe is complete
-and parked on the `ocaml-compiler-libs-parked` branch of the staged-recipes
-fork. This also blocks `ppxlib`, hence tiers 1-3.
+`ocaml-compiler-libs` (#6) was blocked by ocaml-feedstock#132 until 2026-09-18.
+Fixed by #134 in `ocaml` build 8, verified against the published package. It is
+now in staged-recipes#34872 and builds. **Tiers 1-3 are no longer gated on
+anything upstream.**
 
 `ocaml-seq` (15) is upstream's compatibility shim. `Seq` has been in the stdlib
 since 4.07 and the package installs only a META, but `gen` declares
@@ -132,22 +132,32 @@ other users. Default: bundle.
 
 ## Upstream status
 
+All blockers resolved 2026-09-17/18. MementoRC fixed both reported bugs within a
+day of filing.
+
 | Item | Where | State |
 | --- | --- | --- |
-| macOS `CONDA_OCAML_*` point at a nonexistent `-gcc` | ocaml-feedstock#101 | open since 2026-09-01; maintainer says osx lands in days |
-| `ocaml-dune` needs glibc 2.38 undeclared | ocaml-dune-feedstock#17 | ready for review, CI green |
-| cross bootstrap misses `boot/pps.ml` | ocaml-dune-feedstock#18 | ready for review |
-| `OCAMLPATH` exposes only the active env, host libs invisible | ocaml-dune-feedstock#19 | issue filed |
-| `ocamlcommon.cmxa` NUL-padded `-L` breaks compiler-libs links | ocaml-feedstock#132 | issue filed; **blocks ppxlib** |
-| tier 0 recipes (9 packages) | staged-recipes#34872 | draft, red until #17 ships |
-| `ocaml-patricia-tree` | staged-recipes#34850 | open, review requested |
+| `ocaml-dune` needs glibc 2.38 undeclared | ocaml-dune-feedstock#17 | merged, published as build 1/2 |
+| cross bootstrap misses `boot/pps.ml` | ocaml-dune-feedstock#18 | merged |
+| `OCAMLPATH` exposes only the active env | ocaml-dune-feedstock#19 | fixed by #20, published |
+| `ocamlcommon.cmxa` NUL-padded `-L` | ocaml-feedstock#132 | fixed by #134, `ocaml` build 8, published |
+| macOS `CONDA_OCAML_*` point at a nonexistent `-gcc` | ocaml-feedstock#101 | still open; workaround still needed |
+| tier 0 recipes (10 packages) | staged-recipes#34872 | ready for review, CI green, `help-c-cpp` pinged |
+| `ocaml-patricia-tree` | staged-recipes#34850 | ready for review since 2026-09-17 |
 
-Recipe-level workarounds carried until the above land:
+MementoRC is listed as co-maintainer on all ten tier-0 recipes.
 
-- every recipe exports `CONDA_OCAML_CC`/`MKEXE`/`MKDLL` on osx (#101). Needed by
-  all of them, not just those linking executables, because dune builds a
-  `.cmxs` for every public library.
-- `ocaml-gen` exports `OCAMLPATH="${PREFIX}/lib/ocaml:${OCAMLPATH:-}"` (#19).
+Only workaround still carried: every recipe exports `CONDA_OCAML_CC`/`MKEXE`/`MKDLL`
+on osx for #101. Needed by all of them, not just those linking executables,
+because dune builds a `.cmxs` for every public library. Remove once #101 lands.
+
+Recipe conventions settled while building these:
+
+- `${{ stdlib("c") }}` only. `${{ compiler("c") }}` is redundant because
+  `${{ compiler("ocaml") }}` already pulls the C toolchain and its activation.
+  Verified on both linux and osx.
+- a library whose generated META has a non-empty `requires` needs those packages
+  in `run`, not only `host`. `ocaml-gen` needs `ocaml-seq` for this reason.
 
 ## Build order
 
@@ -179,11 +189,12 @@ order.
 - [ ] Ask upstream for a zarith_stubs_js release with the wasm runtime
 - [ ] `ocaml-findlib` 1.9.8 PR
 - [x] Report `OCAMLPATH` gap (ocaml-dune#19) and `.cmxa` relocation (ocaml#132)
-- [ ] Re-run #34872 CI once a fixed `ocaml-dune` is on the channel
-- [ ] Submit `ocaml-compiler-libs` once ocaml#132 is fixed
+- [x] Submit `ocaml-compiler-libs` (in #34872)
+- [ ] Drop the osx `CONDA_OCAML_*` workaround once ocaml-feedstock#101 lands
+- [ ] Consider unskipping win once tier 0 is merged
 - [ ] `ocaml-zarith` 1.14 PR
 - [ ] `ocaml-dune` extra outputs PR
-- [x] staged-recipes: tier 0 new packages (#34872, draft, blocked on #17)
+- [x] staged-recipes: tier 0 new packages (#34872, ready for review, green)
 - [ ] staged-recipes: ppxlib
 - [ ] staged-recipes: sedlex
 - [ ] staged-recipes: js-of-ocaml

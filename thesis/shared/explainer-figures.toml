@@ -48,7 +48,6 @@ why = "The formalization in cross-section: one stratum per session, sized by its
 # detects and rejects them rather than writing a blank file.
 #
 #   gamma             "What an abstract value stands for"   (gamma.js)
-#   strategy-tree     "What an equation is made of"          (trees.js)
 #   timeline-of-runs  the literature time axis               (timeline.js)
 #   recursion         the call spiral                        (recursion-spiral.js)
 #

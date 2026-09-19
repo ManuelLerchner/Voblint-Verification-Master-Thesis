@@ -369,7 +369,7 @@ L4  WHAT AN ANALYSIS SUPPLIES
              v
 L5  EQUATIONS
     routed_node_rhs / routed_node_rhs_buffered     DG_Keyed_Generator
-    routed_call_tree, routed_entry_seed_tree       Routed_Call_Trees
+    routed_call_program, routed_entry_seed_programs Routed_Call_Programs
     compiled_routed_eqs_for                        Compiled_Routed_Equations
              │
              v
@@ -1326,10 +1326,10 @@ thesis section → theories → central definitions → central theorems.
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `sound_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Abstract_Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `abstract_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
-| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `sound_dg_spec_core`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_core_sound`, `combine_sound_tree` |
+| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `sound_dg_spec_core`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_core_sound`, `combine_sound_program` |
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
-| 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Trees`, `DG_Keyed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
-| 7.3–7.4 | `Voblint_Framework.Routed_Call_Trees` | `routed_gk` (`Analysis_Global`, `Activation_Seed`), `routed_call_tree`, `routed_callee_call_tree`, `routed_entry_seed_tree`, `resolve`, `static_resolve` | — |
+| 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Keyed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
+| 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `routed_gk` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
 | 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context_base_hetero`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
@@ -1716,7 +1716,7 @@ and renderable by Typst's `image()` directly.
 | `source-morph`, `cfg` | Watch the compiler take a program apart | 3.6 |
 | `eqs` | From a graph to equations to values | 7.1 |
 | `trees` | What an equation is made of: strategy trees | 7.1, 8.1 |
-| `loop` | Loops: widening and narrowing | 5.3, 8 |
+| `loop` | Why a loop needs widening (inside the black box) | 5.3, 8 |
 | `call` | The life of a call | 7.3 |
 | `context` | Context sensitivity: how many copies of a procedure | 7.5 |
 | `cost` | The price of precision | 12.3 |

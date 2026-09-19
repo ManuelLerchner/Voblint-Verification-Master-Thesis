@@ -108,13 +108,21 @@
   min-height: 30px;
 }
 
+/* A one-letter chip should read as a circle with the letter in the middle.
+   As an inline box its vertical padding does not sit around the line box, so
+   the glyph rode about 3px high; flex centring places it by the box instead. */
 :where(.scene-td) .td-chips span {
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 9px;
   color: var(--primary);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  font: 700 0.84rem var(--mono);
+  font: 700 0.84rem / 1 var(--mono);
   animation: flow-in 250ms ease;
 }
 

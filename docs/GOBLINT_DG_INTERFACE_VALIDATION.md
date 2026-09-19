@@ -95,11 +95,11 @@ thesis of Goblint's side-effecting constraint systems.
 - Side-effects are built into the interface, not bolted on: a transfer is a
   manager-native program that may call the `man` record's `man_global`/`man_sideg`
   fields (`DG_Manager`), and
-  `dg_spec_edge_tree` compiles it to `QueryG`/`Side` nodes beside the local
+  `dg_spec_edge_program` compiles it to `QueryG`/`Side` nodes beside the local
   `Answer`. Effectful analyses are therefore ordinary DG instances, matching
   answer 4.
-- Context routing `route cc ctx entry ca` (`routed_call_alternative_tree`,
-  `Routed_Call_Trees`) reads `entry`, the callee-entry **local** value the
+- Context routing `route cc ctx entry ca` (`routed_call_alternative_program`,
+  `Routed_Call_Programs`) reads `entry`, the callee-entry **local** value the
   enter transfer produced from `locals (sigma (Inl (cc, ctx)))`; no global slot
   reaches it. This matches E3 and E4: context from the entering local state,
   globals dropped.
@@ -114,7 +114,7 @@ avoids (E3), enlarging surface for no faithfulness gain.
 | Component | Goblint counterpart | Verdict |
 | --- | --- | --- |
 | `sound_dg_spec_core` (D, G, `gammaDG`, edge and combine soundness) | `Spec` (D, G, `sideg`) | **Faithful.** Built-in `Side` = E2/E4. Unchanged. |
-| `routed_call_alternative_tree` (`route cc ctx entry ca`) | `context man f v` at the call | **Faithful.** Routing reads the entered local value = E3/E4. |
+| `routed_call_alternative_program` (`route cc ctx entry ca`) | `context man f v` at the call | **Faithful.** Routing reads the entered local value = E3/E4. |
 | `local_state_dg_spec_for_lifted` (whole state in D, G inert) | a `Spec` instance that keeps globals in `D` | Faithful specialization. |
 
 ### Correction to the prior `side_env_ctx` determination
