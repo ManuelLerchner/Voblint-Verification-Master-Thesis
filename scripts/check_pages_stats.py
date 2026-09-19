@@ -19,6 +19,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pages_stats
+import vimp_fixture
 
 REPO = Path(__file__).resolve().parent.parent
 PAGES = REPO / "pages"
@@ -42,6 +43,40 @@ def strip(text):
     return re.sub(r'href="[^"]*"', lambda m: " " * len(m.group(0)), text)
 
 
+def corpus_problems(stats):
+    """Three counts that must agree, and the filenames when they do not.
+
+    `corpus.cases` is a figure on the page, so a silent disagreement between what
+    the site reports, what is on disk and what the fixture reader can actually
+    read would show up as a number nobody can source. Reporting the set
+    difference by name means the next discrepancy explains itself instead of
+    being archaeology.
+    """
+    root = pages_stats.CORPUS_DIR
+    discovered = {path.relative_to(root) for path in root.rglob("*.vimp")}
+    readable, unreadable = set(), {}
+    for name in sorted(discovered):
+        try:
+            if vimp_fixture.param_args(root / name) is None:
+                unreadable[name] = "no // PARAM: header"
+            else:
+                readable.add(name)
+        except Exception as error:  # noqa: BLE001 - reported, not handled
+            unreadable[name] = f"{type(error).__name__}: {error}"
+
+    problems = []
+    if stats["corpus"]["cases"] != len(discovered):
+        problems.append(
+            f"corpus.cases reports {stats['corpus']['cases']} but "
+            f"{len(discovered)} .vimp file(s) are on disk under {root.relative_to(REPO)}"
+        )
+    for name, why in sorted(unreadable.items()):
+        problems.append(
+            f"{(root / name).relative_to(REPO)}: counted but not readable ({why})"
+        )
+    return problems
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -53,7 +88,7 @@ def main():
     args = parser.parse_args()
     stats = pages_stats.collect()
     values = {k: v for k, v in flatten(stats) if v >= MIN}
-    problems = []
+    problems = [] if args.fix else corpus_problems(stats)
 
     fixed = 0
 
@@ -108,7 +143,7 @@ def main():
 
     print(
         f"check_pages_stats: {len(values)} derived figure(s), "
-        f"{len(problems)} problem(s)"
+        f"{stats['corpus']['cases']} corpus case(s), {len(problems)} problem(s)"
     )
     return 1 if problems else 0
 

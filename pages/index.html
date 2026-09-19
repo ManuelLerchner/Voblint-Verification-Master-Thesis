@@ -500,8 +500,9 @@
           <a href="https://github.com/goblint/analyzer/blob/master/tests/regression/37-congruence/14-negative.c" target="_blank" rel="noreferrer"><code>37-congruence/14-negative.c</code></a>,
           with that test's flags, <code>--enable ana.int.congruence
           --set sem.int.signed_overflow assume_none</code>. The fix restricts when the congruence
-          domain may answer a constant for <code>%</code>; after it the test expects UNKNOWN for
-          <code>c % 2 == 1</code>, and <code>c % 2 == -1</code> is still out of reach.
+          domain may answer a constant for <code>%</code>. After it neither assertion is proved: the
+          test expects unknown for <code>c % 2 == 1</code>, and marks <code>c % 2 == -1</code>
+          <code>TODO</code>, its annotation for a check the analyzer ought to get and does not.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a>
         </figcaption>
@@ -6102,7 +6103,7 @@ qed</code></pre>
               <span class="reading-why">Its local-trace semantics was the guide for modeling Voblint's traces, the <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a> trace set.</span>
             </li>
             <li id="ref-stemmler-2025" data-year="2025">
-              <a href="https://doi.org/10.1145/3729297" target="_blank" rel="noreferrer">Taking Out the Toxic Trash: Recovering Precision in Mixed Flow-Sensitive Static Analyses</a>
+              <a href="https://doi.org/10.1145/3729297" target="_blank" rel="noreferrer">Taking out the Toxic Trash: Recovering Precision in Mixed Flow-Sensitive Static Analyses</a>
               <span class="reading-meta">Fabian Stemmler, Michael Schwarz, Julian Erhard, Sarah Tilscher, Helmut Seidl · PLDI 2025</span>
               <span class="reading-why">Update rules that keep a global's contributions apart by origin so they can be narrowed: the source of the per-origin Globals settings.</span>
             </li>
