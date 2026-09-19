@@ -73,6 +73,15 @@ def main():
     )
     args = parser.parse_args()
 
+    # Without the submodule, `rg ... vendor/` finds nothing and a name declared
+    # only in the vendored solver (strategy_tree, eqsT, part_post_solution) reads
+    # as ordinary prose. The check still works, it just covers less, so say so.
+    if not (REPO / "vendor" / "td-verification" / "ROOT").is_file():
+        print(
+            "check_pages_terms: vendor/td-verification is not checked out, so names "
+            "declared only there are not required to be linked"
+        )
+
     missing, checked = [], 0
     for page in sorted(PAGES.glob("*.html")):
         raw = page.read_text(encoding="utf-8")

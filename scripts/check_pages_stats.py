@@ -86,6 +86,22 @@ def main():
         "rewritten: those need a data-stat around them, which is a judgement about the prose)",
     )
     args = parser.parse_args()
+
+    # collect() reads the vendored solver, so without the submodule it dies deep
+    # inside session_graph with a FileNotFoundError. pages_stats.py refuses to
+    # guess a solver count rather than publish a wrong one; say the same thing
+    # here, in one line, instead of a traceback.
+    absent = [
+        root for root in pages_stats.VENDOR_SESSIONS if not (root / "ROOT").is_file()
+    ]
+    if absent:
+        for root in absent:
+            print(
+                f"check_pages_stats: {root.relative_to(REPO)} is not checked out; "
+                "run `pixi run vendor-init` (CI: initialize the submodule)"
+            )
+        return 1
+
     stats = pages_stats.collect()
     values = {k: v for k, v in flatten(stats) if v >= MIN}
     problems = [] if args.fix else corpus_problems(stats)

@@ -399,6 +399,16 @@ jobs:
       - name: Isabelle community linter
         run: pixi run isabelle-lint
 
+      # Both read the vendored solver: pages_stats.py measures it, and a name the
+      # page cites may be declared there. They live in this job because it is the
+      # one lint job that initialises the submodule; without it pages_stats.py
+      # refuses to run rather than publish a wrong solver count.
+      - name: Site repository figures are derived and current
+        run: pixi run pages-stats
+
+      - name: Every Isabelle name the site uses is linked into the theory HTML
+        run: pixi run pages-terms
+
   codegen-check:
     needs: isabelle-build
     runs-on: ubuntu-latest
@@ -495,14 +505,6 @@ jobs:
       - name: Site links and what playground links open (no build needed)
         run: pixi run pages-links
 
-      # The published page fills these from the build; this is what keeps the
-      # fallbacks in the markup, and any figure typed straight into the prose,
-      # from drifting away from what the repository measures.
-      - name: Site repository figures are derived and current
-        run: pixi run pages-stats
-
-      - name: Every Isabelle name the site uses is linked into the theory HTML
-        run: pixi run pages-terms
 
       - name: Fixture reader, example corpus and playground links
         run: pixi run pages-scripts-check
