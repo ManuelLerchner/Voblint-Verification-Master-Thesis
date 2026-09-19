@@ -1,5 +1,11 @@
 # Thesis scope — decision memo
 
+> **Superseded by `docs/THESIS_BLUEPRINT.md` (2026-09-17).** Kept for the
+> record. Its Scope A/B framing predates the relational carrier and the reduced
+> product, both of which have since landed, and its 2026-08-04 refresh already
+> found two of the three artifacts it cites as delivered to have been deleted.
+> Do not reopen Scope A/B from this page.
+
 One page for the supervisor sign-off that gates the next phase. Status as of the
 M4-precision landing (branch `feat/m4-digest-precision`).
 

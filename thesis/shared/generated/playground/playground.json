@@ -1,0 +1,56 @@
+{
+  "contexts": {
+    "analysis": "interval",
+    "context": "entry-state",
+    "globals": "warrow",
+    "image": "contexts.png",
+    "program": "contexts.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
+    "why": "The same two calls without and with entry-state contexts: UNKNOWN twice, then PROVED twice with one box per argument."
+  },
+  "division-definite": {
+    "analysis": "interval",
+    "context": "none",
+    "globals": "warrow",
+    "image": "division-definite.png",
+    "program": "division-definite.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVTCwBnILS_NLMlPzSoB8cwV9mCxIpigVpCsltQgspYosFR9flp-Uk5lXEp-ckZqcrYEwBGiqJjYVSIYBTQMqqeUCAA",
+    "why": "A divisor that is zero in every live context: two errors while both checks still prove."
+  },
+  "division-possible": {
+    "analysis": "interval",
+    "context": "none",
+    "globals": "warrow",
+    "image": "division-possible.png",
+    "program": "division-possible.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVYiPL8tPysnMK4nPy89LSS2JBzI1NK2BagpL80syU_NKgIrMFfRhWkAyCD3JGanJ2Row0xRtFQyAWmu5AA",
+    "why": "A divisor the state cannot exclude from being zero: a warning and an UNKNOWN check."
+  },
+  "int-refinement": {
+    "analysis": "int",
+    "context": "none",
+    "globals": "warrow",
+    "image": "int-refinement.png",
+    "program": "int-refinement.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQyExT0KhU0FYwVLC1VTCGiCkoVCjYKhhag5nx8WX5STmZeSXxyRmpydlAxUCFRpogyVqF1JziVCQtBmBRrlouAA",
+    "why": "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
+  },
+  "overview": {
+    "analysis": "interval",
+    "context": "call-string",
+    "globals": "warrow",
+    "image": "overview.png",
+    "k": "1",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=call-string&k=1",
+    "why": "Every verdict kind, an arithmetic warning, and one graph box per procedure and context, in one run."
+  },
+  "while-loop": {
+    "analysis": "interval",
+    "context": "none",
+    "globals": "warrow",
+    "image": "while-loop.png",
+    "program": "while-loop.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmquUCAA",
+    "why": "The running example: a PROVED check in the source, its state, and the solved graph."
+  }
+}

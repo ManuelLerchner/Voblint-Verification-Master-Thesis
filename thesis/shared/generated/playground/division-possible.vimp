@@ -1,0 +1,5 @@
+fun main() {
+  divisor = __voblint_nondet_int();
+  quotient = 7 / divisor;
+  __voblint_check(divisor != 0);
+}
