@@ -68,6 +68,7 @@ BUILD_OUTPUTS = (
     "assets/voblint_web.bc.wasm",
     "assets/site-stats.js",
     "assets/regression-examples.json",
+    "sitemap.xml",
     "thesis.pdf",
     "formalization.pdf",
 )
