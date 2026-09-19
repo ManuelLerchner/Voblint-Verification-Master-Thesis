@@ -396,9 +396,9 @@
 
         <p class="ans-warrant">
           The first three rows are claims, and a theorem stands behind each.
-          <code>run_voblint_check_sound</code> covers the verdict and
-          <code>run_voblint_dead_check_unreached</code> the dead point.
-          <code>run_voblint_arithmetic_safe</code> points the other way: it covers the divisions
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact"><code>run_voblint_check_sound</code></a> covers the verdict and
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact"><code>run_voblint_dead_check_unreached</code></a> the dead point.
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact"><code>run_voblint_arithmetic_safe</code></a> points the other way: it covers the divisions
           that go <em>unflagged</em>, and says no run divides by zero at one of those. The
           <code>WARNING</code> itself only says the analysis could not rule the divisor out. All
           three assume the analyzer's own solver finished. The last line is the state the analysis
@@ -2680,7 +2680,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           and a call site contributes one program that publishes and reads
           (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>).
           <code>enter</code> and <code>combine</code> are the analysis's, fields of
-          <a href="Voblint/Voblint_Framework/DG_Spec.html"><code>dg_spec</code></a>, where combining is
+          <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype"><code>dg_spec</code></a>, where combining is
           two fields as it is in Goblint, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint
           writes the two ports with <code>sidel</code> and a query of the callee's exit. The keys
           above are written bare: each carries a context too,
@@ -4799,7 +4799,8 @@ fun main() {
           <a href="Voblint/Voblint_Result/Unit_DG_Analysis.html#Unit_DG_Analysis.unit_dg_analysis.result_node_sound_of_terminates%7Cfact"><code>result_node_sound_of_terminates</code></a>
           without context, and into
           <a href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
-          with entry-state contexts; <code>run_voblint_certified_source_sound</code>, the first
+          with entry-state contexts;
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>, the first
           flagship theorem below, adds link 1. On the executable side, one more step transports the solver's
           association-list states to the function-valued states these sets are stated over.
         </figcaption>
@@ -4858,7 +4859,7 @@ fun main() {
           <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_transfer_for</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>part_post_solution_of_solve_c</code></button>
-          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a></button>
+          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
         </div>
 
         <p class="bridge-caption" aria-live="polite">
@@ -4867,9 +4868,13 @@ fun main() {
         </p>
 
         <figcaption>
-          Pillar 1 is proved once, for the compiler; it also needs the other half of the
-          simulation, which carries a source run into a valid trace. Pillars 2 and 5 are
-          obligations each domain discharges, pillar 3 one that each context policy discharges.
+          Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler; it also needs the other
+          half of the simulation, which carries a source run into a valid trace. Pillars 2 and 5,
+          <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale"><code>sound_transfer_for</code></a>
+          and <a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
+          are obligations each domain discharges, pillar 3,
+          <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
+          one that each context policy discharges.
           Pillar 4 bridges to the vendored solver's own theorem, and it promises a post-solution
           only for a solve that terminates, which is why every flagship soundness theorem below
           assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>. Two more obligations do not appear here: that the
@@ -5359,9 +5364,9 @@ qed</code></pre>
 
       <figure class="scene scene-metro">
         <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; the result line leaves the central interchange and ends at three terminals: PROVED, DEAD and SAFE.">
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
           <g class="metro-lines">
-            <path class="line-sem" d="M70 70 H 580"/>
+            <path class="line-sem" d="M70 70 H 700 V 336"/>
             <path class="line-comp" d="M70 165 H 960 V 380"/>
             <path class="line-dom" d="M70 270 H 490 V 350"/>
             <path class="line-fw" d="M70 350 H 700"/>
@@ -5432,16 +5437,16 @@ qed</code></pre>
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/Unit_DG_Analysis.html#Unit_DG_Analysis.unit_dg_analysis.result_node_sound_of_terminates%7Cfact" data-name="result_node_sound_of_terminates" data-theory="Voblint_Result.Unit_DG_Analysis" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates. This is the no-context route; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">result_node_sound_of_terminates</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every domain, update rule and context policy. The three terminals are proved from it.">
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every domain, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere.">
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
               <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_certified_source_sound</text></a>
 
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it. It reaches the hub through run_voblint_certified_source_sound, and uses the compiler a second time on top of that: csim_next_check_edge says the check the source is about to run is an edge at the matched node, which no result-line fact can know.">
               <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_sound_at, not through the source bridge: that bridge only says some node matches the run, so it cannot be read backwards into no run reaching a given node.">
               <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
               <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
           </g>
         </svg>
@@ -5456,6 +5461,7 @@ qed</code></pre>
         </div>
 
         <figcaption>
+        <p>
           Stations are real definitions, theorems and the obligations an analysis discharges;
           wide markers are interchanges, where one result consumes the others that meet there. Being next
           to each other on a line says only that two stations belong to the same layer. The map
@@ -5466,6 +5472,20 @@ qed</code></pre>
           vendored <code>TD</code> session, <code>Voblint_Solver</code> and
           <code>Voblint_Exec</code>, and the result line in <code>Voblint_Routing</code>,
           <code>Voblint_Result</code> and <code>Voblint_CLI</code>.
+        </p>
+        <p>
+          Three terminals, one hub. All three are proved from
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact"><code>run_voblint_sound_at</code></a>,
+          which speaks about a node of the graph and a store the collecting semantics has there.
+          That is why the semantics line runs on into the central interchange: DEAD and SAFE are
+          stated over <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
+          too. What
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>
+          adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
+          purpose: the bridge says only that <em>some</em> node matches the run, so it cannot be
+          read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
+          forwards from the hub, at every collected store.
+        </p>
         </figcaption>
       </figure>
     </section>

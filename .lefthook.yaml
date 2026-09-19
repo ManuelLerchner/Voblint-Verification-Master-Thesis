@@ -337,6 +337,15 @@ pre-commit:
               - "scripts/mk/pages-site.sh"
             run: pixi run pages-links
 
+          # Names the pages set in <code>: every one that a reader could look
+          # up must carry a link to the rendered theory in its own section.
+          - name: pages-terms
+            glob:
+              - "pages/**/*.html"
+              - "src/**/*.thy"
+              - "scripts/check_pages_terms.py"
+            run: pixi run pages-terms
+
           # ----------------------------------------------------------------
           # Generated OCaml interface
           # ----------------------------------------------------------------
