@@ -66,9 +66,9 @@ text \<open>
   \<open>routed_node_rhs_mono_sides\<close> and
   \<open>routed_node_rhs_mono_deps\<close> close the file by
   discharging the vendored solver's own @{const TD_side_mono} preconditions
-  from per-hook properties --- traverse/sides monotonicity and dependency
-  monotonicity --- for an arbitrary generator instance. They are what the
-  solver requires of an equation system before it will return a result at all,
+  from per-hook properties --- well-formedness, traverse/sides monotonicity
+  and dependency monotonicity --- for an arbitrary generator instance. They are
+  what the solver requires of an equation system before it will return a result at all,
   not a property of the result; they are met once here rather than at every
   interpreter.
 \<close>
@@ -772,7 +772,7 @@ subsection \<open>Threefold monotonicity for an arbitrary generator instance\<cl
 
 text \<open>
   The three
-  @{const TD_side_mono} preconditions reduce to a per-tree contract on the
+  @{const TD_side_mono} preconditions reduce to a per-program contract on the
   intra, combine, and extra hooks, discharged once here and reusable at every
   routing policy --- a routed context policy is then a second interpretation
   of this reduction, not a second monotonicity proof. The outer @{const Side}
@@ -911,9 +911,9 @@ qed
 
 text \<open>
   The generator never sees a specification: the intra hook supplies each
-  edge's compiled tree, exactly as \<open>cmb\<close> and \<open>extra\<close> already supply theirs,
+  edge's program, exactly as \<open>cmb\<close> and \<open>extra\<close> already supply theirs,
   so which unknowns an equation reads and which keys it publishes are
-  properties of the supplied trees, not of the generator. The one key the
+  properties of the supplied programs, not of the generator. The one key the
   generator names itself is \<open>gkey c\<close>, at the CFG entry, where it publishes
   \<open>s0g\<close>; a routed activation seed is not its own but arrives through
   \<open>extra\<close>.

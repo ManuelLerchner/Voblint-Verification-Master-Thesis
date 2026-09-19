@@ -8,7 +8,8 @@ begin
 text \<open>
   This theory states its observations at the program level --- \<open>traverse_program\<close>,
   \<open>sides_of_program\<close>, \<open>dep_program\<close> --- reaching for \<^const>\<open>sp_compile\<close> only
-  throughout, but does not unfold it globally: the named observation
+  where a statement must meet the vendored solver's own tree vocabulary,
+  and does not unfold it globally: the named observation
   equations in \<^theory>\<open>Voblint_Solver.Strategy_Tree_Program\<close> are stated
   against \<open>sp_compile\<close> itself, and proofs meet those rather than the
   compiler's representation.

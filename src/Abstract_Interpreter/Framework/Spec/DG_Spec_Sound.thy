@@ -5,11 +5,11 @@ begin
 section \<open>What a manager-native specification owes a concretization\<close>
 
 text \<open>
-  Soundness of a manager-native \<open>dg_spec\<close> is stated against the compiled
-  trees' own observations: an assumption's input is what the tree reads
-  (\<open>\<tau>\<close> at the source and the routed slot), its output is the returned local
-  value together with the contribution the tree actually publishes at that
-  slot. There is no reconstructed \<open>'dg \<times> 'dl\<close> pair anywhere: a transfer
+  Soundness of a manager-native \<open>dg_spec\<close> is stated against the edge and
+  combine programs' own observations: an assumption's input is what the
+  program reads (\<open>\<tau>\<close> at the source and the routed slot), its output is the
+  returned local value together with the contribution the program actually
+  publishes at that slot. There is no reconstructed \<open>'dg \<times> 'dl\<close> pair anywhere: a transfer
   that publishes nothing is judged against \<open>bot\<close>, and a concretization
   that ignores its global argument (every Base-style domain) discharges
   that side vacuously. \<open>sound_local_dg_spec\<close> below is exactly that
@@ -24,14 +24,14 @@ text \<open>
   names would have contributions this concretization never sees. The global-name
   type is therefore pinned at \<^typ>\<open>unit\<close> here and the manager is built from the
   constant embedding, rather than stating an obligation over a namespace the
-  conclusion cannot account for. Every analysis in this tree has one global, so
+  conclusion cannot account for. Every analysis in this development has one global, so
   nothing is lost today; a second global needs \<open>gammaDG\<close> over a global
   \<^emph>\<open>environment\<close> first, and that is what would generalize this locale.
 \<close>
 
 text \<open>
   What a call's alternatives must establish. The coverage contract is the part
-  that does not mention a tree: \<open>enter_runs\<close> and \<open>enter_deps\<close> below do describe
+  that does not mention a strategy program: \<open>enter_runs\<close> and \<open>enter_deps\<close> below do describe
   an entry program and the continuations it is handed, but what an alternative
   \<^emph>\<open>means\<close> is settled here, before any of that.
   \<open>pairs\<close> covers a concrete caller when \<^emph>\<open>some\<close> alternative accounts for it: the
@@ -42,7 +42,7 @@ text \<open>
   every alternative cover every caller would defeat the splitting the list
   exists to express.
 
-  Keeping it separate from any particular tree is what lets an entry
+  Keeping it separate from any particular program is what lets an entry
   obligation be discharged once and reused: a proof about how alternatives are
   folded never has to restate what an alternative means.
 \<close>
