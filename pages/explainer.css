@@ -1449,6 +1449,15 @@
   }
 }
 
+/* Wide enough for the longest entry to sit on one line: 268px of text plus the
+   timeline's inset. Only where the prose gives up nothing for it. */
+@media (min-width: 1750px) {
+  .doc-layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+    column-gap: 40px;
+  }
+}
+
 .doc-toc-title {
   margin: 0 0 10px;
   color: var(--text-muted);

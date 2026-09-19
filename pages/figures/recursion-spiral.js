@@ -12,7 +12,7 @@
   const NO = null;
   const SPIRAL_PROGRAMS = {
     grows: {
-      example: "recursion-grows",
+      fixture: "24-site-figures/03-recursion_grows_entry_state_diverges.vimp",
       turns: 7,
       endless: true,
       code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
@@ -36,7 +36,7 @@
       },
     },
     bounded: {
-      example: "recursion-bounded",
+      fixture: "24-site-figures/precision/26-recursion_bounded_entry_state_join.vimp",
       turns: 11,
       endless: false,
       code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  if (x < 10) {\n    f(x + 1);\n  }\n}\n\nfun main() {\n  f(0);\n}",
@@ -339,7 +339,7 @@
         cs: `globals=warrow&context=call-string&k=${k}`,
         entry: "globals=warrow&context=entry-state",
       }[mode];
-      tryLink.href = `playground.html?example=${cfg.example}&analysis=interval&${link}`;
+      tryLink.href = `playground.html?fixture=${cfg.fixture}&analysis=interval&${link}`;
     };
 
     const selectProgram = (name) => {

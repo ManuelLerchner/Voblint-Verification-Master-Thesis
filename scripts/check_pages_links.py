@@ -16,7 +16,7 @@ Links are read from `pages/*.html` and from the page scripts (`explainer.js`,
 
 Every playground link -- in the pages, the README and docs/ -- is also checked for
 what it opens, in every mode and without a build: its settings are values the
-playground offers, an `example=` names a program in main.js's LINKED_EXAMPLES, a
+playground offers, a
 `fixture=` names a regression file, and a `#code=` program decodes. A README
 program link must carry one of the committed figure programs in docs/readme-figures,
 so a figure, its program and its link cannot drift apart.
@@ -103,7 +103,7 @@ def collected() -> dict[str, set[str]]:
     return links
 
 
-PLAYGROUND_KEYS = {"example", "fixture", "analysis", "globals", "context", "k"}
+PLAYGROUND_KEYS = {"fixture", "analysis", "globals", "context", "k"}
 PLAYGROUND_SELECTS = {
     "analysis": "analysis-select",
     "globals": "globals-select",
@@ -128,13 +128,9 @@ def playground_vocabulary() -> dict[str, object]:
             if block
             else set()
         )
-    examples = re.search(r"^const LINKED_EXAMPLES = \{(.*?)^\};", script, re.S | re.M)
     depth = re.search(r"^const MAX_CONTEXT_DEPTH = (\d+);", script, re.M)
     return {
         "options": options,
-        "examples": set(re.findall(r'^  "?([\w-]+)"?: `', examples.group(1), re.M))
-        if examples
-        else set(),
         "max_depth": int(depth.group(1)) if depth else 0,
     }
 
@@ -162,18 +158,12 @@ def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> li
         if not value.isdigit() or int(value) > vocabulary["max_depth"]:
             problems.append(f"k={value} is outside 0..{vocabulary['max_depth']}")
 
-    for name in query.get("example", []):
-        if name not in vocabulary["examples"]:
-            problems.append(f"example={name} is not in LINKED_EXAMPLES")
-
     for path in query.get("fixture", []):
         if not (REGRESSION / path).is_file():
             problems.append(f"fixture={path} is not a regression file")
 
     code = urllib.parse.parse_qs(parsed.fragment).get("code", [])
-    named = [key for key in ("example", "fixture") if key in query] + (
-        ["code"] if code else []
-    )
+    named = [key for key in ("fixture",) if key in query] + (["code"] if code else [])
     if len(named) > 1:
         problems.append(f"names its program twice ({', '.join(named)})")
 

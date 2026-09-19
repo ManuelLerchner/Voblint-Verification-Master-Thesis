@@ -502,7 +502,7 @@
           --set sem.int.signed_overflow assume_none</code>; its congruence
           trace reads <code>join -5 -7 -&gt; 1+2ℤ</code> and then <code>rem : 1+2ℤ 2 -&gt; 1</code>.
           After the fix both checks come out UNKNOWN.
-          <a class="try-link" href="playground.html?example=goblint-1161&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=int&amp;context=none">Run the Voblint side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a>
         </figcaption>
       </figure>
@@ -684,7 +684,7 @@
           <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
           is the set of stores a node could ever receive; each dot is one of them, read at
           <code>x</code>.
-          <a class="try-link" href="playground.html?example=multiples-of-three&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
         </figcaption>
       </figure>
 
@@ -888,7 +888,7 @@
           and Int runs rounds to a fixpoint after every arithmetic operation and every guard. Here
           two rounds is as deep as it goes: the congruence step moves the bounds, the new bounds
           move the sign, and a sign read off an interval can never narrow that interval again.
-          <a class="try-link" href="playground.html?example=int-reduction&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/02-int_reduction_int.vimp&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a>
         </figcaption>
       </figure>
 
@@ -922,7 +922,7 @@
           <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Analysis_Parity/Parity_Domain.html#Parity_Domain.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Analysis_Sign/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a>
           and both arms come back UNKNOWN. Together the class and the bounds leave
           <code>{−1, 5}</code>, which the guard splits into one value per arm.
-          <a class="try-link" href="playground.html?example=remainder-sign&amp;analysis=int&amp;context=none">Run it in the playground ↗</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/45-remainder_sign_split.vimp&amp;analysis=int&amp;context=none">Run it in the playground ↗</a>
         </figcaption>
       </figure>
 
@@ -1242,9 +1242,9 @@ datatype ltr =
           One constructor per situation an activation can be in. <code>Root</code> is
           <code>main</code>, which nobody called, so it carries a trace and nothing else.
           <code>Call</code> is an activation that is running and will have to return to its
-          <code>ltr_caller</code>, which it holds. <code>Resume</code> is that same activation after
-          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_current</code></a> is that activation frozen at its call node and
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
+          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_caller%7Cconst"><code>ltr_caller</code></a>, which it holds. <code>Resume</code> is that same activation after
+          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_current%7Cconst"><code>ltr_current</code></a> is that activation frozen at its call node and
+          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr_callee%7Cconst"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
           path, which is why a returned call is still one box you can ask questions about.
         </p>
       </div>
@@ -1920,7 +1920,7 @@ datatype ltr =
           shortened. Dashed nodes are numbers the compiler has already handed out as a continuation
           but not yet compiled. The <code>Seq</code> clause that strings the statements together adds
           no node of its own.
-          <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">See this graph in the playground ↗</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp&amp;analysis=interval&amp;context=none">See this graph in the playground ↗</a>
         </figcaption>
       </figure>
 
@@ -2015,7 +2015,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <pre class="prose-code" data-lang="isabelle"><code>type_synonym ('x, 'g, 'd, 'a) strategy_program =
   ('a ⇒ ('x, 'g, 'd) strategy_tree) ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <div class="pipe" role="img" aria-label="A strategy program is compiled by sp_compile into a strategy tree, the trees form an eqsT, the TD solver consumes it and returns an assignment.">
-          <span class="pipe-stage pipe-added"><code>strategy_program</code><small>what the generator writes</small></span>
+          <span class="pipe-stage pipe-added"><a href="Voblint/Voblint_Solver/Strategy_Tree_Program.html#Strategy_Tree_Program.strategy_program%7Ctype"><code>strategy_program</code></a><small>what the generator writes</small></span>
           <span class="pipe-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i><small>sp_compile</small></span>
           <span class="pipe-stage"><code>eqsT</code><small>one tree per unknown</small></span>
           <span class="pipe-arrow" aria-hidden="true"><i class="fa-solid fa-arrow-right"></i></span>
@@ -2397,7 +2397,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
             loop points in every configuration, so the solver itself jumps from <code>[0,1]</code>
             straight to <code>[0,+∞]</code>; the <code>[0,2]</code> frame shows what plain iteration
             would do instead. The solver's own trace is in the black box below.
-            <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
+            <a class="try-link" href="playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
           </figcaption>
         </figure>
 
@@ -2482,7 +2482,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           easy to get wrong: the round that discovers a loop point still updates plainly, and
           an unknown that is already being computed is marked a loop point and answered from its
           current value rather than recomputed.
-          <a class="try-link" href="playground.html?example=counting-loop&amp;analysis=interval&amp;context=none">Run the loop ↗</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp&amp;analysis=interval&amp;context=none">Run the loop ↗</a>
         </figcaption>
       </figure>
       </details>
@@ -2674,7 +2674,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           writes the two ports with <code>sidel</code> and a query of the callee's exit. The keys
           above are written bare: each carries a context too,
           and that is next.
-          <a class="try-link" href="playground.html?example=factorial&amp;analysis=interval&amp;context=entry-state">Run this program &#8599;</a>
+          <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/01-factorial_no_context.vimp&amp;analysis=interval&amp;context=entry-state">Run this program &#8599;</a>
         </figcaption>
       </figure>
 
@@ -3177,7 +3177,7 @@ fun main() {
             merges copies and widening opens the bound, so the check only lands at
             <code>k = 6</code>. The first bar is that scale's zero: no context at all is what a
             call string of depth 0 gives.
-            <a class="try-link" href="playground.html?example=fan-out&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=5">See it miss at k = 5 &#8599;</a>
+            <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/13-fan_out_no_context.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=5">See it miss at k = 5 &#8599;</a>
           </p>
           <p class="cost-explain">
             Times are wall clock, best of 60 runs on one laptop. Entry state proves the same check
@@ -3249,7 +3249,7 @@ fun main() {
             one context standing for the calls it cannot separate is widened, and narrowing never
             brings the lower bound back. It also spends 184.2 ms to answer UNKNOWN, against the
             184.7 ms that <code>k = 100</code> spends to prove the check.
-            <a class="try-link" href="playground.html?example=recursion-down&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=99">See the dip at k = 99 &#8599;</a>
+            <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/10-down_call_string_99.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=99">See the dip at k = 99 &#8599;</a>
           </p>
           <p class="cost-explain">
             Entry state sits off the time series for the same reason as before: its key is not a
@@ -4226,40 +4226,40 @@ fun main() { q = f(0); }</code></pre>
                   <span class="guide-name">Two call sites</span>
                   <code data-lang="vimp">p(1); p(2);</code> checks <code data-lang="vimp">x &lt;= 2</code> in <code data-lang="vimp">p</code>
                 </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=two-sites&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
                   <span class="guide-name">Call inside a loop</span>
                   <code data-lang="vimp">while (x &lt; 10) { g(x); … }</code> checks <code data-lang="vimp">x &lt; 10</code> in <code data-lang="vimp">g</code>
                 </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=loop-call&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
                   <span class="guide-name">Growing recursion</span>
                   <code data-lang="vimp">f(x) { f(x + 1); }</code> called as <code data-lang="vimp">f(0)</code>
                 </th>
-                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="bad"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
                   <span class="guide-name">Recursion that shrinks</span>
                   <code data-lang="vimp">f(a) { if (a &lt; 4) { f(9 / (a + 2)); } }</code> from <code data-lang="vimp">f(-1)</code>, checks <code data-lang="vimp">a &lt;= 9</code>
                 </th>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="ok"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?example=recursion-shrinks&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
               </tr>
             </tbody>
           </table>
@@ -4400,7 +4400,7 @@ fun main() {
           also reports <code>f</code>'s exit and the code after the call as unreachable, which is
           right: that recursion never returns. The turns are depths of real runs; how many solver
           rounds pass before warrowing jumps is not drawn.
-          <a class="try-link spiral-try" href="playground.html?example=recursion-grows&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
+          <a class="try-link spiral-try" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
         </figcaption>
       </figure>
 
@@ -4896,7 +4896,7 @@ fun main() {
           <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_transfer_for</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>part_post_solution_of_solve_c</code></button>
-          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
+          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a></button>
         </div>
 
         <p class="bridge-caption" aria-live="polite">
@@ -5045,7 +5045,7 @@ fun main() {
             <p class="thm-plain">
               At a node with no arithmetic diagnostic, every store the program reaches is
               arithmetically safe: that covers the expressions on the edges leaving it, including a
-              call's arguments. Its corollary <code>run_voblint_arithmetic_intra_safe</code> states
+              call's arguments. Its corollary <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_intra_safe%7Cfact"><code>run_voblint_arithmetic_intra_safe</code></a> states
               it for intra edges: every divisor in an expression on such an edge evaluates to a
               non-zero value.
             </p>
@@ -5199,7 +5199,7 @@ fun main() {
             </svg>
             <p class="thm-cfg-caption">
               Hover a premise or conclusion to see where it lives.
-              <a class="try-link" href="playground.html?example=theorems&amp;analysis=interval&amp;context=none">Open this program ↗</a>
+              <a class="try-link" href="playground.html?fixture=24-site-figures/precision/05-theorems_program.vimp&amp;analysis=interval&amp;context=none">Open this program ↗</a>
             </p>
           </div>
         </div>
@@ -5360,7 +5360,7 @@ qed</code></pre>
           The levels are the actual path through the proof for the interval analysis without
           contexts, with the counting loop's values. Int proves this check too, along a path whose
           last levels are its own: the edge is <code>i = i + 1</code>, so the operator lemma there
-          is the one for addition, such as <code>congruence_plus_sound</code> in the congruence
+          is the one for addition, such as <a href="Voblint/Voblint_Analysis_Congruence/Congruence_Arithmetic.html#Congruence_Arithmetic.congruence_plus_sound%7Cfact"><code>congruence_plus_sound</code></a> in the congruence
           domain. Congruence, Sign and Parity answer UNKNOWN on this check, so the zoom has no
           PROVED to start from in those.
         </figcaption>

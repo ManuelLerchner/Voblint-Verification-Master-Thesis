@@ -601,10 +601,11 @@ the image lives in `docs/images/`, and the link under it carries that program.
 - Write a README link to a playground run with `scripts/playground_link.py`, from
   the program file, never by hand. `pixi run pages-links` fails when a README
   `#code=` link carries anything but a program in `docs/readme-figures/`, and when
-  any playground link names an example, fixture or setting the playground lacks.
-- The explainer's `playground.html?example=<name>` links name keys of
-  `LINKED_EXAMPLES` in `pages/main.js`. Renaming a key breaks them; the same check
-  reports it.
+  any playground link names a fixture or setting the playground lacks.
+- The explainer's "run it" links name a regression case,
+  `playground.html?fixture=<path under tests/regression>`, so the program a claim
+  links to is the one the runner executes. Moving or renaming a fixture breaks
+  them; the same check reports it.
 
 ## Style
 

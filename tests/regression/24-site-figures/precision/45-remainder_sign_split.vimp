@@ -1,0 +1,16 @@
+// PARAM: --analysis int
+// Backs the site figure "A bound that looks wrong". x is 5 (mod 6) and unbounded, so
+// x % 6 is -1 or 5 and the first check cannot be decided. The guard splits those two
+// apart, and each arm is then a single value the Int product pins exactly.
+
+fun main() {
+  n = __voblint_nondet_int();
+  x = 6 * n + 5;
+  a = x % 6;
+  __voblint_check(a >= 0);       // UNKNOWN
+  if (a < 0) {
+    __voblint_check(a == -1);    // PROVED
+  } else {
+    __voblint_check(a == 5);     // PROVED
+  }
+}

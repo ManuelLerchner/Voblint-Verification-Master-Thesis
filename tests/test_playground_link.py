@@ -67,13 +67,13 @@ def test_link_check_rejects_what_the_playground_cannot_open():
     # rejection long after that value became legal.
     too_deep = vocabulary["max_depth"] + 1
     cases = {
-        "playground.html?example=no-such-example": "not in LINKED_EXAMPLES",
         "playground.html?fixture=00-sanity/none.vimp": "not a regression file",
         "playground.html?context=entrystate": "not a playground option",
         f"playground.html?k={too_deep}": "outside",
         "playground.html?colour=red": "unknown parameter",
         "playground.html?analysis=interval#code=!!!": "does not decode",
-        "playground.html?example=theorems#code=" + other.split("#code=")[1]: "twice",
+        "playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp#code="
+        + other.split("#code=")[1]: "twice",
     }
     for url, expected in cases.items():
         problems = check.check_playground(url, "pages/index.html", vocabulary)
