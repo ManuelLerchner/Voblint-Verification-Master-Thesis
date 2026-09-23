@@ -290,7 +290,8 @@ def collect() -> dict:
         "eval_witnesses": sum(
             len(
                 re.findall(
-                    r"\bby eval\b", _proof_text(p.read_text(encoding="utf-8", errors="replace"))
+                    r"\bby eval\b",
+                    _proof_text(p.read_text(encoding="utf-8", errors="replace")),
                 )
             )
             for p in EXAMPLES_DIR.rglob("*.thy")
