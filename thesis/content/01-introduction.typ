@@ -83,6 +83,18 @@ description can contain violating states that no execution reaches, because
 abstraction adds states. The analysis then cannot decide the check, even when
 every execution satisfies it.
 
+#figure(
+  image("/shared/generated/svg/runs.svg", width: 100%),
+  caption: [Testing and static analysis, schematically. Each curve is one
+    execution, and the vertical axis stands for the program state over time.
+    Left: tests observe only the runs they execute. A run on an input nobody
+    tried (dashed) stays unknown. Right: a sound analysis result (shaded)
+    contains every run, tried or not, and may also contain states that no run
+    reaches. Because it does not overlap the bad states, no execution can reach
+    them. An overlap would not show a real violation, only that the analysis
+    cannot exclude one.],
+) <fig:intro-runs>
+
 Suppose, for instance, that the analysis somehow
 knows $x in [43, infinity)$ at a program point. Every execution then has
 $x >= 43$ there, so the check `x > 0` holds and a division by `x` is safe, for
@@ -99,18 +111,6 @@ sound analysis gives up exactness in one direction only: it may leave a check
 undecided, but it never proves a false one. It remains useful as long as it
 decides the checks of interest often enough @rival20[§1.3.5], and a check may
 need only coarse information, such as the lower bound on $x$ above.
-
-#figure(
-  image("/shared/generated/svg/runs.svg", width: 100%),
-  caption: [Testing and static analysis, schematically. Each curve is one
-    execution, and the vertical axis stands for the program state over time.
-    Left: tests observe only the runs they execute. A run on an input nobody
-    tried (dashed) stays unknown. Right: a sound analysis result (shaded)
-    contains every run, tried or not, and may also contain states that no run
-    reaches. Because it does not overlap the bad states, no execution can reach
-    them. An overlap would not show a real violation, only that the analysis
-    cannot exclude one.],
-) <fig:intro-runs>
 
 Voblint answers per check and per arithmetic operation (@fig:intro-answers). A
 definite verdict holds whenever a run reaches its check and does not assert
