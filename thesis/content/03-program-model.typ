@@ -689,7 +689,7 @@ can fall through (#isaconst("falls_through")).
     }
     ```),
     // 0.62pt per viewBox unit sets the 11.5-unit edge labels at 7.1pt.
-    image("/shared/generated/svg/source-morph.svg", width: 380 * 0.62pt),
+    image("/shared/generated/svg/source-morph.svg", width: 314 * 0.62pt),
   ),
   kind: image,
   placement: auto,
