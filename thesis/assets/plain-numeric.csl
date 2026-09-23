@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  LaTeX's `alpha` labels with `plain`-style entries: [TGS26] followed by
+  LaTeX's `unsrt` style: numeric labels [12] in order of first citation,
+  with `plain`-style entries. Originally written for `alpha` labels, [TGS26] followed by
   given-name-first authors and period-separated fields. Written for this thesis
   because Typst's built-in `alphanumeric` style produces the labels but has no
   bibliography layout, and the CSL styles that do produce such labels format
@@ -10,8 +11,8 @@
        default-locale="en-US" demote-non-dropping-particle="never">
   <info>
     <title>Alphanumeric (plain)</title>
-    <id>https://voblint.invalid/alpha-plain</id>
-    <category citation-format="label"/>
+    <id>https://voblint.invalid/plain-numeric</id>
+    <category citation-format="numeric"/>
     <updated>2026-09-22T00:00:00+00:00</updated>
   </info>
 
@@ -20,7 +21,7 @@
     macro, so it has to serve both uses. It evaluates every position test as
     true in the bibliography, and `near-note` is never true for an in-text
     citation: the first branch is the bibliography entry, the second the prose
-    form, "Stemmler et al. [Ste+25]".
+    form, "Stemmler et al. [12]".
   -->
   <macro name="author">
     <choose>
@@ -95,11 +96,11 @@
     </choose>
   </macro>
 
-  <citation collapse="year" disambiguate-add-year-suffix="true">
+  <citation collapse="citation-number">
     <layout prefix="[" suffix="]" delimiter=", ">
       <!-- A supplement (`@key[§8.4.1]`) arrives as the locator. -->
       <group delimiter=", ">
-        <text macro="label"/>
+        <text variable="citation-number"/>
         <text variable="locator"/>
       </group>
     </layout>
@@ -107,18 +108,12 @@
 
   <bibliography second-field-align="flush" entry-spacing="0"
                 hanging-indent="false">
-    <sort>
-      <key variable="citation-label"/>
-      <!--
-        Hayagriva assigns year suffixes in first-citation order, and ties keep
-        that order, so a secondary key would list [Ope26b] before [Ope26a].
-      -->
-    </sort>
+    
     <layout suffix=".">
       <!-- No entry has an original author, so the substitute always renders. -->
       <names variable="original-author">
         <substitute>
-          <text macro="label" prefix="[" suffix="]"/>
+          <text variable="citation-number" prefix="[" suffix="]"/>
         </substitute>
       </names>
       <group delimiter=". ">
