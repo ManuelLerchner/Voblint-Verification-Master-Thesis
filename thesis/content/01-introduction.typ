@@ -82,6 +82,15 @@ description can contain violating states that no execution reaches, because
 abstraction adds states. The analysis then cannot decide the check, even when
 every execution satisfies it.
 
+Suppose, for instance, that the analysis somehow
+knows $x in [43, infinity)$ at a program point. Every execution then has
+$x >= 43$ there, so the check `x > 0` holds and a division by `x` is safe, for
+every input. If the analysis knows only $x in [0, 100]$, the description
+contains $x = 0$, so it can prove neither claim, although every real execution
+may still have $x >= 43$, for reasons an interval cannot express, such as a
+relation between $x$ and another variable or an invariant that a loop
+maintains.
+
 #figure(
   image("/shared/generated/svg/runs.svg", width: 100%),
   caption: [Testing and static analysis, schematically. Each curve is one
