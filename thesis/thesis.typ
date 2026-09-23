@@ -122,4 +122,4 @@
 #print-thesis-glossary(print-glossary)
 
 #pagebreak(to: "odd")
-#bibliography("literature.bib", style: "assets/alpha-plain.csl")
+#bibliography("literature.bib", style: "assets/plain-numeric.csl")
