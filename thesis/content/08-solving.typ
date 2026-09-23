@@ -361,7 +361,7 @@ $(ltop, 0^sharp, [])$, and a published global half $(lbot, d_g,
   italic("ps")_g)$. The type is a quotient that identifies representations with
 equal lookups.
 
-== Computing on one state, proving on the other
+== Computing on one state, proving on the other <sec:readback>
 
 Instead of reproving the transfer soundness of @ch:analysis-interface for the
 carrier, we show that each carrier operation commutes with readback $rho$:
