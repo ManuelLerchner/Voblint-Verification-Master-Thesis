@@ -4,10 +4,10 @@
 ``pages/index.html`` carries the Goblint/Voblint comparison as the rows of
 ``ul.align-list``: a Goblint construct linked to its source at a pinned commit,
 a status (modeled, simplified or absent), the Voblint counterpart linked to the
-rendered theories, and a note. The thesis cites the comparison and counts its
-rows by status. Keeping one copy is the point: this tool reads the rows and
-writes ``thesis/shared/generated/goblint-alignment.json``, and the thesis
-reads that file. It never writes to ``pages/``.
+rendered theories, and a note. The thesis prints the same comparison as an
+appendix table. Keeping one copy is the point: this tool reads the rows and
+writes ``thesis/shared/generated/goblint-alignment.json``, and the appendix
+renders that file. It never writes to ``pages/``.
 
 A Voblint link becomes a formal citation. An entity anchor
 (``#DG_Spec.dg_spec%7Ctype``) is cited by its kind and short name, and a bare
@@ -16,7 +16,7 @@ theory page by ``Session.Theory``; the file's ``citations`` list is what
 fails the thesis checks as any hand-written citation would.
 
     python3 thesis/tools/goblint_alignment.py            # write
-    python3 thesis/tools/goblint_alignment.py --check    # fail on malformed rows
+    python3 thesis/tools/goblint_alignment.py --check    # fail on drift
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ def render(data: dict) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--check", action="store_true", help="only validate the rows")
+    ap.add_argument("--check", action="store_true", help="fail if the JSON is stale")
     args = ap.parse_args()
     try:
         text = render(extract(PAGE.read_text()))
@@ -189,10 +189,15 @@ def main() -> int:
         print(f"goblint_alignment: {err}", file=sys.stderr)
         return 1
     rel = OUT.relative_to(REPO)
-    # The JSON is not committed (every build writes it), so there is nothing to
-    # compare against; a check only proves the page's rows parse.
     if args.check:
-        print("goblint_alignment: the alignment rows of pages/index.html parse")
+        if not OUT.is_file() or OUT.read_text() != text:
+            print(
+                f"goblint_alignment: {rel} is stale against pages/index.html; "
+                "run pixi run thesis-alignment-write",
+                file=sys.stderr,
+            )
+            return 1
+        print(f"goblint_alignment: {rel} matches pages/index.html")
         return 0
     OUT.write_text(text)
     print(f"goblint_alignment: wrote {rel}")
