@@ -70,7 +70,8 @@ the anchor. Regression programs exercise the departures (@sec:eval-corpus).
 
 Programs are commonly checked by testing, if they are checked at all, often
 with unit tests and sometimes only by running them a few times and assuming
-that they work. Either way, only finitely many executions are observed. A
+that they work. Either way, only finitely many executions are observed
+@rival20[§1.4.1]. A
 static analysis instead computes a description of possible behavior, for instance an interval that contains every
 value a variable takes whenever execution reaches a program point. The
 description may include values that never occur, but soundness requires it to
@@ -90,6 +91,14 @@ contains $x = 0$, so it can prove neither claim, although every real execution
 may still have $x >= 43$, for reasons an interval cannot express, such as a
 relation between $x$ and another variable or an invariant that a loop
 maintains.
+
+This incompleteness cannot be avoided. By Rice's theorem, no algorithm decides
+a nontrivial semantic property for every program of a Turing-complete language
+@rice53 @rival20[§1.3.3], so no analysis can answer every check exactly. A
+sound analysis gives up exactness in one direction only: it may leave a check
+undecided, but it never proves a false one. It remains useful as long as it
+decides the checks of interest often enough @rival20[§1.3.5], and a check may
+need only coarse information, such as the lower bound on $x$ above.
 
 #figure(
   image("/shared/generated/svg/runs.svg", width: 100%),
