@@ -241,9 +241,10 @@ their results, and the interface between the two is a side-effecting constraint
 system @apinis12 @seidl26. An Isabelle/HOL formalization of Goblint's top-down
 solver has been verified, including its extension to side effects @stade24
 @tilscher26. When it terminates, the verified solver returns a correct
-post-solution of the equation system it receives. Whether that system describes
+post-solution of the equation system it receives (@sec:td). Whether that system describes
 the program, and whether the verdicts read off its solution hold, is outside
-the solver's theorem. This thesis addresses four research questions about that
+the solver's theorem. Its example analyses supply equations, written by hand or generated
+from a program, and no proof relates them to the program's executions. This thesis addresses four research questions about that
 gap.
 
 / RQ1: Can soundness of a constraint-based, context-sensitive interprocedural
