@@ -22,7 +22,8 @@
 #                 with another.  Must also be unique.
 #   css           figure stylesheet modules under pages/figures/ whose rules
 #                 style this figure.  pages/style.css is always included.
-#   viewbox       replacement viewBox, where the page lets a label overflow.
+#   viewbox       replacement viewBox, where the page lets a label overflow or
+#                 leaves empty margin around the drawing.
 #   colours       per-figure palette entries, {page colour = thesis colour},
 #                 for a colour that means something else in this figure.
 #   drop_classes  elements to remove, for a figure whose page shows them only
@@ -37,6 +38,8 @@ aria_prefix = "Left: four tested runs pass"
 css = ["runs"]
 # The panel notes repeat the caption at an unreadable print size.
 drop_classes = ["probe", "sweep", "panel-note"]
+# Tight around the drawn content; the page reserves room below for the notes.
+viewbox = "15 8 790 254"
 chapter = "1.1"
 why = "Testing observes chosen runs; an analysis result is one region containing every run, tried or not."
 
@@ -47,6 +50,8 @@ css = ["source-morph"]
 colours = { "#d99a2b" = "neutral" }
 # "Statement n" repeats the ppN label; the caption gives the correspondence.
 drop_classes = ["sm-num"]
+# Tight around the drawn content; the page centers the graph in a wider box.
+viewbox = "73 13 314 540"
 chapter = "3.4"
 why = "The counting loop as the compiler numbers it; tests/regression/24-site-figures/precision/03-counting_loop.vimp pins the graph."
 
