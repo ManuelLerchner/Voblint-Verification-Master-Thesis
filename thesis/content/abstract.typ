@@ -15,12 +15,11 @@ We show that the whole pipeline can be verified. We build Voblint, an
 Isabelle/HOL formalization of a constraint-based, context-sensitive
 interprocedural analyzer for VIMP, a small C-like language with global and
 local integer variables and recursive procedures with parameters and return
-values. Its main theorem is about the analysis function itself: if the
-solver terminates and the analysis returns a result, that result covers every
+values. Its main theorem is about the analysis function: if the solver
+terminates (partial correctness) and the analysis returns a result, that result covers every
 store a finite source execution reaches, and every definite verdict (the
 analyzer's answer to a program assertion) holds there. Further theorems
-justify `DEAD` verdicts and the absence of zero divisors where no arithmetic
-warning is reported. A definite verdict holds whenever a run reaches its
+cover `DEAD` verdicts and division safety where no warning is reported. A definite verdict holds whenever a run reaches its
 assertion, but it does not claim that any run does.
 
 Inspired by Goblint, we implement the analyzer for a range of configurations. It combines the
@@ -36,14 +35,15 @@ calling context, but the standard collecting semantics records no context,
 so such a bound has nothing concrete to be sound against. We therefore develop
 an activation-local trace semantics. Like the local traces of Schwarz et al.
 for threads @schwarz21, it describes an execution from the perspective of one
-procedure activation, and the calling context of an activation is read from
-its trace. A totality condition ensures that no
-execution is lost when executions are grouped by context. The proof then
-follows the structure of the analyzer. Each domain, each context policy and
+procedure activation and determines its calling context. A totality condition ensures that no
+execution is lost when executions are grouped by context. Each domain, each context policy and
 the solver prove their own obligations, and one theorem combines them for
 every configuration. Machine-checked counterexamples show that weakening
-selected obligations lets the analyzer report unsound results.
+selected obligations lets the analyzer report unsound results. One of them
+replays a soundness bug in Goblint's congruence domain. Theorems proved by
+evaluation show that the main theorem yields `PROVED` verdicts on
+named programs and strictly separate the precision of two context settings
+on one program.
 
-The guarantee is partial correctness, since solver termination is a premise
-for each program. Parsing, code generation, compilation and presentation lie outside the
+Parsing, code generation, compilation and presentation lie outside the
 proof, and the adequacy of the source semantics is argued, not proved.
