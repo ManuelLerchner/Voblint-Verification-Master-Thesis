@@ -168,7 +168,7 @@ finitely many unknowns are encountered @seidl21[Thms. 1, 5].
 
 Voblint does not implement its own solver. It uses Goblint's top-down solver
 (TD) in the Isabelle/HOL formalization of Stade et al. @stade24, extended to
-side effects and update rules by Tilscher et al. @tilscher26. We use a fork of
+side effects and update rules by Tilscher et al. @tilscher26. We use a #link("https://github.com/ManuelLerchner/td-verification")[fork] of
 that formalization that builds with Isabelle2025 and drops a well-foundedness
 assumption on the widening and narrowing classes, which none of the solver's
 proofs uses and which the state carriers of Voblint do not satisfy. The rest of the
