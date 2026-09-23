@@ -299,7 +299,7 @@ each stage of the analyzer relative to the proof.
       ],
       arrow,
       zone(vb.proved, [proved in Isabelle/HOL])[
-        #p[compiler] #arrow #p[equations] #arrow #p[solver] #arrow #p[result, verdicts]
+        #p[CFG compiler] #arrow #p[equations] #arrow #p[solver] #arrow #p[result, verdicts]
       ],
       arrow,
       zone(vb.unproved, [unverified output], dash: "dashed")[#u[adapter, \ rendering]],
@@ -352,8 +352,8 @@ procedures, through context-indexed equations and a verified solver, to the
 verdicts of an executable analyzer. The contributions below fill this gap: the
 end-to-end theorem (K1) needs a mechanized concrete meaning for contexts
 admitted by a relation (K2), a composition of separately verified domain,
-context policy and solver (K3), and theorems showing that key obligations are
-necessary and its results non-vacuous (K4). @ch:related gives the detailed
+context policy and solver (K3), and counterexample theorems showing that several
+obligations are load-bearing and that its results are non-vacuous (K4). @ch:related gives the detailed
 comparisons.
 
 == Contributions <sec:contributions>
@@ -379,7 +379,8 @@ question.
   itself computes on finite executable states, and each of their operations
   is proved to commute with readback to the function-valued states of the
   soundness proof (@sec:readback).
-  Parsing, code generation and presentation form the trust boundary of
+  Parsing, code generation, target compilation and presentation form the
+  trust boundary of
   @sec:trust-boundary. The solver and its partial correctness are inherited
   @tilscher26. The verified connection from source executions through the
   generated equations to the published verdicts is new. To our knowledge, no
@@ -404,8 +405,8 @@ question.
   Dabrowski and Pichardie mechanize in Coq with contexts computed by a function
   @dabrowski09. The relational admission, the totality condition, the
   bucket-recovery theorem and their connection to an executable solver are new.
-  We
-  found no prior mechanization of a local-trace semantics.
+  To our
+  knowledge, no prior work mechanizes a local-trace semantics.
 
 / K3 (RQ3): _Compositional soundness._ A domain proves its transfer soundness
   without reference to contexts or the solver, a context policy proves its
@@ -431,8 +432,8 @@ question.
   show that several obligations are load-bearing, since weakening or bypassing
   each admits an unsound claim: reading the callee's result in the caller's own context
   satisfies the weakened contract yet declares a reachable call unreachable
-  (#isathm("return_at_caller_context_unsound")), the other four obligations
-  without #oblig("TOTAL") leave a reached store uncovered
+  (#isathm("return_at_caller_context_unsound")), satisfying the other four
+  obligations while dropping #oblig("TOTAL") leaves a reached store uncovered
   (#isathm("total_dropped_unsound")), unpaired entry coverage loses
   a concrete return value (#isathm("unpaired_entry_cover_unsound")), and the
   remainder that Goblint's congruence domain computed before pull request 1161
@@ -446,9 +447,9 @@ question.
   more precise than length 1 on one program
   (#isathm("sign_k2_strictly_more_precise_than_k1_at_g")). These theorems
   concern named programs and establish no general precision ordering
-  (@sec:eval-rq4). Prior mechanizations prove precision as a general
-  completeness or optimality theorem for one analysis @lammich07afp
-  @tilscher26. To our knowledge, none machine-checks strict precision separations
+  (@sec:eval-rq4). Prior mechanizations establish general
+  completeness or optimality results for particular analyses or solver
+  configurations @lammich07afp @tilscher26. To our knowledge, none machine-checks strict precision separations
   between configurations of one analyzer on concrete programs.
 
 The main theorem states partial correctness: termination of the abstract solve
