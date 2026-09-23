@@ -53,6 +53,27 @@ SEMANTICS_THEORIES = (
 )
 
 
+def _proof_text(src: str) -> str:
+    """Theory source without comments and cartouches, which may nest."""
+    open_c, close_c = "\\<open>", "\\<close>"
+    out, depth, i = [], 0, 0
+    while i < len(src):
+        if src.startswith("(*", i):
+            end = src.find("*)", i + 2)
+            i = len(src) if end < 0 else end + 2
+        elif src.startswith(open_c, i):
+            depth += 1
+            i += len(open_c)
+        elif depth and src.startswith(close_c, i):
+            depth -= 1
+            i += len(close_c)
+        else:
+            if not depth:
+                out.append(src[i])
+            i += 1
+    return "".join(out)
+
+
 def count_lines(path: Path) -> int:
     with path.open(encoding="utf-8", errors="replace") as f:
         return sum(1 for _ in f)
@@ -264,8 +285,14 @@ def collect() -> dict:
             "kinds": kinds,
             "by_group": by_group,
         },
+        # Whole word only, and only in proof text: prose such as "proved by
+        # evaluation" or a quoted `by eval` inside a cartouche is no proof.
         "eval_witnesses": sum(
-            p.read_text(encoding="utf-8", errors="replace").count("by eval")
+            len(
+                re.findall(
+                    r"\bby eval\b", _proof_text(p.read_text(encoding="utf-8", errors="replace"))
+                )
+            )
             for p in EXAMPLES_DIR.rglob("*.thy")
         ),
     }
