@@ -10,7 +10,7 @@ that authors transparently disclose the automated tools they use, including
 large language models and proof assistants @leiden26. This section follows
 that recommendation. Substantial parts of this work
 were carried out with generative AI tools, primarily Anthropic's Claude and
-OpenAI's ChatGPT and Codex, working under the author's direction and review.
+OpenAI's ChatGPT and Codex, and Cursor, working under the author's direction and review.
 The AI contributions include large parts of the
 Isabelle mechanization, among them proofs, refactorings across the development,
 and the translation of tactic-style proofs and Sledgehammer output into
