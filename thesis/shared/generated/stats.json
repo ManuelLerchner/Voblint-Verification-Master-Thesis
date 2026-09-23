@@ -32,7 +32,7 @@
     "corpus.kinds.precision": 198,
     "corpus.kinds.soundness": 10,
     "corpus.lines": 12781,
-    "eval_witnesses": 442,
+    "eval_witnesses": 425,
     "generated_ocaml": 9390,
     "handwritten_ocaml": 3315,
     "isabelle.code": 29972,
