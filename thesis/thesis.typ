@@ -65,7 +65,7 @@
 // between a chapter title and its text.
 #heading(outlined: false)[Contents]
 #v(10.9pt)
-#outline(title: none, depth: 3)
+#outline(title: none, depth: 2)
 
 // ------------------------------------------------------------ main matter --
 #pagebreak(weak: true)
