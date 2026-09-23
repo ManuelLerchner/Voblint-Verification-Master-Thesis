@@ -55,8 +55,8 @@ Each domain, each context policy and the solver prove their own obligations,
 and one theorem combines them for every configuration. The formalization
 is modular: a new domain supplies its operations and
 proofs, its registration for every policy and
-update rule is generated, and after a few handwritten dispatch cases, the
-main theorem covers it.
+update rule is generated, and after handwritten dispatch code, the main
+theorem covers it.
 
 Since the TD verification does not prove termination of the side-effecting
 solver, we make no attempt at total correctness:

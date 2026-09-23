@@ -45,8 +45,9 @@ for the proved theorems only because each theorem assumes the missing
 constraints again @bryant26munkres[§8.1]. In September 2026, OpenAI
 released a proposed proof of finite-time blowup for the three-dimensional
 Navier–Stokes equations together with a Lean formalization
-@openai26ns @openai26nspaper @openai26nslean. The Lean theorem covers smooth
-external forcing and an initially stationary fluid of bounded energy, and the
+@openai26ns @openai26nspaper @openai26nslean. The Lean statement asserts
+alternative (C) of the Clay problem, smooth initial data and forcing for which
+no global smooth solution of uniformly bounded kinetic energy exists, and the
 artifact describes its review as self-assessed. Whether this statement matches
 the intended problem is a question the kernel cannot answer. Software verification makes this
 boundary explicit. The seL4 proof relates the kernel's C implementation to an
@@ -323,7 +324,7 @@ CompCert is the precedent for a theorem about a delivered tool: it proves in
 Coq that its compiled code behaves as the source semantics specifies and lists
 the components that remain trusted @leroy09. Verasco
 builds a verified abstract interpreter for most of C99 on it, excluding
-recursion @jourdan15, and the value analysis of
+recursion and dynamic allocation @jourdan15, and the value analysis of
 #cite(<blazy13>, form: "prose") checks the output of an unverified fixpoint
 iterator instead of verifying it. In Isabelle/HOL, seL4 verifies the C
 implementation of an operating-system kernel @klein09, and code generated from a
@@ -352,8 +353,8 @@ procedures, through context-indexed equations and a verified solver, to the
 verdicts of an executable analyzer. The contributions below fill this gap: the
 end-to-end theorem (K1) needs a mechanized concrete meaning for contexts
 admitted by a relation (K2), a composition of separately verified domain,
-context policy and solver (K3), and counterexample theorems showing that several
-obligations are load-bearing and that its results are non-vacuous (K4). @ch:related gives the detailed
+context policy and solver (K3). K4 adds counterexample theorems showing that
+several obligations are load-bearing and that the results are non-vacuous. @ch:related gives the detailed
 comparisons.
 
 == Contributions <sec:contributions>
@@ -378,7 +379,7 @@ question.
   The semantics and the specifications exist only in the logic. The analysis
   itself computes on finite executable states, and each of their operations
   is proved to commute with readback to the function-valued states of the
-  soundness proof (@sec:readback).
+  soundness proof on the states where it is used (@sec:readback).
   Parsing, code generation, target compilation and presentation form the
   trust boundary of
   @sec:trust-boundary. The solver and its partial correctness are inherited
@@ -397,9 +398,9 @@ question.
   (#isaconst("valid_ltr"), @sec:why-traces). A context policy is a relation
   that reads contexts off such traces (#isaconst("trace_context"),
   @sec:contexts), so one call may be admitted at several contexts, as
-  Goblint's `enter` requires. Under the totality condition
-  #isaconst("call_context_total_on") the context buckets jointly recover the
-  context-free collection (#isathm("ltr_collect_eq_Union_activation_collect")).
+  Goblint's `enter` requires. For a claim that meets the coverage contract,
+  including the totality condition #isaconst("call_context_total_on"), the
+  context buckets jointly recover the context-free collection (#isathm("ltr_collect_eq_Union_activation_collect")).
   We inherit local traces, which Schwarz et al. define for threads and do not
   mechanize @schwarz21, and context-instrumented concrete semantics, which
   Dabrowski and Pichardie mechanize in Coq with contexts computed by a function
@@ -443,8 +444,9 @@ question.
   `PROVED` verdicts for named programs, and the main theorem certifies those
   results (#isathm("certificate_demo_full_certificate"),
   #isathm("nv_source_certified")). Precision differences are stated as strict
-  inequalities between computed results: call strings of length 2 are strictly
-  more precise than length 1 on one program
+  inequalities between computed results: on one program, call strings of length 2
+  give a strictly smaller value for one variable at a callee's entry than
+  length 1
   (#isathm("sign_k2_strictly_more_precise_than_k1_at_g")). These theorems
   concern named programs and establish no general precision ordering
   (@sec:eval-rq4). Prior mechanizations establish general
@@ -454,7 +456,7 @@ question.
 
 The main theorem states partial correctness: termination of the abstract solve
 is a per-program premise (@sec:termination). Seidl and Vogler prove on paper
-that the side-effecting solver terminates when only finitely many unknowns are
+that their side-effecting TD variant terminates when only finitely many unknowns are
 encountered @seidl21, and #cite(<tilscher26jar>, form: "prose") machine-check
 total correctness for top-down solvers without side effects. The
 side-effecting solver used here has no general machine-checked termination

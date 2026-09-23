@@ -162,13 +162,16 @@ indices a system can have infinitely many unknowns, of which only those
 influencing the query matter @seidl21. Seidl and Vogler prove that their
 top-down variants with widening and narrowing, including the side-effecting
 one, terminate on arbitrary, possibly non-monotone, systems as long as only
-finitely many unknowns are encountered @seidl21[Thms. 5.1, 9.4].
+finitely many unknowns are encountered @seidl21[Thms. 1, 5].
 
 == The verified top-down solver <sec:td>
 
 Voblint does not implement its own solver. It uses Goblint's top-down solver
 (TD) in the Isabelle/HOL formalization of Stade et al. @stade24, extended to
-side effects and update rules by Tilscher et al. @tilscher26. The rest of the
+side effects and update rules by Tilscher et al. @tilscher26. We use a fork of
+that formalization that builds with Isabelle2025 and drops a well-foundedness
+assumption on the widening and narrowing classes, which none of the solver's
+proofs uses and which the state carriers of Voblint do not satisfy. The rest of the
 thesis builds on this solver and its correctness theorem, so we summarize both
 here.
 
@@ -214,8 +217,10 @@ the query and is closed under the reads of its right-hand sides, and on $S$
 the valuation is a post-solution in the sense above, side contributions
 included. The theorem needs no monotonicity of the right-hand sides and says
 nothing about unknowns outside $S$. An executable version of the solver
-returns an optional result, and #isathm("solve_dom_of_solve_c") shows that a
-run that returns a result satisfies the domain predicate. There is no
+returns an optional result. The vendored formalization proves it equivalent to
+the solver on the domain predicate, and Voblint's corollary
+#isathm("solve_dom_of_solve_c") concludes that a run that returns a result
+satisfies the domain predicate. There is no
 termination theorem for the side-effecting solver, so termination is a
 premise of Voblint's main theorem (@sec:termination).
 

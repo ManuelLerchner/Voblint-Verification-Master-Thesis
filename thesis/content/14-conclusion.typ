@@ -185,9 +185,10 @@ admits values that increase forever, because stabilization is not a law of #isal
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
-#isaconst("pstep") runs would make this check systematic. A run that violates
+#isaconst("pstep") runs would make this check systematic. A run that reaches and violates
 a check the analyzer reports as `PROVED` would then point to a fault in the
-trusted parser, code generator or handwritten OCaml. Comparing its runs with a
+trusted base: the code generator, the target toolchain or the handwritten
+OCaml, and the parser if the evaluator reads the source independently. Comparing its runs with a
 C compiler on the common subset would test the adequacy argument itself.
 
 The relational witness forgets a variable on assignment and everything across
