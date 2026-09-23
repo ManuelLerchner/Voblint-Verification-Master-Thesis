@@ -12,19 +12,53 @@
     <title>Alphanumeric (plain)</title>
     <id>https://voblint.invalid/alpha-plain</id>
     <category citation-format="label"/>
-    <updated>2026-08-25T00:00:00+00:00</updated>
+    <updated>2026-09-22T00:00:00+00:00</updated>
   </info>
 
+  <!--
+    Hayagriva renders the names of a prose citation (`form: "prose"`) from this
+    macro, so it has to serve both uses. It evaluates every position test as
+    true in the bibliography, and `near-note` is never true for an in-text
+    citation: the first branch is the bibliography entry, the second the prose
+    form, "Stemmler et al. [Ste+25]".
+  -->
   <macro name="author">
-    <names variable="author">
-      <!-- Full given names, as LaTeX plain sets them. -->
-      <name and="text" delimiter=", " delimiter-precedes-last="always"/>
-      <label form="short" prefix=", "/>
-      <substitute>
-        <names variable="editor"/>
-        <text variable="title"/>
-      </substitute>
-    </names>
+    <choose>
+      <if position="near-note">
+        <names variable="author">
+          <!-- Full given names, as LaTeX plain sets them. -->
+          <name and="text" delimiter=", " delimiter-precedes-last="contextual"/>
+          <label form="short" prefix=", "/>
+          <substitute>
+            <names variable="editor"/>
+            <text variable="title"/>
+          </substitute>
+        </names>
+      </if>
+      <else>
+        <names variable="author">
+          <name form="short" and="text" delimiter=", " et-al-min="3" et-al-use-first="1"/>
+          <substitute>
+            <names variable="editor"/>
+            <text variable="title"/>
+          </substitute>
+        </names>
+      </else>
+    </choose>
+  </macro>
+
+  <!--
+    Same-label entries get a year suffix ([CC79a], [CC79b]). Rendering the
+    suffix explicitly keeps it out of the date. Hayagriva takes the first
+    variable-bearing element as the flush-aligned label column, which would
+    split a bare `citation-label` from its suffix; the bibliography therefore
+    wraps this macro in a `names` substitute so the whole label is one element.
+  -->
+  <macro name="label">
+    <group>
+      <text variable="citation-label"/>
+      <text variable="year-suffix"/>
+    </group>
   </macro>
 
   <macro name="issued">
@@ -61,9 +95,13 @@
     </choose>
   </macro>
 
-  <citation collapse="year">
+  <citation collapse="year" disambiguate-add-year-suffix="true">
     <layout prefix="[" suffix="]" delimiter=", ">
-      <text variable="citation-label"/>
+      <!-- A supplement (`@key[§8.4.1]`) arrives as the locator. -->
+      <group delimiter=", ">
+        <text macro="label"/>
+        <text variable="locator"/>
+      </group>
     </layout>
   </citation>
 
@@ -71,9 +109,18 @@
                 hanging-indent="false">
     <sort>
       <key variable="citation-label"/>
+      <!--
+        Hayagriva assigns year suffixes in first-citation order, and ties keep
+        that order, so a secondary key would list [Ope26b] before [Ope26a].
+      -->
     </sort>
     <layout suffix=".">
-      <text variable="citation-label" prefix="[" suffix="]"/>
+      <!-- No entry has an original author, so the substitute always renders. -->
+      <names variable="original-author">
+        <substitute>
+          <text macro="label" prefix="[" suffix="]"/>
+        </substitute>
+      </names>
       <group delimiter=". ">
         <text macro="author"/>
         <text variable="title"/>
