@@ -75,8 +75,8 @@ lemma nv_main:
             (VIMP_Proc.com.Seq
                (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
                (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
-            (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6))))
-         (VIMP_Proc.com.Check (Eq (V (STR ''b'')) (N 5)))"
+            (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))))
+         (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5)))"
   by (simp add: nv_prog_def main_body_def prog_main_name_def)
 
 lemma nv_call:
@@ -117,15 +117,15 @@ text \<open>The source run, stopped with the first check about to execute.\<clos
 lemma nv_to_check:
   "star (pstep (declared_global nv_prog) (prog_table nv_prog))
      (main_body (prog_table nv_prog), \<lambda>_. 0, [])
-     (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6)))
-        (VIMP_Proc.com.Check (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
+     (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
+        (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
 proof -
   have "star (pstep (declared_global nv_prog) (prog_table nv_prog))
           (VIMP_Proc.com.Seq
              (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
                 (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
-             (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, [])
-          (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
+             (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, [])
+          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
     using psteps_Seq2 [OF nv_calls] by (meson Seq1 star.step star.refl star_trans)
   then show ?thesis unfolding nv_main by (rule psteps_Seq2)
 qed
@@ -151,8 +151,8 @@ theorem nv_source_certified:
           (Statement 5, Decided Check_Proved)]
    \<and> csim (prog_table nv_prog) (prog_cfg nv_prog)
        (VIMP_Proc.com.Seq
-          (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.com.Check (Eq (V (STR ''b'')) (N 5))),
+          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
+          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))),
         nv_final, [])
        (v, nv_final, stk)
    \<and> nv_final \<in> ltr_collect (declared_global nv_prog) (prog_cfg nv_prog)
@@ -188,8 +188,8 @@ proof -
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  have nc: "next_check (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (Eq (V (STR ''a'')) (N 6)))
-              (VIMP_Proc.com.Check (Eq (V (STR ''b'')) (N 5)))) = Some (Eq (V (STR ''a'')) (N 6))"
+  have nc: "next_check (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
+              (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
     by simp
   from run_voblint_check_sound [OF nv_init nv_to_check nc nv_terminates ans]
   obtain chk
@@ -287,9 +287,9 @@ proof -
   have intra: "intra (prog_cfg nv_dead_prog) =
      {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 5, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')),
-      (Statement 1, EA_Check (Eq (V (STR ''x'')) (N 0)), Statement 2),
+      (Statement 1, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 0)), Statement 2),
       (Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1),
-      (Statement 3, EA_Check (Eq (V (STR ''x'')) (N 5)), Statement 5),
+      (Statement 3, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 5)), Statement 5),
       (Statement 2, EA_Assume (Less (V (STR ''x'')) (N 0)), Statement 3),
       (Statement 2, EA_AssumeNot (Less (V (STR ''x'')) (N 0)), Statement 4),
       (Statement 4, EA_Assign (STR ''x'') (N 2), Statement 5)}"

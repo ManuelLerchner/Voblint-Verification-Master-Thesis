@@ -516,7 +516,7 @@ fun rel_step_for :: "edge_action \<Rightarrow> relc \<Rightarrow> relc \<Rightar
 | "rel_step_for (EA_AssumeNot b) = dgs_branch_rel b False"
 | "rel_step_for (EA_Body p) = dgs_body_rel p"
 | "rel_step_for (EA_Ret e p) = dgs_return_rel e p"
-| "rel_step_for (EA_Check cnd) = dgs_event_rel (Check_Event cnd)"
+| "rel_step_for (EA_Check l cnd) = dgs_event_rel (Check_Event l cnd)"
 
 lemma dg_spec_step_rel_order_spec [simp]:
   "dg_spec_step rel_order_spec a = rel_transfer (rel_step_for a)"

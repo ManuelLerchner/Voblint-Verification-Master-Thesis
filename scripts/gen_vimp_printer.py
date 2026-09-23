@@ -120,7 +120,7 @@ let rec com_lines depth c =
   | {G}.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
   | {G}.Return None -> [pad ^ "return;"]
   | {G}.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
-  | {G}.Check e -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
+  | {G}.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
   | {G}.Call (None, f, args) ->
     [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
   | {G}.Call (Some x, f, args) ->

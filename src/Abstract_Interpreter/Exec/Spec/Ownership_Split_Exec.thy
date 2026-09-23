@@ -73,8 +73,8 @@ where
      dgs_return := (\<lambda>e p. ownership_split_transfer_st (local_transfer (tf_st (EA_Ret e p)))),
      dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_st
                           (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))),
-     dgs_event := (\<lambda>ev. case ev of Check_Event bc
-                     \<Rightarrow> ownership_split_transfer_st (local_transfer (tf_st (EA_Check bc)))),
+     dgs_event := (\<lambda>ev. case ev of Check_Event l bc
+                     \<Rightarrow> ownership_split_transfer_st (local_transfer (tf_st (EA_Check l bc)))),
      dgs_combine_assign := ownership_split_combine_transfer_st \<G> \<rparr>"
 
 lemma dg_spec_step_ownership_split_st_for:

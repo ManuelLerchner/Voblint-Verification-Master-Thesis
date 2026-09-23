@@ -222,7 +222,7 @@ struct
          | (Const ("_stmt_assign", _), [x0, a2]) => K c_Assign $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)) $ (exp_tr ctxt a2)
          | (Const ("_stmt_return", _), [a1]) => K c_Return $ ((K c_Some $ (exp_tr ctxt a1)))
          | (Const ("_stmt_return0", _), []) => K c_Return $ (K c_None)
-         | (Const ("_stmt_check", _), [a2]) => K c_Check $ (exp_tr ctxt a2)
+         | (Const ("_stmt_check", _), [a2]) => K c_Check $ (HOLogic.mk_prod (HOLogic.mk_nat 0, HOLogic.mk_nat 0)) $ (exp_tr ctxt a2)
          | (Const ("_stmt_conditional", _), [a0]) => if_stmt_tr ctxt a0
          | (Const ("_stmt_while", _), [a2, a5]) => K c_While $ (exp_tr ctxt a2) $ (stmts_opt_tr ctxt a5)
          | (Const ("_stmt_call", _), [x0, a2]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x0)) $ (actuals_tr ctxt a2)

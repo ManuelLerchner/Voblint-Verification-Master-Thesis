@@ -48,7 +48,7 @@ let rec com_lines depth c =
   | Voblint_CLI.Generated.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
   | Voblint_CLI.Generated.Return None -> [pad ^ "return;"]
   | Voblint_CLI.Generated.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
-  | Voblint_CLI.Generated.Check e -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
+  | Voblint_CLI.Generated.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
   | Voblint_CLI.Generated.Call (None, f, args) ->
     [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
   | Voblint_CLI.Generated.Call (Some x, f, args) ->

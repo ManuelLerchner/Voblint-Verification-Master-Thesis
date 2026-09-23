@@ -40,7 +40,7 @@ where
      (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
      (\<lambda>ev. transfer_lift empty_pred
-        (tf_st (case ev of Check_Event bc \<Rightarrow> EA_Check bc)))
+        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
      (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
      (\<lambda>ci dcM de. transfer_lift2 empty_pred
@@ -66,7 +66,7 @@ lemma local_spec_step_transfer_lift_tf_st:
      (\<lambda>p. transfer_lift empty_pred (tf_st (EA_Body p)))
      (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ev. transfer_lift empty_pred
-        (tf_st (case ev of Check_Event bc \<Rightarrow> EA_Check bc))) a
+        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc))) a
      = transfer_lift empty_pred (tf_st a)"
   by (cases a) simp_all
 

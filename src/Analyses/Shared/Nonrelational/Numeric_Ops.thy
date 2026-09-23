@@ -97,7 +97,7 @@ fun generic_tf_st_for ::
   | "generic_tf_st_for ops \<G> (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of \<G> ret_var)
          (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
-  | "generic_tf_st_for ops \<G> (EA_Check cnd) s = s"
+  | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
     "'a::bot numeric_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
@@ -128,7 +128,7 @@ lemma generic_tf_abs_simps [simp]:
   "generic_tf_abs ops br (EA_Body p) sigma = sigma"
   "generic_tf_abs ops br (EA_Ret None p) sigma = sigma"
   "generic_tf_abs ops br (EA_Ret (Some a) p) sigma = sigma(ret_var := n_aval ops a sigma)"
-  "generic_tf_abs ops br (EA_Check cnd) sigma = sigma"
+  "generic_tf_abs ops br (EA_Check l cnd) sigma = sigma"
   by (simp_all add: generic_tf_abs_def)
 
 text \<open>
@@ -167,7 +167,7 @@ next
   case (EA_Ret eo p)
   then show ?thesis by (cases eo) simp_all
 next
-  case (EA_Check cnd)
+  case (EA_Check l cnd)
   then show ?thesis by simp
 qed
 

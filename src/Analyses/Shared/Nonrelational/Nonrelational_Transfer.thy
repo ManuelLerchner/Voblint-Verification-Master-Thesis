@@ -176,7 +176,7 @@ lemma tf_abs_simps [simp]:
   "tf_abs (EA_AssumeNot b) = br b False"
   "tf_abs (EA_Body p) = body p"
   "tf_abs (EA_Ret eo p) = ret eo p"
-  "tf_abs (EA_Check c) = event (Check_Event c)"
+  "tf_abs (EA_Check l c) = event (Check_Event l c)"
   by (simp_all add: tf_abs_def)
 
 text \<open>The bundle an executable mirror unfolds against. \<^const>\<open>tf_abs\<close> itself is

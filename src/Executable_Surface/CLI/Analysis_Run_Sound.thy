@@ -25,16 +25,27 @@ subsection \<open>Every check column is a contextual verdict report\<close>
 lemma finite_intra_prog_cfg [simp]: "finite (intra (prog_cfg p))"
   unfolding prog_cfg_def using compile_prog_finite by simp
 
+text \<open>
+  Forgetting the labels, the check column is the contextual verdict report itself.
+\<close>
+
+lemma result_checks_of_verdicts:
+  "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (result_checks_of g r classify)
+     = classify_checks_verdicts g r classify"
+  unfolding result_checks_of_def classify_checks_verdicts_def classify_checks_ctx_def
+  by (simp add: comp_def case_prod_beta image_image)
+
 lemma check_in_result_checks_of:
-  assumes "chk \<in> set (result_checks_of verdicts)"
-  shows "(check_point chk, check_exp chk, check_verdict chk) \<in> set verdicts"
-  using assms by (auto simp: result_checks_of_def)
+  assumes "chk \<in> set (result_checks_of g r classify)"
+  shows "(check_point chk, check_exp chk, check_verdict chk)
+           \<in> set (classify_checks_verdicts g r classify)"
+  using assms unfolding result_checks_of_verdicts [symmetric] by force
 
 lemma run_result_of_columns [simp]:
   "res_cfg (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
      = prog_cfg p"
   "res_checks (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
-     = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+     = result_checks_of (prog_cfg p) r classify"
   "res_diagnostics
        (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
      = arithmetic_diagnostics (prog_cfg p) r classify"
@@ -45,25 +56,23 @@ lemmas run_result_builder_defs =
 
 text \<open>
   Where a result has checks: one per compiled \<^const>\<open>EA_Check\<close> edge, at that edge's
-  source node and with its condition, in the order the graph lists its edges.
+  source node and with its label and condition, in the order the graph lists its edges.
 \<close>
 
-definition check_sites :: "cfg \<Rightarrow> (pp \<times> exp) list" where
+definition check_sites :: "cfg \<Rightarrow> (pp \<times> check_label \<times> exp) list" where
   "check_sites g =
-     map (\<lambda>(u, a, v). (u, ea_check_cond a))
+     map (\<lambda>(u, a, v). (u, ea_check_label a, ea_check_cond a))
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
 
 lemma result_checks_of_sites:
-  "map (\<lambda>chk. (check_point chk, check_exp chk))
-       (result_checks_of (classify_checks_verdicts g r classify))
+  "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk)) (result_checks_of g r classify)
      = check_sites g"
-  unfolding result_checks_of_def classify_checks_verdicts_def classify_checks_ctx_def
-    check_sites_def
+  unfolding result_checks_of_def check_sites_def
   by (simp add: comp_def case_prod_beta)
 
 lemma check_sites_memI [intro]:
-  assumes "finite (intra g)" and "(v, EA_Check cnd, w) \<in> intra g"
-  shows "(v, cnd) \<in> set (check_sites g)"
+  assumes "finite (intra g)" and "(v, EA_Check l cnd, w) \<in> intra g"
+  shows "(v, l, cnd) \<in> set (check_sites g)"
   using assms unfolding check_sites_def by force
 
 subsection \<open>What a check claims at the point it was listed for\<close>
@@ -133,7 +142,7 @@ lemma ctx_checks_sound_at:
       and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
                         \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
       and checks: "res_checks res
-                     = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+                     = result_checks_of (prog_cfg p) r classify"
   shows "checks_sound_at res v s"
 proof -
   have mem: "(v, check_exp chk, check_verdict chk)
@@ -259,7 +268,7 @@ text \<open>
 
 lemma sound_at:
   assumes checks: "res_checks res
-                     = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+                     = result_checks_of (prog_cfg p) r classify"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s \<and> checks_sound_at res v s"
 proof -
@@ -304,8 +313,7 @@ proof -
 qed
 
 lemma result_sound_at:
-  assumes checks: "res_checks res =
-      result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+  assumes checks: "res_checks res = result_checks_of (prog_cfg p) r classify"
     and diagnostics: "res_diagnostics res = arithmetic_diagnostics (prog_cfg p) r classify"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
@@ -327,7 +335,7 @@ theorem source_sound:
       and s0: "s0 \<in> cinit_stores (declared_global p)"
       and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and checks: "res_checks res
-                     = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+                     = result_checks_of (prog_cfg p) r classify"
   shows "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
                \<and> table_covers r v s \<and> checks_sound_at res v s"
@@ -351,7 +359,7 @@ text \<open>
 
 theorem ctx_dead_check_unreached:
   assumes checks: "res_checks res
-                     = result_checks_of (classify_checks_verdicts (prog_cfg p) r classify)"
+                     = result_checks_of (prog_cfg p) r classify"
       and chk: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> (check_point chk) = {}"

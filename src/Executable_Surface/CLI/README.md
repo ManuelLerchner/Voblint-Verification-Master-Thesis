@@ -27,6 +27,7 @@ really does see all five.
 | contextual report | one verdict per (check, context). Needed because a check can be `Dead` in one context and decided in another, which a flat verdict cannot express. |
 | arithmetic diagnostic | a `/` or `%` occurrence whose divisor is classified as definitely or possibly zero, with its source point and occurrence index |
 | run result | what `run_voblint` answers: the compiled graph, the contexts, one state per covered (point, context), the contexts each call enters, the check column and the diagnostics. Everything a renderer reads. |
+| check label | the `check_label` a source `Check l e` carries onto its `EA_Check l e` edge and its result row. The CLI parser sets it to the line and column of the check's keyword, so a renderer prints a row at its own label rather than pairing rows with parser positions by order. |
 
 ## What is here
 

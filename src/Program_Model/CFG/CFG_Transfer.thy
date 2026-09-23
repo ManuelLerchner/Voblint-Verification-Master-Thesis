@@ -28,7 +28,7 @@ lemma edge_collect_simps [simp]:
   "edge_collect (EA_Body p) S = S"
   "edge_collect (EA_Ret e p) S =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) | s. s \<in> S}"
-  "edge_collect (EA_Check c) S = S"
+  "edge_collect (EA_Check l c) S = S"
   unfolding edge_collect_def by (auto split: if_splits)
 
 lemma edge_collect_single:

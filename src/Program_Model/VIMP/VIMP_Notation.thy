@@ -212,37 +212,37 @@ lemma notation_fun_call_return:
 
 lemma notation_comparison_less:
   "imp \<lbrakk> __voblint_check(x < y); \<rbrakk> =
-    Check (Less (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (Less (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_less_eq:
   "imp \<lbrakk> __voblint_check(x <= y); \<rbrakk> =
-    Check (LessEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (LessEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_greater:
   "imp \<lbrakk> __voblint_check(x > y); \<rbrakk> =
-    Check (Greater (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (Greater (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_greater_eq:
   "imp \<lbrakk> __voblint_check(x >= y); \<rbrakk> =
-    Check (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_eq:
   "imp \<lbrakk> __voblint_check(x == y); \<rbrakk> =
-    Check (Eq (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (Eq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_not_eq:
   "imp \<lbrakk> __voblint_check(x != y); \<rbrakk> =
-    Check (NotEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check (0, 0) (NotEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_precedence:
   "imp \<lbrakk> __voblint_check(x + 1 <= y * 2 && x != y); \<rbrakk> =
-    Check (And
+    Check (0, 0) (And
       (LessEq (Plus (V (STR ''x'')) (N 1)) (Times (V (STR ''y'')) (N 2)))
       (NotEq (V (STR ''x'')) (V (STR ''y''))))"
   by simp

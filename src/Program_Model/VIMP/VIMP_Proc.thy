@@ -11,12 +11,21 @@ text \<open>
   \<open>Restore\<close> marks the activation boundary inside sequential syntax, and
   \<open>Unwind\<close> is the state after a \<open>Return\<close> has published its value through
   \<open>ret_var\<close>, discarding pending commands up to the nearest \<open>Restore\<close>.
+
+  A check carries a label naming where it was written. The semantics never reads
+  it; compilation copies it onto the check's edge, and the analysis result lists
+  each check under it, so a report can be matched to its source check by label
+  instead of by position in a list. The CLI parser writes the line and column of
+  the check's \<^verbatim>\<open>__voblint_check\<close> keyword; a program written in Isabelle
+  notation carries the placeholder \<open>(0, 0)\<close>.
 \<close>
+
+type_synonym check_label = "nat \<times> nat"
 
 datatype com =
     SKIP
   | Assign (assign_var: vname) (assign_rhs: exp)
-  | Check  (check_cond: exp)
+  | Check  check_label (check_cond: exp)
   | Seq    (seq_first: com) (seq_second: com)
   | If     (if_cond: exp) (if_then: com) (if_else: com)
   | While  (while_cond: exp) (while_body: com)
@@ -91,7 +100,7 @@ inductive
   for \<G> :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
 where
   Assign:  "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
-| Check:   "\<G>, \<Pi> \<turnstile> (Check c, s, frs) \<rightarrow>\<^sub>p (SKIP, s, frs)"
+| Check:   "\<G>, \<Pi> \<turnstile> (Check l c, s, frs) \<rightarrow>\<^sub>p (SKIP, s, frs)"
 | Seq1:    "\<G>, \<Pi> \<turnstile> (Seq SKIP c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
 | Seq2:    "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')
              \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p (Seq c1' c2, s', frs')"
@@ -140,7 +149,7 @@ inductive_cases SkipSE[elim!]:
 inductive_cases AssignSE[elim!]:
   "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases CheckSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Check c, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Check l c, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases SeqSE[elim]:
   "\<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases IfSE[elim!]:
@@ -308,7 +317,7 @@ fun exp_vnames :: "exp \<Rightarrow> vname set" where
 fun com_vnames :: "com \<Rightarrow> vname set" where
   "com_vnames SKIP = {}"
 | "com_vnames (Assign x a) = insert x (exp_vnames a)"
-| "com_vnames (Check c) = exp_vnames c"
+| "com_vnames (Check l c) = exp_vnames c"
 | "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
 | "com_vnames (If b c1 c2) =
     exp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
@@ -329,7 +338,7 @@ lemma finite_com_vnames [simp]: "finite (com_vnames c)"
 fun source_com :: "com \<Rightarrow> bool" where
   "source_com SKIP = True"
 | "source_com (Assign x a) = True"
-| "source_com (Check c) = True"
+| "source_com (Check l c) = True"
 | "source_com (Seq c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (If b c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (While b c) = source_com c"
@@ -359,7 +368,7 @@ text \<open>
 fun may_fallthrough :: "com \<Rightarrow> bool" where
   "may_fallthrough SKIP = True"
 | "may_fallthrough (Assign _ _) = True"
-| "may_fallthrough (Check _) = True"
+| "may_fallthrough (Check _ _) = True"
 | "may_fallthrough (Seq c1 c2) = (may_fallthrough c1 \<and> may_fallthrough c2)"
 | "may_fallthrough (If _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
 | "may_fallthrough (While _ _) = True"
@@ -401,7 +410,7 @@ text \<open>
 fun wf_source_com :: "proc_table \<Rightarrow> com \<Rightarrow> bool" where
   "wf_source_com \<Pi> SKIP = True"
 | "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_exp a)"
-| "wf_source_com \<Pi> (Check c) = source_exp c"
+| "wf_source_com \<Pi> (Check l c) = source_exp c"
 | "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
 | "wf_source_com \<Pi> (If b c1 c2) =
      (source_exp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"

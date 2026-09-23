@@ -15,7 +15,7 @@ text \<open>
 primrec no_proc_call :: "com \<Rightarrow> bool" where
   "no_proc_call SKIP = True"
 | "no_proc_call (Assign x a) = True"
-| "no_proc_call (Check c) = True"
+| "no_proc_call (Check l c) = True"
 | "no_proc_call (Seq c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
 | "no_proc_call (If b c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
 | "no_proc_call (While b c) = no_proc_call c"

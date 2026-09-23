@@ -68,6 +68,7 @@ record call_route =
 
 record result_check =
   check_point :: pp
+  check_label :: check_label
   check_exp :: exp
   check_verdict :: contextual_verdict
 
@@ -207,10 +208,22 @@ definition ordered_by_key ::
       (\<lambda>k. the_elem (Set.filter (\<lambda>x. rank x = k) S))
       (sorted_list_of_set (rank ` S))"
 
-definition result_checks_of :: "(pp \<times> exp \<times> contextual_verdict) list \<Rightarrow> result_check list" where
-  "result_checks_of verdicts =
-     map (\<lambda>(v, cnd, verdict). \<lparr> check_point = v, check_exp = cnd, check_verdict = verdict \<rparr>)
-       verdicts"
+text \<open>
+  The check column: one row per compiled check edge, carrying the edge's label beside
+  its node, its condition, and the verdict \<^const>\<open>classify_checks_verdicts\<close> computes
+  there. The label is what a consumer finds a source check's row by.
+\<close>
+
+definition result_checks_of ::
+    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
+where
+  "result_checks_of g r classify =
+     map (\<lambda>(u, a, w).
+            \<lparr> check_point = u, check_label = ea_check_label a, check_exp = ea_check_cond a,
+              check_verdict = aggregate_verdicts
+                ((\<lambda>ctx. classify_point classify (ea_check_cond a) (lookup_context r u ctx))
+                   ` contexts_at r u) \<rparr>)
+       (filter (\<lambda>(u, a, w). is_EA_Check a) (cfg_intra_list g))"
 
 text \<open>
   The globals column lists the global unknowns of the constraint system rather than
@@ -279,7 +292,7 @@ definition run_result_of ::
                             map (\<lambda>(i, ctx). route_at u ca ce i ctx)
                               (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_keys r) indexed))
                        (cfg_calls_list g)),
-           res_checks = result_checks_of (classify_checks_verdicts g r classify),
+           res_checks = result_checks_of g r classify,
            res_globals =
              \<lparr> global_key = Global_Shared, global_state = view shared \<rparr>
                # concat (map seeds_of (prog_main_name # prog_procs p)),

@@ -43,7 +43,7 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
 fun csize :: "com \<Rightarrow> nat" where
   "csize SKIP = 1"
 | "csize (Assign x a) = 1"
-| "csize (Check c) = 1"
+| "csize (Check l c) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
 | "csize (If b c1 c2) = 1 + csize c1 + csize c2"
 | "csize (While b c) = 1 + csize c"
@@ -67,7 +67,7 @@ text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<
 fun falls_through :: "com \<Rightarrow> bool" where
   "falls_through SKIP = True"
 | "falls_through (Assign x a) = True"
-| "falls_through (Check c) = True"
+| "falls_through (Check l c) = True"
 | "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
 | "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
 | "falls_through (While b c) = True"
@@ -127,8 +127,8 @@ where
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p (Assign x a) k n =
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
-| "compile \<Pi> p (Check c) k n =
-     (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
+| "compile \<Pi> p (Check l c) k n =
+     (Suc n, Statement n, {(Statement n, EA_Check l c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
@@ -229,7 +229,7 @@ text \<open>The whole program: every declared procedure, plus \<open>main_body \
 
 text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
   directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
-  \<^const>\<open>compile\<close>'s own \<open>Check c\<close> clause emits. There is only one representation
+  \<^const>\<open>compile\<close>'s own \<open>Check l c\<close> clause emits. There is only one representation
   of "where a check sits and what it says" --- the compiled \<^const>\<open>intra\<close> set
   itself --- so this field cannot drift from it by construction, not merely by
   a separately proved agreement lemma.\<close>

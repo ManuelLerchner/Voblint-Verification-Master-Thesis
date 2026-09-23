@@ -436,7 +436,7 @@ lemma int_tf_abs_simps [simp]:
   "int_tf_abs mode (EA_AssumeNot b) = branch_int_dom_for mode b False"
   "int_tf_abs mode (EA_Body p) = body_int_dom p"
   "int_tf_abs mode (EA_Ret eo p) = return_int_dom mode eo p"
-  "int_tf_abs mode (EA_Check c) = event_int_dom (Check_Event c)"
+  "int_tf_abs mode (EA_Check l c) = event_int_dom (Check_Event l c)"
   by (simp_all add: int_tf_abs_def)
 
 text \<open>

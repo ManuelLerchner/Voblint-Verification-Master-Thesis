@@ -48,6 +48,10 @@
 #         lower straight to N 1/N 0 -- exp has no separate Boolean literal
 #         constructor, so a keyword literal still needs a way to reach a
 #         fixed integer argument without going through a parsed rhs position)
+#       {source_label: true} -- the label of the command being built: the
+#         CLI parser writes the (line, column) its first token starts at,
+#         the Isabelle notation the placeholder (0, 0). Only stmt_check
+#         uses it; the printer drops it, since source text has no label.
 #     `{tuple: [i, j, ...]}` builds an OCaml tuple from those rhs positions
 #     instead of applying a constructor (function_decl's (name, formals,
 #     body), not an algebraic-datatype constructor).
@@ -184,7 +188,7 @@ productions:
   - {name: stmt_return0,  result: stmt, rhs: [RETURN, SEMI],
      lower: {ctor: Return, args: [{none: true}]}}
   - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, exp, RPAREN, SEMI],
-     lower: {ctor: Check, args: [{rhs: 2}]}}
+     lower: {ctor: Check, args: [{source_label: true}, {rhs: 2}]}}
   - {name: stmt_if,       result: if_stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {rhs: 9}]}}
   - {name: stmt_if_then, result: if_stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE],
