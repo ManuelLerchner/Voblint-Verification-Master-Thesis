@@ -455,12 +455,17 @@ jobs:
           path: ${{ runner.temp }}/ci-marker/thesis-facts
           key: ${{ steps.facts-cache.outputs.cache-primary-key }}
 
-      # Both read the vendored solver: pages_stats.py measures it, and a name the
-      # page cites may be declared there. They live in this job because it is the
+      # These read the vendored solver: pages_stats.py measures it, and a name
+      # the page cites may be declared there. They live in this job because it is the
       # one lint job that initialises the submodule; without it pages_stats.py
       # refuses to run rather than publish a wrong solver count.
       - name: Site repository figures are derived and current
         run: pixi run pages-stats
+
+      # Same measurement, for the thesis: the committed stats.json must match
+      # and no repository figure may be typed into the chapters by hand.
+      - name: Thesis repository figures are derived and current
+        run: pixi run thesis-stats
 
       - name: Every Isabelle name the site uses is linked into the theory HTML
         run: pixi run pages-terms
@@ -663,6 +668,16 @@ jobs:
       - name: Thesis snippets match the theories (no build needed)
         run: pixi run thesis-snippets
 
+      # The Goblint comparison appendix is generated from the explainer's
+      # alignment rows; the committed JSON must match the page.
+      - name: Thesis Goblint comparison matches the explainer (no build needed)
+        run: pixi run thesis-alignment
+
+      # The notation table is derived from the theories and rendered in the
+      # thesis, the README and the explainer; all three must be current.
+      - name: Thesis notation table matches the theories (no build needed)
+        run: pixi run thesis-notation
+
       # check_thy_prose_refs resolves a cited name against every .thy under src/
       # AND vendor/, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
@@ -733,6 +748,11 @@ jobs:
       # record of how the analyzer used to behave.
       - name: Thesis claims still match the CLI
         run: pixi run thesis-claims
+
+      # Every VIMP listing opens its own program in the playground, at the
+      # settings of the claim or fixture it shows, as a clickable PDF link.
+      - name: Thesis VIMP listings link their programs
+        run: pixi run thesis-vimp
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: pixi run property-test
