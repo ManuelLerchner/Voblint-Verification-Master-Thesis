@@ -5,8 +5,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "callee-uninit-local": {
@@ -15,8 +14,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "cfg-contexts-dot": {
@@ -25,8 +23,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "cfg-sum-dec-dot": {
@@ -34,89 +31,35 @@
     "program": "fun dec(x) {\n  return x - 1;\n}\n\nfun sum(n) {\n  if (n < 1) { return 0; }\n  m = dec(n);\n  r = sum(m);\n  return r + n;\n}\n\nfun main() {\n  x = sum(2);\n  __voblint_check(x == 3);\n}",
     "settings": {
       "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "context": "entry-state",
+      "globals": "warrow"
     }
   },
-  "chain-split-entry": {
-    "fixture": "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
-    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    if (x < 4) {\n      b = f(x);\n    }\n  }\n}",
+  "chain-factorial-entry": {
+    "fixture": "tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp",
+    "program": "fun f(n) {\n  if (n < 2) {\n    return 1;\n  } else {\n    r = f(n - 1);\n    return n * r;\n  }\n}\n\nfun main() {\n  a = f(2);\n  __voblint_check(a == 2);\n}",
     "settings": {
       "analysis": "interval",
       "context": "entry-state",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
-  "chain-split-none": {
-    "fixture": "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
-    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    if (x < 4) {\n      b = f(x);\n    }\n  }\n}",
+  "chain-factorial-none": {
+    "fixture": "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
+    "program": "fun f(n) {\n  if (n < 2) {\n    return 1;\n  } else {\n    r = f(n - 1);\n    return n * r;\n  }\n}\n\nfun main() {\n  a = f(2);\n  __voblint_check(a == 2);\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
-  "coop-eq-both": {
-    "fixture": "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= y) {\n    if (y <= x) {\n      z = (x == y);\n      __voblint_check(z == 1);\n    }\n  }\n}",
+  "chain-factorial-none-join": {
+    "fixture": "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
+    "program": "fun f(n) {\n  if (n < 2) {\n    return 1;\n  } else {\n    r = f(n - 1);\n    return n * r;\n  }\n}\n\nfun main() {\n  a = f(2);\n  __voblint_check(a == 2);\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "coop-eq-interval": {
-    "fixture": "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= y) {\n    if (y <= x) {\n      z = (x == y);\n      __voblint_check(z == 1);\n    }\n  }\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "coop-eq-order": {
-    "fixture": "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= y) {\n    if (y <= x) {\n      z = (x == y);\n      __voblint_check(z == 1);\n    }\n  }\n}",
-    "settings": {
-      "analysis": "order",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "coop-le-both": {
-    "fixture": "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  __voblint_check(x <= y);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "coop-le-interval": {
-    "fixture": "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  __voblint_check(x <= y);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "coop-le-order": {
-    "fixture": "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  __voblint_check(x <= y);\n}",
-    "settings": {
-      "analysis": "order",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "join"
     }
   },
   "cost-down-k100": {
@@ -126,8 +69,7 @@
       "analysis": "interval",
       "context": "call-string",
       "globals": "warrow",
-      "k": 100,
-      "placement": "flow-sensitive"
+      "k": 100
     }
   },
   "cost-down-k99": {
@@ -137,8 +79,7 @@
       "analysis": "interval",
       "context": "call-string",
       "globals": "warrow",
-      "k": 99,
-      "placement": "flow-sensitive"
+      "k": 99
     }
   },
   "counting-loop-snapshot": {
@@ -147,8 +88,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "ctx-demo-entry": {
@@ -157,8 +97,7 @@
     "settings": {
       "analysis": "interval",
       "context": "entry-state",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "ctx-demo-k1": {
@@ -168,8 +107,7 @@
       "analysis": "interval",
       "context": "call-string",
       "globals": "warrow",
-      "k": 1,
-      "placement": "flow-sensitive"
+      "k": 1
     }
   },
   "ctx-demo-k2": {
@@ -179,8 +117,7 @@
       "analysis": "interval",
       "context": "call-string",
       "globals": "warrow",
-      "k": 2,
-      "placement": "flow-sensitive"
+      "k": 2
     }
   },
   "ctx-demo-none": {
@@ -189,8 +126,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-crt-congruence": {
@@ -199,8 +135,7 @@
     "settings": {
       "analysis": "congruence",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-crt-parity": {
@@ -209,28 +144,34 @@
     "settings": {
       "analysis": "parity",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-disjunct-parity": {
-    "fixture": "tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp",
+    "fixture": "tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp",
     "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "parity",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-disjunct-sign": {
     "fixture": "tests/regression/07-sign-precision/precision/07-disjunct_arm_pollution_fixed.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {\n    __voblint_check(false);\n  }\n}",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
+    }
+  },
+  "dom-even-odd-congruence": {
+    "fixture": "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 2 * n;\n  y = 2 * n + 1;\n  __voblint_check(x != y);\n}",
+    "settings": {
+      "analysis": "congruence",
+      "context": "none",
+      "globals": "warrow"
     }
   },
   "dom-even-odd-interval": {
@@ -239,8 +180,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-even-odd-parity": {
@@ -249,48 +189,16 @@
     "settings": {
       "analysis": "parity",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-guard-sign": {
     "fixture": "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
-    "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = - x;\n  }\n  __voblint_check(y >= 0);\n}",
+    "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = 0 - x;\n  }\n  __voblint_check(y >= 0);\n}",
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-int-plus-inverse": {
-    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
-    "settings": {
-      "analysis": "int",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-interval-plus-inverse": {
-    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-query-tree-sign": {
-    "fixture": "tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= 0) {\n    if (0 < y) {\n      __voblint_check(x <= y && y != 0);\n    }\n  }\n}",
-    "settings": {
-      "analysis": "sign",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-stride2-congruence": {
@@ -299,8 +207,7 @@
     "settings": {
       "analysis": "congruence",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-stride2-int": {
@@ -309,8 +216,7 @@
     "settings": {
       "analysis": "int",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-stride2-interval": {
@@ -319,8 +225,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-stride2-parity": {
@@ -329,8 +234,7 @@
     "settings": {
       "analysis": "parity",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "dom-stride2-sign": {
@@ -339,8 +243,7 @@
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "goblint-1161-congruence": {
@@ -349,8 +252,7 @@
     "settings": {
       "analysis": "congruence",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "goblint-1161-int": {
@@ -359,28 +261,16 @@
     "settings": {
       "analysis": "int",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "infinite-contexts": {
-    "fixture": "docs/readme-figures/infinite.vimp",
-    "program": "fun h(z) {\n  return z + 1;\n}\n\nfun g(u, v) {\n  r = h(u);\n  return r + v;\n}\n\nfun w(x) {\n  if (x > 0) {\n    y = __voblint_nondet_int();\n    r = w(y);\n    return r;\n  }\n  return 0;\n}\n\nfun f(n) {\n  if (n < 2) {\n    r = g(n, 0);\n    return r;\n  }\n  a = f(n - 1);\n  b = f(n - 2);\n  return a + b;\n}\n\nfun main() {\n  q = __voblint_nondet_int();\n  s = w(q);\n  r = f(3);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "entry-state",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "intro-answers": {
-    "fixture": "tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp",
-    "program": "fun clamp(x, lo, hi) {\n  if (x < lo) {\n    return lo;\n  }\n  if (x > hi) {\n    return hi;\n  }\n  return x;\n}\n\nfun main() {\n  t = __voblint_nondet_int();\n  p = clamp(t, 0, 100);\n  __voblint_check(0 <= p && p <= 100);\n  __voblint_check(p > 100);\n  __voblint_check(p == 50);\n  a = 1000 / (p + 1);\n  b = 1000 / p;\n  if (p > 100) {\n    __voblint_check(p == 0);\n  }\n}",
+    "fixture": "tests/regression/24-site-figures/precision/47-answers_every_kind.vimp",
+    "program": "fun main() {\n  k = 10;\n  q = 100 / k;\n  d = __voblint_nondet_int();\n  y = 100 / d;\n  __voblint_check(0 < q);\n  if (k < 0) {\n    __voblint_check(q == 0);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "mixed-flow-sign": {
@@ -389,18 +279,7 @@
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "mixed-flow-sign-shared": {
-    "fixture": "thesis/shared/programs/mixed-flow.vimp",
-    "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",
-    "settings": {
-      "analysis": "sign",
-      "context": "none",
-      "globals": "bounded-narrowing",
-      "placement": "flow-insensitive"
+      "globals": "warrow"
     }
   },
   "pg-contexts-entry": {
@@ -409,8 +288,7 @@
     "settings": {
       "analysis": "interval",
       "context": "entry-state",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-contexts-none": {
@@ -419,8 +297,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-contexts-none-join": {
@@ -429,18 +306,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "join",
-      "placement": "flow-sensitive"
-    }
-  },
-  "pg-contexts-trace": {
-    "fixture": "docs/readme-figures/contexts.vimp",
-    "program": "fun bump(n) {\n  return n + 1;\n}\n\nfun main() {\n  a = bump(5);\n  b = bump(4);\n  __voblint_check(a == 6);\n  __voblint_check(b == 5);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "entry-state",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "join"
     }
   },
   "pg-division-definite": {
@@ -449,8 +315,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-division-possible": {
@@ -459,8 +324,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-int-refinement-congruence": {
@@ -469,8 +333,7 @@
     "settings": {
       "analysis": "congruence",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-int-refinement-int": {
@@ -479,8 +342,7 @@
     "settings": {
       "analysis": "int",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-int-refinement-interval": {
@@ -489,8 +351,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-int-refinement-parity": {
@@ -499,8 +360,7 @@
     "settings": {
       "analysis": "parity",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-int-refinement-sign": {
@@ -509,19 +369,17 @@
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "pg-overview": {
-    "fixture": "docs/readme-figures/overview.vimp",
-    "program": "fun smaller(a, b) {\n  if (a <= b) {\n    lo = a;\n  } else {\n    lo = b;\n  }\n  return lo;\n}\n\nfun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n\n  q = 100 / x;\n\n  n = smaller(3, 7);\n  smaller(9, 4);\n\n  if (x <= y) {\n    if (y <= x) {\n      z = (x == y);\n      w = x;\n      __voblint_check(z == 1);\n      __voblint_check(w == y);\n    }\n  }\n\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    u = 0;\n    v = 10;\n  } else {\n    u = 20;\n    v = 30;\n  }\n  __voblint_check(u <= v);\n\n  i = 0;\n  while (i < 3) {\n    i = i + 1;\n  }\n\n  __voblint_check(i == 3);\n  __voblint_check(n == 7);\n\n  if (i > 5) {\n    __voblint_check(i == 0);\n  }\n}",
+    "fixture": "tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp",
+    "program": "global hits;\n\nfun record(amount) {\n  hits = hits + amount;\n}\n\nfun scale(v) {\n  return v * 2;\n}\n\nfun wrap(w) {\n  r = scale(w);\n  return r;\n}\n\nfun main() {\n  i = 0;\n  while (i < 5) {\n    i = i + 1;\n  }\n  __voblint_check(i == 5);\n  __voblint_check(i < 5);\n\n  record(i);\n  record(3);\n  __voblint_check(hits == 8);\n\n  if (hits > 10) {\n    record(100);\n  }\n\n  a = wrap(1);\n  b = wrap(4);\n  __voblint_check(a == 2);\n  share = 10 / (a - 2);\n}",
     "settings": {
       "analysis": "interval",
       "context": "call-string",
       "globals": "warrow",
-      "k": 1,
-      "placement": "flow-sensitive"
+      "k": 1
     }
   },
   "pg-while-loop": {
@@ -530,18 +388,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "rules-grows-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
-    "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "bounded-narrowing",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "rules-grows-warrow": {
@@ -550,8 +397,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "rules-grows-warrow-per-origin": {
@@ -560,18 +406,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow-per-origin",
-      "placement": "flow-sensitive"
-    }
-  },
-  "rules-loop-call-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/precision/50-loop_call_bounded_narrowing.vimp",
-    "program": "fun g(x) {\n  __voblint_check(x < 10);\n}\n\nfun main() {\n  x = 0;\n  while (x < 10) {\n    g(x);\n    x = x + 1;\n  }\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "bounded-narrowing",
-      "placement": "flow-sensitive"
+      "globals": "warrow-per-origin"
     }
   },
   "rules-loop-call-join": {
@@ -580,8 +415,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "join",
-      "placement": "flow-sensitive"
+      "globals": "join"
     }
   },
   "rules-loop-call-per-origin": {
@@ -590,8 +424,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "per-origin",
-      "placement": "flow-sensitive"
+      "globals": "per-origin"
     }
   },
   "rules-loop-call-warrow": {
@@ -600,8 +433,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "rules-loop-call-warrow-per-origin": {
@@ -610,18 +442,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow-per-origin",
-      "placement": "flow-sensitive"
-    }
-  },
-  "rules-shrinks-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
-    "program": "fun f(a) {\n  if (a < 4) {\n    f(9 / (a + 2));\n  }\n  __voblint_check(a <= 9);\n}\n\nfun main() {\n  f(-1);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "bounded-narrowing",
-      "placement": "flow-sensitive"
+      "globals": "warrow-per-origin"
     }
   },
   "rules-shrinks-join": {
@@ -630,8 +451,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "join",
-      "placement": "flow-sensitive"
+      "globals": "join"
     }
   },
   "rules-shrinks-per-origin": {
@@ -640,8 +460,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "per-origin",
-      "placement": "flow-sensitive"
+      "globals": "per-origin"
     }
   },
   "rules-shrinks-warrow": {
@@ -650,8 +469,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "rules-shrinks-warrow-per-origin": {
@@ -660,18 +478,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow-per-origin",
-      "placement": "flow-sensitive"
-    }
-  },
-  "rules-two-sites-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/precision/49-two_sites_bounded_narrowing.vimp",
-    "program": "fun p(x) {\n  __voblint_check(x <= 2);\n}\n\nfun main() {\n  p(1);\n  p(2);\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "bounded-narrowing",
-      "placement": "flow-sensitive"
+      "globals": "warrow-per-origin"
     }
   },
   "rules-two-sites-join": {
@@ -680,8 +487,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "join",
-      "placement": "flow-sensitive"
+      "globals": "join"
     }
   },
   "rules-two-sites-per-origin": {
@@ -690,8 +496,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "per-origin",
-      "placement": "flow-sensitive"
+      "globals": "per-origin"
     }
   },
   "rules-two-sites-warrow": {
@@ -700,8 +505,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "rules-two-sites-warrow-per-origin": {
@@ -710,8 +514,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow-per-origin",
-      "placement": "flow-sensitive"
+      "globals": "warrow-per-origin"
     }
   },
   "sign-cannot-bound-magnitude": {
@@ -720,8 +523,7 @@
     "settings": {
       "analysis": "sign",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "verdicts-mult3-int": {
@@ -730,8 +532,7 @@
     "settings": {
       "analysis": "int",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "verdicts-mult3-interval": {
@@ -740,8 +541,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   },
   "verdicts-mult3-interval-checks": {
@@ -750,18 +550,7 @@
     "settings": {
       "analysis": "interval",
       "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "verdicts-proved-unreachable": {
-    "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (x > 0) {\n    if (x < 3) {\n      __voblint_check(x > 0);\n    }\n  }\n}",
-    "settings": {
-      "analysis": "interval",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
+      "globals": "warrow"
     }
   }
 }
