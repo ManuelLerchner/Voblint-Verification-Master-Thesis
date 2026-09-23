@@ -44,6 +44,7 @@ COMMANDS = (
     "abbreviation",
     "inductive",
     "inductive_set",
+    "inductive_cases",
     "function",
     "partial_function",
     "lift_definition",
@@ -101,6 +102,42 @@ DEFINING = (
 )
 
 
+# A theorem is shown as its statement. The proof is the theory's business, and
+# the thesis cites it rather than reproducing it.
+THEOREMS = ("lemma", "theorem", "corollary", "proposition")
+PROOF_START = re.compile(
+    r"(?<![A-Za-z0-9_'.])"
+    r"(?:proof|by|using|unfolding|apply|including|supply|sorry|oops)"
+    r"(?![A-Za-z0-9_'])"
+)
+# Terms and cartouches may contain any of those words; skip over them.
+QUOTED = re.compile(r'"[^"]*"|\\<open>|\(\*.*?\*\)', re.S)
+CARTOUCHE = re.compile(r"\\<open>|\\<close>")
+
+
+def statement_only(body: str) -> str:
+    """Cut a theorem declaration at the first proof command outside its terms."""
+    pos, depth = 0, 0
+    while pos < len(body):
+        if depth:
+            nxt = CARTOUCHE.search(body, pos)
+            if nxt is None:
+                break
+            depth += 1 if nxt.group(0) == "\\<open>" else -1
+            pos = nxt.end()
+            continue
+        proof = PROOF_START.search(body, pos)
+        quoted = QUOTED.search(body, pos)
+        if proof is None:
+            break
+        if quoted is None or proof.start() < quoted.start():
+            return body[: proof.start()]
+        if quoted.group(0) == "\\<open>":
+            depth = 1
+        pos = quoted.end()
+    sys.exit(f"snippets: no proof found after the statement:\n{body}")
+
+
 def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
     """Match the command that declares `name`, allowing type parameters."""
     return re.compile(
@@ -125,6 +162,8 @@ def extract(
                 continue
             nxt = NEXT_COMMAND.search(text, m.end())
             body = text[m.start() : nxt.start() if nxt else len(text)]
+            if m.group(0).split(None, 1)[0] in THEOREMS:
+                body = statement_only(body)
             return body.rstrip() + "\n", path
     return None
 

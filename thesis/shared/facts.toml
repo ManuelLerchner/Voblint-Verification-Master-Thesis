@@ -5,8 +5,60 @@
 # facts are resolved in; both must be built. Facts from other sessions are
 # reported as unresolved rather than silently dropped.
 
-session = "Voblint_CFG"
-theory = "Voblint_CFG.LTR_Abstract"
+session = "Voblint_CLI"
+theory = "Voblint_CLI.Analysis_Certified"
 
 [facts.ltr_collect_semantic_postfix]
 why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+
+[facts.run_voblint_certified_source_sound]
+why = "The introduction states the source-level soundness result with its actual premises."
+
+[facts.run_voblint_check_sound]
+why = "Check-verdict endpoint cited in the introduction."
+
+[facts.run_voblint_dead_check_unreached]
+why = "Unreachability endpoint cited in the introduction."
+
+[facts.run_voblint_arithmetic_safe]
+why = "Arithmetic-safety endpoint cited in the introduction."
+
+[facts.source_run_has_ltr]
+why = "Main-statements appendix: source runs are represented by valid traces."
+
+[facts.csim_star]
+why = "Main-statements appendix: simulation of source runs by the compiled graph."
+
+[facts.activation_collect_sound]
+why = "Main-statements appendix: the activation-local coverage theorem."
+
+[facts.activation_collect_dg_sound]
+why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
+fact = "routed_context_base_hetero.activation_collect_dg_sound"
+
+[facts.nv_source_certified]
+why = "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.mf_ltr_collect_sound]
+why = "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
+
+[facts.mf_after_calls]
+why = "Mixed flow-sensitivity section: the concrete consequence of the solved flow-insensitive global."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
+
+[facts."pstep.Call"]
+why = "Program-model chapter: the source step rule for a call."
+
+[facts."pstep.ReturnSome"]
+why = "Program-model chapter: the source step rule for returning a value."
+
+[facts."pstep.RestoreStep"]
+why = "Program-model chapter: the source step rule that restores the caller's frame."
+
+[facts."pstep.UnwindAct"]
+why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."

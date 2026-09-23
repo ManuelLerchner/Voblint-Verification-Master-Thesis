@@ -1,19 +1,20 @@
 # Explanatory SVGs lifted from the explainer page into thesis assets.
 #
-# SCOPE. These are *not* thesis figures. A figure drawn for a web page has a
-# different job from one drawn for print: it is persuasive, it simplifies
-# deliberately, and it was composed for a screen. Every figure the thesis needs
-# is drawn for the thesis, in Typst, from the theories and the analyzer.
-#
-# What stays here is the small set that carries *measured data* rather than
-# composition -- line counts, theory counts, the session layering -- where
-# re-deriving the numbers by hand would be the only alternative and would drift.
-# Even these are references: check the numbers before a redraw ships.
+# SCOPE. A figure drawn for a web page simplifies deliberately and was composed
+# for a screen, so a lifted figure ships only with a thesis caption that
+# restores what the page leaves out.  Two kinds are lifted: figures that carry
+# *measured data* (line counts, theory counts, the session layering), where
+# re-deriving the numbers by hand would drift, and static figures whose content
+# the thesis states in the same form (a compiled graph, a schematic contrast).
+# Where a lifted figure shows analyzer output, the regression fixture named in
+# `why` pins the output; this manifest only pins the drawing to the page.
 #
 # `thesis/tools/explainer_svg.py` reads this file, pulls each figure out of
 # pages/index.html, inlines the stylesheet rules that apply, and rewrites the
 # site palette into the thesis one.  pages/ is never written to.
 #
+#   scene         class of the enclosing <figure>, for a graph the page draws
+#                 twice with the same label.  Narrows the other two handles.
 #   aria_prefix   a prefix of the figure's aria-label -- the stable handle,
 #                 since no <svg> on the page carries an id.  Must match exactly
 #                 one figure; two matches is an error, not a first-wins.
@@ -21,24 +22,40 @@
 #                 with another.  Must also be unique.
 #   css           figure stylesheet modules under pages/figures/ whose rules
 #                 style this figure.  pages/style.css is always included.
+#   viewbox       replacement viewBox, where the page lets a label overflow.
+#   colours       per-figure palette entries, {page colour = thesis colour},
+#                 for a colour that means something else in this figure.
 #   drop_classes  elements to remove, for a figure whose page shows them only
 #                 in another state.  Choosing the frame is editorial; record it.
 #   chapter       where the figure is intended to land (docs/THESIS_BLUEPRINT.md §7)
 #   why           what the figure is for -- quoted back by a failing check
 
+# ----------------------------------------------------------------- Part I --
+
+[figures.runs]
+aria_prefix = "Left: four tested runs pass"
+css = ["runs"]
+# The panel notes repeat the caption at an unreadable print size.
+drop_classes = ["probe", "sweep", "panel-note"]
+chapter = "1.1"
+why = "Testing observes chosen runs; an analysis result is one region containing every run, tried or not."
+
+[figures.source-morph]
+aria_prefix = "The compiled graph of the counting loop"
+css = ["source-morph"]
+# Amber would read as "trusted"; entry and result nodes are only distinguished.
+colours = { "#d99a2b" = "neutral" }
+# "Statement n" repeats the ppN label; the caption gives the correspondence.
+drop_classes = ["sm-num"]
+chapter = "3.4"
+why = "The counting loop as the compiler numbers it; tests/regression/24-site-figures/precision/03-counting_loop.vimp pins the graph."
+
 # ---------------------------------------------------------------- Part II --
-
-
-[figures.iceberg]
-aria_prefix = "Two icebergs"
-css = ["iceberg"]
-chapter = "11.4, 12.1"
-why = "Generated code above the waterline, the proof that justifies it below."
 
 [figures.strata]
 aria_prefix = "A cross-section of rock layers"
 css = ["strata"]
-chapter = "12.1"
+chapter = "Appendix A (session structure)"
 why = "The formalization in cross-section: one stratum per session, sized by its proof."
 
 # Not extractable, deliberately absent
