@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Two checks with the same condition and opposite verdicts, with main written
+// before the procedure it calls. The compiler lays out procedures before main,
+// so the result lists f's check first while the source has main's first. Each
+// report row carries its check's own source position as its label, so each
+// verdict lands on its line; pairing rows with checks by order of occurrence
+// would swap the two.
+//
+// Concretely x is 1 at main's check and 2 at f's (x is local to each).
+fun main() {
+  x = 1;
+  __voblint_check(x == 1); // PROVED
+  f();
+}
+fun f() {
+  x = 2;
+  __voblint_check(x == 1); // REFUTED
+}

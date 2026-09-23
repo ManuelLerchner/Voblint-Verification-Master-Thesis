@@ -7,8 +7,7 @@
 
    Positions are recorded where the parser knows it is building a command. The
    lexer cannot make that call -- a statement-position IDENT and one inside an
-   expression are the same token -- which is why this is not the token-stream
-   trick check positions use.
+   expression are the same token.
 
    Reductions complete after their parts, so what accumulates here is
    post-order over the command tree, not source order. Vimp_frontend pairs
@@ -49,6 +48,13 @@ let span (p : Lexing.position) (q : Lexing.position) : pos =
     end_line = q.Lexing.pos_lnum;
     end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1;
   }
+
+(* A check's label: the line and column its keyword starts at. The analysis
+   result lists each check under its label, so a report reads a check's position
+   off the row itself. That this is the check's own position is trusted: no
+   theorem covers the parser. *)
+let label (p : Lexing.position) : int * int =
+  (p.Lexing.pos_lnum, p.Lexing.pos_cnum - p.Lexing.pos_bol + 1)
 
 let record (p : Lexing.position) (q : Lexing.position) (c : 'a) : 'a =
   pending := span p q :: !pending;

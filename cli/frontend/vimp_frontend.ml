@@ -1,16 +1,13 @@
 (* Hand-written glue between the generated frontend (Vimp_parser/Vimp_lexer
    -- both generated from manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py;
    see cli/frontend/vimp_parser.mly, cli/frontend/vimp_lexer.mll) and its callers: a single
-   `program` entry point, (file, source text) -> (imp_prog, check_positions,
-   stmt_positions, header_positions), so main.ml and tests/property/ast_driver.ml need not
-   drive Menhir's own lexbuf-driven interface.
+   `program` entry point, (file, source text) -> (imp_prog, stmt_positions,
+   header_positions), so the CLI entries and tests/property/ast_driver.ml need
+   not drive Menhir's own lexbuf-driven interface.
 
-   check_positions is a CLI reporting concern (each "__voblint_check(...)"
-   occurrence's source position, in encounter order, for the text report's
-   line:col column -- see main.ml's render_report), not a language
-   one, so it doesn't belong in the generated grammar; tracked here by
-   wrapping the token function to note each CHECK token's position as it's
-   consumed. *)
+   Checks need no position table: each carries its own source position as its
+   label (Vimp_positions.label), and the analysis result lists it under that
+   label. *)
 
 exception Parse_error of { file : string; line : int; col : int; msg : string }
 
@@ -74,26 +71,16 @@ let header_positions () : (string * (int * int * int * int)) list =
 
 let program (file : string) (src : string) :
     unit Voblint_CLI.Generated.imp_prog_ext
-    * (int * int) list
     * (int * (int * int * int * int)) list
     * (string * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in
   Vimp_positions.reset ();
-  let check_positions = ref [] in
-
-  let tracked_token lexbuf =
-    let tok = Vimp_lexer.token lexbuf in
-    if tok = Vimp_parser.CHECK then
-      check_positions := position_of lexbuf :: !check_positions;
-    tok
-  in
-
   try
     let module I = Vimp_parser.MenhirInterpreter in
-    let supplier = I.lexer_lexbuf_to_supplier tracked_token lexbuf in
+    let supplier = I.lexer_lexbuf_to_supplier Vimp_lexer.token lexbuf in
     let checkpoint = Vimp_parser.Incremental.program lexbuf.lex_curr_p in
     let prog = I.loop supplier checkpoint in
-    (prog, List.rev !check_positions, stmt_positions prog, header_positions ())
+    (prog, stmt_positions prog, header_positions ())
   with
   | Vimp_lexer.Lex_error { line; col; msg } ->
       raise (Parse_error { file; line; col; msg })

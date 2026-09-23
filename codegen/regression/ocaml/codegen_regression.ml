@@ -23,6 +23,10 @@ open Voblint_CLI.Generated
 let mk_int n = Int_of_integer (Z.of_int n)
 let mk_nat n = nat_of_integer (Z.of_int n)
 
+(* Notation-built checks in the Isabelle twins of these programs carry the
+   placeholder label (0, 0); so do these. *)
+let unlabelled = (mk_nat 0, mk_nat 0)
+
 (* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
    native `string` (see Example_Analysis_Dispatch_Regression.thy), so variable/procedure
    names need no conversion at all. *)
@@ -42,9 +46,9 @@ let demo_prog =
   mk_program []
     (Seq
        ( Seq
-           ( Seq (Assign ("y", N (mk_int 1)), Check check_cond),
+           ( Seq (Assign ("y", N (mk_int 1)), Check (unlabelled, check_cond)),
              Assign ("y", Minus (N (mk_int 0), N (mk_int 1))) ),
-         Check check_cond ))
+         Check (unlabelled, check_cond) ))
     []
 
 (* Conditions are compared as show_exp_compact renders them below. *)
@@ -86,8 +90,8 @@ let proc_demo_prog =
                    ( Assign ("total", N (mk_int 0)),
                      Call (None, "inc", [ N (mk_int 3) ]) ),
                  Call (None, "inc", [ N (mk_int 4) ]) ),
-             Check (Less (N (mk_int 0), V "total")) ),
-         Check (Less (V "total", N (mk_int 100))) ))
+             Check (unlabelled, Less (N (mk_int 0), V "total")) ),
+         Check (unlabelled, Less (V "total", N (mk_int 100))) ))
     [ "total" ]
 
 let expected_proc_demo_sign =
@@ -117,7 +121,7 @@ let no_call_global_self_ref_prog =
        ( Seq
            ( Assign ("total", N (mk_int 0)),
              Assign ("total", Plus (V "total", N (mk_int 3))) ),
-         Check (Less (N (mk_int 0), V "total")) ))
+         Check (unlabelled, Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
@@ -139,7 +143,7 @@ let one_call_prog =
     (Seq
        ( Seq
            (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
-         Check (Less (N (mk_int 0), V "total")) ))
+         Check (unlabelled, Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_one_call_interval =
@@ -224,7 +228,7 @@ let show_edge_action = function
   | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
   | EA_Ret (Some e, _) -> "return " ^ show_exp_compact e
-  | EA_Check b -> "check(" ^ show_exp_compact b ^ ")"
+  | EA_Check (_, b) -> "check(" ^ show_exp_compact b ^ ")"
 
 let show_call_action = function
   | CallEdge (None, _, es) ->

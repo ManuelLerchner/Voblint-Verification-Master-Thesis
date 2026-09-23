@@ -76,7 +76,7 @@ let rec com_fault program where = function
       if x = ret_var || not (source_exp a) then
         Some (where ^ ": assignment to a reserved name")
       else None
-  | C.Check c ->
+  | C.Check (_, c) ->
       if source_exp c then None
       else Some (where ^ ": check reads a reserved name")
   | C.Seq (c1, c2) | C.If (_, c1, c2) -> (

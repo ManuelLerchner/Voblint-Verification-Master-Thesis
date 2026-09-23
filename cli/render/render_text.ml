@@ -1,7 +1,6 @@
 (* The plain-text check report: one table of arithmetic diagnostics and one of
-   assertion checks, each row placed at the source position the parser recorded for
-   it. Positions are the parser's, verdicts and states are the run result's; this
-   file only lines the two up and lays them out. *)
+   assertion checks. A check row carries its own source position as its label; a
+   diagnostic is placed through the statement positions the parser recorded. *)
 
 module C = Voblint_CLI.Generated
 module A = Result_text
@@ -23,19 +22,22 @@ let diagnostic_severity diagnostic =
   | Voblint_CLI.Generated.Check_Refuted -> "error"
   | _ -> "warning"
 
-(* Pairs each check row with the source position of the __voblint_check that
-   produced it. Both lists are in check-declaration order, one entry per check
-   the parser saw -- see Vimp_frontend.program's doc comment -- and only the
-   parser knows positions, so a length mismatch leaves no correct alignment to
-   fall back on. Every later row would be attributed to the wrong source line,
-   which is worse than failing. *)
-let paired_checks rows (check_positions : (int * int) list) =
-  if List.length rows <> List.length check_positions then
-    failwith
-      (Printf.sprintf "verdict/position mismatch: %d verdicts for %d checks"
-         (List.length rows)
-         (List.length check_positions));
-  List.combine rows check_positions
+(* A check row names its source check by label: the line and column the parser
+   wrote for it. Rows are listed in source order. A label shared by two rows
+   leaves the lookup a source check needs ambiguous, and the theorem that makes
+   a row's verdict the one for its check (run_voblint_labelled_check_sound)
+   assumes distinct labels, so a shared label fails rather than printing
+   either row at that position. *)
+let check_location check =
+  let line, column = C.check_label check in
+  (A.int_of_nat line, A.int_of_nat column)
+
+let located_checks rows =
+  let located = List.map (fun check -> (check, check_location check)) rows in
+  let positions = List.map snd located in
+  if List.length (List.sort_uniq compare positions) <> List.length positions
+  then failwith "two checks share one source label";
+  List.stable_sort (fun (_, p) (_, q) -> compare p q) located
 
 (* A row's verdict is lifted, and Bot is the proved-unreachable case: no
    execution reaches the check, so no verdict was computed for it. Goblint
@@ -71,7 +73,7 @@ let render_table title headers rows =
   end;
   Buffer.contents buf
 
-let render_report path analysis positions result check_positions =
+let render_report path analysis positions result =
   let diagnostics =
     List.map
       (fun diagnostic ->
@@ -104,7 +106,7 @@ let render_report path analysis positions result check_positions =
           label;
           state;
         ])
-      (paired_checks (C.res_checks result) check_positions)
+      (located_checks (C.res_checks result))
   in
   Printf.sprintf "%s [%s]\n\n%s\n%s" path analysis
     (render_table "Arithmetic diagnostics"
