@@ -61,14 +61,14 @@ let diagnostic_json stmt_positions diagnostic =
     (location_fields
        (Render_text.diagnostic_location stmt_positions diagnostic))
 
-(* Unlike the text report, a count mismatch drops the positions instead of
-   failing: the verdicts are still correct, only their placement is not. *)
-let positioned_checks checks check_positions =
-  if List.length checks = List.length check_positions then
-    List.map2
-      (fun check position -> (check, Some position))
-      checks check_positions
-  else List.map (fun check -> (check, None)) checks
+(* Unlike the text report, a label shared by two checks drops the positions
+   instead of failing: the verdicts are still correct, only their placement is
+   not. *)
+let positioned_checks checks =
+  match Render_text.located_checks checks with
+  | located ->
+      List.map (fun (check, position) -> (check, Some position)) located
+  | exception Failure _ -> List.map (fun check -> (check, None)) checks
 
 let json_list f xs = "[" ^ String.concat "," (List.map f xs) ^ "]"
 let json_option f = function Some x -> f x | None -> "null"
@@ -356,6 +356,7 @@ let tagged tag = function
   | args -> json_object [ (tag, "[" ^ String.concat "," args ^ "]") ]
 
 let nat_json n = string_of_int (A.int_of_nat n)
+let check_label_json (line, column) = json_list nat_json [ line; column ]
 
 (* JSON readers parse numbers as doubles, so an integer outside what a double
    holds exactly is written as its digit string rather than silently rounded. *)
@@ -386,7 +387,7 @@ let rec exp_json e =
 let rec com_json = function
   | C.SKIP -> tagged "SKIP" []
   | C.Assign (x, e) -> tagged "Assign" [ json_string x; exp_json e ]
-  | C.Check e -> tagged "Check" [ exp_json e ]
+  | C.Check (l, e) -> tagged "Check" [ check_label_json l; exp_json e ]
   | C.Seq (c, d) -> tagged "Seq" [ com_json c; com_json d ]
   | C.If (b, c, d) -> tagged "If" [ exp_json b; com_json c; com_json d ]
   | C.While (b, c) -> tagged "While" [ exp_json b; com_json c ]
@@ -416,7 +417,7 @@ let edge_action_json = function
   | C.EA_AssumeNot b -> tagged "EA_AssumeNot" [ exp_json b ]
   | C.EA_Body f -> tagged "EA_Body" [ json_string f ]
   | C.EA_Ret (e, x) -> tagged "EA_Ret" [ json_option exp_json e; json_string x ]
-  | C.EA_Check b -> tagged "EA_Check" [ exp_json b ]
+  | C.EA_Check (l, b) -> tagged "EA_Check" [ check_label_json l; exp_json b ]
 
 let call_action_json (C.CallEdge (dst, formals, args)) =
   tagged "CallEdge"
@@ -502,6 +503,7 @@ let result_check_json c =
   json_object
     [
       ("check_point", cfg_node_json (C.check_point c));
+      ("check_label", check_label_json (C.check_label c));
       ("check_exp", exp_json (C.check_exp c));
       ("check_verdict", lifted_json check_result_json (C.check_verdict c));
     ]
@@ -670,10 +672,10 @@ let seeds_json program result (graph : G.t) =
          (List.combine (C.res_globals result) (A.global_rows result)))
   ^ "]"
 
-let result_json analysis_ms program ~check_positions ~stmt_positions
-    ~header_positions ~raw result =
+let result_json analysis_ms program ~stmt_positions ~header_positions ~raw
+    result =
   let checks =
-    positioned_checks (C.res_checks result) check_positions
+    positioned_checks (C.res_checks result)
     |> List.map (check_json result)
     |> String.concat ","
   in

@@ -43,9 +43,9 @@
     },
     {
       rule: {
-        name: "compile (Check c)",
+        name: "compile (Check l c)",
         clause:
-          "compile Π p (Check c) k n =\n  (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})",
+          "compile Π p (Check l c) k n =\n  (Suc n, Statement n, {(Statement n, EA_Check l c, k)}, {})",
       },
       text: "The check becomes `Statement 3` with an `EA_Check` edge to the reserved epilogue `Statement 4`.",
     },

@@ -32,7 +32,7 @@ text \<open>A \<^emph>\<open>base\<close> residual is one the compiler turns int
   destination to \<^term>\<open>Some x\<close>, so only that shape emits an action.\<close>
 fun emitted_action :: "com \<Rightarrow> edge_action option" where
   "emitted_action (Assign x a) = Some (EA_Assign x a)"
-| "emitted_action (VIMP_Proc.com.Check c) = Some (EA_Check c)"
+| "emitted_action (VIMP_Proc.com.Check l c) = Some (EA_Check l c)"
 | "emitted_action (Call (Some x) q actuals) =
      (case special_table q of
         None \<Rightarrow> None
@@ -51,7 +51,7 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (Assign x' a' k n0)
   then show ?case by auto
 next
-  case (Check b' k n0)
+  case (Check l b' k n0)
   then show ?case by auto
 next
   case (CallHead dst' q' actuals' k n0)
@@ -108,14 +108,14 @@ qed simp_all
 text \<open>The check a residual runs next, when its leftmost command is one.  A located residual
   about to run a check sits at that check's \<^const>\<open>EA_Check\<close> edge, however much sequencing
   wraps it.\<close>
-fun next_check :: "com \<Rightarrow> exp option" where
-  "next_check (VIMP_Proc.com.Check c) = Some c"
+fun next_check :: "com \<Rightarrow> (check_label \<times> exp) option" where
+  "next_check (VIMP_Proc.com.Check l c) = Some (l, c)"
 | "next_check (Seq c1 c2) = next_check c1"
 | "next_check _ = None"
 
 lemma control_at_next_check_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> next_check r = Some c \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> \<exists>w. (v, EA_Check c, w) \<in> E"
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> next_check r = Some (l, c) \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> \<exists>w. (v, EA_Check l c, w) \<in> E"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (SeqLeft c1 n0 r v c2 k)
   from SeqLeft.prems(2) obtain m F L
@@ -369,8 +369,8 @@ lemma seq_after_eq_iff [simp]:
   "(Unwind = seq_after c afters) = (c = Unwind \<and> afters = [])"
   "(seq_after c afters = Assign x a) = (c = Assign x a \<and> afters = [])"
   "(Assign x a = seq_after c afters) = (c = Assign x a \<and> afters = [])"
-  "(seq_after c afters = VIMP_Proc.com.Check b) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
-  "(VIMP_Proc.com.Check b = seq_after c afters) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
+  "(seq_after c afters = VIMP_Proc.com.Check l b) = (c = VIMP_Proc.com.Check l b \<and> afters = [])"
+  "(VIMP_Proc.com.Check l b = seq_after c afters) = (c = VIMP_Proc.com.Check l b \<and> afters = [])"
   "(seq_after c afters = If b c1 c2) = (c = If b c1 c2 \<and> afters = [])"
   "(If b c1 c2 = seq_after c afters) = (c = If b c1 c2 \<and> afters = [])"
   "(seq_after c afters = While b cw) = (c = While b cw \<and> afters = [])"
@@ -569,7 +569,7 @@ inductive intra_step ::
 | ISpecial: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
              special_result sc s v \<Longrightarrow>
              intra_step \<Pi> (Call (Some x) q actuals, s, frs) (SKIP, s(x := v), frs)"
-| ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) (SKIP, s, frs)"
+| ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) (SKIP, s, frs)"
 | ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
@@ -581,7 +581,7 @@ declare intra_step.intros [intro]
 
 inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> (SKIP, s, frs) y"
 inductive_cases intra_AssignE [elim!]: "intra_step \<Pi> (Assign x a, s, frs) y"
-inductive_cases intra_CheckE [elim!]:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) y"
+inductive_cases intra_CheckE [elim!]:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) y"
 inductive_cases intra_SeqE [elim]:    "intra_step \<Pi> (Seq c1 c2, s, frs) y"
 inductive_cases intra_IfE [elim!]:     "intra_step \<Pi> (If b c1 c2, s, frs) y"
 inductive_cases intra_WhileE [elim]:  "intra_step \<Pi> (While b c, s, frs) y"
@@ -711,18 +711,18 @@ next
 next
   case (AssignDone x a k n0) then show ?case by blast
 next
-  case (Check b k n0)
+  case (Check l b k n0)
   from Check.prems(1) have out: "c' = SKIP" "s' = s" "frs' = frs"
     by auto
-  have act: "emitted_action (VIMP_Proc.com.Check b) = Some (EA_Check b)" by simp
-  have mem: "s' \<in> edge_step (EA_Check b) s" using out(2) by simp
-  obtain w where "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 SKIP w"
+  have act: "emitted_action (VIMP_Proc.com.Check l b) = Some (EA_Check l b)" by simp
+  have mem: "s' \<in> edge_step (EA_Check l b) s" using out(2) by simp
+  obtain w where "control_at \<Pi> p (VIMP_Proc.com.Check l b) k n0 SKIP w"
       and "\<G>, g \<turnstile> (Statement n0, s, stk) \<rightarrow>\<^sub>c\<^sup>* (w, s', stk)"
     by (rule control_at_base_step[OF control_at.Check act Check.prems(2)
                                      Check.prems(3) mem])
   then show ?case using out(1,3) by auto
 next
-  case (CheckDone b k n0) then show ?case by blast
+  case (CheckDone l b k n0) then show ?case by blast
 next
   case (SeqLeft c1 n0 r v c2 k)
   from SeqLeft.prems(2) obtain n1 E1 K1 where

@@ -62,6 +62,8 @@ def render_lower_arg(arg: dict) -> str:
         return "true" if arg["literal"] else "false"
     if "int" in arg:
         return f"(Voblint_CLI.Generated.Int_of_integer (Z.of_int {arg['int']}))"
+    if "source_label" in arg:
+        return "(source_label $startpos)"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 
@@ -358,6 +360,13 @@ def gen_parser(g: dict) -> str:
    reach it too. See that module for why positions are taken here rather than
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
+
+(* A check's label is where its keyword starts, so the analysis result names
+   each check by its own source position. *)
+let source_label p =
+  let line, column = Vimp_positions.label p in
+  ( Voblint_CLI.Generated.nat_of_integer (Z.of_int line),
+    Voblint_CLI.Generated.nat_of_integer (Z.of_int column) )
 
 (* A function_decl's action builds (name, formals, body); closing the bucket
    here keeps the name, its header and its positions together without a second

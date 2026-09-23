@@ -70,7 +70,7 @@ datatype edge_action =
   | EA_AssumeNot (ea_cond: exp)
   | EA_Body     (ea_body_proc: pname)
   | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
-  | EA_Check    (ea_check_cond: exp)
+  | EA_Check    (ea_check_label: check_label) (ea_check_cond: exp)
 
 datatype call_action =
     CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "exp list")
@@ -158,7 +158,7 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
 | "edge_step (EA_Body p) s = {s}"
 | "edge_step (EA_Ret e p) s =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))}"
-| "edge_step (EA_Check c) s = {s}"
+| "edge_step (EA_Check l c) s = {s}"
 
 subsection \<open>Intra-only execution paths\<close>
 

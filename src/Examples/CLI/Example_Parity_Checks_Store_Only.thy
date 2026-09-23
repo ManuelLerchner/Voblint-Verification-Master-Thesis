@@ -103,10 +103,10 @@ lemma parity_ex_intra_eval:
       (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2),
       (Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3),
-      (Statement 3, EA_Check (NotEq (V (STR ''y'')) (V (STR ''z''))), Statement 4),
-      (Statement 4, EA_Check (Eq (V (STR ''y'')) (V (STR ''z''))), Statement 5),
+      (Statement 3, EA_Check (0, 0) (NotEq (V (STR ''y'')) (V (STR ''z''))), Statement 4),
+      (Statement 4, EA_Check (0, 0) (Eq (V (STR ''y'')) (V (STR ''z''))), Statement 5),
       (Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6),
-      (Statement 6, EA_Check (Eq (V (STR ''y'')) (V (STR ''w''))), Statement 7),
+      (Statement 6, EA_Check (0, 0) (Eq (V (STR ''y'')) (V (STR ''w''))), Statement 7),
       (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 

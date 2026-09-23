@@ -117,7 +117,7 @@ export_code
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics state_steps
   route_point route_context route_callee route_targets
-  check_point check_exp check_verdict
+  check_point check_label check_exp check_verdict
   global_key global_state Global_Shared Global_Seed
   diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
   arithmetic_operation arithmetic_divisor

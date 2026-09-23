@@ -73,6 +73,29 @@ open Voblint_CLI.Generated
 
 let int_of_atom s = Int_of_integer (Z.of_string s)
 
+(* The parser labels a check with its own source position, which a generated
+   AST cannot know before it is printed; round-trips compare modulo labels. *)
+let unlabelled = (nat_of_integer Z.zero, nat_of_integer Z.zero)
+
+let rec erase_labels = function
+  | Check (_, e) -> Check (unlabelled, e)
+  | Seq (c1, c2) -> Seq (erase_labels c1, erase_labels c2)
+  | If (b, c1, c2) -> If (b, erase_labels c1, erase_labels c2)
+  | While (b, c) -> While (b, erase_labels c)
+  | c -> c
+
+let erase_program_labels prog =
+  let proc f =
+    match prog_table prog f with
+    | Some (Proc_decl_ext (formals, body, ())) ->
+        (f, Proc_decl_ext (formals, erase_labels body, ()))
+    | None -> failwith ("ast_driver: undeclared procedure " ^ f)
+  in
+  mk_program
+    (List.map proc (prog_procs prog))
+    (erase_labels (prog_main prog))
+    (declared_global_vars prog)
+
 let rec build_exp = function
   | Slist [ Atom "N"; Atom n ] -> N (int_of_atom n)
   | Slist [ Atom "V"; Atom x ] -> V x
@@ -110,7 +133,7 @@ and build_com = function
   | Atom "Skip" -> SKIP
   | Slist [ Atom "Assign"; Atom x; a ] -> Assign (x, build_exp a)
   | Slist [ Atom "Random"; Atom x ] -> Call (Some x, "__voblint_nondet_int", [])
-  | Slist [ Atom "Check"; b ] -> Check (build_exp b)
+  | Slist [ Atom "Check"; b ] -> Check (unlabelled, build_exp b)
   | Slist [ Atom "Seq"; c1; c2 ] -> Seq (build_com c1, build_com c2)
   | Slist [ Atom "If"; b; c1; c2 ] ->
       If (build_exp b, build_com c1, build_com c2)
@@ -157,7 +180,7 @@ let () =
       print_string source_text;
       exit 0);
     match Vimp_frontend.program "<generated>" source_text with
-    | reparsed, _, _, _ when mode = "--print-reprinted" ->
+    | reparsed, _, _ when mode = "--print-reprinted" ->
         (* Prints pretty(parse(pretty(original))) -- the print/parse/print
          invariant is implied by original = reparsed (the printer
          is a pure function, so structurally equal ASTs print identically),
@@ -166,8 +189,9 @@ let () =
          assumption) breaking silently. *)
         print_string (source_text_of_program reparsed);
         exit 0
-    | reparsed, _, _, _ ->
-        if original = reparsed then print_endline "OK"
+    | reparsed, _, _ ->
+        if erase_program_labels original = erase_program_labels reparsed then
+          print_endline "OK"
         else begin
           Printf.printf
             "FAIL round-trip mismatch\n\

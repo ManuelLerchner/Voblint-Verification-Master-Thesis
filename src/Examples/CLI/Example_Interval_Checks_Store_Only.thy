@@ -97,9 +97,9 @@ lemma checks_ivl_ex_intra_eval:
       (Statement 1,
        EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))),
        Statement 5),
-      (Statement 2, EA_Check (Less (V (STR ''x'')) (N 11)), Statement 3),
-      (Statement 3, EA_Check (Less (V (STR ''x'')) (N 0)), Statement 4),
-      (Statement 4, EA_Check (Eq (V (STR ''x'')) (N 5)), Statement 6),
+      (Statement 2, EA_Check (0, 0) (Less (V (STR ''x'')) (N 11)), Statement 3),
+      (Statement 3, EA_Check (0, 0) (Less (V (STR ''x'')) (N 0)), Statement 4),
+      (Statement 4, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 5)), Statement 6),
       (Statement 5, EA_Assign (STR ''y'') (N 0), Statement 6),
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval

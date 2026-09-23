@@ -53,7 +53,7 @@ text \<open>
 \<close>
 
 datatype analysis_event =
-  Check_Event exp
+  Check_Event check_label exp
 
 record ('x,'k,'v,'dl,'dg) dg_spec =
   dgs_skip       :: "('x,'k,'v,'dl,'dg) man_transfer" ("skip\<^sup>#")
@@ -122,7 +122,7 @@ where
 | "dg_spec_step S (EA_AssumeNot b)  = branch\<^sup># S b False"
 | "dg_spec_step S (EA_Body p)       = body\<^sup># S p"
 | "dg_spec_step S (EA_Ret e p)      = return\<^sup># S e p"
-| "dg_spec_step S (EA_Check cnd)    = event\<^sup># S (Check_Event cnd)"
+| "dg_spec_step S (EA_Check l cnd)  = event\<^sup># S (Check_Event l cnd)"
 
 subsection \<open>Compiling a specification to right-hand sides\<close>
 
@@ -439,7 +439,7 @@ where
 | "local_spec_step sk asn sp br bd rt ev (EA_AssumeNot b) = br b False"
 | "local_spec_step sk asn sp br bd rt ev (EA_Body p) = bd p"
 | "local_spec_step sk asn sp br bd rt ev (EA_Ret e p) = rt e p"
-| "local_spec_step sk asn sp br bd rt ev (EA_Check cnd) = ev (Check_Event cnd)"
+| "local_spec_step sk asn sp br bd rt ev (EA_Check l cnd) = ev (Check_Event l cnd)"
 
 definition local_dg_spec ::
   "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)

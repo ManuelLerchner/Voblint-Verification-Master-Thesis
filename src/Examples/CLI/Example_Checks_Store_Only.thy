@@ -103,11 +103,11 @@ lemma checks_ex_intra_eval:
   "intra (prog_cfg checks_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
       (Statement 0, EA_Assign (STR ''y'') (N 5), Statement 1),
-      (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
+      (Statement 1, EA_Check (0, 0) (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
-      (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
+      (Statement 3, EA_Check (0, 0) (Less (N 0) (V (STR ''y''))), Statement 4),
       (Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5),
-      (Statement 5, EA_Check (Eq (V (STR ''z'')) (N 1)), Statement 6),
+      (Statement 5, EA_Check (0, 0) (Eq (V (STR ''z'')) (N 1)), Statement 6),
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
 

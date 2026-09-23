@@ -81,7 +81,7 @@ text \<open>
   the frame writing the destination.
 \<close>
 
-lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.com.Check cond) s s"
+lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.com.Check l cond) s s"
   by (rule star.step) (rule pstep.Check, rule star.refl)
 
 lemma pcompletes_Call_return:
@@ -128,7 +128,7 @@ lemma certificate_demo_main:
      = VIMP_Proc.com.Seq
          (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 1])
             (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 41]))
-         (VIMP_Proc.com.Check (Less (N 0) (V (STR ''b''))))"
+         (VIMP_Proc.com.Check (0, 0) (Less (N 0) (V (STR ''b''))))"
   by (simp add: certificate_demo_prog_def main_body_def prog_main_name_def)
 
 lemma certificate_demo_no_globals: "declared_global certificate_demo_prog = (\<lambda>_. False)"
@@ -180,7 +180,7 @@ text \<open>The same run stopped one step short of the check: both calls are don
 
 lemma certificate_demo_to_check:
   "declared_global certificate_demo_prog, prog_table certificate_demo_prog \<turnstile> (main_body (prog_table certificate_demo_prog), \<lambda>_. 0, [])
-     \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.Check (Less (N 0) (V (STR ''b''))),
+     \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.Check (0, 0) (Less (N 0) (V (STR ''b''))),
       (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])"
   unfolding certificate_demo_main
   using psteps_Seq2 [OF certificate_demo_calls] by (meson Seq1 star.step star.refl star_trans)
@@ -218,7 +218,7 @@ lemma certificate_demo_intra_eval:
        FunctionResult (STR ''bump'')),
       (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2),
       (Statement 5, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')),
-      (Statement 4, EA_Check (Less (N 0) (V (STR ''b''))), Statement 5)}"
+      (Statement 4, EA_Check (0, 0) (Less (N 0) (V (STR ''b''))), Statement 5)}"
   unfolding prog_cfg_def by eval
 
 lemma certificate_demo_calls_eval:

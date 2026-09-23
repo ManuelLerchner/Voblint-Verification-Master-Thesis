@@ -262,7 +262,7 @@ text \<open>
 fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
   "com_stmt_post_order n SKIP = [Statement n]"
 | "com_stmt_post_order n (Assign x a) = [Statement n]"
-| "com_stmt_post_order n (Check c) = [Statement n]"
+| "com_stmt_post_order n (Check l c) = [Statement n]"
 | "com_stmt_post_order n (Seq c1 c2) =
      com_stmt_post_order n c1 @ com_stmt_post_order (n + csize c1) c2"
 | "com_stmt_post_order n (If b c1 c2) =

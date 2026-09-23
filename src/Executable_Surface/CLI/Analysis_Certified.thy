@@ -246,7 +246,8 @@ text \<open>
 \<close>
 
 lemma analysis_result_check_sites:
-  "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks (analysis_result D rule ctx p))
+  "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk))
+       (res_checks (analysis_result D rule ctx p))
      = check_sites (prog_cfg p)"
   by (cases D; cases ctx)
      (simp_all add: run_result_builder_defs prod.case_eq_if result_checks_of_sites)
@@ -295,13 +296,12 @@ corollary run_voblint_arithmetic_intra_safe:
 
 text \<open>
   Whatever the configuration, the result lists one check per compiled check, at the
-  check's node and with its condition, in graph order.  Pairing those checks with
-  source positions happens outside this development.
+  check's node and with its label and condition, in graph order.
 \<close>
 
 corollary run_voblint_check_sites:
   assumes "run_voblint D rule ctx p = Analysed res"
-  shows "map (\<lambda>chk. (check_point chk, check_exp chk)) (res_checks res)
+  shows "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"
 proof -
   from assms have "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
@@ -346,13 +346,9 @@ proof -
 qed
 
 text \<open>
-  The same endpoint, read at a check.  A run about to execute \<open>Check e\<close> finds a
-  check for \<open>e\<close> in the result, listed at a node this very store reaches, and that
-  check's verdict holds of the store.  The check is existential and cannot be
-  otherwise: a source state does not determine its node.  Two procedures with the
-  same body, called on the two branches of a conditional, leave the same source
-  state inside either, and each body's check is listed separately; only the node the
-  store reaches says which one is this execution's.
+  The same endpoint, read at a check.  A run about to execute \<open>Check l e\<close> finds a
+  check labelled \<open>l\<close> for \<open>e\<close> in the result, listed at a node this very store
+  reaches, and that check's verdict holds of the store.
 \<close>
 
 theorem run_voblint_check_sound:
@@ -361,10 +357,10 @@ theorem run_voblint_check_sound:
       and run: "declared_global p, prog_table p
                   \<turnstile> (main_body (prog_table p), s0, [])
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and chk: "next_check residual = Some e"
+      and chk: "next_check residual = Some (l, e)"
       and terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-  shows "\<exists>c \<in> set (res_checks res). check_exp c = e
+  shows "\<exists>c \<in> set (res_checks res). check_label c = l \<and> check_exp c = e
            \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
                     cinit_stores (declared_global p)\<^esub> (check_point c)
            \<and> check_verdict c \<noteq> Dead
@@ -379,11 +375,66 @@ proof -
       and sound: "checks_sound_at res v s"
     by blast
   from csim_next_check_edge [OF m chk]
-  have "(v, e) \<in> set (check_sites (prog_cfg p))" by auto
+  have "(v, l, e) \<in> set (check_sites (prog_cfg p))" by auto
   then obtain c
-    where "c \<in> set (res_checks res)" and "check_point c = v" and "check_exp c = e"
+    where "c \<in> set (res_checks res)" and "check_point c = v"
+      and "check_label c = l" and "check_exp c = e"
     unfolding run_voblint_check_sites [OF ans, symmetric] by auto
   with mem sound show ?thesis unfolding checks_sound_at_def by blast
+qed
+
+text \<open>
+  Read by label, which is how a report finds a source check's row.  When no two rows
+  share a label, the row labelled \<open>l\<close> is the one the theorem above found, so its
+  verdict holds of the store.  Distinct labels are a premise rather than a fact about
+  every result: a procedure called from several sites is compiled once, so its
+  checks are listed once, but two source checks given the same label would share it.
+  The premise is decidable on the result, so a consumer checks it before trusting a
+  lookup.  What stays outside this development is the label itself: that the parser
+  wrote each check's own source position into it.
+\<close>
+
+corollary run_voblint_labelled_check_sound:
+  fixes p :: imp_prog and s0 s :: store
+  assumes s0: "s0 \<in> cinit_stores (declared_global p)"
+      and run: "declared_global p, prog_table p
+                  \<turnstile> (main_body (prog_table p), s0, [])
+                    \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+      and chk: "next_check residual = Some (l, e)"
+      and terminates: "config_terminates D rule ctx p"
+      and ans: "run_voblint D rule ctx p = Analysed res"
+      and distinct: "distinct (map check_label (res_checks res))"
+  shows "\<exists>c \<in> set (res_checks res). check_label c = l"
+    and "\<forall>c \<in> set (res_checks res). check_label c = l \<longrightarrow>
+           check_exp c = e
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
+proof -
+  from run_voblint_check_sound [OF s0 run chk terminates ans]
+  obtain c0 where c0: "c0 \<in> set (res_checks res)" "check_label c0 = l" "check_exp c0 = e"
+    and v0: "check_verdict c0 \<noteq> Dead"
+      "check_verdict c0 = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+      "check_verdict c0 = Decided Check_Refuted \<longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+    by blast
+  from c0 show "\<exists>c \<in> set (res_checks res). check_label c = l" by blast
+  have inj: "inj_on check_label (set (res_checks res))"
+    using distinct by (simp add: distinct_map)
+  show "\<forall>c \<in> set (res_checks res). check_label c = l \<longrightarrow>
+           check_exp c = e
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
+  proof (intro ballI impI)
+    fix c
+    assume "c \<in> set (res_checks res)" and "check_label c = l"
+    with c0 inj have "c = c0" by (metis inj_onD)
+    with c0 v0 show "check_exp c = e
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
+      by blast
+  qed
 qed
 
 text \<open>

@@ -291,7 +291,7 @@ text \<open>\<open>ret_guarded allow_return c\<close> is the deep source-only we
 fun ret_guarded :: "bool \<Rightarrow> com \<Rightarrow> bool" where
   "ret_guarded allow_return SKIP = True"
 | "ret_guarded allow_return (Assign x a) = True"
-| "ret_guarded allow_return (VIMP_Proc.com.Check b) = True"
+| "ret_guarded allow_return (VIMP_Proc.com.Check l b) = True"
 | "ret_guarded allow_return (Seq c1 c2) =
      (if c2 = Restore then ret_guarded True c1
       else ret_guarded allow_return c1 \<and> ret_guarded allow_return c2)"
@@ -408,8 +408,8 @@ text \<open>A source configuration about to run a check is, under \<^const>\<ope
   whose \<^const>\<open>EA_Check\<close> edge carries that check.  Suspended callers only wrap the
   running residual, and the frame-pop phase runs no check.\<close>
 lemma csim_next_check_edge:
-  assumes "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)" and "next_check c = Some e"
-  shows "\<exists>w. (v, EA_Check e, w) \<in> intra g"
+  assumes "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)" and "next_check c = Some (l, e)"
+  shows "\<exists>w. (v, EA_Check l e, w) \<in> intra g"
   using assms
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
   case (Base p c0 k n c v s)

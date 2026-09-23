@@ -511,7 +511,7 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, check_positions, stmt_positions, _ =
+  let prog, stmt_positions, _ =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
@@ -595,13 +595,12 @@ let () =
                   if gvs = [] then None else Some (label, gvs))
                 payloads
             in
-            (* The source view's inline annotations need a verdict *and* a
-             position, and only the parser knows positions -- it notes each
-             __voblint_check token as it consumes one, in the same order the
-             check column lists them. The head of --analysis is the domain the
-             text report would print, so its verdicts are the ones annotated
-             here. Unreachable checks are dropped, matching what the text
-             report's DEAD label says without a verdict to show. *)
+            (* The source view's inline annotations need a verdict and a
+             position; each check row carries its position as its label. The
+             head of --analysis is the domain the text report would print, so
+             its verdicts are the ones annotated here. Unreachable checks are
+             dropped, matching what the text report's DEAD label says without a
+             verdict to show. *)
             let checks =
               match payloads with
               | (_, (_, rows, _, _)) :: _ ->
@@ -619,7 +618,7 @@ let () =
                                 Vimp_printer.string_of_exp (C.check_exp check);
                               message = None;
                             })
-                    (Render_text.paired_checks rows check_positions)
+                    (Render_text.located_checks rows)
               | [] ->
                   (* --analysis names at least one domain or the run never got
                  here, so an empty list would mean a report with no findings
@@ -670,7 +669,7 @@ let () =
           else
             Ok_text
               (Render_text.render_report path (analysis_label kind)
-                 stmt_positions (result_for kind) check_positions)
+                 stmt_positions (result_for kind))
         with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s

@@ -7,6 +7,13 @@
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
 
+(* A check's label is where its keyword starts, so the analysis result names
+   each check by its own source position. *)
+let source_label p =
+  let line, column = Vimp_positions.label p in
+  ( Voblint_CLI.Generated.nat_of_integer (Z.of_int line),
+    Voblint_CLI.Generated.nat_of_integer (Z.of_int column) )
+
 (* A function_decl's action builds (name, formals, body); closing the bucket
    here keeps the name, its header and its positions together without a second
    traversal. *)
@@ -133,7 +140,7 @@ stmt:
   | v0 = RETURN v1 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Return None) }
   | v0 = CHECK v1 = LPAREN v2 = exp v3 = RPAREN v4 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Check v2) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Check ((source_label $startpos), v2)) }
   | v0 = if_stmt
       { v0 }
   | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE

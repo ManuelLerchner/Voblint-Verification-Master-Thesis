@@ -90,11 +90,12 @@ module Generated : sig
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
     EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
-    | EA_Body of string | EA_Ret of exp option * string | EA_Check of exp
+    | EA_Body of string | EA_Ret of exp option * string |
+    EA_Check of (nat * nat) * exp
   type 'a lifted = Bot | Lifted of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
-  type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
-    If of exp * com * com | While of exp * com |
+  type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
+    Seq of com * com | If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
@@ -163,6 +164,7 @@ module Generated : sig
   val route_callee : 'a call_route_ext -> string
   val route_context : 'a call_route_ext -> nat
   val route_targets : 'a call_route_ext -> nat list
+  val check_label : 'a result_check_ext -> nat * nat
   val check_point : 'a result_check_ext -> cfg_node
   val check_verdict : 'a result_check_ext -> check_result lifted
   val prog_stmt_post_order : unit imp_prog_ext -> (string * cfg_node list) list
@@ -2163,31 +2165,32 @@ let rec equal_special_call
 
 type edge_action = EA_Nop | EA_Assign of string * exp |
   EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp |
-  EA_Body of string | EA_Ret of exp option * string | EA_Check of exp;;
+  EA_Body of string | EA_Ret of exp option * string |
+  EA_Check of (nat * nat) * exp;;
 
 let rec equal_edge_actiona
-  x0 x1 = match x0, x1 with EA_Ret (x71, x72), EA_Check x8 -> false
-    | EA_Check x8, EA_Ret (x71, x72) -> false
-    | EA_Body x6, EA_Check x8 -> false
-    | EA_Check x8, EA_Body x6 -> false
+  x0 x1 = match x0, x1 with EA_Ret (x71, x72), EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Ret (x71, x72) -> false
+    | EA_Body x6, EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Body x6 -> false
     | EA_Body x6, EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_Body x6 -> false
-    | EA_AssumeNot x5, EA_Check x8 -> false
-    | EA_Check x8, EA_AssumeNot x5 -> false
+    | EA_AssumeNot x5, EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Body x6 -> false
     | EA_Body x6, EA_AssumeNot x5 -> false
-    | EA_Assume x4, EA_Check x8 -> false
-    | EA_Check x8, EA_Assume x4 -> false
+    | EA_Assume x4, EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Assume x4 -> false
     | EA_Assume x4, EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_Assume x4 -> false
     | EA_Assume x4, EA_Body x6 -> false
     | EA_Body x6, EA_Assume x4 -> false
     | EA_Assume x4, EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Assume x4 -> false
-    | EA_Special (x31, x32), EA_Check x8 -> false
-    | EA_Check x8, EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Body x6 -> false
@@ -2196,8 +2199,8 @@ let rec equal_edge_actiona
     | EA_AssumeNot x5, EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Assume x4 -> false
     | EA_Assume x4, EA_Special (x31, x32) -> false
-    | EA_Assign (x21, x22), EA_Check x8 -> false
-    | EA_Check x8, EA_Assign (x21, x22) -> false
+    | EA_Assign (x21, x22), EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Body x6 -> false
@@ -2208,8 +2211,8 @@ let rec equal_edge_actiona
     | EA_Assume x4, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Special (x31, x32) -> false
     | EA_Special (x31, x32), EA_Assign (x21, x22) -> false
-    | EA_Nop, EA_Check x8 -> false
-    | EA_Check x8, EA_Nop -> false
+    | EA_Nop, EA_Check (x81, x82) -> false
+    | EA_Check (x81, x82), EA_Nop -> false
     | EA_Nop, EA_Ret (x71, x72) -> false
     | EA_Ret (x71, x72), EA_Nop -> false
     | EA_Nop, EA_Body x6 -> false
@@ -2222,7 +2225,8 @@ let rec equal_edge_actiona
     | EA_Special (x31, x32), EA_Nop -> false
     | EA_Nop, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Nop -> false
-    | EA_Check x8, EA_Check y8 -> equal_expa x8 y8
+    | EA_Check (x81, x82), EA_Check (y81, y82) ->
+        equal_proda equal_nat equal_nat x81 y81 && equal_expa x82 y82
     | EA_Ret (x71, x72), EA_Ret (y71, y72) ->
         equal_option equal_exp x71 y71 && ((x72 : string) = y72)
     | EA_Body x6, EA_Body y6 -> ((x6 : string) = y6)
@@ -2235,6 +2239,10 @@ let rec equal_edge_actiona
     | EA_Nop, EA_Nop -> true;;
 
 let equal_edge_action = ({equal = equal_edge_actiona} : edge_action equal);;
+
+let rec comparator_prod
+  comp_a comp_b (x, xa) (y, ya) =
+    (match comp_a x y with Eqa -> comp_b xa ya | Lt -> Lt | Gt -> Gt);;
 
 let rec comparator_special_call
   x0 x1 = match x0, x1 with Nondet_Int, Nondet_Int -> Eqa
@@ -2259,7 +2267,7 @@ let rec comparator_edge_action
     | EA_Nop, EA_AssumeNot ye -> Lt
     | EA_Nop, EA_Body yf -> Lt
     | EA_Nop, EA_Ret (yg, yh) -> Lt
-    | EA_Nop, EA_Check yi -> Lt
+    | EA_Nop, EA_Check (yi, yj) -> Lt
     | EA_Assign (x, xa), EA_Nop -> Gt
     | EA_Assign (x, xa), EA_Assign (y, ya) ->
         (match comparator_of (equal_literal, linorder_literal) x y
@@ -2269,7 +2277,7 @@ let rec comparator_edge_action
     | EA_Assign (x, xa), EA_AssumeNot ye -> Lt
     | EA_Assign (x, xa), EA_Body yf -> Lt
     | EA_Assign (x, xa), EA_Ret (yg, yh) -> Lt
-    | EA_Assign (x, xa), EA_Check yi -> Lt
+    | EA_Assign (x, xa), EA_Check (yi, yj) -> Lt
     | EA_Special (x, xa), EA_Nop -> Gt
     | EA_Special (x, xa), EA_Assign (y, ya) -> Gt
     | EA_Special (x, xa), EA_Special (yb, yc) ->
@@ -2280,7 +2288,7 @@ let rec comparator_edge_action
     | EA_Special (x, xa), EA_AssumeNot ye -> Lt
     | EA_Special (x, xa), EA_Body yf -> Lt
     | EA_Special (x, xa), EA_Ret (yg, yh) -> Lt
-    | EA_Special (x, xa), EA_Check yi -> Lt
+    | EA_Special (x, xa), EA_Check (yi, yj) -> Lt
     | EA_Assume x, EA_Nop -> Gt
     | EA_Assume x, EA_Assign (y, ya) -> Gt
     | EA_Assume x, EA_Special (yb, yc) -> Gt
@@ -2288,7 +2296,7 @@ let rec comparator_edge_action
     | EA_Assume x, EA_AssumeNot ye -> Lt
     | EA_Assume x, EA_Body yf -> Lt
     | EA_Assume x, EA_Ret (yg, yh) -> Lt
-    | EA_Assume x, EA_Check yi -> Lt
+    | EA_Assume x, EA_Check (yi, yj) -> Lt
     | EA_AssumeNot x, EA_Nop -> Gt
     | EA_AssumeNot x, EA_Assign (y, ya) -> Gt
     | EA_AssumeNot x, EA_Special (yb, yc) -> Gt
@@ -2296,7 +2304,7 @@ let rec comparator_edge_action
     | EA_AssumeNot x, EA_AssumeNot ye -> comparator_exp x ye
     | EA_AssumeNot x, EA_Body yf -> Lt
     | EA_AssumeNot x, EA_Ret (yg, yh) -> Lt
-    | EA_AssumeNot x, EA_Check yi -> Lt
+    | EA_AssumeNot x, EA_Check (yi, yj) -> Lt
     | EA_Body x, EA_Nop -> Gt
     | EA_Body x, EA_Assign (y, ya) -> Gt
     | EA_Body x, EA_Special (yb, yc) -> Gt
@@ -2305,7 +2313,7 @@ let rec comparator_edge_action
     | EA_Body x, EA_Body yf ->
         comparator_of (equal_literal, linorder_literal) x yf
     | EA_Body x, EA_Ret (yg, yh) -> Lt
-    | EA_Body x, EA_Check yi -> Lt
+    | EA_Body x, EA_Check (yi, yj) -> Lt
     | EA_Ret (x, xa), EA_Nop -> Gt
     | EA_Ret (x, xa), EA_Assign (y, ya) -> Gt
     | EA_Ret (x, xa), EA_Special (yb, yc) -> Gt
@@ -2316,15 +2324,19 @@ let rec comparator_edge_action
         (match comparator_option comparator_exp x yg
           with Eqa -> comparator_of (equal_literal, linorder_literal) xa yh
           | Lt -> Lt | Gt -> Gt)
-    | EA_Ret (x, xa), EA_Check yi -> Lt
-    | EA_Check x, EA_Nop -> Gt
-    | EA_Check x, EA_Assign (y, ya) -> Gt
-    | EA_Check x, EA_Special (yb, yc) -> Gt
-    | EA_Check x, EA_Assume yd -> Gt
-    | EA_Check x, EA_AssumeNot ye -> Gt
-    | EA_Check x, EA_Body yf -> Gt
-    | EA_Check x, EA_Ret (yg, yh) -> Gt
-    | EA_Check x, EA_Check yi -> comparator_exp x yi;;
+    | EA_Ret (x, xa), EA_Check (yi, yj) -> Lt
+    | EA_Check (x, xa), EA_Nop -> Gt
+    | EA_Check (x, xa), EA_Assign (y, ya) -> Gt
+    | EA_Check (x, xa), EA_Special (yb, yc) -> Gt
+    | EA_Check (x, xa), EA_Assume yd -> Gt
+    | EA_Check (x, xa), EA_AssumeNot ye -> Gt
+    | EA_Check (x, xa), EA_Body yf -> Gt
+    | EA_Check (x, xa), EA_Ret (yg, yh) -> Gt
+    | EA_Check (x, xa), EA_Check (yi, yj) ->
+        (match
+          comparator_prod (comparator_of (equal_nat, linorder_nat))
+            (comparator_of (equal_nat, linorder_nat)) x yi
+          with Eqa -> comparator_exp xa yj | Lt -> Lt | Gt -> Gt);;
 
 let rec less_eq_edge_action x = le_of_comp comparator_edge_action x;;
 
@@ -3461,8 +3473,8 @@ let rec equal_routed_gka _A _B
 let rec equal_routed_gk _A _B =
   ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
 
-type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
-  If of exp * com * com | While of exp * com |
+type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
+  Seq of com * com | If of exp * com * com | While of exp * com |
   Call of string option * string * exp list | Return of exp option | Restore |
   Unwind;;
 
@@ -3509,20 +3521,20 @@ let rec equal_com
     | While (x61, x62), Seq (x41, x42) -> false
     | Seq (x41, x42), If (x51, x52, x53) -> false
     | If (x51, x52, x53), Seq (x41, x42) -> false
-    | Check x3, Unwind -> false
-    | Unwind, Check x3 -> false
-    | Check x3, Restore -> false
-    | Restore, Check x3 -> false
-    | Check x3, Return x8 -> false
-    | Return x8, Check x3 -> false
-    | Check x3, Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Check x3 -> false
-    | Check x3, While (x61, x62) -> false
-    | While (x61, x62), Check x3 -> false
-    | Check x3, If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Check x3 -> false
-    | Check x3, Seq (x41, x42) -> false
-    | Seq (x41, x42), Check x3 -> false
+    | Check (x31, x32), Unwind -> false
+    | Unwind, Check (x31, x32) -> false
+    | Check (x31, x32), Restore -> false
+    | Restore, Check (x31, x32) -> false
+    | Check (x31, x32), Return x8 -> false
+    | Return x8, Check (x31, x32) -> false
+    | Check (x31, x32), Call (x71, x72, x73) -> false
+    | Call (x71, x72, x73), Check (x31, x32) -> false
+    | Check (x31, x32), While (x61, x62) -> false
+    | While (x61, x62), Check (x31, x32) -> false
+    | Check (x31, x32), If (x51, x52, x53) -> false
+    | If (x51, x52, x53), Check (x31, x32) -> false
+    | Check (x31, x32), Seq (x41, x42) -> false
+    | Seq (x41, x42), Check (x31, x32) -> false
     | Assign (x21, x22), Unwind -> false
     | Unwind, Assign (x21, x22) -> false
     | Assign (x21, x22), Restore -> false
@@ -3537,8 +3549,8 @@ let rec equal_com
     | If (x51, x52, x53), Assign (x21, x22) -> false
     | Assign (x21, x22), Seq (x41, x42) -> false
     | Seq (x41, x42), Assign (x21, x22) -> false
-    | Assign (x21, x22), Check x3 -> false
-    | Check x3, Assign (x21, x22) -> false
+    | Assign (x21, x22), Check (x31, x32) -> false
+    | Check (x31, x32), Assign (x21, x22) -> false
     | SKIP, Unwind -> false
     | Unwind, SKIP -> false
     | SKIP, Restore -> false
@@ -3553,8 +3565,8 @@ let rec equal_com
     | If (x51, x52, x53), SKIP -> false
     | SKIP, Seq (x41, x42) -> false
     | Seq (x41, x42), SKIP -> false
-    | SKIP, Check x3 -> false
-    | Check x3, SKIP -> false
+    | SKIP, Check (x31, x32) -> false
+    | Check (x31, x32), SKIP -> false
     | SKIP, Assign (x21, x22) -> false
     | Assign (x21, x22), SKIP -> false
     | Return x8, Return y8 -> equal_option equal_exp x8 y8
@@ -3566,7 +3578,8 @@ let rec equal_com
     | If (x51, x52, x53), If (y51, y52, y53) ->
         equal_expa x51 y51 && (equal_com x52 y52 && equal_com x53 y53)
     | Seq (x41, x42), Seq (y41, y42) -> equal_com x41 y41 && equal_com x42 y42
-    | Check x3, Check y3 -> equal_expa x3 y3
+    | Check (x31, x32), Check (y31, y32) ->
+        equal_proda equal_nat equal_nat x31 y31 && equal_expa x32 y32
     | Assign (x21, x22), Assign (y21, y22) ->
         ((x21 : string) = y21) && equal_expa x22 y22
     | Unwind, Unwind -> true
@@ -3627,7 +3640,7 @@ type ('a, 'b, 'c, 'd, 'e, 'f) man_ext =
                 ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
       'f;;
 
-type analysis_event = Check_Event of exp;;
+type analysis_event = Check_Event of (nat * nat) * exp;;
 
 type ('a, 'b, 'c, 'd) state_ext =
   State_ext of
@@ -3710,7 +3723,7 @@ type ('a, 'b) result_state_ext =
       (cfg_node * ((string * 'a) list) lifted) list * 'b;;
 
 type 'a result_check_ext =
-  Result_check_ext of cfg_node * exp * check_result lifted * 'a;;
+  Result_check_ext of cfg_node * (nat * nat) * exp * check_result lifted * 'a;;
 
 type 'a call_route_ext =
   Call_route_ext of cfg_node * nat * string * nat list * 'a;;
@@ -4513,7 +4526,7 @@ let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
                     | Return uw -> false
                     | SKIP -> true
                     | Assign (v, va) -> true
-                    | Check v -> true
+                    | Check (v, va) -> true
                     | Call (v, va, vb) -> true
                     | Restore -> true
                     | Unwind -> true;;
@@ -4591,14 +4604,15 @@ let rec dgs_body
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_body;;
 
-let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
-                       | s, EA_Assign (x, e) -> dgs_assign s x e
-                       | s, EA_Special (sc, x) -> dgs_special s sc x
-                       | s, EA_Assume b -> dgs_branch s b true
-                       | s, EA_AssumeNot b -> dgs_branch s b false
-                       | s, EA_Body p -> dgs_body s p
-                       | s, EA_Ret (e, p) -> dgs_return s e p
-                       | s, EA_Check cnd -> dgs_event s (Check_Event cnd);;
+let rec dg_spec_step
+  s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
+    | s, EA_Assign (x, e) -> dgs_assign s x e
+    | s, EA_Special (sc, x) -> dgs_special s sc x
+    | s, EA_Assume b -> dgs_branch s b true
+    | s, EA_AssumeNot b -> dgs_branch s b false
+    | s, EA_Body p -> dgs_body s p
+    | s, EA_Ret (e, p) -> dgs_return s e p
+    | s, EA_Check (l, cnd) -> dgs_event s (Check_Event (l, cnd));;
 
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
@@ -4631,7 +4645,7 @@ let rec exp_vnames
 let rec com_vnames
   = function SKIP -> bot_set
     | Assign (x, a) -> inserta equal_literal x (exp_vnames a)
-    | Check c -> exp_vnames c
+    | Check (l, c) -> exp_vnames c
     | Seq (c1, c2) -> sup_set equal_literal (com_vnames c1) (com_vnames c2)
     | If (b, c1, c2) ->
         sup_set equal_literal
@@ -4648,7 +4662,7 @@ let rec com_vnames
 
 let rec source_com = function SKIP -> true
                      | Assign (x, a) -> true
-                     | Check c -> true
+                     | Check (l, c) -> true
                      | Seq (c1, c2) -> source_com c1 && source_com c2
                      | If (b, c1, c2) -> source_com c1 && source_com c2
                      | While (b, c) -> source_com c
@@ -5566,12 +5580,12 @@ let rec special_table
 let rec may_fallthrough
   = function SKIP -> true
     | Assign (uu, uv) -> true
-    | Check uw -> true
+    | Check (uw, ux) -> true
     | Seq (c1, c2) -> may_fallthrough c1 && may_fallthrough c2
-    | If (ux, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
-    | While (uy, uz) -> true
-    | Call (va, vb, vc) -> true
-    | Return vd -> false
+    | If (uy, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
+    | While (uz, va) -> true
+    | Call (vb, vc, vd) -> true
+    | Return ve -> false
     | Restore -> false
     | Unwind -> false;;
 
@@ -5584,7 +5598,7 @@ let rec may_return_value
     | Return e -> not (is_none e)
     | SKIP -> false
     | Assign (v, va) -> false
-    | Check v -> false
+    | Check (v, va) -> false
     | Call (v, va, vb) -> false
     | Restore -> false
     | Unwind -> false;;
@@ -5598,7 +5612,7 @@ let rec may_return_none
     | Return e -> is_none e
     | SKIP -> false
     | Assign (v, va) -> false
-    | Check v -> false
+    | Check (v, va) -> false
     | Call (v, va, vb) -> false
     | Restore -> false
     | Unwind -> false;;
@@ -5611,7 +5625,7 @@ let rec value_providing
 let rec wf_source_com
   pi x1 = match pi, x1 with pi, SKIP -> true
     | pi, Assign (x, a) -> not ((x : string) = ret_var) && source_exp a
-    | pi, Check c -> source_exp c
+    | pi, Check (l, c) -> source_exp c
     | pi, Seq (c1, c2) -> wf_source_com pi c1 && wf_source_com pi c2
     | pi, If (b, c1, c2) ->
         source_exp b && (wf_source_com pi c1 && wf_source_com pi c2)
@@ -5645,7 +5659,7 @@ let rec wf_proc_decl
 let rec csize
   = function SKIP -> one_nat
     | Assign (x, a) -> one_nat
-    | Check c -> one_nat
+    | Check (l, c) -> one_nat
     | Seq (c1, c2) -> plus_nat (csize c1) (csize c2)
     | If (b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
     | While (b, c) -> plus_nat one_nat (csize c)
@@ -6273,7 +6287,7 @@ let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
 
 let rec local_enter_transfer f m = sp_return (f (man_local m));;
 
-let rec ea_check_cond (EA_Check x8) = x8;;
+let rec ea_check_cond (EA_Check (x81, x82)) = x82;;
 
 let rec is_EA_Check = function EA_Nop -> false
                       | EA_Assign (x21, x22) -> false
@@ -6282,12 +6296,12 @@ let rec is_EA_Check = function EA_Nop -> false
                       | EA_AssumeNot x5 -> false
                       | EA_Body x6 -> false
                       | EA_Ret (x71, x72) -> false
-                      | EA_Check x8 -> true;;
+                      | EA_Check (x81, x82) -> true;;
 
 let rec falls_through
   = function SKIP -> true
     | Assign (x, a) -> true
-    | Check c -> true
+    | Check (l, c) -> true
     | Seq (c1, c2) -> falls_through c1 && falls_through c2
     | If (b, c1, c2) -> falls_through c1 || falls_through c2
     | While (b, c) -> true
@@ -6321,13 +6335,13 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Assign (x, a), k)) bot_set,
               bot_set)))
-    | pi, p, Check c, k, n ->
+    | pi, p, Check (l, c), k, n ->
         (suc n,
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
-               (Statement n, (EA_Check c, k)) bot_set,
+               (Statement n, (EA_Check (l, c), k)) bot_set,
               bot_set)))
     | pi, p, Seq (c1, c2), k, n ->
         (let (_, (en1, (e1, k1))) =
@@ -6561,7 +6575,7 @@ let rec equations (_A1, _A2) _B
               local_transfer
                 (transfer_lift
                   (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                  (tf_st g (let Check_Event a = ev in EA_Check a))))
+                  (tf_st g (let Check_Event (a, b) = ev in EA_Check (a, b)))))
             (dgs_enter_update
               (fun _ ci ->
                 local_enter_transfer
@@ -7735,7 +7749,7 @@ let rec generic_tf_st_for _A
     | ops, g, EA_Ret (Some a, p), s ->
         update_resolved_st_q _A s (location_of g ret_var)
           (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
-    | ops, g, EA_Check cnd, s -> s;;
+    | ops, g, EA_Check (l, cnd), s -> s;;
 
 let rec congruence_tf_st_for
   x = generic_tf_st_for bot_congruence congruence_ops x;;
@@ -8239,6 +8253,23 @@ let rec entered_targets _A
       (if list_ex (fun x -> is_empty _A (entered x)) pars then []
         else [pick_ctx u ctx entered ca]));;
 
+let rec arithmetic_diagnostic_of
+  v i obligation x3 = match v, i, obligation, x3 with
+    v, i, obligation, Lifted Check_Refuted ->
+      [Arithmetic_Diagnostic (v, i, obligation, Check_Refuted)]
+    | v, i, obligation, Lifted Check_Unknown ->
+        [Arithmetic_Diagnostic (v, i, obligation, Check_Unknown)]
+    | v, i, obligation, Bot -> []
+    | v, i, obligation, Lifted Check_Proved -> [];;
+
+let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
+
+let rec arithmetic_condition
+  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
+
+let rec aggregate_verdicts
+  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
+
 let rec classify_point
   classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
     | classify, c, Lifted st -> Lifted (classify c st);;
@@ -8256,42 +8287,6 @@ let rec contexts_at
   r v = image snd
           (filter (fun (va, _) -> equal_cfg_nodea va v) (result_keys r));;
 
-let rec classify_checks_ctx _A
-  g r classify =
-    map_filter
-      (fun x ->
-        (if (let (_, (a, _)) = x in is_EA_Check a)
-          then Some (let (u, (a, _)) = x in
-                      (u, (ea_check_cond a,
-                            image (fun ctx ->
-                                    (ctx, classify_point classify
-    (ea_check_cond a) (lookup_context _A r u ctx)))
-                              (contexts_at r u))))
-          else None))
-      (cfg_intra_list g);;
-
-let rec aggregate_verdicts
-  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
-
-let rec classify_checks_verdicts _A
-  g r classify =
-    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
-      (classify_checks_ctx _A g r classify);;
-
-let rec arithmetic_diagnostic_of
-  v i obligation x3 = match v, i, obligation, x3 with
-    v, i, obligation, Lifted Check_Refuted ->
-      [Arithmetic_Diagnostic (v, i, obligation, Check_Refuted)]
-    | v, i, obligation, Lifted Check_Unknown ->
-        [Arithmetic_Diagnostic (v, i, obligation, Check_Unknown)]
-    | v, i, obligation, Bot -> []
-    | v, i, obligation, Lifted Check_Proved -> [];;
-
-let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
-
-let rec arithmetic_condition
-  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
-
 let rec arithmetic_site_verdict _A
   r classify v obligation =
     aggregate_verdicts
@@ -8304,7 +8299,7 @@ let rec arithmetic_site_verdict _A
 let rec arithmetic_edge_expressions = function EA_Assign (x, e) -> [e]
                                       | EA_Assume e -> [e]
                                       | EA_AssumeNot e -> [e]
-                                      | EA_Check e -> [e]
+                                      | EA_Check (l, e) -> [e]
                                       | EA_Ret (Some e, p) -> [e]
                                       | EA_Special (Min (a, b), x) -> [a; b]
                                       | EA_Special (Max (a, b), x) -> [a; b]
@@ -8329,7 +8324,7 @@ let rec arithmetic_expression_sites
                           edges)
                   | (_, (EA_Body _, _)) -> true
                   | (_, (EA_Ret (_, _), _)) -> true
-                  | (_, (EA_Check _, _)) -> true)
+                  | (_, (EA_Check (_, _), _)) -> true)
               then Some (let (u, (a, _)) = x in
                           (u, arithmetic_edge_expressions a))
               else None))
@@ -8371,10 +8366,25 @@ let rec arithmetic_diagnostics _A
              (zip (upt zero_nat (size_list obligations)) obligations))
       (arithmetic_sites g);;
 
-let rec result_checks_of
-  verdicts =
-    map (fun (v, (cnd, verdict)) -> Result_check_ext (v, cnd, verdict, ()))
-      verdicts;;
+let rec ea_check_label (EA_Check (x81, x82)) = x81;;
+
+let rec result_checks_of _A
+  g r classify =
+    map_filter
+      (fun x ->
+        (if (let (_, (a, _)) = x in is_EA_Check a)
+          then Some (let (u, (a, _)) = x in
+                      Result_check_ext
+                        (u, ea_check_label a, ea_check_cond a,
+                          aggregate_verdicts
+                            (image
+                              (fun ctx ->
+                                classify_point classify (ea_check_cond a)
+                                  (lookup_context _A r u ctx))
+                              (contexts_at r u)),
+                          ()))
+          else None))
+      (cfg_intra_list g);;
 
 let rec context_indices _A
   indexed ctx =
@@ -8499,7 +8509,7 @@ let rec run_result_of _B
                        else None))
                    indexed)
             (cfg_calls_list g),
-          result_checks_of (classify_checks_verdicts _B g r classify),
+          result_checks_of _B g r classify,
           Result_global_ext (Global_Shared, view shared, ()) ::
             maps seeds_of (prog_main_name :: prog_procs p),
           arithmetic_diagnostics _B g r classify, ()));;
@@ -9320,7 +9330,8 @@ let rec route_point
     = route_point;;
 
 let rec check_exp
-  (Result_check_ext (check_point, check_exp, check_verdict, more)) = check_exp;;
+  (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
+    = check_exp;;
 
 let rec route_callee
   (Call_route_ext
@@ -9337,14 +9348,18 @@ let rec route_targets
     (route_point, route_context, route_callee, route_targets, more))
     = route_targets;;
 
+let rec check_label
+  (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
+    = check_label;;
+
 let rec check_point
-  (Result_check_ext (check_point, check_exp, check_verdict, more)) =
-    check_point;;
+  (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
+    = check_point;;
 
 let rec com_stmt_post_order
   n x1 = match n, x1 with n, SKIP -> [Statement n]
     | n, Assign (x, a) -> [Statement n]
-    | n, Check c -> [Statement n]
+    | n, Check (l, c) -> [Statement n]
     | n, Seq (c1, c2) ->
         com_stmt_post_order n c1 @
           com_stmt_post_order (plus_nat n (csize c1)) c2
@@ -9358,8 +9373,8 @@ let rec com_stmt_post_order
     | n, Unwind -> [Statement n];;
 
 let rec check_verdict
-  (Result_check_ext (check_point, check_exp, check_verdict, more)) =
-    check_verdict;;
+  (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
+    = check_verdict;;
 
 let rec defs_stmt_post_order
   pi x1 n = match pi, x1, n with pi, [], n -> []

@@ -109,7 +109,7 @@ let run analysis_js globals_js context_js context_depth source_js =
     | _, _, Error message -> Render_json.error_json message
     | Some analysis, Some globals, Ok context -> (
         try
-          let program, check_positions, stmt_positions, header_positions =
+          let program, stmt_positions, header_positions =
             Vimp_frontend.program "browser.vimp" source
           in
           let analysis_start = now_ms () in
@@ -131,8 +131,8 @@ let run analysis_js globals_js context_js context_depth source_js =
               in
               Render_json.error_json ~raw message
           | C.Analysed result ->
-              Render_json.result_json analysis_ms program ~check_positions
-                ~stmt_positions ~header_positions ~raw result
+              Render_json.result_json analysis_ms program ~stmt_positions
+                ~header_positions ~raw result
         with Vimp_frontend.Parse_error { line; col; msg; _ } ->
           Render_json.parse_error_json ~line ~column:col msg)
   in

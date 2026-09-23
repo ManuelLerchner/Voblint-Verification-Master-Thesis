@@ -205,11 +205,12 @@ text \<open>Membership unfolds to an \<^const>\<open>EA_Check\<close> edge at th
 lemma classify_checks_ctx_mem_iff:
   assumes "finite (intra g)"
   shows "(v, c, vs) \<in> set (classify_checks_ctx g r classify)
-     \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
+     \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
          \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_context r v ctx))) ` contexts_at r v"
   unfolding classify_checks_ctx_def set_map set_filter
   using set_cfg_intra_list[OF assms]
   by (auto simp: image_iff split: edge_action.splits)
+     (metis edge_action.collapse surjective_pairing)
 
 subsection \<open>Contextual proved/refuted soundness\<close>
 
@@ -279,7 +280,7 @@ text \<open>
 lemma classify_checks_verdicts_mem_iff:
   assumes "finite (intra g)"
   shows "(v, c, vr) \<in> set (classify_checks_verdicts g ar classify)
-     \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
+     \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
          \<and> vr = aggregate_verdicts
                   ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
 proof -
@@ -291,7 +292,7 @@ proof -
       \<longleftrightarrow> (\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify)
                  \<and> vr = aggregate_verdicts (snd ` vs))"
     unfolding classify_checks_verdicts_def set_map by (force simp: image_iff)
-  also have "... \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
+  also have "... \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
          \<and> vr = aggregate_verdicts
                   ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
     unfolding classify_checks_ctx_mem_iff[OF assms] using img by auto

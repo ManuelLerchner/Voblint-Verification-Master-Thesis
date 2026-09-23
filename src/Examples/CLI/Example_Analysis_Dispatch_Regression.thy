@@ -181,5 +181,36 @@ lemma dead_step_branch_steps_nowhere:
   "step_view dead_step_prog (STR ''x'') (Statement 2) = [(Bot, [(Statement 4, Bot)])]"
   by eval
 
+
+subsection \<open>A check's row carries its label\<close>
+
+text \<open>
+  Two checks of \<open>x == 1\<close> with opposite verdicts: main's, where \<open>x = 1\<close>, and the
+  callee's, where \<open>x = 2\<close>. The compiler lays the callee out first, so the check column
+  lists the callee's check first. Each row keeps its own check's label, so a report that
+  looks rows up by label shows each verdict at its check whatever the order.
+\<close>
+
+definition labelled_checks_prog :: imp_prog where
+  "labelled_checks_prog =
+     mk_program
+       [(STR ''f'',
+         \<lparr>formals = [],
+          body = VIMP_Proc.com.Seq (VIMP_Proc.com.Assign (STR ''x'') (exp.N 2))
+                   (VIMP_Proc.com.Check (6, 3) (exp.Eq (V (STR ''x'')) (exp.N 1)))\<rparr>)]
+       (VIMP_Proc.com.Seq
+          (VIMP_Proc.com.Seq (VIMP_Proc.com.Assign (STR ''x'') (exp.N 1))
+             (VIMP_Proc.com.Check (2, 3) (exp.Eq (V (STR ''x'')) (exp.N 1))))
+          (VIMP_Proc.com.Call None (STR ''f'') []))
+       []"
+
+lemma labelled_checks_rows:
+  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_None labelled_checks_prog of
+      Analysed res \<Rightarrow>
+        map (\<lambda>chk. (check_label chk, check_verdict chk)) (res_checks res) =
+          [((6, 3), Lifted Check_Refuted), ((2, 3), Lifted Check_Proved)]
+    | _ \<Rightarrow> False)"
+  by eval
+
 end
 

@@ -118,7 +118,7 @@ fun arithmetic_edge_expressions :: "edge_action \<Rightarrow> exp list" where
   "arithmetic_edge_expressions (EA_Assign x e) = [e]"
 | "arithmetic_edge_expressions (EA_Assume e) = [e]"
 | "arithmetic_edge_expressions (EA_AssumeNot e) = [e]"
-| "arithmetic_edge_expressions (EA_Check e) = [e]"
+| "arithmetic_edge_expressions (EA_Check l e) = [e]"
 | "arithmetic_edge_expressions (EA_Ret (Some e) p) = [e]"
 | "arithmetic_edge_expressions (EA_Special (Min a b) x) = [a, b]"
 | "arithmetic_edge_expressions (EA_Special (Max a b) x) = [a, b]"

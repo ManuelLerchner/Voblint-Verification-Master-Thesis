@@ -148,9 +148,9 @@ TIMEOUT rather than hanging the whole suite.
 Expected results are keyed by real source LINE NUMBER, the same way
 Goblint's own harness parses its analyzer's line-tagged warnings and
 matches them against the source -- not by check order within the file.
-voblint's own report lines carry the check's source "line:col" (see
-vimp_frontend.ml's check_positions tracking and render_text_report),
-so this runner reads that back rather than re-deriving position from the
+voblint's own report lines carry the check's source "line:col" (each
+check row's label, which the parser sets to the check's position; see
+render_text.ml's located_checks), so this runner reads that back rather than re-deriving position from the
 report's row order. Robust to inserting/removing an unrelated check
 earlier in the file, unlike order-based matching.
 

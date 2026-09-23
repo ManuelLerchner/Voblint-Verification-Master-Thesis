@@ -614,6 +614,10 @@ def render_lower_arg_isabelle(
         return "@{term True}" if arg["literal"] else "@{term False}"
     if "int" in arg:
         return f"HOLogic.mk_number HOLogic.intT {arg['int']}"
+    if "source_label" in arg:
+        # Isabelle hands a translation no source position for a delimiter
+        # token, so notation-built checks share one placeholder label.
+        return "HOLogic.mk_prod (HOLogic.mk_nat 0, HOLogic.mk_nat 0)"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 

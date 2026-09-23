@@ -40,9 +40,9 @@ where
 | AssignDone:
     "control_at \<Pi> p (Assign x a) k n SKIP k"
 | Check:
-    "control_at \<Pi> p (VIMP_Proc.com.Check c) k n (VIMP_Proc.com.Check c) (Statement n)"
+    "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n (VIMP_Proc.com.Check l c) (Statement n)"
 | CheckDone:
-    "control_at \<Pi> p (VIMP_Proc.com.Check c) k n SKIP k"
+    "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n SKIP k"
 | SeqLeft:
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
@@ -88,7 +88,7 @@ text \<open>Inversion by the shape of the fragment \<open>c0\<close>, which is w
 inductive_cases control_at_SkipE [elim!]:    "control_at \<Pi> p SKIP k n r v"
 inductive_cases control_at_AssignE [elim!]:  "control_at \<Pi> p (Assign x a) k n r v"
 inductive_cases control_at_CheckE [elim!]:
-  "control_at \<Pi> p (VIMP_Proc.com.Check b) k n r v"
+  "control_at \<Pi> p (VIMP_Proc.com.Check l b) k n r v"
 inductive_cases control_at_SeqE [elim]:      "control_at \<Pi> p (Seq c1 c2) k n r v"
 inductive_cases control_at_IfE [elim]:       "control_at \<Pi> p (If b c1 c2) k n r v"
 inductive_cases control_at_WhileE [elim]:    "control_at \<Pi> p (While b c) k n r v"

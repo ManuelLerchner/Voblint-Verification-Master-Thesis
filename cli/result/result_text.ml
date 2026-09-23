@@ -90,7 +90,7 @@ let action_text = function
   | C.EA_Body p -> "body(" ^ p ^ ")"
   | C.EA_Ret (None, _) -> "return"
   | C.EA_Ret (Some e, _) -> "return " ^ Vimp_printer.string_of_exp e
-  | C.EA_Check e -> "check(" ^ Vimp_printer.string_of_exp e ^ ")"
+  | C.EA_Check (_, e) -> "check(" ^ Vimp_printer.string_of_exp e ^ ")"
 
 let action_writes = function
   | C.EA_Assign (x, _) | C.EA_Special (_, x) -> Some x

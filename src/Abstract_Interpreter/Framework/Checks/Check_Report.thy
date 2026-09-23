@@ -37,10 +37,11 @@ text \<open>Membership unfolds to an \<^const>\<open>EA_Check\<close> edge at th
 lemma classify_checks_mem_iff:
   assumes "finite (intra g)"
   shows "(v, c, r) \<in> set (classify_checks g env classify)
-     \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g) \<and> r = classify c (env v)"
+     \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g) \<and> r = classify c (env v)"
   unfolding classify_checks_def set_map set_filter
   using set_cfg_intra_list[OF assms]
   by (auto simp: image_iff split: edge_action.splits)
+     (metis edge_action.collapse surjective_pairing)
 
 text \<open>
   Soundness bridge: a \<^term>\<open>Check_Proved\<close> report entry's condition genuinely
