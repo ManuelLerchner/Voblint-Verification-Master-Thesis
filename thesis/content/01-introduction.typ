@@ -384,6 +384,10 @@ question.
   absence of zero divisors where no arithmetic diagnostic is reported
   (#isathm("run_voblint_arithmetic_safe")). The theorem is about the function
   whose generated code the command-line tool and the browser playground run.
+  The semantics and the specifications exist only in the logic. The analysis
+  itself computes on finite executable states, and each of their operations
+  is proved to commute with readback to the function-valued states of the
+  soundness proof (@sec:readback).
   Parsing, code generation and presentation form the trust boundary of
   @sec:trust-boundary. The solver and its partial correctness are inherited
   @tilscher26. The verified connection from source executions through the
