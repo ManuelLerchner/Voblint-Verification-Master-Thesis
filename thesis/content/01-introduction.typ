@@ -24,22 +24,24 @@ of an executable analyzer describes the program it was computed for.
 
 Formal verification states such a claim as a proposition over explicit
 definitions, and a proof assistant checks its proof @nipkow14. Isabelle/HOL
-follows the LCF approach: theorems can be constructed only through a small
-trusted inference kernel @paulson19, so the procedure that finds a proof need
-not be trusted. Recent AI-assisted mathematics relies on this separation.
-AlphaProof solved three problems of the 2024 International Mathematical
-Olympiad in Lean. Experts formalized the problem statements by hand, and
-each solution took two to three days of computation @hubert25alphaproof. In
-Isabelle, #cite(<kappelmann26>, form: "prose") study agents that draft and
-generalize formalizations from human hints, and
+follows the LCF approach: every theorem is constructed through a small trusted
+inference kernel @paulson19. Because the kernel checks each step, it does not
+matter who or what found a proof. A proof found by an automated tool or an AI
+system passes the same check as one written by an expert, and this has made proof
+assistants a target for AI. AlphaProof, for example, solved three problems of
+the 2024 International Mathematical Olympiad in Lean, on problem statements
+that experts had formalized by hand @hubert25alphaproof. For Isabelle,
+#cite(<kappelmann26>, form: "prose") study agents that draft and generalize
+formalizations from human hints, and
 #cite(<bryant26munkres>, form: "prose") report LLM coding agents that
-produced over 85,000 lines of Isabelle/HOL covering Munkres' general topology
-in 24 active days, with all 806 results proved.
+produced over 85,000 lines of Isabelle/HOL covering Munkres' general topology,
+with all 806 results proved. This thesis was developed with AI assistance as
+well (see #link(<ai-use>)[Use of Generative AI]), and the same argument
+applies to it.
 
 A checked proof settles that the formal statement follows from the
 definitions. It does not settle whether the definitions model the intended
-objects or whether the statement expresses the intended claim. AlphaProof's
-statements were formalized by people. A manual review of the Munkres
+objects or whether the statement expresses the intended claim. A manual review of the Munkres
 formalization found definitions logically weaker than the textbook's, harmless
 for the proved theorems only because each theorem assumes the missing
 constraints again @bryant26munkres[§8.1]. In September 2026, OpenAI
