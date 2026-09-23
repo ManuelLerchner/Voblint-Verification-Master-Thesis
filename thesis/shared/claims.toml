@@ -372,9 +372,17 @@ argv = [
   "warrow",
   "--context",
   "none",
-  "tests/regression/24-site-figures/precision/47-answers_every_kind.vimp",
+  "tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp",
 ]
-why = "Introduction, one answer of each kind: a possible-division warning at 100 / d, 0 < q PROVED at q=[10,10], and q == 0 DEAD under k < 0."
+why = "Introduction, one answer of each kind on a clamp function: the range check PROVED, p > 100 REFUTED and p == 50 UNKNOWN at p=[0,100], p == 0 DEAD under p > 100, a possible-division warning at 1000 / p and none at 1000 / (p + 1)."
+
+[claims.verdicts-proved-unreachable]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
+]
+why = "Section 9.5, a PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
 
 [claims.verdicts-mult3-interval]
 argv = [

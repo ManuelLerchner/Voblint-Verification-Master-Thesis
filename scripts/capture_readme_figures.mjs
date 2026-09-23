@@ -309,6 +309,16 @@ const FIGURES = {
     );
   },
 
+  async "playground-clamp"() {
+    const page = await run(
+      programLink("clamp", "--analysis", "interval", "--globals", "warrow", "--context", "none"),
+      900,
+      "clamp.vimp",
+    );
+
+    await compose("playground-clamp", [{ image: await shot(page, ".editor-shell"), area: "editor" }], `"editor"`);
+  },
+
   async "playground-division-possible"() {
     const page = await run(programLink("division-possible", "--analysis", "interval"), 1100, "division-possible.vimp");
 
