@@ -23,16 +23,16 @@ why = "The known-imprecision example: sign tracks total=+ (positive) exactly but
 [claims.pg-overview]
 argv = [
   "--analysis",
-  "interval,order",
+  "interval",
   "--globals",
   "warrow",
   "--context",
   "call-string",
   "--context-depth",
   "1",
-  "docs/readme-figures/overview.vimp",
+  "tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp",
 ]
-why = "The playground's default program at the overview figure's settings: PROVED, REFUTED and DEAD checks and one possible-division warning."
+why = "The playground's default program at call-string depth 1: PROVED, REFUTED and UNKNOWN checks and one possible-division warning."
 
 [claims.pg-contexts-none]
 argv = [
@@ -69,34 +69,6 @@ argv = [
   "docs/readme-figures/contexts.vimp",
 ]
 why = "With entry-state contexts both checks are PROVED."
-
-[claims.infinite-contexts]
-argv = [
-  "--analysis",
-  "interval",
-  "--globals",
-  "warrow",
-  "--context",
-  "entry-state",
-  "--graph-snapshot",
-  "docs/readme-figures/infinite.vimp",
-]
-why = "The contexts the explainer's infinite-system figure (fig:solve-infinite) fills: w in top, f in 0 to 3, h in 0 and 1, g in (0,0) and (1,0)."
-
-[claims.pg-contexts-trace]
-argv = [
-  "--analysis",
-  "interval",
-  "--globals",
-  "warrow",
-  "--context",
-  "entry-state",
-  "--trace",
-  "--format",
-  "jsonl",
-  "docs/readme-figures/contexts.vimp",
-]
-why = "The solver trace behind tab:eq-trace and fig:eq-walk: each new callee context is first read with an empty seed, the buffered publication is flushed after the result query, and a second pass computes a = 6 and b = 5."
 
 [claims.pg-while-loop]
 argv = [
@@ -214,7 +186,7 @@ argv = [
   "--globals",
   "warrow",
   "--context",
-  "none",
+  "entry-state",
   "--dot",
   "tests/regression/24-site-figures/precision/46-sum_dec_cfgmap.vimp",
 ]
@@ -239,30 +211,6 @@ argv = [
 ]
 why = "Backward filtering of 0 < x lets Sign prove y >= 0 after both arms, with y=≥0."
 
-[claims.dom-interval-plus-inverse]
-argv = [
-  "--analysis",
-  "interval",
-  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-]
-why = "Interval's identity inverse of + leaves x < 4 unknown on the true arm of x + 1 < 5."
-
-[claims.dom-int-plus-inverse]
-argv = [
-  "--analysis",
-  "int",
-  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-]
-why = "Int's component inverses of + carry no order either, so x < 4 stays unknown on the true arm of x + 1 < 5."
-
-[claims.dom-query-tree-sign]
-argv = [
-  "--analysis",
-  "sign",
-  "tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp",
-]
-why = "check_query proves x <= y && y != 0 from Sign's less and eq with x=≤0, y=+."
-
 [claims.dom-disjunct-sign]
 argv = [
   "--analysis",
@@ -275,9 +223,9 @@ why = "Normalizing each infeasible disjunct to Bot makes the branch DEAD under S
 argv = [
   "--analysis",
   "parity",
-  "tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp",
+  "tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp",
 ]
-why = "Parity's equality refinement empties each contradictory arm, so the branch is DEAD."
+why = "Parity has no guard filter, so the same infeasible branch stays UNKNOWN."
 
 [claims.dom-stride2-sign]
 argv = [
@@ -335,6 +283,14 @@ argv = [
 ]
 why = "x = 2n, y = 2n + 1: Parity proves x != y."
 
+[claims.dom-even-odd-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
+]
+why = "x = 2n, y = 2n + 1: Congruence holds x=2ℤ, y=1+2ℤ but its equality query answers only for singletons, so x != y is UNKNOWN."
+
 [claims.dom-crt-parity]
 argv = [
   "--analysis",
@@ -374,26 +330,37 @@ why = "Evaluation, Goblint #1161 replay: congruence alone knows only c in 1+2Z a
 # The results chapter's soundness-chain figure: one program, the same check, two
 # context policies.
 
-[claims.chain-split-entry]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "entry-state",
-  "--graph-snapshot",
-  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
-]
-why = "Soundness chain figure: f gets the contexts {n=[1,1]} (m=[2,2], check proved) and {n=[1,3]} (m=[2,6], check unknown), so the node verdict is unknown."
-
-[claims.chain-split-none]
+[claims.chain-factorial-none]
 argv = [
   "--analysis",
   "interval",
   "--context",
   "none",
-  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
+  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
 ]
-why = "Without contexts the one entry of f widens to n=[1,+∞] and the check m == 2 is UNKNOWN at m=⊤."
+why = "Without contexts the factorial result a == 2 is UNKNOWN at state a=⊤, although every run has a = 2."
+
+[claims.chain-factorial-none-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
+]
+why = "Under the joining rule, without contexts, the factorial result a == 2 is still UNKNOWN at state a=⊤; no widening occurs."
+
+[claims.chain-factorial-entry]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "entry-state",
+  "tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp",
+]
+why = "With entry-state contexts the factorial result a == 2 is PROVED at state a=[2,2]."
 
 # Explainer scenes redrawn in Chapters 1 and 9.
 
@@ -405,17 +372,9 @@ argv = [
   "warrow",
   "--context",
   "none",
-  "tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp",
+  "tests/regression/24-site-figures/precision/47-answers_every_kind.vimp",
 ]
-why = "Introduction, one answer of each kind on a clamp function: the range check PROVED, p > 100 REFUTED and p == 50 UNKNOWN at p=[0,100], p == 0 DEAD under p > 100, a possible-division warning at 1000 / p and none at 1000 / (p + 1)."
-
-[claims.verdicts-proved-unreachable]
-argv = [
-  "--analysis",
-  "interval",
-  "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-]
-why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
+why = "Introduction, one answer of each kind: a possible-division warning at 100 / d, 0 < q PROVED at q=[10,10], and q == 0 DEAD under k < 0."
 
 [claims.verdicts-mult3-interval]
 argv = [
@@ -710,54 +669,6 @@ argv = [
 ]
 why = "Update-rule table, shrinks program under warrow-per-origin: the verdict and state quoted in its cell."
 
-[claims.rules-two-sites-bounded-narrowing]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--globals",
-  "bounded-narrowing",
-  "tests/regression/24-site-figures/precision/49-two_sites_bounded_narrowing.vimp",
-]
-why = "Update-rule table, two-sites program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
-
-[claims.rules-loop-call-bounded-narrowing]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--globals",
-  "bounded-narrowing",
-  "tests/regression/24-site-figures/precision/50-loop_call_bounded_narrowing.vimp",
-]
-why = "Update-rule table, loop-call program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
-
-[claims.rules-grows-bounded-narrowing]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--globals",
-  "bounded-narrowing",
-  "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
-]
-why = "Update-rule table, grows program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
-
-[claims.rules-shrinks-bounded-narrowing]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--globals",
-  "bounded-narrowing",
-  "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
-]
-why = "Update-rule table, shrinks program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
-
 [claims.cost-down-k99]
 argv = [
   "--analysis",
@@ -795,69 +706,3 @@ argv = [
   "thesis/shared/programs/mixed-flow.vimp",
 ]
 why = "Flow-sensitive globals: Sign derives y=+ and x=+ at pp7, after both calls, where the flow-insensitive placement leaves y at ≥0."
-
-[claims.mixed-flow-sign-shared]
-argv = [
-  "--analysis",
-  "sign",
-  "--program-globals",
-  "flow-insensitive",
-  "--graph-snapshot",
-  "thesis/shared/programs/mixed-flow.vimp",
-]
-why = "Flow-insensitive globals: with Gx on the shared channel Sign leaves y at ≥0 at pp7, after both calls."
-
-[claims.ast-contexts]
-argv = ["--ast", "docs/readme-figures/contexts.vimp"]
-why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."
-
-# Chapter 7, cooperating analyses: one program per direction, each run with
-# either analysis alone and with both activated.
-
-[claims.coop-eq-interval]
-argv = [
-  "--analysis",
-  "interval",
-  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-]
-why = "Interval alone after two guards x <= y, y <= x: z = (x == y) gives z=[0,1], so z == 1 is UNKNOWN."
-
-[claims.coop-eq-order]
-argv = [
-  "--analysis",
-  "order",
-  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-]
-why = "The order analysis alone records x <= y and y <= x but tracks no value of z, so z == 1 is UNKNOWN."
-
-[claims.coop-eq-both]
-argv = [
-  "--analysis",
-  "interval,order",
-  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
-]
-why = "Interval asks EvalInt (x == y), the order analysis answers 1, Interval assigns z=[1,1] and z == 1 is PROVED."
-
-[claims.coop-le-interval]
-argv = [
-  "--analysis",
-  "interval",
-  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-]
-why = "Interval alone joins x=[0,20] and y=[10,30], which overlap, so x <= y is UNKNOWN."
-
-[claims.coop-le-order]
-argv = [
-  "--analysis",
-  "order",
-  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-]
-why = "The order analysis alone cannot compare a variable with a constant, so x <= y is UNKNOWN."
-
-[claims.coop-le-both]
-argv = [
-  "--analysis",
-  "interval,order",
-  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
-]
-why = "The order analysis asks Interval at y = 10 and y = 30, records x <= y on both branches, and x <= y is PROVED."

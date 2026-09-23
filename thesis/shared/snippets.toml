@@ -5,8 +5,7 @@
 [snippets.executable_domain]
 why = "Chapter 5, the domain interface figure: the executable operations a domain supplies."
 
-[snippets.numeric_domain]
-why = "The domain interface figure: what a domain must supply and prove."
+
 
 [snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
@@ -245,7 +244,6 @@ why = "Chapter 5, the domain interface: intersection, forward evaluation, truth 
 [snippets.sound_inverse_ops]
 why = "Chapter 5, the inverse operators and their soundness laws, a parent of sound_refinement."
 
-
 [snippets.sound_evaluator]
 why = "Chapter 5, the forward evaluator every expression-level interface of a domain shares."
 
@@ -322,3 +320,27 @@ why = "Chapter 5, Figure 5.2: the monotone strengthening of the bundle certifica
 
 [snippets.update_rules_example]
 why = "Solving chapter, update-rule figure: the value each rule computes after each contribution."
+
+[snippets.sound_domain]
+why = "The domain interface figure: what a domain must supply and prove."
+
+[snippets.valid_ltr]
+why = "The four rules of valid activation-local traces (traces chapter)."
+
+[snippets.ltr_collect]
+why = "The context-insensitive collecting semantics (traces chapter)."
+
+[snippets.lookup_resolved_st]
+why = "The executable carrier's lookup: two defaults and an override list (solving chapter)."
+
+[snippets.run_voblint_certified_source_sound]
+why = "The source-level soundness theorem (introduction and results chapter)."
+
+[snippets.source_run_has_ltr]
+why = "Main-statements appendix: every source run is represented by a valid trace."
+
+[snippets.mf_ltr_collect_sound]
+why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to end for one program."
+
+[snippets.mf_after_calls]
+why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."
