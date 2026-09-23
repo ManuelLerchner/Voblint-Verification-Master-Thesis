@@ -28,6 +28,9 @@ blocks.
 | A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`30`, `03-recursion_grows_entry_state_diverges` |
 | The price of precision | fan-out, `down(5)` | `precision/31`–`42`, `known-imprecision/10-down_call_string_4` |
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
+| One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |
+| What the analyzer will answer (collecting semantics) | `sum(2)` via `dec`, no contexts | `known-imprecision/19-sum_dec_no_context` |
+| What does it tell you? | `100 / k`, `100 / d` and two checks | `precision/47-answers_every_kind` |
 
 ## What is not pinned
 

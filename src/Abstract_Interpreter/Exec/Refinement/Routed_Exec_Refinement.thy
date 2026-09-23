@@ -39,8 +39,8 @@ text \<open>
 
 
 locale routed_domain_exec =
-  routed_dg_domain_exec gs empty_pred tf_st enter_st sk asn sp br bd rt en ev
-  for gs :: "vname \<Rightarrow> bool"
+  routed_dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
+  for \<G> :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -60,9 +60,9 @@ locale routed_domain_exec =
     and resolve_abs :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a abs_state lifted \<Rightarrow> pname list"
   assumes seed_key_ne_gk0 [simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
       and route_agree: "\<And>u c' d ca. route_st u c' d ca
-                          = route_abs u c' (map_lift (fun_of_resolved_st_q_for gs) d) ca"
+                          = route_abs u c' (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
       and resolve_agree: "\<And>g w cc ca d. resolve_st g w cc ca d
-                          = resolve_abs g w cc ca (map_lift (fun_of_resolved_st_q_for gs) d)"
+                          = resolve_abs g w cc ca (map_lift (fun_of_resolved_st_q_for \<G>) d)"
 begin
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. \<open>spec_st\<close>
@@ -73,13 +73,13 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 
 lemma dg_prog_st_commute_routed_call_program:
   "dg_reader_commute_gen.dg_prog_st_commute
-     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
+     (map_lift (fun_of_resolved_st_q_for \<G>)) (map_lift (fun_of_resolved_st_q_for \<G>)) env
      (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
      (routed_call_program spec_abs gk0 seed_key (resolve_abs g) (\<lambda>d. d = Bot)
         route_abs ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_prog_st_commute_routed_call_program
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
+        [where Floc = "map_lift (fun_of_resolved_st_q_for \<G>)"
+           and Fglob = "map_lift (fun_of_resolved_st_q_for \<G>)"])
      (rule dg_reader_commute_gen_lifted_for seed_key_ne_gk0
            dg_spec_wf_local_state_dg_spec_st_for_lifted
            dg_spec_wf_local_state_dg_spec_for_lifted

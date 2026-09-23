@@ -31,16 +31,16 @@ text \<open>
 
 fun int_tf_st_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow>
     int_dom resolved_st_q \<Rightarrow> int_dom resolved_st_q" where
-  "int_tf_st_for Refine_Never gs = int_tf_st_never_for gs"
-| "int_tf_st_for Refine_Once gs = int_tf_st_once_for gs"
-| "int_tf_st_for Refine_Fixpoint gs = int_tf_st_fixpoint_for gs"
+  "int_tf_st_for Refine_Never \<G> = int_tf_st_never_for \<G>"
+| "int_tf_st_for Refine_Once \<G> = int_tf_st_once_for \<G>"
+| "int_tf_st_for Refine_Fixpoint \<G> = int_tf_st_fixpoint_for \<G>"
 
 fun int_dom_enter_st_for ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow>
       int_dom resolved_st_q \<Rightarrow> int_dom resolved_st_q" where
-  "int_dom_enter_st_for Refine_Never gs = int_dom_enter_never_st_for gs"
-| "int_dom_enter_st_for Refine_Once gs = int_dom_enter_once_st_for gs"
-| "int_dom_enter_st_for Refine_Fixpoint gs = int_dom_enter_fixpoint_st_for gs"
+  "int_dom_enter_st_for Refine_Never \<G> = int_dom_enter_never_st_for \<G>"
+| "int_dom_enter_st_for Refine_Once \<G> = int_dom_enter_once_st_for \<G>"
+| "int_dom_enter_st_for Refine_Fixpoint \<G> = int_dom_enter_fixpoint_st_for \<G>"
 
 end
 

@@ -66,9 +66,9 @@ subsection \<open>Procedure entry\<close>
 definition generic_enter_st_for ::
     "'a::bot numeric_ops => (vname => bool) => call_info =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_enter_st_for ops gs ci s =
-     bind_formals_resolved_q gs (ci_formals ci)
-       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+  "generic_enter_st_for ops \<G> ci s =
+     bind_formals_resolved_q \<G> (ci_formals ci)
+       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
        (enter_frame_D_resolved_q (n_top ops) s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
@@ -76,28 +76,28 @@ subsection \<open>The per-edge step, on both stores\<close>
 fun generic_tf_st_for ::
     "'a::bot numeric_ops => (vname => bool) => edge_action =>
        'a resolved_st_q => 'a resolved_st_q" where
-    "generic_tf_st_for ops gs EA_Nop s = s"
-  | "generic_tf_st_for ops gs (EA_Assign x a) s =
-       update_resolved_st_q s (location_of gs x)
-         (n_aval ops a (fun_of_resolved_st_q_for gs s))"
-  | "generic_tf_st_for ops gs (EA_Special sc x) s =
-       update_resolved_st_q s (location_of gs x)
+    "generic_tf_st_for ops \<G> EA_Nop s = s"
+  | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
+       update_resolved_st_q s (location_of \<G> x)
+         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+  | "generic_tf_st_for ops \<G> (EA_Special sc x) s =
+       update_resolved_st_q s (location_of \<G> x)
          (case sc of
             Nondet_Int => n_top ops
           | Min a b => special_min (n_special ops)
-                         (n_aval ops a (fun_of_resolved_st_q_for gs s))
-                         (n_aval ops b (fun_of_resolved_st_q_for gs s))
+                         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
+                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s))
           | Max a b => special_max (n_special ops)
-                         (n_aval ops a (fun_of_resolved_st_q_for gs s))
-                         (n_aval ops b (fun_of_resolved_st_q_for gs s)))"
-  | "generic_tf_st_for ops gs (EA_Assume b) s = n_bfilter ops gs b True s"
-  | "generic_tf_st_for ops gs (EA_AssumeNot b) s = n_bfilter ops gs b False s"
-  | "generic_tf_st_for ops gs (EA_Body p) s = s"
-  | "generic_tf_st_for ops gs (EA_Ret None p) s = s"
-  | "generic_tf_st_for ops gs (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of gs ret_var)
-         (n_aval ops a (fun_of_resolved_st_q_for gs s))"
-  | "generic_tf_st_for ops gs (EA_Check cnd) s = s"
+                         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
+                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s)))"
+  | "generic_tf_st_for ops \<G> (EA_Assume b) s = n_bfilter ops \<G> b True s"
+  | "generic_tf_st_for ops \<G> (EA_AssumeNot b) s = n_bfilter ops \<G> b False s"
+  | "generic_tf_st_for ops \<G> (EA_Body p) s = s"
+  | "generic_tf_st_for ops \<G> (EA_Ret None p) s = s"
+  | "generic_tf_st_for ops \<G> (EA_Ret (Some a) p) s =
+       update_resolved_st_q s (location_of \<G> ret_var)
+         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+  | "generic_tf_st_for ops \<G> (EA_Check cnd) s = s"
 
 definition generic_tf_abs ::
     "'a::bot numeric_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
@@ -140,11 +140,11 @@ text \<open>
 theorem generic_tf_st_for_commute:
   fixes ops :: "'a::bot numeric_ops"
   assumes branch:
-    "\<And>b pol. fun_of_resolved_st_q_for gs (n_bfilter ops gs b pol s) =
-               br b pol (fun_of_resolved_st_q_for gs s)"
+    "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
+               br b pol (fun_of_resolved_st_q_for \<G> s)"
   shows
-    "fun_of_resolved_st_q_for gs (generic_tf_st_for ops gs a s) =
-     generic_tf_abs ops br a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (generic_tf_st_for ops \<G> a s) =
+     generic_tf_abs ops br a (fun_of_resolved_st_q_for \<G> s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by simp

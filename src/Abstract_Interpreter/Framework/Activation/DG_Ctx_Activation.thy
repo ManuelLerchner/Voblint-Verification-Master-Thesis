@@ -15,18 +15,18 @@ text \<open>
   activation backbone asks for. Entry and callee-seed coverage remain with the
   concrete analysis.
 
-  Both carriers are parameters: \<open>gammaDG\<close> interprets a D/G pair, while
-  \<open>gammaM\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
+  Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
+  \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
   \<open>abs_state\<close> therefore instantiates this locale directly. Solutions carry one
   shared global slot \<open>Inr gk0\<close>, and \<open>sg_cov\<close> ties the reader at a covered key
-  to \<open>gammaDG\<close> of the local slot against that global.
+  to \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against that global.
 \<close>
 
-locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
+locale dg_ctx_activation_base = sound_dg_spec_core S \<gamma>\<^sub>D\<^sub>G \<G>
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
-    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-    and gs :: "vname \<Rightarrow> bool" +
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and \<G> :: "vname \<Rightarrow> bool" +
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -38,7 +38,7 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
-    and gammaM :: "'M \<Rightarrow> store set"
+    and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
   assumes cmb_wf: "\<And>c ca cc v. sp_wf (cmb route c ca cc v)"
     and extra_wf: "\<And>c v q. q \<in> set (extra route c v) \<Longrightarrow> sp_wf q"
     and finE: "finite (intra g)"
@@ -47,12 +47,12 @@ locale dg_ctx_activation_base = sound_dg_spec_core S gammaDG gs
                   route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
-        \<Longrightarrow> gammaM (sg (Inl (v, c))) =
-          gammaDG (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
+        \<Longrightarrow> \<gamma>\<^sub>M (sg (Inl (v, c))) =
+          \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
-        \<Longrightarrow> gammaM (sg (Inl (v, c))) = {}"
+        \<Longrightarrow> \<gamma>\<^sub>M (sg (Inl (v, c))) = {}"
     and fwd: "\<And>u a v c. (u, c) \<in> vars
-        \<Longrightarrow> gammaDG (locals (sigma (Inl (u, c)))) (globs (sigma (Inr gk0))) \<noteq> {}
+        \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (u, c)))) (globs (sigma (Inr gk0))) \<noteq> {}
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 begin
@@ -69,6 +69,15 @@ abbreviation contribs :: "pp \<Rightarrow> 'c
   "contribs v ctx \<equiv>
      routed_contribution_programs intra_predecessor_addr_list call_site_list route
        (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g ctx v"
+
+text \<open>The reader's claim at a covered point (\<open>sg_cov\<close>) and the manager its call
+  programs run under. Input-only, so facts of theory-level interpretations keep printing
+  the explicit terms.\<close>
+abbreviation (input) gamma_at :: "pp \<Rightarrow> 'c \<Rightarrow> store set" where
+  "gamma_at v ctx \<equiv> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
+
+abbreviation (input) man_at where
+  "man_at v ctx \<equiv> mk_dg_man (locals (sigma (Inl (v, ctx)))) (\<lambda>_. gk0)"
 
 text \<open>Every contribution the routed generator folds here runs its continuation
   once: the edge hook is a compiled specification step, and the call and extra
@@ -189,32 +198,32 @@ qed
 
 theorem dg_ctx_act_edge:
   assumes e: "(u, a, v) \<in> intra g"
-    and sin: "s \<in> gammaM (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step a s"
-  shows "s' \<in> gammaM (sg (Inl (v, ctx)))"
+    and sin: "s \<in> \<gamma>\<^sub>M (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step a s"
+  shows "s' \<in> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
 proof (cases "(u, ctx) \<in> vars")
   case False
-  hence "gammaM (sg (Inl (u, ctx))) = {}" by (rule sg_uncov)
+  hence "\<gamma>\<^sub>M (sg (Inl (u, ctx))) = {}" by (rule sg_uncov)
   thus ?thesis using sin by simp
 next
   case True
   let ?d = "locals (sigma (Inl (u, ctx)))"
   let ?g = "globs (sigma (Inr gk0))"
-  have sin': "s \<in> gammaDG ?d ?g"
+  have sin': "s \<in> \<gamma>\<^sub>D\<^sub>G ?d ?g"
     using sin True by simp
   have cov_v: "(v, ctx) \<in> vars"
     using True _ e by (rule fwd) (use sin' in blast)
-  have "{s} \<subseteq> gammaDG ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (gammaDG ?d ?g)" by (rule edge_collect_mono)
+  have "{s} \<subseteq> \<gamma>\<^sub>D\<^sub>G ?d ?g" using sin' by simp
+  hence "edge_collect a {s} \<subseteq> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by (rule edge_collect_mono)
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (gammaDG ?d ?g)" by blast
-  hence "s' \<in> gammaDG
+  ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
+  hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
       (locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma))
       (globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
                 sigma (Inr gk0)))"
     using step_sound[of a sigma "Inl (u, ctx)" gk0] by blast
-  also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
+  also have "\<dots> \<subseteq> gamma_at v ctx"
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
-  also have "\<dots> = gammaM (sg (Inl (v, ctx)))"
+  also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     using cov_v by simp
   finally show ?thesis .
 qed
@@ -230,8 +239,8 @@ lemma dg_ctx_act_comb_covered:
   assumes covCl: "(cl, c1) \<in> vars"
     and covEx: "(ex, c2) \<in> vars"
     and covV: "(v, cv) \<in> vars"
-    and s: "s \<in> gammaM (sg (Inl (cl, c1)))"
-    and t: "t \<in> gammaM (sg (Inl (ex, c2)))"
+    and s: "s \<in> \<gamma>\<^sub>M (sg (Inl (cl, c1)))"
+    and t: "t \<in> \<gamma>\<^sub>M (sg (Inl (ex, c2)))"
     and bound_local:
       "locals (traverse_program
                  (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma)
@@ -241,17 +250,17 @@ lemma dg_ctx_act_comb_covered:
                 (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
                 (Inr gk0))
        \<le> globs (sigma (Inr gk0))"
-  shows "combine_collect gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
+  shows "combine_collect \<G> (ci_dst ci) s t \<in> \<gamma>\<^sub>M (sg (Inl (v, cv)))"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"
   let ?De = "locals (sigma (Inl (ex, c2)))"
   let ?G = "globs (sigma (Inr gk0))"
-  have sin: "s \<in> gammaDG ?Dc ?G"
+  have sin: "s \<in> \<gamma>\<^sub>D\<^sub>G ?Dc ?G"
     using s covCl by simp
-  have tin: "t \<in> gammaDG ?De ?G"
+  have tin: "t \<in> \<gamma>\<^sub>D\<^sub>G ?De ?G"
     using t covEx by simp
-  have "combine_collect gs (ci_dst ci) s t
-        \<in> gammaDG
+  have "combine_collect \<G> (ci_dst ci) s t
+        \<in> \<gamma>\<^sub>D\<^sub>G
             (locals (traverse_program
                (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma))
             (globs (sides_of_program
@@ -259,9 +268,9 @@ proof -
                (Inr gk0)))"
     using combine_sound_program[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
         and src_ex = "Inl (ex, c2)" and gk = gk0 and ci = ci, OF sin tin] .
-  also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, cv)))) ?G"
+  also have "\<dots> \<subseteq> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, cv)))) ?G"
     by (rule gammaDG_mono[OF bound_local bound_global])
-  also have "\<dots> = gammaM (sg (Inl (v, cv)))"
+  also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, cv)))"
     using covV by simp
   finally show ?thesis .
 qed

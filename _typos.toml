@@ -24,3 +24,5 @@ stabl = "stabl"
 ded = "ded"
 # Cytoscape.js option naming the elements to fit or center on.
 eles = "eles"
+# The concretization parameter of gamma_lift in Reachability_Lift.thy.
+gam = "gam"

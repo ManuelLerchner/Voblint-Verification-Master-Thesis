@@ -132,8 +132,8 @@ theorem rc_activation_collect_sound:
   "activation_collect rc_gs
      (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs) v ctx
-   \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
-       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx))))"
+   \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding rc_cfg_alt[symmetric]
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
@@ -202,12 +202,12 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
-    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, []))))"
+  assumes sm: "s \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))\<rbrakk>\<^sub>\<bottom>"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for rc_gs)
+           \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
                 (interval_es_rule.reader Globals_Warrow rc_gs rc_program
-                  (Inl (FunctionEntry (STR ''p''), ctx_call))))"
+                  (Inl (FunctionEntry (STR ''p''), ctx_call)))\<rbrakk>\<^sub>\<bottom>"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4)
@@ -242,7 +242,7 @@ corollary rc_activation_ctx_key:
      [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t.
-        t \<in> valid_ltr rc_gs (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
+        t \<in> \<T>\<^bsub>rc_gs,compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub>
         \<and> sink_node t = FunctionEntry (STR ''p'')
         \<and> trace_context rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
             [] (compile_prog rc_pi rc_procs) t ctx_call}"

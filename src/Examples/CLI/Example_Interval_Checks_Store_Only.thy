@@ -76,8 +76,7 @@ lemma checks_ivl_ex_fwd_ok_ball:
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ivl_ex_reach v =
-     ltr_collect checks_ivl_ex_gs (prog_cfg checks_ivl_ex_program)
-       (cinit_stores checks_ivl_ex_gs) v"
+     \<C>\<^bsub>checks_ivl_ex_gs,prog_cfg checks_ivl_ex_program,cinit_stores checks_ivl_ex_gs\<^esub> v"
 
 text \<open>The computed Interval environment at an arbitrary node, read out of the
   routed-unit solved table \<open>interval_rule.result\<close> the
@@ -147,13 +146,13 @@ lemma checks_ivl_ex_precision_over_sign:
 
 corollary checks_ivl_ex_first_check_holds:
   assumes "t \<in> checks_ivl_ex_reach (Statement 2)"
-  shows "truthy (aval (Less (V (STR ''x'')) (N 11)) t)"
+  shows "truthy (\<lbrakk>Less (V (STR ''x'')) (N 11)\<rbrakk>\<^sub>e t)"
   using assms checks_ivl_ex_node_sound interval_classify_check_proved[OF checks_ivl_ex_classify_2]
   by blast
 
 corollary checks_ivl_ex_second_check_refuted:
   assumes "t \<in> checks_ivl_ex_reach (Statement 3)"
-  shows "\<not> truthy (aval (Less (V (STR ''x'')) (N 0)) t)"
+  shows "\<not> truthy (\<lbrakk>Less (V (STR ''x'')) (N 0)\<rbrakk>\<^sub>e t)"
   using assms checks_ivl_ex_node_sound interval_classify_check_refuted[OF checks_ivl_ex_classify_3]
   by blast
 
@@ -177,7 +176,7 @@ text \<open>Non-vacuity: reading \<open>5\<close> for \<open>x\<close> satisfies
 
 lemma checks_ivl_ex_reach2_nonempty: "checks_ivl_ex_reach (Statement 2) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where gs = checks_ivl_ex_gs
+  note step = ltr_collect_intra_step[where \<G> = checks_ivl_ex_gs
       and g = "prog_cfg checks_ivl_ex_program" and S = "cinit_stores checks_ivl_ex_gs",
       folded checks_ivl_ex_reach_def]
   have "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (cfg_entry (prog_cfg checks_ivl_ex_program))"

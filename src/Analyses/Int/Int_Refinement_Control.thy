@@ -73,7 +73,7 @@ proof (cases "is_empty (refine_round d)")
   have bottom_empty:
     "gamma_int_dom (bot :: int_dom) = {}"
   proof -
-    have "gamma (bot :: int_dom) = {}"
+    have "\<gamma> (bot :: int_dom) = {}"
       by (rule gamma_bot)
     then show ?thesis by simp
   qed

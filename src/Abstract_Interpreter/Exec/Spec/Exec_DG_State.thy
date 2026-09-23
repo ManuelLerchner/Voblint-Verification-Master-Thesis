@@ -31,32 +31,32 @@ text \<open>
 
 definition fun_of_exec_dg_st_for ::
   "(vname => bool) => ('a::bot) exec_dg_st => 'a abs_state" where
-  "fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs"
+  "fun_of_exec_dg_st_for \<G> = fun_of_resolved_st_q_for \<G>"
 
 lemma fun_of_exec_dg_st_for_bot [simp]:
-  "fun_of_exec_dg_st_for gs (bot :: ('a::order_bot) exec_dg_st) = bot"
+  "fun_of_exec_dg_st_for \<G> (bot :: ('a::order_bot) exec_dg_st) = bot"
   unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_bot)
 
 lemma fun_of_exec_dg_st_for_sup [simp]:
-  "fun_of_exec_dg_st_for gs ((s :: ('a::bounded_semilattice_sup_bot) exec_dg_st) \<squnion> t)
-     = fun_of_exec_dg_st_for gs s \<squnion> fun_of_exec_dg_st_for gs t"
+  "fun_of_exec_dg_st_for \<G> ((s :: ('a::bounded_semilattice_sup_bot) exec_dg_st) \<squnion> t)
+     = fun_of_exec_dg_st_for \<G> s \<squnion> fun_of_exec_dg_st_for \<G> t"
   unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_sup)
 
 definition fun_of_dg_st_for ::
   "(vname => bool) =>
    (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
 where
-  "fun_of_dg_st_for gs d =
-    DG (fun_of_exec_dg_st_for gs (locals d)) (fun_of_exec_dg_st_for gs (globs d))"
+  "fun_of_dg_st_for \<G> d =
+    DG (fun_of_exec_dg_st_for \<G> (locals d)) (fun_of_exec_dg_st_for \<G> (globs d))"
 
 lemma fun_of_dg_st_for_simps [simp]:
-  "locals (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (locals d)"
-  "globs (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (globs d)"
-  "fun_of_dg_st_for gs (DG a b) = DG (fun_of_exec_dg_st_for gs a) (fun_of_exec_dg_st_for gs b)"
+  "locals (fun_of_dg_st_for \<G> d) = fun_of_exec_dg_st_for \<G> (locals d)"
+  "globs (fun_of_dg_st_for \<G> d) = fun_of_exec_dg_st_for \<G> (globs d)"
+  "fun_of_dg_st_for \<G> (DG a b) = DG (fun_of_exec_dg_st_for \<G> a) (fun_of_exec_dg_st_for \<G> b)"
   by (simp_all add: fun_of_dg_st_for_def)
 
 lemma fun_of_dg_st_for_bot [simp]:
-  "fun_of_dg_st_for gs (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
+  "fun_of_dg_st_for \<G> (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
                          'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 end

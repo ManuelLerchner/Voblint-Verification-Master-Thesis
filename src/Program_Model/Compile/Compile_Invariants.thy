@@ -28,11 +28,11 @@ text \<open>\<open>prog_main_name\<close> names the distinguished entry procedur
   declared procedure like any other.\<close>
 definition wf_compile_input ::
   "(vname => bool) => proc_table => pname list => bool" where
-  "wf_compile_input gs \<Pi> ps \<longleftrightarrow>
+  "wf_compile_input \<G> \<Pi> ps \<longleftrightarrow>
      distinct ps \<and>
      set ps = {p. \<Pi> p ~= None} - {prog_main_name} \<and>
      prog_main_name \<notin> set ps \<and>
-     wf_source_program gs \<Pi>"
+     wf_source_program \<G> \<Pi>"
 
 declare wf_compile_input_def [wf_compile_input_simps]
 
@@ -52,14 +52,14 @@ declare
   main_body_def [wf_compile_input_simps]
 
 lemma wf_compile_input_source_program:
-  "wf_compile_input gs \<Pi> ps \<Longrightarrow> wf_source_program gs \<Pi>"
+  "wf_compile_input \<G> \<Pi> ps \<Longrightarrow> wf_source_program \<G> \<Pi>"
   by (simp add: wf_compile_input_def)
 
 lemma wf_compile_inputD:
-  assumes "wf_compile_input gs \<Pi> ps"
-  shows "reserved_ret_var gs" and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = (main_body \<Pi>)\<rparr>"
+  assumes "wf_compile_input \<G> \<Pi> ps"
+  shows "reserved_ret_var \<G>" and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = (main_body \<Pi>)\<rparr>"
     and "wf_source_com \<Pi> (main_body \<Pi>)" and "no_return (main_body \<Pi>)"
-    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
+    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>" and "source_com (main_body \<Pi>)"
     and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
@@ -96,14 +96,14 @@ text \<open>
 
 definition wf_program_compile_input_exec :: "imp_prog => bool" where
   "wf_program_compile_input_exec p \<longleftrightarrow>
-     (let procs = proc_rep p; gs = declared_global p; pi = map_of procs
-      in reserved_ret_var gs \<and>
+     (let procs = proc_rep p; \<G> = declared_global p; pi = map_of procs
+      in reserved_ret_var \<G> \<and>
          distinct (prog_procs p) \<and>
          set (prog_procs p) = set (map fst procs) - {prog_main_name} \<and>
          prog_main_name \<notin> set (prog_procs p) \<and>
          pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>) \<and>
          wf_source_com pi (prog_main p) \<and> no_return (prog_main p) \<and>
-         list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs \<and>
+         list_all (\<lambda>(_, decl). wf_proc_decl \<G> pi decl) procs \<and>
          list_all (\<lambda>(q, _). special_table q = None) procs)"
 
 lemma wf_program_compile_input_exec_sound:
@@ -111,29 +111,29 @@ lemma wf_program_compile_input_exec_sound:
   shows "wf_program_compile_input p"
 proof -
   define procs where "procs = proc_rep p"
-  define gs where "gs = declared_global p"
+  define \<G> where "\<G> = declared_global p"
   define pi where "pi = map_of procs"
   have pi_eq: "pi = prog_table p"
     unfolding pi_def procs_def prog_table_def ..
   from assms have h:
-    "reserved_ret_var gs"
+    "reserved_ret_var \<G>"
     "distinct (prog_procs p)"
     "set (prog_procs p) = set (map fst procs) - {prog_main_name}"
     "prog_main_name \<notin> set (prog_procs p)"
     "pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>)"
     "wf_source_com pi (prog_main p)"
     "no_return (prog_main p)"
-    "list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs"
+    "list_all (\<lambda>(_, decl). wf_proc_decl \<G> pi decl) procs"
     "list_all (\<lambda>(q, _). special_table q = None) procs"
-    unfolding wf_program_compile_input_exec_def procs_def gs_def pi_def Let_def
+    unfolding wf_program_compile_input_exec_def procs_def \<G>_def pi_def Let_def
     by simp_all
   have domain: "set (map fst procs) = {q. pi q \<noteq> None}"
     unfolding pi_def by (induction procs) auto
-  have every_decl: "\<And>q decl. pi q = Some decl \<Longrightarrow> wf_proc_decl gs pi decl"
+  have every_decl: "\<And>q decl. pi q = Some decl \<Longrightarrow> wf_proc_decl \<G> pi decl"
   proof -
     fix q decl assume "pi q = Some decl"
     then have "(q, decl) \<in> set procs" unfolding pi_def by (rule map_of_SomeD)
-    with h(8) show "wf_proc_decl gs pi decl" by (auto simp: list_all_iff)
+    with h(8) show "wf_proc_decl \<G> pi decl" by (auto simp: list_all_iff)
   qed
   have every_special: "\<And>q. pi q \<noteq> None \<Longrightarrow> special_table q = None"
   proof -
@@ -143,15 +143,15 @@ proof -
     with h(9) show "special_table q = None" by (auto simp: list_all_iff)
   qed
   have main_eq: "main_body pi = prog_main p" using pi_eq by simp
-  have wf_source_program: "wf_source_program gs pi"
+  have wf_source_program: "wf_source_program \<G> pi"
     unfolding wf_source_program_def main_eq
     using h(1) h(5) h(6) h(7) every_decl every_special by blast
-  have wf_compile_input: "wf_compile_input gs pi (prog_procs p)"
+  have wf_compile_input: "wf_compile_input \<G> pi (prog_procs p)"
     unfolding wf_compile_input_def
     using h(2) h(3) h(4) wf_source_program
     using domain by blast
   show ?thesis
-    unfolding gs_def[symmetric] pi_eq[symmetric] using wf_compile_input .
+    unfolding \<G>_def[symmetric] pi_eq[symmetric] using wf_compile_input .
 qed
 
 text \<open>\<^const>\<open>compile_prog\<close> takes a \<^typ>\<open>proc_table\<close> and a \<^typ>\<open>pname list\<close>, so a

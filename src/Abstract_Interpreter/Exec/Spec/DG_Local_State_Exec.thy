@@ -30,7 +30,7 @@ definition local_state_dg_spec_st_for_lifted ::
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st = local_dg_spec
+  "local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st = local_dg_spec
      (transfer_lift empty_pred (tf_st EA_Nop))
      (\<lambda>x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
      (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
@@ -44,8 +44,8 @@ where
      (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
      (\<lambda>ci dcM de. transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
-             (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
+        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
         dcM de)"
 
 text \<open>Consumed at code-generation time like every other specification builder
@@ -71,16 +71,16 @@ lemma local_spec_step_transfer_lift_tf_st:
   by (cases a) simp_all
 
 lemma dg_spec_step_local_state_st_for_lifted:
-  "dg_spec_step (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) a
+  "dg_spec_step (local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st) a
      = local_transfer (transfer_lift empty_pred (tf_st a))"
   by (simp add: local_state_dg_spec_st_for_lifted_def local_spec_step_transfer_lift_tf_st)
 
 lemma dg_spec_wf_local_state_dg_spec_st_for_lifted [intro, simp]:
-  "dg_spec_wf (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st)"
+  "dg_spec_wf (local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st)"
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
 lemma dgs_enter_local_state_st_for_lifted:
-  "enter\<^sup># (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
+  "enter\<^sup># (local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (enter_st ci) d)])"
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
@@ -98,11 +98,11 @@ where
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))"
 
 lemma dg_spec_combine_transfer_local_state_st_for_lifted:
-  "dg_spec_combine_transfer (local_state_dg_spec_st_for_lifted gs empty_pred tf_st enter_st) ci
+  "dg_spec_combine_transfer (local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred
-            (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
-                 (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
+            (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+                 (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
             (combine_env_st_lifted dc de) de)"
   by (simp add: local_state_dg_spec_st_for_lifted_def combine_env_st_lifted_def)
 

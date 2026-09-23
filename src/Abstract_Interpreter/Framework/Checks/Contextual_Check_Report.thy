@@ -19,8 +19,10 @@ text \<open>
   \<open>contextual_verdict\<close> keeps that case outside \<^typ>\<open>check_result\<close> rather
   than folding it into one of its three values. \<open>Dead\<close> means ``no concrete
   execution is represented here''; it is neither \<^const>\<open>Check_Unknown\<close>, which
-  does assert that something reaches this point and the abstraction failed to
-  decide it, nor \<^const>\<open>Check_Proved\<close>.
+  says only that the abstraction decided the condition neither way on a state
+  representing some stores --- it asserts no reachability, since those stores
+  may over-approximate a point no execution reaches --- nor
+  \<^const>\<open>Check_Proved\<close>.
 \<close>
 
 text \<open>

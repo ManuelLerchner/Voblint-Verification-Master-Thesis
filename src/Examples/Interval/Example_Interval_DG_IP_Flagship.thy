@@ -151,19 +151,18 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs"
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s, []) src'"
+  assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s, []) \<rightarrow>\<^sub>p\<^sup>* src'"
       and init: "s \<in> cinit_stores twice_gs"
-  shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
+  shows "\<exists>v t stk. twice_pi, twice_cfg \<turnstile> src' \<approx> (v, t, stk)
                    \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program v\<rbrakk>"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
-  have run': "star (pstep twice_gs (prog_table twice_program))
-                (main_body (prog_table twice_program), s, []) (residual, t, frs)"
+  have run': "twice_gs, prog_table twice_program \<turnstile> (main_body (prog_table twice_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run[unfolded src'] by (simp flip: twice_pi_def)
   have wf: "wf_compile_input twice_gs (prog_table twice_program) (prog_procs twice_program)"
     using twice_wf by (simp add: twice_pi_def twice_procs_def)
   have cert:
-    "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
+    "\<exists>v stk. twice_pi, twice_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
        \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program v\<rbrakk>"
     using interval_seed_join.source_sound[OF twice_terminates twice_vars_cover wf init run']
     by (simp add: twice_cfg_prog_cfg twice_pi_def)

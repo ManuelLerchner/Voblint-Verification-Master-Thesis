@@ -35,11 +35,11 @@ text \<open>
 \<close>
 
 lemma bfilter_congruence_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_congruence b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_congruence b res \<sigma>\<rbrakk>"
   using congruence_backward_domain.bfilter_sound by simp
 
 lemma branch_congruence_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_congruence b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_congruence b res \<sigma>\<rbrakk>"
   using congruence_backward_domain.branch_sound by simp
 
 lemma branch_congruence_mono:

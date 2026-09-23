@@ -21,29 +21,29 @@ lemma call_transition:
       and distinct: "distinct (formals decl)"
       and edge: "(u, CallEdge dst (formals decl) actuals, FunctionEntry q, cont) \<in> calls g"
       and fm: "frames_match frs stk"
-  shows "pstep gs \<Pi> (Call dst q actuals, s, frs)
-           (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
+  shows "\<G>, \<Pi> \<turnstile> (Call dst q actuals, s, frs)
+           \<rightarrow>\<^sub>p (Seq (body decl) Restore,
+            bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s),
             Frame s dst # frs)"
-    and "cstep gs g (u, s, stk)
-           (FunctionEntry q,
-            call_enter gs (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
-    and "call_enter gs (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
+    and "\<G>, g \<turnstile> (u, s, stk)
+           \<rightarrow>\<^sub>c (FunctionEntry q,
+            call_enter \<G> (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+    and "call_enter \<G> (CallEdge dst (formals decl) actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
     and "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
 proof -
-  show "pstep gs \<Pi> (Call dst q actuals, s, frs)
-           (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
+  show "\<G>, \<Pi> \<turnstile> (Call dst q actuals, s, frs)
+           \<rightarrow>\<^sub>p (Seq (body decl) Restore,
+            bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s),
             Frame s dst # frs)"
     using decl arity distinct
-    by (intro pstep.Call[where vals = "map (\<lambda>e. aval e s) actuals"]) auto
-  show "cstep gs g (u, s, stk)
-           (FunctionEntry q,
-            call_enter gs (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
+    by (intro pstep.Call[where vals = "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals"]) auto
+  show "\<G>, g \<turnstile> (u, s, stk)
+           \<rightarrow>\<^sub>c (FunctionEntry q,
+            call_enter \<G> (CallEdge dst (formals decl) actuals) s, (cont, dst, s) # stk)"
     by (rule cstep.Call[OF edge])
-  show "call_enter gs (CallEdge dst (formals decl) actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
+  show "call_enter \<G> (CallEdge dst (formals decl) actuals) s
+           = bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
     by (rule call_enter_CallEdge)
   show "frames_match (Frame s dst # frs) ((cont, dst, s) # stk)"
     using fm by (simp add: frames_match_activation)
@@ -54,69 +54,69 @@ lemma return_initiation:
       and comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and sub: "E \<subseteq> intra g"
   obtains k where "v = Statement k"
-    and "pstep gs \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
-    and "cstep gs g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+    and "\<G>, \<Pi> \<turnstile> (Return e, s, frs) \<rightarrow>\<^sub>p (Unwind, ret_store e s, frs)"
+    and "\<G>, g \<turnstile> (Statement k, s, stk) \<rightarrow>\<^sub>c (FunctionResult p, ret_store e s, stk)"
 proof -
   from control_at_return_edge[OF loc refl comp] obtain k where
     k: "v = Statement k" "(Statement k, EA_Ret e p, FunctionResult p) \<in> E" by blast
   have edge: "(Statement k, EA_Ret e p, FunctionResult p) \<in> intra g" using k(2) sub by blast
-  have src: "pstep gs \<Pi> (Return e, s, frs) (Unwind, ret_store e s, frs)"
+  have src: "\<G>, \<Pi> \<turnstile> (Return e, s, frs) \<rightarrow>\<^sub>p (Unwind, ret_store e s, frs)"
     by (cases e) (auto simp: ret_store_def)
-  have cfg: "cstep gs g (Statement k, s, stk) (FunctionResult p, ret_store e s, stk)"
+  have cfg: "\<G>, g \<turnstile> (Statement k, s, stk) \<rightarrow>\<^sub>c (FunctionResult p, ret_store e s, stk)"
     using cstep.Intra[OF edge edge_step_EA_Ret_ret_store_mem] .
   show ?thesis by (rule that[OF k(1) src cfg])
 qed
 
 lemma return_completion_restore:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep gs \<Pi> (Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect gs dst caller callee, frs)"
-    and "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect gs dst caller callee, stk)"
+  shows "\<G>, \<Pi> \<turnstile> (Restore, callee, Frame caller dst # frs)
+           \<rightarrow>\<^sub>p (SKIP, combine_collect \<G> dst caller callee, frs)"
+    and "\<G>, g \<turnstile> (FunctionResult p, callee, (cont, dst, caller) # stk)
+           \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
-  show "pstep gs \<Pi> (Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect gs dst caller callee, frs)"
+  show "\<G>, \<Pi> \<turnstile> (Restore, callee, Frame caller dst # frs)
+          \<rightarrow>\<^sub>p (SKIP, combine_collect \<G> dst caller callee, frs)"
     using pstep.RestoreStep by (simp add: combine_collect_def)
-  show "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect gs dst caller callee, stk)"
+  show "\<G>, g \<turnstile> (FunctionResult p, callee, (cont, dst, caller) # stk)
+           \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
 lemma return_completion_unwind:
   assumes fm: "frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  shows "pstep gs \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-           (SKIP, combine_collect gs dst caller callee, frs)"
-    and "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect gs dst caller callee, stk)"
+  shows "\<G>, \<Pi> \<turnstile> (Seq Unwind Restore, callee, Frame caller dst # frs)
+           \<rightarrow>\<^sub>p (SKIP, combine_collect \<G> dst caller callee, frs)"
+    and "\<G>, g \<turnstile> (FunctionResult p, callee, (cont, dst, caller) # stk)
+           \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller callee, stk)"
     and "frames_match frs stk"
 proof -
-  show "pstep gs \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-          (SKIP, combine_collect gs dst caller callee, frs)"
+  show "\<G>, \<Pi> \<turnstile> (Seq Unwind Restore, callee, Frame caller dst # frs)
+          \<rightarrow>\<^sub>p (SKIP, combine_collect \<G> dst caller callee, frs)"
     using pstep.UnwindAct by (simp add: combine_collect_def)
-  show "cstep gs g (FunctionResult p, callee, (cont, dst, caller) # stk)
-           (cont, combine_collect gs dst caller callee, stk)"
+  show "\<G>, g \<turnstile> (FunctionResult p, callee, (cont, dst, caller) # stk)
+           \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller callee, stk)"
     by (rule cstep.Return)
   show "frames_match frs stk" using fm by (simp add: frames_match_activation)
 qed
 
-lemma Unwind_not_pcompletes: "\<not> pcompletes gs \<Pi> Unwind s t"
+lemma Unwind_not_pcompletes: "\<not> pcompletes \<G> \<Pi> Unwind s t"
 proof (rule notI)
-  assume "star (pstep gs \<Pi>) (Unwind, s, []) (SKIP, t, [])"
+  assume "\<G>, \<Pi> \<turnstile> (Unwind, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
-lemma Return_empty_not_pcompletes: "\<not> pcompletes gs \<Pi> (Return e) s t"
+lemma Return_empty_not_pcompletes: "\<not> pcompletes \<G> \<Pi> (Return e) s t"
 proof (rule notI)
-  assume "star (pstep gs \<Pi>) (Return e, s, []) (SKIP, t, [])"
-  then obtain y where step: "pstep gs \<Pi> (Return e, s, []) y"
-      and rest: "star (pstep gs \<Pi>) y (SKIP, t, [])"
+  assume "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  then obtain y where step: "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p y"
+      and rest: "\<G>, \<Pi> \<turnstile> y \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
     by (cases rule: star.cases) auto
   from step have "y = (Unwind, ret_store e s, [])"
     by (cases e) (auto simp: ret_store_def)
-  with rest have "star (pstep gs \<Pi>) (Unwind, ret_store e s, []) (SKIP, t, [])" by simp
+  with rest have "\<G>, \<Pi> \<turnstile> (Unwind, ret_store e s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])" by simp
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
@@ -132,7 +132,7 @@ lemma return_safe_seq_return_main_rejected: "\<not> return_safe (Seq SKIP (Retur
   by (simp add: return_safe_def)
 
 lemma return_main_stuck_but_rejected:
-  "pstep gs \<Pi> (Return e, s, []) (Unwind, ret_store e s, []) \<and> ~ return_safe (Return e)"
+  "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p (Unwind, ret_store e s, []) \<and> ~ return_safe (Return e)"
   by (cases e) (auto simp: return_safe_def ret_store_def)
 
 lemma return_safe_return_in_callee:
@@ -141,7 +141,7 @@ lemma return_safe_return_in_callee:
 
 lemma return_safe_psteps:
   assumes "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
-      and "star (pstep gs \<Pi>) sc sc'" and "return_safe (fst sc)"
+      and "\<G>, \<Pi> \<turnstile> sc \<rightarrow>\<^sub>p\<^sup>* sc'" and "return_safe (fst sc)"
   shows "return_safe (fst sc')"
   using assms(2,3)
 proof (induction rule: star.induct)
@@ -159,14 +159,12 @@ lemma csim_tailcall_callee_entry:
       and calleecacc: "compiled_at \<Pi> g p c0 k n"
       and caller: "control_at \<Pi> pc c0c kc nc SKIP cont"
       and callercacc: "compiled_at \<Pi> g pc c0c kc nc"
-  shows "csim \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst])
-                  (v, callee, [(cont, dst, caller)])"
+  shows "\<Pi>, g \<turnstile> (Seq SKIP Restore, callee, [Frame caller dst]) \<approx> (v, callee, [(cont, dst, caller)])"
 proof -
-  have base: "csim \<Pi> g (SKIP, callee, []) (v, callee, [])"
+  have base: "\<Pi>, g \<turnstile> (SKIP, callee, []) \<approx> (v, callee, [])"
     by (rule csim.Base[OF callee calleecacc])
   have caller': "control_at \<Pi> pc c0c kc nc (seq_after SKIP []) cont" using caller by simp
-  have "csim \<Pi> g (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst])
-                 (v, callee, [] @ [(cont, dst, caller)])"
+  have "\<Pi>, g \<turnstile> (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst]) \<approx> (v, callee, [] @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF base caller' callercacc])
   thus ?thesis by simp
 qed

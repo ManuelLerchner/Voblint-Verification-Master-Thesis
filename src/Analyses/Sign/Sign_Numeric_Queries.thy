@@ -45,7 +45,7 @@ lemma sign_less_true_sound:
   assumes "sign_less_true a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "i < j"
 proof -
-  have "i \<in> gamma a" and "j \<in> gamma b" using assms by simp_all
+  have "i \<in> \<gamma> a" and "j \<in> \<gamma> b" using assms by simp_all
   then show ?thesis
     using assms(1) unfolding sign_less_true_def
     by (blast intro: sign_backward_domain.less_true_sound)
@@ -58,7 +58,7 @@ lemma sign_less_false_sound:
   assumes "sign_less_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "\<not> i < j"
 proof -
-  have "i \<in> gamma a" and "j \<in> gamma b" using assms by simp_all
+  have "i \<in> \<gamma> a" and "j \<in> \<gamma> b" using assms by simp_all
   then show ?thesis
     using assms(1) unfolding sign_less_false_def
     using sign_backward_domain.less_false_sound by blast

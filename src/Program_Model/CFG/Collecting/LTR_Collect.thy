@@ -5,7 +5,7 @@ begin
 section \<open>Which stores can occur at each node\<close>
 
 text \<open>
-  \<open>ltr_collect gs g S v\<close> is the set of stores a run can actually have at node \<open>v\<close>: take
+  \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close> is the set of stores a run can actually have at node \<open>v\<close>: take
   every valid trace that ends there and keep its final store.  This is the concrete set an
   analysis has to over-approximate, so it is the target of every soundness statement
   downstream.
@@ -28,18 +28,34 @@ text \<open>\<open>ltr_collect\<close> is the concrete collecting view: the sink
   those whose trace may carry the queried context; the context type is not required
   finite, and a bucket is not claimed to be an exact activation identity.\<close>
 
-definition ltr_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set" where
-  "ltr_collect gs g S v =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v}"
+definition ltr_collect ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set"
+    ("\<C>\<^bsub>_,_,_\<^esub>") where
+  "\<C>\<^bsub>\<G>,g,S\<^esub> v =
+     {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v}"
+
+text \<open>Up to the inhabitation witness, every lemma concerns one graph and one set of
+  initial stores, so the block fixes \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close> and writes
+  \<open>\<T>\<close> and \<open>\<C> v\<close> for \<open>\<T>\<^bsub>\<G>,g,S\<^esub>\<close> and
+  \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close>.\<close>
+
+context
+  fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
+begin
+
+private abbreviation (input) traces :: "ltr set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
+private abbreviation (input) collect :: "cfg_node \<Rightarrow> store set"
+  where "collect \<equiv> \<C>\<^bsub>\<G>,g,S\<^esub>"
+notation traces ("\<T>") and collect ("\<C>")
 
 lemma ltr_collect_I [intro]:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_store t \<in> ltr_collect gs g S (sink_node t)"
+  "t \<in> \<T> \<Longrightarrow> sink_store t \<in> \<C> (sink_node t)"
   unfolding ltr_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness.\<close>
 lemma ltr_collect_E [elim]:
-  assumes "s \<in> ltr_collect gs g S v"
-  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = s"
+  assumes "s \<in> \<C> v"
+  obtains t where "t \<in> \<T>" "sink_node t = v" "sink_store t = s"
   using assms unfolding ltr_collect_def by blast
 
 text \<open>
@@ -50,14 +66,14 @@ text \<open>
 \<close>
 
 lemma ltr_collect_intra_step:
-  assumes s: "s \<in> ltr_collect gs g S u"
+  assumes s: "s \<in> \<C> u"
     and e: "(u, a, v) \<in> intra g"
     and st: "s' \<in> edge_step a s"
-  shows "s' \<in> ltr_collect gs g S v"
+  shows "s' \<in> \<C> v"
 proof -
-  from s obtain t where t: "t \<in> valid_ltr gs g S" and n: "sink_node t = u" and w: "sink_store t = s"
+  from s obtain t where t: "t \<in> \<T>" and n: "sink_node t = u" and w: "sink_store t = s"
     by (rule ltr_collect_E)
-  have "extend t (v, s') \<in> valid_ltr gs g S"
+  have "extend t (v, s') \<in> \<T>"
     by (rule valid_ltr.intra[OF t]) (use e st n w in simp_all)
   from ltr_collect_I[OF this] show ?thesis by simp
 qed
@@ -70,8 +86,8 @@ text \<open>
 \<close>
 
 lemma valid_ltr_intra_path_extend_pair:
-  "intra_path g x y \<Longrightarrow> t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
-   \<Longrightarrow> \<exists>t'. t' \<in> valid_ltr gs g S \<and> sink_node t' = fst y \<and> sink_store t' = snd y
+  "intra_path g x y \<Longrightarrow> t \<in> \<T> \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
+   \<Longrightarrow> \<exists>t'. t' \<in> \<T> \<and> sink_node t' = fst y \<and> sink_store t' = snd y
             \<and> caller_of t' = caller_of t \<and> fst (hd (path t')) = fst (hd (path t))"
 proof (induction arbitrary: t rule: star.induct)
   case (refl x)
@@ -83,13 +99,13 @@ next
   from step.hyps(1) x y obtain a where
     e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
     by auto
-  have ext: "extend t (w, s1) \<in> valid_ltr gs g S"
+  have ext: "extend t (w, s1) \<in> \<T>"
     by (rule valid_ltr.intra[OF step.prems(1)])
        (use e st step.prems(2,3) x in simp_all)
   have hd_ext: "fst (hd (path (extend t (w, s1)))) = fst (hd (path t))"
     using valid_ltr_path_nonempty[OF step.prems(1)] by simp
   from step.IH[OF ext] y obtain t' where
-    "t' \<in> valid_ltr gs g S" "sink_node t' = fst z" "sink_store t' = snd z"
+    "t' \<in> \<T>" "sink_node t' = fst z" "sink_store t' = snd z"
     "caller_of t' = caller_of (extend t (w, s1))"
     "fst (hd (path t')) = fst (hd (path (extend t (w, s1))))" by auto
   then show ?case using hd_ext by auto
@@ -97,8 +113,8 @@ qed
 
 lemma valid_ltr_intra_path_extend:
   assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
-    and t: "t \<in> valid_ltr gs g S"
-  obtains t' where "t' \<in> valid_ltr gs g S" "sink_node t' = v" "sink_store t' = s'"
+    and t: "t \<in> \<T>"
+  obtains t' where "t' \<in> \<T>" "sink_node t' = v" "sink_store t' = s'"
     "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
   using valid_ltr_intra_path_extend_pair[OF p t] by auto
 
@@ -113,27 +129,27 @@ text \<open>
 \<close>
 
 lemma ltr_collect_call_return_step:
-  assumes s: "s \<in> ltr_collect gs g S u"
+  assumes s: "s \<in> \<C> u"
       and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
-      and body: "intra_path g (FunctionEntry q, call_enter gs (CallEdge dst pars args) s)
+      and body: "intra_path g (FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)
                    (FunctionResult q, t)"
-  shows "combine_collect gs dst s t \<in> ltr_collect gs g S cont"
+  shows "combine_collect \<G> dst s t \<in> \<C> cont"
 proof -
-  from s obtain caller where cv: "caller \<in> valid_ltr gs g S"
+  from s obtain caller where cv: "caller \<in> \<T>"
     and cn: "sink_node caller = u" and cs: "sink_store caller = s"
     by (rule ltr_collect_E)
-  let ?entered = "Call caller [(FunctionEntry q, call_enter gs (CallEdge dst pars args) s)]"
-  have ev: "?entered \<in> valid_ltr gs g S"
+  let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
+  have ev: "?entered \<in> \<T>"
     using valid_ltr.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
-  obtain callee where dv: "callee \<in> valid_ltr gs g S"
+  obtain callee where dv: "callee \<in> \<T>"
     and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
     and dc: "caller_of callee = caller_of ?entered"
     by (rule valid_ltr_intra_path_extend [OF _ ev]) (use body in simp_all)
   have "Resume caller callee
-          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
-          \<in> valid_ltr gs g S"
+          (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])
+          \<in> \<T>"
     by (rule valid_ltr.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   from ltr_collect_I [OF this] show ?thesis
     using cs ds by (simp add: sink_node_def sink_store_def)
@@ -143,7 +159,7 @@ subsection \<open>Collecting equations\<close>
 
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>
 lemma ltr_collect_init:
-  "s \<in> S \<Longrightarrow> s \<in> ltr_collect gs g S (cfg_entry g)"
+  "s \<in> S \<Longrightarrow> s \<in> \<C> (cfg_entry g)"
   using ltr_collect_I[OF valid_ltr.init] by simp
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
@@ -151,11 +167,11 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): every context bucket, and so their union, is included in the
   context-insensitive collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs R startcontext g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect \<G> R startcontext g S v c \<subseteq> \<C> v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 theorem Union_activation_collect_le_ltr_collect:
-  "(\<Union>c. activation_collect gs R startcontext g S v c) \<subseteq> ltr_collect gs g S v"
+  "(\<Union>c. activation_collect \<G> R startcontext g S v c) \<subseteq> \<C> v"
   using activation_collect_le_ltr_collect by blast
 
 text \<open>Bridge (2): the converse needs every valid trace to carry some context.  That premise is
@@ -164,28 +180,30 @@ text \<open>Bridge (2): the converse needs every valid trace to carry some conte
   \<^const>\<open>key\<close> is total; a relational one earns it from conditional totality, which is
   \<open>LTR_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem ltr_collect_eq_Union_activation_of_has_context:
-  assumes has_ctx: "\<And>t. t \<in> valid_ltr gs g S \<Longrightarrow> \<exists>c. trace_context gs R startcontext g t c"
-  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs R startcontext g S v c)"
+  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext g t c"
+  shows "\<C> v = (\<Union>c. activation_collect \<G> R startcontext g S v c)"
 proof
-  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs R startcontext g S v c)"
+  show "\<C> v \<subseteq> (\<Union>c. activation_collect \<G> R startcontext g S v c)"
   proof
-    fix x assume "x \<in> ltr_collect gs g S v"
-    then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
+    fix x assume "x \<in> \<C> v"
+    then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    from has_ctx [OF t(1)] obtain c where "trace_context gs R startcontext g t c" ..
-    with t show "x \<in> (\<Union>c. activation_collect gs R startcontext g S v c)"
+    from has_ctx [OF t(1)] obtain c where "trace_context \<G> R startcontext g t c" ..
+    with t show "x \<in> (\<Union>c. activation_collect \<G> R startcontext g S v c)"
       by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs R startcontext g S v c) \<subseteq> ltr_collect gs g S v"
+  show "(\<Union>c. activation_collect \<G> R startcontext g S v c) \<subseteq> \<C> v"
     by (rule Union_activation_collect_le_ltr_collect)
 qed
 
 theorem ltr_collect_eq_Union_activation_of_fun:
-  "ltr_collect gs g S v
-     = (\<Union>c. activation_collect gs (call_context_rel_of_fun f) startcontext g S v c)"
+  "\<C> v
+     = (\<Union>c. activation_collect \<G> (call_context_rel_of_fun f) startcontext g S v c)"
   by (rule ltr_collect_eq_Union_activation_of_has_context)
      (simp add: trace_context_of_fun_iff)
+
+end
 
 
 section \<open>The collecting semantics is inhabited\<close>
@@ -213,28 +231,28 @@ lemma ltr_witness_edge [simp]:
   by (simp add: ltr_witness_cfg_def)
 
 lemma ltr_witness_root:
-  "Root [(Statement 0, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+  "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub>"
 proof -
-  have "Root [(cfg_entry ltr_witness_cfg, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+  have "Root [(cfg_entry ltr_witness_cfg, s)] \<in> \<T>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub>"
     by (rule valid_ltr.init) simp
   then show ?thesis by simp
 qed
 
 theorem ltr_collect_witness:
-  "s \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 0)"
-  "s(STR ''x'' := 1) \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 1)"
+  "s \<in> \<C>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub> (Statement 0)"
+  "s(STR ''x'' := 1) \<in> \<C>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub> (Statement 1)"
 proof -
-  have root: "Root [(Statement 0, s)] \<in> valid_ltr gs ltr_witness_cfg {s}"
+  have root: "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub>"
     by (rule ltr_witness_root)
-  show "s \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 0)"
+  show "s \<in> \<C>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub> (Statement 0)"
     using ltr_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
   have "extend (Root [(Statement 0, s)]) (Statement 1, s(STR ''x'' := 1))
-          \<in> valid_ltr gs ltr_witness_cfg {s}"
+          \<in> \<T>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub>"
     by (rule valid_ltr.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
                                         and v = "Statement 1"])
        (simp_all add: ltr_witness_cfg_def sink_node_def sink_store_def)
   from ltr_collect_I[OF this]
-  show "s(STR ''x'' := 1) \<in> ltr_collect gs ltr_witness_cfg {s} (Statement 1)"
+  show "s(STR ''x'' := 1) \<in> \<C>\<^bsub>\<G>,ltr_witness_cfg,{s}\<^esub> (Statement 1)"
     by (simp add: sink_node_def sink_store_def)
 qed
 

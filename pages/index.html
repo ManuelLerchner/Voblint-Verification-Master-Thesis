@@ -428,7 +428,7 @@
           for code that runs, and nobody looks again. Mature analyzers track these as their own
           category; Goblint's issue tracker has
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">a label for them</a>.
-          Below is one of them, replayed with the verdicts it got backwards. The shorthand in
+          Below is one of them, replayed with the verdict it got wrong. The shorthand in
           the margins is the analyzer's own state, and the next two sections say what it means.
           <a href="#verified">What a machine-checked proof rules out</a> comes after them.
         </p>
@@ -449,8 +449,8 @@
           In C, <code>%</code> truncates toward zero, so a negative odd <code>c</code> gives
           <code>c % 2 = −1</code>. Goblint's congruence domain read <code>c % 2</code> as the
           constant <code>1</code> for every <code>c</code> it knew to be odd, sign included. Here
-          <code>c</code> is −5 or −7, so it reported a check that every run violates as succeeding,
-          and the one every run satisfies as failing. No wrap-around is involved: this is plain
+          <code>c</code> is −5 or −7, so it reported <code>c % 2 == 1</code> as succeeding although
+          every run violates it. No wrap-around is involved: this is plain
           signed arithmetic, so the program means the same thing in VIMP. The dot follows one real
           run, with <code>top ≠ 0</code>.
         </p>
@@ -465,10 +465,10 @@
 <span class="ml rl rl-2">    c = -7;<span class="mh">−5 ⊔ −7 = 1+2ℤ</span></span>
 <span class="ml">  }</span>
 <span class="ml bad-step">  <span class="mh bad-hint">↳ 1+2ℤ % 2 = 1  ✗ every run gives −1</span></span>
-<span class="ml rl rl-4 refuted">  __goblint_check(c % 2 == 1);<span class="mb">✗ will succeed</span></span>
-<span class="ml rl rl-5 refuted alarm">  __goblint_check(c % 2 == -1);<span class="mb">✗ will fail</span></span>
+<span class="ml rl rl-4 refuted alarm">  __goblint_check(c % 2 == 1);<span class="mb">✗ will succeed</span></span>
+<span class="ml rl rl-5">  __goblint_check(c % 2 == -1);<span class="mb">not documented</span></span>
 <span class="ml">}</span></pre>
-            <p class="bug-verdict-line wrong"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> <span>Both verdicts are backwards: the first check fails in every run, the second holds in every run.</span></p>
+            <p class="bug-verdict-line wrong"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> <span>The first verdict is wrong: the check fails in every run. Issue #1156 does not record Goblint's verdict on the second check.</span></p>
           </div>
 
           <div class="bug-pane right">
@@ -1398,7 +1398,7 @@ datatype ltr =
         <p>
           A local trace is a value in the logic and nowhere else. It exists so that soundness has
           something to be a statement <em>about</em>, and the proofs quantify over the set without
-          anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">9,406</span> lines of
+          anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">9,390</span> lines of
           OCaml exported from these theories, the number that mention <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a>,
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> or
           <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> is zero. The specification does not ship.
@@ -1672,8 +1672,8 @@ datatype ltr =
           collects by starting at the entry node, walking an edge, opening a call and closing one.
           Ask where each trace ends. Keep the store it ended with.
         </p>
-        <pre class="prose-code" data-lang="isabelle"><code>ltr_collect gs g S v =
-  {sink_store t | t. t &#8712; valid_ltr gs g S &#8743; sink_node t = v}</code></pre>
+        <pre class="prose-code" data-lang="isabelle"><code>𝒞<sub>𝒢,g,S</sub> v =
+  {sink_store t | t. t &#8712; 𝒯<sub>𝒢,g,S</sub> &#8743; sink_node t = v}</code></pre>
         <p>
           One bucket per node, holding the stores a real run can be in there. Neither of the other
           two semantics can be asked for this: over <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> there is no <code>v</code>
@@ -4396,8 +4396,8 @@ fun main() {
         </p>
         <p>
           What is left to read is <span data-stat="semantics.theories">6</span> theories,
-          <span data-stat="semantics.lines">963</span> lines out of the
-          <span data-stat="isabelle.lines">62,098</span> in <code>src/</code>, with
+          <span data-stat="semantics.lines">968</span> lines out of the
+          <span data-stat="isabelle.lines">63,133</span> in <code>src/</code>, with
           <code>pstep</code>'s <span data-stat="semantics.pstep_rules">14</span> rules among
           them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
           the equation generator, the solver, the five domains and the result table, the kernel
@@ -4767,7 +4767,8 @@ fun main() {
                 <h4>The solver's answer <code>γ(σ (pp0, c))</code></h4>
                 <p>
                   A post-solution whenever the solve terminates
-                  (<a href="Voblint/Voblint_Solver/TD_Solver_Bridge.html#TD_Solver_Bridge.TD_side_upd_rule.part_post_solution_of_solve_c%7Cfact"><code>part_post_solution_of_solve_c</code></a>),
+                  (the vendored <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact"><code>partial_post_solution</code></a>, with termination discharged by
+                  <a href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.TD_side_rule_Interp.solve_dom_of_solve_c%7Cfact"><code>solve_dom_of_solve_c</code></a>),
                   read back as the result the analyzer reports
                   (<a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.gamma_reader_eq_lookup%7Cfact"><code>gamma_reader_eq_lookup</code></a>).
                 </p>
@@ -4858,7 +4859,7 @@ fun main() {
           <button type="button" data-pillar="1" aria-pressed="true"><b>1</b> Compiler simulation <code>csim_step</code></button>
           <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_transfer_for</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
-          <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>part_post_solution_of_solve_c</code></button>
+          <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
           <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
         </div>
 
@@ -4898,6 +4899,30 @@ fun main() {
         </p>
       </div>
 
+      <!-- notation:begin -->
+      <!-- Generated by thesis/tools/notation.py from thesis/shared/notation.toml. -->
+      <details class="notation-legend">
+        <summary>How to read the theorem statements</summary>
+        <table class="notation-table">
+          <thead><tr><th>Symbol</th><th>Reads as</th><th>In the theories</th></tr></thead>
+          <tbody>
+          <tr><td class="nl-sym">γ a</td><td>gamma of <em>a</em></td><td><a href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.sound_domain_class.gamma%7Cconst"><code>gamma</code></a></td></tr>
+          <tr><td class="nl-sym">⟦e⟧<sub>e</sub> s</td><td>the value of <em>e</em> in <em>s</em></td><td><a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.aval%7Cconst"><code>aval</code></a></td></tr>
+          <tr><td class="nl-sym">⟦σ⟧</td><td>the stores <em>σ</em> represents</td><td><a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.gamma_state%7Cconst"><code>gamma_state</code></a></td></tr>
+          <tr><td class="nl-sym">⟦d⟧<sub>⊥</sub></td><td>the stores <em>d</em> represents</td><td><a href="Voblint/Voblint_Domain/Nonrelational_Reachability.html#Nonrelational_Reachability.gamma_state_lift%7Cconst"><code>gamma_state_lift</code></a></td></tr>
+          <tr><td class="nl-sym">𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em></td><td><a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst"><code>psteps</code></a></td></tr>
+          <tr><td class="nl-sym">𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em> in <em>g</em></td><td><a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst"><code>csteps</code></a></td></tr>
+          <tr><td class="nl-sym">Π,g ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
+          <tr><td class="nl-sym">𝒢</td><td>the globals classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
+          <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></td></tr>
+          <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a></td></tr>
+          <tr><td class="nl-sym">activation_collect 𝒢 R startcontext g S v c<span class="nl-local"><a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.buckets%7Cconst">𝒜 v c</a> exists only where a locale fixes its environment: within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
+          </tbody>
+        </table>
+        <p class="notation-note">Each name links to its declaration. <a href="thesis.pdf">The thesis</a>, appendix B, gives the meaning of every symbol and the proof-local shorthands.</p>
+      </details>
+      <!-- notation:end -->
+
       <figure class="scene scene-theorems" data-theorem="source">
         <div class="thm-tabs" role="tablist" aria-label="Flagship theorems">
           <button type="button" role="tab" data-theorem="source" aria-selected="true">Any run, stopped anywhere</button>
@@ -4929,13 +4954,12 @@ fun main() {
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_certified_source_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
-      and "star (pstep (declared_global p) (prog_table p))
-             (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and "declared_global p, prog_table p
+             ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
-  shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-           ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) v
+  shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
+           ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
            ∧ analysis_result_covers D rule ctx p v s
            ∧ checks_sound_at res v s"</pre>
             </details>
@@ -4960,17 +4984,16 @@ fun main() {
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_check_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
-      and "star (pstep (declared_global p) (prog_table p))
-             (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and "declared_global p, prog_table p
+             ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "next_check residual = Some e"
       and "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
   shows "∃c ∈ set (res_checks res). check_exp c = e
-           ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) (check_point c)
+           ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
-           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (aval e s))
-           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"</pre>
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (⟦e⟧<sub>e</sub> s))"</pre>
             </details>
           </article>
 
@@ -4996,8 +5019,7 @@ fun main() {
       and "run_voblint D rule ctx p = Analysed res"
       and "chk ∈ set (res_checks res)"
       and "check_verdict chk = Dead"
-  shows "ltr_collect (declared_global p) (prog_cfg p)
-           (cinit_stores (declared_global p)) (check_point chk) = {}"</pre>
+  shows "𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point chk) = {}"</pre>
             </details>
           </article>
 
@@ -5021,8 +5043,7 @@ fun main() {
 <pre>theorem run_voblint_arithmetic_safe:
   assumes "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
-      and "s ∈ ltr_collect (declared_global p) (prog_cfg p)
-             (cinit_stores (declared_global p)) v"
+      and "s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v"
       and "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"</pre>
             </details>
@@ -5220,7 +5241,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="1">
                 <p class="zoom-kicker">The flagship theorem</p>
-                <pre class="zoom-formal" data-lang="isabelle">check_verdict c = Decided Check_Proved ⟶ truthy (aval e s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s)</pre>
                 <p>
                   For every store <code>s</code> a source run has when it is about to run the check,
                   a listed check for <code>i == 5</code> sits at a node <code>s</code> reaches, and
@@ -5231,7 +5252,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="2">
                 <p class="zoom-kicker">Why the verdict may say PROVED</p>
-                <pre class="zoom-formal" data-lang="isabelle">classify c d = Check_Proved ⟹ s ∈ ⟦d⟧ ⟹ truthy (aval c s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">classify c d = Check_Proved ⟹ s ∈ ⟦d⟧ ⟹ truthy (⟦c⟧<sub>e</sub> s)</pre>
                 <p>
                   The analysis says PROVED only when every store its state <code>d</code> describes
                   satisfies the check. At the check, <code>d</code> is <code>i ∈ [5, 5]</code>: one
@@ -5242,7 +5263,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="3">
                 <p class="zoom-kicker">Why the run is described by <code>d</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v ⊆ ⟦state_at ugs p v⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">𝒞<sub>𝒢,prog_cfg p,cinit_stores 𝒢</sub> v ⊆ ⟦state_at 𝒢 p v⟧</pre>
                 <p>
                   Every store the collecting semantics reaches at the check's node lies in the
                   concretization of the result there. Our run's store, <code>i = 5</code>, is in
@@ -5253,7 +5274,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="4">
                 <p class="zoom-kicker">Why every node is covered</p>
-                <pre class="zoom-formal" data-lang="isabelle">activation_collect gs R startcontext g S v c ⊆ cover v c</pre>
+                <pre class="zoom-formal" data-lang="isabelle">activation_collect 𝒢 R startcontext g S v c ⊆ cover v c</pre>
                 <p>
                   By induction along the run's trace <code>E → H → B → H → … → X</code>: if one
                   store is covered by the solver's value at its node, the next store is covered at
@@ -5265,7 +5286,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="5">
                 <p class="zoom-kicker">One step: the edge <code>i := i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := aval a s) ∈ ⟦asn x a σ⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := ⟦a⟧<sub>e</sub> s) ∈ ⟦asn x a σ⟧</pre>
                 <p>
                   On its last pass the run is at <code>B</code> with <code>i = 4</code>, inside
                   <code>σ(B) = [0, 4]</code>. This is the contract every transfer meets: the
@@ -5278,7 +5299,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="6">
                 <p class="zoom-kicker">The right-hand side <code>i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">(∀x. s x ∈ γ (σ x)) ⟹ aval e s ∈ γ (ev e σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">(∀x. s x ∈ γ (σ x)) ⟹ ⟦e⟧<sub>e</sub> s ∈ γ (ev e σ)</pre>
                 <p>
                   If every variable's value is covered by the abstract state, evaluating the
                   expression abstractly covers evaluating it concretely: <code>4 + 1 = 5</code>
@@ -5522,104 +5543,104 @@ qed</code></pre>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168-L263" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Spec</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html" title="Theory in the formalization">dg_spec</a>
-            <span class="align-note">An analysis is a record of transfer functions, one per edge action, matching Goblint's method-per-construct shape. Spec's startstate, exitstate and morphstate have no counterpart.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" title="Definition in the formalization">dg_spec</a>
+            <span class="align-note">An analysis is a record with one transfer per edge action plus the call and return operations, matching Goblint's method-per-construct shape. Spec's startstate, exitstate and morphstate have no counterpart.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L170-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">D / G lattices</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html" title="Theory in the formalization">'dl / 'dg carriers</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" title="Definition in the formalization">'dl / 'dg carriers</a>
             <span class="align-note">The local/global split exists, but the shipped domains keep their whole state local.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">TD3 solver</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Unsorted/TD/TD_side_upd_rule.html" title="Theory in the formalization">Verified TD solver with side effects</a>
-            <span class="align-note">A verified relative of TD3, vendored from td-verification, without Goblint's sidel and demandl.</span>
+            <a class="align-voblint" href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule%7Clocale" title="Definition in the formalization">Top-down solver with side effects</a>
+            <span class="align-note">Vendored from td-verification with a partial-correctness proof; it has neither Goblint's sidel nor its demandl.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sidel into a function entry</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Call_Programs.html" title="Theory in the formalization">Side effect into an entry proxy</a>
-            <span class="align-note">Callee entries are reached through a global proxy; no equivalence to Goblint's fixpoint is claimed.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_gk%7Ctype" title="Definition in the formalization">Side effect into an entry proxy</a>
+            <span class="align-note">A callee entry is published to a global proxy key and read back by the entry's local unknown, so it widens one hop later; no equivalence to Goblint's fixpoint is claimed.</span>
           </li>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L233-L237" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">enter returning alternatives</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html" title="Theory in the formalization">dgs_enter</a>
-            <span class="align-note">A list of alternatives, each a pair of caller continuation and callee entry state, folded by the call routing.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst" title="Definition in the formalization">dgs_enter</a>
+            <span class="align-note">A list of alternatives, each a pair of caller continuation and callee entry state; the call-site equation routes each alternative and joins their contributions.</span>
           </li>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L196-L197" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">context from the callee state</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html" title="Theory in the formalization">Context policies (route)</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
             <span class="align-note">The context is chosen from the state after enter, as in Goblint, though the selector does not see which callee it is choosing for.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L239-L251" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">combine_env / combine_assign</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html" title="Theory in the formalization">dgs_combine_env / dgs_combine_assign</a>
-            <span class="align-note">Both hooks exist: the specifications the analyses execute split the environment merge from the return write, as Goblint does; only the proof-side whole-state specs leave combine_env the identity.</span>
+            <span class="align-voblint"><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst" title="Definition in the formalization">dgs_combine_env</a> / <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst" title="Definition in the formalization">dgs_combine_assign</a></span>
+            <span class="align-note">Both hooks exist: the specifications the analyses execute split the environment merge from the return write, as Goblint does; only the proof-side whole-state specifications leave the environment merge the identity.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L381-L394" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Widening and narrowing</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Unsorted/TD/Update_rules.html" title="Theory in the formalization">Four global update rules</a>
-            <span class="align-note">Chosen per configuration, not per unknown; entries widen one hop later.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype" title="Definition in the formalization">Four global update rules</a>
+            <span class="align-note">Local unknowns are warrowed at widening points under every rule; the merge rule for side-effected globals is chosen once per run, not per unknown.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/callstring.ml#L19-L55" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Context-sensitivity options</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Call_String_Context.html#Call_String_Context.cs_route%7Cconst" title="Theory in the formalization">None, entry state, call strings</a>
-            <span class="align-note">Call strings are finite; nothing certifies that entry-state contexts stay finite.</span>
+            <a class="align-voblint" href="Voblint/Voblint_CLI/Analysis_Config.html#Analysis_Config.context_mode%7Ctype" title="Definition in the formalization">None, entry state, call strings</a>
+            <span class="align-note">Bounded call strings give a finite context space over a compiled program; nothing certifies that entry-state contexts stay finite, and lifters such as context gas are absent.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">IntDomTuple</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Analysis_Int/Int_Domain.html" title="Theory in the formalization">Int product: sign × interval × parity × congruence</a>
-            <span class="align-note">Goblint combines six integer domains; interval and congruence have counterparts here, and a DefExc-style exclusion component cannot form the required lattice over unbounded integers, which is an argument recorded in the alignment register rather than a machine-checked theorem.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Analysis_Int/Int_Domain.html#Int_Domain.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
+            <span class="align-note">Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intervalDomain.ml#L35-L69" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Machine integers (ikind)</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <span class="align-voblint">Mathematical integers</span>
-            <span class="align-note">No theorem here covers wrap-around arithmetic.</span>
+            <span class="align-note">No soundness theorem here covers wrap-around arithmetic.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
-            <span class="align-voblint">Two numeric queries in the check layer</span>
+            <a class="align-voblint" href="Voblint/Voblint_Domain/Abstract_Numeric_Queries.html#Abstract_Numeric_Queries.abstract_numeric_queries%7Clocale" title="Definition in the formalization">Two numeric queries in the check layer</a>
             <span class="align-note">A transfer function cannot ask a query at all.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L199" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sync</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <span class="align-voblint">none</span>
-            <span class="align-note">Not modeled anywhere in the development.</span>
+            <span class="align-note">The analysis record has no sync hook; publication happens only in an edge transfer's result.</span>
           </li>
           <li class="align-row absent">
-            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168-L263" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads and the analysis manager</a>
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads and the analysis manager</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <span class="align-voblint">none</span>
-            <span class="align-note">Goblint's main use: many analyses composed, thread creation, privatization. None of it is modeled here.</span>
+            <span class="align-note">Goblint composes many analyses through its manager and handles thread creation and privatization. None of it is modeled here.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Solver termination</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_CLI/Analysis_Certified.html" title="Theory in the formalization">config_terminates</a>
-            <span class="align-note">Neither analyzer proves its solver terminates in general; here it is a premise every soundness theorem carries, discharged per program by evaluation.</span>
+            <a class="align-voblint" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst" title="Definition in the formalization">config_terminates</a>
+            <span class="align-note">Termination is a premise of the end-to-end soundness theorem, discharged per program by evaluation; no general termination theorem exists here.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/util/cilfacade.ml#L110-L119" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Any program CIL accepts</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html" title="Theory in the formalization">Admissible input</a>
-            <span class="align-note">A well-formedness gate inside run_voblint rejects programs the compiler's proof does not cover; Goblint has no counterpart.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Compile/Compile_Invariants.html#Compile_Invariants.wf_program_compile_input_exec%7Cconst" title="Definition in the formalization">Admissible input</a>
+            <span class="align-note">A well-formedness gate inside the analysis function rejects inputs the compiler proof does not cover, and no guarantee applies to them; Goblint has no admissibility predicate.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/util/cilfacade.ml#L110-L119" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">C through CIL</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <a class="align-voblint" href="Voblint/Voblint_VIMP/VIMP_Proc.html" title="Theory in the formalization">VIMP</a>
-            <span class="align-note">A small integer language: no memory, pointers or types.</span>
+            <span class="align-note">A small language of integer variables and procedures: no memory, pointers, arrays or floating point.</span>
           </li>
         </ul>
         <figcaption>
@@ -5784,8 +5805,8 @@ qed</code></pre>
               <text class="mono" x="685" y="440" text-anchor="middle">Voblint_Solver</text>
             </g>
             <g class="berg-label below">
-              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">62,098</tspan> lines of Isabelle</text></a>
-              <text x="660" y="272"><tspan data-stat="isabelle.theories">223</tspan> theories · <tspan data-stat="isabelle.proofs">3,012</tspan> lemmas · <tspan data-stat="isabelle.defs">1,389</tspan> definitions</text>
+              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">63,133</tspan> lines of Isabelle</text></a>
+              <text x="660" y="272"><tspan data-stat="isabelle.theories">225</tspan> theories · <tspan data-stat="isabelle.proofs">3,067</tspan> lemmas · <tspan data-stat="isabelle.defs">1,413</tspan> definitions</text>
               <line x1="655" y1="258" x2="615" y2="250"/>
             </g>
             <g class="berg-label solver">
@@ -5800,14 +5821,14 @@ qed</code></pre>
               <text class="muted" x="40" y="196">outside the proof</text>
             </g>
             <g class="berg-label corpus">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">289</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">434</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">292</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">442</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
               <text class="muted" x="40" y="336">tested, not proved</text>
             </g>
           </g>
           <g class="berg-label above">
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/codegen/generated/ml" target="_blank" rel="noreferrer">
-              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,406</tspan> lines</text>
+              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,390</tspan> lines</text>
               <text x="560" y="60">generated OCaml: the analyzer that runs</text>
             </a>
             <line x1="555" y1="66" x2="486" y2="120"/>
@@ -5967,7 +5988,7 @@ qed</code></pre>
           everything below that, reached through those, in a lighter dotted line. The example sessions
           are drawn together at the surface. Lines are counted per <code>ROOT</code> directory with the
           scanner behind <code>pixi run theory-stats</code>:
-          <span data-stat="isabelle.lines">62,098</span> in <code>src</code> plus
+          <span data-stat="isabelle.lines">63,133</span> in <code>src</code> plus
           <span data-stat="solver.lines">31,328</span> across the
           <span data-stat="solver.theories">26</span> theory files in the vendored solver's directory,
           of which Voblint's imports reach <span data-stat="solver.used.theories">5</span> theories and

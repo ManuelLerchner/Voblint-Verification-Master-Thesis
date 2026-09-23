@@ -6,7 +6,7 @@ section \<open>Locals and globals over the scalar store\<close>
 
 text \<open>
   The store is one \<open>vname \<Rightarrow> int\<close> function; the locals/globals split is a
-  classifier \<open>gs :: vname \<Rightarrow> bool\<close> on top of it. A call needs both halves of
+  classifier \<open>\<G> :: vname \<Rightarrow> bool\<close> on top of it. A call needs both halves of
   that split: \<open>enter_state\<close> keeps the globals and resets the locals on entry,
   \<open>combine_env caller callee\<close> restores the caller's locals and keeps the
   callee's globals on exit.
@@ -19,54 +19,57 @@ text \<open>
 
 type_synonym pname = String.literal
 
-definition combine_env :: "('k \<Rightarrow> bool) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
-  "combine_env gs s t = (\<lambda>n. if gs n then t n else s n)"
+definition combine_env ::
+    "('k \<Rightarrow> bool) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
+  "combine_env \<G> s t = (\<lambda>n. if \<G> n then t n else s n)"
 
 definition enter_frame :: "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
-  "enter_frame gs reset_val s = combine_env gs (\<lambda>_. reset_val) s"
+  "enter_frame \<G> reset_val s = combine_env \<G> (\<lambda>_. reset_val) s"
 
 definition enter_state :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store" where
-  "enter_state gs s = enter_frame gs 0 s"
+  "enter_state \<G> s = enter_frame \<G> 0 s"
 
 lemma combine_query [simp]:
-  "combine_env gs s t n = (if gs n then t n else s n)"
+  "combine_env \<G> s t n = (if \<G> n then t n else s n)"
   unfolding combine_env_def by simp
 
 lemma enter_frame_apply [simp]:
-  "enter_frame gs reset_val s n = (if gs n then s n else reset_val)"
+  "enter_frame \<G> reset_val s n = (if \<G> n then s n else reset_val)"
   unfolding enter_frame_def by simp
 
 lemma enter_state_apply [simp]:
-  "enter_state gs s n = (if gs n then s n else 0)"
+  "enter_state \<G> s n = (if \<G> n then s n else 0)"
   unfolding enter_state_def by simp
 
 lemma combine_collapse [simp]:
-  "combine_env gs s s = s"
+  "combine_env \<G> s s = s"
   by (rule ext) simp
 
 lemma combine_nest_left [simp]:
-  "combine_env gs (combine_env gs s t) u = combine_env gs s u"
+  "combine_env \<G> (combine_env \<G> s t) u = combine_env \<G> s u"
   by (rule ext) simp
 
 lemma combine_nest_right [simp]:
-  "combine_env gs s (combine_env gs t u) = combine_env gs s u"
+  "combine_env \<G> s (combine_env \<G> t u) = combine_env \<G> s u"
   by (rule ext) simp
 
 section \<open>C-faithful initial store set\<close>
 
 text \<open>
   VIMP approximates C startup by initializing every global with no explicit
-  initializer to 0 and treating every local integer slot as unconstrained.
-  \<open>cinit_stores\<close> is the corresponding set of concrete stores: those where every
-  global is 0 and locals are unconstrained. This matches VIMP's total-store
-  semantics, where every declared variable already has some value on entry; it
-  is not a model of C's indeterminate-value or undefined-behaviour rules, and
-  VIMP has no global initializer syntax for a declaration such as \<open>int x = 42;\<close>
-  to diverge from.
+  initializer to 0 and leaving every other name of the initial store
+  unconstrained. \<open>cinit_stores\<close> is the corresponding set of concrete stores:
+  those where every global is 0, so \<open>main\<close>'s locals may hold any integer. It
+  constrains only the initial store. A callee's locals do not come from it:
+  \<open>enter_state\<close> resets them to 0 on every entry, which defines what C leaves
+  indeterminate, as \<open>c_div\<close> defines division by zero. Neither convention is a
+  model of C's indeterminate-value or undefined-behaviour rules, and VIMP has no
+  global initializer syntax for a declaration such as \<open>int x = 42;\<close> to diverge
+  from.
 \<close>
 
 definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> store set" where
-  "cinit_stores gs = {s. \<forall>x. gs x \<longrightarrow> s x = 0}"
+  "cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}"
 
 end
 

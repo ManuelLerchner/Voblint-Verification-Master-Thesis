@@ -76,12 +76,12 @@ subsection \<open>The overriding entry transfer\<close>
 
 definition forget_formals ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st" where
-  "forget_formals gs ci s =
-     foldl (\<lambda>s f. update_resolved_st_q s (location_of gs f) STop) s (ci_formals ci)"
+  "forget_formals \<G> ci s =
+     foldl (\<lambda>s f. update_resolved_st_q s (location_of \<G> f) STop) s (ci_formals ci)"
 
 definition forget_var ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> sign \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted" where
-  "forget_var gs v w = map_lift (\<lambda>s. update_resolved_st_q s (location_of gs v) w)"
+  "forget_var \<G> v w = map_lift (\<lambda>s. update_resolved_st_q s (location_of \<G> v) w)"
 
 text \<open>Alternative 1 is the stock singleton entry, continuation untouched. Alternative 2
   forgets the formals on entry \<^emph>\<open>and\<close> forgets the caller's own \<open>x\<close> in its continuation to
@@ -95,53 +95,53 @@ text \<open>Alternative 1 is the stock singleton entry, continuation untouched. 
 definition ov_enter ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> call_info
    \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted enter_result list" where
-  "ov_enter gs ep ci d =
-     (let entered = transfer_lift ep (sign_enter_st_for gs ci) d
+  "ov_enter \<G> ep ci d =
+     (let entered = transfer_lift ep (sign_enter_st_for \<G> ci) d
       in [(d, entered),
-          (forget_var gs (STR ''x'') STop d, map_lift (forget_formals gs ci) entered)])"
+          (forget_var \<G> (STR ''x'') STop d, map_lift (forget_formals \<G> ci) entered)])"
 
 definition ov_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (pp \<times> sign list, (unit, sign list) routed_gk, unit,
         sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
-  "ov_spec gs ep = (sign_conf_spec gs ep)
-     \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (ov_enter gs ep ci)) \<rparr>"
+  "ov_spec \<G> ep = (sign_conf_spec \<G> ep)
+     \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (ov_enter \<G> ep ci)) \<rparr>"
 
 declare ov_spec_def [code_unfold]
 
 text \<open>Only the entry differs; every other field is \<^const>\<open>sign_conf_spec\<close>'s.\<close>
 
 lemma dg_spec_step_ov_spec [simp]:
-  "dg_spec_step (ov_spec gs ep) a = dg_spec_step (sign_conf_spec gs ep) a"
+  "dg_spec_step (ov_spec \<G> ep) a = dg_spec_step (sign_conf_spec \<G> ep) a"
   by (cases a) (simp_all add: ov_spec_def)
 
 lemma dgs_combine_env_ov_spec [simp]:
-  "combine_env\<^sup># (ov_spec gs ep) = combine_env\<^sup># (sign_conf_spec gs ep)"
+  "combine_env\<^sup># (ov_spec \<G> ep) = combine_env\<^sup># (sign_conf_spec \<G> ep)"
   by (simp add: ov_spec_def)
 
 lemma dgs_combine_assign_ov_spec [simp]:
-  "combine_assign\<^sup># (ov_spec gs ep) = combine_assign\<^sup># (sign_conf_spec gs ep)"
+  "combine_assign\<^sup># (ov_spec \<G> ep) = combine_assign\<^sup># (sign_conf_spec \<G> ep)"
   by (simp add: ov_spec_def)
 
 lemma dgs_enter_ov_spec [simp]:
-  "enter\<^sup># (ov_spec gs ep) ci = local_enter_transfer (ov_enter gs ep ci)"
+  "enter\<^sup># (ov_spec \<G> ep) ci = local_enter_transfer (ov_enter \<G> ep ci)"
   by (simp add: ov_spec_def)
 
 text \<open>The override runs its continuation once wherever the stock specification
   does: only the entry changed, and it answers its alternatives outright.\<close>
 
-lemma dg_spec_wf_ov_spec [intro, simp]: "dg_spec_wf (ov_spec gs ep)"
+lemma dg_spec_wf_ov_spec [intro, simp]: "dg_spec_wf (ov_spec \<G> ep)"
 proof (unfold dg_spec_wf_def, intro conjI allI)
   fix a d key
-  show "sp_wf (dg_spec_step (ov_spec gs ep) a (mk_dg_man d key))"
+  show "sp_wf (dg_spec_step (ov_spec \<G> ep) a (mk_dg_man d key))"
     by (simp add: dg_spec_wf_step[OF dg_spec_wf_sign_conf_spec])
 next
   fix ci d key
-  show "sp_wf (enter\<^sup># (ov_spec gs ep) ci (mk_dg_man d key))"
+  show "sp_wf (enter\<^sup># (ov_spec \<G> ep) ci (mk_dg_man d key))"
     by (simp add: local_enter_transfer_def)
 next
   fix ci d key ex
-  show "sp_wf (dg_spec_combine_transfer (ov_spec gs ep) ci (mk_dg_man d key) ex)"
+  show "sp_wf (dg_spec_combine_transfer (ov_spec \<G> ep) ci (mk_dg_man d key) ex)"
     unfolding dg_spec_combine_transfer_def dgs_combine_env_ov_spec dgs_combine_assign_ov_spec
     by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def
         local_combine_transfer_def)
@@ -151,10 +151,10 @@ text \<open>Entry is absent from \<^locale>\<open>sound_dg_spec_core\<close>, so
   stock core soundness outright.\<close>
 
 lemma sound_dg_spec_core_ov_spec:
-  assumes exact: "\<And>s. ep s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "sound_dg_spec_core (ov_spec gs ep) (sign_conf_gamma gs) gs"
+  assumes exact: "\<And>s. ep s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  shows "sound_dg_spec_core (ov_spec \<G> ep) (sign_conf_gamma \<G>) \<G>"
 proof -
-  interpret stock: sound_dg_spec_core "sign_conf_spec gs ep" "sign_conf_gamma gs" gs
+  interpret stock: sound_dg_spec_core "sign_conf_spec \<G> ep" "sign_conf_gamma \<G>" \<G>
     by (rule sign_conf_sound_exec[OF exact])
   show ?thesis
   proof (unfold_locales, goal_cases)
@@ -502,7 +502,7 @@ lemma ov_caller_store_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
-          \<in> gamma (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)) y)"
+          \<in> \<gamma> (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)) y)"
     by (cases "y = STR ''x''")
        (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
 qed
@@ -571,7 +571,7 @@ lemma ov_cont2_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
-          \<in> gamma (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := STop)) y)"
+          \<in> \<gamma> (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := STop)) y)"
     by (cases "y = STR ''x''")
        (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
 qed
@@ -586,7 +586,7 @@ lemma ov_entry1_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
-          \<in> gamma (((enter_frame ov_gs STop
+          \<in> \<gamma> (((enter_frame ov_gs STop
                        ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
                     (STR ''a'' := SPos)) y)"
     by (cases "y = STR ''a''")
@@ -605,7 +605,7 @@ lemma ov_entry2_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
-          \<in> gamma (((enter_frame ov_gs STop
+          \<in> \<gamma> (((enter_frame ov_gs STop
                        ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
                     (STR ''a'' := STop)) y)"
     by (cases "y = STR ''a''")
@@ -692,8 +692,8 @@ lemma ov_intra_side_free:
   by (simp add: dg_spec_step_local_state_st_for_lifted)
 
 lemma dg_spec_combine_transfer_ov_spec [simp]:
-  "dg_spec_combine_transfer (ov_spec gs ep) ci m exit
-     = dg_spec_combine_transfer (sign_conf_spec gs ep) ci m exit"
+  "dg_spec_combine_transfer (ov_spec \<G> ep) ci m exit
+     = dg_spec_combine_transfer (sign_conf_spec \<G> ep) ci m exit"
   by (simp add: dg_spec_combine_transfer_def)
 
 lemma ov_cmb_side_free_at_gk0:
@@ -873,7 +873,7 @@ interpretation ov_routed: routed_context_base_hetero
   "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
-  "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for ov_gs) m)" ov_R
+  "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for ov_gs) m\<rbrakk>\<^sub>\<bottom>" ov_R
 proof (rule routed_context_base_hetero.intro
     [OF dg_ctx_activation_base.intro[OF sound_dg_spec_core_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
@@ -974,7 +974,7 @@ proof -
     by simp
   show ?thesis
     using routed_entry_context_relI[
-            where alts = "ov_enter ov_gs ov_ep" and gammaDG = "sign_conf_gamma ov_gs"
+            where alts = "ov_enter ov_gs ov_ep" and \<gamma>\<^sub>D\<^sub>G = "sign_conf_gamma ov_gs"
               and sigma = "snd ov_sol"
               and route = "exec_formals_route ov_gs" and u = "Statement 3" and ctx = "[]",
             OF mem
@@ -1002,7 +1002,7 @@ proof -
     by simp
   show ?thesis
     using routed_entry_context_relI[
-            where alts = "ov_enter ov_gs ov_ep" and gammaDG = "sign_conf_gamma ov_gs"
+            where alts = "ov_enter ov_gs ov_ep" and \<gamma>\<^sub>D\<^sub>G = "sign_conf_gamma ov_gs"
               and sigma = "snd ov_sol"
               and route = "exec_formals_route ov_gs" and u = "Statement 3" and ctx = "[]",
             OF mem

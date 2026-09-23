@@ -26,18 +26,18 @@ text \<open>
 \<close>
 
 lemma int_tf_st_for_commute:
-  assumes "live_resolved_st_q gs s"
+  assumes "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (int_tf_st_for mode gs a s) =
-       int_tf_abs mode a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (int_tf_st_for mode \<G> a s) =
+       int_tf_abs mode a (fun_of_resolved_st_q_for \<G> s)"
   using assms
   by (cases mode)
      (simp_all add: int_tf_st_never_for_commute int_tf_st_once_for_commute
        int_tf_st_fixpoint_for_commute)
 
 lemma int_dom_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_st_for mode gs ci s) =
-     enter_int_dom_ci_for mode gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (int_dom_enter_st_for mode \<G> ci s) =
+     enter_int_dom_ci_for mode \<G> ci (fun_of_resolved_st_q_for \<G> s)"
 proof (cases mode)
   case Refine_Never
   then show ?thesis
@@ -62,8 +62,8 @@ text \<open>
 \<close>
 
 lemma int_cinit_gamma:
-  "cinit_stores gs
-     \<subseteq> gamma_state_lift (map_lift (fun_of_exec_dg_st_for gs) (Lifted cinit_int_dom_st))"
+  "cinit_stores \<G>
+     \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted cinit_int_dom_st)\<rbrakk>\<^sub>\<bottom>"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
       fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q gamma_int_dom_top)
 

@@ -72,7 +72,7 @@ lemma x1_comb_fwd_ok:
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_node_sound:
-  "ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) v
+  "\<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> v
      \<subseteq> \<lbrakk>case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog) v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
   using sign_rule.result_node_sound_closure
@@ -101,7 +101,7 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg x1_prog))
+  "\<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> (cfg_exit (prog_cfg x1_prog))
    \<le> \<lbrakk>x1_exit_env\<rbrakk>"
   unfolding x1_exit_env_def
   using x1_node_sound
@@ -120,7 +120,7 @@ lemma x1_completed:
 
 lemma x1_completed_run_collect:
   "x1_s0((STR ''x'') := 1)
-     \<in> ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg x1_prog))"
+     \<in> \<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> (cfg_exit (prog_cfg x1_prog))"
 proof -
   have init: "x1_s0 \<in> cinit_stores x1_gs"
     by (simp add: x1_s0_def cinit_stores_def)
@@ -129,8 +129,8 @@ proof -
     by (auto simp: wf_compile_input_simps split: if_splits)
 
   have run:
-    "star (pstep x1_gs (prog_table x1_prog)) (main_body (prog_table x1_prog), x1_s0, [])
-      (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [])"
+    "x1_gs, prog_table x1_prog \<turnstile> (main_body (prog_table x1_prog), x1_s0, [])
+      \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [])"
     using x1_completed by simp
   from source_completes_ltr_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .
@@ -147,7 +147,7 @@ proof (rule conjI)
 next
   have collect:
     "x1_s0((STR ''x'') := 1) \<in>
-      ltr_collect x1_gs (prog_cfg x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg x1_prog))"
+      \<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> (cfg_exit (prog_cfg x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
   show "x1_s0((STR ''x'') := 1) \<in> \<lbrakk>x1_exit_env\<rbrakk>"

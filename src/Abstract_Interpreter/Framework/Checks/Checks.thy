@@ -24,10 +24,10 @@ text \<open>
 type_synonym checks = "(pp \<times> exp) set"
 
 definition checks_proven :: "checks \<Rightarrow> (pp \<Rightarrow> store set) \<Rightarrow> bool" where
-  "checks_proven ck reach \<longleftrightarrow> (\<forall>v c. (v, c) \<in> ck \<longrightarrow> (\<forall>s \<in> reach v. truthy (aval c s)))"
+  "checks_proven ck reach \<longleftrightarrow> (\<forall>v c. (v, c) \<in> ck \<longrightarrow> (\<forall>s \<in> reach v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)))"
 
 lemma checks_provenI [intro]:
-  "(\<And>v c s. (v, c) \<in> ck \<Longrightarrow> s \<in> reach v \<Longrightarrow> truthy (aval c s)) \<Longrightarrow> checks_proven ck reach"
+  "(\<And>v c s. (v, c) \<in> ck \<Longrightarrow> s \<in> reach v \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)) \<Longrightarrow> checks_proven ck reach"
   unfolding checks_proven_def by blast
 
 text \<open>The one-step destruction dual of \<open>checks_provenI\<close>, so a caller with a
@@ -42,7 +42,7 @@ lemma checks_provenD [dest]:
   assumes proven: "checks_proven ck reach"
     and at_v: "(v, c) \<in> ck"
     and mem: "s \<in> reach v"
-  shows "truthy (aval c s)"
+  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   using proven at_v mem unfolding checks_proven_def by blast
 
 end

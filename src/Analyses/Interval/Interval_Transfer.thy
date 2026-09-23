@@ -32,13 +32,13 @@ subsection \<open>Abstract branch\<close>
 text \<open>
   Guard refinement delegates to the generic \<open>bfilter\<close> proved sound in
   \<^locale>\<open>backward_domain\<close>. \<^const>\<open>bfilter_ivl\<close> narrows on the branch selected by
-  its boolean polarity argument (\<^const>\<open>True\<close> for \<open>truthy (aval b s)\<close>,
+  its boolean polarity argument (\<^const>\<open>True\<close> for \<open>truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)\<close>,
   \<^const>\<open>False\<close> for its negation) --- this is Interval's branch operation directly,
   matching Goblint's single polarity-parametrized \<open>Spec.branch\<close>.
 \<close>
 
 lemma bfilter_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.bfilter_sound by simp
 
 text \<open>
@@ -48,7 +48,7 @@ text \<open>
 \<close>
 
 lemma branch_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.branch_sound by simp
 
 subsection \<open>Interval's instance of the generic transfer\<close>

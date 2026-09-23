@@ -57,15 +57,15 @@ definition enter_binding ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> 'a)
    \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)"
 where
-  "enter_binding gs reset_val ev xs es s =
-     bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame gs reset_val s)"
+  "enter_binding \<G> reset_val ev xs es s =
+     bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame \<G> reset_val s)"
 
 text \<open>The concrete instance, spelled out: this is the equation that lets a
   soundness statement about the shared constant be read as one about the entry
   store the source semantics actually builds.\<close>
 lemma enter_binding_concrete:
-  "enter_binding gs 0 aval xs es s
-     = bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)"
+  "enter_binding \<G> 0 aval xs es s
+     = bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state \<G> s)"
   by (simp add: enter_binding_def enter_state_def)
 
 text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
@@ -87,109 +87,111 @@ text \<open>The reference semantics every soundness claim is ultimately about.  
 inductive
   pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
-  for gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
+  for \<G> :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
 where
-  Assign:  "pstep gs \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
-| Check:   "pstep gs \<Pi> (Check c, s, frs) (SKIP, s, frs)"
-| Seq1:    "pstep gs \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
-| Seq2:    "pstep gs \<Pi> (c1, s, frs) (c1', s', frs')
-             \<Longrightarrow> pstep gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
-| IfTrue:  "truthy (aval b s) \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IfFalse: "\<not> truthy (aval b s) \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
-| While:   "pstep gs \<Pi> (While b c, s, frs)
-                      (If b (Seq c (While b c)) SKIP, s, frs)"
+  Assign:  "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
+| Check:   "\<G>, \<Pi> \<turnstile> (Check c, s, frs) \<rightarrow>\<^sub>p (SKIP, s, frs)"
+| Seq1:    "\<G>, \<Pi> \<turnstile> (Seq SKIP c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+| Seq2:    "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')
+             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p (Seq c1' c2, s', frs')"
+| IfTrue:  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p (c1, s, frs)"
+| IfFalse: "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+| While:   "\<G>, \<Pi> \<turnstile> (While b c, s, frs)
+                      \<rightarrow>\<^sub>p (If b (Seq c (While b c)) SKIP, s, frs)"
 | Call:    "\<Pi> p = Some decl
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
-             \<Longrightarrow> vals = map (\<lambda>e. aval e s) actuals
-             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state gs s)
-             \<Longrightarrow> pstep gs \<Pi> (Call dst p actuals, s, frs)
-                 (Seq (body decl) Restore,
+             \<Longrightarrow> vals = map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals
+             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state \<G> s)
+             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs)
+                 \<rightarrow>\<^sub>p (Seq (body decl) Restore,
                   callee,
                   Frame s dst # frs)"
 | Special: "special_table p = Some desc
              \<Longrightarrow> classify_special desc actuals = Some sc
              \<Longrightarrow> special_result sc s v
-             \<Longrightarrow> pstep gs \<Pi> (Call (Some x) p actuals, s, frs) (SKIP, s(x := v), frs)"
+             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call (Some x) p actuals, s, frs) \<rightarrow>\<^sub>p (SKIP, s(x := v), frs)"
 | RestoreStep:
-    "pstep gs \<Pi> (Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Restore, s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
 | ReturnSome:
-    "pstep gs \<Pi> (Return (Some e), s, frs)
-       (Unwind, s(ret_var := aval e s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Return (Some e), s, frs)
+       \<rightarrow>\<^sub>p (Unwind, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), frs)"
 | ReturnNone:
-    "pstep gs \<Pi> (Return None, s, frs) (Unwind, s, frs)"
+    "\<G>, \<Pi> \<turnstile> (Return None, s, frs) \<rightarrow>\<^sub>p (Unwind, s, frs)"
 | UnwindDead:
     "c2 \<noteq> Restore
-     \<Longrightarrow> pstep gs \<Pi> (Seq Unwind c2, s, frs) (Unwind, s, frs)"
+     \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq Unwind c2, s, frs) \<rightarrow>\<^sub>p (Unwind, s, frs)"
 | UnwindAct:
-    "pstep gs \<Pi> (Seq Unwind Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Seq Unwind Restore, s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
 
 abbreviation
   psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
                         \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
-where "psteps gs \<Pi> x y \<equiv> star (pstep gs \<Pi>) x y"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p\<^sup>*/ _)" [51, 51, 51, 51] 50)
+where "psteps \<G> \<Pi> x y \<equiv> star (pstep \<G> \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
 
 inductive_cases SkipSE[elim!]:
-  "pstep gs \<Pi> (SKIP, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (SKIP, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases AssignSE[elim!]:
-  "pstep gs \<Pi> (Assign x a, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases CheckSE[elim!]:
-  "pstep gs \<Pi> (Check c, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Check c, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases SeqSE[elim]:
-  "pstep gs \<Pi> (Seq c1 c2, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases IfSE[elim!]:
-  "pstep gs \<Pi> (If b c1 c2, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases WhileSE[elim]:
-  "pstep gs \<Pi> (While b c, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (While b c, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases CallSE[elim]:
-  "pstep gs \<Pi> (Call dst p actuals, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases RestoreSE[elim!]:
-  "pstep gs \<Pi> (Restore, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Restore, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases ReturnSE[elim!]:
-  "pstep gs \<Pi> (Return e, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Return e, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases UnwindSE[elim!]:
-  "pstep gs \<Pi> (Unwind, s, frs) cfg"
+  "\<G>, \<Pi> \<turnstile> (Unwind, s, frs) \<rightarrow>\<^sub>p cfg"
 
 lemmas star_pstep_induct =
-  star.induct[of "pstep gs \<Pi>", split_format(complete), case_names refl step]
+  star.induct[of "pstep \<G> \<Pi>", split_format(complete), case_names refl step]
 
 subsection \<open>Completing runs\<close>
 
 text \<open>A run completes when it reaches \<open>SKIP\<close> with the frame stack it started
   with; \<open>SKIP\<close> under a non-empty stack is stuck, not finished.\<close>
 abbreviation pcompletes :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pcompletes gs \<Pi> c s t \<equiv> psteps gs \<Pi> (c, s, []) (SKIP, t, [])"
+  "pcompletes \<G> \<Pi> c s t \<equiv> \<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
 
-lemma pcompletes_skip: "pcompletes gs \<Pi> SKIP s s"
+lemma pcompletes_skip: "pcompletes \<G> \<Pi> SKIP s s"
   by (rule star.refl)
 
-lemma pcompletes_assign: "pcompletes gs \<Pi> (Assign x a) s (s(x := aval a s))"
+lemma pcompletes_assign: "pcompletes \<G> \<Pi> (Assign x a) s (s(x := \<lbrakk>a\<rbrakk>\<^sub>e s))"
   by simp
 
 lemma pcompletes_special_nondet_int:
-  "pcompletes gs \<Pi> (Call (Some x) special_pname_nondet_int []) s (s(x := v))"
+  "pcompletes \<G> \<Pi> (Call (Some x) special_pname_nondet_int []) s (s(x := v))"
   by (simp add: special_table_def)
 
 lemma psteps_Seq2:
-  "psteps gs \<Pi> (c1, s, frs) (c1', s', frs')
-   \<Longrightarrow> psteps gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+  "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c1', s', frs')
+   \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p\<^sup>* (Seq c1' c2, s', frs')"
   by (induction rule: star_pstep_induct) (auto intro: star.step)
 
 lemma pcompletes_Seq:
-  assumes "pcompletes gs \<Pi> c1 s s2" and "pcompletes gs \<Pi> c2 s2 t"
-  shows "pcompletes gs \<Pi> (Seq c1 c2) s t"
+  assumes "pcompletes \<G> \<Pi> c1 s s2" and "pcompletes \<G> \<Pi> c2 s2 t"
+  shows "pcompletes \<G> \<Pi> (Seq c1 c2) s t"
   using psteps_Seq2[OF assms(1)] assms(2) by (meson Seq1 star.step star_trans)
 
 lemma pcompletes_IfTrue:
-  "truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c1 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
+  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c1 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If b c1 c2) s t"
   by (meson IfTrue star.step)
 
 lemma pcompletes_IfFalse:
-  "\<not> truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c2 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
+  "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c2 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If b c1 c2) s t"
   by (meson IfFalse star.step)
 
 subsection \<open>Frame-stack extension\<close>
@@ -198,20 +200,20 @@ text \<open>A step never inspects the frames below the one it works on, so any r
   with more callers underneath.  This is what lets a proof about a procedure in isolation be
   reused at an arbitrary call depth.\<close>
 lemma pstep_frame_extend:
-  "pstep gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
-   pstep gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
+  "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p (c', s', frs' @ extra)"
   by (induction "(c, s, frs)" "(c', s', frs')"
         arbitrary: c s frs c' s' frs' rule: pstep.induct)
      auto
 
 lemma psteps_frame_extend:
-  "psteps gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
-   psteps gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
+  "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c', s', frs') \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p\<^sup>* (c', s', frs' @ extra)"
   by (induction rule: star_pstep_induct) (auto intro: pstep_frame_extend star.step)
 
 lemma psteps_frame_mono:
-  "psteps gs \<Pi> (c, s, []) (SKIP, t, []) \<Longrightarrow>
-   psteps gs \<Pi> (c, s, extra) (SKIP, t, extra)"
+  "\<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, []) \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, extra) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, extra)"
   using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
   by simp
 
@@ -221,33 +223,33 @@ text \<open>Running a whole call in one step of reasoning: a body that finishes 
   frame lets the caller resume with the frame popped and the return slot written.  Callers
   use these instead of replaying the \<open>Restore\<close> bookkeeping at every call site.\<close>
 lemma combine_env_ret_var_irrelevant [simp]:
-  "\<not> gs ret_var \<Longrightarrow> combine_env gs fr (t(ret_var := v)) = combine_env gs fr t"
+  "\<not> \<G> ret_var \<Longrightarrow> combine_env \<G> fr (t(ret_var := v)) = combine_env \<G> fr t"
   by (rule ext) simp
 
 lemma psteps_Seq_Restore_body:
-  assumes "psteps gs \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
-  shows "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-           (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
+  assumes "\<G>, \<Pi> \<turnstile> (c, s0, [Frame fr dst]) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t', [Frame fr dst])"
+  shows "\<G>, \<Pi> \<turnstile> (Seq c Restore, s0, [Frame fr dst])
+           \<rightarrow>\<^sub>p\<^sup>* (SKIP, combine_assign dst (t' ret_var) (combine_env \<G> fr t'), [])"
   using psteps_Seq2[OF assms] by (meson Seq1 RestoreStep star.refl star.step star_trans)
 
 lemma pstep_Call:
   assumes "\<Pi> p = Some decl"
       and "length actuals = length (formals decl)"
       and "distinct (formals decl)"
-  shows "pstep gs \<Pi> (Call dst p actuals, s, frs)
-           (Seq (body decl) Restore,
-            bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s),
+  shows "\<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs)
+           \<rightarrow>\<^sub>p (Seq (body decl) Restore,
+            bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s),
             Frame s dst # frs)"
   using assms by (rule Call) (rule refl)+
 
 lemma pstep_Call_parameterless [intro]:
   assumes "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
-  shows "pstep gs \<Pi> (Call dst p [], s, frs) (Seq c Restore, enter_state gs s, Frame s dst # frs)"
+  shows "\<G>, \<Pi> \<turnstile> (Call dst p [], s, frs) \<rightarrow>\<^sub>p (Seq c Restore, enter_state \<G> s, Frame s dst # frs)"
 proof -
-  have "pstep gs \<Pi> (Call dst p [], s, frs)
-          (Seq (body (\<lparr>formals = [], body = c\<rparr>)) Restore,
+  have "\<G>, \<Pi> \<turnstile> (Call dst p [], s, frs)
+          \<rightarrow>\<^sub>p (Seq (body (\<lparr>formals = [], body = c\<rparr>)) Restore,
            bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
-             (map (\<lambda>e. aval e s) []) (enter_state gs s),
+             (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) []) (enter_state \<G> s),
            Frame s dst # frs)"
     using assms by (rule pstep_Call) simp_all
   then show ?thesis by simp
@@ -259,18 +261,18 @@ lemma pcompletes_Call:
   assumes p: "\<Pi> p = Some decl"
       and arity: "length actuals = length (formals decl)"
       and distinct_formals: "distinct (formals decl)"
-      and body: "pcompletes gs \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)) t'"
-  shows "pcompletes gs \<Pi> (Call dst p actuals) s
-           (combine_assign dst (t' ret_var) (combine_env gs s t'))"
+      and body: "pcompletes \<G> \<Pi> (body decl)
+                   (bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)) t'"
+  shows "pcompletes \<G> \<Pi> (Call dst p actuals) s
+           (combine_assign dst (t' ret_var) (combine_env \<G> s t'))"
   by (rule star.step, rule pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals])
      (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
 
 lemma pcompletes_Call_parameterless:
   assumes p: "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
-      and body: "pcompletes gs \<Pi> c (enter_state gs s) t'"
-  shows "pcompletes gs \<Pi> (Call None p []) s (combine_env gs s t')"
-  using pcompletes_Call[where \<Pi> = \<Pi> and p = p and gs = gs and actuals = "[]" and dst = None
+      and body: "pcompletes \<G> \<Pi> c (enter_state \<G> s) t'"
+  shows "pcompletes \<G> \<Pi> (Call None p []) s (combine_env \<G> s t')"
+  using pcompletes_Call[where \<Pi> = \<Pi> and p = p and \<G> = \<G> and actuals = "[]" and dst = None
                           and s = s and t' = t', OF p] body
   by simp
 
@@ -343,7 +345,7 @@ definition source_exp :: "exp \<Rightarrow> bool" where
   "source_exp a \<longleftrightarrow> ret_var \<notin> exp_vnames a"
 
 definition valid_formal :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
-  "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x \<noteq> ret_var"
+  "valid_formal \<G> x \<longleftrightarrow> \<not> \<G> x \<and> x \<noteq> ret_var"
 
 subsection \<open>Procedure result contract\<close>
 
@@ -430,13 +432,13 @@ fun no_return :: "com \<Rightarrow> bool" where
 | "no_return _ = True"
 
 definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> proc_decl \<Rightarrow> bool" where
-  "wf_proc_decl gs \<Pi> decl \<longleftrightarrow>
+  "wf_proc_decl \<G> \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
-     list_all (valid_formal gs) (formals decl) \<and>
+     list_all (valid_formal \<G>) (formals decl) \<and>
      wf_source_com \<Pi> (body decl)"
 
 definition reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" where
-  "reserved_ret_var gs \<longleftrightarrow> \<not> gs ret_var"
+  "reserved_ret_var \<G> \<longleftrightarrow> \<not> \<G> ret_var"
 
 text \<open>The entry procedure is fixed: a program has exactly one, it is called \<open>main\<close>, and the
   parser rejects formals on it.  Naming it here rather than threading it as a parameter means
@@ -458,11 +460,11 @@ text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<cl
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
   this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
 definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
-  "wf_source_program gs \<Pi> \<longleftrightarrow>
-     reserved_ret_var gs \<and>
+  "wf_source_program \<G> \<Pi> \<longleftrightarrow>
+     reserved_ret_var \<G> \<and>
      \<Pi> prog_main_name = Some (\<lparr>formals = [], body = main_body \<Pi>\<rparr>) \<and>
      wf_source_com \<Pi> (main_body \<Pi>) \<and> no_return (main_body \<Pi>) \<and>
-     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
 
 text \<open>The compiler-input well-formedness defined in the compiler session unfolds
@@ -480,12 +482,12 @@ lemma wf_source_com_source_com:
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_programD:
-  assumes "wf_source_program gs \<Pi>"
-  shows "reserved_ret_var gs"
+  assumes "wf_source_program \<G> \<Pi>"
+  shows "reserved_ret_var \<G>"
     and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
     and "wf_source_com \<Pi> (main_body \<Pi>)"
     and "no_return (main_body \<Pi>)"
-    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl gs \<Pi> decl"
+    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>"
     and "source_com (main_body \<Pi>)"
@@ -511,23 +513,23 @@ theorem pcompletes_witness:
          (Call (Some (STR ''x'')) (STR ''ret1'') []) s t
      \<and> t (STR ''x'') = 1"
 proof -
-  let ?gs = "\<lambda>_ :: vname. False"
+  let ?\<G> = "\<lambda>_ :: vname. False"
   let ?fr = "[Frame s (Some (STR ''x''))]"
-  let ?en = "enter_state ?gs s"
-  let ?s' = "?en(ret_var := aval (N 1) ?en)"
-  let ?t  = "(combine_env ?gs s ?s')(STR ''x'' := aval (N 1) ?en)"
+  let ?en = "enter_state ?\<G> s"
+  let ?s' = "?en(ret_var := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
+  let ?t  = "(combine_env ?\<G> s ?s')(STR ''x'' := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
   have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr>"
     by (simp add: witness_ret1_pi_def)
-  have s1: "pstep ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') [], s, [])
-              (Seq (Return (Some (N 1))) Restore, ?en, ?fr)"
+  have s1: "?\<G>, witness_ret1_pi \<turnstile> (Call (Some (STR ''x'')) (STR ''ret1'') [], s, [])
+              \<rightarrow>\<^sub>p (Seq (Return (Some (N 1))) Restore, ?en, ?fr)"
     using q by (rule pstep_Call_parameterless)
-  have s2: "pstep ?gs witness_ret1_pi (Seq (Return (Some (N 1))) Restore, ?en, ?fr)
-              (Seq Unwind Restore, ?s', ?fr)"
+  have s2: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Return (Some (N 1))) Restore, ?en, ?fr)
+              \<rightarrow>\<^sub>p (Seq Unwind Restore, ?s', ?fr)"
     by (intro Seq2 ReturnSome)
-  have s3: "pstep ?gs witness_ret1_pi (Seq Unwind Restore, ?s', ?fr) (SKIP, ?t, [])"
-    using UnwindAct[of ?gs witness_ret1_pi ?s' s "Some (STR ''x'')" "[]"] by simp
+  have s3: "?\<G>, witness_ret1_pi \<turnstile> (Seq Unwind Restore, ?s', ?fr) \<rightarrow>\<^sub>p (SKIP, ?t, [])"
+    using UnwindAct[of ?\<G> witness_ret1_pi ?s' s "Some (STR ''x'')" "[]"] by simp
   from s1 s2 s3
-  have "pcompletes ?gs witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
+  have "pcompletes ?\<G> witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
     by (meson star.refl star.step)
   moreover have "?t (STR ''x'') = 1" by simp
   ultimately show ?thesis by blast

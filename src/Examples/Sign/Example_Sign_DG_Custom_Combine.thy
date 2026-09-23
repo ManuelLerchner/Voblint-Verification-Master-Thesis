@@ -54,30 +54,30 @@ definition sign_dg_spec_callee_join ::
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
-  "sign_dg_spec_callee_join gs tf_st enter_st =
-     (ownership_split_dg_spec_st_for gs tf_st enter_st)
+  "sign_dg_spec_callee_join \<G> tf_st enter_st =
+     (ownership_split_dg_spec_st_for \<G> tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
 
 declare sign_dg_spec_callee_join_def [code_unfold]
 text \<open>Only the environment merge differs; every other field is the stock one.\<close>
 
 lemma dgs_enter_sign_dg_spec_callee_join [simp]:
-  "enter\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
-     = enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
+  "enter\<^sup># (sign_dg_spec_callee_join \<G> tf_st enter_st)
+     = enter\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st)"
   by (simp add: sign_dg_spec_callee_join_def)
 
 lemma dgs_combine_assign_sign_dg_spec_callee_join [simp]:
-  "combine_assign\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
-     = combine_assign\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
+  "combine_assign\<^sup># (sign_dg_spec_callee_join \<G> tf_st enter_st)
+     = combine_assign\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st)"
   by (simp add: sign_dg_spec_callee_join_def)
 
 lemma dg_spec_step_sign_dg_spec_callee_join [simp]:
-  "dg_spec_step (sign_dg_spec_callee_join gs tf_st enter_st) a
-     = dg_spec_step (ownership_split_dg_spec_st_for gs tf_st enter_st) a"
+  "dg_spec_step (sign_dg_spec_callee_join \<G> tf_st enter_st) a
+     = dg_spec_step (ownership_split_dg_spec_st_for \<G> tf_st enter_st) a"
   by (cases a) (simp_all add: sign_dg_spec_callee_join_def)
 
 lemma dgs_combine_env_sign_dg_spec_callee_join [simp]:
-  "combine_env\<^sup># (sign_dg_spec_callee_join gs tf_st enter_st)
+  "combine_env\<^sup># (sign_dg_spec_callee_join \<G> tf_st enter_st)
      = (\<lambda>ci. sign_combine_env_callee_join)"
   by (simp add: sign_dg_spec_callee_join_def)
 
@@ -145,54 +145,54 @@ text \<open>
 
 abbreviation sign_base_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state,sign abs_state) dg_spec" where
-  "sign_base_spec gs \<equiv> local_state_dg_spec_for gs
+  "sign_base_spec \<G> \<equiv> local_state_dg_spec_for \<G>
      skip_sign assign_sign special_sign branch_sign body_sign return_sign
-     (enter_sign_ci_for gs) event_sign"
+     (enter_sign_ci_for \<G>) event_sign"
 
 definition combine_env_callee_join_abs ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer"
 where
-  "combine_env_callee_join_abs gs =
-     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_for gs de)"
+  "combine_env_callee_join_abs \<G> =
+     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_for \<G> de)"
 
 definition sign_dg_spec_env_join ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state, sign abs_state) dg_spec" where
-  "sign_dg_spec_env_join gs =
-     (ownership_split_lift gs (sign_base_spec gs))
-       \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs gs) \<rparr>"
+  "sign_dg_spec_env_join \<G> =
+     (ownership_split_lift \<G> (sign_base_spec \<G>))
+       \<lparr> dgs_combine_env := (\<lambda>ci. combine_env_callee_join_abs \<G>) \<rparr>"
 
 declare sign_dg_spec_env_join_def [code_unfold]
 
 lemma dg_spec_step_sign_dg_spec_env_join [simp]:
-  "dg_spec_step (sign_dg_spec_env_join gs) a
-     = dg_spec_step (ownership_split_lift gs (sign_base_spec gs)) a"
+  "dg_spec_step (sign_dg_spec_env_join \<G>) a
+     = dg_spec_step (ownership_split_lift \<G> (sign_base_spec \<G>)) a"
   by (cases a) (simp_all add: sign_dg_spec_env_join_def)
 
 lemma dgs_enter_sign_dg_spec_env_join [simp]:
-  "enter\<^sup># (sign_dg_spec_env_join gs)
-     = enter\<^sup># (ownership_split_lift gs (sign_base_spec gs))"
+  "enter\<^sup># (sign_dg_spec_env_join \<G>)
+     = enter\<^sup># (ownership_split_lift \<G> (sign_base_spec \<G>))"
   by (simp add: sign_dg_spec_env_join_def)
 
 lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
-  "dg_spec_wf (ownership_split_lift gs (sign_base_spec gs))"
+  "dg_spec_wf (ownership_split_lift \<G> (sign_base_spec \<G>))"
   by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
 
 lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
-  "dg_spec_wf (sign_dg_spec_env_join gs)"
+  "dg_spec_wf (sign_dg_spec_env_join \<G>)"
 proof (unfold dg_spec_wf_def, intro conjI allI)
   fix a d key
-  show "sp_wf (dg_spec_step (sign_dg_spec_env_join gs) a (mk_dg_man d key))"
+  show "sp_wf (dg_spec_step (sign_dg_spec_env_join \<G>) a (mk_dg_man d key))"
     unfolding dg_spec_step_sign_dg_spec_env_join
     by (rule dg_spec_wf_step[OF dg_spec_wf_ownership_split_lift_sign_base])
 next
   fix ci d key
-  show "sp_wf (enter\<^sup># (sign_dg_spec_env_join gs) ci (mk_dg_man d key))"
+  show "sp_wf (enter\<^sup># (sign_dg_spec_env_join \<G>) ci (mk_dg_man d key))"
     by (simp only: dgs_enter_sign_dg_spec_env_join
         dg_spec_wf_enter[OF dg_spec_wf_ownership_split_lift_sign_base])
 next
   fix ci d key ex
-  show "sp_wf (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci (mk_dg_man d key) ex)"
+  show "sp_wf (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci (mk_dg_man d key) ex)"
     unfolding dg_spec_combine_transfer_def
     by (auto simp: sign_dg_spec_env_join_def combine_env_callee_join_abs_def
         local_combine_transfer_def
@@ -207,9 +207,9 @@ text \<open>
 \<close>
 
 lemma dg_spec_combine_transfer_env_join:
-  "dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci m de
-     = ownership_split_combine_transfer gs (dg_spec_combine_transfer (sign_base_spec gs) ci)
-         (m\<lparr>man_local := man_local m \<squnion> restrict_local_for gs de\<rparr>) de"
+  "dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci m de
+     = ownership_split_combine_transfer \<G> (dg_spec_combine_transfer (sign_base_spec \<G>) ci)
+         (m\<lparr>man_local := man_local m \<squnion> restrict_local_for \<G> de\<rparr>) de"
   unfolding dg_spec_combine_transfer_def sign_dg_spec_env_join_def
     combine_env_callee_join_abs_def ownership_split_lift_def
   by (simp add: local_transfer_def local_combine_transfer_def)
@@ -227,13 +227,13 @@ text \<open>
 \<close>
 
 lemma combine_env_join_ge:
-  "combine_env gs dc g \<le> combine_env gs (dc \<squnion> restrict_local_for gs de) g"
+  "combine_env \<G> dc g \<le> combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) g"
   by (rule combine_env_mono[OF sup_ge1 order_refl])
 
 lemma combine_collect_abs_join_ge:
-  "combine\<^sup># gs dst (combine_env gs dc g) (combine_env gs de g)
-     \<le> combine\<^sup># gs dst (combine_env gs (dc \<squnion> restrict_local_for gs de) g)
-         (combine_env gs de g)"
+  "combine\<^sup># \<G> dst (combine_env \<G> dc g) (combine_env \<G> de g)
+     \<le> combine\<^sup># \<G> dst (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) g)
+         (combine_env \<G> de g)"
   by (rule combine_collect_abs_mono[OF combine_env_join_ge order_refl])
 
 text \<open>The override's own tree observations. The generic reduction rules do not
@@ -242,12 +242,12 @@ text \<open>The override's own tree observations. The generic reduction rules do
 
 lemma traverse_combine_env_join:
   "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+       (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
-     = restrict_local_for gs
-         (combine\<^sup># gs (ci_dst ci)
-            (combine_env gs (dc \<squnion> restrict_local_for gs de) (globs (\<tau> (Inr gk))))
-            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+     = restrict_local_for \<G>
+         (combine\<^sup># \<G> (ci_dst ci)
+            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (globs (\<tau> (Inr gk))))
+            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
@@ -256,12 +256,12 @@ lemma traverse_combine_env_join:
 
 lemma sides_combine_env_join:
   "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+       (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
-     = restrict_global_for gs
-         (combine\<^sup># gs (ci_dst ci)
-            (combine_env gs (dc \<squnion> restrict_local_for gs de) (globs (\<tau> (Inr gk))))
-            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+     = restrict_global_for \<G>
+         (combine\<^sup># \<G> (ci_dst ci)
+            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (globs (\<tau> (Inr gk))))
+            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
@@ -273,12 +273,12 @@ text \<open>The stock observations, in the same shape, so the comparison below i
 
 lemma traverse_combine_stock:
   "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+       (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
-     = restrict_local_for gs
-         (combine\<^sup># gs (ci_dst ci)
-            (combine_env gs dc (globs (\<tau> (Inr gk))))
-            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+     = restrict_local_for \<G>
+         (combine\<^sup># \<G> (ci_dst ci)
+            (combine_env \<G> dc (globs (\<tau> (Inr gk))))
+            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
@@ -287,12 +287,12 @@ lemma traverse_combine_stock:
 
 lemma sides_combine_stock:
   "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+       (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
-     = restrict_global_for gs
-         (combine\<^sup># gs (ci_dst ci)
-            (combine_env gs dc (globs (\<tau> (Inr gk))))
-            (combine_env gs de (globs (\<tau> (Inr gk)))))"
+     = restrict_global_for \<G>
+         (combine\<^sup># \<G> (ci_dst ci)
+            (combine_env \<G> dc (globs (\<tau> (Inr gk))))
+            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_local_dg_spec
@@ -301,33 +301,33 @@ lemma sides_combine_stock:
 
 lemma traverse_combine_env_join_ge:
   "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+       (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
      \<le> locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-          (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+          (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
              (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)"
   unfolding traverse_combine_stock traverse_combine_env_join
   by (rule restrict_local_for_mono[OF combine_collect_abs_join_ge])
 
 lemma sides_combine_env_join_ge:
   "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-       (dg_spec_combine_transfer (ownership_split_lift gs (sign_base_spec gs)) ci
+       (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
      \<le> globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-          (dg_spec_combine_transfer (sign_dg_spec_env_join gs) ci
+          (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
              (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))"
   unfolding sides_combine_stock sides_combine_env_join
   by (rule restrict_global_for_mono[OF combine_collect_abs_join_ge])
 
 theorem sound_dg_spec_core_sign_dg_spec_env_join:
-  "sound_dg_spec_core (sign_dg_spec_env_join gs) (gamma_ownership_split gs) gs"
+  "sound_dg_spec_core (sign_dg_spec_env_join \<G>) (gamma_ownership_split \<G>) \<G>"
 proof -
-  interpret sign_tf: sound_transfer_for gs
+  interpret sign_tf: sound_transfer_for \<G>
       skip_sign assign_sign special_sign branch_sign body_sign return_sign
-      "enter_sign_ci_for gs" event_sign
+      "enter_sign_ci_for \<G>" event_sign
     by (rule sign_tf.is_sound_transfer_for)
   interpret stock: sound_dg_spec_core
-    "ownership_split_lift gs (sign_base_spec gs)" "gamma_ownership_split gs" gs
+    "ownership_split_lift \<G> (sign_base_spec \<G>)" "gamma_ownership_split \<G>" \<G>
     by (rule sign_tf.ownership_split_lift_core_sound)
   show ?thesis
   proof (unfold_locales, goal_cases)

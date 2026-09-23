@@ -80,9 +80,15 @@ fixes two constants:
 `term_equivalence` (`:2362`) and `value_equivalence` (`:2370`) prove the two
 agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 `solve_c` as `solve`'s code equation, so the equality between them is proved.
-`part_post_solution_of_solve_c` (`TD_Solver_Bridge.thy`) turns a successful
-`solve_c` into the vendored certificate `part_post_solution`
-(`Basics_side.thy`). That certificate is solver-independent:
+`solve_dom_of_solve_c` (`TD_Solver_Bridge.thy`) turns a successful `solve_c`
+into `solve_dom`, and the vendored `partial_post_solution` turns `solve_dom`
+into the certificate `part_post_solution` (`Basics_side.thy`). The analysis
+locale `routed_dg_analysis` assumes both facts of its solver parameters, and
+every generated domain registration discharges them with
+`TD_side_rule_Interp.solve_dom_of_solve_c` and
+`TD_side_rule_Interp.partial_post_solution`; `run_voblint`'s termination
+premise is `solve_dom`. The composite `part_post_solution_of_solve_c` is not on
+that path. The certificate is solver-independent:
 `activation_collect_dg_sound` (`Routed_Context.thy`) proves collecting
 soundness from any valuation satisfying it, without asking how it was computed.
 

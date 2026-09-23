@@ -16,12 +16,12 @@ text \<open>
   \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
   and the return value with \<^const>\<open>combine_collect\<close>.
 
-  The design adapts the thread-modular local-trace semantics of Schwarz and Erhard,
-  \<^emph>\<open>Data Race Detection by Digest-Driven Abstract Interpretation\<close> (arXiv:2511.11055,
-  2025), which builds on Schwarz et al., \<^emph>\<open>Improving Thread-Modular Abstract
-  Interpretation\<close> (SAS 2021).  There a local trace is one thread's execution and
-  synchronisation relates traces; here a local trace is one procedure activation and
-  a return composes the completed callee into its suspended caller.
+  The design adapts the thread-modular local-trace semantics introduced by Schwarz et
+  al., \<^emph>\<open>Improving Thread-Modular Abstract Interpretation\<close> (SAS 2021).  Schwarz and
+  Erhard, \<^emph>\<open>Data Race Detection by Digest-Driven Abstract Interpretation\<close>
+  (arXiv:2511.11055, 2025), is later work on the same semantics.  There a local trace
+  is one thread's execution and synchronisation relates traces; here a local trace is
+  one procedure activation and a return composes the completed callee into its suspended caller.
 \<close>
 
 subsection \<open>The datatype\<close>
@@ -97,37 +97,46 @@ text \<open>
   compatible context.
 \<close>
 
-inductive_set valid_ltr :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> ltr set" for gs and g and S where
+inductive_set valid_ltr ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> ltr set"
+    ("\<T>\<^bsub>_,_,_\<^esub>")
+  for \<G> and g and S where
   init:
     "s \<in> S
-     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> valid_ltr gs g S"
+     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 | intra:
-    "t \<in> valid_ltr gs g S
+    "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
      \<Longrightarrow> (sink_node t, a, v) \<in> intra g
      \<Longrightarrow> s' \<in> edge_step a (sink_store t)
-     \<Longrightarrow> extend t (v, s') \<in> valid_ltr gs g S"
+     \<Longrightarrow> extend t (v, s') \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 | call:
-    "caller \<in> valid_ltr gs g S
-     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-     \<Longrightarrow> Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
-         \<in> valid_ltr gs g S"
+    "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
+           \<in> calls g
+     \<Longrightarrow> Call caller
+           [(FunctionEntry p,
+             call_enter \<G> (CallEdge dst pars args) (sink_store caller))]
+         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 | ret:
-    "callee \<in> valid_ltr gs g S
+    "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
      \<Longrightarrow> caller_of callee = Some caller
      \<Longrightarrow> sink_node callee = FunctionResult p
-     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+     \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
+           \<in> calls g
      \<Longrightarrow> Resume caller callee
-           (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
-         \<in> valid_ltr gs g S"
+           (path caller
+              @ [(cont, combine_collect \<G> dst
+                          (sink_store caller) (sink_store callee))])
+         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 
 inductive_cases valid_ltr_RootE [elim]:
-  "Root p \<in> valid_ltr gs g S"
+  "Root p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 
 inductive_cases valid_ltr_CallE [elim]:
-  "Call caller p \<in> valid_ltr gs g S"
+  "Call caller p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 
 inductive_cases valid_ltr_ResumeE [elim]:
-  "Resume caller callee p \<in> valid_ltr gs g S"
+  "Resume caller callee p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 
 subsection \<open>Structural lemmas\<close>
 
@@ -148,8 +157,20 @@ lemma sink_single_simps [simp]:
   "sink_store (Call c [(n, s)]) = s"
   by (simp_all add: sink_node_def sink_store_def)
 
+text \<open>The lemmas up to the caller-chain closure all speak about the traces of one graph
+  from one set of initial stores, so the block fixes \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close> and writes
+  \<open>\<T>\<close> for \<open>\<T>\<^bsub>\<G>,g,S\<^esub>\<close>.  Outside the block every lemma holds
+  for arbitrary \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close>.\<close>
+
+context
+  fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
+begin
+
+private abbreviation (input) traces :: "ltr set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
+notation traces ("\<T>")
+
 lemma valid_ltr_path_nonempty:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> path t \<noteq> []"
+  "t \<in> \<T> \<Longrightarrow> path t \<noteq> []"
   by (induction t rule: valid_ltr.induct) auto
 
 lemma entry_store_extend [simp]:
@@ -162,7 +183,7 @@ subsection \<open>Design invariants\<close>
 text \<open>A valid \<^const>\<open>Call\<close> activation has a valid caller, even after intra steps have
   extended its local path.\<close>
 lemma valid_ltr_Call_caller_valid:
-  "u \<in> valid_ltr gs g S \<Longrightarrow> u = Call cc q \<Longrightarrow> cc \<in> valid_ltr gs g S"
+  "u \<in> \<T> \<Longrightarrow> u = Call cc q \<Longrightarrow> cc \<in> \<T>"
 proof (induction arbitrary: cc q rule: valid_ltr.induct)
   case (intra t a v s')
   from intra.prems obtain q' where "t = Call cc q'"
@@ -173,8 +194,8 @@ qed auto
 text \<open>A valid \<^const>\<open>Resume\<close> retains its callee as a valid trace, and its frozen caller is
   forced to be exactly \<open>caller_of callee\<close> --- a return cannot invent a caller.\<close>
 lemma valid_ltr_Resume_fields:
-  "u \<in> valid_ltr gs g S \<Longrightarrow> u = Resume cc dd q
-   \<Longrightarrow> dd \<in> valid_ltr gs g S \<and> caller_of dd = Some cc"
+  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q
+   \<Longrightarrow> dd \<in> \<T> \<and> caller_of dd = Some cc"
 proof (induction arbitrary: cc dd q rule: valid_ltr.induct)
   case (intra t a v s')
   from intra.prems obtain q' where "t = Resume cc dd q'"
@@ -184,20 +205,20 @@ qed auto
 
 text \<open>Every caller recovered from a valid trace by \<^const>\<open>caller_of\<close> is itself valid.\<close>
 lemma valid_ltr_caller_valid:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> caller_of t = Some c \<Longrightarrow> c \<in> valid_ltr gs g S"
+  "t \<in> \<T> \<Longrightarrow> caller_of t = Some c \<Longrightarrow> c \<in> \<T>"
 proof (induction t arbitrary: c)
   case (Root x)
   then show ?case by simp
 next
   case (Call caller p)
-  have "caller \<in> valid_ltr gs g S"
+  have "caller \<in> \<T>"
     using valid_ltr_Call_caller_valid[OF Call.prems(1) refl] .
   with Call.prems(2) show ?case by simp
 next
   case (Resume caller callee p)
   from valid_ltr_Resume_fields[OF Resume.prems(1) refl]
-  have cd: "callee \<in> valid_ltr gs g S" "caller_of callee = Some caller" by auto
-  have cv: "caller \<in> valid_ltr gs g S" using Resume.IH(2)[OF cd(1)] cd(2) by simp
+  have cd: "callee \<in> \<T>" "caller_of callee = Some caller" by auto
+  have cv: "caller \<in> \<T>" using Resume.IH(2)[OF cd(1)] cd(2) by simp
   from Resume.prems(2) have "caller_of caller = Some c" by simp
   then show ?case using Resume.IH(1)[OF cv] by simp
 qed
@@ -205,7 +226,7 @@ qed
 text \<open>A \<^const>\<open>Root\<close> activation starts at \<^const>\<open>cfg_entry\<close>: \<open>init\<close> creates it there and
   \<open>intra\<close> only appends.\<close>
 lemma valid_ltr_Root_entry:
-  "u \<in> valid_ltr gs g S \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
+  "u \<in> \<T> \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
 proof (induction arbitrary: p rule: valid_ltr.induct)
   case (intra t a v s')
   from intra.prems obtain p' where t: "t = Root p'" and p: "p = p' @ [(v, s')]"
@@ -217,7 +238,7 @@ qed auto
 
 text \<open>A \<^const>\<open>Resume\<close> extends its caller's own local path, so both share a head node.\<close>
 lemma valid_ltr_Resume_path:
-  "u \<in> valid_ltr gs g S \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path cc @ xs \<and> xs \<noteq> []"
+  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path cc @ xs \<and> xs \<noteq> []"
 proof (induction arbitrary: cc dd q rule: valid_ltr.induct)
   case (intra t a v s')
   from intra.prems obtain q' where t: "t = Resume cc dd q'" and q: "q = q' @ [(v, s')]"
@@ -230,7 +251,7 @@ text \<open>A callerless activation is the root one, and its local \<^const>\<op
   \<^const>\<open>cfg_entry\<close>.  The \<^const>\<open>Resume\<close> case needs the caller's own entry, which term
   induction supplies (the caller is a subterm) --- rule induction would only offer the callee.\<close>
 lemma valid_ltr_caller_None_entry:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path t)) = cfg_entry g"
+  "t \<in> \<T> \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path t)) = cfg_entry g"
 proof (induction t)
   case (Root p)
   then show ?case using valid_ltr_Root_entry[OF Root.prems(1) refl] by simp
@@ -240,8 +261,8 @@ next
 next
   case (Resume caller callee q)
   from valid_ltr_Resume_fields[OF Resume.prems(1) refl]
-  have cd: "callee \<in> valid_ltr gs g S" "caller_of callee = Some caller" by auto
-  have cv: "caller \<in> valid_ltr gs g S" using Resume.IH(2)[OF cd(1)] cd(2)
+  have cd: "callee \<in> \<T>" "caller_of callee = Some caller" by auto
+  have cv: "caller \<in> \<T>" using Resume.IH(2)[OF cd(1)] cd(2)
     using valid_ltr_caller_valid[OF cd(1) cd(2)] by simp
   from Resume.prems(2) have "caller_of caller = None" by simp
   with Resume.IH(1)[OF cv] have hcaller: "fst (hd (path caller)) = cfg_entry g" by simp
@@ -287,21 +308,23 @@ text \<open>
 lemma caller_chain_closure:
   fixes P :: "ltr \<Rightarrow> bool"
   assumes Root: "\<And>s. s \<in> S \<Longrightarrow> P (Root [(cfg_entry g, s)])"
-    and Intra: "\<And>t a v s'. t \<in> valid_ltr gs g S \<Longrightarrow> (\<forall>u \<in> callers t. P u)
+    and Intra: "\<And>t a v s'. t \<in> \<T> \<Longrightarrow> (\<forall>u \<in> callers t. P u)
         \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a (sink_store t)
         \<Longrightarrow> P (extend t (v, s'))"
-    and Call: "\<And>caller dst pars args p cont. caller \<in> valid_ltr gs g S
+    and Call: "\<And>caller dst pars args p cont. caller \<in> \<T>
         \<Longrightarrow> (\<forall>u \<in> callers caller. P u)
-        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
+           \<in> calls g
         \<Longrightarrow> P (Call caller
-                 [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
-    and Ret: "\<And>callee caller p dst pars args cont. callee \<in> valid_ltr gs g S
+                 [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
+    and Ret: "\<And>callee caller p dst pars args cont. callee \<in> \<T>
         \<Longrightarrow> (\<forall>u \<in> callers callee. P u)
         \<Longrightarrow> caller_of callee = Some caller \<Longrightarrow> sink_node callee = FunctionResult p
-        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
+           \<in> calls g
         \<Longrightarrow> P (Resume caller callee (path caller
-                 @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
-  shows "t \<in> valid_ltr gs g S \<Longrightarrow> \<forall>u \<in> callers t. P u"
+                 @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
+  shows "t \<in> \<T> \<Longrightarrow> \<forall>u \<in> callers t. P u"
 proof (induction rule: valid_ltr.induct)
   case (init s)
   then show ?case using Root[OF init] by simp
@@ -317,6 +340,8 @@ next
     using Ret[OF ret.hyps(1) ret.IH ret.hyps(2,3,4)] ancestors_caller[OF ret.hyps(2)] by auto
 qed
 
+end
+
 subsection \<open>Stable context entry invariant\<close>
 
 text \<open>An activation's entry store is fixed once it starts: a call names the store the callee
@@ -324,9 +349,9 @@ text \<open>An activation's entry store is fixed once it starts: a call names th
   the callee's.  Context policies that read the entry store rely on this -- otherwise the
   context a trace carries could change under it as the trace grows.\<close>
 definition call_enter_store :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "call_enter_store gs g c s t \<longleftrightarrow>
+  "call_enter_store \<G> g c s t \<longleftrightarrow>
      (\<exists>dst pars args p cont. (c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<and> t = call_enter gs (CallEdge dst pars args) s)"
+        \<and> t = call_enter \<G> (CallEdge dst pars args) s)"
 
 lemma entry_store_Resume_caller:
   "path caller \<noteq> [] \<Longrightarrow>

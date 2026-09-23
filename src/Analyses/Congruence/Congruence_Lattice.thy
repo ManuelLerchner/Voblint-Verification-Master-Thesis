@@ -439,13 +439,10 @@ instantiation congruence :: sound_domain
 begin
 
 definition gamma_abs_congruence [simp]:
-  "gamma (a :: congruence) = gamma_congruence a"
+  "\<gamma> (a :: congruence) = gamma_congruence a"
 
 definition is_empty_congruence [simp]:
   "is_empty (a :: congruence) = is_bottom_congruence a"
-
-definition is_full_congruence [simp]:
-  "is_full (a :: congruence) = is_top_congruence a"
 
 definition to_string_congruence [simp]:
   "to_string (a :: congruence) =
@@ -453,25 +450,21 @@ definition to_string_congruence [simp]:
 
 instance
 proof intro_classes
-  show "gamma (bot :: congruence) = {}"
+  show "\<gamma> (bot :: congruence) = {}"
     unfolding bot_congruence_def by simp
 next
-  show "gamma (top :: congruence) = UNIV"
+  show "\<gamma> (top :: congruence) = UNIV"
     by simp
 next
   fix a b :: congruence
   assume "a <= b"
-  then show "gamma a \<subseteq> gamma b"
+  then show "\<gamma> a \<subseteq> \<gamma> b"
     unfolding less_eq_congruence_iff_gamma
     by simp
 next
   fix a :: congruence
-  show "is_empty a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
     by (simp add: is_bottom_congruence_correct)
-next
-  fix a :: congruence
-  show "is_full a \<longleftrightarrow> gamma a = UNIV"
-    by (simp add: is_top_congruence_correct_gamma)
 qed
 
 end

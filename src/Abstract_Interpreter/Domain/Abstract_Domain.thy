@@ -9,39 +9,37 @@ unbundle lattice_syntax
 section \<open>Abstract value domains\<close>
 
 text \<open>
-  An executable domain supplies the required lattice operations, an exact
-  emptiness test, and an exact fullness test. Sound domains
-  add a concretization into integers, while
-  widening domains add the update operation required for infinite ascending
-  chains. Abstract states and control-flow reachability are separate modules.
+  An executable domain supplies the required lattice operations and an exact
+  emptiness test. Sound domains add a concretization into integers. The
+  widening and narrowing the solver applies come from the vendored
+  \<open>warrowing\<close> class, required as \<open>bounded_warrowing\<close> below. Abstract states and
+  control-flow reachability are separate modules.
 \<close>
 
 subsection \<open>Executable and sound domains\<close>
 
 class executable_domain = bounded_semilattice_sup_bot + order_top +
   fixes is_empty :: "'a \<Rightarrow> bool"
-  fixes is_full :: "'a \<Rightarrow> bool"
   fixes to_string :: "'a \<Rightarrow> String.literal"
 
 class sound_domain = executable_domain +
-  fixes gamma :: "'a \<Rightarrow> int set"
-  assumes gamma_bot[simp]: "gamma bot = {}"
-  assumes gamma_top[simp]: "gamma top = UNIV"
-  assumes gamma_mono: "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
-  assumes is_empty_correct: "is_empty a \<longleftrightarrow> gamma a = {}"
-  assumes is_full_correct: "is_full a \<longleftrightarrow> gamma a = UNIV"
+  fixes gamma :: "'a \<Rightarrow> int set" ("\<gamma>")
+  assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"
+  assumes gamma_top[simp]: "\<gamma> \<top> = UNIV"
+  assumes gamma_mono: "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
+  assumes is_empty_correct: "is_empty a \<longleftrightarrow> \<gamma> a = {}"
 
 text \<open>
   \<open>executable_domain\<close> carries exactly the executable per-element operations a
   concrete domain's runtime representation needs: the lattice structure,
-  \<open>is_empty\<close>/\<open>is_full\<close> (both finite decision procedures on every real instance
+  \<open>is_empty\<close> (a finite decision procedure on every real instance
   -- Interval's bound comparison, Sign's constructor match, ...), and
   \<open>to_string\<close> for reporting a solved value back to a caller. \<open>sound_domain\<close>
   extends it with \<open>gamma\<close>, which is not executable in general (an infinite
   \<^typ>\<open>int set\<close>) and exists purely to state and prove soundness. Splitting the
   class this way keeps \<open>gamma\<close> out of the type-class dictionary that code
-  generation must materialize for any constant that only needs \<open>is_empty\<close>/
-  \<open>is_full\<close> (the finite witness-bottom tests over a resolved state, in
+  generation must materialize for any constant that only needs \<open>is_empty\<close>
+  (the finite witness-bottom tests over a resolved state, in
   particular): requesting \<open>'a::executable_domain\<close> there never drags \<^const>\<open>gamma\<close>'s
   code equation into the dependency closure, even though every
   \<^class>\<open>sound_domain\<close> instance is automatically a \<^class>\<open>executable_domain\<close>
@@ -49,8 +47,8 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>is_empty\<close>/\<open>is_full\<close> are semantic classifiers, not structural equality
-  tests against \<open>bot\<close>/\<open>top\<close>: \<open>is_empty\<close> mirrors Goblint's own \<open>Lattice.Bot\<close>
+  \<open>is_empty\<close> is a semantic classifier, not a structural equality
+  test against \<open>bot\<close>: it mirrors Goblint's own \<open>Lattice.Bot\<close>
   signature (@{url "https://github.com/goblint/analyzer/blob/master/src/domain/lattice.ml"}):
   \<open>val is_bot: t -> bool\<close> is a per-domain operation there too, not a
   generic derived test. Goblint's own default implementation (\<open>IntDomain0.Std\<close>
@@ -60,59 +58,38 @@ text \<open>
   value, since most of its domains keep a single bottom representation
   (Interval's \<open>bot () = None\<close>, normalized on every operation). Voblint
   cannot take that shortcut: some Voblint domains admit representations with
-  more than one empty- or full-denoting value that are never normalized away
+  more than one empty-denoting value that are never normalized away
   (Interval's inverted bound pairs, e.g. \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>, none
   of them favored over \<open>bot\<close> itself), so \<open>a = bot\<close> would silently miss some
-  of them, and symmetrically for \<open>a = top\<close> and full concretizations. Fixing
-  \<open>is_empty\<close>/\<open>is_full\<close> as their own class operations, correct against
-  \<^const>\<open>gamma\<close> rather than against \<^const>\<open>bot\<close>/\<^const>\<open>top\<close>, makes every
-  \<^class>\<open>sound_domain\<close> instance responsible for its own exact emptiness and
-  fullness tests, the same obligation every domain already carries for
-  \<^const>\<open>gamma\<close> itself. The lattice constants \<open>bot\<close>/\<open>top\<close> stay the canonical
-  representatives; \<open>is_empty\<close>/\<open>is_full\<close> answer a different question (what a
+  of them. Fixing \<open>is_empty\<close> as its own class operation, correct against
+  \<^const>\<open>gamma\<close> rather than against \<^const>\<open>bot\<close>, makes every
+  \<^class>\<open>sound_domain\<close> instance responsible for its own exact emptiness
+  test, the same obligation every domain already carries for
+  \<^const>\<open>gamma\<close> itself. The lattice constant \<open>bot\<close> stays the canonical
+  representative; \<open>is_empty\<close> answers a different question (what a
   value denotes), and a proof that genuinely needs the canonical element
-  still writes \<open>a = bot\<close>/\<open>a = top\<close> directly.
+  still writes \<open>a = bot\<close> directly.
 \<close>
 
 subsection \<open>Concretization bounds\<close>
 
-lemma gamma_sup_ub1[intro]: "gamma a \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
+lemma gamma_sup_ub1[intro]: "\<gamma> a \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::sound_domain"
   by (rule gamma_mono[OF sup_ge1])
 
-lemma gamma_sup_ub2[intro]: "gamma b \<subseteq> gamma (a \<squnion> b)" for a b :: "'a::sound_domain"
+lemma gamma_sup_ub2[intro]: "\<gamma> b \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::sound_domain"
   by (rule gamma_mono[OF sup_ge2])
 
 text \<open>
-  Emptiness is downward closed under the abstract order, and fullness is
-  upward closed: both follow from \<open>gamma_mono\<close> alone, with no per-domain fact
-  needed. This is what lets the generic transfer dispatcher's short-circuit
-  stay monotone: a smaller input can only be witness-empty \<^emph>\<open>more\<close> often than
-  a larger one, never less; symmetrically, a larger input can only be
-  witness-full \<^emph>\<open>more\<close> often than a smaller one.
+  Emptiness is downward closed under the abstract order: it follows from
+  \<open>gamma_mono\<close> alone, with no per-domain fact needed. This is what lets the
+  generic transfer dispatcher's short-circuit stay monotone: a smaller input
+  can only be witness-empty \<^emph>\<open>more\<close> often than a larger one, never less.
 \<close>
 lemma is_empty_antimono:
   "a \<le> b \<Longrightarrow> is_empty b \<Longrightarrow> is_empty a" for a b :: "'a::sound_domain"
   using gamma_mono unfolding is_empty_correct by blast
 
 subsection \<open>Domains with widening\<close>
-
-text \<open>
-  Widening belongs to the value domain because it approximates joins in that
-  domain. Finite domains instantiate it with join; infinite domains may use a
-  coarser extrapolation. \<open>executable_widening_domain\<close> keeps widening on the
-  executable side, so generated code that only needs \<open>\<nabla>\<close> is never forced to
-  request \<open>gamma\<close> through \<open>widening_domain\<close>.
-\<close>
-
-class executable_widening_domain = executable_domain + widening
-
-class widening_domain = sound_domain + executable_widening_domain
-
-lemma widen_ub1[intro]: "gamma a \<subseteq> gamma (a \<nabla> b)" for a b :: "'a::widening_domain"
-  by (rule gamma_mono[OF widen_ge1])
-
-lemma widen_ub2[intro]: "gamma b \<subseteq> gamma (a \<nabla> b)" for a b :: "'a::widening_domain"
-  by (rule gamma_mono[OF widen_ge2])
 
 text \<open>The vendored solver states its combined update rule over a bounded
   semilattice carrying both widening and narrowing.\<close>

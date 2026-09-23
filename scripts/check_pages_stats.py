@@ -28,14 +28,6 @@ PAGES = REPO / "pages"
 MIN = 1000
 
 
-def flatten(node, prefix=""):
-    for key, value in node.items():
-        if isinstance(value, dict):
-            yield from flatten(value, f"{prefix}{key}.")
-        elif isinstance(value, int):
-            yield f"{prefix}{key}", value
-
-
 def strip(text):
     """Blank out spans where a numeric match means nothing, keeping offsets."""
     for pattern in (r"<script.*?</script>", r"<svg.*?</svg>", r"<style.*?</style>"):
@@ -103,7 +95,7 @@ def main():
         return 1
 
     stats = pages_stats.collect()
-    values = {k: v for k, v in flatten(stats) if v >= MIN}
+    values = {k: v for k, v in pages_stats.flatten(stats) if v >= MIN}
     problems = [] if args.fix else corpus_problems(stats)
 
     fixed = 0

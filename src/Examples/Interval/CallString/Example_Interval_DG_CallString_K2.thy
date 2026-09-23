@@ -175,7 +175,7 @@ interpretation nest_2_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 2 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_2_sol" "fst nest_2_sol" "(cfg_exit nest_cfg, [])" nest_2_sg
     "\<lambda>d. d = Bot"
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) m)"
+    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) m\<rbrakk>\<^sub>\<bottom>"
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -265,7 +265,7 @@ section \<open>The headline theorem: 2-call-string activation collecting soundne
 
 theorem nest_2_activation_collect_sound:
   "activation_collect nest_gs (call_context_rel_of_fun (cs_context 2)) [] nest_cfg (cinit_stores nest_gs) v ctx
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for nest_gs) (nest_2_sg (Inl (v, ctx))))"
+     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_2_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule nest_2_cs.activation_collect_sound[unfolded nest_cfg_compile,
             OF entry_covered_2 nest_cinit_le_cinit_ivl_st])
 

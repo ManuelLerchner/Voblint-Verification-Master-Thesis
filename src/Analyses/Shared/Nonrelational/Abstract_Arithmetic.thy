@@ -115,20 +115,20 @@ locale expression_domain_sound =
     and ev_Or[simp]: "ev (Or e1 e2) sigma =
          (if is_empty (ev e1 sigma) \<or> is_empty (ev e2 sigma) then bot
           else of_bool_option lit (or_opt (tobool (ev e1 sigma)) (tobool (ev e2 sigma))))"
-    and lit_sound[simp]: "n \<in> gamma (lit n)"
+    and lit_sound[simp]: "n \<in> \<gamma> (lit n)"
     and plus_sound[intro]:
-      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i + j \<in> gamma (pls p q)"
+      "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> i + j \<in> \<gamma> (pls p q)"
     and minus_sound[intro]:
-      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i - j \<in> gamma (mns p q)"
+      "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> i - j \<in> \<gamma> (mns p q)"
     and times_sound[intro]:
-      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> i * j \<in> gamma (tms p q)"
+      "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> i * j \<in> \<gamma> (tms p q)"
     and div_sound[intro]:
-      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> c_div i j \<in> gamma (dvs p q)"
+      "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_div i j \<in> \<gamma> (dvs p q)"
     and mod_sound[intro]:
-      "i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> c_mod i j \<in> gamma (rem p q)"
-    and lt_sound: "lt p q = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> (i < j) = b"
-    and eqb_sound: "eqb p q = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> j \<in> gamma q \<Longrightarrow> (i = j) = b"
-    and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> gamma (p::'a) \<Longrightarrow> truthy i = b"
+      "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_mod i j \<in> \<gamma> (rem p q)"
+    and lt_sound: "lt p q = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> (i < j) = b"
+    and eqb_sound: "eqb p q = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> (i = j) = b"
+    and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> truthy i = b"
 begin
 
 text \<open>
@@ -140,56 +140,56 @@ text \<open>
 
 lemma of_bool_option_sound:
   assumes "\<not> E" and "\<And>b. r = Some b \<Longrightarrow> v = (if b then 1 else 0)" and "v \<in> {0, 1}"
-  shows "v \<in> gamma (if E then bot else of_bool_option lit r)"
+  shows "v \<in> \<gamma> (if E then bot else of_bool_option lit r)"
   using assms
   by (cases r) (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
 
 lemma aval_dom_sound:
-  "(\<forall>x. s x \<in> gamma (sigma x)) \<Longrightarrow> aval a s \<in> gamma (ev a sigma)"
+  "(\<forall>x. s x \<in> \<gamma> (sigma x)) \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a sigma)"
 proof (induction a arbitrary: s sigma)
   case (Less e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Less by simp_all
   show ?case unfolding ev_Less aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
 next
   case (LessEq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using LessEq by simp_all
   show ?case unfolding ev_LessEq aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
 next
   case (Greater e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Greater by simp_all
   show ?case unfolding ev_Greater aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
 next
   case (GreaterEq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using GreaterEq by simp_all
   show ?case unfolding ev_GreaterEq aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
 next
   case (NotEq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using NotEq by simp_all
   show ?case unfolding ev_NotEq aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
 next
   case (Eq e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Eq by simp_all
   show ?case unfolding ev_Eq aval.simps
     by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
 next
   case (Not e)
-  have h: "aval e s \<in> gamma (ev e sigma)" using Not by simp
+  have h: "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e sigma)" using Not by simp
   show ?case unfolding ev_Not aval.simps
     by (rule of_bool_option_sound) (use h is_empty_correct tobool_sound[OF _ h] in auto)
 next
   case (And e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using And by simp_all
   show ?case unfolding ev_And aval.simps
     by (rule of_bool_option_sound)
@@ -197,7 +197,7 @@ next
           and_opt_sound[OF _ tobool_sound[OF _ h1] tobool_sound[OF _ h2]] in auto)
 next
   case (Or e1 e2)
-  have h1: "aval e1 s \<in> gamma (ev e1 sigma)" and h2: "aval e2 s \<in> gamma (ev e2 sigma)"
+  have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Or by simp_all
   show ?case unfolding ev_Or aval.simps
     by (rule of_bool_option_sound)

@@ -33,8 +33,8 @@ global_interpretation sign_check_domain:
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD by blast
-  then show "aval e s \<in> gamma (aval_sign e \<sigma>)"
+  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
+  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_sign e \<sigma>)"
     by (rule sign_arith.aval_dom_sound)
 qed
 

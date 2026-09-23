@@ -73,7 +73,7 @@ lemma call_context_rel_of_fun_iff [simp]:
   by (simp add: call_context_rel_of_fun_def)
 
 text \<open>
-  \<open>admits_call_context gs g R u ctx p s es ctx'\<close>: from node \<open>u\<close> in context \<open>ctx\<close> with store
+  \<open>admits_call_context \<G> g R u ctx p s es ctx'\<close>: from node \<open>u\<close> in context \<open>ctx\<close> with store
   \<open>s\<close>, some \<open>calls\<close> edge of \<open>g\<close> enters \<open>p\<close> with exactly the store \<open>es\<close>, and \<open>R\<close> admits
   \<open>ctx'\<close> for that edge.  It is \<^const>\<open>call_enter_store\<close> with the callee and the admitted
   context made explicit.  Naming the edge by its effect rather than assuming it unique keeps
@@ -85,96 +85,96 @@ definition admits_call_context ::
   "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 'c call_context_rel
      \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
 where
-  "admits_call_context gs g R u ctx p s es ctx' \<longleftrightarrow>
+  "admits_call_context \<G> g R u ctx p s es ctx' \<longleftrightarrow>
      (\<exists>dst pars args cont.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<and> es = call_enter gs (CallEdge dst pars args) s
+        \<and> es = call_enter \<G> (CallEdge dst pars args) s
         \<and> R u ctx (call_info_of (CallEdge dst pars args) p) s es ctx')"
 
 lemma admits_call_contextI:
   assumes "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "R u ctx (call_info_of (CallEdge dst pars args) p) s
-           (call_enter gs (CallEdge dst pars args) s) ctx'"
-  shows "admits_call_context gs g R u ctx p s (call_enter gs (CallEdge dst pars args) s) ctx'"
+           (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+  shows "admits_call_context \<G> g R u ctx p s (call_enter \<G> (CallEdge dst pars args) s) ctx'"
   using assms unfolding admits_call_context_def by blast
 
 lemma admits_call_contextE:
-  assumes "admits_call_context gs g R u ctx p s es ctx'"
+  assumes "admits_call_context \<G> g R u ctx p s es ctx'"
   obtains dst pars args cont
     where "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-      and "es = call_enter gs (CallEdge dst pars args) s"
+      and "es = call_enter \<G> (CallEdge dst pars args) s"
       and "R u ctx (call_info_of (CallEdge dst pars args) p) s es ctx'"
   using assms unfolding admits_call_context_def by blast
 
 lemma admits_call_context_call_enter_storeD:
-  "admits_call_context gs g R u ctx p s es ctx' \<Longrightarrow> call_enter_store gs g u s es"
+  "admits_call_context \<G> g R u ctx p s es ctx' \<Longrightarrow> call_enter_store \<G> g u s es"
   unfolding admits_call_context_def call_enter_store_def by blast
 
 lemma admits_call_context_of_fun:
-  "admits_call_context gs g (call_context_rel_of_fun f) u ctx p s es ctx'
+  "admits_call_context \<G> g (call_context_rel_of_fun f) u ctx p s es ctx'
      \<longleftrightarrow> (\<exists>dst pars args cont.
            (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-           \<and> es = call_enter gs (CallEdge dst pars args) s)
+           \<and> es = call_enter \<G> (CallEdge dst pars args) s)
        \<and> ctx' = f u ctx es"
   unfolding admits_call_context_def by auto
 
 text \<open>
-  \<open>trace_context gs R startcontext g t ctx\<close>: the trace \<open>t\<close> may carry context \<open>ctx\<close>.  A root
+  \<open>trace_context \<G> R startcontext g t ctx\<close>: the trace \<open>t\<close> may carry context \<open>ctx\<close>.  A root
   carries \<open>startcontext\<close>; a call carries any context admitted for its creating transition,
   computed from the caller's own carried context; a resumed caller keeps what it carried.
 \<close>
 
 inductive trace_context ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> ltr \<Rightarrow> 'c \<Rightarrow> bool"
-  for gs :: "vname \<Rightarrow> bool" and R :: "'c call_context_rel" and startcontext :: 'c and g :: cfg
+  for \<G> :: "vname \<Rightarrow> bool" and R :: "'c call_context_rel" and startcontext :: 'c and g :: cfg
 where
-  Root: "trace_context gs R startcontext g (Root xs) startcontext"
+  Root: "trace_context \<G> R startcontext g (Root xs) startcontext"
 | Call:
-    "trace_context gs R startcontext g parent ctx
-     \<Longrightarrow> admits_call_context gs g R (sink_node parent) ctx p (sink_store parent) es ctx'
-     \<Longrightarrow> trace_context gs R startcontext g (Call parent ((FunctionEntry p, es) # xs)) ctx'"
+    "trace_context \<G> R startcontext g parent ctx
+     \<Longrightarrow> admits_call_context \<G> g R (sink_node parent) ctx p (sink_store parent) es ctx'
+     \<Longrightarrow> trace_context \<G> R startcontext g (Call parent ((FunctionEntry p, es) # xs)) ctx'"
 | Resume:
-    "trace_context gs R startcontext g current ctx
-     \<Longrightarrow> trace_context gs R startcontext g (Resume current callee xs) ctx"
+    "trace_context \<G> R startcontext g current ctx
+     \<Longrightarrow> trace_context \<G> R startcontext g (Resume current callee xs) ctx"
 
 declare trace_context.intros [intro]
 
 inductive_cases trace_context_RootE [elim!]:
-  "trace_context gs R startcontext g (Root xs) ctx"
+  "trace_context \<G> R startcontext g (Root xs) ctx"
 
 inductive_cases trace_context_CallE [elim]:
-  "trace_context gs R startcontext g (Call parent xs) ctx"
+  "trace_context \<G> R startcontext g (Call parent xs) ctx"
 
 inductive_cases trace_context_ResumeE [elim]:
-  "trace_context gs R startcontext g (Resume current callee xs) ctx"
+  "trace_context \<G> R startcontext g (Resume current callee xs) ctx"
 
 lemma trace_context_Root_iff [simp]:
-  "trace_context gs R startcontext g (Root xs) ctx \<longleftrightarrow> ctx = startcontext"
+  "trace_context \<G> R startcontext g (Root xs) ctx \<longleftrightarrow> ctx = startcontext"
   by blast
 
 lemma trace_context_Resume_iff [simp]:
-  "trace_context gs R startcontext g (Resume current callee xs) ctx
-     \<longleftrightarrow> trace_context gs R startcontext g current ctx"
+  "trace_context \<G> R startcontext g (Resume current callee xs) ctx
+     \<longleftrightarrow> trace_context \<G> R startcontext g current ctx"
   by blast
 
 lemma trace_context_Call_Nil [simp]:
-  "\<not> trace_context gs R startcontext g (Call parent []) ctx"
+  "\<not> trace_context \<G> R startcontext g (Call parent []) ctx"
   by blast
 
 text \<open>The carried context of a called activation depends on its caller and its entry
   record only: the rest of the local path is irrelevant, which is what makes an intra step
   context-preserving.\<close>
 lemma trace_context_Call_iff:
-  "trace_context gs R startcontext g (Call parent ((n, es) # xs)) ctx'
+  "trace_context \<G> R startcontext g (Call parent ((n, es) # xs)) ctx'
      \<longleftrightarrow> (\<exists>ctx p. n = FunctionEntry p
-           \<and> trace_context gs R startcontext g parent ctx
-           \<and> admits_call_context gs g R (sink_node parent) ctx p (sink_store parent) es ctx')"
+           \<and> trace_context \<G> R startcontext g parent ctx
+           \<and> admits_call_context \<G> g R (sink_node parent) ctx p (sink_store parent) es ctx')"
   by blast
 
 lemma trace_context_extend:
   assumes "path t \<noteq> []"
-  shows "trace_context gs R startcontext g (extend t x) ctx
-           \<longleftrightarrow> trace_context gs R startcontext g t ctx"
+  shows "trace_context \<G> R startcontext g (extend t x) ctx
+           \<longleftrightarrow> trace_context \<G> R startcontext g t ctx"
 proof (cases t)
   case (Call parent xs)
   then obtain n es ys where "xs = (n, es) # ys" using assms by (cases xs) auto
@@ -183,85 +183,96 @@ qed simp_all
 
 subsection \<open>Context entry invariant\<close>
 
+text \<open>The invariants below concern the traces of one graph from one set of initial stores,
+  so the block fixes \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close> and writes \<open>\<T>\<close> for
+  \<open>\<T>\<^bsub>\<G>,g,S\<^esub>\<close>.\<close>
+
+context
+  fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
+begin
+
+private abbreviation (input) traces :: "ltr set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
+notation traces ("\<T>")
+
 text \<open>A called activation carries exactly the contexts admitted for the transition from its
   immediate caller, each computed from a context the caller itself carries.  Stated as an
   equivalence: forwards, a RETURN argument recovers the caller's slot from the callee's;
   backwards, it re-enters the callee at a context derived from whichever slot the resumed
   caller is being placed in.\<close>
 lemma trace_context_caller_entry:
-  assumes "callee \<in> valid_ltr gs g S"
+  assumes "callee \<in> \<T>"
   shows "\<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c
        \<longrightarrow> (\<exists>p es. hd (path u) = (FunctionEntry p, es)
-             \<and> (\<forall>ctx'. trace_context gs R startcontext g u ctx'
-                  \<longleftrightarrow> (\<exists>ctx. trace_context gs R startcontext g c ctx
-                        \<and> admits_call_context gs g R (sink_node c) ctx p (sink_store c) es ctx')))"
+             \<and> (\<forall>ctx'. trace_context \<G> R startcontext g u ctx'
+                  \<longleftrightarrow> (\<exists>ctx. trace_context \<G> R startcontext g c ctx
+                        \<and> admits_call_context \<G> g R (sink_node c) ctx p (sink_store c) es ctx')))"
 proof -
   define P where "P u \<longleftrightarrow> (\<forall>c. caller_of u = Some c
        \<longrightarrow> (\<exists>p es. hd (path u) = (FunctionEntry p, es)
-             \<and> (\<forall>ctx'. trace_context gs R startcontext g u ctx'
-                  \<longleftrightarrow> (\<exists>ctx. trace_context gs R startcontext g c ctx
-                        \<and> admits_call_context gs g R (sink_node c) ctx p (sink_store c) es ctx'))))"
+             \<and> (\<forall>ctx'. trace_context \<G> R startcontext g u ctx'
+                  \<longleftrightarrow> (\<exists>ctx. trace_context \<G> R startcontext g c ctx
+                        \<and> admits_call_context \<G> g R (sink_node c) ctx p (sink_store c) es ctx'))))"
     for u
   have "\<forall>u \<in> callers callee. P u"
   proof (rule caller_chain_closure[OF _ _ _ _ assms])
     fix s show "P (Root [(cfg_entry g, s)])" by (simp add: P_def)
   next
-    fix t a v s' assume t: "t \<in> valid_ltr gs g S" and IH: "\<forall>u \<in> callers t. P u"
+    fix t a v s' assume t: "t \<in> \<T>" and IH: "\<forall>u \<in> callers t. P u"
     have "path t \<noteq> []" using valid_ltr_path_nonempty[OF t] .
     with IH[THEN bspec, OF callers_refl] show "P (extend t (v, s'))"
       by (simp add: P_def trace_context_extend hd_append)
   next
     fix caller dst pars args p cont
     show "P (Call caller
-        [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+        [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
       unfolding P_def by (auto simp: trace_context_Call_iff)
   next
     fix callee caller p dst pars args cont
-    assume cv: "callee \<in> valid_ltr gs g S" and IH: "\<forall>u \<in> callers callee. P u"
+    assume cv: "callee \<in> \<T>" and IH: "\<forall>u \<in> callers callee. P u"
       and cof: "caller_of callee = Some caller"
     have "path caller \<noteq> []"
       using valid_ltr_path_nonempty[OF valid_ltr_caller_valid[OF cv cof]] .
     moreover have "P caller" using IH ancestors_caller[OF cof] by blast
     ultimately show "P (Resume caller callee
-        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+        (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
       by (simp add: P_def hd_append)
   qed
   then show ?thesis unfolding P_def .
 qed
 
 lemma trace_context_caller_entryE:
-  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
-    and "trace_context gs R startcontext g callee ctx'"
+  assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
+    and "trace_context \<G> R startcontext g callee ctx'"
   obtains ctx p where "hd (path callee) = (FunctionEntry p, entry_store callee)"
-    and "trace_context gs R startcontext g caller ctx"
-    and "admits_call_context gs g R (sink_node caller) ctx p (sink_store caller)
+    and "trace_context \<G> R startcontext g caller ctx"
+    and "admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller)
            (entry_store callee) ctx'"
 proof -
   from trace_context_caller_entry[OF assms(1), THEN bspec, OF callers_refl,
       rule_format, OF assms(2)]
   obtain p es where hd: "hd (path callee) = (FunctionEntry p, es)"
-    and iff: "\<forall>ctx'. trace_context gs R startcontext g callee ctx'
-         \<longleftrightarrow> (\<exists>ctx. trace_context gs R startcontext g caller ctx
-               \<and> admits_call_context gs g R (sink_node caller) ctx p (sink_store caller) es ctx')"
+    and iff: "\<forall>ctx'. trace_context \<G> R startcontext g callee ctx'
+         \<longleftrightarrow> (\<exists>ctx. trace_context \<G> R startcontext g caller ctx
+               \<and> admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller) es ctx')"
     by force
   have "es = entry_store callee" using hd by (simp add: entry_store_def)
   with hd iff assms(3) show thesis using that by blast
 qed
 
 lemma trace_context_caller_entryI:
-  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
+  assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
     and "hd (path callee) = (FunctionEntry p, entry_store callee)"
-    and "trace_context gs R startcontext g caller ctx"
-    and "admits_call_context gs g R (sink_node caller) ctx p (sink_store caller)
+    and "trace_context \<G> R startcontext g caller ctx"
+    and "admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller)
            (entry_store callee) ctx'"
-  shows "trace_context gs R startcontext g callee ctx'"
+  shows "trace_context \<G> R startcontext g callee ctx'"
 proof -
   from trace_context_caller_entry[OF assms(1), THEN bspec, OF callers_refl,
       rule_format, OF assms(2)]
   obtain p' es where hd: "hd (path callee) = (FunctionEntry p', es)"
-    and iff: "\<forall>ctx'. trace_context gs R startcontext g callee ctx'
-         \<longleftrightarrow> (\<exists>ctx. trace_context gs R startcontext g caller ctx
-               \<and> admits_call_context gs g R (sink_node caller) ctx p' (sink_store caller) es ctx')"
+    and iff: "\<forall>ctx'. trace_context \<G> R startcontext g callee ctx'
+         \<longleftrightarrow> (\<exists>ctx. trace_context \<G> R startcontext g caller ctx
+               \<and> admits_call_context \<G> g R (sink_node caller) ctx p' (sink_store caller) es ctx')"
     by force
   have "p' = p" and "es = entry_store callee" using hd assms(3) by simp_all
   with iff assms(4,5) show ?thesis by blast
@@ -270,17 +281,17 @@ qed
 text \<open>A functional policy carries exactly \<^const>\<open>key\<close>'s context on every valid trace.  The
   restriction to valid traces is what supplies the call edge the relational clause names.\<close>
 lemma trace_context_of_fun_iff:
-  assumes "t \<in> valid_ltr gs g S"
-  shows "trace_context gs (call_context_rel_of_fun f) startcontext g t ctx
+  assumes "t \<in> \<T>"
+  shows "trace_context \<G> (call_context_rel_of_fun f) startcontext g t ctx
            \<longleftrightarrow> key f startcontext t = ctx"
 proof -
-  define P where "P u \<longleftrightarrow> (\<forall>ctx. trace_context gs (call_context_rel_of_fun f) startcontext g u ctx
+  define P where "P u \<longleftrightarrow> (\<forall>ctx. trace_context \<G> (call_context_rel_of_fun f) startcontext g u ctx
                                 \<longleftrightarrow> key f startcontext u = ctx)" for u
   have "\<forall>u \<in> callers t. P u"
   proof (rule caller_chain_closure[OF _ _ _ _ assms])
     fix s show "P (Root [(cfg_entry g, s)])" by (simp add: P_def eq_commute)
   next
-    fix t a v s' assume t: "t \<in> valid_ltr gs g S" and IH: "\<forall>u \<in> callers t. P u"
+    fix t a v s' assume t: "t \<in> \<T>" and IH: "\<forall>u \<in> callers t. P u"
     have "path t \<noteq> []" using valid_ltr_path_nonempty[OF t] .
     with IH[THEN bspec, OF callers_refl] show "P (extend t (v, s'))"
       by (simp add: P_def key_extend_nonempty trace_context_extend)
@@ -290,7 +301,7 @@ proof -
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     have Pc: "P caller" using IH callers_refl by blast
     show "P (Call caller
-        [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+        [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
       unfolding P_def trace_context_Call_iff admits_call_context_of_fun
       using Pc[unfolded P_def] e by auto
   next
@@ -298,7 +309,7 @@ proof -
     assume IH: "\<forall>u \<in> callers callee. P u" and cof: "caller_of callee = Some caller"
     have "P caller" using IH ancestors_caller[OF cof] by blast
     then show "P (Resume caller callee
-        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+        (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
       by (simp add: P_def)
   qed
   then show ?thesis unfolding P_def using callers_refl by blast
@@ -311,10 +322,10 @@ text \<open>Every ancestor of a valid trace is itself valid: \<open>caller_chain
   and validity coincide.\<close>
 
 lemma callers_valid:
-  assumes "callee \<in> valid_ltr gs g S" and "u \<in> callers callee"
-  shows "u \<in> valid_ltr gs g S"
+  assumes "callee \<in> \<T>" and "u \<in> callers callee"
+  shows "u \<in> \<T>"
 proof -
-  have "\<forall>u \<in> callers callee. u \<in> valid_ltr gs g S"
+  have "\<forall>u \<in> callers callee. u \<in> \<T>"
   proof (rule caller_chain_closure[OF _ _ _ _ assms(1)], goal_cases Root Intra Call Ret)
     case (Root s) then show ?case by (rule valid_ltr.init)
   next
@@ -336,20 +347,20 @@ text \<open>The context of an activation is exactly what \<open>enterc\<close> c
   the \<open>enterc\<close>-equation and the call-edge witness in one step.\<close>
 
 lemma key_entry_invariant:
-  assumes "callee \<in> valid_ltr gs g S"
+  assumes "callee \<in> \<T>"
   shows "\<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c \<longrightarrow>
        key enterc initial_ctx u = enterc (sink_node c) (key enterc initial_ctx c) (entry_store u)
-       \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+       \<and> call_enter_store \<G> g (sink_node c) (sink_store c) (entry_store u)"
 proof (intro ballI allI impI)
   fix u c assume mem: "u \<in> callers callee" and cof: "caller_of u = Some c"
-  have uv: "u \<in> valid_ltr gs g S" using callers_valid[OF assms mem] .
-  have cv: "c \<in> valid_ltr gs g S" using valid_ltr_caller_valid[OF uv cof] .
-  have tc_u: "trace_context gs (call_context_rel_of_fun enterc) initial_ctx g u
+  have uv: "u \<in> \<T>" using callers_valid[OF assms mem] .
+  have cv: "c \<in> \<T>" using valid_ltr_caller_valid[OF uv cof] .
+  have tc_u: "trace_context \<G> (call_context_rel_of_fun enterc) initial_ctx g u
                 (key enterc initial_ctx u)"
     by (simp only: trace_context_of_fun_iff[OF uv])
   obtain p ctx where hd: "hd (path u) = (FunctionEntry p, entry_store u)"
-    and tc_c: "trace_context gs (call_context_rel_of_fun enterc) initial_ctx g c ctx"
-    and adm: "admits_call_context gs g (call_context_rel_of_fun enterc) (sink_node c) ctx p
+    and tc_c: "trace_context \<G> (call_context_rel_of_fun enterc) initial_ctx g c ctx"
+    and adm: "admits_call_context \<G> g (call_context_rel_of_fun enterc) (sink_node c) ctx p
                 (sink_store c) (entry_store u) (key enterc initial_ctx u)"
     by (rule trace_context_caller_entryE[OF uv cof tc_u])
   have key_c: "key enterc initial_ctx c = ctx"
@@ -361,54 +372,59 @@ proof (intro ballI allI impI)
     unfolding key_c using adm' .
   show "key enterc initial_ctx u
           = enterc (sink_node c) (key enterc initial_ctx c) (entry_store u)
-        \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+        \<and> call_enter_store \<G> g (sink_node c) (sink_store c) (entry_store u)"
     using key_eq admits_call_context_call_enter_storeD[OF adm] by (intro conjI)
 qed
 
 lemma key_entry_invariant_eq:
-  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
+  assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
   shows "key enterc initial_ctx callee
          = enterc (sink_node caller) (key enterc initial_ctx caller) (entry_store callee)"
   using key_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF assms(2),
       THEN conjunct1] .
 
 lemma key_entry_invariant_call_enterD [dest]:
-  assumes "callee \<in> valid_ltr gs g S" and "caller_of callee = Some caller"
-  shows "call_enter_store gs g (sink_node caller) (sink_store caller) (entry_store callee)"
+  assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
+  shows "call_enter_store \<G> g (sink_node caller) (sink_store caller) (entry_store callee)"
   using key_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF assms(2)]
   by (rule conjunct2)
+
+end
 
 subsection \<open>Conditional totality\<close>
 
 text \<open>
-  A relation may admit no context at all, and then every context-indexed collection is
-  empty --- true, and useless.  \<open>call_context_total_on cover R gs g\<close> rules that out exactly
-  where it matters: at every call edge, every store the claimed \<open>cover\<close> admits at the call
-  site has some admissible callee context.  A dead call site owes nothing.  The graph of a
-  function is total outright.
+  A relation may admit no context for a call.  The callee activation then carries no
+  context and drops out of every bucket, but the resumed caller keeps its own, so the
+  continuation is still collected.  CALL and RETURN hold vacuously at such a call, and a
+  claim may leave the continuation uncovered although a valid trace reaches it there
+  (\<open>total_dropped_unsound\<close> in \<open>Example_Non_Vacuity\<close>).  \<open>call_context_total_on cover R \<G> g\<close>
+  rules that out exactly where it matters: at every call edge, every store the claimed
+  \<open>cover\<close> admits at the call site has some admissible callee context.  A dead call site
+  owes nothing.  The graph of a function is total outright.
 \<close>
 
 definition call_context_total_on ::
   "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c call_context_rel \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool"
 where
-  "call_context_total_on cover R gs g \<longleftrightarrow>
+  "call_context_total_on cover R \<G> g \<longleftrightarrow>
      (\<forall>u dst pars args p cont ctx s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<longrightarrow> s \<in> cover u ctx
         \<longrightarrow> (\<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) p) s
-                      (call_enter gs (CallEdge dst pars args) s) ctx'))"
+                      (call_enter \<G> (CallEdge dst pars args) s) ctx'))"
 
 lemma call_context_total_onE:
-  assumes "call_context_total_on cover R gs g"
+  assumes "call_context_total_on cover R \<G> g"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> cover u ctx"
-  obtains ctx' where "admits_call_context gs g R u ctx p s
-                        (call_enter gs (CallEdge dst pars args) s) ctx'"
+  obtains ctx' where "admits_call_context \<G> g R u ctx p s
+                        (call_enter \<G> (CallEdge dst pars args) s) ctx'"
   using assms unfolding call_context_total_on_def
   by (blast intro: admits_call_contextI)
 
 lemma call_context_total_on_of_fun [simp]:
-  "call_context_total_on cover (call_context_rel_of_fun f) gs g"
+  "call_context_total_on cover (call_context_rel_of_fun f) \<G> g"
   unfolding call_context_total_on_def call_context_rel_of_fun_def by blast
 
 subsection \<open>The activation-indexed context collecting\<close>
@@ -420,26 +436,26 @@ text \<open>The activation-sensitive collecting is the sink stores of valid trac
 definition activation_collect ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c
      \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "activation_collect gs R startcontext g S v c =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v
-                        \<and> trace_context gs R startcontext g t c}"
+  "activation_collect \<G> R startcontext g S v c =
+     {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v
+                        \<and> trace_context \<G> R startcontext g t c}"
 
 lemma activation_collect_I [intro]:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> trace_context gs R startcontext g t c
-   \<Longrightarrow> sink_store t \<in> activation_collect gs R startcontext g S v c"
+  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t = v \<Longrightarrow> trace_context \<G> R startcontext g t c
+   \<Longrightarrow> sink_store t \<in> activation_collect \<G> R startcontext g S v c"
   unfolding activation_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness carrying the queried \<open>c\<close>.\<close>
 lemma activation_collect_E [elim]:
-  assumes "s \<in> activation_collect gs R startcontext g S v c"
-  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v"
-    "trace_context gs R startcontext g t c" "sink_store t = s"
+  assumes "s \<in> activation_collect \<G> R startcontext g S v c"
+  obtains t where "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" "sink_node t = v"
+    "trace_context \<G> R startcontext g t c" "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 
 text \<open>Under a functional policy the buckets are \<^const>\<open>key\<close>'s fibres.\<close>
 lemma activation_collect_of_fun:
-  "activation_collect gs (call_context_rel_of_fun f) startcontext g S v c =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> key f startcontext t = c}"
+  "activation_collect \<G> (call_context_rel_of_fun f) startcontext g S v c =
+     {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v \<and> key f startcontext t = c}"
   unfolding activation_collect_def
   by (auto simp: trace_context_of_fun_iff)
 

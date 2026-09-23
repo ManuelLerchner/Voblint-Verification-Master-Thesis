@@ -42,7 +42,7 @@ definition branch_ivl_st_for ::
   "branch_ivl_st_for = n_bfilter ivl_ops"
 
 lemma branch_ivl_st_for_eq [simp]:
-  "branch_ivl_st_for gs b pol s = branch_ivl_st gs b pol s"
+  "branch_ivl_st_for \<G> b pol s = branch_ivl_st \<G> b pol s"
   by (simp add: branch_ivl_st_for_def)
 
 definition ivl_enter_st_for ::
@@ -51,10 +51,10 @@ definition ivl_enter_st_for ::
   "ivl_enter_st_for = generic_enter_st_for ivl_ops"
 
 lemma ivl_enter_st_for_eq [simp]:
-  "ivl_enter_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "ivl_enter_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_ivl e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q ivl_top s)"
   by (simp add: ivl_enter_st_for_def generic_enter_st_for_def)
 
@@ -81,10 +81,10 @@ text \<open>
 \<close>
 
 lemma cinit_ivl_st_not_bot_for:
-  assumes globals: "\<And>x. gs x = (x \<in> set gl)"
+  assumes globals: "\<And>x. \<G> x = (x \<in> set gl)"
   shows "\<not> resolved_st_q_is_bot_for gl cinit_ivl_st"
 proof -
-  have "\<not> is_empty_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
+  have "\<not> is_empty_state (fun_of_resolved_st_q_for \<G> cinit_ivl_st)"
     unfolding is_empty_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
   then show ?thesis
     by (simp add: resolved_st_q_is_bot_for_iff[OF globals])
@@ -96,17 +96,17 @@ text \<open>Only the guard is Interval's to discharge: every other action is set
   once for any bundle by \<open>ivl_tf.tf_st_for_commute\<close>.\<close>
 
 lemma ivl_tf_st_for_commute:
-  assumes live: "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s) =
-     ivl_tf_abs a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (ivl_tf_st_for \<G> a s) =
+     ivl_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding ivl_tf_st_for_def
   by (rule ivl_tf.tf_st_for_commute)
      (simp add: branch_ivl_st_commute[OF live])
 
 lemma ivl_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs ci s) =
-   enter_ivl_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (ivl_enter_st_for \<G> ci s) =
+   enter_ivl_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: ivl_tf.op_defs enter_binding_def enter_frame_def)
 
 

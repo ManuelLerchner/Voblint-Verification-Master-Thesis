@@ -58,8 +58,8 @@ theorem example_early_return_skips_dead:
       and sub: "E \<subseteq> intra g"
   shows "control_at \<Pi> p (Seq (Return (Some e)) dead) k n
            (Seq (Return (Some e)) dead) (Statement n)"
-    and "cstep cr_gs g (Statement n, s, stk)
-           (FunctionResult p, s(ret_var := aval e s), stk)"
+    and "cr_gs, g \<turnstile> (Statement n, s, stk)
+           \<rightarrow>\<^sub>c (FunctionResult p, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), stk)"
     and "\<forall>k. FunctionResult p \<noteq> Statement k"
 proof -
   show "control_at \<Pi> p (Seq (Return (Some e)) dead) k n
@@ -68,7 +68,7 @@ proof -
   have "(Statement n, EA_Ret (Some e) p, FunctionResult p) \<in> intra g"
     using compile_seq_return_edge[OF comp] sub by blast
   from cstep_ret[OF this]
-  show "cstep cr_gs g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
+  show "cr_gs, g \<turnstile> (Statement n, s, stk) \<rightarrow>\<^sub>c (FunctionResult p, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), stk)"
     by simp
   show "\<forall>k. FunctionResult p \<noteq> Statement k" by simp
 qed
@@ -77,8 +77,8 @@ theorem example_nested_call_preserves_outer:
   assumes p: "\<Pi> pin = Some decl" and spNone: "special_table pin = None"
       and comp: "compile \<Pi> pout (Seq (Call (Some rin) pin actuals) after) k n = (n', en, E, K)"
       and sub: "K \<subseteq> calls g"
-  shows "cstep cr_gs g (Statement n, s, outer # stk)
-           (FunctionEntry pin,
+  shows "cr_gs, g \<turnstile> (Statement n, s, outer # stk)
+           \<rightarrow>\<^sub>c (FunctionEntry pin,
             call_enter cr_gs (CallEdge (Some rin) (formals decl) actuals) s,
             (Statement (Suc n), Some rin, s) # outer # stk)"
 proof -

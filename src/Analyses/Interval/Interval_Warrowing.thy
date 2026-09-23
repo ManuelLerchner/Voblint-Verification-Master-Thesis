@@ -202,6 +202,5 @@ instance proof intro_classes
 qed
 end
 
-instance ivl :: widening_domain ..
 
 end

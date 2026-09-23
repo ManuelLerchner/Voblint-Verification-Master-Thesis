@@ -77,10 +77,10 @@ where
   "int_dom_enter_never_st_for = generic_enter_st_for int_dom_ops_never"
 
 lemma int_dom_enter_never_st_for_eq [simp]:
-  "int_dom_enter_never_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "int_dom_enter_never_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_int_dom Refine_Never e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_never_st_for_def generic_enter_st_for_def)
 
@@ -105,17 +105,17 @@ proof (rule ext, rule ext)
 qed
 
 theorem int_tf_st_never_for_commute:
-  assumes live: "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (int_tf_st_never_for gs a s) =
-     int_tf_abs Refine_Never a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (int_tf_st_never_for \<G> a s) =
+     int_tf_abs Refine_Never a (fun_of_resolved_st_q_for \<G> s)"
   unfolding int_tf_st_never_for_def int_tf_abs_never_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: int_dom_backward_never.branch_st_commute[OF live])
 
 lemma int_dom_enter_never_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_never_st_for gs ci s) =
-   enter_int_dom_ci_for Refine_Never gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (int_dom_enter_never_st_for \<G> ci s) =
+   enter_int_dom_ci_for Refine_Never \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
                 enter_frame_def enter_frame_int_dom_for_def)
 
@@ -143,10 +143,10 @@ where
   "int_dom_enter_once_st_for = generic_enter_st_for int_dom_ops_once"
 
 lemma int_dom_enter_once_st_for_eq [simp]:
-  "int_dom_enter_once_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "int_dom_enter_once_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_int_dom Refine_Once e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_once_st_for_def generic_enter_st_for_def)
 
@@ -171,17 +171,17 @@ proof (rule ext, rule ext)
 qed
 
 theorem int_tf_st_once_for_commute:
-  assumes live: "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (int_tf_st_once_for gs a s) =
-     int_tf_abs Refine_Once a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (int_tf_st_once_for \<G> a s) =
+     int_tf_abs Refine_Once a (fun_of_resolved_st_q_for \<G> s)"
   unfolding int_tf_st_once_for_def int_tf_abs_once_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: int_dom_backward_once.branch_st_commute[OF live])
 
 lemma int_dom_enter_once_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_once_st_for gs ci s) =
-   enter_int_dom_ci_for Refine_Once gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (int_dom_enter_once_st_for \<G> ci s) =
+   enter_int_dom_ci_for Refine_Once \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
                 enter_frame_def enter_frame_int_dom_for_def)
 
@@ -209,10 +209,10 @@ where
   "int_dom_enter_fixpoint_st_for = generic_enter_st_for int_dom_ops_fixpoint"
 
 lemma int_dom_enter_fixpoint_st_for_eq [simp]:
-  "int_dom_enter_fixpoint_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "int_dom_enter_fixpoint_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_int_dom Refine_Fixpoint e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q top s)"
   by (simp add: int_dom_enter_fixpoint_st_for_def generic_enter_st_for_def)
 
@@ -238,17 +238,17 @@ proof (rule ext, rule ext)
 qed
 
 theorem int_tf_st_fixpoint_for_commute:
-  assumes live: "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (int_tf_st_fixpoint_for gs a s) =
-     int_tf_abs Refine_Fixpoint a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (int_tf_st_fixpoint_for \<G> a s) =
+     int_tf_abs Refine_Fixpoint a (fun_of_resolved_st_q_for \<G> s)"
   unfolding int_tf_st_fixpoint_for_def int_tf_abs_fixpoint_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: int_dom_backward_fixpoint.branch_st_commute[OF live])
 
 lemma int_dom_enter_fixpoint_st_for_commute:
-  "fun_of_resolved_st_q_for gs (int_dom_enter_fixpoint_st_for gs ci s) =
-   enter_int_dom_ci_for Refine_Fixpoint gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (int_dom_enter_fixpoint_st_for \<G> ci s) =
+   enter_int_dom_ci_for Refine_Fixpoint \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: enter_int_dom_ci_for_def enter_int_dom_for_def enter_binding_def
                 enter_frame_def enter_frame_int_dom_for_def)
 

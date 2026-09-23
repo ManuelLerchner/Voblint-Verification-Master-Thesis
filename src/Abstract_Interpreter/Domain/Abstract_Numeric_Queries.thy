@@ -47,9 +47,9 @@ locale abstract_numeric_queries = executable_numeric_queries less eq
   for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" +
   assumes less_sound[intro]:
-      "less a b = Some r \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> (i < j) = r"
+      "less a b = Some r \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> (i < j) = r"
     and eq_sound[intro]:
-      "eq a b = Some r \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> (i = j) = r"
+      "eq a b = Some r \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> (i = j) = r"
 
 subsection \<open>Building an instance from four judgments\<close>
 
@@ -81,13 +81,13 @@ locale numeric_query_judgments =
     and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
   assumes less_true_sound:
-      "less_true a b \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> i < j"
+      "less_true a b \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> i < j"
     and less_false_sound:
-      "less_false a b \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> \<not> i < j"
+      "less_false a b \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> \<not> i < j"
     and eq_true_sound:
-      "eq_true a b \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> i = j"
+      "eq_true a b \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> i = j"
     and eq_false_sound:
-      "eq_false a b \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> i \<noteq> j"
+      "eq_false a b \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> i \<noteq> j"
 begin
 
 definition less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
@@ -97,12 +97,12 @@ definition eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
   "eq a b = (if eq_true a b then Some True else if eq_false a b then Some False else None)"
 
 lemma less_opt_sound:
-  assumes "less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "(i < j) = r"
   using assms less_true_sound less_false_sound unfolding less_def by (auto split: if_splits)
 
 lemma eq_opt_sound:
-  assumes "eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "(i = j) = r"
   using assms eq_true_sound eq_false_sound unfolding eq_def by (auto split: if_splits)
 
@@ -111,11 +111,11 @@ end
 sublocale numeric_query_judgments \<subseteq> abstract_numeric_queries less eq
 proof
   fix a b r i j
-  assume "less a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assume "less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i < j) = r" by (rule less_opt_sound)
 next
   fix a b r i j
-  assume "eq a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assume "eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i = j) = r" by (rule eq_opt_sound)
 qed
 

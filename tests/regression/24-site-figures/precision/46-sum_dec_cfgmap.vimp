@@ -1,0 +1,204 @@
+// PARAM: --analysis interval --globals warrow --context entry-state
+// Backs the site's "one copy of each procedure" graph (scene-cfgmap) and the
+// thesis's compiled-graph figure: sum(2) calls dec and then itself, down to
+// sum(0). The graph has one copy of each procedure's nodes, pp1, pp4 and pp8
+// are allocated but carry no edge, and entry-state contexts keep the three
+// activations of sum apart, so sum(2) = 3 is proved.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_pp11_ctx0
+//     main_exit_main_ctx0
+//     main_pp9_ctx0
+//     main_pp10_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: sum / [0,0]
+//     sum_pp3_ctx0
+//     sum_exit_sum_ctx0
+//     sum_pp2_ctx0
+//     sum_pp5_ctx0
+//     sum_pp6_ctx0
+//     sum_pp7_ctx0
+//     sum_entry_sum_ctx0
+//   cluster_ctx_2: dec / [1,1]
+//     dec_exit_dec_ctx0
+//     dec_pp0_ctx0
+//     dec_entry_dec_ctx0
+//   cluster_ctx_3: sum / [1,1]
+//     sum_pp3_ctx1
+//     sum_exit_sum_ctx1
+//     sum_pp2_ctx1
+//     sum_pp5_ctx1
+//     sum_pp6_ctx1
+//     sum_pp7_ctx1
+//     sum_entry_sum_ctx1
+//   cluster_ctx_4: dec / [2,2]
+//     dec_exit_dec_ctx1
+//     dec_pp0_ctx1
+//     dec_entry_dec_ctx1
+//   cluster_ctx_5: sum / [2,2]
+//     sum_pp3_ctx2
+//     sum_exit_sum_ctx2
+//     sum_pp2_ctx2
+//     sum_pp5_ctx2
+//     sum_pp6_ctx2
+//     sum_pp7_ctx2
+//     sum_entry_sum_ctx2
+//
+// nodes:
+//   main_pp11_ctx0: pp11
+//       x=[3,3]
+//   main_exit_main_ctx0: exit_main
+//       x=[3,3]
+//   main_pp9_ctx0: pp9
+//       x=⊤
+//   main_pp10_ctx0: pp10 [proved]
+//       x=[3,3]
+//       check x == 3
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
+//   sum_pp3_ctx0: pp3
+//       n=[0,0]
+//       m=⊤
+//       r=⊤
+//   sum_exit_sum_ctx0: exit_sum
+//       n=[0,0]
+//       m=⊤
+//       r=⊤
+//   sum_pp2_ctx0: pp2
+//       n=[0,0]
+//       m=⊤
+//       r=⊤
+//   sum_pp5_ctx0: pp5 [unreachable]
+//       unreachable
+//   sum_pp6_ctx0: pp6 [unreachable]
+//       unreachable
+//   sum_pp7_ctx0: pp7 [unreachable]
+//       unreachable
+//   sum_entry_sum_ctx0: entry_sum
+//       n=[0,0]
+//       m=⊤
+//       r=⊤
+//   dec_exit_dec_ctx0: exit_dec
+//       x=[1,1]
+//   sum_pp3_ctx1: pp3 [unreachable]
+//       unreachable
+//   sum_exit_sum_ctx1: exit_sum
+//       n=[1,1]
+//       m=[0,0]
+//       r=[0,0]
+//   dec_pp0_ctx0: pp0
+//       x=[1,1]
+//   sum_pp2_ctx1: pp2
+//       n=[1,1]
+//       m=⊤
+//       r=⊤
+//   sum_pp5_ctx1: pp5
+//       n=[1,1]
+//       m=⊤
+//       r=⊤
+//   dec_entry_dec_ctx0: entry_dec
+//       x=[1,1]
+//   sum_pp6_ctx1: pp6
+//       n=[1,1]
+//       m=[0,0]
+//       r=⊤
+//   sum_pp7_ctx1: pp7
+//       n=[1,1]
+//       m=[0,0]
+//       r=[0,0]
+//   sum_entry_sum_ctx1: entry_sum
+//       n=[1,1]
+//       m=⊤
+//       r=⊤
+//   dec_exit_dec_ctx1: exit_dec
+//       x=[2,2]
+//   sum_pp3_ctx2: pp3 [unreachable]
+//       unreachable
+//   sum_exit_sum_ctx2: exit_sum
+//       n=[2,2]
+//       m=[1,1]
+//       r=[1,1]
+//   dec_pp0_ctx1: pp0
+//       x=[2,2]
+//   sum_pp2_ctx2: pp2
+//       n=[2,2]
+//       m=⊤
+//       r=⊤
+//   sum_pp5_ctx2: pp5
+//       n=[2,2]
+//       m=⊤
+//       r=⊤
+//   dec_entry_dec_ctx1: entry_dec
+//       x=[2,2]
+//   sum_pp6_ctx2: pp6
+//       n=[2,2]
+//       m=[1,1]
+//       r=⊤
+//   sum_pp7_ctx2: pp7
+//       n=[2,2]
+//       m=[1,1]
+//       r=[1,1]
+//   sum_entry_sum_ctx2: entry_sum
+//       n=[2,2]
+//       m=⊤
+//       r=⊤
+//
+// edges:
+//   dec_pp0_ctx0 -> dec_exit_dec_ctx0: return x - 1
+//   dec_pp0_ctx1 -> dec_exit_dec_ctx1: return x - 1
+//   sum_pp2_ctx0 -> sum_pp3_ctx0: [n < 1]
+//   sum_pp2_ctx1 -> sum_pp3_ctx1: [n < 1]
+//   sum_pp2_ctx2 -> sum_pp3_ctx2: [n < 1]
+//   sum_pp2_ctx0 -> sum_pp5_ctx0: ![n < 1]
+//   sum_pp2_ctx1 -> sum_pp5_ctx1: ![n < 1]
+//   sum_pp2_ctx2 -> sum_pp5_ctx2: ![n < 1]
+//   sum_pp3_ctx0 -> sum_exit_sum_ctx0: return 0
+//   sum_pp3_ctx1 -> sum_exit_sum_ctx1: return 0
+//   sum_pp3_ctx2 -> sum_exit_sum_ctx2: return 0
+//   sum_pp7_ctx0 -> sum_exit_sum_ctx0: return r + n
+//   sum_pp7_ctx1 -> sum_exit_sum_ctx1: return r + n
+//   sum_pp7_ctx2 -> sum_exit_sum_ctx2: return r + n
+//   main_pp10_ctx0 -> main_pp11_ctx0: check(x == 3)
+//   main_pp11_ctx0 -> main_exit_main_ctx0: return
+//   dec_entry_dec_ctx0 -> dec_pp0_ctx0: body(dec)
+//   dec_entry_dec_ctx1 -> dec_pp0_ctx1: body(dec)
+//   main_entry_main_ctx0 -> main_pp9_ctx0: body(main)
+//   sum_entry_sum_ctx0 -> sum_pp2_ctx0: body(sum)
+//   sum_entry_sum_ctx1 -> sum_pp2_ctx1: body(sum)
+//   sum_entry_sum_ctx2 -> sum_pp2_ctx2: body(sum)
+//   sum_pp5_ctx0 -> sum_pp6_ctx0: call-to-return dec
+//   sum_pp5_ctx1 -> dec_entry_dec_ctx0: enter dec(n)
+//   dec_exit_dec_ctx0 -> sum_pp6_ctx1: combine m := dec(n)
+//   sum_pp5_ctx1 -> sum_pp6_ctx1: call-to-return dec
+//   sum_pp5_ctx2 -> dec_entry_dec_ctx1: enter dec(n)
+//   dec_exit_dec_ctx1 -> sum_pp6_ctx2: combine m := dec(n)
+//   sum_pp5_ctx2 -> sum_pp6_ctx2: call-to-return dec
+//   sum_pp6_ctx0 -> sum_pp7_ctx0: call-to-return sum
+//   sum_pp6_ctx1 -> sum_entry_sum_ctx0: enter sum(m)
+//   sum_exit_sum_ctx0 -> sum_pp7_ctx1: combine r := sum(m)
+//   sum_pp6_ctx1 -> sum_pp7_ctx1: call-to-return sum
+//   sum_pp6_ctx2 -> sum_entry_sum_ctx1: enter sum(m)
+//   sum_exit_sum_ctx1 -> sum_pp7_ctx2: combine r := sum(m)
+//   sum_pp6_ctx2 -> sum_pp7_ctx2: call-to-return sum
+//   main_pp9_ctx0 -> sum_entry_sum_ctx2: enter sum(2)
+//   sum_exit_sum_ctx2 -> main_pp10_ctx0: combine x := sum(2)
+//   main_pp9_ctx0 -> main_pp10_ctx0: call-to-return sum
+// EXPECT-GRAPH-END
+
+
+fun dec(x) {
+  return x - 1;
+}
+
+fun sum(n) {
+  if (n < 1) { return 0; }
+  m = dec(n);
+  r = sum(m);
+  return r + n;
+}
+
+fun main() {
+  x = sum(2);
+  __voblint_check(x == 3); // PROVED
+}

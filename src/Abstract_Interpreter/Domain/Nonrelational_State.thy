@@ -30,11 +30,12 @@ text \<open>Pointwise join on abstract states is idempotent because the value-do
   standard idempotent-join laws without a separate state-level assumption.\<close>
 subsection \<open>State concretization\<close>
 
-definition gamma_state :: "('a::sound_domain) abs_state \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>") where
-  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> gamma (\<sigma> x)}"
+definition gamma_state :: "('a::sound_domain) abs_state \<Rightarrow> store set"
+    ("\<lbrakk>_\<rbrakk>") where
+  "\<lbrakk>\<sigma>\<rbrakk> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
 
 lemma gamma_stateI [intro]:
-  "(\<And>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  "(\<And>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   unfolding gamma_state_def by simp
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
@@ -94,7 +95,7 @@ text \<open>
   \<open>env_indep_depsD\<close>). Cite it explicitly with the variable the goal needs.
 \<close>
 lemma gamma_stateD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s x \<in> gamma (\<sigma> x)"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s x \<in> \<gamma> (\<sigma> x)"
   for \<sigma> :: "'a::sound_domain abs_state"
   unfolding gamma_state_def by simp
 
@@ -170,10 +171,10 @@ lemma gamma_state_empty_is_empty_state:
   shows "is_empty_state \<sigma>"
 proof (rule ccontr)
   assume "\<not> is_empty_state \<sigma>"
-  then have nonempty: "\<And>x. \<exists>v. v \<in> gamma (\<sigma> x)"
+  then have nonempty: "\<And>x. \<exists>v. v \<in> \<gamma> (\<sigma> x)"
     unfolding is_empty_state_def using is_empty_correct by blast
-  define s where "s = (\<lambda>x. SOME v. v \<in> gamma (\<sigma> x))"
-  have s_prop: "s x \<in> gamma (\<sigma> x)" for x
+  define s where "s = (\<lambda>x. SOME v. v \<in> \<gamma> (\<sigma> x))"
+  have s_prop: "s x \<in> \<gamma> (\<sigma> x)" for x
     unfolding s_def using nonempty[of x] by (rule someI_ex)
   then have "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
     unfolding gamma_state_def by simp

@@ -68,9 +68,10 @@ text \<open>
   discharging the vendored solver's own @{const TD_side_mono} preconditions
   from per-hook properties --- well-formedness, traverse/sides monotonicity
   and dependency monotonicity --- for an arbitrary generator instance. They are
-  what the solver requires of an equation system before it will return a result at all,
-  not a property of the result; they are met once here rather than at every
-  interpreter.
+  the hypotheses of the vendored least-solution theorem for the solver without
+  widening and narrowing, not a property of the result. The warrowing solver
+  \<open>TD_side_upd_rule\<close> that the shipped analyses run needs none of them, and no
+  shipped analysis discharges the per-hook properties.
 \<close>
 
 

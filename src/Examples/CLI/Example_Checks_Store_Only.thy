@@ -85,8 +85,7 @@ lemma checks_ex_fwd_ok_ball:
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ex_reach v =
-     ltr_collect checks_ex_gs (prog_cfg checks_ex_program)
-       (cinit_stores checks_ex_gs) v"
+     \<C>\<^bsub>checks_ex_gs,prog_cfg checks_ex_program,cinit_stores checks_ex_gs\<^esub> v"
 
 text \<open>The computed Sign environment at an arbitrary node, read out of the
   routed-unit solved table \<open>sign_rule.result\<close> the production
@@ -145,12 +144,12 @@ text \<open>The proved check's condition holds at every reaching store and the r
 
 corollary checks_ex_first_check_holds:
   assumes "t \<in> checks_ex_reach (Statement 1)"
-  shows "truthy (aval (Less (N 0) (V (STR ''y''))) t)"
+  shows "truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
   using assms checks_ex_node_sound sign_classify_check_proved[OF checks_ex_classify_1] by blast
 
 corollary checks_ex_second_check_refuted:
   assumes "t \<in> checks_ex_reach (Statement 3)"
-  shows "\<not> truthy (aval (Less (N 0) (V (STR ''y''))) t)"
+  shows "\<not> truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
   using assms checks_ex_node_sound sign_classify_check_refuted[OF checks_ex_classify_3] by blast
 
 text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
@@ -180,7 +179,7 @@ text \<open>Non-vacuity: stores do reach the check nodes.  The all-zero initial 
 lemma checks_ex_reach_nonempty:
   "checks_ex_reach (Statement 1) \<noteq> {}" "checks_ex_reach (Statement 5) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where gs = checks_ex_gs and g = "prog_cfg checks_ex_program"
+  note step = ltr_collect_intra_step[where \<G> = checks_ex_gs and g = "prog_cfg checks_ex_program"
       and S = "cinit_stores checks_ex_gs", folded checks_ex_reach_def]
   have "(\<lambda>_. 0) \<in> checks_ex_reach (cfg_entry (prog_cfg checks_ex_program))"
     unfolding checks_ex_reach_def by (rule ltr_collect_init) (simp add: cinit_stores_def)

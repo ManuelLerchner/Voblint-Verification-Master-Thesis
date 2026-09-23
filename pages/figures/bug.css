@@ -116,10 +116,11 @@
   }
 }
 
-:where(.scene-bug) .rl-5.alarm {
+/* The flash keyframes sit at 62-92%; the negative delay aligns them with line 4's cursor. */
+:where(.scene-bug) .rl-4.alarm {
   animation-name: run-line, dead-alarm;
   animation-duration: 10s, 10s;
-  animation-delay: 6s, 0s;
+  animation-delay: 4.5s, -1.5s;
   animation-iteration-count: infinite, infinite;
 }
 

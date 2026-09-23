@@ -21,13 +21,13 @@ definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> st
 
 lemma edge_collect_simps [simp]:
   "edge_collect EA_Nop S = S"
-  "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s \<in> S}"
+  "edge_collect (EA_Assign x a) S = {s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) | s. s \<in> S}"
   "edge_collect (EA_Special sc x) S = {t. \<exists>s\<in>S. t \<in> special_step sc x s}"
-  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (aval b s)}"
-  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (aval b s)}"
+  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
+  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
   "edge_collect (EA_Body p) S = S"
   "edge_collect (EA_Ret e p) S =
-     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) | s. s \<in> S}"
+     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) | s. s \<in> S}"
   "edge_collect (EA_Check c) S = S"
   unfolding edge_collect_def by (auto split: if_splits)
 
@@ -50,9 +50,9 @@ text \<open>Return-value rehydration at the caller: write the callee's \<open>re
   call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
 
 definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)"
+  "combine_collect \<G> dst s t = combine_assign dst (t ret_var) (combine_env \<G> s t)"
 
-lemma combine_collect_None: "combine_collect gs None s t = combine_env gs s t"
+lemma combine_collect_None: "combine_collect \<G> None s t = combine_env \<G> s t"
   by (simp add: combine_collect_def)
 
 subsection \<open>Call-entry transfer\<close>
@@ -64,19 +64,19 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
   source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
 
 definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter gs ca s =
+  "call_enter \<G> ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        enter_binding gs 0 aval pars actuals s)"
+        enter_binding \<G> 0 aval pars actuals s)"
 
 lemma call_enter_CallEdge:
-  "call_enter gs (CallEdge dst pars actuals) s
-     = bind_formals pars (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
+  "call_enter \<G> (CallEdge dst pars actuals) s
+     = bind_formals pars (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
   by (simp add: call_enter_def enter_binding_def enter_state_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>
 lemma call_enter_Nil [simp]:
-  "call_enter gs (CallEdge dst [] []) s = enter_state gs s"
+  "call_enter \<G> (CallEdge dst [] []) s = enter_state \<G> s"
   by (simp add: call_enter_CallEdge)
 
 end

@@ -166,6 +166,10 @@
   display: grid;
 }
 
+:where(.scene-align) .align-voblint a {
+  color: inherit;
+}
+
 @media (max-width: 760px) {
   :where(.scene-align) .align-head {
     display: none;
@@ -186,14 +190,16 @@
 }
 
 :where(.scene-align) a.align-goblint,
-:where(.scene-align) a.align-voblint {
+:where(.scene-align) a.align-voblint,
+:where(.scene-align) .align-voblint a {
   text-decoration: underline;
   text-decoration-color: var(--border-strong);
   text-underline-offset: 3px;
 }
 
 :where(.scene-align) a.align-goblint:hover,
-:where(.scene-align) a.align-voblint:hover {
+:where(.scene-align) a.align-voblint:hover,
+:where(.scene-align) .align-voblint a:hover {
   color: var(--primary);
   text-decoration-color: var(--accent);
 }

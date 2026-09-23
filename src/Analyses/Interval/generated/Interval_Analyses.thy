@@ -45,16 +45,16 @@ global_interpretation interval_rule: unit_dg_analysis
   for r
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
-  case (2 gs a s) then show ?case
+  case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
     by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
-  case (3 gs ci s) show ?case
+  case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 gs u ctx d ca) show ?case by simp
+  case (4 \<G> u ctx d ca) show ?case by simp
 next
   case (5 v ctx) show ?case by simp
 next
@@ -70,7 +70,7 @@ next
 next
   case 10 show ?case by (rule refl)
 next
-  case (11 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 \<G>) show ?case by (rule interval_cinit_gamma)
 next
   case (12 eqs x) then show ?case
     by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
@@ -90,16 +90,16 @@ global_interpretation interval_es_rule: routed_dg_analysis
     "TD_side_rule_Interp_solve_c r"
   for r
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
-  case (2 gs a s) then show ?case
+  case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
     by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
-  case (3 gs ci s) show ?case
+  case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 gs u ctx d ca) show ?case
+  case (4 \<G> u ctx d ca) show ?case
     unfolding fun_of_exec_dg_st_for_def
     by (rule exec_formals_route_commute[symmetric])
 next
@@ -117,7 +117,7 @@ next
 next
   case 10 show ?case by (rule refl)
 next
-  case (11 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 \<G>) show ?case by (rule interval_cinit_gamma)
 next
   case (12 eqs x) then show ?case
     by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
@@ -137,16 +137,16 @@ global_interpretation interval_cs_rule: routed_dg_analysis
     "TD_side_rule_Interp_solve_c r"
   for k r
 proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
-  case (2 gs a s) then show ?case
+  case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
     by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
-  case (3 gs ci s) show ?case
+  case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)
+  case (4 \<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)
 next
   case (5 v ctx) show ?case by simp
 next
@@ -162,7 +162,7 @@ next
 next
   case 10 show ?case by (rule refl)
 next
-  case (11 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 \<G>) show ?case by (rule interval_cinit_gamma)
 next
   case (12 eqs x) then show ?case
     by (rule TD_side_rule_Interp.solve_dom_of_solve_c)

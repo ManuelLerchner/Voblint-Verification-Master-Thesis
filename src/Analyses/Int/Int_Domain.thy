@@ -803,38 +803,31 @@ instantiation int_dom_ext ::
 begin
 
 definition gamma_abs_int_dom_ext [simp]:
-  "gamma (d :: 'a int_dom_scheme) = gamma_int_dom d"
+  "\<gamma> (d :: 'a int_dom_scheme) = gamma_int_dom d"
 
 definition is_empty_int_dom_ext [simp]:
   "is_empty (d :: 'a int_dom_scheme) = is_bottom_int_dom d"
-
-definition is_full_int_dom_ext [simp]:
-  "is_full (d :: 'a int_dom_scheme) = is_top_int_dom d"
 
 definition to_string_int_dom_ext [simp]:
   "to_string (d :: 'a int_dom_scheme) = string_of_int_dom d"
 
 instance
 proof intro_classes
-  show "gamma (bot :: 'a int_dom_scheme) = {}"
+  show "\<gamma> (bot :: 'a int_dom_scheme) = {}"
     by (simp add: gamma_int_dom_def bot_int_dom_ext_def
           bot_sign_def bot_ivl_def bot_parity_def)
 next
-  show "gamma (top :: 'a int_dom_scheme) = UNIV"
+  show "\<gamma> (top :: 'a int_dom_scheme) = UNIV"
     by (simp add: gamma_int_dom_def top_int_dom_ext_def
           gamma_sign_top gamma_ivl_top top_ivl_def gamma_parity_top)
 next
   fix a b :: "'a int_dom_scheme"
-  show "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
+  show "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
     by (simp add: gamma_int_dom_mono)
 next
   fix a :: "'a int_dom_scheme"
-  show "is_empty a \<longleftrightarrow> gamma a = {}"
+  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
     by (simp add: is_bottom_int_dom_correct)
-next
-  fix a :: "'a int_dom_scheme"
-  show "is_full a \<longleftrightarrow> gamma a = UNIV"
-    by (simp add: is_top_int_dom_correct_gamma)
 qed
 
 end

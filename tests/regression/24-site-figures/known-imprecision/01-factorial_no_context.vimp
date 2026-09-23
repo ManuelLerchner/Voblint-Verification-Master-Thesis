@@ -1,8 +1,9 @@
 // PARAM: --analysis interval --context none
 // Backs the same figures in no-context mode. The concrete result is fixed (a = 2),
-// but with one context for f the recursive call f(n - 1) writes into the entry that
-// f(2) writes: the entry's lower bound moves and warrowing widens n to [-inf,2], so
-// the shared exit loses the return value and a == 2 is UNKNOWN.
+// but with one context for f the recursive call f(n - 1) shares f's single exit, and
+// the recursive combine feeds that exit back into itself, so the return value is lost
+// and a == 2 is UNKNOWN under every --globals rule. Under the default warrow rule the
+// entry is additionally widened to n = [-inf,2]; under join it stays n = [1,2].
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: f / unit

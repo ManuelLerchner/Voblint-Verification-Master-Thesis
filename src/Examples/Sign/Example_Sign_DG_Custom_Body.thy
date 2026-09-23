@@ -51,8 +51,8 @@ definition sign_body_forget ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname
    \<Rightarrow> ('x,'k,unit,sign exec_dg_st,sign exec_dg_st) man_transfer"
 where
-  "sign_body_forget gs x =
-     local_transfer (\<lambda>d. update_resolved_st_q d (location_of gs x) STop)"
+  "sign_body_forget \<G> x =
+     local_transfer (\<lambda>d. update_resolved_st_q d (location_of \<G> x) STop)"
 
 subsection \<open>The Sign specification that uses it\<close>
 
@@ -61,38 +61,38 @@ definition sign_dg_spec_body_forget ::
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
-  "sign_dg_spec_body_forget gs x tf_st enter_st =
-     (ownership_split_dg_spec_st_for gs tf_st enter_st)
-       \<lparr> dgs_body := (\<lambda>p. sign_body_forget gs x) \<rparr>"
+  "sign_dg_spec_body_forget \<G> x tf_st enter_st =
+     (ownership_split_dg_spec_st_for \<G> tf_st enter_st)
+       \<lparr> dgs_body := (\<lambda>p. sign_body_forget \<G> x) \<rparr>"
 
 declare sign_dg_spec_body_forget_def [code_unfold]
 text \<open>Only the procedure-entry transfer differs; every other field is the stock
   one, so any disagreement below is attributable to it alone.\<close>
 
 lemma dgs_enter_sign_dg_spec_body_forget [simp]:
-  "enter\<^sup># (sign_dg_spec_body_forget gs x tf_st enter_st)
-     = enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
+  "enter\<^sup># (sign_dg_spec_body_forget \<G> x tf_st enter_st)
+     = enter\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st)"
   by (simp add: sign_dg_spec_body_forget_def)
 
 lemma dgs_combine_env_sign_dg_spec_body_forget [simp]:
-  "combine_env\<^sup># (sign_dg_spec_body_forget gs x tf_st enter_st)
-     = combine_env\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
+  "combine_env\<^sup># (sign_dg_spec_body_forget \<G> x tf_st enter_st)
+     = combine_env\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st)"
   by (simp add: sign_dg_spec_body_forget_def)
 
 lemma dgs_combine_assign_sign_dg_spec_body_forget [simp]:
-  "combine_assign\<^sup># (sign_dg_spec_body_forget gs x tf_st enter_st)
-     = combine_assign\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st)"
+  "combine_assign\<^sup># (sign_dg_spec_body_forget \<G> x tf_st enter_st)
+     = combine_assign\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st)"
   by (simp add: sign_dg_spec_body_forget_def)
 
 text \<open>The edge dispatch differs at exactly one action.\<close>
 
 lemma dg_spec_step_sign_dg_spec_body_forget_body [simp]:
-  "dg_spec_step (sign_dg_spec_body_forget gs x tf_st enter_st) (EA_Body p)
-     = sign_body_forget gs x"
+  "dg_spec_step (sign_dg_spec_body_forget \<G> x tf_st enter_st) (EA_Body p)
+     = sign_body_forget \<G> x"
   by (simp add: sign_dg_spec_body_forget_def)
 
 lemma dgs_body_sign_dg_spec_body_forget [simp]:
-  "body\<^sup># (sign_dg_spec_body_forget gs x tf_st enter_st) = (\<lambda>p. sign_body_forget gs x)"
+  "body\<^sup># (sign_dg_spec_body_forget \<G> x tf_st enter_st) = (\<lambda>p. sign_body_forget \<G> x)"
   by (simp add: sign_dg_spec_body_forget_def)
 
 subsection \<open>Both specifications, on one program\<close>

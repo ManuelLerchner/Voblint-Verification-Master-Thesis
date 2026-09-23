@@ -48,7 +48,7 @@ text \<open>One assumption per operation, each an inference rule from a concrete
   more.\<close>
 
 locale sound_transfer_for =
-  fixes gs :: "vname \<Rightarrow> bool"
+  fixes \<G> :: "vname \<Rightarrow> bool"
     and sk :: "'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -58,22 +58,22 @@ locale sound_transfer_for =
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_sound_assign_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>asn x a \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>asn x a \<sigma>\<rbrakk>"
   assumes tf_sound_special_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>sp sc x \<sigma>\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
   assumes tf_sound_skip_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sk \<sigma>\<rbrakk>"
   assumes tf_sound_body_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>bd p \<sigma>\<rbrakk>"
   assumes tf_sound_return_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
          \<in> \<lbrakk>rt e p \<sigma>\<rbrakk>"
   assumes tf_sound_enter_entry_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state gs s)
+       bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state \<G> s)
          \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>ev evt \<sigma>\<rbrakk>"
@@ -105,7 +105,7 @@ text \<open>The contract is exactly \<^locale>\<open>sound_local_dg_spec\<close>
 
 sublocale sound_transfer_for \<subseteq> base: sound_local_dg_spec
   sk asn sp br bd rt "\<lambda>ci d. [(d, en ci d)]" ev "\<lambda>ci dc de. dc"
-  "\<lambda>ci. combine\<^sup># gs (ci_dst ci)" gamma_state gs
+  "\<lambda>ci. combine\<^sup># \<G> (ci_dst ci)" gamma_state \<G>
 proof (unfold_locales, goal_cases)
   case 1
   then show ?case by (rule gamma_state_mono)
@@ -139,19 +139,19 @@ definition local_state_dg_spec_for ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "local_state_dg_spec_for gs sk asn sp br bd rt en ev = local_dg_spec
+  "local_state_dg_spec_for \<G> sk asn sp br bd rt en ev = local_dg_spec
      sk asn sp br bd rt (\<lambda>ci d. [(d, en ci d)]) ev
-     (\<lambda>ci dc de. dc) (\<lambda>ci. combine\<^sup># gs (ci_dst ci))"
+     (\<lambda>ci dc de. dc) (\<lambda>ci. combine\<^sup># \<G> (ci_dst ci))"
 
 declare local_state_dg_spec_for_def [code_unfold]
 
 lemma dg_spec_step_local_state_for:
-  "dg_spec_step (local_state_dg_spec_for gs sk asn sp br bd rt en ev) a
+  "dg_spec_step (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) a
      = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: local_state_dg_spec_for_def)
 
 theorem (in sound_transfer_for) local_state_dg_spec_for_core_sound:
-  "sound_dg_spec_core (local_state_dg_spec_for gs sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) gs"
+  "sound_dg_spec_core (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
   unfolding local_state_dg_spec_for_def by (rule base.local_spec_core_sound)
 
 
@@ -180,7 +180,7 @@ definition local_state_dg_spec_for_lifted ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev = local_dg_spec
+  "local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev = local_dg_spec
      (transfer_lift empty_pred sk)
      (\<lambda>x e. transfer_lift empty_pred (asn x e))
      (\<lambda>sc x. transfer_lift empty_pred (sp sc x))
@@ -190,7 +190,7 @@ where
      (\<lambda>ci d. [(d, transfer_lift empty_pred (en ci) d)])
      (\<lambda>evt. transfer_lift empty_pred (ev evt))
      (\<lambda>ci dc de. dc)
-     (\<lambda>ci dcM de. transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dcM de)"
+     (\<lambda>ci dcM de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dcM de)"
 
 declare local_state_dg_spec_for_lifted_def [code_unfold]
 
@@ -206,20 +206,20 @@ lemma local_spec_step_transfer_lift:
   by (cases a) simp_all
 
 lemma dg_spec_wf_local_state_dg_spec_for [intro, simp]:
-  "dg_spec_wf (local_state_dg_spec_for gs sk asn sp br bd rt en ev)"
+  "dg_spec_wf (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev)"
   by (simp add: local_state_dg_spec_for_def)
 
 lemma dg_spec_step_local_state_for_lifted:
-  "dg_spec_step (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) a
+  "dg_spec_step (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) a
      = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a))"
   by (simp add: local_state_dg_spec_for_lifted_def local_spec_step_transfer_lift)
 
 lemma dg_spec_wf_local_state_dg_spec_for_lifted [intro, simp]:
-  "dg_spec_wf (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)"
+  "dg_spec_wf (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)"
   by (simp add: local_state_dg_spec_for_lifted_def)
 
 lemma dgs_enter_local_state_for_lifted:
-  "enter\<^sup># (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
+  "enter\<^sup># (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (en ci) d)])"
   by (simp add: local_state_dg_spec_for_lifted_def)
 
@@ -229,9 +229,9 @@ text \<open>The caller continuation and the env stage are both identities, so th
 
 lemma dg_spec_combine_transfer_local_state_for_lifted:
   "dg_spec_combine_transfer
-     (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev) ci
+     (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
-         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
+         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de)"
   by (simp add: local_state_dg_spec_for_lifted_def)
 
 subsection \<open>Soundness of the lifted construction\<close>
@@ -246,14 +246,14 @@ text \<open>
 definition gamma_dg_local_state ::
   "'a::sound_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
 where
-  "gamma_dg_local_state d g = gamma_state_lift d"
+  "gamma_dg_local_state d g = \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
 
 theorem (in sound_transfer_for) local_state_dg_spec_for_lifted_core_sound:
   assumes empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec_core (local_state_dg_spec_for_lifted gs empty_pred sk asn sp br bd rt en ev)
-           gamma_dg_local_state gs"
+  shows "sound_dg_spec_core (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)
+           gamma_dg_local_state \<G>"
 proof -
-  have geq: "gamma_dg_local_state = (\<lambda>d g. gamma_state_lift d)"
+  have geq: "gamma_dg_local_state = (\<lambda>d g. \<lbrakk>d\<rbrakk>\<^sub>\<bottom>)"
     by (simp add: fun_eq_iff gamma_dg_local_state_def)
   show ?thesis
     unfolding local_state_dg_spec_for_lifted_def geq
@@ -268,27 +268,27 @@ proof -
             [OF step_sound_for edge_collect_empty_set empty_pred_sound])
   next
     case (3 s d ci)
-    have "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-            \<in> gamma_state_lift (transfer_lift empty_pred (en ci) d)"
+    have "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+            \<in> \<lbrakk>transfer_lift empty_pred (en ci) d\<rbrakk>\<^sub>\<bottom>"
     proof (rule transfer_lift_sound_mem
-          [where h = "call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
+          [where h = "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
       show "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-          call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
+          call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
         by (simp add: call_enter_CallEdge tf_sound_enter_entry_for)
       show "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}" by (rule empty_pred_sound)
-      show "s \<in> gamma_state_lift d" by (rule 3)
+      show "s \<in> \<lbrakk>d\<rbrakk>\<^sub>\<bottom>" by (rule 3)
     qed
     with 3 show ?case by (auto simp: entry_pairs_cover_def)
   next
     case (4 s dc t de ci)
     show ?case
-    proof (rule transfer_lift2_sound_mem[where h = "combine_collect gs (ci_dst ci)"])
+    proof (rule transfer_lift2_sound_mem[where h = "combine_collect \<G> (ci_dst ci)"])
       show "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow>
-          combine_collect gs (ci_dst ci) s t \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) \<sigma>1 \<sigma>2\<rbrakk>"
+          combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) \<sigma>1 \<sigma>2\<rbrakk>"
         by (rule combine_collect_sound)
       show "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}" by (rule empty_pred_sound)
-      show "s \<in> gamma_state_lift dc" by (rule 4(1))
-      show "t \<in> gamma_state_lift de" by (rule 4(2))
+      show "s \<in> \<lbrakk>dc\<rbrakk>\<^sub>\<bottom>" by (rule 4(1))
+      show "t \<in> \<lbrakk>de\<rbrakk>\<^sub>\<bottom>" by (rule 4(2))
     qed
   qed
 qed

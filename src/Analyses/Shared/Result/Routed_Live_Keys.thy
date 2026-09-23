@@ -134,17 +134,17 @@ context routed_dg_analysis
 begin
 
 lemma analysis_spec_enter:
-  "enter\<^sup># (analysis_spec gs p) ci
+  "enter\<^sup># (analysis_spec \<G> p) ci
      = local_enter_transfer
          (\<lambda>d. [(d, transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                   (enter_st gs ci) d)])"
+                   (enter_st \<G> ci) d)])"
   by (simp add: analysis_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def)
 
 lemma analysis_contribs_wf [simp]:
   "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
-       (route gs)
-       (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec gs p) a src (\<lambda>_. gk0))
-       (routed_call_program (analysis_spec gs p) gk0 seed rsv (\<lambda>d. d = Bot))
+       (route \<G>)
+       (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec \<G> p) a src (\<lambda>_. gk0))
+       (routed_call_program (analysis_spec \<G> p) gk0 seed rsv (\<lambda>d. d = Bot))
        (routed_entry_seed_programs seed) cfg cx w). sp_wf q"
   by (rule routed_contribution_programs_wf) auto
 
@@ -436,10 +436,10 @@ text \<open>
 \<close>
 
 lemma gamma_live_reader_le:
-  "gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-       (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-          (reader (declared_global p) p (Inl (v, ctx))))"
+  "\<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+       (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>
+     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+          (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof (cases "(v, ctx) \<in> live_keys p")
   case True
   then have "(v, ctx) \<in> sol_vars (declared_global p) p" using live_keys_sub by blast
@@ -468,8 +468,8 @@ theorem activation_collect_sound_live_keys:
                       (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
   shows "activation_collect (declared_global p) R root_ctx (prog_cfg p)
            (cinit_stores (declared_global p)) v ctx
-           \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-                 (reader (declared_global p) p (Inl (v, ctx))))"
+           \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+                 (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof -
   interpret live: routed_analysis_sound "analysis_spec (declared_global p) p" dom.gamma_exec
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot
@@ -478,8 +478,8 @@ proof -
     by (rule routed_analysis_sound_live_keys[where R = R, OF wf solves cover_R total_R])
   have "activation_collect (declared_global p) R root_ctx (prog_cfg p)
           (cinit_stores (declared_global p)) v ctx
-        \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-             (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
+        \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+             (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
     by (rule live.routed_activation_collect_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
@@ -497,8 +497,8 @@ theorem fun_route_activation_collect_sound_of_terminates:
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "activation_collect (declared_global p) (call_context_rel_of_fun ctx_fun) root_ctx
            (prog_cfg p) (cinit_stores (declared_global p)) v ctx
-           \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-                 (reader (declared_global p) p (Inl (v, ctx))))"
+           \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+                 (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof (rule activation_collect_sound_live_keys[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_keys p"
@@ -564,8 +564,8 @@ theorem entry_state_activation_collect_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
            root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx
-           \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-                 (reader (declared_global p) p (Inl (v, ctx))))"
+           \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+                 (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof -
   interpret live: routed_analysis_sound "analysis_spec (declared_global p) p" dom.gamma_exec
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot
@@ -575,8 +575,8 @@ proof -
     by (rule entry_state_routed_analysis_sound_live_keys[OF wf solves])
   have "activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
           root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx
-        \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for (declared_global p))
-             (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
+        \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
+             (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
     by (rule live.routed_activation_collect_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
@@ -592,7 +592,7 @@ corollary entry_state_lookup_sound_of_terminates:
 
 theorem entry_state_ltr_collect_eq_Union_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v
+  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
            = (\<Union>ctx. activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
                        root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx)"
 proof (rule ltr_collect_eq_Union_activation_of_has_context)
@@ -603,7 +603,7 @@ proof (rule ltr_collect_eq_Union_activation_of_has_context)
       "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
     by (rule entry_state_routed_analysis_sound_live_keys[OF wf solves])
   fix t
-  assume "t \<in> valid_ltr (declared_global p) (prog_cfg p) (cinit_stores (declared_global p))"
+  assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
   then show "\<exists>c. trace_context (declared_global p) (admitted_contexts (declared_global p) p)
                    root_ctx (prog_cfg p) t c"
     by (rule live.routed_valid_ltr_has_context

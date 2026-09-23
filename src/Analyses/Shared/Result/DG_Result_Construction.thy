@@ -42,14 +42,14 @@ definition dg_result_for ::
           \<times> (pp \<times> 'c + 'k
                \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
      \<Rightarrow> ('c, 'a abs_state) analysis_result" where
-  "dg_result_for gs gl sol =
+  "dg_result_for \<G> gl sol =
      Analysis_Result (fst sol)
-       (\<lambda>v ctx. readback_result_value gs
+       (\<lambda>v ctx. readback_result_value \<G>
                   (canonicalize_lift (resolved_st_q_is_bot_for gl)
                     (locals (snd sol (Inl (v, ctx))))))"
 
 lemma result_keys_dg_result_for [simp]:
-  "result_keys (dg_result_for gs gl sol) = fst sol"
+  "result_keys (dg_result_for \<G> gl sol) = fst sol"
   unfolding dg_result_for_def by simp
 
 text \<open>
@@ -58,9 +58,9 @@ text \<open>
 \<close>
 
 lemma lookup_context_dg_result_for [simp]:
-  "lookup_context (dg_result_for gs gl sol) v ctx
+  "lookup_context (dg_result_for \<G> gl sol) v ctx
      = (if (v, ctx) \<in> fst sol
-        then readback_result_value gs
+        then readback_result_value \<G>
                (canonicalize_lift (resolved_st_q_is_bot_for gl)
                  (locals (snd sol (Inl (v, ctx)))))
         else Bot)"
@@ -74,9 +74,9 @@ text \<open>
 \<close>
 
 lemma readback_canonicalize_lift_eq:
-  assumes "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "readback_result_value gs (canonicalize_lift empty_pred d)
-       = canonicalize_lift is_empty_state (map_lift (fun_of_resolved_st_q_for gs) d)"
+  assumes "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  shows "readback_result_value \<G> (canonicalize_lift empty_pred d)
+       = canonicalize_lift is_empty_state (map_lift (fun_of_resolved_st_q_for \<G>) d)"
   by (cases d) (simp_all add: assms normalize_lift_def)
 
 lemma lookup_context_dg_result_for_projected:
@@ -87,19 +87,19 @@ lemma lookup_context_dg_result_for_projected:
   assumes exact:
     "\<And>s :: 'a::executable_domain exec_dg_st.
       resolved_st_q_is_bot_for gl s =
-      is_empty_state (fun_of_resolved_st_q_for gs s)"
-  shows "lookup_context (dg_result_for gs gl sol) v ctx =
+      is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  shows "lookup_context (dg_result_for \<G> gl sol) v ctx =
     (if (v, ctx) \<in> fst sol
      then canonicalize_lift is_empty_state
-       (map_lift (fun_of_resolved_st_q_for gs)
+       (map_lift (fun_of_resolved_st_q_for \<G>)
          (locals (snd sol (Inl (v, ctx)))))
      else Bot)"
 proof -
   have commute:
-    "readback_result_value gs
+    "readback_result_value \<G>
         (canonicalize_lift (resolved_st_q_is_bot_for gl) d) =
       canonicalize_lift is_empty_state
-        (map_lift (fun_of_resolved_st_q_for gs) d)"
+        (map_lift (fun_of_resolved_st_q_for \<G>) d)"
     for d :: "'a exec_dg_st lifted"
     by (rule readback_canonicalize_lift_eq[OF exact])
   show ?thesis
@@ -109,11 +109,11 @@ proof -
   next
     case True
     have commute_at:
-      "readback_result_value gs
+      "readback_result_value \<G>
           (canonicalize_lift (resolved_st_q_is_bot_for gl)
             (locals (snd sol (Inl (v, ctx))))) =
         canonicalize_lift is_empty_state
-          (map_lift (fun_of_resolved_st_q_for gs)
+          (map_lift (fun_of_resolved_st_q_for \<G>)
             (locals (snd sol (Inl (v, ctx)))))"
     proof (cases "locals (snd sol (Inl (v, ctx)))")
       case Bot
@@ -121,7 +121,7 @@ proof -
     next
       case (Lifted s)
       have eq: "resolved_st_q_is_bot_for gl s =
-          is_empty_state (fun_of_resolved_st_q_for gs s)"
+          is_empty_state (fun_of_resolved_st_q_for \<G> s)"
         by (rule exact[of s])
       show ?thesis unfolding Lifted using eq by (simp add: normalize_lift_def)
     qed
