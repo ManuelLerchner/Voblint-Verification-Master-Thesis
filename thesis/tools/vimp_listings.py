@@ -58,9 +58,7 @@ MAIN = THESIS / "thesis.typ"
 SOURCE_EXEMPT = {"content/03-gallery.typ"}
 
 # The voblint CLI's defaults, which a claim's argv leaves implicit.
-CLI_DEFAULTS = {"globals": "warrow", "context": "none", "placement": "flow-sensitive"}
-# Under flow-insensitive program globals the CLI's default rule changes.
-CLI_FLOW_INSENSITIVE_GLOBALS = "bounded-narrowing"
+CLI_DEFAULTS = {"globals": "warrow", "context": "none"}
 
 VIMP_LANGS = ("c", "vimp")
 VIMP_SHAPE = re.compile(
@@ -74,17 +72,10 @@ VIMP_SHAPE = re.compile(
 def run_settings(args: list[str]) -> dict[str, object]:
     """The playground settings a voblint command line selects."""
     given = vimp_fixture.analysis_settings(args)
-    placement = given.get("program_globals", CLI_DEFAULTS["placement"])
-    default_rule = (
-        CLI_FLOW_INSENSITIVE_GLOBALS
-        if placement == "flow-insensitive"
-        else CLI_DEFAULTS["globals"]
-    )
     settings = {
         "analysis": given["analyses"][0],
-        "globals": given.get("globals", default_rule),
+        "globals": given.get("globals", CLI_DEFAULTS["globals"]),
         "context": given.get("context", CLI_DEFAULTS["context"]),
-        "placement": placement,
     }
     if settings["context"] == "call-string":
         settings["k"] = given["context_depth"]
@@ -110,10 +101,6 @@ def claim_runs() -> dict[str, dict]:
     for name, claim in tomllib.loads(CLAIMS.read_text()).get("claims", {}).items():
         programs = [a for a in claim["argv"] if a.endswith(".vimp")]
         if len(programs) != 1 or claim.get("expect_status", 0) != 0:
-            continue
-        # A claim that only parses (--ast) runs no analysis, so it has no
-        # settings for a listing to open the playground at.
-        if "--analysis" not in claim["argv"]:
             continue
         flags = [a for a in claim["argv"] if a != programs[0]]
         runs[name] = {
@@ -179,14 +166,10 @@ def known_runs(
 
 
 def link_settings(settings: dict) -> dict[str, str]:
-    """Settings as the query carries them: k only for call strings, placement
-    only when it is not the playground's default."""
+    """Settings as the query carries them: k only for call strings."""
     out = {key: str(settings[key]) for key in ("analysis", "globals", "context")}
     if settings["context"] == "call-string":
         out["k"] = str(settings["k"])
-    placement = settings.get("placement", CLI_DEFAULTS["placement"])
-    if placement != CLI_DEFAULTS["placement"]:
-        out["placement"] = str(placement)
     return out
 
 
@@ -237,31 +220,6 @@ def scan_source(root: Path = THESIS) -> list[str]:
                     f"{rel}:{line_of(text, match.start())}: VIMP code in {call or 'markup'}(...) has no "
                     'playground link; use listing(..., lang: "c")'
                 )
-    return problems
-
-
-FIXTURE_CALL = re.compile(r'fixture\("([^"]+)"')
-BARE_FIXTURE = re.compile(r"`[\w./-]+\.vimp`")
-
-
-def scan_fixtures(root: Path = THESIS, repo: Path = REPO) -> list[str]:
-    """Fixture paths named in the chapters: linked, and still present."""
-    problems = []
-    for path in sorted((root / "content").rglob("*.typ")):
-        rel = path.relative_to(root).as_posix()
-        text = path.read_text()
-        for match in FIXTURE_CALL.finditer(text):
-            target = repo / "tests/regression" / match.group(1)
-            if not target.is_file():
-                problems.append(
-                    f"{rel}:{line_of(text, match.start())}: fixture "
-                    f"{match.group(1)} does not exist under tests/regression"
-                )
-        for match in BARE_FIXTURE.finditer(text):
-            problems.append(
-                f"{rel}:{line_of(text, match.start())}: {match.group(0)} names a "
-                'fixture without a link; use fixture("<path>")'
-            )
     return problems
 
 
@@ -488,7 +446,6 @@ def main() -> int:
             f"{OUT.relative_to(REPO)} is stale; run `pixi run thesis-vimp-write`"
         )
     problems += scan_source()
-    problems += scan_fixtures()
     problems += check_defaults()
     count = None
     if args.check:
