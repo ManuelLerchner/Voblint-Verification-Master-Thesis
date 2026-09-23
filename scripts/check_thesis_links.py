@@ -22,8 +22,8 @@ to read. A name with no verified anchor is a build failure, not a dead link.
 `--write` and `--check` read the rendered theories under build/isabelle-html, which a
 working copy usually does not have (or has stale). `--lenient` turns that from
 a failure into a warning, which is what the local hook and the day-to-day
-`make check` want: a link cannot be validated before the theories are built,
-and blocking a commit on that helps nobody.
+`make check` use. Even in lenient mode, every citation must have a stored
+target. Only verification against unavailable local HTML may be skipped.
 
 `--live` is the check that actually matters, and it can only run in one place:
 after the rendered theories are deployed to GitHub Pages, since that is the
@@ -44,6 +44,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+import tomllib
+
 REPO = Path(__file__).resolve().parent.parent
 HTML = REPO / "build" / "isabelle-html"
 OUT = REPO / "thesis" / "shared" / "generated" / "links.json"
@@ -56,8 +58,12 @@ KIND_ANCHORS = {
     "locale": ("locale",),
     # A theorem environment's `isa:` name: whatever the theories say it is.
     "any": ("fact", "thm", "const", "type", "locale"),
+    "session": ("page",),
+    "theory": ("page",),
 }
-TYPST_REF = re.compile(r"\bisa(thm|const|type|locale)\(\"([^\"]*)\"\)")
+TYPST_REF = re.compile(r'\bisa(thm|const|type|locale|session|name)\(\s*"([^\"]*)"\s*\)')
+GENERATED_REF = re.compile(r'\b(thy|proved|stated)\(\s*"([^\"]+)"')
+THEORY_REF = re.compile(r'\bthy-badge\(\s*"([^\"]+)"\s*,\s*"([^\"]+)"\s*\)')
 # `isa: "name"` on a theorem environment, and `oblig("NAME")` for a named
 # assumption of `ltr_coverage`, which the HTML anchors as a fact of the locale.
 ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
@@ -85,12 +91,35 @@ def pages_base() -> str:
 
 
 def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+    path = Path(rel)
+    if path.name == "index.html":
+        index.setdefault((path.parent.name, "page"), rel)
+    else:
+        index.setdefault((f"{path.parent.name}.{path.stem}", "page"), rel)
     for m in ANCHOR.finditer(body):
         qualified, kind = m.group(1), m.group(2)
         anchor = f"{qualified}|{kind}".replace("|", "%7C")
         parts = qualified.split(".")
         for i in range(1, len(parts)):
-            index.setdefault((".".join(parts[i:]), kind), f"{rel}#{anchor}")
+            key = (".".join(parts[i:]), kind)
+            target = f"{rel}#{anchor}"
+
+            # Prefer the original locale fact to a deeper interpreted copy.
+            # Keep current project exports ahead of stale/library duplicates.
+            # Per-domain and example sessions interpret the generic locales, so
+            # an equally deep copy there is an instance, not the definition.
+            def rank(value: str) -> tuple[bool, bool, int, bool, str]:
+                page, _, entity = value.partition("#")
+                return (
+                    not page.startswith("Voblint/"),
+                    page.startswith("Unsorted/"),
+                    entity.count("."),
+                    "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
+                    value,
+                )
+
+            if key not in index or rank(target) < rank(index[key]):
+                index[key] = target
 
 
 def index_live(
@@ -117,6 +146,7 @@ def index_live(
         listing = fetch(f"{base}Voblint/{session}/index.html", retries)
         if listing is None:
             continue
+        _index_page(index, f"Voblint/{session}/index.html", listing)
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
             if page == "index.html":
@@ -138,18 +168,18 @@ def index_live(
 def index_anchors() -> dict[tuple[str, str], str]:
     """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html."""
     index: dict[tuple[str, str], str] = {}
-    for path in HTML.rglob("*.html"):
+    # Prefer this project's definitions over identically named HOL examples.
+    # Old ungrouped exports may also coexist with the current Voblint group.
+    for path in sorted(
+        HTML.rglob("*.html"),
+        key=lambda p: (
+            p.relative_to(HTML).parts[0] != "Voblint",
+            p.relative_to(HTML).parts[0] == "Unsorted",
+            p.as_posix(),
+        ),
+    ):
         rel = path.relative_to(HTML).as_posix()
-        for m in ANCHOR.finditer(path.read_text(errors="ignore")):
-            qualified, kind = m.group(1), m.group(2)
-            anchor = f"{qualified}|{kind}".replace("|", "%7C")
-            # Anchors are `<Theory>.<name>`, and a record field or locale
-            # member carries its owner too (`CFG_Def.cfg.intra`). Prose cites
-            # the short name, so register every suffix and let the shortest
-            # win -- an exact citation beats a qualified one.
-            parts = qualified.split(".")
-            for i in range(1, len(parts)):
-                index.setdefault((".".join(parts[i:]), kind), f"{rel}#{anchor}")
+        _index_page(index, rel, path.read_text(errors="ignore"))
     return index
 
 
@@ -161,7 +191,15 @@ def cited() -> list[tuple[Path, int, str, str]]:
         text = path.read_text(errors="ignore")
         for m in TYPST_REF.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
-            refs.append((path, line, m.group(1), m.group(2)))
+            kind = "any" if m.group(1) == "name" else m.group(1)
+            refs.append((path, line, kind, m.group(2)))
+        for m in GENERATED_REF.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            kind = "any" if m.group(1) == "thy" else "thm"
+            refs.append((path, line, kind, m.group(2)))
+        for m in THEORY_REF.finditer(text):
+            line = text.count("\n", 0, m.start()) + 1
+            refs.append((path, line, "theory", f"{m.group(1)}.{m.group(2)}"))
         for m in ISA_ARG.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, "any", m.group(1)))
@@ -170,6 +208,35 @@ def cited() -> list[tuple[Path, int, str, str]]:
             refs.append(
                 (path, line, "thm", f"{m.group(2) or 'ltr_coverage'}.{m.group(1)}")
             )
+    # Tables rendered from generated JSON cite through its `citations` list.
+    for path in sorted((REPO / "thesis" / "shared" / "generated").glob("*.json")):
+        if path == OUT:
+            continue
+        data = json.loads(path.read_text())
+        if isinstance(data, dict):
+            refs += [(path, 1, c["kind"], c["name"]) for c in data.get("citations", [])]
+    return refs + manifest_citations(REPO / "thesis" / "shared")
+
+
+def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
+    """Names Typst cites by iterating a manifest, which no source text spells out.
+
+    The anchor index appendix renders every `anchors.toml` item, and the oracle
+    audit table every `facts.toml` key.
+    """
+    refs = []
+    anchors = shared / "anchors.toml"
+    if anchors.is_file():
+        refs += [
+            (anchors, 1, a["kind"], a["name"])
+            for a in tomllib.loads(anchors.read_text()).get("anchor", [])
+        ]
+    facts = shared / "facts.toml"
+    if facts.is_file():
+        refs += [
+            (facts, 1, "thm", name)
+            for name in tomllib.loads(facts.read_text()).get("facts", {})
+        ]
     return refs
 
 
@@ -184,11 +251,15 @@ def resolve(
         key = f"{kind}:{name}"
         if key in links:
             continue
-        for anchor_kind in KIND_ANCHORS[kind]:
-            hit = index.get((name, anchor_kind))
-            if hit:
-                links[key] = hit
-                break
+        hits = [
+            index[(name, anchor_kind)]
+            for anchor_kind in KIND_ANCHORS[kind]
+            if (name, anchor_kind) in index
+        ]
+        if hits:
+            # An untyped theorem-header citation may name a project datatype
+            # while HOL has an unrelated constant with the same short name.
+            links[key] = min(hits, key=lambda hit: not hit.startswith("Voblint/"))
         else:
             unresolved.append(
                 f"  {path.relative_to(REPO)}:{line}: {name} has no "
@@ -207,6 +278,31 @@ def skip_or_fail(detail: str, lenient: bool) -> int:
     return 1
 
 
+def check_coverage() -> int:
+    """Require a usable target even when local HTML has not been built."""
+    data = json.loads(OUT.read_text()) if OUT.is_file() else {}
+    if not re.match(r"^https?://[^/]+/", data.get("base", "")):
+        print("check_thesis_links: missing HTTP(S) base URL", file=sys.stderr)
+        return 1
+    links = data.get("links", {})
+    missing = []
+    for path, line, kind, name in cited():
+        target = links.get(f"{kind}:{name}", "")
+        page, _, anchor = target.partition("#")
+        if not page.endswith(".html") or (
+            kind not in ("session", "theory") and not anchor
+        ):
+            missing.append(f"  {path.relative_to(REPO)}:{line}: {kind}:{name}")
+    if missing:
+        print(
+            "check_thesis_links: citations missing HTML targets:\n" + "\n".join(missing)
+        )
+        print("Regenerate with pixi run thesis-links-write (or --write --from-live).")
+        return 1
+    print("check_thesis_links: every citation has an HTML target")
+    return 0
+
+
 def fetch(url: str, retries: int) -> str | None:
     """GET `url`, retrying while a fresh Pages deployment propagates."""
     for attempt in range(retries):
@@ -223,6 +319,8 @@ def fetch(url: str, retries: int) -> str | None:
 
 def check_live(base_override: str | None, retries: int) -> int:
     """Verify every stored link against the site a reader will actually click."""
+    if check_coverage():
+        return 1
     if not OUT.is_file():
         print(
             f"check_thesis_links: no {OUT.relative_to(REPO)} to verify -- "
@@ -250,6 +348,8 @@ def check_live(base_override: str | None, retries: int) -> int:
             broken += [f"  {key}: {url} did not respond" for key, _ in entries]
             continue
         for key, anchor in entries:
+            if not anchor:
+                continue
             # The stored anchor is percent-encoded for the URL; the page holds
             # the raw id.
             raw = anchor.replace("%7C", "|")
@@ -279,6 +379,7 @@ def main() -> int:
     mode.add_argument("--check", action="store_true")
     mode.add_argument("--live", action="store_true")
     mode.add_argument("--list", action="store_true")
+    mode.add_argument("--coverage", action="store_true")
     ap.add_argument("--base", help="override the link base URL")
     ap.add_argument(
         "--lenient",
@@ -298,8 +399,12 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    if args.coverage:
+        return check_coverage()
     if args.live:
         return check_live(args.base, args.retries)
+    if args.check and check_coverage():
+        return 1
 
     base = args.base or pages_base()
     if args.from_live:
@@ -322,7 +427,7 @@ def main() -> int:
             + "\nEither the name is stale, or build/isabelle-html predates it "
             "(rebuild with: pixi run isabelle-html-build)"
         )
-        return skip_or_fail(detail, args.lenient)
+        return skip_or_fail(detail, False)
 
     payload = (
         json.dumps({"base": base, "links": links}, indent=2, sort_keys=True) + "\n"

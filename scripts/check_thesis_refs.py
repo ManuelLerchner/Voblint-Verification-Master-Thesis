@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import os
 import re
 import shutil
@@ -35,6 +36,9 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+import tomllib
+from extract_definitions import find_matching_close, mask_comments_and_strings
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -63,7 +67,7 @@ KIND_COMMANDS = {
         "partial_function",
         "lift_definition",
     ),
-    "type": ("datatype", "type_synonym", "record", "typedef"),
+    "type": ("datatype", "type_synonym", "record", "typedef", "quotient_type"),
     "locale": ("locale", "class"),
 }
 COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmds}
@@ -71,14 +75,14 @@ COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmd
 # `record 'a domain_transfer =` and `datatype ('a, 'b) t = ...` put type
 # parameters between the command and the name, so those are skipped first.
 DECL = re.compile(
-    r"^\s*(?:qualified\s+)?("
+    r"^[ \t]*(?:qualified\s+)?("
     + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
     + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)\s+)*"
     + r"([A-Za-z][A-Za-z0-9_']*)",
     re.M,
 )
 # `lemma foo:` and `lemma foo [simp]:` both declare foo; `lemma "..."` does not.
-ANON = re.compile(r'^\s*(?:lemma|theorem|corollary)\s+["\\]')
+ANON = re.compile(r'^\s*(?:lemma|theorem|corollary)\s+["\\]', re.M)
 # `  field :: "type"` lines inside a record / datatype body.
 FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
 
@@ -86,7 +90,21 @@ FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
 # it cites the type: `EA_Assign`, `Root`, `CallEdge`.  They are capitalised and
 # introduced after `=` or after a `|`, which may sit mid-line when several
 # nullary constructors share one (`Sign_Analysis | Interval_Analysis | ...`).
-CONSTRUCTOR = re.compile(r"(?:^\s*(?:\||=)|\|)\s*([A-Z][A-Za-z0-9_']*)", re.M)
+CONSTRUCTOR = re.compile(r"(?:=|\|)\s*([A-Z][A-Za-z0-9_']*)")
+
+# Bound bodies by commands, not indentation: constructors may start a line,
+# while the next declaration may itself be indented inside a context.
+BODY_END = re.compile(
+    r"^[ \t]*(?:"
+    + "|".join(COMMAND_KIND)
+    + r"|begin|end|context|instantiation|instance|interpretation|sublocale"
+    + r"|text|text_raw|chapter|section|subsection|subsubsection|paragraph)\b",
+    re.M,
+)
+CLASS_FIX = re.compile(r"\b(?:fixes|and)\s+([A-Za-z][A-Za-z0-9_']*)\s*::")
+# `Assign: "..."` or `| Call: "..."` in an inductive body names the fact
+# `pstep.Call`, which a theorem statement cites.
+RULE_LABEL = re.compile(r"^\s*(?:\|\s*)?([A-Za-z][A-Za-z0-9_']*)\s*:(?!:)", re.M)
 
 TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\)")
 
@@ -140,29 +158,39 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
     kinds: dict[str, set[str]] = defaultdict(set)
     for root in ("src", "vendor"):
         for path in (REPO / root).rglob("*.thy"):
-            text = path.read_text(errors="ignore")
-            text = re.sub(r"\(\*.*?\*\)", "", text, flags=re.S)
+            original = path.read_text(errors="ignore")
+            text = mask_comments_and_strings(original)
+            # Cartouches contain documentation and terms, not declarations.
+            # Preserve offsets/newlines while excluding their apparent commands.
+            start = 0
+            while (start := text.find("\\<open>", start)) != -1:
+                end = find_matching_close(text, start)
+                text = (
+                    text[:start] + re.sub(r"[^\n]", " ", text[start:end]) + text[end:]
+                )
+                start = end
             for m in DECL.finditer(text):
-                line_start = text.rfind("\n", 0, m.start()) + 1
-                if ANON.match(text, line_start):
+                if ANON.match(original, m.start()):
                     continue
                 kinds[m.group(2)].add(COMMAND_KIND[m.group(1)])
-                # A record's fields and a datatype's selectors are constants;
-                # prose cites them (`intra`, `calls`) as often as it cites the
-                # type they belong to.
+                stop = BODY_END.search(text, m.end())
+                body = text[m.end() : stop.start() if stop else len(text)]
+                # Selectors belong only to this declaration, not every later
+                # indented type annotation or proof-local variable in the file.
                 if m.group(1) in ("record", "datatype"):
-                    for f in FIELD.finditer(text, m.end()):
-                        if f.group(0).lstrip().startswith(("record", "datatype")):
-                            break
+                    for f in FIELD.finditer(body):
                         kinds[f.group(1)].add("const")
                 if m.group(1) == "datatype":
-                    # Constructors run until the next top-level command.
-                    rest = text[m.end() :]
-                    stop = re.search(r"^\S", rest, re.M)
-                    for c in CONSTRUCTOR.finditer(
-                        rest[: stop.start() if stop else len(rest)]
-                    ):
+                    for c in CONSTRUCTOR.finditer(body):
                         kinds[c.group(1)].add("const")
+                # Type-class parameters become overloaded global constants.
+                # Arbitrary locale fixes do not declare such constants.
+                if m.group(1) == "class":
+                    for f in CLASS_FIX.finditer(body):
+                        kinds[f.group(1)].add("const")
+                if m.group(1) in ("inductive", "inductive_set"):
+                    for r in RULE_LABEL.finditer(body):
+                        kinds[f"{m.group(2)}.{r.group(1)}"].add("thm")
 
     # Theory names, so a figure that labels a node with a theory is not
     # mistaken for one naming a declaration that does not exist.
@@ -195,6 +223,30 @@ def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
         for m in ISA_ARG.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, "any", m.group(1)))
+    return refs + generated_citations(thesis)
+
+
+def generated_citations(thesis: Path) -> list[tuple[Path, int, str, str]]:
+    """Citations the data files carry for the tables Typst renders from them."""
+    refs = []
+    for path in sorted((thesis / "shared" / "generated").glob("*.json")):
+        data = json.loads(path.read_text())
+        if isinstance(data, dict):
+            refs += [(path, 1, c["kind"], c["name"]) for c in data.get("citations", [])]
+    # Manifests Typst iterates: the anchor index appendix renders every
+    # `anchors.toml` item, and the oracle audit table every `facts.toml` key.
+    anchors = thesis / "shared" / "anchors.toml"
+    if anchors.is_file():
+        refs += [
+            (anchors, 1, a["kind"], a["name"])
+            for a in tomllib.loads(anchors.read_text()).get("anchor", [])
+        ]
+    facts = thesis / "shared" / "facts.toml"
+    if facts.is_file():
+        refs += [
+            (facts, 1, "thm", name)
+            for name in tomllib.loads(facts.read_text()).get("facts", {})
+        ]
     return refs
 
 
@@ -255,7 +307,7 @@ def collect_raw_names(thesis: Path) -> list[tuple[Path, int, str]]:
 # helpers wrap is blanked first, as are comments, raw blocks and labels.
 MARKUP_CALL = re.compile(
     r"\b(?:isa(?:thm|const|type|locale|session|cmd|name|file)|oblig|ctor|keyw|isai"
-    r"|thy-badge)\((?:[^()]|\([^()]*\))*\)"
+    r"|thy-badge|thy|proved|stated)\((?:[^()]|\([^()]*\))*\)"
     r"|#isa\((?:[^()]|\([^()]*\))*\)"
     r"|//[^\n]*"
     r"|<[a-z]+:[^>]*>|@[a-z]+:[A-Za-z0-9_-]+"
@@ -355,6 +407,11 @@ def main() -> int:
                     f"  {site}: session {name} is not declared in any ROOT{hint}"
                 )
             continue
+        if kind == "theory":
+            session, _, theory = name.rpartition(".")
+            if session not in sessions or theory not in theories:
+                missing.append(f"  {site}: theory {name} is not a Session.Theory pair")
+            continue
         if kind == "any":
             # A theorem environment's own `isa:` name: it must exist, but the
             # environment does not claim which kind it is.
@@ -366,6 +423,11 @@ def main() -> int:
                 missing.append(f'  {site}: isa: "{name}" does not exist{hint}')
             continue
         have = kinds.get(name)
+        # `locale.name`: a constant declared inside a locale, cited qualified
+        # because the short name is not unique (`admits`).
+        locale, _, local = name.rpartition(".")
+        if have is None and "locale" in kinds.get(locale, ()):
+            have = kinds.get(local)
         if have is None:
             near = difflib.get_close_matches(name, sorted(kinds), 1, 0.75)
             hint = f" -- did you mean {near[0]}?" if near else ""
