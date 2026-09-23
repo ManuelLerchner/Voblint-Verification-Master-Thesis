@@ -74,17 +74,24 @@ that they work. Either way, only finitely many executions are observed. A
 static analysis instead computes a description of possible behavior, for instance an interval that contains every
 value a variable takes whenever execution reaches a program point. The
 description may include values that never occur, but soundness requires it to
-include those that do (@fig:intro-runs). An abstract state that implies a check
-establishes it for every covered execution. One that permits both outcomes
-leaves the check undecided, even when all executions satisfy it.
+include those that do (@fig:intro-runs). This asymmetry decides what an
+analysis can prove. Every execution lies inside the description, so if the
+description contains no state that violates a check, no execution violates it,
+including executions that no test ever tried. The converse does not hold. The
+description can contain violating states that no execution reaches, because
+abstraction adds states. The analysis then cannot decide the check, even when
+every execution satisfies it.
 
 #figure(
   image("/shared/generated/svg/runs.svg", width: 100%),
   caption: [Testing and static analysis, schematically. Each curve is one
-    execution, and the vertical axis stands for the state. Tests see only the runs
-    they execute. A sound result contains every run, tried or not, and possibly
-    unreachable states. A check is proved when that region avoids its violating
-    states.],
+    execution, and the vertical axis stands for the program state over time.
+    Left: tests observe only the runs they execute. A run on an input nobody
+    tried (dashed) stays unknown. Right: a sound analysis result (shaded)
+    contains every run, tried or not, and may also contain states that no run
+    reaches. Because it does not overlap the bad states, no execution can reach
+    them. An overlap would not show a real violation, only that the analysis
+    cannot exclude one.],
 ) <fig:intro-runs>
 
 Voblint answers per check and per arithmetic operation (@fig:intro-answers). A
