@@ -31,7 +31,7 @@ inspection_ reads the theories, their session structure, or Goblint's code, and
 supports statements about structure only. An _argument_ is reasoning in the
 text that no theorem checks; we mark it where a claim rests on one.
 
-== RQ1: Is the exported analyzer sound end to end? <sec:eval-rq1>
+== RQ1: Is the analysis sound from source executions to verdicts? <sec:eval-rq1>
 
 RQ1 asks whether soundness can be machine-checked from source executions to
 the verdicts of the exported executable, and which premises and trusted
@@ -490,8 +490,8 @@ The runner matches results by source line and distinguishes a missing report
 row from a `DEAD` one, so a check the compiler dropped cannot pass as proved
 unreachable. Some fixtures pin the conventions of @tab:vimp-vs-c at the
 analyzer's output, for instance
-`10-arithmetic/precision/07-signed_division_totalization.vimp` (truncating
-division and remainder) and `04-globals/precision/01-global_default_zero.vimp`
+#fixture("10-arithmetic/precision/07-signed_division_totalization.vimp") (truncating
+division and remainder) and #fixture("04-globals/precision/01-global_default_zero.vimp")
 (zero-initialized globals); they check verdicts, not concrete runs
 (@sec:eval-absent). CI runs the whole corpus on every pull request and push to
 the main branch.

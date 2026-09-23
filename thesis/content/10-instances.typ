@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isaconst, isalocale, isasession, isathm, isatype, listing
+#import "../lib/code.typ": fixture, isaconst, isalocale, isasession, isathm, isatype, listing
 #import "../lib/math.typ": *
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
@@ -51,8 +51,8 @@ is proved from these interpretations.
 
 == One loop, five answers <sec:stride2>
 
-The loop below is the fixture `05-mine_ex410_stride2_parity.vimp`, adapted
-from Goblint's regression test `56-witness/29-mine-tutorial-ex4.10.c` (revision
+The loop below is the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"), adapted
+from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/d155e9e/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`] (revision
 `d155e9e`), which names Example 4.10 of Miné's tutorial @mine17 as its source.
 Goblint's test asserts only bounds on $v$ and, according to its comment, reads
 an invariant from a witness file "to have no narrowing". The VIMP fixture has
