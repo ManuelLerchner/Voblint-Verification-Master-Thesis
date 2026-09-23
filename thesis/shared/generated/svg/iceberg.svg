@@ -46,8 +46,8 @@
               <text class="mono" x="685" y="440" text-anchor="middle">Voblint_Solver</text>
             </g>
             <g class="berg-label below">
-              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">62,098</tspan> lines of Isabelle</text></a>
-              <text x="660" y="272"><tspan data-stat="isabelle.theories">223</tspan> theories · <tspan data-stat="isabelle.proofs">3,012</tspan> lemmas · <tspan data-stat="isabelle.defs">1,389</tspan> definitions</text>
+              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">63,133</tspan> lines of Isabelle</text></a>
+              <text x="660" y="272"><tspan data-stat="isabelle.theories">225</tspan> theories · <tspan data-stat="isabelle.proofs">3,067</tspan> lemmas · <tspan data-stat="isabelle.defs">1,413</tspan> definitions</text>
               <line x1="655" y1="258" x2="615" y2="250"/>
             </g>
             <g class="berg-label solver">
@@ -62,14 +62,14 @@
               <text class="muted" x="40" y="196">outside the proof</text>
             </g>
             <g class="berg-label corpus">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">289</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">434</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">292</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">442</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
               <text class="muted" x="40" y="336">tested, not proved</text>
             </g>
           </g>
           <g class="berg-label above">
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/codegen/generated/ml" target="_blank" rel="noreferrer">
-              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,406</tspan> lines</text>
+              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,390</tspan> lines</text>
               <text x="560" y="60">generated OCaml: the analyzer that runs</text>
             </a>
             <line x1="555" y1="66" x2="486" y2="120"/>
