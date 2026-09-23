@@ -175,3 +175,34 @@ def test_built_document_needs_a_clickable_link_on_every_vimp_listing():
         doc.write_text(header + codly + "#show link: it => it.body\n" + body)
         problems, _ = vl.check_built(doc)
         assert any("link annotation" in p for p in problems), problems
+
+
+def _fixture_tree(tmp: Path, chapter: str) -> tuple[Path, Path]:
+    root, repo = tmp / "thesis", tmp / "repo"
+    (root / "content").mkdir(parents=True)
+    (root / "content" / "ch.typ").write_text(chapter)
+    target = repo / "tests/regression/01-group/precision/01-case.vimp"
+    target.parent.mkdir(parents=True)
+    target.write_text("fun main() {}\n")
+    return root, repo
+
+
+def test_fixture_link_to_existing_file_passes(tmp_path):
+    root, repo = _fixture_tree(
+        tmp_path, 'See #fixture("01-group/precision/01-case.vimp").\n'
+    )
+    assert vl.scan_fixtures(root, repo) == []
+
+
+def test_fixture_link_to_missing_file_fails(tmp_path):
+    root, repo = _fixture_tree(
+        tmp_path, 'See #fixture("01-group/precision/02-gone.vimp").\n'
+    )
+    problems = vl.scan_fixtures(root, repo)
+    assert len(problems) == 1 and "does not exist" in problems[0]
+
+
+def test_unlinked_fixture_path_fails(tmp_path):
+    root, repo = _fixture_tree(tmp_path, "See `01-group/precision/01-case.vimp`.\n")
+    problems = vl.scan_fixtures(root, repo)
+    assert len(problems) == 1 and "without a link" in problems[0]

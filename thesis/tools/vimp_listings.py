@@ -223,6 +223,31 @@ def scan_source(root: Path = THESIS) -> list[str]:
     return problems
 
 
+FIXTURE_CALL = re.compile(r'fixture\("([^"]+)"')
+BARE_FIXTURE = re.compile(r"`[\w./-]+\.vimp`")
+
+
+def scan_fixtures(root: Path = THESIS, repo: Path = REPO) -> list[str]:
+    """Fixture paths named in the chapters: linked, and still present."""
+    problems = []
+    for path in sorted((root / "content").rglob("*.typ")):
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text()
+        for match in FIXTURE_CALL.finditer(text):
+            target = repo / "tests/regression" / match.group(1)
+            if not target.is_file():
+                problems.append(
+                    f"{rel}:{line_of(text, match.start())}: fixture "
+                    f"{match.group(1)} does not exist under tests/regression"
+                )
+        for match in BARE_FIXTURE.finditer(text):
+            problems.append(
+                f"{rel}:{line_of(text, match.start())}: {match.group(0)} names a "
+                'fixture without a link; use fixture("<path>")'
+            )
+    return problems
+
+
 def check_defaults() -> list[str]:
     """The helper's defaults must be what the playground itself selects."""
     html = (REPO / "pages" / "playground.html").read_text()
@@ -446,6 +471,7 @@ def main() -> int:
             f"{OUT.relative_to(REPO)} is stale; run `pixi run thesis-vimp-write`"
         )
     problems += scan_source()
+    problems += scan_fixtures()
     problems += check_defaults()
     count = None
     if args.check:

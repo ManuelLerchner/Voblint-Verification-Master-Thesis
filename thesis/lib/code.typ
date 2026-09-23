@@ -83,6 +83,15 @@
 // thesis/tools/vimp_listings.py decodes every link in the built PDF and
 // compares it with the listing.
 
+// A regression fixture, linked to its file in the repository. The path is
+// relative to tests/regression; thesis/tools/vimp_listings.py checks that it
+// exists, and that no fixture path appears in the chapters without this link.
+#let repo-blob = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/"
+#let fixture(path, label: none) = link(
+  repo-blob + "tests/regression/" + path,
+  raw(if label == none { path } else { label }),
+)
+
 #let playground-base = "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html"
 
 // What the playground selects when a link names nothing (pages/playground.html;

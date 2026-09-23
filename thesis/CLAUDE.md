@@ -45,6 +45,7 @@ checked, coloured and linked:
 | `thy("name")` | a declaration lifted verbatim from the theories (`shared/snippets.toml`) | listing |
 | `listing(```…```, lang: "c")` | a VIMP program, linked to the playground by its `VIMP ↗` tag; `claim: "name"` opens that claim's fixture at its settings (required when showing a claimed or fixture program at non-default settings, and for an excerpt), `program:` the whole program a split listing belongs to, `analysis:`/`globals:`/`ctx:`/`k:` override the playground defaults | listing |
 | `proved("name", note: [...])` | a theorem statement: its source `assumes`/`shows` header without the proof, listed in both `snippets.toml` and `facts.toml` | listing |
+| `fixture("group/kind/NN-name.vimp", label: …)` | a regression fixture named in prose, linked to its file under `tests/regression` on GitHub; `thesis-vimp-source` fails on a missing file or a backticked `.vimp` path without the helper | text |
 | `stat("corpus.cases")`, `stat-sum(..)`, `stat-percent(part, whole)`, `stat-keys(prefix)` | a repository figure (line counts, theory files, corpus sizes) from `lib/stats.typ`, grouped as `62,098`; an unknown key fails the build. Never type such a number. Write `#stat("k")\;` before a semicolon, which would otherwise end the call | text |
 
 A formal citation whose link the map cannot resolve fails the build. Regenerate
