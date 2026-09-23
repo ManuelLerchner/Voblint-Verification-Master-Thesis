@@ -2,11 +2,58 @@
 # the name has to resolve, and the extracted text is committed, so a rename
 # fails the build and an edit to a shown definition surfaces as a diff.
 
-[snippets.numeric_domain]
+[snippets.sound_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
-[snippets.combine_env]
-why = "Named in the transfer-function box as the structural default combine."
+[snippets.caller_of]
+why = "The creating caller of a trace (traces chapter)."
 
-[snippets.analysis_contract]
-why = "The D/G soundness obligations the per-domain instantiations discharge."
+[snippets.valid_ltr]
+why = "The four rules of valid activation-local traces (traces chapter)."
+
+[snippets.ltr_collect]
+why = "The context-insensitive collecting semantics (traces chapter)."
+
+[snippets.activation_collect]
+why = "The context-indexed collecting semantics (traces chapter)."
+
+[snippets.part_post_solution]
+file = "vendor/td-verification/Basics_side.thy"
+why = "The certificate between the vendored solver and the semantic proof (solving chapter)."
+
+[snippets.lookup_resolved_st]
+why = "The executable carrier's lookup: two defaults and an override list (solving chapter)."
+
+[snippets.run_voblint]
+why = "The public operation and its type: what the executable chapter says the browser and CLI call."
+
+# Theorems shown with proved(...): the statement as the theory states it, cut
+# before the proof. Each is also listed in facts.toml, which checks that the
+# built session proves a fact of this name in the theory the text came from.
+
+[snippets.run_voblint_certified_source_sound]
+why = "The source-level soundness theorem (introduction and results chapter)."
+
+[snippets.run_voblint_check_sound]
+why = "Main-statements appendix: the check-verdict endpoint."
+
+[snippets.run_voblint_dead_check_unreached]
+why = "Main-statements appendix: the unreachability endpoint."
+
+[snippets.source_run_has_ltr]
+why = "Main-statements appendix: every source run is represented by a valid trace."
+
+[snippets.csim_star]
+why = "Main-statements appendix: the compiled graph simulates every source run."
+
+[snippets.activation_collect_sound]
+why = "Main-statements appendix: the local obligations bound the context-indexed collecting semantics."
+
+[snippets.activation_collect_dg_sound]
+why = "Main-statements appendix: a solved D/G table bounds the collecting semantics."
+
+[snippets.mf_ltr_collect_sound]
+why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to end for one program."
+
+[snippets.mf_after_calls]
+why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."

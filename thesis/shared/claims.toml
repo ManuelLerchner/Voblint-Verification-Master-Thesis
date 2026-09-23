@@ -17,11 +17,692 @@ argv = [
 ]
 why = "The known-imprecision example: sign tracks total=+ (positive) exactly but has no magnitude, so total<100 stays UNKNOWN."
 
-[claims.parse-error-shape]
+# Playground runs placed in Chapters 7 and 11, re-run through the CLI,
+# which links the same generated module as the browser page.
+
+[claims.pg-overview]
 argv = [
   "--analysis",
   "interval",
-  "tests/regression/00-sanity/02-malformed.vimp",
+  "--globals",
+  "warrow",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp",
 ]
-why = "The frontend reports file:line:col on a syntax error rather than crashing."
-expect_status = 2
+why = "The playground's default program at call-string depth 1: PROVED, REFUTED and UNKNOWN checks and one possible-division warning."
+
+[claims.pg-contexts-none]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/contexts.vimp",
+]
+why = "Without contexts both calls share one entry and both checks are UNKNOWN."
+
+[claims.pg-contexts-none-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "join",
+  "--context",
+  "none",
+  "docs/readme-figures/contexts.vimp",
+]
+why = "Background: joining the two entries of bump gives both callers [5,6]; the default warrowing rule also loses the lower bound."
+
+[claims.pg-contexts-entry]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "entry-state",
+  "docs/readme-figures/contexts.vimp",
+]
+why = "With entry-state contexts both checks are PROVED."
+
+[claims.pg-while-loop]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/while-loop.vimp",
+]
+why = "Chapter 11, one run in three views: the check after the counted loop is PROVED at pp3 with state x=[10,10]."
+
+[claims.pg-division-definite]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/division-definite.vimp",
+]
+why = "Chapter 11: a divisor zero in every live context gives two ERROR diagnostics while quotient == 0 and remainder == 7 are PROVED by VIMP's total arithmetic."
+
+[claims.pg-division-possible]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/division-possible.vimp",
+]
+why = "Chapter 11: a nondeterministic divisor gives a WARNING and leaves divisor != 0 UNKNOWN."
+
+[claims.pg-int-refinement-int]
+argv = [
+  "--analysis",
+  "int",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, guard inversion under y + 1 == 3: the product Int proves y == 2."
+
+[claims.pg-int-refinement-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, guard inversion under y + 1 == 3: Congruence alone proves y == 2."
+
+[claims.pg-int-refinement-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, guard inversion under y + 1 == 3: Sign leaves y == 2 UNKNOWN."
+
+[claims.pg-int-refinement-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, guard inversion under y + 1 == 3: Interval leaves y == 2 UNKNOWN."
+
+[claims.pg-int-refinement-parity]
+argv = [
+  "--analysis",
+  "parity",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "docs/readme-figures/int-refinement.vimp",
+]
+why = "Chapter 11, guard inversion under y + 1 == 3: Parity leaves y == 2 UNKNOWN."
+
+[claims.cfg-contexts-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "--dot",
+  "docs/readme-figures/contexts.vimp",
+]
+why = "The compiled graph of the two-call program: node names and edge labels drawn in the program-to-equations figure of Chapter 3."
+
+[claims.cfg-sum-dec-dot]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "entry-state",
+  "--dot",
+  "tests/regression/24-site-figures/precision/46-sum_dec_cfgmap.vimp",
+]
+why = "The compiled graph of the recursive sum/dec program: node names, edge labels and wiring drawn in the compiled-graph figure of Chapter 3."
+
+[claims.callee-uninit-local]
+argv = ["--analysis", "interval", "thesis/shared/programs/callee-uninit.vimp"]
+why = "Chapter 3: the shipped entry resets a callee's locals to top, so a check that an unassigned callee local is 0 stays UNKNOWN although the source semantics starts it at 0."
+
+[claims.and-divisor-warning]
+argv = ["--analysis", "interval", "thesis/shared/programs/and-divisor.vimp"]
+why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns about the divisor in x != 0 && 10 / x > 1."
+
+# The domain chapters: guard filtering, explicit reachability, and one program
+# per step of the Sign -> Interval -> Parity -> Congruence -> product ladder.
+
+[claims.dom-guard-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
+]
+why = "Backward filtering of 0 < x lets Sign prove y >= 0 after both arms, with y=≥0."
+
+[claims.dom-disjunct-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/07-sign-precision/precision/07-disjunct_arm_pollution_fixed.vimp",
+]
+why = "Normalizing each infeasible disjunct to Bot makes the branch DEAD under Sign."
+
+[claims.dom-disjunct-parity]
+argv = [
+  "--analysis",
+  "parity",
+  "tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp",
+]
+why = "Parity has no guard filter, so the same infeasible branch stays UNKNOWN."
+
+[claims.dom-stride2-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
+]
+why = "Stride-2 loop: Sign knows only v=+ and leaves every exit check UNKNOWN."
+
+[claims.dom-stride2-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
+]
+why = "Stride-2 loop: Interval proves v >= 51 at exit with v=[51,52] but leaves v == 51 UNKNOWN."
+
+[claims.dom-stride2-parity]
+argv = [
+  "--analysis",
+  "parity",
+  "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
+]
+why = "Stride-2 loop: Parity knows v=1+2ℤ but decides no exit check."
+
+[claims.dom-stride2-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
+]
+why = "Stride-2 loop: Congruence knows v=1+2ℤ but decides no exit check."
+
+[claims.dom-stride2-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
+]
+why = "Stride-2 loop: the reduced product proves v == 51 at exit with v=51."
+
+[claims.dom-even-odd-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
+]
+why = "x = 2n, y = 2n + 1: Interval leaves x != y UNKNOWN."
+
+[claims.dom-even-odd-parity]
+argv = [
+  "--analysis",
+  "parity",
+  "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
+]
+why = "x = 2n, y = 2n + 1: Parity proves x != y."
+
+[claims.dom-even-odd-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
+]
+why = "x = 2n, y = 2n + 1: Congruence holds x=2ℤ, y=1+2ℤ but its equality query answers only for singletons, so x != y is UNKNOWN."
+
+[claims.dom-crt-parity]
+argv = [
+  "--analysis",
+  "parity",
+  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+]
+why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Parity leaves the inner check UNKNOWN."
+
+[claims.dom-crt-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp",
+]
+why = "x = 4n+1, y = 6m+3 under x == y, then x == 13: Congruence intersects to 9 (mod 12) and reports the inner check DEAD."
+
+[claims.goblint-1161-int]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/precision/04-goblint_1161_congruence_mod.vimp",
+]
+why = "Evaluation, Goblint #1161 replay: the Int product refutes c % 2 == 1 and proves c % 2 == -1 for c in {-5, -7}."
+
+[claims.goblint-1161-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/precision/04-goblint_1161_congruence_mod.vimp",
+]
+why = "Evaluation, Goblint #1161 replay: congruence alone knows only c in 1+2Z and leaves both remainder checks UNKNOWN."
+
+# The results chapter's soundness-chain figure: one program, the same check, two
+# context policies.
+
+[claims.chain-factorial-none]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
+]
+why = "Without contexts the factorial result a == 2 is UNKNOWN at state a=⊤, although every run has a = 2."
+
+[claims.chain-factorial-none-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
+]
+why = "Under the joining rule, without contexts, the factorial result a == 2 is still UNKNOWN at state a=⊤; no widening occurs."
+
+[claims.chain-factorial-entry]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "entry-state",
+  "tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp",
+]
+why = "With entry-state contexts the factorial result a == 2 is PROVED at state a=[2,2]."
+
+# Explainer scenes redrawn in Chapters 1 and 9.
+
+[claims.intro-answers]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/precision/47-answers_every_kind.vimp",
+]
+why = "Introduction, one answer of each kind: a possible-division warning at 100 / d, 0 < q PROVED at q=[10,10], and q == 0 DEAD under k < 0."
+
+[claims.verdicts-mult3-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp",
+]
+why = "Verdict figure: the interval at the unreached check x == 1 is [1,2], so it is UNKNOWN; the check x == 6 is DEAD."
+
+[claims.verdicts-mult3-interval-checks]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp",
+]
+why = "Verdict figure: under Interval the unreached check x == 1 is UNKNOWN and x == 6 is DEAD."
+
+[claims.verdicts-mult3-int]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/precision/06-multiples_of_three_int.vimp",
+]
+why = "Verdict figure: the Int product, tracking x = 0 (mod 3), marks both checks DEAD."
+
+# Figures redrawn from the explainer (Chapters 7, 8 and 12): context policies on the
+# playground demo, the counting loop solved, the update-rule table, and the
+# call-string depth that decides down(100).
+# Snapshots (--graph-snapshot) are parsed by thesis/lib/claims.typ.
+
+[claims.ctx-demo-none]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp",
+]
+why = "Context figure: without contexts wrap and scale have one copy each and a == 2 is UNKNOWN."
+
+[claims.ctx-demo-k1]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "1",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/known-imprecision/12-demo_call_string_1.vimp",
+]
+why = "Context figure: call strings of length 1 give wrap two copies but scale one, so a == 2 is UNKNOWN."
+
+[claims.ctx-demo-k2]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "2",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/precision/44-demo_call_string_2.vimp",
+]
+why = "Context figure: call strings of length 2 give scale two copies and a == 2 is PROVED."
+
+[claims.ctx-demo-entry]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "entry-state",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/precision/43-demo_entry_state.vimp",
+]
+why = "Context figure: entry-state contexts key wrap and scale by their argument and a == 2 is PROVED."
+
+[claims.counting-loop-snapshot]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/precision/03-counting_loop.vimp",
+]
+why = "Solver trace figure: the counting loop solves to i=[0,5] at the head pp1, [0,4] in the body pp2 and [5,5] at the check pp3."
+
+[claims.rules-two-sites-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "tests/regression/24-site-figures/precision/07-two_sites_join.vimp",
+]
+why = "Update-rule table, two-sites program under join: the verdict and state quoted in its cell."
+
+[claims.rules-two-sites-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "per-origin",
+  "tests/regression/24-site-figures/precision/08-two_sites_per_origin.vimp",
+]
+why = "Update-rule table, two-sites program under per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-two-sites-warrow]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow",
+  "tests/regression/24-site-figures/known-imprecision/07-two_sites_warrow.vimp",
+]
+why = "Update-rule table, two-sites program under warrow: the verdict and state quoted in its cell."
+
+[claims.rules-two-sites-warrow-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow-per-origin",
+  "tests/regression/24-site-figures/precision/09-two_sites_warrow_per_origin.vimp",
+]
+why = "Update-rule table, two-sites program under warrow-per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-loop-call-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "tests/regression/24-site-figures/precision/10-loop_call_join.vimp",
+]
+why = "Update-rule table, loop-call program under join: the verdict and state quoted in its cell."
+
+[claims.rules-loop-call-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "per-origin",
+  "tests/regression/24-site-figures/precision/11-loop_call_per_origin.vimp",
+]
+why = "Update-rule table, loop-call program under per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-loop-call-warrow]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow",
+  "tests/regression/24-site-figures/known-imprecision/08-loop_call_warrow.vimp",
+]
+why = "Update-rule table, loop-call program under warrow: the verdict and state quoted in its cell."
+
+[claims.rules-loop-call-warrow-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow-per-origin",
+  "tests/regression/24-site-figures/precision/12-loop_call_warrow_per_origin.vimp",
+]
+why = "Update-rule table, loop-call program under warrow-per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-grows-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "--timeout",
+  "5",
+  "tests/regression/24-site-figures/01-recursion_grows_join_diverges.vimp",
+]
+why = "Update-rule table, grows program under join: the verdict and state quoted in its cell. The solve does not finish within 5 s."
+expect_status = 3
+
+[claims.rules-grows-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "per-origin",
+  "--timeout",
+  "5",
+  "tests/regression/24-site-figures/02-recursion_grows_per_origin_diverges.vimp",
+]
+why = "Update-rule table, grows program under per-origin: the verdict and state quoted in its cell. The solve does not finish within 5 s."
+expect_status = 3
+
+[claims.rules-grows-warrow]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow",
+  "tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp",
+]
+why = "Update-rule table, grows program under warrow: the verdict and state quoted in its cell."
+
+[claims.rules-grows-warrow-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow-per-origin",
+  "tests/regression/24-site-figures/precision/14-recursion_grows_warrow_per_origin.vimp",
+]
+why = "Update-rule table, grows program under warrow-per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-shrinks-join]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "join",
+  "tests/regression/24-site-figures/precision/15-recursion_shrinks_join.vimp",
+]
+why = "Update-rule table, shrinks program under join: the verdict and state quoted in its cell."
+
+[claims.rules-shrinks-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "per-origin",
+  "tests/regression/24-site-figures/precision/16-recursion_shrinks_per_origin.vimp",
+]
+why = "Update-rule table, shrinks program under per-origin: the verdict and state quoted in its cell."
+
+[claims.rules-shrinks-warrow]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow",
+  "tests/regression/24-site-figures/precision/17-recursion_shrinks_warrow.vimp",
+]
+why = "Update-rule table, shrinks program under warrow: the verdict and state quoted in its cell."
+
+[claims.rules-shrinks-warrow-per-origin]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "warrow-per-origin",
+  "tests/regression/24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp",
+]
+why = "Update-rule table, shrinks program under warrow-per-origin: the verdict and state quoted in its cell."
+
+[claims.cost-down-k99]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "99",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/known-imprecision/10-down_call_string_99.vimp",
+]
+why = "Evaluation, the contexts paragraph: down(100) recursion at context setting k99: procedure-copy count and the verdict of n >= 0."
+
+[claims.cost-down-k100]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "call-string",
+  "--context-depth",
+  "100",
+  "--graph-snapshot",
+  "tests/regression/24-site-figures/precision/42-down_call_string_100.vimp",
+]
+why = "Evaluation, the contexts paragraph: down(100) recursion at context setting k100: procedure-copy count and the verdict of n >= 0."
+
+# The mixed-flow section (Chapter 7): Sign with globals in the flow-sensitive
+# state, the placement the section contrasts with one fact per global.
+
+[claims.mixed-flow-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "--graph-snapshot",
+  "thesis/shared/programs/mixed-flow.vimp",
+]
+why = "Flow-sensitive globals: Sign derives y=+ and x=+ at pp7, after both calls, where the flow-insensitive placement leaves y at ≥0."
