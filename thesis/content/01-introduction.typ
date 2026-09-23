@@ -209,14 +209,18 @@ every inclusion, but a store reached by an execution must not be lost.
 Goblint is an abstract interpreter for multithreaded C programs @vojdani16
 @seidl21. It defines analyses independently of the generic solvers that compute
 their results, and the interface between the two is a side-effecting constraint
-system @apinis12 @seidl26. An Isabelle/HOL formalization of Goblint's top-down
+system @apinis12 @seidl26. A side effect lets the right-hand side of one
+unknown contribute to others, for example a call site to the entry state of
+its callee (@sec:side-effects). An Isabelle/HOL formalization of Goblint's top-down
 solver has been verified, including its extension to side effects @stade24
 @tilscher26. When it terminates, the verified solver returns a correct
 post-solution of the equation system it receives (@sec:td). Whether that system describes
 the program, and whether the verdicts read off its solution hold, is outside
 the solver's theorem. Its example analyses supply equations, written by hand or generated
-from a program, and no proof relates them to the program's executions. This thesis addresses four research questions about that
-gap.
+from a program, and no proof relates them to the program's executions. Context sensitivity adds a second difficulty. The
+analyzer keeps a separate abstract state per calling context, while the
+ordinary concrete semantics has no notion of context. This thesis addresses
+four research questions about that gap.
 
 / RQ1: Can soundness of a constraint-based, context-sensitive interprocedural
   analyzer be machine-checked end to end, from source executions to the
@@ -233,7 +237,17 @@ gap.
   than by testing?
 
 Voblint answers them for a Goblint-style analyzer of a small language with
-parameters, return values and several context policies. It provides the
+parameters, return values and several context policies. It is not a
+verification of Goblint itself. It isolates the parts of Goblint's
+architecture that the proof is about, namely recursive procedures, calling
+contexts, side-effecting constraint systems, configurable domains and the
+top-down solver, in a language small enough for every semantic connection to
+be mechanized. The thesis shows that such an analyzer can be connected by
+machine-checked proofs from a source semantics, through context-sensitive
+equations and a verified solver, to the verdicts of its executable analysis
+function. Here, _end to end_ means from source executions to the result the
+analysis function returns. Parsing, code generation, target compilation and
+presentation remain outside the proof. It provides the
 semantic connections on both sides of the solver and depends on the solver
 only through its post-solution guarantee (@ch:solving). @fig:intro-trust places
 each stage of the analyzer relative to the proof.
@@ -332,7 +346,7 @@ procedures, through context-indexed equations and a verified solver, to the
 verdicts of an executable analyzer. The contributions below fill this gap: the
 end-to-end theorem (K1) needs a mechanized concrete meaning for contexts
 admitted by a relation (K2), a composition of separately verified domain,
-context policy and solver (K3), and theorems showing that its obligations are
+context policy and solver (K3), and theorems showing that key obligations are
 necessary and its results non-vacuous (K4). @ch:related gives the detailed
 comparisons.
 
@@ -363,8 +377,8 @@ question.
   @sec:trust-boundary. The solver and its partial correctness are inherited
   @tilscher26. The verified connection from source executions through the
   generated equations to the published verdicts is new. To our knowledge, no
-  prior mechanized abstract interpreter proves soundness of its exported
-  executable for a language with recursive procedures under configurable
+  prior mechanized abstract interpreter proves soundness of an analysis
+  function exported to an executable for a language with recursive procedures under configurable
   context sensitivity. The closest one, Verasco, covers far more of C but
   reanalyzes a function at every call site up to a fuel bound and raises an
   alarm on possible recursion @jourdan15.
@@ -418,10 +432,9 @@ question.
   remainder that Goblint's congruence domain computed before pull request 1161
   violates the obligation the shipped domain discharges
   (#isathm("prefix_congruence_mod_unsound")). Evaluation inside Isabelle,
-  trusting the code generator, discharges the termination premise for named
-  programs and computes `PROVED` verdicts there, which the main theorem
-  certifies
-  (#isathm("certificate_demo_full_certificate"),
+  trusting the code generator, discharges the termination premise and computes
+  `PROVED` verdicts for named programs, and the main theorem certifies those
+  results (#isathm("certificate_demo_full_certificate"),
   #isathm("nv_source_certified")). Precision differences are stated as strict
   inequalities between computed results: call strings of length 2 are strictly
   more precise than length 1 on one program
@@ -437,7 +450,8 @@ is a per-program premise (@sec:termination). Seidl and Vogler prove on paper
 that the side-effecting solver terminates when only finitely many unknowns are
 encountered @seidl21, and #cite(<tilscher26jar>, form: "prose") machine-check
 total correctness for top-down solvers without side effects. The
-side-effecting solver used here has no machine-checked termination theorem. Isabelle can discharge it by evaluating the solve for a given
+side-effecting solver used here has no general machine-checked termination
+theorem. Isabelle can discharge it by evaluating the solve for a given
 program (@sec:nonvacuity).
 
 We do not claim as contributions the top-down solver and its update rules
