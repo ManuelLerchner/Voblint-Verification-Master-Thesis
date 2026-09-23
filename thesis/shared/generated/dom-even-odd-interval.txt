@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ----------------------
-20:3      pp3    x != y     UNKNOWN  interval: x=⊤, y=⊤
+--------  -----  ---------  -------  ------------
+20:3      pp3    x != y     UNKNOWN  x=⊤, y=⊤

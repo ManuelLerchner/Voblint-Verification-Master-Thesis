@@ -5,6 +5,6 @@ None
 
 Assertion checks
 Location  Point  Condition    Verdict  State
---------  -----  -----------  -------  ----------------------------------------------------------------------
-16:3      pp5    c % 2 == 1   REFUTED  int: c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ
-17:3      pp6    c % 2 == -1  PROVED   int: c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ
+--------  -----  -----------  -------  -----------------------------------------------------------------
+16:3      pp5    c % 2 == 1   REFUTED  c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ
+17:3      pp6    c % 2 == -1  PROVED   c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ

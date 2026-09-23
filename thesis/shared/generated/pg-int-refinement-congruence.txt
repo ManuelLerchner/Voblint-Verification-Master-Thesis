@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ---------------
-4:5       pp2    y == 2     PROVED   congruence: y=2
+--------  -----  ---------  -------  -----
+4:5       pp2    y == 2     PROVED   y=2

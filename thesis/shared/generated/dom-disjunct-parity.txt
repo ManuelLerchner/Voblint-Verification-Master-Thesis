@@ -1,4 +1,4 @@
-tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp [parity]
+tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp [parity]
 
 Arithmetic diagnostics
 None
@@ -6,4 +6,4 @@ None
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  -----
-12:5      pp3    x == 5     DEAD     
+16:5      pp3    x == 5     UNKNOWN  x=⊤

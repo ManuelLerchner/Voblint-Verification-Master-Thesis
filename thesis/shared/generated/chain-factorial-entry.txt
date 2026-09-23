@@ -1,4 +1,4 @@
-tests/regression/24-site-figures/precision/11-loop_call_per_origin.vimp [interval]
+tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp [interval]
 
 Arithmetic diagnostics
 None
@@ -6,4 +6,4 @@ None
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  -------
-60:3      pp0    x < 10     PROVED   x=[0,9]
+108:3     pp6    a == 2     PROVED   a=[2,2]

@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  --------------
-4:5       pp2    y == 2     UNKNOWN  parity: y=2ℤ
+--------  -----  ---------  -------  -----
+4:5       pp2    y == 2     UNKNOWN  y=⊤

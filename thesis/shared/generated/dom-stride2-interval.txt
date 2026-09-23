@@ -5,9 +5,9 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -------------------
-19:5      pp2    v >= 1     PROVED   interval: v=[1,50]
-21:5      pp4    v <= 52    PROVED   interval: v=[3,52]
-23:3      pp5    v >= 51    PROVED   interval: v=[51,52]
-24:3      pp6    v <= 52    PROVED   interval: v=[51,52]
-25:3      pp7    v == 51    UNKNOWN  interval: v=[51,52]
+--------  -----  ---------  -------  ---------
+19:5      pp2    v >= 1     PROVED   v=[1,50]
+21:5      pp4    v <= 52    PROVED   v=[3,52]
+23:3      pp5    v >= 51    PROVED   v=[51,52]
+24:3      pp6    v <= 52    PROVED   v=[51,52]
+25:3      pp7    v == 51    UNKNOWN  v=[51,52]

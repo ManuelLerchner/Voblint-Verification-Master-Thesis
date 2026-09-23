@@ -18,43 +18,30 @@ clusters:
 
 nodes:
   set_pp1_ctx0: pp1
-      sign:
   set_exit_set_ctx0: exit_set
-      sign:
   get_exit_get_ctx0: exit_get
-      sign:
   main_exit_main_ctx0: exit_main
-      sign:
-        x=+
-        y=+
+      x=+
+      y=+
   get_pp2_ctx0: pp2
-      sign:
   main_pp4_ctx0: pp4
-      sign:
-        x=⊤
-        y=⊤
+      x=⊤
+      y=⊤
   set_pp0_ctx0: pp0
-      sign:
   main_pp5_ctx0: pp5
-      sign:
-        x=+
-        y=⊤
+      x=+
+      y=⊤
   set_entry_set_ctx0: entry_set
-      sign:
   main_pp6_ctx0: pp6
-      sign:
-        x=+
-        y=⊤
+      x=+
+      y=⊤
   get_entry_get_ctx0: entry_get
-      sign:
   main_pp7_ctx0: pp7
-      sign:
-        x=+
-        y=+
+      x=+
+      y=+
   main_entry_main_ctx0: entry_main
-      sign:
-        x=⊤
-        y=⊤
+      x=⊤
+      y=⊤
 
 edges:
   set_pp0_ctx0 -> set_pp1_ctx0: Gx := 1
