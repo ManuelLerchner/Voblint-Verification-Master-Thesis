@@ -1,0 +1,9 @@
+docs/readme-figures/while-loop.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------
+6:3       pp3    0 < x      PROVED   x=[10,10]

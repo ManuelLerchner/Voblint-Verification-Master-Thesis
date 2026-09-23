@@ -1,0 +1,10 @@
+tests/regression/24-site-figures/precision/06-multiples_of_three_int.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+70:7      pp4    x == 1     DEAD     
+74:7      pp7    x == 6     DEAD     

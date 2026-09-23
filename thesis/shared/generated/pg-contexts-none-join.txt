@@ -1,0 +1,10 @@
+docs/readme-figures/contexts.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -------
+8:3       pp4    a == 6     UNKNOWN  a=[5,6]
+9:3       pp5    b == 5     UNKNOWN  b=[5,6]

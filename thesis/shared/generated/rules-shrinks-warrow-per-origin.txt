@@ -1,0 +1,11 @@
+tests/regression/24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------
+57:5      pp1    WARNING   possible division by zero: 9 / (a + 2)
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+59:3      pp3    a <= 9     UNKNOWN  a=⊤

@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/known-imprecision/08-loop_call_warrow.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------
+61:3      pp0    x < 10     UNKNOWN  x=[0,+∞]

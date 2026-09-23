@@ -1,0 +1,9 @@
+tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ------
+18:3      pp5    y >= 0     PROVED   y=≥0

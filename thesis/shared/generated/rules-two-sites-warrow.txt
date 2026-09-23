@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/known-imprecision/07-two_sites_warrow.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------
+49:3      pp0    x <= 2     UNKNOWN  x=[1,+∞]

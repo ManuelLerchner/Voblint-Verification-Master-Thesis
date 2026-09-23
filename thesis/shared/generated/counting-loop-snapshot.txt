@@ -1,0 +1,35 @@
+clusters:
+  cluster_ctx_0: main / unit
+    main_pp2_ctx0
+    main_pp1_ctx0
+    main_pp3_ctx0
+    main_pp4_ctx0
+    main_exit_main_ctx0
+    main_pp0_ctx0
+    main_entry_main_ctx0
+
+nodes:
+  main_pp2_ctx0: pp2
+      i=[0,4]
+  main_pp1_ctx0: pp1
+      i=[0,5]
+  main_pp3_ctx0: pp3 [proved]
+      i=[5,5]
+      check i == 5
+  main_pp4_ctx0: pp4
+      i=[5,5]
+  main_exit_main_ctx0: exit_main
+      i=[5,5]
+  main_pp0_ctx0: pp0
+      i=⊤
+  main_entry_main_ctx0: entry_main
+      i=⊤
+
+edges:
+  main_pp0_ctx0 -> main_pp1_ctx0: i := 0
+  main_pp1_ctx0 -> main_pp2_ctx0: [i < 5]
+  main_pp1_ctx0 -> main_pp3_ctx0: ![i < 5]
+  main_pp2_ctx0 -> main_pp1_ctx0: i := i + 1
+  main_pp3_ctx0 -> main_pp4_ctx0: check(i == 5)
+  main_pp4_ctx0 -> main_exit_main_ctx0: return
+  main_entry_main_ctx0 -> main_pp0_ctx0: body(main)

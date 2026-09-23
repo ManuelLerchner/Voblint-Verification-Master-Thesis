@@ -1,10 +1,108 @@
 {
   "facts": {
+    "activation_collect_dg_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>routed_context_base_hetero S \\<gamma>\\<^sub>D\\<^sub>G \\<G> g gk0.0\n          route bot0.0 s0d s0g sigma vars x0.0 sg seed_key resolve is_bot\n          \\<gamma>\\<^sub>M R;\n (cfg_entry g, startcontext) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G s0d s0g\\<rbrakk>\n\\<Longrightarrow> activation_collect \\<G> R startcontext g S0.0 v ctx\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, ctx)))",
+      "theory": "Routed_Context",
+      "why": "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
+    },
+    "activation_collect_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<And>s.\n            s \\<in> S \\<Longrightarrow>\n            s \\<in> cover (cfg_entry g) startcontext;\n \\<And>u a v c s s'.\n    \\<lbrakk>(u, a, v) \\<in> intra g; s \\<in> cover u c;\n     s' \\<in> edge_step a s\\<rbrakk>\n    \\<Longrightarrow> s' \\<in> cover v c;\n \\<And>u dst pars args p cont c c' s.\n    \\<lbrakk>(u, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> cover u c;\n     R u c (call_info_of (CallEdge dst pars args) p) s\n      (call_enter \\<G> (CallEdge dst pars args) s) c'\\<rbrakk>\n    \\<Longrightarrow> call_enter \\<G> (CallEdge dst pars args) s\n                      \\<in> cover (FunctionEntry p) c';\n \\<And>cl dst pars args p cont c1 c' p' s t es.\n    \\<lbrakk>(cl, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> cover cl c1; admits_call_context \\<G> g R cl c1 p' s es c';\n     t \\<in> cover (FunctionResult p) c'\\<rbrakk>\n    \\<Longrightarrow> combine_collect \\<G> dst s t \\<in> cover cont c1;\n call_context_total_on cover R \\<G> g\\<rbrakk>\n\\<Longrightarrow> activation_collect \\<G> R startcontext g S v ctx\n                  \\<subseteq> cover v ctx",
+      "theory": "Activation_Backbone",
+      "why": "Main-statements appendix: the activation-local coverage theorem."
+    },
+    "csim_star": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<Pi>,g \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p\\<^sup>*\n src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g \\<turnstile> src' \\<approx> cfg'",
+      "theory": "Simulation_Preservation",
+      "why": "Main-statements appendix: simulation of source runs by the compiled graph."
+    },
     "ltr_collect_semantic_postfix": {
+      "oracles": [],
       "statement": "\\<lbrakk>S0.0 \\<subseteq> B (cfg_entry g);\n \\<And>u a w s s'.\n    \\<lbrakk>(u, a, w) \\<in> intra g; s \\<in> B u;\n     s' \\<in> edge_step a s\\<rbrakk>\n    \\<Longrightarrow> s' \\<in> B w;\n \\<And>u dst pars args p cont s.\n    \\<lbrakk>(u, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> B u\\<rbrakk>\n    \\<Longrightarrow> call_enter \\<G> (CallEdge dst pars args) s\n                      \\<in> B (FunctionEntry p);\n \\<And>cl dst pars args p cont s t.\n    \\<lbrakk>(cl, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> B cl; t \\<in> B (FunctionResult p)\\<rbrakk>\n    \\<Longrightarrow> combine_collect \\<G> dst s t \\<in> B cont\\<rbrakk>\n\\<Longrightarrow> \\<C>\\<^bsub>\\<G>,g,S0.0\\<^esub> v \\<subseteq> B v",
+      "theory": "LTR_Abstract",
       "why": "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+    },
+    "mf_after_calls": {
+      "oracles": [
+        "Code_Generator.holds_by_evaluation"
+      ],
+      "statement": "s \\<in> \\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub>\n         (Statement 7) \\<Longrightarrow>\n0 < s STR ''x'' \\<and> 0 \\<le> s STR ''y''",
+      "theory": "Example_Sign_Mixed_Flow",
+      "why": "Mixed flow-sensitivity section: the concrete consequence of the solved flow-insensitive global."
+    },
+    "mf_ltr_collect_sound": {
+      "oracles": [
+        "Code_Generator.holds_by_evaluation"
+      ],
+      "statement": "\\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub> v\n\\<subseteq> mf_gammaM (mf_reader (Inl (v, ())))",
+      "theory": "Example_Sign_Mixed_Flow",
+      "why": "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
+    },
+    "nv_source_certified": {
+      "oracles": [
+        "Code_Generator.holds_by_evaluation"
+      ],
+      "statement": "\\<exists>res v stk.\n   run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog =\n   Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (res_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   prog_table nv_prog,prog_cfg nv_prog \\<turnstile>\n   (Seq (Check (exp.Eq (V STR ''a'') (N 6)))\n     (Check (exp.Eq (V STR ''b'') (N 5))),\n    nv_final, []) \\<approx>\n   (v, nv_final, stk) \\<and>\n   nv_final\n   \\<in> \\<C>\\<^bsub>declared_global\n                      nv_prog,prog_cfg\n                               nv_prog,cinit_stores\n  (declared_global nv_prog)\\<^esub>\n          v \\<and>\n   analysis_result_covers Interval_Analysis Globals_Warrow Ctx_EntryState\n    nv_prog v nv_final \\<and>\n   checks_sound_at res v nv_final",
+      "theory": "Example_Non_Vacuity",
+      "why": "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
+    },
+    "pstep.Call": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl);\n vals = map (\\<lambda>e. \\<lbrakk>e\\<rbrakk>\\<^sub>e s) actuals;\n callee = bind_formals (formals decl) vals (enter_state \\<G> s)\\<rbrakk>\n\\<Longrightarrow> \\<G>,\\<Pi> \\<turnstile>\n                  (com.Call dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) Restore, callee, Frame s dst # frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule for a call."
+    },
+    "pstep.RestoreStep": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Restore, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule that restores the caller's frame."
+    },
+    "pstep.ReturnSome": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile> (Return (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind, s(ret_var := \\<lbrakk>e\\<rbrakk>\\<^sub>e s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule for returning a value."
+    },
+    "pstep.UnwindAct": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Seq Unwind Restore, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+    },
+    "run_voblint_arithmetic_safe": {
+      "oracles": [],
+      "statement": "\\<lbrakk>config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          v;\n \\<forall>d\\<in>set (res_diagnostics res).\n    diagnostic_point d \\<noteq> v\\<rbrakk>\n\\<Longrightarrow> arithmetic_safe_at (prog_cfg p) v s",
+      "theory": "Analysis_Certified",
+      "why": "Arithmetic-safety endpoint cited in the introduction."
+    },
+    "run_voblint_certified_source_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk.\n                     prog_table p,prog_cfg p \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>declared_global\n    p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v \\<and>\n                     analysis_result_covers D rule ctx p v s \\<and>\n                     checks_sound_at res v s",
+      "theory": "Analysis_Certified",
+      "why": "The introduction states the source-level soundness result with its actual premises."
+    },
+    "run_voblint_check_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n next_check residual = Some e; config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>c\\<in>set (res_checks res).\n                     check_exp c = e \\<and>\n                     s \\<in> \\<C>\\<^bsub>declared_global\n    p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              (check_point c) \\<and>\n                     check_verdict c \\<noteq> Dead \\<and>\n                     (check_verdict c =\n                      Decided Check_Proved \\<longrightarrow>\n                      truthy (\\<lbrakk>e\\<rbrakk>\\<^sub>e s)) \\<and>\n                     (check_verdict c =\n                      Decided Check_Refuted \\<longrightarrow>\n                      \\<not> truthy (\\<lbrakk>e\\<rbrakk>\\<^sub>e s))",
+      "theory": "Analysis_Certified",
+      "why": "Check-verdict endpoint cited in the introduction."
+    },
+    "run_voblint_dead_check_unreached": {
+      "oracles": [],
+      "statement": "\\<lbrakk>config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res; chk \\<in> set (res_checks res);\n check_verdict chk = Dead\\<rbrakk>\n\\<Longrightarrow> \\<C>\\<^bsub>declared_global\n                               p,prog_cfg\n                                  p,cinit_stores (declared_global p)\\<^esub>\n                   (check_point chk) =\n                  {}",
+      "theory": "Analysis_Certified",
+      "why": "Unreachability endpoint cited in the introduction."
+    },
+    "source_run_has_ltr": {
+      "oracles": [],
+      "statement": "\\<lbrakk>wf_compile_input \\<G> \\<Pi> ps; s0.0 \\<in> S;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t.\n                     \\<Pi>,compile_prog \\<Pi> ps \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     ltr_repr \\<G> (compile_prog \\<Pi> ps) S (v, s, stk) t",
+      "theory": "Source_To_Trace",
+      "why": "Main-statements appendix: source runs are represented by valid traces."
     }
   },
-  "session": "Voblint_CFG",
-  "theory": "Voblint_CFG.LTR_Abstract"
+  "session": "Voblint_CLI",
+  "theory": "Voblint_CLI.Analysis_Certified"
 }

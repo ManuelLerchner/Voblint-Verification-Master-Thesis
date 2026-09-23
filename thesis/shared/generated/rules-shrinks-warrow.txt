@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/precision/17-recursion_shrinks_warrow.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------
+57:3      pp3    a <= 9     PROVED   a=[-1,9]

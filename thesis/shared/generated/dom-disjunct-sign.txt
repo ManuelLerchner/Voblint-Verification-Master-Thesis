@@ -1,0 +1,9 @@
+tests/regression/07-sign-precision/precision/07-disjunct_arm_pollution_fixed.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+13:5      pp3    x == 5     DEAD     

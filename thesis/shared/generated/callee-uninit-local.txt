@@ -1,0 +1,9 @@
+thesis/shared/programs/callee-uninit.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+2:3       pp0    y == 0     UNKNOWN  y=⊤

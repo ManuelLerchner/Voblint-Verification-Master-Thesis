@@ -1,0 +1,13 @@
+tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp [parity]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------
+19:5      pp2    v >= 1     UNKNOWN  v=1+2ℤ
+21:5      pp4    v <= 52    UNKNOWN  v=1+2ℤ
+23:3      pp5    v >= 51    UNKNOWN  v=1+2ℤ
+24:3      pp6    v <= 52    UNKNOWN  v=1+2ℤ
+25:3      pp7    v == 51    UNKNOWN  v=1+2ℤ
