@@ -11,10 +11,10 @@ whether a divisor can be zero at some point, or whether a check always holds.
 Its users act on these answers without running the program. The analyzer,
 however, is itself a program, and an error in a transfer operation, in the
 treatment of a call, or in the reading of the computed state produces a
-confident answer that real executions contradict. Goblint issue 1156 reports
+confident answer that real executions contradict. Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue 1156] reports
 that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$ @goblint1156, although
-the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$. Pull request
-1161 located the fault in the congruence domain, which returned the constant
+the truncating remainder of C11 @iso-c11[§6.5.5p6] gives $-1$. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+  1161] located the fault in the congruence domain, which returned the constant
 remainder of an odd value while ignoring the sign of the dividend, and
 restricted the cases in which it returns a constant @goblint1161.
 @ch:evaluation replays the case.
@@ -375,7 +375,7 @@ question.
   theorems justify `DEAD` (#isathm("run_voblint_dead_check_unreached")) and the
   absence of zero divisors where no arithmetic diagnostic is reported
   (#isathm("run_voblint_arithmetic_safe")). The theorem is about the function
-  whose generated code the command-line tool and the browser playground run.
+  whose generated code the command-line tool and the browser #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[playground] run.
   The semantics and the specifications exist only in the logic. The analysis
   itself computes on finite executable states, and each of their operations
   is proved to commute with readback to the function-valued states of the
@@ -437,7 +437,7 @@ question.
   obligations while dropping #oblig("TOTAL") leaves a reached store uncovered
   (#isathm("total_dropped_unsound")), unpaired entry coverage loses
   a concrete return value (#isathm("unpaired_entry_cover_unsound")), and the
-  remainder that Goblint's congruence domain computed before pull request 1161
+  remainder that Goblint's congruence domain computed before #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161]
   violates the obligation the shipped domain discharges
   (#isathm("prefix_congruence_mod_unsound")). Evaluation inside Isabelle,
   trusting the code generator, discharges the termination premise and computes

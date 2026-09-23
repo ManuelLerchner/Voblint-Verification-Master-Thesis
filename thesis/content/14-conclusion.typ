@@ -41,7 +41,7 @@ unpaired entry coverage (#isathm("unpaired_entry_cover_unsound")) admit
 unsound claims, that a claim meeting every obligation except #oblig("TOTAL")
 misses a store of the context-indexed collection
 (#isathm("total_dropped_unsound")), and that Goblint's congruence remainder
-before pull request 1161 violates the domain obligation (#isathm("prefix_congruence_mod_unsound")).
+before #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] violates the domain obligation (#isathm("prefix_congruence_mod_unsound")).
 Evaluation inside Isabelle, trusting the code generator, discharges every
 premise of the main theorem for named programs, which then yields `PROVED`
 verdicts (#isathm("nv_source_certified"),
