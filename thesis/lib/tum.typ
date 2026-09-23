@@ -100,9 +100,11 @@
 #let front-chapter(body) = {
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
-    v(83.5pt)
+    // Tighter than the TUM LaTeX template (83.5pt / 40.2pt) so the abstract
+    // fits on one page.
+    v(4pt)
     align(center, text(font: serif-12, size: 14.4pt, weight: "bold", it.body))
-    v(40.2pt)
+    v(8pt)
   }
   body
 }
