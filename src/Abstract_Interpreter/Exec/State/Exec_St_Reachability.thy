@@ -93,7 +93,7 @@ lemma resolved_st_is_botE:
   using assms by (auto simp: resolved_st_is_bot_def)
 
 text \<open>
-  Soundness needs \<G> to leave infinitely many vnames local, so that some local
+  Soundness needs \<open>\<G>\<close> to leave infinitely many vnames local, so that some local
   witness always escapes any given (finite) override list -- true for any
   @{term declared_global} of a real program, which only ever declares finitely
   many globals while @{typ vname} is infinite.
