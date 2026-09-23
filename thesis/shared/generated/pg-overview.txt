@@ -1,0 +1,14 @@
+tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  ---------------------------------------
+44:3      pp21   WARNING   possible division by zero: 10 / (a - 2)
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------
+30:3      pp10   i == 5     PROVED   i=[5,5]
+31:3      pp11   i < 5      REFUTED  i=[5,5]
+35:3      pp14   hits == 8  PROVED   hits=[8,8]
+43:3      pp20   a == 2     UNKNOWN  a=⊤

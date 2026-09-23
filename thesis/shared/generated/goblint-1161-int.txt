@@ -1,0 +1,10 @@
+tests/regression/24-site-figures/precision/04-goblint_1161_congruence_mod.vimp [int]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition    Verdict  State
+--------  -----  -----------  -------  -----------------------------------------------------------------
+16:3      pp5    c % 2 == 1   REFUTED  c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ
+17:3      pp6    c % 2 == -1  PROVED   c=signs:-; intervals:[-7,-5]; parities:1+2ℤ; congruences:1+2ℤ

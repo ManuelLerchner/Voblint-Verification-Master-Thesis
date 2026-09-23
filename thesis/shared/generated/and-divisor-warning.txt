@@ -1,0 +1,9 @@
+thesis/shared/programs/and-divisor.vimp [interval]
+
+Arithmetic diagnostics
+Location  Point  Severity  Message
+--------  -----  --------  ---------------------------------
+3:3       pp1    WARNING   possible division by zero: 10 / x
+
+Assertion checks
+None

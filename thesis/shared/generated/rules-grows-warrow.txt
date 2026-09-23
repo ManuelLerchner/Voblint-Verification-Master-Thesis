@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------
+51:3      pp0    x >= 0     PROVED   x=[0,+∞]

@@ -1,0 +1,192 @@
+clusters:
+  cluster_ctx_0: record / unit
+    record_pp1_ctx0
+    record_exit_record_ctx0
+    record_pp0_ctx0
+    record_entry_record_ctx0
+  cluster_ctx_1: scale / unit
+    scale_exit_scale_ctx0
+    scale_pp2_ctx0
+    scale_entry_scale_ctx0
+  cluster_ctx_2: wrap / unit
+    wrap_exit_wrap_ctx0
+    wrap_pp4_ctx0
+    wrap_pp5_ctx0
+    wrap_entry_wrap_ctx0
+  cluster_ctx_3: main / unit
+    main_pp9_ctx0
+    main_pp8_ctx0
+    main_pp10_ctx0
+    main_pp11_ctx0
+    main_pp15_ctx0
+    main_pp21_ctx0
+    main_pp22_ctx0
+    main_exit_main_ctx0
+    main_pp7_ctx0
+    main_pp12_ctx0
+    main_pp13_ctx0
+    main_pp14_ctx0
+    main_pp16_ctx0
+    main_pp18_ctx0
+    main_pp19_ctx0
+    main_pp20_ctx0
+    main_entry_main_ctx0
+
+nodes:
+  record_pp1_ctx0: pp1
+      amount=⊤
+  record_exit_record_ctx0: exit_record
+      amount=⊤
+  scale_exit_scale_ctx0: exit_scale
+      v=[1,+∞]
+  wrap_exit_wrap_ctx0: exit_wrap
+      w=[1,+∞]
+      r=⊤
+  main_pp9_ctx0: pp9
+      a=⊤
+      b=⊤
+      i=[0,4]
+      share=⊤
+  main_pp8_ctx0: pp8
+      a=⊤
+      b=⊤
+      i=[0,5]
+      share=⊤
+  main_pp10_ctx0: pp10 [proved]
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+      check i == 5
+  main_pp11_ctx0: pp11 [refuted]
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+      check i < 5
+  main_pp15_ctx0: pp15
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_pp21_ctx0: pp21 [unknown]
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+      possible division by zero: 10 / (a - 2)
+  main_pp22_ctx0: pp22
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_exit_main_ctx0: exit_main
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_pp7_ctx0: pp7
+      a=⊤
+      b=⊤
+      i=⊤
+      share=⊤
+  record_pp0_ctx0: pp0
+      amount=⊤
+  scale_pp2_ctx0: pp2
+      v=[1,+∞]
+  wrap_pp4_ctx0: pp4
+      w=[1,+∞]
+      r=⊤
+  scale_entry_scale_ctx0: entry_scale
+      v=[1,+∞]
+  wrap_pp5_ctx0: pp5
+      w=[1,+∞]
+      r=⊤
+  main_pp12_ctx0: pp12
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_pp13_ctx0: pp13
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_pp14_ctx0: pp14 [unknown]
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+      check hits == 8
+  main_pp16_ctx0: pp16
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  record_entry_record_ctx0: entry_record
+      amount=⊤
+  main_pp18_ctx0: pp18
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  main_pp19_ctx0: pp19
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+  wrap_entry_wrap_ctx0: entry_wrap
+      w=[1,+∞]
+      r=⊤
+  main_pp20_ctx0: pp20 [unknown]
+      a=⊤
+      b=⊤
+      i=[5,5]
+      share=⊤
+      check a == 2
+  main_entry_main_ctx0: entry_main
+      a=⊤
+      b=⊤
+      i=⊤
+      share=⊤
+
+edges:
+  record_pp0_ctx0 -> record_pp1_ctx0: hits := hits + amount
+  record_pp1_ctx0 -> record_exit_record_ctx0: return
+  scale_pp2_ctx0 -> scale_exit_scale_ctx0: return v * 2
+  wrap_pp5_ctx0 -> wrap_exit_wrap_ctx0: return r
+  main_pp7_ctx0 -> main_pp8_ctx0: i := 0
+  main_pp8_ctx0 -> main_pp9_ctx0: [i < 5]
+  main_pp8_ctx0 -> main_pp10_ctx0: ![i < 5]
+  main_pp9_ctx0 -> main_pp8_ctx0: i := i + 1
+  main_pp10_ctx0 -> main_pp11_ctx0: check(i == 5)
+  main_pp11_ctx0 -> main_pp12_ctx0: check(i < 5)
+  main_pp14_ctx0 -> main_pp15_ctx0: check(hits == 8)
+  main_pp15_ctx0 -> main_pp16_ctx0: [hits > 10]
+  main_pp15_ctx0 -> main_pp18_ctx0: ![hits > 10]
+  main_pp20_ctx0 -> main_pp21_ctx0: check(a == 2)
+  main_pp21_ctx0 -> main_pp22_ctx0: share := 10 / (a - 2)
+  main_pp22_ctx0 -> main_exit_main_ctx0: return
+  main_entry_main_ctx0 -> main_pp7_ctx0: body(main)
+  record_entry_record_ctx0 -> record_pp0_ctx0: body(record)
+  scale_entry_scale_ctx0 -> scale_pp2_ctx0: body(scale)
+  wrap_entry_wrap_ctx0 -> wrap_pp4_ctx0: body(wrap)
+  wrap_pp4_ctx0 -> scale_entry_scale_ctx0: enter scale(w)
+  scale_exit_scale_ctx0 -> wrap_pp5_ctx0: combine r := scale(w)
+  wrap_pp4_ctx0 -> wrap_pp5_ctx0: call-to-return scale
+  main_pp12_ctx0 -> record_entry_record_ctx0: enter record(i)
+  record_exit_record_ctx0 -> main_pp13_ctx0: combine
+  main_pp12_ctx0 -> main_pp13_ctx0: call-to-return record
+  main_pp13_ctx0 -> record_entry_record_ctx0: enter record(3)
+  record_exit_record_ctx0 -> main_pp14_ctx0: combine
+  main_pp13_ctx0 -> main_pp14_ctx0: call-to-return record
+  main_pp16_ctx0 -> record_entry_record_ctx0: enter record(100)
+  record_exit_record_ctx0 -> main_pp18_ctx0: combine
+  main_pp16_ctx0 -> main_pp18_ctx0: call-to-return record
+  main_pp18_ctx0 -> wrap_entry_wrap_ctx0: enter wrap(1)
+  wrap_exit_wrap_ctx0 -> main_pp19_ctx0: combine a := wrap(1)
+  main_pp18_ctx0 -> main_pp19_ctx0: call-to-return wrap
+  main_pp19_ctx0 -> wrap_entry_wrap_ctx0: enter wrap(4)
+  wrap_exit_wrap_ctx0 -> main_pp20_ctx0: combine b := wrap(4)
+  main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
+tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:238:3: warning: possible division by zero: 10 / (a - 2) [interval]
