@@ -159,18 +159,71 @@ the part of the system the query depends on (@sec:certificate).
 
 A _local_ solver produces such a partial certificate. With contexts as
 indices a system can have infinitely many unknowns, of which only those
-influencing the query matter @seidl21. Goblint's top-down solver is local: it
-evaluates right-hand sides on demand from the query and applies warrowing at
-the unknowns where a read closes a cycle (@fig:td-trace). Seidl and Vogler
-prove that their variants with widening and narrowing, including the
-side-effecting one, terminate on arbitrary, possibly non-monotone, systems as
-long as only finitely many unknowns are encountered @seidl21[Thms. 5.1, 9.4].
-The Isabelle formalization of the side-effecting solver @tilscher26 proves
-partial correctness only: when a solve terminates, it returns a partial
-post-solution. It contains no termination theorem for that solver, so
-termination is a premise of the main theorem (@sec:termination). The proof architecture follows the split: the equation
-generator shows that any suitable post-solution over-approximates the
-semantics, and the solver shows that a terminating run provides one.
+influencing the query matter @seidl21. Seidl and Vogler prove that their
+top-down variants with widening and narrowing, including the side-effecting
+one, terminate on arbitrary, possibly non-monotone, systems as long as only
+finitely many unknowns are encountered @seidl21[Thms. 5.1, 9.4].
+
+== The verified top-down solver <sec:td>
+
+Voblint does not implement its own solver. It uses Goblint's top-down solver
+(TD) in the Isabelle/HOL formalization of Stade et al. @stade24, extended to
+side effects and update rules by Tilscher et al. @tilscher26. The rest of the
+thesis builds on this solver and its correctness theorem, so we summarize both
+here.
+
+TD starts from a query unknown and evaluates right-hand sides on demand. When
+the right-hand side of $x$ reads an unknown $y$, TD first solves $y$ and
+records that $x$ depends on $y$. When the value of $y$ changes later, every
+unknown that read it is marked unstable and evaluated again. At unknowns where
+a read closes a cycle, TD combines the old and the new value with warrowing
+instead of replacing it (@fig:td-trace). Side contributions to a global are
+merged into its value by an update rule (@sec:update-rules). The run ends when
+the query is stable, and it returns the set $S$ of stable unknowns together
+with the valuation $sol$.
+
+The formalization splits the unknowns into _local_ unknowns $Unk$, which have a
+right-hand side, and _globals_ $G$, which receive only side contributions. A
+right-hand side is not an opaque function but a _strategy tree_
+(#isatype("strategy_tree")), which makes every read and every side effect
+visible to the solver:
+$
+  t ::= ctor("Answer")(d) | ctor("QueryL")(y, k) | ctor("QueryG")(g, k)
+  | ctor("Side")(g, d, t)
+$
+with $y in Unk$, $g in G$, $d in A$ and a continuation $k : A -> t$ that
+receives the value read. Evaluating $t$ against $sol$ follows the queries and
+yields a value $italic("eval")(t, sol)$, the set $italic("dep")(t, sol)$ of local unknowns it
+reads, and the join $italic("side")(t, sol)$ of its side contributions per global.
+
+The solver is defined as mutually recursive functions without a termination
+proof. Isabelle's function package then supplies a domain predicate $D$,
+which holds exactly for the query unknowns on which the
+recursion terminates. The main theorem, #isathm("partial_post_solution"),
+states partial correctness for a system with right-hand sides $rhs(u)$,
+$u in Unk$:
+$
+  D(x) and italic("solve")(x) = (S, sol) ==> x in S and forall u in S. \
+  italic("dep")(rhs(u), sol) subset.eq S and
+  italic("eval")(rhs(u), sol) lle sol(u) and italic("side")(rhs(u), sol) lle sol
+$
+The three conditions, taken together for all $u in S$, are
+#isaconst("part_post_solution"). The last one compares pointwise over
+the globals. $S$ contains
+the query and is closed under the reads of its right-hand sides, and on $S$
+the valuation is a post-solution in the sense above, side contributions
+included. The theorem needs no monotonicity of the right-hand sides and says
+nothing about unknowns outside $S$. An executable version of the solver
+returns an optional result, and #isathm("solve_dom_of_solve_c") shows that a
+run that returns a result satisfies the domain predicate. There is no
+termination theorem for the side-effecting solver, so termination is a
+premise of Voblint's main theorem (@sec:termination).
+
+Voblint instantiates the solver's locale #isalocale("TD_side_upd_rule") with
+its own equation system. The proof architecture follows the split between
+the two theorems. The equation generator shows that any valuation satisfying
+#isaconst("part_post_solution") over-approximates the semantics, and the
+solver theorem shows that a terminating run provides one (@sec:certificate).
 
 == Isabelle/HOL mechanisms
 
