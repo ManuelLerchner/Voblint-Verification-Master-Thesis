@@ -280,6 +280,13 @@ Do not weaken or omit these qualifications for cleaner prose.
 
 ## Writing for the thesis
 
+The research contribution is the Isabelle formalization and machine-checked
+verification. The thesis is its explanatory companion: explain the problem,
+important definitions, proof architecture, difficult proof insights, and
+relationship to prior work. Cite the formal development for the complete
+proofs. Do not reconstruct a parallel, self-contained proof development in
+prose or present the exposition itself as the verification contribution.
+
 Write for a computer-science reader who knows neither this repository nor its
 Isabelle architecture.
 
@@ -386,10 +393,17 @@ For real Isabelle entities in Typst, use the typed thesis helpers such as
 `isathm`, `isaconst`, `isatype`, `isalocale`, and `isasession` so
 `thesis-refs` can verify them.
 
+Every Isabelle entity citation must carry its Isabelle HTML link, including
+generated statements and declarations, theorem headers, session references,
+and theory badges. Do not fall back to unlinked text. Regenerate the link map
+with `pixi run thesis-links-write` and run `pixi run thesis-links` after adding
+citations. Missing targets fail the thesis build and the pre-commit link check;
+the post-deployment check also verifies the published pages and anchors.
+
 When reproducing formal material, prefer generated sources:
 
 - `thy(...)` for extracted declarations;
-- `stmt(...)` or `proved(...)` for theorem statements;
+- `proved(...)` for theorem statements;
 - generated claim material for analyzer output used as evidence.
 
 Do not manually copy a theorem statement or analyzer output when the thesis
