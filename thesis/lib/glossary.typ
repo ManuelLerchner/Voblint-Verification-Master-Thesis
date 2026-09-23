@@ -797,7 +797,7 @@
   ],
   term(
     "falsification",
-    "falsification (load-bearing condition)",
+    "falsification (necessary condition)",
     _trust,
     isa: [#isathm("proved_everywhere_unsound"), #isathm("prefix_congruence_mod_unsound")],
     see: <sec:falsification>,

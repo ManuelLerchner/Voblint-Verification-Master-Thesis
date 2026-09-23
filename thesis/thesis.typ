@@ -36,6 +36,9 @@
   // third of a page.
   inset: (x: 0.32em, y: 0.2em),
   number-format: n => text(fill: vb.muted, size: 0.75em, str(n)),
+  // The tag sits inside the frame, clear of its top and right edges.
+  lang-inset: (x: 0.45em, y: 0.22em),
+  lang-outset: (x: -0.25em, y: 0.12em),
   languages: (
     c: (name: "VIMP", color: vb.keyword),
     isabelle: (name: "Isabelle", color: vb.accent),
