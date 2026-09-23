@@ -1,185 +1,392 @@
+#import "@preview/fletcher:0.5.8": diagram, node
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": *
 #import "../lib/code.typ": *
+#import "../lib/sources.typ": thy
+
+// A row of a registered CLI claim (shared/claims.toml), so a verdict or state
+// quoted in prose is read from the checked output rather than typed.
+#let cli-row(name, cond) = {
+  let cells = read("/shared/generated/" + name + ".txt")
+    .split("\n")
+    .map(l => l.trim().split(regex("\s{2,}")))
+    .find(c => c.len() == 5 and c.at(2) == cond)
+  assert(cells != none, message: "claim " + name + " has no check " + cond)
+  cells
+}
+#let cli-verdict(name, cond) = raw(cli-row(name, cond).at(3))
+// One verdict shared by several (claim, condition) rows; fails if they differ.
+#let cli-same(..rows) = {
+  let vs = rows.pos().map(((name, cond)) => cli-row(name, cond).at(3))
+  assert(vs.dedup().len() == 1, message: "verdicts differ: " + repr(vs))
+  raw(vs.first())
+}
 
 = From Formalization to Executable Analyzer <ch:executable>
 
-The theorems of @ch:results are about #isaconst("run_voblint"), one Isabelle
-constant. This chapter follows that constant out of the proof assistant: what
-makes it executable, how it becomes OCaml, what handwritten code surrounds it,
-and what a reader can do with the result without installing Isabelle. It ends
-where the proof ends, with the boundary drawn in one place.
-
-#let pending(section) = block(
-  fill: vb.bg,
-  stroke: (paint: vb.muted, thickness: 0.7pt, dash: "dashed"),
-  radius: 4pt,
-  inset: 9pt,
-  width: 100%,
-)[
-  _Section draft pending._ The plan is in `docs/THESIS_BLUEPRINT.md`,
-  section 7, #section.
-]
-
-== Executable definitions <sec:executable-defs>
-
-#pending[11.1]
+The theorems of @ch:results are about #isaconst("run_voblint"), a HOL function
+from a VIMP syntax tree and a configuration to an analysis answer. A user has
+source text and wants a report. Code generation, a compiler, a parser, and a renderer lie
+between the two, and the theorem covers none of them. This
+chapter follows the constant out of the proof assistant and states in
+@sec:trust-boundary where the proof ends. It supplies the part of RQ1 that asks
+which trusted components remain, and with it the executable half of
+contribution K1: the constant the theorem is about is the one the delivered
+tools run.
 
 == Code generation and the public interface <sec:codegen>
 
-#pending[11.2]
+The source-level theorem is stated about one HOL function, and the delivered
+tools call that function:
+
+#thy("run_voblint")
+
+The first three arguments are the configuration: the domain
+(#isatype("analysis_domain")), the global update rule
+(#isatype("globals_rule")), and the context policy (#isatype("context_mode"): no
+contexts, entry states, or call strings of a given depth). The fourth is the
+syntax tree, of type #isatype("imp_prog"). #isaconst("analyse_program") first
+checks the structural conditions compilation requires
+(#isaconst("wf_program_compile_input_exec")) and returns
+#isaconst("Malformed_Program") on failure. Otherwise it compiles and solves, and
+#isaconst("Analysed") carries a #isatype("run_result") record: the CFG, the
+contexts, one state per solved point and context with its verdicts and
+arithmetic diagnostics, the call routes, the check rows, and the solved global
+unknowns.
+
+The verdicts are values of a HOL datatype, computed in HOL and constrained by
+the theorem. The abstract values are not: #isaconst("run_voblint") maps each
+through #isaconst("string_of_abstract_value"), and the coverage half of the
+source theorem is stated about the result before this map
+(#isaconst("analysis_result_covers")). No theorem constrains the strings.
+
+Export requires executable code equations for the whole dependency closure. Two
+objects of the soundness argument have none, and @ch:solving replaces both. The
+semantic state, a function on an infinite set of variables, becomes the finite
+carrier #isatype("resolved_st_q"). The solver specification, a recursion whose
+termination is not known in general, gets the vendored solver's executable
+version as its code equation, which the vendored library proves from their
+agreement wherever the specification is defined @tilscher26. Outside that
+domain the equation aborts. Both replacements are proved, and neither proves
+termination (@sec:termination). One #isacmd("export_code")
+declaration then emits #isaconst("run_voblint") and the constructors and
+selectors a caller needs as the OCaml module `Generated`.
+
+Exporting the theorem's own constant means that no handwritten entry point needs
+an agreement argument. One exported entry point per domain and context policy
+would need a lemma relating each of them to the theorem's constant. The single
+dispatcher answers every combination of its three configuration arguments, so
+the command-line tool never decides which combination is legal.
+
+== Interfaces that separate execution from proof <sec:engineering>
+
+Two requirements of code generation shape the interfaces between execution and
+proof. First, a type-class constraint becomes a dictionary of operations passed
+at run time. A class holding both the operations of a domain and its
+concretization would put the concretization into every dictionary, and a
+function into sets of integers, such as the residue class of a congruence, has
+no executable code equation in general. The domain classes therefore split
+(@fig:domain-contract): #isalocale("executable_domain") holds the runtime
+operations and #isalocale("sound_domain") adds the concretization and its
+laws. The executable pipeline and the solver's class
+#isalocale("bounded_warrowing") mention only the former. A type has at most one
+instance of each class, while transfer functions, routing policy and solver
+vary over one carrier. They are therefore locale parameters.
+
+Second, code generation needs unconditional equations, and theorems about the
+result need semantic premises. #isalocale("routed_dg_pipeline") fixes the
+executable ingredients (transfer, entry, initial state, routing, solver, check
+classifier) and assumes nothing, so its definitions become code equations
+directly. Even the bottom state is a parameter, because a least element taken
+from a type class would have to be executable at a function type.
+#isalocale("routed_dg_analysis") imports it, strengthens the value type to
+#isalocale("sound_domain"), and adds the contracts, among them soundness of the
+abstract transfer and of the initial state, agreement of the executable
+transfer, entry and routing with their abstract counterparts, the solver
+certificate, discharge of the termination premise by a finished executable
+run, and correctness of the check classifier. Each domain interprets this
+locale once per context family (@fig:assembly) and inherits the argument of
+@ch:results. The assembly fixes a reachability-lifted whole-store carrier, so
+the relational witness of @ch:instances is not selectable through it.
+
+#figure(
+  {
+    set text(size: 8pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let loc(pos, name, note, color: vb.neutral) = node(
+      pos,
+      align(center)[#name \ #text(size: 7.5pt, fill: vb.muted, note)],
+      stroke: 0.8pt + color,
+      fill: color.lighten(93%),
+      corner-radius: 2pt,
+      inset: 5pt,
+    )
+    let inst(pos, body) = node(
+      pos,
+      align(center, text(size: 7.5pt, body)),
+      stroke: (paint: vb.proved, thickness: 0.7pt, dash: "dotted"),
+      corner-radius: 2pt,
+      inset: 4pt,
+    )
+    let lab(body) = text(size: 7pt, fill: vb.muted, body)
+    diagram(
+      spacing: (9mm, 8mm),
+      loc((1, 0), isalocale("routed_dg_pipeline"), [executable ingredients, no assumptions \
+        definitions exported as code equations]),
+      loc(
+        (1, 1),
+        isalocale("routed_dg_analysis"),
+        [adds the contracts; value type \
+          strengthened to #isalocale("sound_domain")],
+        color: vb.proved,
+      ),
+      loc(
+        (2.3, 1),
+        isalocale("unit_dg_analysis"),
+        [the same at the one-element \
+          context space],
+        color: vb.proved,
+      ),
+      inst((0.3, 2), [five domains \ entry-state contexts]),
+      inst((1.5, 2), [five domains \ call strings of depth $k$]),
+      inst((2.7, 2), [five domains \ no contexts]),
+      import-edge((1, 0), (1, 1), label: lab[extends], label-side: left),
+      import-edge((1, 1), (2.3, 1), label: lab[specializes]),
+      interp-edge((1, 1), (0.3, 2)),
+      interp-edge((1, 1), (1.5, 2)),
+      interp-edge((2.3, 1), (2.7, 2)),
+    )
+  },
+  kind: image,
+  caption: [The analysis assembly. Solid arrows are locale extension, dotted
+    ones global interpretations, one per domain and context family. Each
+    interpretation keeps the global update rule, and for call strings the
+    depth $k$, as a parameter, so one registration serves every rule and
+    every depth.],
+) <fig:assembly>
 
 == The OCaml and browser boundary <sec:ocaml-boundary>
 
-#pending[11.3]
+The generated module takes a syntax tree and returns a typed answer, so
+unverified OCaml surrounds it on both sides (@fig:intro-trust). Before it, an `ocamllex` lexer and a Menhir parser, which a
+project script emits from a grammar description, turn source text into an
+#isatype("imp_prog") and record source positions. After it, rendering code
+prints values, builds the contextual graph from the published routes, and
+attaches a source position to each check row. For a
+#isaconst("Malformed_Program") answer it names the first well-formedness
+conjunct the program breaks. The rejection itself is decided by the generated test.
+Integers in the export are arbitrary-precision Zarith integers, matching VIMP's
+mathematical integers and not C11's finite ones (@sec:vimp-vs-c).
+
+The command-line tool and the browser adapter link the same generated module
+and frontend. The command-line tool runs the analysis in a child process with a
+wall-clock budget and reports a run that exceeds it as unfinished, with no
+verdicts. For the browser, #raw("wasm_of_ocaml", lang: "sh") compiles the
+adapter into a WebAssembly module that runs in a Web Worker the user can
+cancel. Its only exported function calls #isaconst("run_voblint") once and
+returns the report, the graph, and the raw typed answer as one JSON string.
+No theorem states that the graph and the report come from the same answer. We
+establish this by reading the adapter.
 
 == An interactive analyzer artifact <sec:playground>
 
-The generated analyzer is compiled a second time, to WebAssembly, and embedded
-in a page that runs it in the browser with no server involved. The page is not a
-reimplementation and not a mock-up: the function it calls on every keystroke is
-the exported #isaconst("run_voblint"), fed the parsed program and the settings
-chosen in the toolbar, and what it draws is that function's answer. What the
-interface exposes is chosen to match what the theorems talk about.
+The playground,
+#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[`manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html`],
+is a static page that runs the generated analyzer in the reader's browser. Its
+toolbar selects exactly the arguments of #isaconst("run_voblint"), so every
+selectable run lies within the configurations covered by
+#isathm("run_voblint_certified_source_sound"), subject to its input and
+termination premises. Verdicts and value hints appear in the source, a state
+inspector shows the abstract state under the cursor in every context it was
+solved at, and the graph draws one box per procedure and context, the unknown
+space of @ch:equations.
 
-- *Every dimension the soundness theorem quantifies over.* The toolbar selects
-  the domain (#isaconst("Sign_Analysis"), #isaconst("Interval_Analysis"),
-  #isaconst("Parity_Analysis"), #isaconst("Congruence_Analysis"),
-  #isaconst("Int_Analysis")), the global update rule, and the context policy
-  with its call-string depth. These are the arguments of
-  #isaconst("run_voblint"), so every configuration the page can produce is one
-  #isathm("run_voblint_certified_source_sound") covers.
-- *The result at the granularity the theorems state it.* Verdicts and value
-  hints appear in the source; the statement under the cursor shows its abstract
-  state in every context it was solved at; the graph draws one box per
-  procedure and context, which is the unknown space of @ch:equations made
-  visible. The entry seeds published as solver globals and the raw typed input
-  and output of the generated core are one panel away.
-- *The unverified parts named as such.* The parser that turns text into an
-  #isatype("imp_prog") and the panels that render the answer are the handwritten
-  layer of @sec:ocaml-boundary, and the page says so beside them.
+The figures below are captured runs of the page, each linked to the run it
+shows. They are illustrative evidence (@ch:evaluation): the build checks each
+screenshot and program against the captured copy, not against the analyzer.
+Verdicts, states and diagnostics quoted in the prose come from command-line
+runs of the same generated core, registered as claims `pg-*` and re-executed by
+the build.
 
-The figures that follow are runs of that page, captured by a script rather than
-composed, and each caption links to the run it shows. The programs are the ones
-the figures were captured on.
+#let _wl = cli-row("pg-while-loop", "0 < x")
 
-=== The running example
-
-@fig:pg-while-loop is the counted loop that @ch:program-model compiled. The
-check after the loop is proved, the state at that point is the singleton
-interval $[10, 10]$, and the solved graph beside it carries one interval
-environment per node.
+*One run, three views.* @fig:pg-while-loop shows how a run relates the source
+to the graph the theorems are about. The check after the loop is
+#raw(_wl.at(3)), the inspector shows the state #raw(_wl.at(4)) at the check's
+node #raw(_wl.at(1)), and the graph names the same node.
 
 #playground-program("while-loop")
 
 #playground-figure(
   "while-loop",
-  [The counted loop in the playground: the
-    proved check in the source, the state at the check, and the solved graph.
-    Settings #playground-settings("while-loop")],
-  width: 78%,
+  width: 88%,
+  [A counted loop: the proved check and the inline values in the source, the
+    state inspector at the check's node, and the solved graph. Settings #playground-settings("while-loop")],
 ) <fig:pg-while-loop>
 
-=== Every verdict at once
+*Every kind of answer.* @fig:pg-overview shows in the editor what
+@fig:intro-answers tabulates, for the default program under call strings of
+depth one: a #cli-verdict("pg-overview", "i == 5") check, a
+#cli-verdict("pg-overview", "i < 5") check, an
+#cli-verdict("pg-overview", "a == 2") check, a possible division by zero, and a
+`DEAD` statement whose solved state is empty in every context. At this depth the
+two calls of `wrap` share one context of `scale`, so `a == 2` stays undecided
+although it holds in every execution.
 
-@fig:pg-overview runs a larger bundled program under call-string contexts of
-depth one. It is placed here because it shows every kind of answer the analyzer
-gives on one screen: `PROVED` and `REFUTED` checks, an `UNKNOWN` one, a `DEAD`
-point that the analysis proved unreachable rather than merely failed to reach,
-and an arithmetic warning. The graph on the right has one box per procedure and
-calling context, which is what the context policy of @ch:equations buys and what
-it costs.
+#playground-figure(
+  "overview",
+  crop: (0.005, 0.005, 0.52, 0.7),
+  width: 100%,
+  placement: auto,
+  [The editor pane of one run: every verdict kind in the badges after the
+    checks, the `DEAD` call `record(100)`, and the arithmetic warning at
+    `share = 10 / (a - 2)`.
+    The run's graph pane and panels are omitted. Settings
+    #playground-settings("overview")],
+) <fig:pg-overview>
 
-#playground-figure("overview", [Calls, contexts, every verdict and an
-  arithmetic warning in one run. Settings #playground-settings("overview")]) <fig:pg-overview>
-
-=== Arithmetic diagnostics
-
-The two runs of @fig:pg-division-definite and @fig:pg-division-possible show
-the diagnostic of @ch:results at its two strengths. In the first the divisor is
-zero in every live context, so both operations are reported as errors; both
-checks still prove, because VIMP defines `7 / 0` and `7 % 0`
-(@sec:vimp-vs-c) and the checks state exactly those values. In the second the
-divisor is a nondeterministic input, the state cannot exclude zero, and the
-result is a warning together with an `UNKNOWN` check: the only sound answer,
-since both a zero and a non-zero run exist.
+*Diagnostics and verdicts are separate claims.* In @fig:pg-division-definite
+the divisor is zero in every live context. Both operations carry the
+diagnostic #raw(check-row("pg-division-definite", cond: "ERROR").cond), and
+both checks are
+#cli-same(("pg-division-definite", "quotient == 0"), ("pg-division-definite", "remainder == 7")),
+because VIMP defines `7 / 0` as $0$ and `7 % 0` as $7$ (@sec:vimp-vs-c). Only
+the absence of a diagnostic excludes a zero divisor
+(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). In
+@fig:pg-division-possible the divisor is a nondeterministic input, so the
+division carries a #raw(check-row("pg-division-possible", cond: "WARNING").cond)
+and `divisor != 0` is #cli-verdict("pg-division-possible", "divisor != 0"), the
+only sound answer, because runs with a zero and with a nonzero divisor both
+exist.
 
 #playground-program("division-definite")
 
-#playground-figure("division-definite", [Definite division and remainder by
-  zero: two errors while both checks prove. Settings
-  #playground-settings("division-definite")]) <fig:pg-division-definite>
+#playground-figure(
+  "division-definite",
+  crop: (0, 0, 0.52, 0.53),
+  width: 72%,
+  [The editor pane for a divisor that is zero in every live context: two
+    errors, and both checks proved; the diagnostics panel is omitted. Settings
+    #playground-settings("division-definite")],
+) <fig:pg-division-definite>
 
 #playground-program("division-possible")
 
-#playground-figure("division-possible", [A divisor the state cannot exclude
-  from being zero: a warning and an unknown check. Settings
-  #playground-settings("division-possible")]) <fig:pg-division-possible>
+#playground-figure(
+  "division-possible",
+  crop: (0, 0, 0.505, 0.47),
+  width: 72%,
+  [The editor pane for a divisor the state cannot exclude from being zero: a
+    warning and an `UNKNOWN` check. Settings #playground-settings("division-possible")],
+) <fig:pg-division-possible>
 
-=== Contexts
+*Contexts in the result.* @fig:pg-contexts runs the program of
+@fig:program-to-equations without and with entry-state contexts; the verdicts
+are those of @sec:eq-coarse and @sec:eq-call. The inline values list the
+callee's state once per context (`#0` for the argument 4, `#1` for 5), and the
+graph draws one box of `bump` per context, with the call and return edges
+between them.
 
-@fig:pg-contexts is the program of @ch:traces, two calls of one procedure with
-different arguments, analysed twice. Without contexts the procedure has one
-entry, the two arguments join to $[4, 5]$, and neither check can be decided.
-Under entry-state contexts the callee is analysed once per abstract argument,
-the graph draws one box per context, and both checks prove. The concrete
-semantics did not change between the two runs; only the projection of
-@sec:contexts that the analysis keys its unknowns by.
+#playground-figure(
+  "contexts",
+  width: 100%,
+  placement: auto,
+  [The running example without contexts, where both checks are `UNKNOWN`, and
+    with entry-state contexts, where both are `PROVED`, with the per-context
+    values in the source and one graph box per context of `bump`. Settings of
+    the lower run and the graph #playground-settings("contexts")],
+) <fig:pg-contexts>
 
-#playground-program("contexts")
-
-#playground-figure("contexts", [The same two calls without contexts, where both
-  checks are unknown, and with entry-state contexts, where both prove and the
-  graph draws one box per argument. Settings
-  #playground-settings("contexts")]) <fig:pg-contexts>
-
-=== The product domain
-
-@fig:pg-int-refinement shows a check that Sign, Interval and Parity each leave
-`UNKNOWN` and that the product domain of @ch:instances proves. The gain is not a
-better interval transfer: Interval's backward step for `+` is the identity, so
-the guard `y + 1 == 3` tells it nothing. Congruence carries the one real
-arithmetic inversion, and the product's reduction re-derives the other three
-components from that tightened operand.
+*Which component inverts a guard.* In @fig:pg-int-refinement the check
+`y == 2` follows from the guard `y + 1 == 3`. Sign, Interval and Parity each
+answer #cli-same(
+  ("pg-int-refinement-sign", "y == 2"),
+  ("pg-int-refinement-interval", "y == 2"),
+  ("pg-int-refinement-parity", "y == 2"),
+): their backward step for `+` is the identity or, for Parity, absent
+(@ch:instances). Congruence inverts the addition, and the product Int, which
+contains it, answers #cli-verdict("pg-int-refinement-int", "y == 2").
+Congruence alone also answers
+#cli-verdict("pg-int-refinement-congruence", "y == 2")\; the screenshot omits
+that run.
 
 #playground-program("int-refinement")
 
-#playground-figure("int-refinement", [The product domain proving `y == 2` where
-  its components, run alone, each answer unknown. Settings
-  #playground-settings("int-refinement")]) <fig:pg-int-refinement>
+#playground-figure(
+  "int-refinement",
+  width: 88%,
+  [The product domain proving `y == 2`, and Sign, Interval and Parity, each run
+    alone, answering `UNKNOWN`. Settings
+    #playground-settings("int-refinement") for the product; the other panes
+    change only the domain.],
+) <fig:pg-int-refinement>
 
-== What the playground demonstrates, and what it cannot <sec:playground-limits>
+== What remains outside the proof <sec:trust-boundary>
 
-The page demonstrates three things and is careful to claim nothing beyond them.
-It shows that the analyzer the theorems are about is the analyzer that runs:
-there is one #isaconst("run_voblint"), one export, and the browser calls it. It
-shows the configuration space of the theorems as controls a reader can vary,
-rather than as a quantifier in a statement. And it shows the solved result at
-the level the proofs are stated, per point and per context, which no summary
-table does.
+Three questions determine what a run of the delivered analyzer establishes, and
+@fig:intro-trust places each component under one of them.
 
-It cannot exhibit the proof. A reader sees an answer and a program; that the
-answer over-approximates every execution is a fact about the Isabelle
-development, and the page has no way to show it. Nor can it certify a single
-run: the theorem's conclusion is available only through the theorem.
+*What is proved.* Take an initial store from #isaconst("cinit_stores"), a
+finite source execution from it to any point, the termination premise
+#isaconst("config_terminates"), and an #isaconst("Analysed") answer of
+#isaconst("run_voblint"). Then #isathm("run_voblint_certified_source_sound")
+(@sec:headline) gives a graph node that simulates the reached configuration,
+at which the store is collected and covered by the typed result table in some
+context (#isaconst("analysis_result_covers")), and at which no listed check is
+`DEAD`, every `PROVED` condition holds and every `REFUTED` condition fails
+(#isaconst("checks_sound_at")). #isathm("run_voblint_dead_check_unreached") and
+#isathm("run_voblint_arithmetic_safe") give `DEAD` and the absence of an
+arithmetic diagnostic their meaning. The proved side includes the compiler,
+the well-formedness test, the vendored solver with its executable refinement,
+and the finite carrier. It ends at three points: the syntax tree
+#isaconst("run_voblint") receives, the typed result before its abstract values
+are printed by #isaconst("string_of_abstract_value") (@sec:codegen), and the
+termination premise, which only a finished run discharges (@sec:termination).
+No theorem constrains `UNKNOWN` verdicts or warnings.
 
-It cannot distinguish two reasons for a run that never finishes. Termination of
-the generated analysis is a premise of every endpoint, #isaconst("config_terminates"),
-not a proved property, so a program on which the solver does not stop
-contradicts nothing. But a hang in the page may also come from the exported
-code, the toolchain or the browser, and the artifact cannot tell which. The
-honest reading of a run that does not return is that the theorem's premise was
-not established for it, and nothing more.
+*What is trusted.* The delivered guarantee also relies on components the
+theorem does not mention, and each can break it in its own way.
 
-Two comparable artifacts exist and the claim is scoped against them. Verasco
-ships an extracted command-line analyzer, and the F\* abstract interpreter of
-Franceschino, Pichardie and Talpin has a hosted browser version, so a verified
-analyzer in a browser is not new. What is distinctive here is narrower: the
-amount of verified internals exposed interactively, and that the configuration
-space on offer is exactly the one the theorem ranges over. @ch:evaluation
-returns to what that is worth.
+- The lexer and parser. A fault builds a syntax tree other than the one the
+  text denotes, and the verdicts then describe another program.
+- Isabelle's kernel, and its code generator with the library's target
+  mappings, which send HOL integers to Zarith and HOL strings to OCaml strings.
+  The code equations of the development are theorems. The translation to OCaml
+  and these mappings are not. Witness theorems proved by `eval`, such as the
+  non-vacuity instances of @sec:nonvacuity and the one-program bound of
+  @sec:mixed-flow, trust the same generator inside Isabelle
+  (@tab:oracles-audit).
+- The OCaml compiler and runtime, #raw("wasm_of_ocaml", lang: "sh"), Zarith
+  with its JavaScript stubs, and the browser. They run the generated code.
+- The handwritten adapter and rendering code. They print values, draw the
+  graph and pair check rows with source positions by order of occurrence. A
+  fault can show a correct verdict at the wrong line or a wrong state in the
+  inspector. The page's editor and graph libraries only display their output.
 
-== What remains outside the trusted boundary <sec:trust-boundary>
+Tests address these components because the theorem does not: a regression can
+detect a lost source position without touching any proof obligation
+(@sec:eval-corpus).
 
-#pending[11.6]
+*Whether the definitions are adequate.* Machine checking proves consequences of
+the chosen execution rules. It cannot establish that #isaconst("pstep") matches
+the language a reader has in mind, or that the verdict semantics of
+@sec:verdicts is the guarantee a reader wants. @sec:vimp-vs-c gives the
+adequacy argument for the source semantics: which fragment of C VIMP models,
+where it departs from C11, and why no external reference semantics anchors it.
+
+*Outputs the theorem says nothing about.* A parse error says nothing about the
+program's executions. A #isaconst("Malformed_Program") answer says that the
+input failed the generated well-formedness test. A run that does not return
+contradicts nothing, since termination is a premise. A timeout establishes only
+that the run did not finish within its budget. It yields no verdict and does
+not show that the solver diverges. A hang may come from the solve, from the
+fixpoint reduction of the Int product (@ch:instances), or from the toolchain
+and the browser. An abort branch of a code equation, such as the solver's
+outside its domain, raises an exception and yields no answer.
+
+The chapter completes RQ1 and K1 on the executable side. The delivered tools
+run the constant the source-level theorem is about, through code equations
+that are theorems, and the trust boundary consists of the frontend, the code generator's
+translation and target mappings, the compilers and runtimes, and the rendering
+code, together with the argued adequacy of #isaconst("pstep").
