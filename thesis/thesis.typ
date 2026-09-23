@@ -68,7 +68,7 @@
 #outline(title: none, depth: 3)
 
 // ------------------------------------------------------------ main matter --
-#pagebreak(to: "odd")
+#pagebreak(weak: true)
 #set page(numbering: "1")
 #counter(page).update(1)
 #set heading(numbering: "1.1.")
@@ -113,13 +113,13 @@
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
-#pagebreak(to: "odd")
+#pagebreak(weak: true)
 #outline(title: [List of Figures], target: figure.where(kind: image))
 #outline(title: [List of Tables], target: figure.where(kind: table))
 
-#pagebreak(to: "odd")
+#pagebreak(weak: true)
 = Glossary <glossary>
 #print-thesis-glossary(print-glossary)
 
-#pagebreak(to: "odd")
+#pagebreak(weak: true)
 #bibliography("literature.bib", style: "assets/plain-numeric.csl")
