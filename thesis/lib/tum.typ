@@ -39,13 +39,15 @@
 // tall and the leading is what the baseline pitch leaves over.
 #let leading-for(pitch, size) = pitch - 0.685 * size
 #let margin-bottom = 115pt
-#let margin-inside = 89.9pt
-#let margin-outside = 73.6pt
+// One-sided: the TUM two-sided margins (89.9pt inside, 73.6pt outside)
+// averaged, so the text width is unchanged.
+#let margin-inside = 81.75pt
+#let margin-outside = 81.75pt
 #let rule = 0.4pt
 
-// The running head sits above a rule at 81.9pt and shows the chapter on even
-// pages and the section on odd ones, in italics; a chapter's first page has
-// neither. The page number sits below a rule at 759.4pt, on the outer side.
+// The running head sits above a rule at 81.9pt and shows the chapter, in
+// italics; a chapter's first page has none. The page number sits below a rule
+// at 759.4pt, on the right.
 #let opener-page(pg) = query(heading.where(level: 1)).any(h => h.location().page() == pg)
 
 #let running-head() = context {
@@ -63,7 +65,7 @@
     h(0.5em)
     cand.body
   }
-  let level = if calc.odd(pg) { 2 } else { 1 }
+  let level = 1
   let title = hydra(
     level,
     prev-filter: (ctx, cands) => cands.primary.next == none and marks(cands.primary.prev),
@@ -74,7 +76,7 @@
   set text(style: "italic")
   block(width: 100%, below: 0pt, {
     if title != none {
-      align(if calc.odd(pg) { right } else { left }, title)
+      align(right, title)
     } else {
       v(1.2em)
     }
@@ -91,7 +93,7 @@
     return
   }
   stack(dir: ttb, spacing: 3.2pt, line(length: 100%, stroke: rule), if page.numbering != none {
-    align(if calc.odd(pg) { right } else { left }, counter(page).display(page.numbering))
+    align(right, counter(page).display(page.numbering))
   })
 }
 
@@ -352,7 +354,7 @@
     size: 17.28pt,
     author,
   ))
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // --------------------------------------------------------- title page ---
   head-block(logo-top: 102pt - margin-top)
@@ -378,7 +380,7 @@
       [Date:], [#date],
     )
   })
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // --------------------------------------------------------- disclaimer ---
   set align(left)
@@ -390,7 +392,7 @@
     [Munich, #date]
   })
   place(top + left, dx: 237.5pt, dy: 553pt + 2 * 13.55pt + 56.5pt - margin-top, [#author])
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // ------------------------------------------------------- front matter ---
   set page(
@@ -407,7 +409,7 @@
 
 // Switch from roman front matter to arabic main matter.
 #let main-matter() = {
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
   set page(numbering: "1")
   counter(page).update(1)
 }
