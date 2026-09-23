@@ -300,6 +300,26 @@ reaching the check:
   three verdicts constrain each store at the node and hold vacuously when there
   is none. `DEAD` constrains the whole set.
 
+#let _pu = check-row("verdicts-proved-unreachable", cond: "x > 0")
+A `PROVED` verdict at a check that no run reaches is therefore no
+contradiction. In the program below, $x = 3n$ is never 1 or 2, so no run
+reaches the check. The interval analysis cannot see this and keeps
+#raw(_pu.state) there, where `x > 0` holds, so it reports #raw(_pu.verdict).
+The verdict is sound, because it only claims that `x > 0` holds whenever a run
+reaches the check.
+
+#listing(lang: "c", claim: "verdicts-proved-unreachable", ```
+fun main() {
+  n = __voblint_nondet_int();
+  x = 3 * n;
+  if (x > 0) {
+    if (x < 3) {
+      __voblint_check(x > 0);
+    }
+  }
+}
+```)
+
 Conditions are evaluated in the VIMP semantics, where division by zero yields
 zero (@sec:vimp-vs-c), so a `PROVED` verdict can depend on that convention.
 Only the absence of an arithmetic diagnostic at a node excludes zero divisors

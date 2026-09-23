@@ -1,0 +1,9 @@
+tests/regression/06-reachability/precision/18-proved_unreachable.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -------
+12:7      pp4    x > 0      PROVED   x=[1,2]

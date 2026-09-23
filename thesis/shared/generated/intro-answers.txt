@@ -1,12 +1,14 @@
-tests/regression/24-site-figures/precision/47-answers_every_kind.vimp [interval]
+tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp [interval]
 
 Arithmetic diagnostics
 Location  Point  Severity  Message
---------  -----  --------  ----------------------------------
-13:3      pp3    WARNING   possible division by zero: 100 / d
+--------  -----  --------  -----------------------------------
+26:3      pp14   WARNING   possible division by zero: 1000 / p
 
 Assertion checks
-Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ---------
-14:3      pp4    0 < q      PROVED   q=[10,10]
-16:5      pp6    q == 0     DEAD     
+Location  Point  Condition           Verdict  State
+--------  -----  ------------------  -------  ---------
+22:3      pp10   0 <= p && p <= 100  PROVED   p=[0,100]
+23:3      pp11   p > 100             REFUTED  p=[0,100]
+24:3      pp12   p == 50             UNKNOWN  p=[0,100]
+28:5      pp16   p == 0              DEAD     

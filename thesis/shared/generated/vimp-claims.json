@@ -265,8 +265,8 @@
     }
   },
   "intro-answers": {
-    "fixture": "tests/regression/24-site-figures/precision/47-answers_every_kind.vimp",
-    "program": "fun main() {\n  k = 10;\n  q = 100 / k;\n  d = __voblint_nondet_int();\n  y = 100 / d;\n  __voblint_check(0 < q);\n  if (k < 0) {\n    __voblint_check(q == 0);\n  }\n}",
+    "fixture": "tests/regression/24-site-figures/precision/48-clamp_every_answer.vimp",
+    "program": "fun clamp(x, lo, hi) {\n  if (x < lo) {\n    return lo;\n  }\n  if (x > hi) {\n    return hi;\n  }\n  return x;\n}\n\nfun main() {\n  t = __voblint_nondet_int();\n  p = clamp(t, 0, 100);\n  __voblint_check(0 <= p && p <= 100);\n  __voblint_check(p > 100);\n  __voblint_check(p == 50);\n  a = 1000 / (p + 1);\n  b = 1000 / p;\n  if (p > 100) {\n    __voblint_check(p == 0);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -547,6 +547,15 @@
   "verdicts-mult3-interval-checks": {
     "fixture": "tests/regression/24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp",
     "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (x > 0) {\n    if (x < 3) {\n      __voblint_check(x == 1);\n    }\n  } else {\n    if (x > 5) {\n      __voblint_check(x == 6);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow"
+    }
+  },
+  "verdicts-proved-unreachable": {
+    "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (x > 0) {\n    if (x < 3) {\n      __voblint_check(x > 0);\n    }\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",

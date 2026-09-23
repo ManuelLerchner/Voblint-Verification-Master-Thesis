@@ -1,0 +1,22 @@
+fun clamp(x, lo, hi) {
+  if (x < lo) {
+    return lo;
+  }
+  if (x > hi) {
+    return hi;
+  }
+  return x;
+}
+
+fun main() {
+  t = __voblint_nondet_int();
+  p = clamp(t, 0, 100);
+  __voblint_check(0 <= p && p <= 100);
+  __voblint_check(p > 100);
+  __voblint_check(p == 50);
+  a = 1000 / (p + 1);
+  b = 1000 / p;
+  if (p > 100) {
+    __voblint_check(p == 0);
+  }
+}
