@@ -1,0 +1,6 @@
+fun main() {
+  x = __voblint_nondet_int();
+  if (x != 0 && 10 / x > 1) {
+    y = 1;
+  }
+}

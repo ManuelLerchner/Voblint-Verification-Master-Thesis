@@ -1,0 +1,4 @@
+global Gx;
+fun set() { Gx = 1; }
+fun get() { return Gx; }
+fun main() { x = 1; set(); y = get(); }
