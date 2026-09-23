@@ -1,10 +1,11 @@
 #import "lib/tum.typ": front-chapter, thesis
 #import "lib/theme.typ": vb
+#import "lib/code.typ": isabelle-scripts
 #import "@preview/codly:1.3.0": codly, codly-init
 #import "lib/theorems.typ": thm-counter
 #import "lib/figures.typ": part, part-outline-entry
 #import "@preview/glossarium:0.5.10": make-glossary, print-glossary, register-glossary
-#import "lib/glossary.typ": entries as glossary-entries
+#import "lib/glossary.typ": entries as glossary-entries, print-thesis-glossary
 
 #show: make-glossary
 #register-glossary(glossary-entries)
@@ -31,6 +32,9 @@
   stroke: 0.7pt + vb.frame,
   radius: 3pt,
   display-icon: false,
+  // Tighter than codly's 0.32em rows: a 13-line program should not take a
+  // third of a page.
+  inset: (x: 0.32em, y: 0.2em),
   number-format: n => text(fill: vb.muted, size: 0.75em, str(n)),
   languages: (
     c: (name: "VIMP", color: vb.keyword),
@@ -38,6 +42,8 @@
     ocaml: (name: "OCaml", color: vb.trusted),
   ),
 )
+
+#show raw.where(lang: "isabelle"): isabelle-scripts
 
 // Theorem numbering restarts at every chapter.
 #show heading.where(level: 1): it => {
@@ -51,6 +57,7 @@
 #front-chapter({
   include "content/acknowledgements.typ"
   include "content/abstract.typ"
+  include "content/ai-use.typ"
 })
 
 #show outline.entry.where(level: 1): part-outline-entry
@@ -99,6 +106,11 @@
   include "content/03-gallery.typ"
 }
 
+// Appendices retain stable labels while using a separate alphabetic counter.
+#set heading(numbering: "A.1.")
+#counter(heading).update(0)
+#include "content/appendices.typ"
+
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
 #pagebreak(to: "odd")
@@ -107,7 +119,7 @@
 
 #pagebreak(to: "odd")
 = Glossary <glossary>
-#print-glossary(glossary-entries)
+#print-thesis-glossary(print-glossary)
 
 #pagebreak(to: "odd")
 #bibliography("literature.bib", style: "assets/alpha-plain.csl")
