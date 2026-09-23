@@ -59,3 +59,11 @@ analysis = "int"
 globals = "warrow"
 context = "none"
 why = "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
+
+[figures.clamp]
+image = "docs/images/playground-clamp.png"
+program = "docs/readme-figures/clamp.vimp"
+analysis = "interval"
+globals = "warrow"
+context = "none"
+why = "Every answer kind in one run of a clamp function, each shown inline at its line: Figure 1.2."
