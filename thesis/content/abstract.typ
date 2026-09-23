@@ -13,34 +13,37 @@ describe the program.
 
 We show that the whole pipeline can be verified. We build Voblint, an
 Isabelle/HOL formalization of a constraint-based, context-sensitive
-interprocedural analyzer for a small imperative language with recursive
-procedures, and prove it sound from source executions to the verdicts of its
-analysis function. The analyzer generated from that function runs on the
-command line and in the browser.
+interprocedural analyzer for VIMP, a small C-like language with global and
+local integer variables and recursive procedures with parameters and return
+values. Its main theorem is about the analysis function itself: if the
+solver terminates and the analysis returns a result, that result covers every
+store a finite source execution reaches, and every definite verdict (the
+analyzer's answer to a program assertion) holds there. Further theorems
+justify `DEAD` verdicts and the absence of zero divisors where no arithmetic
+warning is reported. A definite verdict holds whenever a run reaches its
+assertion, but it does not claim that any run does.
 
-The thesis makes four contributions. First, an end-to-end soundness theorem
-for the exported analysis function, covering every offered domain, update rule and context policy.
-Second, an activation-local trace semantics with a relational, trace-derived
-semantics of calling contexts, and a totality condition under which the
-context-indexed collection loses no executions. Third, a compositional proof.
-Domains, context policies and an existing verified top-down solver discharge
-separate obligations, the solver only through its post-solution certificate,
-and one theorem composes them for every configuration. Fourth, machine-checked counterexamples showing that
-weakened obligations allow unsound claims, together with non-vacuity and
-precision witnesses proved by evaluation for named programs.
+Inspired by Goblint, we implement the analyzer for a range of configurations. It combines the
+numeric domains Sign, Interval, Parity and Congruence, and their reduced
+product, with four update rules for the solver's global unknowns and three
+kinds of context sensitivity: none, bounded call strings and entry-state
+contexts. The main theorem covers every combination. Isabelle's code generator
+exports the verified function to OCaml, which runs on the command line and in
+the browser.
 
-The main theorem states that if the solver terminates and the analysis returns
-a result, that result covers every store a finite source execution reaches,
-and each definite verdict holds there. Further theorems justify `DEAD` and the
-absence of zero divisors where no arithmetic diagnostic is reported. A
-definite verdict holds whenever a run reaches its check, but it does not
-assert that any run does. Executable instances cover Sign,
-Interval, Parity, Congruence and their reduced product, with four update rules
-and bounded call strings or entry-state contexts.
+A context-sensitive analysis bounds the stores at each program point per
+calling context, but the standard collecting semantics records no context,
+so such a bound has nothing concrete to be sound against. We therefore develop
+an activation-local trace semantics. Like the local traces of Schwarz et al.
+for threads @schwarz21, it describes an execution from the perspective of one
+procedure activation, and the calling context of an activation is read from
+its trace. A totality condition ensures that no
+execution is lost when executions are grouped by context. The proof then
+follows the structure of the analyzer. Each domain, each context policy and
+the solver prove their own obligations, and one theorem combines them for
+every configuration. Machine-checked counterexamples show that weakening
+selected obligations lets the analyzer report unsound results.
 
-The guarantee is partial correctness: solver termination is a per-program
-premise. The development does not establish completeness, a
-general precision ordering, or correctness of Goblint's implementation or of C
-analysis. Parsing, code generation, compilation and presentation lie outside the
-proof, and the source semantics is checked against C11 and regression
-programs, not proved adequate.
+The guarantee is partial correctness, since solver termination is a premise
+for each program. Parsing, code generation, compilation and presentation lie outside the
+proof, and the adequacy of the source semantics is argued, not proved.
