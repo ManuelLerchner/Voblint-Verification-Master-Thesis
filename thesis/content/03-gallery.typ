@@ -11,14 +11,14 @@
 #import "../lib/figures.typ": *
 #import "../lib/code.typ": *
 #import "../lib/theorems.typ": definition, theorem
-#import "../lib/sources.typ": proved, stmt, thy
+#import "../lib/sources.typ": proved, thy
 #import "../lib/figures.typ": annotation-grid, iteration-plot, simulation
 
 = Figure Gallery <ch:gallery>
 
 This chapter is not thesis content. It is a working reference: one instance of
 every figure kind the thesis needs, built from the vocabulary in
-#isafile("lib/"). Copy a figure, change the payload, keep the styles.
+#isafile("lib/"). To use a figure, copy it, change the payload and keep the styles.
 
 #block(
   fill: vb.unproved.lighten(92%),
@@ -28,7 +28,7 @@ every figure kind the thesis needs, built from the vocabulary in
   width: 100%,
 )[
   *Every payload in this chapter is a placeholder.* The figure _kinds_ are
-  real and are what this chapter is for; the names, numbers and statements
+  real and are what this chapter is for. The names, numbers and statements
   inside them were written before the formalization settled and several are
   now wrong. Verified wrong as of the figure audit: the module graph named
   five theories that do not exist (removed below); #isatype("dg_spec") is a
@@ -43,17 +43,17 @@ every figure kind the thesis needs, built from the vocabulary in
 
   Copy a figure's _shape_ from here. Re-derive its content from the theories,
   and route every Isabelle identifier through `isathm` and its
-  siblings so that `thesis-refs` checks it --- a raw `` `name` `` in a figure
-  is not checked for kind and was how five of the above went unnoticed.
+  siblings so that `thesis-refs` checks it. A raw `` `name` `` in a figure
+  is not checked for kind, which is how five of the above went unnoticed.
 
   Delete this chapter before submission.
 ]
 
 == The pipeline and its trust boundary
 
-@fig:pipeline is the thesis in one picture. Every stage carries its status,
-and every arrow carries the fact that discharges it: an unlabelled arrow
-between two proved stages is a gap, visible at a glance.
+@fig:pipeline summarizes the whole thesis. Every stage shows its status, and
+every arrow is labelled with the fact that justifies it. An unlabelled arrow
+between two proved stages therefore marks a gap.
 
 #figure(
   diagram(
@@ -66,9 +66,9 @@ between two proved stages is a gap, visible at a glance.
     stage((0, 1.2), isatype("imp_prog")),
     stage((1.6, 1.2), [procedure-aware \ CFG]),
     stage((3.2, 1.2), [equation \ system]),
-    stage((4.8, 1.2), [#TDside \ #text(0.8em)[vendored]]),
+    stage((4.8, 1.2), [$"TD"_"side"$ \ #text(0.8em)[vendored]]),
 
-    stage((0, 2.4), [#partpost \ certificate]),
+    stage((0, 2.4), [$italic("part_post")$ \ certificate]),
     stage((1.6, 2.4), [sound abstract \ result]),
     stage((3.2, 2.4), [source-level \ result]),
 
@@ -97,7 +97,7 @@ between two proved stages is a gap, visible at a glance.
   caption: [The verified pipeline. Arrow labels name the fact that justifies
     the step; stage colour states whether the stage is proved, trusted, or
     unverified. The parser and the OCaml harness sit outside the boundary by
-    construction; the code generator sits on it.
+    construction, and the code generator sits on it.
     #v(0.4em)
     #text(0.85em)[#proved-badge machine-checked #h(1em)
       #trusted-badge assumed, not proved #h(1em)
@@ -124,12 +124,12 @@ between two proved stages is a gap, visible at a glance.
   figure(
     diagram(
       spacing: (10mm, 9mm),
-      entry-node((0, 0), $#FunEntry($italic("fac")$)$),
+      entry-node((0, 0), $ctor("FunctionEntry") thin italic("fac")$),
       ppoint((0, 1), $u_1$),
       ppoint((-0.7, 2), $u_2$),
       ppoint((0.7, 2), $u_3$),
       ppoint((0, 3), $u_4$),
-      result-node((0, 4), $#FunResult($italic("fac")$)$),
+      result-node((0, 4), $ctor("FunctionResult") thin italic("fac")$),
       intra-edge((0, 0), (0, 1)),
       intra-edge((0, 1), (-0.7, 2), label: "n<=1"),
       intra-edge((0, 1), (0.7, 2), label: "!(n<=1)"),
@@ -148,9 +148,9 @@ between two proved stages is a gap, visible at a glance.
   label: <fig:cfg>,
 )
 
-@fig:cfg-dot shows the alternative route, and the one place where Typst does
-something LaTeX cannot: the Graphviz source is laid out and drawn inside the
-document, with no build step and no intermediate file.
+@fig:cfg-dot shows the alternative route, which uses a feature LaTeX lacks:
+Typst lays out and draws the Graphviz source inside the document, with no
+build step and no intermediate file.
 
 #figure(
   raw-render(raw(read("/shared/dot/cfg_fac.dot")), height: 70mm),
@@ -158,7 +158,7 @@ document, with no build step and no intermediate file.
     from #isafile("shared/dot/cfg_fac.dot") at compile time.],
 ) <fig:cfg-dot>
 
-Between the two sits the abstract syntax the compiler actually consumes.
+The abstract syntax that the compiler consumes sits between source and CFG.
 @fig:ast is the same procedure again, as an #isatype("imp_prog") term.
 
 #figure(
@@ -185,22 +185,22 @@ Between the two sits the abstract syntax the compiler actually consumes.
 #figure(
   rhsbox[
     $
-          tf(assign(x, e)) d & = upd(d, x, asem(e) d) \
-      tf(keyw("assume") b) d & = cases(
-                                 d & "if" mono("true") in asem(b) d,
-                                 lbot & "otherwise"
-                               ) \
-                 tf(skipC) d & = d \
-                  enterh p d & = setcomp(
-                                 upd(d_0, arrow(x)_p, asem(arrow(e)) d),
-                                 d_0 = restrict(d, italic("globals"))
-                               ) \
-            combineh d_c d_r & = combineassignh (combineenvh d_c d_r)
+          sh(delta) lr([assign(x, e)]) d & = upd(d, x, asem(e) d) \
+      sh(delta) lr([keyw("assume") b]) d & = cases(
+                                             d & "if" mono("true") in asem(b) d,
+                                             lbot & "otherwise"
+                                           ) \
+                 sh(delta) lr([skipC]) d & = d \
+                              enterh p d & = setcomp(
+                                             upd(d_0, arrow(x)_p, asem(arrow(e)) d),
+                                             d_0 = restrict(d, italic("globals"))
+                                           ) \
+         italic("combine")^sharp d_c d_r & = combineassignh (combineenvh d_c d_r)
     $
   ],
   kind: image,
   caption: [Right-hand sides of the abstract transfer for local edges. All
-    functions are strict in $lbot$; only the non-$lbot$ cases are shown.],
+    functions are strict in $lbot$, so only the non-$lbot$ cases are shown.],
 ) <fig:rhs>
 
 == Inference rules
@@ -210,27 +210,27 @@ Between the two sits the abstract syntax the compiler actually consumes.
     columns: 2,
     column-gutter: 2.5em,
     row-gutter: 1.6em,
-    prooftree(rule(name: [Root], $validltr ("Root" u_0 s_0)$)),
+    prooftree(rule(name: [Root], $ctor("Root") thin [(u_0, s_0)] in #isaconst("valid_ltr")$)),
     prooftree(rule(
       name: [Step],
-      $validltr t$,
-      $cfgedge(italic("last") t, a, v)$,
-      $s' in sem(a) (sinkstore t)$,
-      $validltr (t dot (v, s'))$,
+      $t in #isaconst("valid_ltr")$,
+      $(#isaconst("sink_node") t, a, v) in #isaconst("intra") g$,
+      $s' in #isaconst("edge_step") a (#isaconst("sink_store") t)$,
+      $t dot (v, s') in #isaconst("valid_ltr")$,
     )),
 
     prooftree(rule(
       name: [Call],
-      $validltr t$,
-      $cfgcall(u, a, p, v)$,
-      $s' = enterh p (sinkstore t)$,
-      $validltr ("Called" t p s')$,
+      $t in #isaconst("valid_ltr")$,
+      $(u, a, ctor("FunctionEntry") p, v) in #isaconst("calls") g$,
+      $s' = #isaconst("call_enter") cal(G) a (#isaconst("sink_store") t)$,
+      $ctor("Call") t [(ctor("FunctionEntry") p, s')] in #isaconst("valid_ltr")$,
     )),
     prooftree(rule(
       name: [Resume],
-      $validltr t_c$,
-      $callerof t_c = t$,
-      $validltr ("Resumed" t t_c)$,
+      $t_c in #isaconst("valid_ltr")$,
+      $#isaconst("caller_of") t_c = ctor("Some") t$,
+      $ctor("Resume") t t_c pi in #isaconst("valid_ltr")$,
     )),
   ),
   kind: image,
@@ -265,7 +265,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
         ((0, 3), (1, 2)),
       ),
     ),
-    caption: [#DSign],
+    caption: [#isatype("sign")],
   ),
   <fig:lat-sign>,
   figure(
@@ -273,7 +273,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
       (((0, 0), $ltop$), ((-1, 1), signval("even")), ((1, 1), signval("odd")), ((0, 2), $lbot$)),
       (((-1, 1), (0, 0)), ((1, 1), (0, 0)), ((0, 2), (-1, 1)), ((0, 2), (1, 1))),
     ),
-    caption: [#DPar],
+    caption: [#isatype("parity")],
   ),
   <fig:lat-par>,
   figure(
@@ -281,7 +281,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
       spacing: (18mm, 8mm),
       node(
         (0, 0),
-        $cal(P)(Val)$,
+        $cal(P)(ZZ)$,
         stroke: 0.8pt + vb.accent,
         fill: vb.accent.lighten(90%),
         width: 24mm,
@@ -290,7 +290,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
       ),
       node(
         (1, 0),
-        DSign,
+        isatype("sign"),
         stroke: 0.8pt + vb.sign,
         fill: vb.sign.lighten(90%),
         width: 20mm,
@@ -342,8 +342,8 @@ Between the two sits the abstract syntax the compiler actually consumes.
     ),
   ),
   caption: [Chain iteration at a single loop head. Widening jumps to a coarse
-    bound at iteration 3; narrowing recovers the exact one. Plots like this
-    come from the analyzer's own trace output, not from hand-placed
+    bound at iteration 3, and narrowing recovers the exact one. Plots like this
+    come from the analyzer's trace output instead of hand-placed
     coordinates.],
 ) <fig:widening>
 
@@ -354,9 +354,9 @@ Between the two sits the abstract syntax the compiler actually consumes.
     cetz.canvas({
       import cetz.draw: *
       rect((-2.5, -1.6), (2.5, 1.6), fill: vb.called.lighten(90%), stroke: none, radius: 0.2)
-      content((0, 1.3), text(0.75em, fill: vb.called)[#called])
+      content((0, 1.3), text(0.75em, fill: vb.called)[$italic("called")$])
       rect((-2.1, -1.25), (1.0, 1.0), fill: vb.stable.lighten(82%), stroke: none, radius: 0.2)
-      content((-0.55, 0.7), text(0.75em, fill: vb.stable)[#stable])
+      content((-0.55, 0.7), text(0.75em, fill: vb.stable)[$italic("stable")$])
       rect((-1.8, -0.95), (-0.2, 0.3), fill: vb.proved.lighten(65%), stroke: none, radius: 0.2)
       content((-1.0, -0.35), text(0.7em)[truly \ stable])
       rect((0.3, -1.25), (2.2, 0.35), fill: vb.unstable.lighten(65%), stroke: none, radius: 0.2)
@@ -379,15 +379,15 @@ Between the two sits the abstract syntax the compiler actually consumes.
       side-edge((1, 0), (1, 2)),
       withdrawn-edge((0, 1), (1, 2)),
     ),
-    caption: [one frame of a #TDside run],
+    caption: [one frame of a $"TD"_"side"$ run],
   ),
   <fig:solverstate>,
   columns: (1fr, 1fr),
   align: bottom,
-  caption: [Left: the subsets a correctness argument reasons about; #called
+  caption: [Left: the subsets a correctness argument reasons about; $italic("called")$
     unknowns need not be stable once side effects are in play. Right: the same
     state as a graph. Green is stable, orange destabilised, white fresh, purple
-    outline #called; double-tipped arrows are side effects and dashed ones are
+    outline $italic("called")$. Double-tipped arrows are side effects, and dashed ones are
     withdrawn contributions.],
   label: <fig:solver>,
 )
@@ -406,9 +406,9 @@ Between the two sits the abstract syntax the compiler actually consumes.
     [#text(fill: vb.unstable)[cycle detected]],
     [4], [update $u_2$], [$lbot$], [$ivl(0, 0)$], [$lbot$], [],
     [5], [side effect to $g$], [$lbot$], [$ivl(0, 0)$], [$ivl(0, 0)$],
-    [$u_2 sidefx g$],
+    [$u_2 arrow.squiggly g$],
     [6], [destabilise], [$lbot$], [$ivl(0, 0)$], [$ivl(0, 0)$],
-    [$u_1$ leaves #stable],
+    [$u_1$ leaves $italic("stable")$],
     [7], [update $u_1$ with $widen$], [$ivl(0, infinity)$], [$ivl(0, 0)$],
     [$ivl(0, 0)$], [widening point],
     table.hline(),
@@ -420,29 +420,29 @@ Between the two sits the abstract syntax the compiler actually consumes.
 ) <tab:trace>
 
 #algorithm(
-  caption: [The $TDside$ core, in the shape the formalization proves correct.
-    Widening is applied at the update, and destabilisation is what makes the
-    surrounding `repeat` terminate rather than spin.],
+  caption: [The $"TD"_"side"$ core, in the shape the formalization proves correct.
+    Widening is applied at the update, and destabilisation makes the
+    surrounding `repeat` terminate instead of looping forever.],
   label-name: "alg:tdside",
   pseudocode-list(booktabs: true, hooks: 0.5em)[
     + *function* $italic("solve")(x)$
-      + *if* $x in.not called union stable$
-        + $called <- called union {x}$
+      + *if* $x in.not italic("called") union italic("stable")$
+        + $italic("called") <- italic("called") union {x}$
         + *repeat*
-          + $stable <- stable union {x}$
+          + $italic("stable") <- italic("stable") union {x}$
           + $d <- rhs(x) italic("eval") italic("side")$
-          + *if* $d subset.sq.eq.not sol x$
+          + *if* $d lt.eq.not sol x$
             + $sol x <- sol x widen d$
             + $italic("destabilize")(x)$
-        + *until* $x in stable$
-        + $called <- called without {x}$#h(1fr)
+        + *until* $x in italic("stable")$
+        + $italic("called") <- italic("called") without {x}$#h(1fr)
   ],
 )
 
 == Software architecture of the formalization
 
-The layout follows the module maps of comparable systems @apinis14 @jourdan15;
-the trust boundary follows @leroy09.
+The layout follows the module maps of comparable systems @apinis14 @jourdan15,
+and the trust boundary follows @leroy09.
 
 #figure(
   diagram(
@@ -471,9 +471,9 @@ the trust boundary follows @leroy09.
     interp-edge((-1.6, 6), (-1.6, 7)),
     interp-edge((1.6, 6), (1.6, 7)),
   ),
-  caption: [Locale hierarchy of the domain framework. The three edge kinds are
-    genuinely different: `import` is declared, `sublocale` is proved after the
-    fact, and `interpretation` lands an abstract theory on a concrete
+  caption: [Locale hierarchy of the domain framework. The three edge kinds
+    differ: `import` is declared, `sublocale` is proved after the
+    fact, and `interpretation` applies an abstract theory to a concrete
     instance. This figure is generated from #isacmd("locale_deps"), not
     drawn by hand.
     #v(0.3em)
@@ -501,8 +501,8 @@ the trust boundary follows @leroy09.
     [#isalocale("analysis_contract")], yes, yes, yes, no, yes,
     table.hline(),
   ),
-  caption: [Which abstract theory is landed on which concrete domain. A row
-    with no #yes is a false abstraction; a #no is a deliberate scope decision,
+  caption: [Which abstract theory is applied to which concrete domain. A row
+    with no #yes is a false abstraction, and a #no is a deliberate scope decision,
     here that Congruence is not selectable on its own but only as a component
     of the Int product.],
 ) <tab:instantiation>
@@ -511,9 +511,9 @@ the trust boundary follows @leroy09.
   image("/shared/generated/session_graph.svg", width: 62%),
   caption: [The session graph of #isasession("Voblint_CLI"), from Pure down to
     #isathm("run_voblint_certified_source_sound")'s own theory. Generated by
-    Isabelle's presentation build rather than drawn: the hand-drawn version
-    this replaces named five theories that no longer exist, which is the
-    failure mode a generated figure cannot have.],
+    Isabelle's presentation build instead of drawn by hand. The hand-drawn
+    version it replaces named five theories that no longer exist, an error a
+    generated figure cannot make.],
 ) <fig:modules>
 
 == Isabelle in the text #thy-badge("Voblint_Domain", "Abstract_Domain")
@@ -525,8 +525,8 @@ them, and decoded at render time with Isabelle's own symbol table.
   thy("numeric_domain"),
   kind: image,
   caption: [The domain interface as the sources state it, lifted by name from
-    the theory rather than retyped. Presenting it verbatim is what lets a
-    reader check the obligations a domain must discharge.],
+    the theory instead of retyped. Because it is shown verbatim, a reader can
+    check the obligations a domain must discharge.],
 ) <fig:isasnippet>
 
 #proved("ltr_collect_semantic_postfix", note: [
@@ -534,7 +534,7 @@ them, and decoded at render time with Isabelle's own symbol table.
   semantics.
 ])
 
-#[Everything above is generated. What follows is not, and says so.]
+#[The material above is generated. The next table is not, and its caption says so.]
 
 #figure(
   table(
@@ -551,33 +551,33 @@ them, and decoded at render time with Isabelle's own symbol table.
     table.hline(),
   ),
   caption: [Output of #isacmd("thm_oracles") for the endpoint theorems,
-    transcribed into a table. This is machine-checked evidence that the results
-    rest on no oracle and no admitted subgoal --- a claim that is otherwise
-    only asserted in prose.],
+    transcribed into a table. It is machine-checked evidence that the results
+    rest on no oracle and no admitted subgoal. Without it, this claim would
+    only be asserted in prose.],
 ) <tab:oracles>
 
 == Drawing the mathematics
 
-Four figures adapted from _Concrete Semantics_, which solves the same
-presentation problem this thesis has: how to show a reader what a formal
+The next four figures are adapted from _Concrete Semantics_, which has the
+same presentation problem as this thesis: showing a reader what a formal
 development means without asking them to read it.
 
 @fig:iteration is its treatment of widening. Plotting the iteration against
-$f x$ rather than against time shows *why* the sequence terminates --- the jump
-leaves the region where $f$ can keep climbing --- instead of only showing that
-a bound moved.
+$f x$ instead of against time shows why the sequence terminates (the jump
+leaves the region where $f$ can keep climbing), and not only that a bound
+moved.
 
 #figure(
   iteration-plot(),
   kind: image,
   caption: [Fixpoint iteration at one loop head. The staircase is plain
-    iteration climbing toward the fixpoint; the heavy jump is widening
-    overshooting it; the dotted descent is narrowing recovering precision. The
+    iteration climbing toward the fixpoint, and the heavy jump is widening
+    overshooting it. The dotted descent is narrowing, which recovers precision. The
     dashed diagonal is $f x = x$.],
 ) <fig:iteration>
 
-A lemma about two levels of a pipeline is easier to draw than to read. The
-squares below are @fig:simulation --- the claim is that they commute.
+A lemma relating two levels of a pipeline is easier to understand as a drawing
+than as text. @fig:simulation draws such a lemma as squares, and the lemma states that they commute.
 
 #subfigures(
   figure(
@@ -611,8 +611,8 @@ squares below are @fig:simulation --- the claim is that they commute.
   <fig:sim-backward>,
   columns: (1fr, 1fr),
   align: bottom,
-  caption: [Compiler correctness as two simulations. Neither direction alone is
-    correctness, and drawing both is what makes the asymmetry visible.],
+  caption: [Compiler correctness as two simulations. Neither direction alone gives
+    correctness. Drawing both makes the asymmetry visible.],
   label: <fig:simulation>,
 )
 
@@ -628,13 +628,13 @@ squares below are @fig:simulation --- the claim is that they commute.
   ),
   kind: image,
   caption: [The abstract state as a grid: one value per variable per program
-    point. A termination argument sums a measure over the cells, so seeing the
-    state as a finite tuple is the point of the picture.],
+    point. A termination argument sums a measure over the cells, so the picture
+    presents the state as a finite tuple.],
 ) <fig:annotations>
 
-Finally, the convention this repository enforces everywhere: theory sources are
+The repository enforces one more convention everywhere: theory sources are
 ASCII-only, and every symbol is written in its escaped form. @tab:symbols is
-not maintained by hand --- it lists exactly the symbols that appear in the
+not maintained by hand. It lists exactly the symbols that appear in the
 material this chapter quotes, so it grows when a new snippet does.
 
 #figure(
@@ -728,9 +728,8 @@ material this chapter quotes, so it grows when a new snippet does.
   kind: image,
   caption: [Interface correspondence, side by side. `D` and `G` map onto the
     two fields of #isatype("dg_state"); `C` and `V` onto the locale parameters
-    `'c` and `'k`. Where the correspondence is inexact --- here, that both
-    payloads are currently the same flat type --- the divergence is recorded
-    rather than glossed over.],
+    `'c` and `'k`. Where the correspondence is inexact (here, both payloads are
+    currently the same flat type), the divergence is recorded.],
 ) <fig:correspondence>
 
 == Analyzer output as a figure
@@ -752,14 +751,14 @@ material this chapter quotes, so it grows when a new snippet does.
   ),
   caption: [The analyzer's result rendered against the program that produced
     it. Generated by the CLI, so it cannot drift from what the analyzer
-    actually computes.],
+    computes.],
 ) <fig:annotated>
 
-@fig:claim is the same idea applied to prose: the listing is not typed into
-this file, it is the output of a recorded command, regenerated and diffed by
+@fig:claim applies the same idea to prose. The listing is not typed into this
+file. It is the output of a recorded command, regenerated and diffed by
 #isafile("thesis/tools/claims.py"). If the analyzer's answer changes, the build
-fails and names the claim rather than leaving the figure describing behaviour
-that is gone.
+fails and names the claim, so the figure cannot keep describing behaviour that
+is gone.
 
 #figure(
   listing(read("/shared/generated/sign-cannot-bound-magnitude.txt")),
@@ -767,8 +766,8 @@ that is gone.
   caption: [Output of `voblint --analysis sign` on the known-imprecision case.
     The listing includes the command's report header and table. Sign tracks
     #signval("+") (positive) exactly, but the lattice has no magnitude, so `total <
-    100` is genuinely undecidable here --- `UNKNOWN` is the correct answer, not
-    a regression.],
+    100` cannot be decided here. `UNKNOWN` is the correct answer and not a
+    regression.],
 ) <fig:claim>
 
 == Evaluation
@@ -802,7 +801,7 @@ that is gone.
       label: [known-imprecision suite],
     ),
   ),
-  caption: [Assertions discharged per selectable analysis. Bars are read off
+  caption: [Assertions proved per selectable analysis. Bars are read off
     the regression runner, so the figure and the test suite cannot disagree.],
 ) <fig:eval>
 
