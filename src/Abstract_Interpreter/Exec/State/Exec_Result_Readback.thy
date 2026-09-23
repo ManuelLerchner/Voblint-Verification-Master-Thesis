@@ -29,6 +29,6 @@ text \<open>
 fun readback_result_value ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) resolved_st_q lifted \<Rightarrow> 'a abs_state lifted"
 where
-  "readback_result_value gs Bot = Bot"
-| "readback_result_value gs (Lifted s) = Lifted (fun_of_resolved_st_q_for gs s)"
+  "readback_result_value \<G> Bot = Bot"
+| "readback_result_value \<G> (Lifted s) = Lifted (fun_of_resolved_st_q_for \<G> s)"
 end

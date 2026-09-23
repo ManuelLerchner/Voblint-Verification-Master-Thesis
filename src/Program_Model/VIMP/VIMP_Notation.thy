@@ -257,11 +257,11 @@ lemma notation_relational_before_equality:
   by simp_all
 
 lemma comparison_signed_boundaries:
-  "map (\<lambda>e. aval e s)
+  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
     [Less (N (-1)) (N 0), LessEq (N (-1)) (N (-1)),
      Greater (N 0) (N (-1)), GreaterEq (N (-1)) (N (-1)),
      Eq (N (-1)) (N (-1)), NotEq (N (-1)) (N 0)] = [1, 1, 1, 1, 1, 1]"
-  "map (\<lambda>e. aval e s)
+  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
     [Less (N (-1)) (N (-1)), LessEq (N 0) (N (-1)),
      Greater (N (-1)) (N (-1)), GreaterEq (N (-1)) (N 0),
      Eq (N (-1)) (N 0), NotEq (N (-1)) (N (-1))] = [0, 0, 0, 0, 0, 0]"
@@ -282,7 +282,7 @@ lemma notation_multiplicative_precedence:
   by simp_all
 
 lemma aval_division_remainder:
-  "map (\<lambda>e. aval e s)
+  "map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s)
     [Div (N 7) (N 3), Div (N (-7)) (N 3),
      Div (N 7) (N (-3)), Div (N (-7)) (N (-3)),
      Mod (N 7) (N 3), Mod (N (-7)) (N 3),

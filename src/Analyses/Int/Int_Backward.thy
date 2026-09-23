@@ -407,8 +407,8 @@ lemma int_dom_backward_domain_reductive:
 proof unfold_locales
   fix s :: store and e :: exp and sigma :: "vname => int_dom"
   assume "s \<in> \<lbrakk>sigma\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (sigma x)" using gamma_stateD by blast
-  then show "aval e s \<in> gamma (aval_int_dom mode e sigma)"
+  then have "\<forall>x. s x \<in> \<gamma> (sigma x)" using gamma_stateD by blast
+  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom mode e sigma)"
     using aval_int_dom_sound by simp
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound

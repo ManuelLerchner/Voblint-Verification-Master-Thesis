@@ -544,15 +544,6 @@ text \<open>
 
 instance lifted :: (bounded_warrowing) bounded_warrowing ..
 
-text \<open>
-  \<open>\<nabla>\<Delta>\<close> preserves \<^const>\<open>normalized_lift\<close> from just its \<^emph>\<open>right\<close> operand being
-  normalized, matching \<open>warrowing_properties\<close>'s own asymmetry: \<open>b \<le> a \<nabla>\<Delta> b\<close> holds
-  unconditionally, on whichever branch (\<open>\<nabla>\<close> or \<open>\<Delta>\<close>) the \<open>b \<le> a\<close> test picks, so only
-  \<open>y\<close> -- the operand playing \<open>warrowing_properties\<close>'s \<open>b\<close> -- needs to already be
-  non-bottom. Stated after the \<open>bounded_warrowing\<close> instance above, because \<open>\<nabla>\<Delta>\<close> on
-  \<^typ>\<open>'a lifted\<close> only exists once that instance is in scope.
-\<close>
-
 subsection \<open>Transporting a lifted transfer along a representation map\<close>
 
 text \<open>

@@ -38,7 +38,7 @@ definition branch_parity :: "exp \<Rightarrow> bool \<Rightarrow> parity abs_sta
   "branch_parity b pol \<sigma> = \<sigma>"
 
 lemma branch_parity_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
   by (simp add: branch_parity_def)
 
 lemma branch_parity_mono:

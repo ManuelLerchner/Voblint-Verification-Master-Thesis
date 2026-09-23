@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --globals warrow --context none
+// EXPECT-ARITHMETIC
+// Backs the site figure "What does it tell you?" and the thesis introduction's
+// verdict figure: one run yields each kind of answer. k is 10, so 100 / k is
+// safe and 0 < q is proved with q = [10,10]; d is unconstrained, so 100 / d gets
+// the possible-division warning; k < 0 contradicts k = [10,10], so the check
+// under it is DEAD.
+
+fun main() {
+  k = 10;
+  q = 100 / k;                // ARITH: NONE
+  d = __voblint_nondet_int();
+  y = 100 / d;                // ARITH: WARN division-by-zero
+  __voblint_check(0 < q);     // PROVED
+  if (k < 0) {
+    __voblint_check(q == 0);  // NOWARN
+  }
+}

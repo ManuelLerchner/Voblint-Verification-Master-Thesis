@@ -109,8 +109,7 @@ text \<open>
 lemma run_result_sound:
   assumes "res = run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p"
       and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
+      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
   by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) (simp_all add: assms(1))
 
@@ -122,8 +121,7 @@ text \<open>
 lemma unit_run_result_sound:
   assumes "fst solved = r"
       and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
+      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s
          \<and> checks_sound_at (unit_run_result into enter classify solved p) v s
          \<and> diagnostics_sound_at (unit_run_result into enter classify solved p) p v s"
@@ -133,8 +131,7 @@ lemma unit_run_result_sound:
 lemma entry_state_run_result_sound:
   assumes "fst solved = r"
       and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
+      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s
          \<and> checks_sound_at (entry_state_run_result into enter classify solved p) v s
          \<and> diagnostics_sound_at (entry_state_run_result into enter classify solved p) p v s"
@@ -144,8 +141,7 @@ lemma entry_state_run_result_sound:
 lemma call_string_run_result_sound:
   assumes "fst solved = r"
       and "sound_table p r classify"
-      and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) v"
+      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers r v s
          \<and> checks_sound_at (call_string_run_result into enter classify solved k p) v s
          \<and> diagnostics_sound_at (call_string_run_result into enter classify solved k p) p v s"
@@ -160,8 +156,7 @@ text \<open>
 lemma analysis_result_sound:
   assumes wf: "wf_program_compile_input p"
       and terminates: "config_terminates D rule ctx p"
-      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                      (cinit_stores (declared_global p)) v"
+      and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "analysis_result_covers D rule ctx p v s
          \<and> checks_sound_at (analysis_result D rule ctx p) v s
          \<and> diagnostics_sound_at (analysis_result D rule ctx p) p v s"
@@ -265,8 +260,7 @@ text \<open>
 lemma run_voblint_sound_at:
   assumes terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                      (cinit_stores (declared_global p)) v"
+      and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "analysis_result_covers D rule ctx p v s \<and> checks_sound_at res v s
            \<and> diagnostics_sound_at res p v s"
 proof -
@@ -280,8 +274,7 @@ qed
 theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates D rule ctx p"
     and ans: "run_voblint D rule ctx p = Analysed res"
-    and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-      (cinit_stores (declared_global p)) v"
+    and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and absent: "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
   using run_voblint_sound_at[OF terminates ans mem] absent
@@ -290,13 +283,12 @@ theorem run_voblint_arithmetic_safe:
 corollary run_voblint_arithmetic_intra_safe:
   assumes "config_terminates D rule ctx p"
     and "run_voblint D rule ctx p = Analysed res"
-    and "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-      (cinit_stores (declared_global p)) v"
+    and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
     and "(v, action, w) \<in> intra (prog_cfg p)"
     and "e \<in> set (arithmetic_edge_expressions action)"
     and "divisor \<in> expression_divisors e"
-  shows "aval divisor s \<noteq> 0"
+  shows "\<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0"
   using run_voblint_arithmetic_safe[OF assms(1-4)]
     arithmetic_expression_sites_intra[OF finite_intra_prog_cfg assms(5)] assms(6,7)
   unfolding arithmetic_safe_at_def by blast
@@ -330,24 +322,25 @@ text \<open>
 theorem run_voblint_certified_source_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and run: "declared_global p, prog_table p
+                  \<turnstile> (main_body (prog_table p), s0, [])
+                    \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-               \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                         (cinit_stores (declared_global p)) v
-               \<and> analysis_result_covers D rule ctx p v s
-               \<and> checks_sound_at res v s"
+  shows "\<exists>v stk.
+             prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
+                        cinit_stores (declared_global p)\<^esub> v
+           \<and> analysis_result_covers D rule ctx p v s
+           \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
   from ans have "wf_program_compile_input_exec p" by (rule run_voblint_AnalysedE)
   from source_reaches_ltr_collect
          [OF wf_program_compile_input_exec_sound [OF this] s0 run]
   obtain v stk
-    where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
-      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                      (cinit_stores (declared_global p)) v"
+    where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     unfolding cfg by blast
   with run_voblint_sound_at [OF terminates ans mem] show ?thesis by blast
 qed
@@ -365,23 +358,24 @@ text \<open>
 theorem run_voblint_check_sound:
   fixes p :: imp_prog and s0 s :: store
   assumes s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
+      and run: "declared_global p, prog_table p
+                  \<turnstile> (main_body (prog_table p), s0, [])
+                    \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and chk: "next_check residual = Some e"
       and terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
   shows "\<exists>c \<in> set (res_checks res). check_exp c = e
-           \<and> s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) (check_point c)
+           \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
+                    cinit_stores (declared_global p)\<^esub> (check_point c)
            \<and> check_verdict c \<noteq> Dead
-           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (aval e s))
-           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (aval e s))"
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))
+           \<and> (check_verdict c = Decided Check_Refuted
+                \<longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
 proof -
   from run_voblint_certified_source_sound [OF s0 run terminates ans]
   obtain v stk
-    where m: "csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)"
-      and mem: "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                      (cinit_stores (declared_global p)) v"
+    where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
       and sound: "checks_sound_at res v s"
     by blast
   from csim_next_check_edge [OF m chk]
@@ -404,12 +398,11 @@ corollary run_voblint_dead_check_unreached:
       and ans: "run_voblint D rule ctx p = Analysed res"
       and listed: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
-  shows "ltr_collect (declared_global p) (prog_cfg p)
-           (cinit_stores (declared_global p)) (check_point chk) = {}"
+  shows "\<C>\<^bsub>declared_global p,prog_cfg p,
+            cinit_stores (declared_global p)\<^esub> (check_point chk) = {}"
 proof (rule equals0I)
   fix s
-  assume "s \<in> ltr_collect (declared_global p) (prog_cfg p)
-                (cinit_stores (declared_global p)) (check_point chk)"
+  assume "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> (check_point chk)"
   from run_voblint_sound_at [OF terminates ans this]
   have "checks_sound_at res (check_point chk) s" by blast
   with listed dead show False unfolding checks_sound_at_def by blast

@@ -34,7 +34,7 @@ text \<open>
   \<^item> \<^bold>\<open>C zero-initialization.\<close> Every domain's entry state gives globals a
     non-\<open>top\<close> value and locals \<open>top\<close> --- \<open>(STop, SZero, [])\<close> for Sign, and the
     parity, interval and product analyses match it. It over-approximates
-    \<open>cinit_stores gs = {s. \<forall>x. gs x \<longrightarrow> s x = 0}\<close>, which quantifies over
+    \<open>cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}\<close>, which quantifies over
     \<^emph>\<open>all\<close> names the classifier calls global, for an arbitrary classifier and
     with no finiteness hypothesis. A fixed-\<open>top\<close> map can only express that by
     materializing every global, which makes the entry state a function of the

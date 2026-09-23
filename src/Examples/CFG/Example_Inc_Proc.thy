@@ -56,14 +56,14 @@ lemma inc_g_eq_compile:
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
-  fixes s :: store and x :: vname and a :: exp and gs :: "vname \<Rightarrow> bool"
-  assumes "enter_state gs s \<in> S"
-  shows "(enter_state gs s)(x := aval a (enter_state gs s))
+  fixes s :: store and x :: vname and a :: exp and \<G> :: "vname \<Rightarrow> bool"
+  assumes "enter_state \<G> s \<in> S"
+  shows "(enter_state \<G> s)(x := \<lbrakk>a\<rbrakk>\<^sub>e (enter_state \<G> s))
            \<in> edge_collect (EA_Assign x a) S"
   using assms by auto
 
 lemma aval_plus_counter_on_enter_declared:
-  "aval (Plus (V (STR ''counter'')) (N 1))
+  "\<lbrakk>Plus (V (STR ''counter'')) (N 1)\<rbrakk>\<^sub>e
       (enter_state (declared_global inc_program) s)
      = s (STR ''counter'') + 1"
   by (simp add: enter_state_def)
@@ -102,7 +102,7 @@ proof -
                (enter_state (declared_global inc_program) s)
                ((enter_state (declared_global inc_program) s)
                  ((STR ''counter'') :=
-                    aval (Plus (V (STR ''counter'')) (N 1))
+                    \<lbrakk>Plus (V (STR ''counter'')) (N 1)\<rbrakk>\<^sub>e
                       (enter_state (declared_global inc_program) s)))"
         by (rule pcompletes_assign)
       thus ?thesis using aval_plus_counter_on_enter_declared by simp
@@ -134,13 +134,12 @@ text \<open>
 \<close>
 lemma cstep_inc_pcall_declared:
   fixes s :: store
-  shows "star (cstep (declared_global inc_program) inc_g)
-           (FunctionEntry (STR ''main''), s, [])
-           (FunctionResult (STR ''main''),
+  shows "declared_global inc_program, inc_g \<turnstile> (FunctionEntry (STR ''main''), s, [])
+           \<rightarrow>\<^sub>c\<^sup>* (FunctionResult (STR ''main''),
             s((STR ''Glocal'') := 1,
               (STR ''counter'') := s (STR ''counter'') + 1), [])"
 proof -
-  let ?gs = "declared_global inc_program"
+  let ?\<G> = "declared_global inc_program"
   have e1: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2) \<in> intra inc_g"
     and e2: "(Statement 2, EA_Assign (STR ''Glocal'') (N 1), Statement 3) \<in> intra inc_g"
     and e3: "(Statement 3, CallEdge None [] [],
@@ -152,61 +151,56 @@ proof -
     and e6: "(Statement 1, EA_Ret None (STR ''p''), FunctionResult (STR ''p'')) \<in> intra inc_g"
     and e7: "(Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')) \<in> intra inc_g"
     by eval+
-  have g: "?gs (STR ''counter'')" by simp
-  have s1: "cstep ?gs inc_g (FunctionEntry (STR ''main''), s, []) (Statement 2, s, [])"
+  have g: "?\<G> (STR ''counter'')" by simp
+  have s1: "?\<G>, inc_g \<turnstile> (FunctionEntry (STR ''main''), s, []) \<rightarrow>\<^sub>c (Statement 2, s, [])"
     by (rule cstep.Intra[OF e1]) simp
-  have s2: "cstep ?gs inc_g (Statement 2, s, []) (Statement 3, s((STR ''Glocal'') := 1), [])"
+  have s2: "?\<G>, inc_g \<turnstile> (Statement 2, s, []) \<rightarrow>\<^sub>c (Statement 3, s((STR ''Glocal'') := 1), [])"
     by (rule cstep.Intra[OF e2]) simp
-  have s3: "cstep ?gs inc_g (Statement 3, s((STR ''Glocal'') := 1), [])
-              (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)),
+  have s3: "?\<G>, inc_g \<turnstile> (Statement 3, s((STR ''Glocal'') := 1), [])
+              \<rightarrow>\<^sub>c (FunctionEntry (STR ''p''), enter_state ?\<G> (s((STR ''Glocal'') := 1)),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     using cstep.Call[OF e3] by simp
-  have s4: "cstep ?gs inc_g
-              (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)),
+  have s4: "?\<G>, inc_g \<turnstile> (FunctionEntry (STR ''p''), enter_state ?\<G> (s((STR ''Glocal'') := 1)),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])
-              (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)),
+              \<rightarrow>\<^sub>c (Statement 0, enter_state ?\<G> (s((STR ''Glocal'') := 1)),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e4]) simp
-  have s5: "cstep ?gs inc_g
-              (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)),
+  have s5: "?\<G>, inc_g \<turnstile> (Statement 0, enter_state ?\<G> (s((STR ''Glocal'') := 1)),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])
-              (Statement 1,
-               (enter_state ?gs (s((STR ''Glocal'') := 1)))
+              \<rightarrow>\<^sub>c (Statement 1,
+               (enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                  ((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e5]) (simp add: enter_state_def)
-  have s6: "cstep ?gs inc_g
-              (Statement 1,
-               (enter_state ?gs (s((STR ''Glocal'') := 1)))
+  have s6: "?\<G>, inc_g \<turnstile> (Statement 1,
+               (enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                  ((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])
-              (FunctionResult (STR ''p''),
-               (enter_state ?gs (s((STR ''Glocal'') := 1)))
+              \<rightarrow>\<^sub>c (FunctionResult (STR ''p''),
+               (enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                  ((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e6]) (auto simp: ret_var_def)
-  have s7: "cstep ?gs inc_g
-              (FunctionResult (STR ''p''),
-               (enter_state ?gs (s((STR ''Glocal'') := 1)))
+  have s7: "?\<G>, inc_g \<turnstile> (FunctionResult (STR ''p''),
+               (enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                  ((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])
-              (Statement 4,
+              \<rightarrow>\<^sub>c (Statement 4,
                s((STR ''Glocal'') := 1,
                  (STR ''counter'') := s (STR ''counter'') + 1), [])"
   proof -
-    have ret: "cstep ?gs inc_g
-                 (FunctionResult (STR ''p''),
-                  (enter_state ?gs (s((STR ''Glocal'') := 1)))
+    have ret: "?\<G>, inc_g \<turnstile> (FunctionResult (STR ''p''),
+                  (enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                     ((STR ''counter'') := s (STR ''counter'') + 1),
                   [(Statement 4, None, s((STR ''Glocal'') := 1))])
-                 (Statement 4,
-                  combine_collect ?gs None (s((STR ''Glocal'') := 1))
-                    ((enter_state ?gs (s((STR ''Glocal'') := 1)))
+                 \<rightarrow>\<^sub>c (Statement 4,
+                  combine_collect ?\<G> None (s((STR ''Glocal'') := 1))
+                    ((enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                       ((STR ''counter'') := s (STR ''counter'') + 1)),
                   [])"
       by (rule cstep.Return)
-    have eq: "combine_collect ?gs None (s((STR ''Glocal'') := 1))
-                ((enter_state ?gs (s((STR ''Glocal'') := 1)))
+    have eq: "combine_collect ?\<G> None (s((STR ''Glocal'') := 1))
+                ((enter_state ?\<G> (s((STR ''Glocal'') := 1)))
                   ((STR ''counter'') := s (STR ''counter'') + 1))
               = s((STR ''Glocal'') := 1,
                   (STR ''counter'') := s (STR ''counter'') + 1)"
@@ -214,11 +208,10 @@ proof -
           combine_after_enter_global_assign_declared[OF g] fun_upd_twist)
     show ?thesis using ret eq by simp
   qed
-  have s8: "cstep ?gs inc_g
-              (Statement 4,
+  have s8: "?\<G>, inc_g \<turnstile> (Statement 4,
                s((STR ''Glocal'') := 1,
                  (STR ''counter'') := s (STR ''counter'') + 1), [])
-              (FunctionResult (STR ''main''),
+              \<rightarrow>\<^sub>c (FunctionResult (STR ''main''),
                s((STR ''Glocal'') := 1,
                  (STR ''counter'') := s (STR ''counter'') + 1), [])"
     by (rule cstep.Intra[OF e7]) (auto simp: ret_var_def)

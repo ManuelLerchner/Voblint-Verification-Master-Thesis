@@ -210,13 +210,12 @@ lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
         parity_prog_def)
 
 theorem parity_source_run_sound:
-  assumes run: "star (pstep parity_gs parity_pi) (parity_prog, s, []) (residual, t, frs)"
+  assumes run: "parity_gs, parity_pi \<turnstile> (parity_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
-  shows "\<exists>v stk. csim parity_pi parity_cfg (residual, t, frs) (v, t, stk)
+  shows "\<exists>v stk. parity_pi, parity_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program v\<rbrakk>"
 proof -
-  have run': "star (pstep parity_gs (prog_table parity_program))
-                (main_body (prog_table parity_program), s, []) (residual, t, frs)"
+  have run': "parity_gs, prog_table parity_program \<turnstile> (main_body (prog_table parity_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp flip: parity_pi_def)
   have wf: "wf_compile_input parity_gs (prog_table parity_program) (prog_procs parity_program)"
     using parity_wf parity_cfg_prog_cfg

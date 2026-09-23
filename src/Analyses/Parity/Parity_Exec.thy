@@ -46,10 +46,10 @@ definition parity_enter_st_for ::
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
 lemma parity_enter_st_for_eq [simp]:
-  "parity_enter_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "parity_enter_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_parity e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def)
 
@@ -65,8 +65,8 @@ text \<open>Both filters are the identity here, so the guard obligation the gene
   commutation leaves open holds on every executable state, not only a live one.\<close>
 
 theorem parity_tf_st_for_commute:
-  "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
-   parity_tf_abs a (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (parity_tf_st_for \<G> a s) =
+   parity_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding parity_tf_st_for_def
   by (rule parity_tf.tf_st_for_commute) (simp add: branch_parity_def)
 
@@ -80,19 +80,19 @@ text \<open>
 \<close>
 
 lemma parity_tf_st_for_commute_if_live:
-  assumes "live_resolved_st_q gs s"
-  shows "fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s) =
-         parity_tf_abs a (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q \<G> s"
+  shows "fun_of_resolved_st_q_for \<G> (parity_tf_st_for \<G> a s) =
+         parity_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   by (rule parity_tf_st_for_commute)
 
 lemma enter_frame_parity_st_for_commute:
-  "fun_of_resolved_st_q_for gs (enter_frame_D_resolved_q PTop s) =
-   enter_frame_parity_for gs (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q PTop s) =
+   enter_frame_parity_for \<G> (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: parity_tf.op_defs)
 
 lemma parity_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (parity_enter_st_for gs ci s) =
-   enter_parity_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (parity_enter_st_for \<G> ci s) =
+   enter_parity_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: parity_tf.op_defs enter_binding_def
                 enter_frame_def enter_frame_parity_st_for_commute)
 

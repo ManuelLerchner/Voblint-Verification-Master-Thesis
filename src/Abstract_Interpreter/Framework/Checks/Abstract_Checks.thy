@@ -68,7 +68,7 @@ locale abstract_expression_domain =
   fixes gamma_state :: "'d \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
   assumes aval_abs_sound[intro]:
-      "s \<in> gamma_state d \<Longrightarrow> aval e s \<in> gamma (aval_abs e d)"
+      "s \<in> gamma_state d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
 
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>
 
@@ -117,7 +117,7 @@ definition truthy_query :: "exp \<Rightarrow> 'd \<Rightarrow> bool option" wher
 lemma truthy_query_sound:
   assumes mem: "s \<in> gamma_state d"
     and query: "truthy_query e d = Some r"
-  shows "truthy (aval e s) = r"
+  shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = r"
   using assms aval_abs_sound eq_sound truthy_query_def
   by fastforce
 
@@ -142,7 +142,7 @@ text \<open>Soundness of the arithmetic fallback, proved once and cited by every
 
 theorem check_query_sound:
   assumes mem: "s \<in> gamma_state d"
-  shows "check_query c d = Some r \<Longrightarrow> truthy (aval c s) = r"
+  shows "check_query c d = Some r \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s) = r"
 using truthy_query_sound[OF mem] proof (induction c arbitrary: r)
   case (And b1 b2)
   then show ?case
@@ -154,7 +154,7 @@ next
     the goal determines them by unification.\<close>
   then show ?case
     using or_opt_sound[of "check_query b1 d" "check_query b2 d" r
-        "truthy (aval b1 s)" "truthy (aval b2 s)"]
+        "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s)" "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"]
     by auto
 next
   case (Less a b)
@@ -166,28 +166,28 @@ next
   case (LessEq a b)
   have query: "less (aval_abs b d) (aval_abs a d) = Some (\<not> r)"
     using LessEq.prems by (auto split: option.splits)
-  have relation: "(aval b s < aval a s) = (\<not> r)"
+  have relation: "(\<lbrakk>b\<rbrakk>\<^sub>e s < \<lbrakk>a\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by auto
 next
   case (Greater a b)
   have query: "less (aval_abs b d) (aval_abs a d) = Some r"
     using Greater.prems by simp
-  have relation: "(aval b s < aval a s) = r"
+  have relation: "(\<lbrakk>b\<rbrakk>\<^sub>e s < \<lbrakk>a\<rbrakk>\<^sub>e s) = r"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by simp
 next
   case (GreaterEq a b)
   have query: "less (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
     using GreaterEq.prems by (auto split: option.splits)
-  have relation: "(aval a s < aval b s) = (\<not> r)"
+  have relation: "(\<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by auto
 next
   case (NotEq a b)
   have query: "eq (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
     using NotEq.prems by (auto split: option.splits)
-  have relation: "(aval a s = aval b s) = (\<not> r)"
+  have relation: "(\<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule eq_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by auto
 qed (fastforce+)
@@ -204,20 +204,20 @@ definition classify_check :: "exp \<Rightarrow> 'd \<Rightarrow> check_result" w
 
 lemma classify_check_proved:
   assumes "classify_check c d = Check_Proved" and "s \<in> gamma_state d"
-  shows "truthy (aval c s)"
+  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   using assms check_query_sound
   unfolding classify_check_def
   by (fastforce split: option.splits bool.splits)
 
 lemma classify_check_refuted:
   assumes "classify_check c d = Check_Refuted" and "s \<in> gamma_state d"
-  shows "\<not> truthy (aval c s)"
+  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   using assms check_query_sound
   unfolding classify_check_def
   by (fastforce split: option.splits bool.splits)
 
 text \<open>\<open>Check_Unknown\<close> carries no semantic claim: no lemma concludes \<open>truthy
-  (aval c s)\<close> or its negation from it, by design.\<close>
+  (\<lbrakk>c\<rbrakk>\<^sub>e s)\<close> or its negation from it, by design.\<close>
 
 subsection \<open>Node-indexed bridge to \<^const>\<open>checks_proven\<close>\<close>
 
@@ -243,7 +243,7 @@ proof (rule checks_provenI)
     using checked ck' by blast
   have in_gamma: "s \<in> gamma_state (env v)"
     using node_sound[OF ck'] mem by blast
-  show "truthy (aval c s)"
+  show "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     using check_query_sound[OF in_gamma proven] by simp
 qed
 

@@ -920,8 +920,8 @@ global_interpretation congruence_backward_domain:
 proof unfold_locales
   fix s :: store and e :: exp and sigma :: "vname => congruence"
   assume "s \<in> \<lbrakk>sigma\<rbrakk>"
-  then have "\<forall>x. s x : gamma (sigma x)" using gamma_stateD by blast
-  then show "aval e s : gamma (aval_congruence e sigma)"
+  then have "\<forall>x. s x : \<gamma> (sigma x)" using gamma_stateD by blast
+  then show "\<lbrakk>e\<rbrakk>\<^sub>e s : \<gamma> (aval_congruence e sigma)"
     by (rule congruence_arith.aval_dom_sound)
 qed (simp_all add: intersect_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
        inv_plus_congruence_sound inv_minus_congruence_sound inv_times_congruence_sound

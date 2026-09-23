@@ -87,13 +87,13 @@ text \<open>A single \<^const>\<open>pstep\<close> touches only the head region 
   bridges the \<open>Nested\<close> snoc (the inner step threads all frames) to the induction hypothesis
   (stated on the inner frames alone).\<close>
 lemma pstep_frame_restrict:
-  "pstep gs \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
-   \<exists>frs''. frs' = frs'' @ extra \<and> pstep gs \<Pi> (c, s, frs) (c', s', frs'')"
+  "\<G>, \<Pi> \<turnstile> (c, s, fr) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
        arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.hyps(2)[OF Seq2.prems] obtain frs'' where
-    ih: "f1' = frs'' @ extra" "pstep gs \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+    ih: "f1' = frs'' @ extra" "\<G>, \<Pi> \<turnstile> (c1, s1, frs) \<rightarrow>\<^sub>p (c1', s1', frs'')" by blast
   show ?case
     by (rule exI[of _ frs'']) (use ih in auto)
 next
@@ -115,14 +115,14 @@ text \<open>Unlike \<open>pstep_frame_restrict\<close> this needs no non-empty a
   command never heads with \<^const>\<open>SKIP\<close> / \<^const>\<open>Restore\<close> / \<^const>\<open>Unwind\<close>, so no pop can
   fire.\<close>
 lemma pstep_call_frame_restrict:
-  "pstep gs \<Pi> (c, s, fr) (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
-   \<exists>frs''. frs' = frs'' @ extra \<and> pstep gs \<Pi> (c, s, frs) (c', s', frs'')"
+  "\<G>, \<Pi> \<turnstile> (c, s, fr) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
+   \<exists>frs''. frs' = frs'' @ extra \<and> \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
        arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.prems(1) have "head_call c1" by simp
   from Seq2.hyps(2)[OF this Seq2.prems(2)] obtain frs'' where
-    ih: "f1' = frs'' @ extra" "pstep gs \<Pi> (c1, s1, frs) (c1', s1', frs'')" by blast
+    ih: "f1' = frs'' @ extra" "\<G>, \<Pi> \<turnstile> (c1, s1, frs) \<rightarrow>\<^sub>p (c1', s1', frs'')" by blast
   show ?case by (rule exI[of _ frs'']) (use ih in auto)
 next
   case (Call p decl actuals dst vals callee s1 frs0 frs)
@@ -133,14 +133,14 @@ text \<open>The CFG dual: a \<^const>\<open>cstep\<close> also touches only the 
   bottom segment rides along --- with no non-emptiness needed, since the return step already
   requires a non-empty stack.\<close>
 lemma cstep_frame_extend:
-  "cstep gs g (u, s, stk) (u', s', stk') \<Longrightarrow>
-   cstep gs g (u, s, stk @ E) (u', s', stk' @ E)"
+  "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (u', s', stk') \<Longrightarrow>
+   \<G>, g \<turnstile> (u, s, stk @ E) \<rightarrow>\<^sub>c (u', s', stk' @ E)"
   by (erule cstep.cases) auto
 
 lemma cstep_star_frame_extend:
-  assumes "star (cstep gs g) c c'"
-  shows "star (cstep gs g) (fst c, fst (snd c), snd (snd c) @ E)
-                        (fst c', fst (snd c'), snd (snd c') @ E)"
+  assumes "\<G>, g \<turnstile> c \<rightarrow>\<^sub>c\<^sup>* c'"
+  shows "\<G>, g \<turnstile> (fst c, fst (snd c), snd (snd c) @ E)
+                        \<rightarrow>\<^sub>c\<^sup>* (fst c', fst (snd c'), snd (snd c') @ E)"
   using assms
 proof (induction rule: star.induct)
   case (refl a) show ?case by simp
@@ -148,8 +148,8 @@ next
   case (step a b c)
   obtain ua sa stka where a: "a = (ua, sa, stka)" by (cases a)
   obtain ub sb stkb where b: "b = (ub, sb, stkb)" by (cases b)
-  from step.hyps(1) a b have "cstep gs g (ua, sa, stka) (ub, sb, stkb)" by simp
-  hence "cstep gs g (ua, sa, stka @ E) (ub, sb, stkb @ E)" by (rule cstep_frame_extend)
+  from step.hyps(1) a b have "\<G>, g \<turnstile> (ua, sa, stka) \<rightarrow>\<^sub>c (ub, sb, stkb)" by simp
+  hence "\<G>, g \<turnstile> (ua, sa, stka @ E) \<rightarrow>\<^sub>c (ub, sb, stkb @ E)" by (rule cstep_frame_extend)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
@@ -157,18 +157,18 @@ text \<open>The \<open>Nested\<close> step-inversion rule: stepping a wrapped ac
   \<^term>\<open>Seq inner Restore\<close> is stepping \<open>inner\<close>, provided \<open>inner\<close> has neither completed nor
   begun to unwind (either of which would relocate rather than step).\<close>
 lemma pstep_seq_after_seq_restore:
-  assumes step: "pstep gs \<Pi> (seq_after (Seq inner Restore) afters, s, frs) src'"
+  assumes step: "\<G>, \<Pi> \<turnstile> (seq_after (Seq inner Restore) afters, s, frs) \<rightarrow>\<^sub>p src'"
       and nsk: "inner \<noteq> SKIP" and nunw: "inner \<noteq> Unwind"
   obtains inner' s' fz where
     "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-    "pstep gs \<Pi> (inner, s, frs) (inner', s', fz)"
+    "\<G>, \<Pi> \<turnstile> (inner, s, frs) \<rightarrow>\<^sub>p (inner', s', fz)"
 proof -
   obtain h' s' fz where
     src': "src' = (seq_after h' afters, s', fz)"
-      and hstep: "pstep gs \<Pi> (Seq inner Restore, s, frs) (h', s', fz)"
+      and hstep: "\<G>, \<Pi> \<turnstile> (Seq inner Restore, s, frs) \<rightarrow>\<^sub>p (h', s', fz)"
     by (rule pstep_seq_after_headE[OF step]) auto
   from hstep nsk nunw obtain inner' where
-    "h' = Seq inner' Restore" "pstep gs \<Pi> (inner, s, frs) (inner', s', fz)"
+    "h' = Seq inner' Restore" "\<G>, \<Pi> \<turnstile> (inner, s, frs) \<rightarrow>\<^sub>p (inner', s', fz)"
     by auto
   with src' show ?thesis using that by blast
 qed
@@ -177,21 +177,20 @@ text \<open>The \<open>Nested\<close> step shared by every completion theorem: t
   under the caller frame and its relation re-wraps as \<open>Nested\<close>.  \<open>csim\<close> pins the graph store
   to the source store, so the lifted run ends at the source store.\<close>
 lemma csim_Nested_lift:
-  assumes run: "\<exists>cfg'. star (cstep gs g) (v0, s0, stk0) cfg' \<and> csim \<Pi> g (inner', s', fz') cfg'"
+  assumes run: "\<exists>cfg'. \<G>, g \<turnstile> (v0, s0, stk0) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> (inner', s', fz') \<approx> cfg'"
       and loc: "control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont"
       and cacc: "compiled_at \<Pi> g pc c0c kc nc"
-  shows "\<exists>cfg'. star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)]) cfg'
-              \<and> csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst]) cfg'"
+  shows "\<exists>cfg'. \<G>, g \<turnstile> (v0, s0, stk0 @ [(cont, dst, caller)]) \<rightarrow>\<^sub>c\<^sup>* cfg'
+              \<and> \<Pi>, g \<turnstile> (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst]) \<approx> cfg'"
 proof -
   from run obtain v' t' stk' where
-    inner: "star (cstep gs g) (v0, s0, stk0) (v', t', stk')"
-      and sim: "csim \<Pi> g (inner', s', fz') (v', t', stk')" by auto
+    inner: "\<G>, g \<turnstile> (v0, s0, stk0) \<rightarrow>\<^sub>c\<^sup>* (v', t', stk')"
+      and sim: "\<Pi>, g \<turnstile> (inner', s', fz') \<approx> (v', t', stk')" by auto
   have teq: "t' = s'" using csim_store_eq[OF sim] by simp
-  have "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                         (v', s', stk' @ [(cont, dst, caller)])"
+  have "\<G>, g \<turnstile> (v0, s0, stk0 @ [(cont, dst, caller)])
+                         \<rightarrow>\<^sub>c\<^sup>* (v', s', stk' @ [(cont, dst, caller)])"
     using cstep_star_frame_extend[OF inner, of "[(cont, dst, caller)]"] teq by simp
-  moreover have "csim \<Pi> g (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst])
-                          (v', s', stk' @ [(cont, dst, caller)])"
+  moreover have "\<Pi>, g \<turnstile> (seq_after (Seq inner' Restore) afters, s', fz' @ [Frame caller dst]) \<approx> (v', s', stk' @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF sim[unfolded teq] loc cacc])
   ultimately show ?thesis by blast
 qed
@@ -210,14 +209,14 @@ lemma csim_call_base:
       and loc: "control_at \<Pi> p c0 kk n (seq_after (Call dst q actuals) afters) v"
       and cacc: "compiled_at \<Pi> g p c0 kk n"
       and decl: "\<Pi> q = Some decl"
-  shows "\<exists>cfg'. star (cstep gs g) (v, s, [])  cfg'
-              \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
-                          bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
-                            (enter_state gs s),
-                          [Frame s dst]) cfg'"
+  shows "\<exists>cfg'. \<G>, g \<turnstile> (v, s, []) \<rightarrow>\<^sub>c\<^sup>* cfg'
+              \<and> \<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters,
+                          bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals)
+                            (enter_state \<G> s),
+                          [Frame s dst]) \<approx> cfg'"
 proof -
   let ?callee =
-    "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state gs s)"
+    "bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
   have spNone: "special_table q = None" by (rule procs_embedded_special_table_none[OF pc decl])
   from cacc obtain n' en E K where comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and Ksub: "K \<subseteq> calls g" by blast
@@ -228,65 +227,63 @@ proof -
     and callerSKIP: "control_at \<Pi> p c0 kk n (seq_after SKIP afters) w" by blast
   have edge: "(Statement j, CallEdge dst (formals decl) actuals, FunctionEntry q, w)
                 \<in> calls g" using edgeK Ksub by (auto simp: decl)
-  have cstep1: "cstep gs g (Statement j, s, [])
-           (FunctionEntry q, call_enter gs (CallEdge dst (formals decl) actuals) s,
+  have cstep1: "\<G>, g \<turnstile> (Statement j, s, [])
+           \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst (formals decl) actuals) s,
             [(w, dst, s)])" by (rule cstep.Call[OF edge])
-  have ce: "call_enter gs (CallEdge dst (formals decl) actuals) s = ?callee"
+  have ce: "call_enter \<G> (CallEdge dst (formals decl) actuals) s = ?callee"
     by (rule call_enter_CallEdge)
   obtain kq m en_q where
     caccq: "compiled_at \<Pi> g q (body decl) kq m"
       and ctrlq: "control_at \<Pi> q (body decl) kq m (body decl) en_q"
       and entry: "(FunctionEntry q, EA_Body q, en_q) \<in> intra g"
     by (rule procs_embedded_activation[OF pc decl])
-  have cstep2: "cstep gs g (FunctionEntry q, ?callee, [(w, dst, s)])
-                        (en_q, ?callee, [(w, dst, s)])"
+  have cstep2: "\<G>, g \<turnstile> (FunctionEntry q, ?callee, [(w, dst, s)])
+                        \<rightarrow>\<^sub>c (en_q, ?callee, [(w, dst, s)])"
     using cstep_body[OF entry] .
-  have star: "star (cstep gs g) (v, s, []) (en_q, ?callee, [(w, dst, s)])"
+  have star: "\<G>, g \<turnstile> (v, s, []) \<rightarrow>\<^sub>c\<^sup>* (en_q, ?callee, [(w, dst, s)])"
     using cstep1[unfolded ce] cstep2 vk by (simp add: star.step)
-  have baseCallee: "csim \<Pi> g (body decl, ?callee, []) (en_q, ?callee, [])"
+  have baseCallee: "\<Pi>, g \<turnstile> (body decl, ?callee, []) \<approx> (en_q, ?callee, [])"
     by (rule csim.Base[OF ctrlq caccq])
-  have "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters, ?callee, [] @ [Frame s dst])
-                 (en_q, ?callee, [] @ [(w, dst, s)])"
+  have "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters, ?callee, [] @ [Frame s dst]) \<approx> (en_q, ?callee, [] @ [(w, dst, s)])"
     by (rule csim.Nested[OF baseCallee callerSKIP cacc])
-  then have "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst])
-                      (en_q, ?callee, [(w, dst, s)])" by simp
+  then have "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst]) \<approx> (en_q, ?callee, [(w, dst, s)])" by simp
   with star show ?thesis by blast
 qed
 
 theorem csim_call_completion:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow> head_call c \<Longrightarrow>
-   pstep gs \<Pi> (c, s, frs) src' \<Longrightarrow>
-   \<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow> head_call c \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p src' \<Longrightarrow>
+   \<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   from head_call_seq_after_form[OF Base.prems(2)] obtain dst q actuals afters where
     ceq: "cc = seq_after (Call dst q actuals) afters" and spNone: "special_table q = None"
     by blast
-  have step: "pstep gs \<Pi> (seq_after (Call dst q actuals) afters, ss, []) src'"
+  have step: "\<G>, \<Pi> \<turnstile> (seq_after (Call dst q actuals) afters, ss, []) \<rightarrow>\<^sub>p src'"
     using Base.prems(3) ceq by simp
   have w1: "Call dst q actuals \<noteq> SKIP" by simp
   have w2: "Call dst q actuals \<noteq> Unwind" by simp
   obtain h' s' fz where
     src': "src' = (seq_after h' afters, s', fz)"
-      and pcall: "pstep gs \<Pi> (Call dst q actuals, ss, []) (h', s', fz)"
+      and pcall: "\<G>, \<Pi> \<turnstile> (Call dst q actuals, ss, []) \<rightarrow>\<^sub>p (h', s', fz)"
     by (rule pstep_seq_after_headE[OF step w1 w2])
   from pcall spNone obtain decl where
     qdecl: "\<Pi> q = Some decl"
       and heq: "h' = Seq (body decl) Restore"
-      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals)
-                        (enter_state gs ss)"
+      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e ss) actuals)
+                        (enter_state \<G> ss)"
       and fzeq: "fz = [Frame ss dst]"
     by auto
   have loc': "control_at \<Pi> p c0 kk n (seq_after (Call dst q actuals) afters) vv"
     using Base.hyps(1) ceq by simp
   from csim_call_base[OF Base.prems(1) loc' Base.hyps(2) qdecl, where s = ss]
   obtain cfg' where
-    cstar: "star (cstep gs g) (vv, ss, []) cfg'"
-      and csimr: "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
-               bind_formals (formals decl) (map (\<lambda>e. aval e ss) actuals)
-                 (enter_state gs ss),
-               [Frame ss dst]) cfg'" by blast
-  from csimr have "csim \<Pi> g src' cfg'" by (simp add: src' heq seq fzeq)
+    cstar: "\<G>, g \<turnstile> (vv, ss, []) \<rightarrow>\<^sub>c\<^sup>* cfg'"
+      and csimr: "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters,
+               bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e ss) actuals)
+                 (enter_state \<G> ss),
+               [Frame ss dst]) \<approx> cfg'" by blast
+  from csimr have "\<Pi>, g \<turnstile> src' \<approx> cfg'" by (simp add: src' heq seq fzeq)
   with cstar show ?case by blast
 next
   case (Returning w pc c0c kc nc afters cont callee caller dst p)
@@ -299,11 +296,11 @@ next
   have nunw: "inner \<noteq> Unwind" using headinner by (rule head_call_not_Unwind)
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep gs \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "\<G>, \<Pi> \<turnstile> (inner, s0, frs0 @ [Frame caller dst]) \<rightarrow>\<^sub>p (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(3) nsk nunw])
   from pstep_call_frame_restrict[OF stepin headinner refl] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
-      and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+      and stepin': "\<G>, \<Pi> \<turnstile> (inner, s0, frs0) \<rightarrow>\<^sub>p (inner', s', fz')" by blast
   from csim_Nested_lift[OF Nested.hyps(2)[OF Nested.prems(1) headinner stepin'] Nested.hyps(3,4)]
   show ?case by (simp add: src' fz)
 qed
@@ -352,9 +349,9 @@ text \<open>
   \<^term>\<open>FunctionResult p\<close> (\<open>compiled_at_exit\<close>), landing in a \<open>Returning\<close> activation.
 \<close>
 theorem csim_intra_completion:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow>
+  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow>
    intra_step \<Pi> (c, s, frs) src' \<Longrightarrow>
-   \<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+   \<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
@@ -368,8 +365,8 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
       and Esub: "E \<subseteq> intra g" by blast
   from intra_step_simulation[OF Base.hyps(1) istep comp Esub srcbody, where stk = "[]"]
   obtain v' where feq: "frs' = []" and loc': "control_at \<Pi> p c0 kk n c' v'"
-      and cstar: "star (cstep gs g) (vv, ss, []) (v', s', [])" by blast
-  have "csim \<Pi> g (c', s', []) (v', s', [])" by (rule csim.Base[OF loc' Base.hyps(2)])
+      and cstar: "\<G>, g \<turnstile> (vv, ss, []) \<rightarrow>\<^sub>c\<^sup>* (v', s', [])" by blast
+  have "\<Pi>, g \<turnstile> (c', s', []) \<approx> (v', s', [])" by (rule csim.Base[OF loc' Base.hyps(2)])
   with cstar show ?case using sc feq by auto
 next
   case (Returning w pc c0c kc nc afters cont callee caller dst p)
@@ -385,7 +382,7 @@ next
     assume fall: "inner = SKIP \<and> src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])"
     then have innerSKIP: "inner = SKIP"
       and src': "src' = (seq_after Restore afters, s0, frs0 @ [Frame caller dst])" by auto
-    have baseInner: "csim \<Pi> g (SKIP, s0, frs0) (v0, s0, stk0)"
+    have baseInner: "\<Pi>, g \<turnstile> (SKIP, s0, frs0) \<approx> (v0, s0, stk0)"
       using Nested.hyps(1) innerSKIP by simp
     from baseInner obtain pin c0in kin nin where
       ctrl: "control_at \<Pi> pin c0in kin nin SKIP v0" and cacc: "compiled_at \<Pi> g pin c0in kin nin"
@@ -398,19 +395,18 @@ next
       and Esub: "E \<subseteq> intra g"
       and exitedge: "(kin, EA_Ret None pin, FunctionResult pin) \<in> intra g"
       using ftin by blast
-    have star1: "star (cstep gs g) (v0, s0, [(cont, dst, caller)])
-                   (kin, s0, [(cont, dst, caller)])"
+    have star1: "\<G>, g \<turnstile> (v0, s0, [(cont, dst, caller)])
+                   \<rightarrow>\<^sub>c\<^sup>* (kin, s0, [(cont, dst, caller)])"
       by (rule control_at_skip_to_exit[OF ctrl refl comp Esub])
-    have "cstep gs g (kin, s0, [(cont, dst, caller)])
-            (FunctionResult pin, s0, [(cont, dst, caller)])"
+    have "\<G>, g \<turnstile> (kin, s0, [(cont, dst, caller)])
+            \<rightarrow>\<^sub>c (FunctionResult pin, s0, [(cont, dst, caller)])"
       using cstep.Intra[OF exitedge edge_step_EA_Ret_ret_store_mem] by simp
-    with star1 have star: "star (cstep gs g) (v0, s0, [(cont, dst, caller)])
-                             (FunctionResult pin, s0, [(cont, dst, caller)])"
+    with star1 have star: "\<G>, g \<turnstile> (v0, s0, [(cont, dst, caller)])
+                             \<rightarrow>\<^sub>c\<^sup>* (FunctionResult pin, s0, [(cont, dst, caller)])"
       by (rule star_trans[OF _ star_step1])
-    have "csim \<Pi> g (seq_after Restore afters, s0, [Frame caller dst])
-                   (FunctionResult pin, s0, [(cont, dst, caller)])"
+    have "\<Pi>, g \<turnstile> (seq_after Restore afters, s0, [Frame caller dst]) \<approx> (FunctionResult pin, s0, [(cont, dst, caller)])"
       by (rule csim.Returning[OF _ Nested.hyps(3) Nested.hyps(4)]) simp
-    then have "csim \<Pi> g src' (FunctionResult pin, s0, [(cont, dst, caller)])"
+    then have "\<Pi>, g \<turnstile> src' \<approx> (FunctionResult pin, s0, [(cont, dst, caller)])"
       using src' frs0nil by simp
     with star show ?case using stk0nil by auto
   next
@@ -442,9 +438,9 @@ text \<open>
   \<^const>\<open>Return\<close> (a stuck top-level return); \<open>csim_step\<close> discharges it from \<^const>\<open>return_safe\<close>.
 \<close>
 theorem csim_return_init_completion:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
-   head_return c \<Longrightarrow> pstep gs \<Pi> (c, s, frs) src' \<Longrightarrow>
-   \<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> procs_embedded \<Pi> g \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
+   head_return c \<Longrightarrow> \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p src' \<Longrightarrow>
+   \<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   from Base.prems(2) show ?case by simp
@@ -459,12 +455,12 @@ next
   have nunw: "inner \<noteq> Unwind" using hr_inner by auto
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep gs \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "\<G>, \<Pi> \<turnstile> (inner, s0, frs0 @ [Frame caller dst]) \<rightarrow>\<^sub>p (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(4) nsk nunw])
   show ?case
   proof (cases "frs0 = []")
     case True
-    have baseInner: "csim \<Pi> g (inner, s0, []) (v0, s0, stk0)" using Nested.hyps(1) True by simp
+    have baseInner: "\<Pi>, g \<turnstile> (inner, s0, []) \<approx> (v0, s0, stk0)" using Nested.hyps(1) True by simp
     obtain pin c0in kin nin where
       stk0nil: "stk0 = []"
         and ctrl: "control_at \<Pi> pin c0in kin nin inner v0"
@@ -479,11 +475,11 @@ next
     obtain e cafters where innerform: "inner = seq_after (Return e) cafters"
       using head_return_seq_after_form[OF hr_inner] by blast
     \<comment> \<open>the head step is @{text \<open>Return e --> Unwind\<close>}, leaving the continuations \<open>cafters\<close>\<close>
-    have stepin1: "pstep gs \<Pi> (seq_after (Return e) cafters, s0, [Frame caller dst])
-                     (inner', s', fz)"
+    have stepin1: "\<G>, \<Pi> \<turnstile> (seq_after (Return e) cafters, s0, [Frame caller dst])
+                     \<rightarrow>\<^sub>p (inner', s', fz)"
       using stepin True innerform by simp
     obtain h' where inner'form: "inner' = seq_after h' cafters"
-        and hstep: "pstep gs \<Pi> (Return e, s0, [Frame caller dst]) (h', s', fz)"
+        and hstep: "\<G>, \<Pi> \<turnstile> (Return e, s0, [Frame caller dst]) \<rightarrow>\<^sub>p (h', s', fz)"
       by (rule pstep_seq_after_headE[OF stepin1]) auto
     have hUnw: "h' = Unwind" and s'eq: "s' = ret_store e s0" and fzeq: "fz = [Frame caller dst]"
       using hstep by (cases e; auto simp: ret_store_def)+
@@ -500,27 +496,25 @@ next
       using control_at_seq_after_return_edge[OF ctrl[unfolded innerform] refl comp] by blast
     have edgeg: "(Statement j, EA_Ret e pin, FunctionResult pin) \<in> intra g"
       using edge Esub by blast
-    have cstep1: "cstep gs g (Statement j, s0, [(cont, dst, caller)])
-                          (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+    have cstep1: "\<G>, g \<turnstile> (Statement j, s0, [(cont, dst, caller)])
+                          \<rightarrow>\<^sub>c (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
       using cstep.Intra[OF edgeg edge_step_EA_Ret_ret_store_mem] .
     \<comment> \<open>the enclosing wrapper becomes @{text Returning}\<close>
-    have rel: "csim \<Pi> g
-        (seq_after (Seq (seq_after Unwind cafters) Restore) afters, ret_store e s0,
-         [Frame caller dst])
-        (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+    have rel: "\<Pi>, g \<turnstile> (seq_after (Seq (seq_after Unwind cafters) Restore) afters, ret_store e s0,
+         [Frame caller dst]) \<approx> (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
       by (rule csim.Returning[OF popready Nested.hyps(3) Nested.hyps(4)])
     have srcshape: "src' = (seq_after (Seq (seq_after Unwind cafters) Restore) afters,
                             ret_store e s0, [Frame caller dst])"
       using src' inner'form hUnw s'eq fzeq by simp
-    have "star (cstep gs g) (v0, s0, stk0 @ [(cont, dst, caller)])
-                         (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
+    have "\<G>, g \<turnstile> (v0, s0, stk0 @ [(cont, dst, caller)])
+                         \<rightarrow>\<^sub>c\<^sup>* (FunctionResult pin, ret_store e s0, [(cont, dst, caller)])"
       using cstep1 vk stk0nil by auto
     with rel srcshape show ?thesis by auto
   next
     case False
     from pstep_frame_restrict[OF stepin refl False] obtain fz' where
       fz: "fz = fz' @ [Frame caller dst]"
-        and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+        and stepin': "\<G>, \<Pi> \<turnstile> (inner, s0, frs0) \<rightarrow>\<^sub>p (inner', s', fz')" by blast
     from csim_Nested_lift[OF Nested.hyps(2)[OF Nested.prems(1) False hr_inner stepin']
                              Nested.hyps(3,4)]
     show ?thesis by (simp add: src' fz)
@@ -534,11 +528,11 @@ text \<open>The half of the simulation where the two sides advance at different 
   the callee result node, and only the final pop takes a graph step -- so the correspondence
   is a star, not a step-for-step match.\<close>
 lemma csim_returning_frames_nonempty:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> frs \<noteq> [] \<and> stk \<noteq> []"
+  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow> frs \<noteq> [] \<and> stk \<noteq> []"
   by (erule csim.cases) (auto dest: control_at_not_returning)
 
 lemma csim_not_unwind:
-  "csim \<Pi> g (Unwind, s, frs) cfg' \<Longrightarrow> False"
+  "\<Pi>, g \<turnstile> (Unwind, s, frs) \<approx> cfg' \<Longrightarrow> False"
   by (erule csim.cases) (auto dest: control_at_not_unwind pop_ready_not_Unwind)
 
 text \<open>
@@ -554,34 +548,33 @@ lemma csim_returning_base_completion:
   assumes pr: "pop_ready w"
       and loc: "control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont"
       and cacc: "compiled_at \<Pi> g pc c0c kc nc"
-      and step: "pstep gs \<Pi> (seq_after w afters, callee, [Frame caller dst]) src'"
-  shows "\<exists>cfg'. star (cstep gs g) (FunctionResult p, callee, [(cont, dst, caller)]) cfg'
-              \<and> csim \<Pi> g src' cfg'"
+      and step: "\<G>, \<Pi> \<turnstile> (seq_after w afters, callee, [Frame caller dst]) \<rightarrow>\<^sub>p src'"
+  shows "\<exists>cfg'. \<G>, g \<turnstile> (FunctionResult p, callee, [(cont, dst, caller)]) \<rightarrow>\<^sub>c\<^sup>* cfg'
+              \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof -
   have wsk: "w \<noteq> SKIP" using pr by (rule pop_ready_not_SKIP)
   have wunw: "w \<noteq> Unwind" using pr by (rule pop_ready_not_Unwind)
   obtain h' s' frs' where
     src': "src' = (seq_after h' afters, s', frs')"
-      and hstep: "pstep gs \<Pi> (w, callee, [Frame caller dst]) (h', s', frs')"
+      and hstep: "\<G>, \<Pi> \<turnstile> (w, callee, [Frame caller dst]) \<rightarrow>\<^sub>p (h', s', frs')"
     by (rule pstep_seq_after_headE[OF step wsk wunw])
-  let ?rs = "combine_collect gs dst caller callee"
+  let ?rs = "combine_collect \<G> dst caller callee"
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
   proof (rule disjE)
     assume "(h', s', frs') =
-              (SKIP, combine_assign dst (callee ret_var) (combine_env gs caller callee),
+              (SKIP, combine_assign dst (callee ret_var) (combine_env \<G> caller callee),
                [])"
     hence h': "h' = SKIP" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
-    have "cstep gs g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
+    have "\<G>, g \<turnstile> (FunctionResult p, callee, [(cont, dst, caller)]) \<rightarrow>\<^sub>c (cont, ?rs, [])"
       by (rule cstep.Return)
-    moreover have "csim \<Pi> g (seq_after SKIP afters, ?rs, []) (cont, ?rs, [])"
+    moreover have "\<Pi>, g \<turnstile> (seq_after SKIP afters, ?rs, []) \<approx> (cont, ?rs, [])"
       by (rule csim.Base[OF loc cacc])
     ultimately show ?thesis using src' h' by auto
   next
     assume "\<exists>w'. (h', s', frs') = (w', callee, [Frame caller dst]) \<and> pop_ready w'"
     then obtain w' where h': "h' = w'" "s' = callee" "frs' = [Frame caller dst]"
         and pr': "pop_ready w'" by auto
-    have "csim \<Pi> g (seq_after w' afters, callee, [Frame caller dst])
-                   (FunctionResult p, callee, [(cont, dst, caller)])"
+    have "\<Pi>, g \<turnstile> (seq_after w' afters, callee, [Frame caller dst]) \<approx> (FunctionResult p, callee, [(cont, dst, caller)])"
       by (rule csim.Returning[OF pr' loc cacc])
     with src' h' show ?thesis by auto
   qed
@@ -591,9 +584,9 @@ text \<open>Deep return completion: the base case above, threaded out through an
   \<open>Nested\<close> wrappers.  No \<^const>\<open>procs_embedded\<close> is needed --- the returning phase runs on the
   certificates \<open>csim\<close> already carries.\<close>
 theorem csim_returning_completion:
-  "csim \<Pi> g (c, s, frs) (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow>
-   pstep gs \<Pi> (c, s, frs) src' \<Longrightarrow>
-   \<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> is_returning c \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p src' \<Longrightarrow>
+   \<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   from control_at_not_returning[OF Base.hyps(1)] Base.prems(1) show ?case by simp
@@ -615,11 +608,11 @@ next
     using csim_returning_frames_nonempty[OF Nested.hyps(1) retinner] by simp
   obtain inner' s' fz where
     src': "src' = (seq_after (Seq inner' Restore) afters, s', fz)"
-      and stepin: "pstep gs \<Pi> (inner, s0, frs0 @ [Frame caller dst]) (inner', s', fz)"
+      and stepin: "\<G>, \<Pi> \<turnstile> (inner, s0, frs0 @ [Frame caller dst]) \<rightarrow>\<^sub>p (inner', s', fz)"
     by (rule pstep_seq_after_seq_restore[OF Nested.prems(2) nsk nunw])
   from pstep_frame_restrict[OF stepin refl frsne] obtain fz' where
     fz: "fz = fz' @ [Frame caller dst]"
-      and stepin': "pstep gs \<Pi> (inner, s0, frs0) (inner', s', fz')" by blast
+      and stepin': "\<G>, \<Pi> \<turnstile> (inner, s0, frs0) \<rightarrow>\<^sub>p (inner', s', fz')" by blast
   from csim_Nested_lift[OF Nested.hyps(2)[OF retinner stepin'] Nested.hyps(3,4)]
   show ?case by (simp add: src' fz)
 qed
@@ -631,14 +624,14 @@ text \<open>Only a \<open>Base\<close> activation has an empty stack, and its lo
   \<^const>\<open>return_safe\<close> discharges the nonempty-frame premise of
   \<open>csim_return_init_completion\<close>.\<close>
 lemma csim_head_return_frames:
-  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+  assumes SIM: "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)"
       and PC: "procs_embedded \<Pi> g"
       and WF: "return_safe c"
       and RET: "head_return c"
   shows "frs \<noteq> []"
 proof (rule ccontr)
   assume "\<not> frs \<noteq> []"
-  hence base: "csim \<Pi> g (c, s, []) (v, t, stk)" using SIM by simp
+  hence base: "\<Pi>, g \<turnstile> (c, s, []) \<approx> (v, t, stk)" using SIM by simp
   obtain p c0 kk n where
     ctrl: "control_at \<Pi> p c0 kk n c v" and cacc: "compiled_at \<Pi> g p c0 kk n"
     using base by blast
@@ -658,11 +651,11 @@ text \<open>
   tuples, offsets, or frame conditions.
 \<close>
 theorem csim_step:
-  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+  assumes SIM: "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)"
       and PC: "procs_embedded \<Pi> g"
       and WF: "return_safe c"
-      and STEP: "pstep gs \<Pi> (c, s, frs) src'"
-  shows "\<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+      and STEP: "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p src'"
+  shows "\<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
 proof -
   consider (call) "head_call c" | (ret) "head_return c" | (returning) "is_returning c"
     | (intra) "\<not> head_call c" "\<not> head_return c" "\<not> is_returning c" by blast
@@ -690,10 +683,10 @@ qed
 
 lemma csim_run:
   assumes PC: "procs_embedded \<Pi> g"
-      and RUN: "star (pstep gs \<Pi>) sc sc'"
-      and SIM: "csim \<Pi> g sc dg"
+      and RUN: "\<G>, \<Pi> \<turnstile> sc \<rightarrow>\<^sub>p\<^sup>* sc'"
+      and SIM: "\<Pi>, g \<turnstile> sc \<approx> dg"
       and WF: "return_safe (fst sc)"
-  shows "\<exists>dg'. star (cstep gs g) dg dg' \<and> csim \<Pi> g sc' dg'"
+  shows "\<exists>dg'. \<G>, g \<turnstile> dg \<rightarrow>\<^sub>c\<^sup>* dg' \<and> \<Pi>, g \<turnstile> sc' \<approx> dg'"
   using RUN SIM WF
 proof (induction arbitrary: dg rule: star.induct)
   case (refl a)
@@ -704,35 +697,35 @@ next
   obtain c0 s0 f0 where a: "a = (c0, s0, f0)" by (cases a)
   obtain c1 s1 f1 where b: "b = (c1, s1, f1)" by (cases b)
   obtain v0 t0 k0 where dgd: "dg = (v0, t0, k0)" by (cases dg)
-  have SIMa: "csim \<Pi> g (c0, s0, f0) (v0, t0, k0)" using step.prems(1) a dgd by simp
+  have SIMa: "\<Pi>, g \<turnstile> (c0, s0, f0) \<approx> (v0, t0, k0)" using step.prems(1) a dgd by simp
   have WFa: "return_safe c0" using step.prems(2) a by simp
-  have STEP: "pstep gs \<Pi> (c0, s0, f0) (c1, s1, f1)" using step.hyps(1) a b by simp
+  have STEP: "\<G>, \<Pi> \<turnstile> (c0, s0, f0) \<rightarrow>\<^sub>p (c1, s1, f1)" using step.hyps(1) a b by simp
   from csim_step[OF SIMa PC WFa STEP] obtain dg1 where
-    run1: "star (cstep gs g) (v0, t0, k0) dg1"
-    and sim1: "csim \<Pi> g (c1, s1, f1) dg1" by blast
+    run1: "\<G>, g \<turnstile> (v0, t0, k0) \<rightarrow>\<^sub>c\<^sup>* dg1"
+    and sim1: "\<Pi>, g \<turnstile> (c1, s1, f1) \<approx> dg1" by blast
   have bodies: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> source_com (body decl)"
     using procs_embedded_source_com[OF PC] .
   have WFb: "return_safe (fst b)" using return_safe_pstep[OF bodies STEP WFa] b by simp
-  have sim1b: "csim \<Pi> g b dg1" using sim1 b by simp
+  have sim1b: "\<Pi>, g \<turnstile> b \<approx> dg1" using sim1 b by simp
   from step.IH[OF sim1b WFb] obtain dg' where
-    run2: "star (cstep gs g) dg1 dg'" and sim2: "csim \<Pi> g cc dg'" by blast
-  from run1 run2 have "star (cstep gs g) (v0, t0, k0) dg'" by (rule star_trans)
+    run2: "\<G>, g \<turnstile> dg1 \<rightarrow>\<^sub>c\<^sup>* dg'" and sim2: "\<Pi>, g \<turnstile> cc \<approx> dg'" by blast
+  from run1 run2 have "\<G>, g \<turnstile> (v0, t0, k0) \<rightarrow>\<^sub>c\<^sup>* dg'" by (rule star_trans)
   with sim2 show ?case using dgd by blast
 qed
 
 theorem csim_star:
-  assumes SIM: "csim \<Pi> g (c, s, frs) (v, t, stk)"
+  assumes SIM: "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)"
       and PC: "procs_embedded \<Pi> g"
       and WF: "return_safe c"
-      and RUN: "star (pstep gs \<Pi>) (c, s, frs) src'"
-  shows "\<exists>cfg'. star (cstep gs g) (v, t, stk) cfg' \<and> csim \<Pi> g src' cfg'"
+      and RUN: "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p\<^sup>* src'"
+  shows "\<exists>cfg'. \<G>, g \<turnstile> (v, t, stk) \<rightarrow>\<^sub>c\<^sup>* cfg' \<and> \<Pi>, g \<turnstile> src' \<approx> cfg'"
   using csim_run[OF PC RUN SIM] WF by simp
 
 section \<open>The static certificate for a whole compiled program\<close>
 
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_return_safe:
-  assumes "wf_compile_input gs \<Pi> ps"
+  assumes "wf_compile_input \<G> \<Pi> ps"
   shows "return_safe (main_body \<Pi>)"
   using wf_compile_inputD(8)[OF assms] wf_compile_inputD(4)[OF assms]
   by (rule return_safe_if_no_return)
@@ -747,7 +740,7 @@ text \<open>
   forever, is what closes the static side of the simulation.
 \<close>
 theorem procs_embedded_compile_prog:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
   shows "procs_embedded \<Pi> (compile_prog \<Pi> ps)"
   unfolding procs_embedded_def
 proof (intro allI impI)
@@ -832,7 +825,7 @@ theorem procs_embedded_witness: "procs_embedded witness_pi witness_cfg"
   by (rule procs_embedded_compile_prog[OF witness_wf])
 
 theorem csim_witness:
-  obtains v where "csim witness_pi witness_cfg (SKIP, s, []) (v, s, [])"
+  obtains v where "witness_pi, witness_cfg \<turnstile> (SKIP, s, []) \<approx> (v, s, [])"
 proof -
   have decl: "witness_pi (STR ''main'') = Some \<lparr>formals = [], body = SKIP\<rparr>"
     by (simp add: witness_pi_def)
@@ -842,7 +835,7 @@ proof -
       and ctrl: "control_at witness_pi (STR ''main'')
              (body \<lparr>formals = [], body = SKIP\<rparr>) k n (body \<lparr>formals = [], body = SKIP\<rparr>) en"
     by (rule procs_embedded_activation[OF procs_embedded_witness decl])
-  have "csim witness_pi witness_cfg (SKIP, s, []) (en, s, [])"
+  have "witness_pi, witness_cfg \<turnstile> (SKIP, s, []) \<approx> (en, s, [])"
     by (rule csim.Base[OF ctrl[simplified] cacc[simplified]])
   then show ?thesis ..
 qed

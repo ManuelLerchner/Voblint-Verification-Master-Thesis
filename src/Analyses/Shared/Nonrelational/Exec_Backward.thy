@@ -7,7 +7,7 @@ section \<open>Generic executable mirror of backward filtering\<close>
 text \<open>
   Every interpretation of @{locale backward_domain} gets an executable
   @{typ "'a resolved_st_q"} mirror of its @{text afilter} / @{text bfilter}
-  for free, parameterized by an explicit location classifier \<open>gs\<close>:
+  for free, parameterized by an explicit location classifier \<open>\<G>\<close>:
   \<open>afilter_st\<close> / \<open>bfilter_st\<close> and their commutation with the abstract
   filters through @{const fun_of_resolved_st_q_for}, proved once here so no
     domain needs to repeat the induction by hand. Each concrete domain names its
@@ -51,112 +51,112 @@ fun afilter_st_lift_with ::
   "'a::executable_domain backward_exec_ops
    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> 'a \<Rightarrow> 'a resolved_st_q lifted \<Rightarrow> 'a resolved_st_q lifted"
 where
-    "afilter_st_lift_with ops gs (V x) a x_lift = do {
+    "afilter_st_lift_with ops \<G> (V x) a x_lift = do {
        s <- x_lift;
-       update_resolved_st_q_lift (Lifted s) (location_of gs x)
-         (be_intersect ops a (fun_of_resolved_st_q_for gs s x))
+       update_resolved_st_q_lift (Lifted s) (location_of \<G> x)
+         (be_intersect ops a (fun_of_resolved_st_q_for \<G> s x))
      }"
-  | "afilter_st_lift_with ops gs (Plus e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ops \<G> (Plus e1 e2) a x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_plus ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops gs (Minus e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ops \<G> (Minus e1 e2) a x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_minus ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops gs (Times e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ops \<G> (Times e1 e2) a x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_times ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops gs _ a x_lift = x_lift"
+  | "afilter_st_lift_with ops \<G> _ a x_lift = x_lift"
 
-lemma afilter_st_lift_with_Bot [simp]: "afilter_st_lift_with ops gs e a Bot = Bot"
+lemma afilter_st_lift_with_Bot [simp]: "afilter_st_lift_with ops \<G> e a Bot = Bot"
   by (induction e) simp_all
 
 fun bfilter_st_lift_with ::
   "'a::executable_domain backward_exec_ops
    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a resolved_st_q lifted \<Rightarrow> 'a resolved_st_q lifted"
 where
-    "bfilter_st_lift_with ops gs (Less e1 e2) res x_lift = do {
+    "bfilter_st_lift_with ops \<G> (Less e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_less ops res
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs (GreaterEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (GreaterEq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_less ops (\<not> res)
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs (Greater e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (Greater e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_less ops res
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e2 a1 (afilter_st_lift_with ops gs e1 a2 (Lifted s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e2 a1 (afilter_st_lift_with ops \<G> e1 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs (LessEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (LessEq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_less ops (\<not> res)
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e2 a1 (afilter_st_lift_with ops gs e1 a2 (Lifted s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e2 a1 (afilter_st_lift_with ops \<G> e1 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs (Not b) res x_lift =
-       bfilter_st_lift_with ops gs b (\<not> res) x_lift"
-  | "bfilter_st_lift_with ops gs (And b1 b2) True x_lift =
-       bfilter_st_lift_with ops gs b1 True (bfilter_st_lift_with ops gs b2 True x_lift)"
-  | "bfilter_st_lift_with ops gs (And b1 b2) False x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (Not b) res x_lift =
+       bfilter_st_lift_with ops \<G> b (\<not> res) x_lift"
+  | "bfilter_st_lift_with ops \<G> (And b1 b2) True x_lift =
+       bfilter_st_lift_with ops \<G> b1 True (bfilter_st_lift_with ops \<G> b2 True x_lift)"
+  | "bfilter_st_lift_with ops \<G> (And b1 b2) False x_lift = do {
        s <- x_lift;
-       (if feasible_with ops b1 False (fun_of_resolved_st_q_for gs s)
-        then bfilter_st_lift_with ops gs b1 False (Lifted s) else Bot)
-       \<squnion> (if feasible_with ops b2 False (fun_of_resolved_st_q_for gs s)
-          then bfilter_st_lift_with ops gs b2 False (Lifted s) else Bot)
+       (if feasible_with ops b1 False (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st_lift_with ops \<G> b1 False (Lifted s) else Bot)
+       \<squnion> (if feasible_with ops b2 False (fun_of_resolved_st_q_for \<G> s)
+          then bfilter_st_lift_with ops \<G> b2 False (Lifted s) else Bot)
      }"
-  | "bfilter_st_lift_with ops gs (Or b1 b2) True x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (Or b1 b2) True x_lift = do {
        s <- x_lift;
-       (if feasible_with ops b1 True (fun_of_resolved_st_q_for gs s)
-        then bfilter_st_lift_with ops gs b1 True (Lifted s) else Bot)
-       \<squnion> (if feasible_with ops b2 True (fun_of_resolved_st_q_for gs s)
-          then bfilter_st_lift_with ops gs b2 True (Lifted s) else Bot)
+       (if feasible_with ops b1 True (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st_lift_with ops \<G> b1 True (Lifted s) else Bot)
+       \<squnion> (if feasible_with ops b2 True (fun_of_resolved_st_q_for \<G> s)
+          then bfilter_st_lift_with ops \<G> b2 True (Lifted s) else Bot)
      }"
-  | "bfilter_st_lift_with ops gs (Or b1 b2) False x_lift =
-       bfilter_st_lift_with ops gs b1 False (bfilter_st_lift_with ops gs b2 False x_lift)"
-  | "bfilter_st_lift_with ops gs (Eq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (Or b1 b2) False x_lift =
+       bfilter_st_lift_with ops \<G> b1 False (bfilter_st_lift_with ops \<G> b2 False x_lift)"
+  | "bfilter_st_lift_with ops \<G> (Eq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_eq ops res
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs (NotEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> (NotEq e1 e2) res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_eq ops (\<not> res)
-             (be_aval ops e1 (fun_of_resolved_st_q_for gs s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e1 a1 (afilter_st_lift_with ops gs e2 a2 (Lifted s))
+             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops gs e res x_lift = do {
+  | "bfilter_st_lift_with ops \<G> e res x_lift = do {
        s <- x_lift;
        let (a1, a2) = be_inv_eq ops (\<not> res)
-             (be_aval ops e (fun_of_resolved_st_q_for gs s))
-             (be_aval ops (N 0) (fun_of_resolved_st_q_for gs s));
-       afilter_st_lift_with ops gs e a1 (Lifted s)
+             (be_aval ops e (fun_of_resolved_st_q_for \<G> s))
+             (be_aval ops (N 0) (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ops \<G> e a1 (Lifted s)
      }"
 
-lemma bfilter_st_lift_with_Bot [simp]: "bfilter_st_lift_with ops gs b res Bot = Bot"
+lemma bfilter_st_lift_with_Bot [simp]: "bfilter_st_lift_with ops \<G> b res Bot = Bot"
 proof (induction b arbitrary: res)
   case (And b1 b2) then show ?case by (cases res) simp_all
 next
@@ -173,8 +173,8 @@ text \<open>
 \<close>
 
 lemma map_lift_fun_of_resolved_st_q_for_sup [simp]:
-  "map_lift (fun_of_resolved_st_q_for gs) (x \<squnion> y) =
-     map_lift (fun_of_resolved_st_q_for gs) x \<squnion> map_lift (fun_of_resolved_st_q_for gs) y"
+  "map_lift (fun_of_resolved_st_q_for \<G>) (x \<squnion> y) =
+     map_lift (fun_of_resolved_st_q_for \<G>) x \<squnion> map_lift (fun_of_resolved_st_q_for \<G>) y"
   by (cases x; cases y) simp_all
 
 context backward_domain
@@ -183,79 +183,79 @@ begin
 fun afilter_st ::
   "(vname => bool) => exp => 'a => 'a resolved_st_q => 'a resolved_st_q"
 where
-    "afilter_st gs (V x) a s =
-       update_resolved_st_q s (location_of gs x)
-         (intersect a (fun_of_resolved_st_q_for gs s x))"
-  | "afilter_st gs (Plus e1 e2) a s =
+    "afilter_st \<G> (V x) a s =
+       update_resolved_st_q s (location_of \<G> x)
+         (intersect a (fun_of_resolved_st_q_for \<G> s x))"
+  | "afilter_st \<G> (Plus e1 e2) a s =
        (let (a1, a2) = inv_plus a
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "afilter_st gs (Minus e1 e2) a s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "afilter_st \<G> (Minus e1 e2) a s =
        (let (a1, a2) = inv_minus a
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "afilter_st gs (Times e1 e2) a s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "afilter_st \<G> (Times e1 e2) a s =
        (let (a1, a2) = inv_times a
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "afilter_st gs _ a s = s"
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "afilter_st \<G> _ a s = s"
 
 fun bfilter_st ::
   "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
 where
-    "bfilter_st gs (Less e1 e2) res s =
+    "bfilter_st \<G> (Less e1 e2) res s =
        (let (a1, a2) = inv_less res
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "bfilter_st gs (GreaterEq e1 e2) res s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "bfilter_st \<G> (GreaterEq e1 e2) res s =
        (let (a1, a2) = inv_less (\<not> res)
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "bfilter_st gs (Greater e1 e2) res s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "bfilter_st \<G> (Greater e1 e2) res s =
        (let (a1, a2) = inv_less res
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e2 a1 (afilter_st gs e1 a2 s))"
-  | "bfilter_st gs (LessEq e1 e2) res s =
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e2 a1 (afilter_st \<G> e1 a2 s))"
+  | "bfilter_st \<G> (LessEq e1 e2) res s =
        (let (a1, a2) = inv_less (\<not> res)
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e2 a1 (afilter_st gs e1 a2 s))"
-  | "bfilter_st gs (Not b) res s = bfilter_st gs b (\<not> res) s"
-  | "bfilter_st gs (And b1 b2) True s =
-       bfilter_st gs b1 True (bfilter_st gs b2 True s)"
-  | "bfilter_st gs (And b1 b2) False s =
-       (if feasible b1 False (fun_of_resolved_st_q_for gs s)
-        then bfilter_st gs b1 False s else bot)
-       \<squnion> (if feasible b2 False (fun_of_resolved_st_q_for gs s)
-            then bfilter_st gs b2 False s else bot)"
-  | "bfilter_st gs (Or b1 b2) True s =
-       (if feasible b1 True (fun_of_resolved_st_q_for gs s)
-        then bfilter_st gs b1 True s else bot)
-       \<squnion> (if feasible b2 True (fun_of_resolved_st_q_for gs s)
-            then bfilter_st gs b2 True s else bot)"
-  | "bfilter_st gs (Or b1 b2) False s =
-       bfilter_st gs b1 False (bfilter_st gs b2 False s)"
-  | "bfilter_st gs (Eq e1 e2) res s =
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e2 a1 (afilter_st \<G> e1 a2 s))"
+  | "bfilter_st \<G> (Not b) res s = bfilter_st \<G> b (\<not> res) s"
+  | "bfilter_st \<G> (And b1 b2) True s =
+       bfilter_st \<G> b1 True (bfilter_st \<G> b2 True s)"
+  | "bfilter_st \<G> (And b1 b2) False s =
+       (if feasible b1 False (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st \<G> b1 False s else bot)
+       \<squnion> (if feasible b2 False (fun_of_resolved_st_q_for \<G> s)
+            then bfilter_st \<G> b2 False s else bot)"
+  | "bfilter_st \<G> (Or b1 b2) True s =
+       (if feasible b1 True (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st \<G> b1 True s else bot)
+       \<squnion> (if feasible b2 True (fun_of_resolved_st_q_for \<G> s)
+            then bfilter_st \<G> b2 True s else bot)"
+  | "bfilter_st \<G> (Or b1 b2) False s =
+       bfilter_st \<G> b1 False (bfilter_st \<G> b2 False s)"
+  | "bfilter_st \<G> (Eq e1 e2) res s =
        (let (a1, a2) = inv_eq res
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "bfilter_st gs (NotEq e1 e2) res s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "bfilter_st \<G> (NotEq e1 e2) res s =
        (let (a1, a2) = inv_eq (\<not> res)
-              (aval_abs e1 (fun_of_resolved_st_q_for gs s))
-              (aval_abs e2 (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e1 a1 (afilter_st gs e2 a2 s))"
-  | "bfilter_st gs e res s =
+              (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs e2 (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
+  | "bfilter_st \<G> e res s =
        (let (a1, a2) = inv_eq (\<not> res)
-              (aval_abs e (fun_of_resolved_st_q_for gs s))
-              (aval_abs (N 0) (fun_of_resolved_st_q_for gs s))
-        in afilter_st gs e a1 s)"
+              (aval_abs e (fun_of_resolved_st_q_for \<G> s))
+              (aval_abs (N 0) (fun_of_resolved_st_q_for \<G> s))
+        in afilter_st \<G> e a1 s)"
 
 text \<open>
   \<open>afilter_st_lift\<close>/\<open>bfilter_st_lift\<close> mirror \<open>afilter_st\<close>/\<open>bfilter_st\<close>'s own recursion
@@ -297,17 +297,17 @@ lemma feasible_with_ops [simp]: "feasible_with ops = feasible"
 definition afilter_st_lift ::
   "(vname => bool) => exp => 'a => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-  "afilter_st_lift gs e a x_lift = afilter_st_lift_with ops gs e a x_lift"
+  "afilter_st_lift \<G> e a x_lift = afilter_st_lift_with ops \<G> e a x_lift"
 
 lemmas afilter_st_lift_simps [simp] =
   afilter_st_lift_with.simps [of ops, folded afilter_st_lift_def]
 
-lemma afilter_st_lift_Bot [simp]: "afilter_st_lift gs e a Bot = Bot"
+lemma afilter_st_lift_Bot [simp]: "afilter_st_lift \<G> e a Bot = Bot"
   by (simp add: afilter_st_lift_def)
 
 lemma afilter_st_commute:
-  "fun_of_resolved_st_q_for gs (afilter_st gs e a s) =
-     afilter e a (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (afilter_st \<G> e a s) =
+     afilter e a (fun_of_resolved_st_q_for \<G> s)"
 proof (induction e arbitrary: a s)
   case (N n)
   then show ?case by simp
@@ -348,8 +348,8 @@ next
 qed
 
 lemma bfilter_st_commute:
-  "fun_of_resolved_st_q_for gs (bfilter_st gs b res s) =
-     bfilter b res (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (bfilter_st \<G> b res s) =
+     bfilter b res (fun_of_resolved_st_q_for \<G> s)"
 proof (induction b arbitrary: res s)
   case (N n)
   then show ?case unfolding bfilter_st.simps bfilter.simps Let_def case_prod_beta
@@ -437,12 +437,12 @@ text \<open>
 definition bfilter_st_lift ::
   "(vname => bool) => exp => bool => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-  "bfilter_st_lift gs b res x_lift = bfilter_st_lift_with ops gs b res x_lift"
+  "bfilter_st_lift \<G> b res x_lift = bfilter_st_lift_with ops \<G> b res x_lift"
 
 lemmas bfilter_st_lift_simps [simp] =
   bfilter_st_lift_with.simps [of ops, folded bfilter_st_lift_def afilter_st_lift_def]
 
-lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift gs b res Bot = Bot"
+lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift \<G> b res Bot = Bot"
   by (simp add: bfilter_st_lift_def)
 
 text \<open>
@@ -461,29 +461,29 @@ begin
 
 lemma afilter_lift_step:
   fixes s :: "'a resolved_st_q"
-  assumes IH1: "!!s'. live_resolved_st_q gs s' ==>
-                map_lift (fun_of_resolved_st_q_for gs) (afilter_st_lift gs e1 a1 (Lifted s')) =
-                normalize_lift is_empty_state (afilter e1 a1 (fun_of_resolved_st_q_for gs s'))"
-    and IH2: "map_lift (fun_of_resolved_st_q_for gs) (afilter_st_lift gs e2 a2 (Lifted s)) =
-                normalize_lift is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for gs s))"
-  shows "map_lift (fun_of_resolved_st_q_for gs)
-           (afilter_st_lift gs e1 a1 (afilter_st_lift gs e2 a2 (Lifted s))) =
+  assumes IH1: "!!s'. live_resolved_st_q \<G> s' ==>
+                map_lift (fun_of_resolved_st_q_for \<G>) (afilter_st_lift \<G> e1 a1 (Lifted s')) =
+                normalize_lift is_empty_state (afilter e1 a1 (fun_of_resolved_st_q_for \<G> s'))"
+    and IH2: "map_lift (fun_of_resolved_st_q_for \<G>) (afilter_st_lift \<G> e2 a2 (Lifted s)) =
+                normalize_lift is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for \<G> s))"
+  shows "map_lift (fun_of_resolved_st_q_for \<G>)
+           (afilter_st_lift \<G> e1 a1 (afilter_st_lift \<G> e2 a2 (Lifted s))) =
          normalize_lift is_empty_state
-           (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for gs s)))"
-proof (cases "is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for gs s))")
+           (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for \<G> s)))"
+proof (cases "is_empty_state (afilter e2 a2 (fun_of_resolved_st_q_for \<G> s))")
   case True
-  then have bot2: "afilter_st_lift gs e2 a2 (Lifted s) = Bot"
-    using IH2 by (cases "afilter_st_lift gs e2 a2 (Lifted s)") simp_all
-  have "is_empty_state (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for gs s)))"
+  then have bot2: "afilter_st_lift \<G> e2 a2 (Lifted s) = Bot"
+    using IH2 by (cases "afilter_st_lift \<G> e2 a2 (Lifted s)") simp_all
+  have "is_empty_state (afilter e1 a1 (afilter e2 a2 (fun_of_resolved_st_q_for \<G> s)))"
     using is_empty_state_antimono[OF afilter_reductive True] .
   with bot2 show ?thesis by simp
 next
   case False
-  then obtain t where t: "afilter_st_lift gs e2 a2 (Lifted s) = Lifted t"
-    using IH2 by (cases "afilter_st_lift gs e2 a2 (Lifted s)") simp_all
-  have ft: "fun_of_resolved_st_q_for gs t = afilter e2 a2 (fun_of_resolved_st_q_for gs s)"
+  then obtain t where t: "afilter_st_lift \<G> e2 a2 (Lifted s) = Lifted t"
+    using IH2 by (cases "afilter_st_lift \<G> e2 a2 (Lifted s)") simp_all
+  have ft: "fun_of_resolved_st_q_for \<G> t = afilter e2 a2 (fun_of_resolved_st_q_for \<G> s)"
     using IH2 t False by simp
-  have live_t: "live_resolved_st_q gs t"
+  have live_t: "live_resolved_st_q \<G> t"
     unfolding live_resolved_st_q_def ft using False by simp
   show ?thesis
     unfolding t using IH1[OF live_t] ft by simp
@@ -499,26 +499,26 @@ text \<open>
 
 lemma bfilter_lift_bind_step:
   fixes s :: "'a resolved_st_q"
-  assumes IH1: "!!s'. live_resolved_st_q gs s' ==>
-                map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs b1 res (Lifted s')) =
-                bfilter_lifted b1 res (fun_of_resolved_st_q_for gs s')"
-    and IH2: "map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs b2 res (Lifted s)) =
-                bfilter_lifted b2 res (fun_of_resolved_st_q_for gs s)"
-  shows "map_lift (fun_of_resolved_st_q_for gs)
-           (bfilter_st_lift gs b1 res (bfilter_st_lift gs b2 res (Lifted s))) =
-         bind_lift (bfilter_lifted b2 res (fun_of_resolved_st_q_for gs s)) (bfilter_lifted b1 res)"
-proof (cases "bfilter_st_lift gs b2 res (Lifted s)")
+  assumes IH1: "!!s'. live_resolved_st_q \<G> s' ==>
+                map_lift (fun_of_resolved_st_q_for \<G>) (bfilter_st_lift \<G> b1 res (Lifted s')) =
+                bfilter_lifted b1 res (fun_of_resolved_st_q_for \<G> s')"
+    and IH2: "map_lift (fun_of_resolved_st_q_for \<G>) (bfilter_st_lift \<G> b2 res (Lifted s)) =
+                bfilter_lifted b2 res (fun_of_resolved_st_q_for \<G> s)"
+  shows "map_lift (fun_of_resolved_st_q_for \<G>)
+           (bfilter_st_lift \<G> b1 res (bfilter_st_lift \<G> b2 res (Lifted s))) =
+         bind_lift (bfilter_lifted b2 res (fun_of_resolved_st_q_for \<G> s)) (bfilter_lifted b1 res)"
+proof (cases "bfilter_st_lift \<G> b2 res (Lifted s)")
   case Bot
   then show ?thesis using IH2 by simp
 next
   case (Lifted t)
-    have eq: "Lifted (fun_of_resolved_st_q_for gs t)
-              = bfilter_lifted b2 res (fun_of_resolved_st_q_for gs s)"
+    have eq: "Lifted (fun_of_resolved_st_q_for \<G> t)
+              = bfilter_lifted b2 res (fun_of_resolved_st_q_for \<G> s)"
     using IH2 Lifted by simp
-  have live_t: "live_resolved_st_q gs t"
+  have live_t: "live_resolved_st_q \<G> t"
   proof -
-    have "normalized_lift is_empty_state (Lifted (fun_of_resolved_st_q_for gs t))"
-      using bfilter_lifted_normalized[of b2 res "fun_of_resolved_st_q_for gs s"] eq by simp
+    have "normalized_lift is_empty_state (Lifted (fun_of_resolved_st_q_for \<G> t))"
+      using bfilter_lifted_normalized[of b2 res "fun_of_resolved_st_q_for \<G> s"] eq by simp
     then show ?thesis by (simp add: live_resolved_st_q_def)
   qed
     show ?thesis
@@ -534,22 +534,22 @@ text \<open>
 
 lemma bfilter_lift_gate_step:
   fixes s :: "'a resolved_st_q"
-  assumes IH: "map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs b pol (Lifted s)) =
-                 bfilter_lifted b pol (fun_of_resolved_st_q_for gs s)"
-  shows "map_lift (fun_of_resolved_st_q_for gs)
-           (if feasible b pol (fun_of_resolved_st_q_for gs s)
-            then bfilter_st_lift gs b pol (Lifted s) else Bot)
-         = (if feasible b pol (fun_of_resolved_st_q_for gs s)
-            then bfilter_lifted b pol (fun_of_resolved_st_q_for gs s) else Bot)"
-  by (cases "feasible b pol (fun_of_resolved_st_q_for gs s)") (simp_all add: IH)
+  assumes IH: "map_lift (fun_of_resolved_st_q_for \<G>) (bfilter_st_lift \<G> b pol (Lifted s)) =
+                 bfilter_lifted b pol (fun_of_resolved_st_q_for \<G> s)"
+  shows "map_lift (fun_of_resolved_st_q_for \<G>)
+           (if feasible b pol (fun_of_resolved_st_q_for \<G> s)
+            then bfilter_st_lift \<G> b pol (Lifted s) else Bot)
+         = (if feasible b pol (fun_of_resolved_st_q_for \<G> s)
+            then bfilter_lifted b pol (fun_of_resolved_st_q_for \<G> s) else Bot)"
+  by (cases "feasible b pol (fun_of_resolved_st_q_for \<G> s)") (simp_all add: IH)
 
 
 
 lemma afilter_st_lift_correct:
   fixes s :: "'a resolved_st_q"
-  assumes "live_resolved_st_q gs s"
-  shows "map_lift (fun_of_resolved_st_q_for gs) (afilter_st_lift gs e a (Lifted s)) =
-         normalize_lift is_empty_state (afilter e a (fun_of_resolved_st_q_for gs s))"
+  assumes "live_resolved_st_q \<G> s"
+  shows "map_lift (fun_of_resolved_st_q_for \<G>) (afilter_st_lift \<G> e a (Lifted s)) =
+         normalize_lift is_empty_state (afilter e a (fun_of_resolved_st_q_for \<G> s))"
 using assms proof (induction e arbitrary: a s)
   case (N n)
   then show ?case by (simp add: live_resolved_st_q_def)
@@ -606,9 +606,9 @@ qed
 
 lemma bfilter_st_lift_correct:
   fixes s :: "'a resolved_st_q"
-  assumes "live_resolved_st_q gs s"
-    shows "map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs b res (Lifted s)) =
-         bfilter_lifted b res (fun_of_resolved_st_q_for gs s)"
+  assumes "live_resolved_st_q \<G> s"
+    shows "map_lift (fun_of_resolved_st_q_for \<G>) (bfilter_st_lift \<G> b res (Lifted s)) =
+         bfilter_lifted b res (fun_of_resolved_st_q_for \<G> s)"
 using assms proof (induction b arbitrary: res s)
   case (N n)
   show ?case
@@ -656,17 +656,17 @@ next
       by simp
   next
     case False
-    have g1: "map_lift (fun_of_resolved_st_q_for gs)
-                (if feasible b1 False (fun_of_resolved_st_q_for gs s)
-                 then bfilter_st_lift gs b1 False (Lifted s) else Bot)
-              = (if feasible b1 False (fun_of_resolved_st_q_for gs s)
-                 then bfilter_lifted b1 False (fun_of_resolved_st_q_for gs s) else Bot)"
+    have g1: "map_lift (fun_of_resolved_st_q_for \<G>)
+                (if feasible b1 False (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_st_lift \<G> b1 False (Lifted s) else Bot)
+              = (if feasible b1 False (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_lifted b1 False (fun_of_resolved_st_q_for \<G> s) else Bot)"
       by (rule bfilter_lift_gate_step[OF And.IH(1)[OF And.prems]])
-    have g2: "map_lift (fun_of_resolved_st_q_for gs)
-                (if feasible b2 False (fun_of_resolved_st_q_for gs s)
-                 then bfilter_st_lift gs b2 False (Lifted s) else Bot)
-              = (if feasible b2 False (fun_of_resolved_st_q_for gs s)
-                 then bfilter_lifted b2 False (fun_of_resolved_st_q_for gs s) else Bot)"
+    have g2: "map_lift (fun_of_resolved_st_q_for \<G>)
+                (if feasible b2 False (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_st_lift \<G> b2 False (Lifted s) else Bot)
+              = (if feasible b2 False (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_lifted b2 False (fun_of_resolved_st_q_for \<G> s) else Bot)"
       by (rule bfilter_lift_gate_step[OF And.IH(2)[OF And.prems]])
     show ?thesis
       using False
@@ -677,17 +677,17 @@ next
   show ?case
   proof (cases res)
     case True
-    have g1: "map_lift (fun_of_resolved_st_q_for gs)
-                (if feasible b1 True (fun_of_resolved_st_q_for gs s)
-                 then bfilter_st_lift gs b1 True (Lifted s) else Bot)
-              = (if feasible b1 True (fun_of_resolved_st_q_for gs s)
-                 then bfilter_lifted b1 True (fun_of_resolved_st_q_for gs s) else Bot)"
+    have g1: "map_lift (fun_of_resolved_st_q_for \<G>)
+                (if feasible b1 True (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_st_lift \<G> b1 True (Lifted s) else Bot)
+              = (if feasible b1 True (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_lifted b1 True (fun_of_resolved_st_q_for \<G> s) else Bot)"
       by (rule bfilter_lift_gate_step[OF Or.IH(1)[OF Or.prems]])
-    have g2: "map_lift (fun_of_resolved_st_q_for gs)
-                (if feasible b2 True (fun_of_resolved_st_q_for gs s)
-                 then bfilter_st_lift gs b2 True (Lifted s) else Bot)
-              = (if feasible b2 True (fun_of_resolved_st_q_for gs s)
-                 then bfilter_lifted b2 True (fun_of_resolved_st_q_for gs s) else Bot)"
+    have g2: "map_lift (fun_of_resolved_st_q_for \<G>)
+                (if feasible b2 True (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_st_lift \<G> b2 True (Lifted s) else Bot)
+              = (if feasible b2 True (fun_of_resolved_st_q_for \<G> s)
+                 then bfilter_lifted b2 True (fun_of_resolved_st_q_for \<G> s) else Bot)"
       by (rule bfilter_lift_gate_step[OF Or.IH(2)[OF Or.prems]])
     show ?thesis
       using True
@@ -751,27 +751,27 @@ text \<open>
 definition branch_st ::
   "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
 where
-  "branch_st gs e pol s =
-     (if feasible_with ops e pol (fun_of_resolved_st_q_for gs s)
-      then collapse_lift (bfilter_st_lift_with ops gs e pol (Lifted s))
+  "branch_st \<G> e pol s =
+     (if feasible_with ops e pol (fun_of_resolved_st_q_for \<G> s)
+      then collapse_lift (bfilter_st_lift_with ops \<G> e pol (Lifted s))
       else bot)"
 
 lemma branch_st_commute:
-  assumes "live_resolved_st_q gs s"
+  assumes "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (branch_st gs e pol s) =
-       branch e pol (fun_of_resolved_st_q_for gs s)"
-  proof (cases "feasible e pol (fun_of_resolved_st_q_for gs s)")
+    "fun_of_resolved_st_q_for \<G> (branch_st \<G> e pol s) =
+       branch e pol (fun_of_resolved_st_q_for \<G> s)"
+  proof (cases "feasible e pol (fun_of_resolved_st_q_for \<G> s)")
   case True
-  have eq: "map_lift (fun_of_resolved_st_q_for gs) (bfilter_st_lift gs e pol (Lifted s)) =
-              bfilter_lifted e pol (fun_of_resolved_st_q_for gs s)"
+  have eq: "map_lift (fun_of_resolved_st_q_for \<G>) (bfilter_st_lift \<G> e pol (Lifted s)) =
+              bfilter_lifted e pol (fun_of_resolved_st_q_for \<G> s)"
     by (rule bfilter_st_lift_correct[OF assms])
-  have "fun_of_resolved_st_q_for gs (collapse_lift (bfilter_st_lift gs e pol (Lifted s)))
-          = collapse_lift (map_lift (fun_of_resolved_st_q_for gs)
-                             (bfilter_st_lift gs e pol (Lifted s)))"
-    by (rule collapse_lift_map_lift[where f = "fun_of_resolved_st_q_for gs",
+  have "fun_of_resolved_st_q_for \<G> (collapse_lift (bfilter_st_lift \<G> e pol (Lifted s)))
+          = collapse_lift (map_lift (fun_of_resolved_st_q_for \<G>)
+                             (bfilter_st_lift \<G> e pol (Lifted s)))"
+    by (rule collapse_lift_map_lift[where f = "fun_of_resolved_st_q_for \<G>",
           OF fun_of_resolved_st_q_for_bot, symmetric])
-  also have "... = collapse_lift (bfilter_lifted e pol (fun_of_resolved_st_q_for gs s))"
+  also have "... = collapse_lift (bfilter_lifted e pol (fun_of_resolved_st_q_for \<G> s))"
     using eq by simp
     finally show ?thesis
     using True

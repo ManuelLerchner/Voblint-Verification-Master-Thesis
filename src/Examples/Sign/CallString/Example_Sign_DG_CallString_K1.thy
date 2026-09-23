@@ -122,7 +122,7 @@ text \<open>The executable spec is sound for the concretization that reads a loc
 
 definition sign_nest_gamma ::
     "sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
-  "sign_nest_gamma d g = gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) d)"
+  "sign_nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
 interpretation sign_nest_domain: routed_dg_domain_exec
   sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
@@ -273,7 +273,7 @@ interpretation sign_nest_1_cs: call_string_routed_context
     Bot "Lifted cinit_sign_st" Bot
     sigma_1 "fst sign_nest_1_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_1
     "\<lambda>d. d = Bot"
-    "\<lambda>m. gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs) m)"
+    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -367,8 +367,8 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 theorem sign_nest_1_activation_collect_sound:
   "activation_collect sign_nest_gs (call_context_rel_of_fun (cs_context 1)) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
-     \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for sign_nest_gs)
-           (sign_ctx_sg_1 (Inl (v, ctx))))"
+     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+           (sign_ctx_sg_1 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule sign_nest_1_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
 

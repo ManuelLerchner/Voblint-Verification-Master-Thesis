@@ -22,11 +22,11 @@ global_interpretation congruence_numeric_queries:
   abstract_numeric_queries congruence_lt congruence_eqb
 proof unfold_locales
   fix a b :: congruence and r :: bool and i j :: int
-  assume "congruence_lt a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assume "congruence_lt a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i < j) = r" using congruence_lt_sound by simp
 next
   fix a b :: congruence and r :: bool and i j :: int
-  assume "congruence_eqb a b = Some r" and "i \<in> gamma a" and "j \<in> gamma b"
+  assume "congruence_eqb a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i = j) = r" using congruence_eqb_sound by simp
 qed
 

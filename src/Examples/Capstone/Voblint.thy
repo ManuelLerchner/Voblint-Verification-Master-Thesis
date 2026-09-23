@@ -655,7 +655,7 @@ text \<open>
       routed analysis at the unit context) bundles solver correctness,
       executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
-      application, bounding \<open>ltr_collect g S v\<close> at every program point.
+      application, bounding \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec_core\<close>; every domain is one of its

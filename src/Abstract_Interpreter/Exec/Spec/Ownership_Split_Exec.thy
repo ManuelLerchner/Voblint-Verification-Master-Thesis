@@ -50,12 +50,12 @@ definition ownership_split_combine_transfer_st ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
 where
-  "ownership_split_combine_transfer_st gs ci =
+  "ownership_split_combine_transfer_st \<G> ci =
      ownership_split_combine_transfer_gen combine_resolved_st_q restrict_global_resolved_q
        restrict_local_resolved_q
        (local_combine_transfer
-          (\<lambda>env de. combine_assign_resolved_q gs (ci_dst ci)
-                      (lookup_resolved_st_q de (location_of gs ret_var)) env))"
+          (\<lambda>env de. combine_assign_resolved_q \<G> (ci_dst ci)
+                      (lookup_resolved_st_q de (location_of \<G> ret_var)) env))"
 
 definition ownership_split_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
@@ -63,7 +63,7 @@ definition ownership_split_dg_spec_st_for ::
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) dg_spec"
 where
-  "ownership_split_dg_spec_st_for gs tf_st enter_st = local_dg_spec_template\<lparr>
+  "ownership_split_dg_spec_st_for \<G> tf_st enter_st = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_st (local_transfer (tf_st EA_Nop)),
      dgs_assign := (\<lambda>x e. ownership_split_transfer_st (local_transfer (tf_st (EA_Assign x e)))),
      dgs_special := (\<lambda>sc x. ownership_split_transfer_st (local_transfer (tf_st (EA_Special sc x)))),
@@ -75,22 +75,22 @@ where
                           (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))),
      dgs_event := (\<lambda>ev. case ev of Check_Event bc
                      \<Rightarrow> ownership_split_transfer_st (local_transfer (tf_st (EA_Check bc)))),
-     dgs_combine_assign := ownership_split_combine_transfer_st gs \<rparr>"
+     dgs_combine_assign := ownership_split_combine_transfer_st \<G> \<rparr>"
 
 lemma dg_spec_step_ownership_split_st_for:
-  "dg_spec_step (ownership_split_dg_spec_st_for gs tf_st enter_st) a
+  "dg_spec_step (ownership_split_dg_spec_st_for \<G> tf_st enter_st) a
      = ownership_split_transfer_st (local_transfer (tf_st a))"
   unfolding ownership_split_dg_spec_st_for_def
   by (cases a) simp_all
 
 lemma dgs_enter_ownership_split_dg_spec_st_for:
-  "enter\<^sup># (ownership_split_dg_spec_st_for gs tf_st enter_st) ci
+  "enter\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st) ci
      = ownership_split_enter_transfer_st (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))"
   unfolding ownership_split_dg_spec_st_for_def by simp
 
 lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:
-  "dg_spec_combine_transfer (ownership_split_dg_spec_st_for gs tf_st enter_st) ci m de
-     = ownership_split_combine_transfer_st gs ci m de"
+  "dg_spec_combine_transfer (ownership_split_dg_spec_st_for \<G> tf_st enter_st) ci m de
+     = ownership_split_combine_transfer_st \<G> ci m de"
   unfolding dg_spec_combine_transfer_def ownership_split_dg_spec_st_for_def
   by (simp add: local_transfer_def local_combine_transfer_def)
 

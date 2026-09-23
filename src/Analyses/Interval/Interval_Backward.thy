@@ -401,14 +401,14 @@ global_interpretation ivl_backward_domain:
     and branch_ivl_st = ivl_backward_domain.branch_st
 proof unfold_locales
   fix n :: int and a b :: ivl
-  assume "n \<in> gamma a" and "n \<in> gamma b"
+  assume "n \<in> \<gamma> a" and "n \<in> \<gamma> b"
   then have "n \<in> gamma_ivl a" and "n \<in> gamma_ivl b" by simp_all
-  then show "n \<in> gamma (intersect_ivl a b)" using intersect_ivl_gamma by simp
+  then show "n \<in> \<gamma> (intersect_ivl a b)" using intersect_ivl_gamma by simp
 next
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> ivl"
   assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using gamma_stateD[OF H] by simp
-  show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
+  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_ivl e \<sigma>)"
     using aval_ivl_sound[OF h] by simp
 qed (simp_all add: inv_less_ivl_sound inv_eq_ivl_sound
        interval_tobool_sound[unfolded truthy_def] intersect_ivl_mono aval_ivl_mono

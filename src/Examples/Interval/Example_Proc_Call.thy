@@ -71,9 +71,9 @@ proof -
       have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = Gx + 1; \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 ((STR ''Gx'') := aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') := \<lbrakk>Plus (V (STR ''Gx'')) (N 1)\<rbrakk>\<^sub>e (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s) = s (STR ''Gx'') + 1"
+      moreover have "\<lbrakk>Plus (V (STR ''Gx'')) (N 1)\<rbrakk>\<^sub>e (enter_state proc_call_gs s) = s (STR ''Gx'') + 1"
         by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
@@ -101,11 +101,11 @@ proof -
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
                  ((STR ''Gx'') :=
-                   aval (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+                   \<lbrakk>Times (V (STR ''Gx'')) (V (STR ''Gx''))\<rbrakk>\<^sub>e
                      (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
       moreover have
-        "aval (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+        "\<lbrakk>Times (V (STR ''Gx'')) (V (STR ''Gx''))\<rbrakk>\<^sub>e
            (enter_state proc_call_gs s) =
          s (STR ''Gx'') * s (STR ''Gx'')"
         by (simp add: enter_state_def proc_call_gs_def)
@@ -129,7 +129,7 @@ theorem main_prog_result:
   "pcompletes proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25))"
 proof -
   have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = 4; \<rbrakk>) s (s((STR ''Gx'') := 4))"
-    using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
+    using pcompletes_assign[where \<G> = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
     by simp
   have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]

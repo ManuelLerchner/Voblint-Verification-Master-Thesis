@@ -19,13 +19,13 @@ text \<open>
 \<close>
 
 text \<open>
-  This locale is stated for a \<^emph>\<open>single\<close> global: \<open>gammaDG\<close> takes one \<open>'G\<close>, read at
+  This locale is stated for a \<^emph>\<open>single\<close> global: \<open>\<gamma>\<^sub>D\<^sub>G\<close> takes one \<open>'G\<close>, read at
   the one slot \<open>Inr gk\<close>, so a specification publishing at two distinct global
   names would have contributions this concretization never sees. The global-name
   type is therefore pinned at \<^typ>\<open>unit\<close> here and the manager is built from the
   constant embedding, rather than stating an obligation over a namespace the
   conclusion cannot account for. Every analysis in this development has one global, so
-  nothing is lost today; a second global needs \<open>gammaDG\<close> over a global
+  nothing is lost today; a second global needs \<open>\<gamma>\<^sub>D\<^sub>G\<close> over a global
   \<^emph>\<open>environment\<close> first, and that is what would generalize this locale.
 \<close>
 
@@ -241,7 +241,7 @@ definition combine_transfer_program ::
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
   "combine_transfer_program T src_cc src_ex key =
-     sp_map (\<lambda>d. DG d bot) (combine_program_at T src_cc src_ex key)"
+     sp_map (\<lambda>d. DG d \<bottom>) (combine_program_at T src_cc src_ex key)"
 
 definition dg_spec_combine_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
@@ -259,14 +259,14 @@ text \<open>
 
 lemma traverse_combine_transfer_program:
   "traverse_program (combine_transfer_program T src_cc src_ex key) \<tau>
-     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+     = traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
          (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
 lemma sides_combine_transfer_program:
   "sides_of_program (combine_transfer_program T src_cc src_ex key) \<tau>
-     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
          (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
@@ -274,7 +274,7 @@ lemma sides_combine_transfer_program:
 lemma dep_combine_transfer_program:
   "dep_program \<tau> (combine_transfer_program T src_cc src_ex key)
      = insert src_cc (insert src_ex
-         (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot)
+         (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d \<bottom>)
             (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex))))))"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
@@ -318,23 +318,29 @@ text \<open>The contract a specification signs: its concretization is monotone, 
 locale sound_dg_spec_core =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
-    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-    and gs :: "vname \<Rightarrow> bool"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and \<G> :: "vname \<Rightarrow> bool"
   assumes spec_wf: "dg_spec_wf S"
     and gammaDG_mono:
-      "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gammaDG d g \<subseteq> gammaDG d' g'"
+      "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d g \<subseteq> \<gamma>\<^sub>D\<^sub>G d' g'"
     and step_sound:
-      "edge_collect a (gammaDG (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
-         \<subseteq> gammaDG (locals (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
-                   (globs (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
+      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
+         \<subseteq> \<gamma>\<^sub>D\<^sub>G
+           (locals (traverse_program
+              (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
+           (globs (sides_of_program
+              (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and combine_sound:
-      "\<lbrakk>s \<in> gammaDG dc (globs (\<tau> (Inr gk)));
-        t \<in> gammaDG de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
-        combine_collect gs (ci_dst ci) s t
-          \<in> gammaDG (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
-                  (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
-                    (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
-                  (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
+      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (globs (\<tau> (Inr gk)));
+        t \<in> \<gamma>\<^sub>D\<^sub>G de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+        combine_collect \<G> (ci_dst ci) s t
+          \<in> \<gamma>\<^sub>D\<^sub>G
+            (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+               (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
+               \<tau>))
+            (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+               (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
+               \<tau> (Inr gk)))"
 
 text \<open>
   The obligation is stated at \<^emph>\<open>values\<close> rather than at two unknown reads,
@@ -346,10 +352,10 @@ text \<open>
 \<close>
 
 lemma (in sound_dg_spec_core) combine_sound_program:
-  assumes sc: "s \<in> gammaDG (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
-    and se: "t \<in> gammaDG (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
-  shows "combine_collect gs (ci_dst ci) s t
-          \<in> gammaDG (locals (traverse_program
+  assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
+    and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
+  shows "combine_collect \<G> (ci_dst ci) s t
+          \<in> \<gamma>\<^sub>D\<^sub>G (locals (traverse_program
                 (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
                     (globs (sides_of_program (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk))
                                           \<tau> (Inr gk)))"
@@ -376,22 +382,22 @@ locale sound_local_dg_spec =
     and ce :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and ca :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and gammaD :: "'D \<Rightarrow> store set"
-    and gs :: "vname \<Rightarrow> bool"
+    and \<G> :: "vname \<Rightarrow> bool"
   assumes gammaD_mono: "d \<le> d' \<Longrightarrow> gammaD d \<subseteq> gammaD d'"
     and step_sound_local:
       "edge_collect a (gammaD d) \<subseteq> gammaD (local_spec_step sk asn sp br bd rt ev a d)"
     and enter_sound_local:
       "s \<in> gammaD d \<Longrightarrow>
          entry_pairs_cover gammaD s
-           (call_enter gs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            (en ci d)"
     and combine_sound_local:
       "\<lbrakk>s \<in> gammaD dc; t \<in> gammaD de\<rbrakk> \<Longrightarrow>
-        combine_collect gs (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
+        combine_collect \<G> (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
 begin
 
 theorem local_spec_core_sound:
-  "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) gs"
+  "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) \<G>"
 proof (unfold_locales, goal_cases wf mono step comb)
   case wf
   then show ?case

@@ -58,15 +58,15 @@ theorem classify_checks_proved_sound:
   fixes gamma_state :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Proved) \<in> set (classify_checks g env classify)"
-    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
+    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and node_sound: "reach v \<le> gamma_state (env v)"
-  shows "\<forall>s \<in> reach v. truthy (aval c s)"
+  shows "\<forall>s \<in> reach v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof
   fix s assume s: "s \<in> reach v"
   have "classify c (env v) = Check_Proved"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
   moreover have "s \<in> gamma_state (env v)" using node_sound s by blast
-  ultimately show "truthy (aval c s)" using classify_proved by blast
+  ultimately show "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved by blast
 qed
 
 theorem classify_checks_refuted_sound:
@@ -74,15 +74,15 @@ theorem classify_checks_refuted_sound:
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
     and classify_refuted: "\<And>d s. classify c d = Check_Refuted
-                              \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
+                              \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and node_sound: "reach v <= gamma_state (env v)"
-  shows "\<forall>s \<in> reach v. ~ truthy (aval c s)"
+  shows "\<forall>s \<in> reach v. ~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof
   fix s assume s: "s : reach v"
   have "classify c (env v) = Check_Refuted"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
   moreover have "s : gamma_state (env v)" using node_sound s by blast
-  ultimately show "~ truthy (aval c s)" using classify_refuted by blast
+  ultimately show "~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted by blast
 qed
 
 text \<open>

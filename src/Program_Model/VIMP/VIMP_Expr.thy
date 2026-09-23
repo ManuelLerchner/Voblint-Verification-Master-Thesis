@@ -111,23 +111,23 @@ lemma c_mod_signed_examples:
 definition truthy :: "int \<Rightarrow> bool" where
   [simp]: "truthy n \<longleftrightarrow> n \<noteq> 0"
 
-fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" where
-    "aval (N n)     s  = n"
-  | "aval (V x)     s  = s x"
-  | "aval (Plus  a b) s  = aval a s + aval b s"
-  | "aval (Minus a b) s  = aval a s - aval b s"
-  | "aval (Times a b) s  = aval a s * aval b s"
-  | "aval (Div a b) s = c_div (aval a s) (aval b s)"
-  | "aval (Mod a b) s = c_mod (aval a s) (aval b s)"
-  | "aval (Less a b)  s  = (if aval a s < aval b s then 1 else 0)"
-  | "aval (LessEq a b) s = (if aval a s \<le> aval b s then 1 else 0)"
-  | "aval (Greater a b) s = (if aval a s > aval b s then 1 else 0)"
-  | "aval (GreaterEq a b) s = (if aval a s \<ge> aval b s then 1 else 0)"
-  | "aval (NotEq a b) s = (if aval a s \<noteq> aval b s then 1 else 0)"
-  | "aval (Eq   a b)  s  = (if aval a s = aval b s then 1 else 0)"
-  | "aval (Not b)     s  = (if truthy (aval b s) then 0 else 1)"
-  | "aval (And b1 b2) s  = (if truthy (aval b1 s) \<and> truthy (aval b2 s) then 1 else 0)"
-  | "aval (Or  b1 b2) s  = (if truthy (aval b1 s) \<or> truthy (aval b2 s) then 1 else 0)"
+fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^sub>e") where
+    "\<lbrakk>N n\<rbrakk>\<^sub>e     s  = n"
+  | "\<lbrakk>V x\<rbrakk>\<^sub>e     s  = s x"
+  | "\<lbrakk>Plus  a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s + \<lbrakk>b\<rbrakk>\<^sub>e s"
+  | "\<lbrakk>Minus a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s - \<lbrakk>b\<rbrakk>\<^sub>e s"
+  | "\<lbrakk>Times a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s * \<lbrakk>b\<rbrakk>\<^sub>e s"
+  | "\<lbrakk>Div a b\<rbrakk>\<^sub>e s = c_div (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  | "\<lbrakk>Mod a b\<rbrakk>\<^sub>e s = c_mod (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  | "\<lbrakk>Less a b\<rbrakk>\<^sub>e  s  = (if \<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>LessEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>Greater a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s > \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>GreaterEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<ge> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>NotEq a b\<rbrakk>\<^sub>e s = (if \<lbrakk>a\<rbrakk>\<^sub>e s \<noteq> \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>Eq   a b\<rbrakk>\<^sub>e  s  = (if \<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s then 1 else 0)"
+  | "\<lbrakk>Not b\<rbrakk>\<^sub>e     s  = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then 0 else 1)"
+  | "\<lbrakk>And b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<and> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
+  | "\<lbrakk>Or  b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
 
 text \<open>
   \<open>truthy\<close> of a compiled comparison or Boolean expression restated in plain
@@ -136,39 +136,39 @@ text \<open>
 \<close>
 
 lemma truthy_aval_Less [simp]:
-  "truthy (aval (Less a b) s) \<longleftrightarrow> aval a s < aval b s"
+  "truthy (\<lbrakk>Less a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_LessEq [simp]:
-  "truthy (aval (LessEq a b) s) \<longleftrightarrow> aval a s \<le> aval b s"
+  "truthy (\<lbrakk>LessEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_Greater [simp]:
-  "truthy (aval (Greater a b) s) \<longleftrightarrow> aval a s > aval b s"
+  "truthy (\<lbrakk>Greater a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s > \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_GreaterEq [simp]:
-  "truthy (aval (GreaterEq a b) s) \<longleftrightarrow> aval a s \<ge> aval b s"
+  "truthy (\<lbrakk>GreaterEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<ge> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_NotEq [simp]:
-  "truthy (aval (NotEq a b) s) \<longleftrightarrow> aval a s \<noteq> aval b s"
+  "truthy (\<lbrakk>NotEq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<noteq> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_Eq [simp]:
-  "truthy (aval (Eq a b) s) \<longleftrightarrow> aval a s = aval b s"
+  "truthy (\<lbrakk>Eq a b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s"
   by simp
 
 lemma truthy_aval_Not [simp]:
-  "truthy (aval (Not b) s) \<longleftrightarrow> \<not> truthy (aval b s)"
+  "truthy (\<lbrakk>Not b\<rbrakk>\<^sub>e s) \<longleftrightarrow> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   by simp
 
 lemma truthy_aval_And [simp]:
-  "truthy (aval (And b1 b2) s) \<longleftrightarrow> truthy (aval b1 s) \<and> truthy (aval b2 s)"
+  "truthy (\<lbrakk>And b1 b2\<rbrakk>\<^sub>e s) \<longleftrightarrow> truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<and> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"
   by simp
 
 lemma truthy_aval_Or [simp]:
-  "truthy (aval (Or b1 b2) s) \<longleftrightarrow> truthy (aval b1 s) \<or> truthy (aval b2 s)"
+  "truthy (\<lbrakk>Or b1 b2\<rbrakk>\<^sub>e s) \<longleftrightarrow> truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"
   by simp
 
 end

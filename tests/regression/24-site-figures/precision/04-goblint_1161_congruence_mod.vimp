@@ -5,7 +5,7 @@
 // c is -5 or -7, so c % 2 is -1: C and VIMP both truncate division toward zero. The
 // congruence alone reads c % 2 as 1+2Z and the interval alone as [-1,0]; the Int
 // product's refinement leaves -1. Goblint before the fix read c % 2 as the constant 1,
-// so it reported the first check as succeeding and the second as failing.
+// so it claimed the first check holds (#1156); its second verdict is not documented.
 
 fun main() {
   top = __voblint_nondet_int();

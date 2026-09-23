@@ -468,7 +468,7 @@ text \<open>
 \<close>
 
 lemma compile_prog_proc_frag_sub:
-  assumes wf: "wf_compile_input gs \<Pi> ps" and decl: "\<Pi> q = Some d"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
   obtains m m' Ep Kp where
     "compile_proc \<Pi> q d m = (m', Ep, Kp)"
     "(FunctionEntry q, EA_Body q, Statement m) \<in> intra (compile_prog \<Pi> ps)"
@@ -510,7 +510,7 @@ definition prog_live :: "proc_table \<Rightarrow> pname list \<Rightarrow> pname
         \<and> x \<in> proc_live q d m)"
 
 lemma prog_live_entry:
-  assumes wf: "wf_compile_input gs \<Pi> ps" and decl: "\<Pi> q = Some d"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps" and decl: "\<Pi> q = Some d"
   shows "prog_live \<Pi> ps q (FunctionEntry q)"
   using compile_prog_proc_frag_sub[OF wf decl] decl
   unfolding prog_live_def proc_live_def by (metis insertI1)
@@ -524,7 +524,7 @@ lemma prog_live_reaches:
   unfolding prog_live_def using compile_proc_live_reaches by force
 
 lemma prog_live_intra:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and live: "prog_live \<Pi> ps q u" and e: "(u, a, v) \<in> intra (compile_prog \<Pi> ps)"
   shows "prog_live \<Pi> ps q v"
 proof -
@@ -541,7 +541,7 @@ proof -
 qed
 
 lemma prog_live_calls:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and live: "prog_live \<Pi> ps q u" and e: "(u, ca, ce, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "prog_live \<Pi> ps q k"
 proof -
@@ -558,7 +558,7 @@ proof -
 qed
 
 lemma prog_live_main_entry:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
   shows "prog_live \<Pi> ps prog_main_name (cfg_entry (compile_prog \<Pi> ps))"
   using prog_live_entry[OF wf wf_compile_inputD(2)[OF wf]] by simp
 
@@ -598,7 +598,7 @@ next
 qed (auto split: option.splits)
 
 lemma compile_prog_calls_target_declared:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and e: "(u, ca, FunctionEntry q, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "\<exists>d. \<Pi> q = Some d"
 proof -
@@ -636,7 +636,7 @@ proof -
 qed
 
 lemma prog_live_callee_entry:
-  assumes wf: "wf_compile_input gs \<Pi> ps"
+  assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and e: "(u, ca, FunctionEntry q, k) \<in> calls (compile_prog \<Pi> ps)"
   shows "prog_live \<Pi> ps q (FunctionEntry q)"
   using compile_prog_calls_target_declared[OF wf e] prog_live_entry[OF wf] by blast

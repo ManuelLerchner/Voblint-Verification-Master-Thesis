@@ -61,16 +61,16 @@ global_interpretation interval_seed_join: unit_dg_analysis
     and interval_sj_state_at = interval_seed_join.state_at
 proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
        goal_cases)
-  case (1 gs) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
-  case (2 gs a s) then show ?case
+  case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
     by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
-  case (3 gs ci s) show ?case
+  case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
 next
-  case (4 gs u ctx d ca) show ?case by simp
+  case (4 \<G> u ctx d ca) show ?case by simp
 next
   case (5 v ctx) show ?case by simp
 next
@@ -86,7 +86,7 @@ next
 next
   case 10 show ?case by (rule refl)
 next
-  case (11 gs) show ?case by (rule interval_cinit_gamma)
+  case (11 \<G>) show ?case by (rule interval_cinit_gamma)
 next
   case (12 eqs x) then show ?case
     by (rule TD_side_seed_join_warrowing_Interp.solve_dom_of_solve_c)
@@ -209,14 +209,12 @@ lemma flagship_wf:
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_gs flagship_pi)
-                  (prog_main flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
-  shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
+  shows "\<exists>v stk. flagship_pi, flagship_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog v\<rbrakk>"
 proof -
-  have run': "star (pstep flagship_gs (prog_table flagship_prog))
-                (main_body (prog_table flagship_prog), s, []) (residual, t, frs)"
+  have run': "flagship_gs, prog_table flagship_prog \<turnstile> (main_body (prog_table flagship_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp add: flagship_pi_def)
   have wf: "wf_compile_input flagship_gs (prog_table flagship_prog) (prog_procs flagship_prog)"
     using flagship_wf by (simp add: flagship_pi_def)
@@ -228,14 +226,14 @@ qed
 text \<open>
   \<^bold>\<open>The bound is proper.\<close>  The published loop-head state constrains \<open>x\<close> to exactly
   \<open>[0,20]\<close> and rejects, e.g., a store with \<open>x = 100\<close>.  The guarantee therefore says
-  something --- it is not the trivial \<open>gamma top = UNIV\<close>.
+  something --- it is not the trivial \<open>\<gamma> \<top> = UNIV\<close>.
 \<close>
 
 theorem flagship_head_bound_proper:
   "(\<lambda>_. 100) \<notin> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog (Statement 1)\<rbrakk>"
 proof
   assume "(\<lambda>_. 100) \<in> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog (Statement 1)\<rbrakk>"
-  then have "(100::int) \<in> gamma (interval_sj_state_at flagship_gs flagship_prog (Statement 1)
+  then have "(100::int) \<in> \<gamma> (interval_sj_state_at flagship_gs flagship_prog (Statement 1)
       (STR ''x''))"
     by (simp add: gamma_state_def)
   then show False using flagship_head_computed by simp

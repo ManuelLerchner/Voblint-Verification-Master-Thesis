@@ -37,10 +37,10 @@ definition sign_enter_st_for ::
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
 lemma sign_enter_st_for_eq [simp]:
-  "sign_enter_st_for gs ci s =
-    bind_formals_resolved_q gs (ci_formals ci)
+  "sign_enter_st_for \<G> ci s =
+    bind_formals_resolved_q \<G> (ci_formals ci)
       (map (\<lambda>e. aval_sign e
-        (fun_of_resolved_st_q_for gs s)) (ci_args ci))
+        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def)
 
@@ -57,29 +57,29 @@ subsection \<open>Classifier-parametric commutation\<close>
 text \<open>The classifier-parametric commutation of the executable and abstract sign
   transfer: the registered D/G pipeline for a program with a real declared global
   needs the executable transfer to commute with the abstract transfer at an
-  arbitrary classifier \<open>gs\<close>.
+  arbitrary classifier \<open>\<G>\<close>.
 
   Only the guard is Sign's to discharge. Every other action is settled once for
   any bundle by \<open>sign_tf.tf_st_for_commute\<close>, so what remains is
   \<open>sign_backward_domain\<close>'s own filter commutation, which holds on a live state.\<close>
 
 theorem sign_tf_st_for_commute:
-  assumes live: "live_resolved_st_q gs s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows
-    "fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s) =
-     sign_tf_abs a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (sign_tf_st_for \<G> a s) =
+     sign_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding sign_tf_st_for_def
   by (rule sign_tf.tf_st_for_commute)
      (simp add: sign_backward_domain.branch_st_commute[OF live])
 
 lemma enter_frame_sign_st_for_commute:
-  "fun_of_resolved_st_q_for gs (enter_frame_D_resolved_q STop s) =
-   enter_frame_sign_for gs (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q STop s) =
+   enter_frame_sign_for \<G> (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: sign_tf.op_defs)
 
 lemma sign_enter_st_for_commute:
-  "fun_of_resolved_st_q_for gs (sign_enter_st_for gs ci s) =
-   enter_sign_ci_for gs ci (fun_of_resolved_st_q_for gs s)"
+  "fun_of_resolved_st_q_for \<G> (sign_enter_st_for \<G> ci s) =
+   enter_sign_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
   by (simp add: sign_tf.op_defs enter_binding_def enter_frame_def
                 enter_frame_sign_st_for_commute)
 

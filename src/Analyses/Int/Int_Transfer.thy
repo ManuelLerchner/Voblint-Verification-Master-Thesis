@@ -32,15 +32,15 @@ text \<open>
 \<close>
 
 lemma bfilter_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_never b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_never b res \<sigma>\<rbrakk>"
   using int_dom_backward_never.bfilter_sound by simp
 
 lemma bfilter_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_once b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_once b res \<sigma>\<rbrakk>"
   using int_dom_backward_once.bfilter_sound by simp
 
 lemma bfilter_int_dom_fixpoint_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_fixpoint b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_fixpoint b res \<sigma>\<rbrakk>"
   using int_dom_backward_fixpoint.bfilter_sound by simp
 
 text \<open>
@@ -51,11 +51,11 @@ text \<open>
 \<close>
 
 lemma branch_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_never b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_never b res \<sigma>\<rbrakk>"
   using int_dom_backward_never.branch_sound by simp
 
 lemma branch_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
   using int_dom_backward_once.branch_sound by simp
 
 text \<open>
@@ -75,7 +75,7 @@ where
   "assign_int_dom mode x a \<sigma> = \<sigma>(x := aval_int_dom mode a \<sigma>)"
 
 lemma assign_int_dom_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign_int_dom mode x a \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign_int_dom mode x a \<sigma>\<rbrakk>"
   unfolding gamma_state_def assign_int_dom_def
   by (auto simp: aval_int_dom_sound)
 
@@ -208,23 +208,23 @@ lemma gamma_int_dom_top: "gamma_int_dom (top :: int_dom) = UNIV"
         gamma_sign_top gamma_ivl_top gamma_parity_top)
 
 lemma special_int_dom_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
   shows "s(x := v) \<in> \<lbrakk>special_int_dom mode sc x \<sigma>\<rbrakk>"
 proof (cases sc)
   case Nondet_Int
   show ?thesis
     unfolding Nondet_Int gamma_state_def
-    using gs unfolding gamma_state_def
+    using \<G> unfolding gamma_state_def
     by (simp add: gamma_int_dom_top)
 next
   case (Min a b)
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using gs unfolding gamma_state_def by simp
-  have Va: "aval a s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
+    using \<G> unfolding gamma_state_def by simp
+  have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
     by (rule aval_int_dom_sound[OF V])
-  have Vb: "aval b s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
+  have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
     by (rule aval_int_dom_sound[OF V])
-  have v: "v = min (aval a s) (aval b s)"
+  have v: "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
     using sr unfolding Min by simp
   have "v : gamma_int_dom (int_dom_min mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
     unfolding v by (rule int_dom_min_sound[OF Va Vb])
@@ -233,12 +233,12 @@ next
 next
   case (Max a b)
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using gs unfolding gamma_state_def by simp
-  have Va: "aval a s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
+    using \<G> unfolding gamma_state_def by simp
+  have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
     by (rule aval_int_dom_sound[OF V])
-  have Vb: "aval b s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
+  have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
     by (rule aval_int_dom_sound[OF V])
-  have v: "v = max (aval a s) (aval b s)"
+  have v: "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
     using sr unfolding Max by simp
   have "v : gamma_int_dom (int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
     unfolding v by (rule int_dom_max_sound[OF Va Vb])
@@ -307,10 +307,10 @@ lemma event_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
   by (simp add: event_int_dom_def)
 
 lemma return_int_dom_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
            \<in> \<lbrakk>return_int_dom mode e p \<sigma>\<rbrakk>"
-  using assign_int_dom_sound[OF gs] gs
+  using assign_int_dom_sound[OF \<G>] \<G>
   by (cases e) (simp_all add: return_int_dom_def)
 
 lemma skip_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> skip_int_dom sigma1 <= skip_int_dom sigma2"
@@ -332,44 +332,44 @@ subsection \<open>Classifier-parametric procedure entry\<close>
 
 definition enter_frame_int_dom_for ::
     "(vname => bool) => int_dom abs_state => int_dom abs_state" where
-  "enter_frame_int_dom_for gs = enter_frame gs (top :: int_dom)"
+  "enter_frame_int_dom_for \<G> = enter_frame \<G> (top :: int_dom)"
 
 definition enter_int_dom_for ::
     "refine_mode => (vname => bool) => vname list => exp list =>
       int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_for mode gs = enter_binding gs (top :: int_dom) (aval_int_dom mode)"
+  "enter_int_dom_for mode \<G> = enter_binding \<G> (top :: int_dom) (aval_int_dom mode)"
 
 lemma enter_frame_int_dom_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   shows "enter_state cls s \<in> \<lbrakk>enter_frame_int_dom_for cls \<sigma>\<rbrakk>"
   unfolding enter_frame_int_dom_for_def
-proof (rule enter_frame_sound[OF gs])
-  show "gamma (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
+proof (rule enter_frame_sound[OF \<G>])
+  show "\<gamma> (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 qed
 
 lemma enter_int_dom_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_int_dom_for mode cls xs es \<sigma>\<rbrakk>"
   unfolding enter_int_dom_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF gs])
-  show "gamma (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
+proof (rule enter_binding_sound[OF \<G>])
+  show "\<gamma> (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 next
   fix e
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using gs unfolding gamma_state_def by simp
-  show "aval e s \<in> gamma (aval_int_dom mode e \<sigma>)"
+    using \<G> unfolding gamma_state_def by simp
+  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom mode e \<sigma>)"
     using V by (simp add: aval_int_dom_sound)
 qed
 
 lemma enter_frame_int_dom_for_mono:
   assumes "s1 <= s2"
-  shows "enter_frame_int_dom_for gs s1 <= enter_frame_int_dom_for gs s2"
+  shows "enter_frame_int_dom_for \<G> s1 <= enter_frame_int_dom_for \<G> s2"
   unfolding enter_frame_int_dom_for_def by (rule enter_frame_mono[OF assms])
 
 lemma enter_int_dom_for_mono:
   assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
-  shows "enter_int_dom_for mode gs xs es s1 <= enter_int_dom_for mode gs xs es s2"
+  shows "enter_int_dom_for mode \<G> xs es s1 <= enter_int_dom_for mode \<G> xs es s2"
   unfolding enter_int_dom_for_def
 proof (rule enter_binding_mono[OF assms(2)])
   fix e
@@ -379,20 +379,20 @@ qed
 
 definition enter_int_dom_ci_for ::
     "refine_mode => (vname => bool) => call_info => int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_ci_for mode gs ci = enter_int_dom_for mode gs (ci_formals ci) (ci_args ci)"
+  "enter_int_dom_ci_for mode \<G> ci = enter_int_dom_for mode \<G> (ci_formals ci) (ci_args ci)"
 
 lemma enter_int_dom_ci_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state cls s)
            \<in> \<lbrakk>enter_int_dom_ci_for mode cls ci \<sigma>\<rbrakk>"
-  using enter_int_dom_for_sound[OF gs, where xs = "ci_formals ci" and es = "ci_args ci"
+  using enter_int_dom_for_sound[OF \<G>, where xs = "ci_formals ci" and es = "ci_args ci"
       and mode = mode]
   by (simp add: enter_int_dom_ci_for_def)
 
 lemma enter_int_dom_ci_for_mono:
   assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
-  shows "enter_int_dom_ci_for mode gs ci s1 <= enter_int_dom_ci_for mode gs ci s2"
-  using enter_int_dom_for_mono[OF assms, of gs "ci_formals ci" "ci_args ci"]
+  shows "enter_int_dom_ci_for mode \<G> ci s1 <= enter_int_dom_ci_for mode \<G> ci s2"
+  using enter_int_dom_for_mono[OF assms, of \<G> "ci_formals ci" "ci_args ci"]
   by (simp add: enter_int_dom_ci_for_def)
 
 subsection \<open>Registered transfer operations, one set per refinement mode\<close>
@@ -407,9 +407,9 @@ fun branch_int_dom_for ::
 | "branch_int_dom_for Refine_Fixpoint = branch_int_dom_fixpoint"
 
 lemma int_is_sound_transfer_for:
-  "sound_transfer_for gs skip_int_dom (assign_int_dom mode) (special_int_dom mode)
+  "sound_transfer_for \<G> skip_int_dom (assign_int_dom mode) (special_int_dom mode)
      (branch_int_dom_for mode) body_int_dom (return_int_dom mode)
-     (enter_int_dom_ci_for mode gs) event_int_dom"
+     (enter_int_dom_ci_for mode \<G>) event_int_dom"
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)

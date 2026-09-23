@@ -155,8 +155,8 @@ theorem twice_activation_collect_sound:
   "activation_collect twice_gs
      (interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program)
      [] (compile_prog twice_pi twice_procs) (cinit_stores twice_gs) v ctx
-   \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for twice_gs)
-       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx))))"
+   \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for twice_gs)
+       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding twice_cfg_alt[symmetric]
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF twice_entry_state_hyps])
 

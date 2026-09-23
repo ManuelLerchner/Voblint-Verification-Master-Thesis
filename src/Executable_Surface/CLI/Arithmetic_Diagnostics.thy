@@ -89,8 +89,8 @@ definition arithmetic_condition :: "arithmetic_obligation \<Rightarrow> exp" whe
   "arithmetic_condition obligation = NotEq (arithmetic_divisor obligation) (N 0)"
 
 lemma arithmetic_condition_safe:
-  "truthy (aval (arithmetic_condition obligation) s) \<longleftrightarrow>
-    aval (arithmetic_divisor obligation) s \<noteq> 0"
+  "truthy (\<lbrakk>arithmetic_condition obligation\<rbrakk>\<^sub>e s) \<longleftrightarrow>
+    \<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   by (auto simp: arithmetic_condition_def split: if_splits)
 
 context abstract_check_domain
@@ -99,14 +99,14 @@ begin
 lemma arithmetic_classify_safe:
   assumes "classify_check (arithmetic_condition obligation) d = Check_Proved"
     and "s \<in> gamma_state d"
-  shows "aval (arithmetic_divisor obligation) s \<noteq> 0"
+  shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   using classify_check_proved[OF assms]
   by (auto simp: arithmetic_condition_def split: if_splits)
 
 lemma arithmetic_classify_zero:
   assumes "classify_check (arithmetic_condition obligation) d = Check_Refuted"
     and "s \<in> gamma_state d"
-  shows "aval (arithmetic_divisor obligation) s = 0"
+  shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s = 0"
   using classify_check_refuted[OF assms]
   by (auto simp: arithmetic_condition_def split: if_splits)
 

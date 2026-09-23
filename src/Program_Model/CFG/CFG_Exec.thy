@@ -20,51 +20,56 @@ text \<open>
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
-inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for gs and g where
+inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) for \<G> and g where
   Intra:
     "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
-     cstep gs g (u, s, stk) (v, s', stk)"
+     \<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s', stk)"
 | Call:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-     cstep gs g (u, s, stk)
-       (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     \<G>, g \<turnstile> (u, s, stk)
+       \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return:
-    "cstep gs g (FunctionResult q, t, (cont, dst, caller) # stk)
-       (cont, combine_collect gs dst caller t, stk)"
+    "\<G>, g \<turnstile> (FunctionResult q, t, (cont, dst, caller) # stk)
+       \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller t, stk)"
 
 declare cstep.intros [intro]
+
+abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)
+  where "csteps \<G> g x y \<equiv> star (cstep \<G> g) x y"
 
 text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
   than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
   does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
-inductive_cases cstep_E [elim]: "cstep gs g (u, s, stk) y"
+inductive_cases cstep_E [elim]: "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c y"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_body:
   assumes "(u, EA_Body p, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (aval b s)"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_ret:
   assumes "(u, EA_Ret e q, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk)
-     (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
+  shows "\<G>, g \<turnstile> (u, s, stk)
+     \<rightarrow>\<^sub>c (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 subsection \<open>Intra-only paths as stack-preserving runs\<close>
@@ -73,7 +78,7 @@ text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run 
   \<open>cstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
   along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
 lemma intra_path_imp_cstep_star:
-  "intra_path g x y \<Longrightarrow> star (cstep gs g) (fst x, snd x, stk) (fst y, snd y, stk)"
+  "intra_path g x y \<Longrightarrow> \<G>, g \<turnstile> (fst x, snd x, stk) \<rightarrow>\<^sub>c\<^sup>* (fst y, snd y, stk)"
 proof (induction rule: star.induct)
   case (refl a) show ?case by simp
 next
@@ -81,7 +86,7 @@ next
   obtain ua sa where a: "a = (ua, sa)" by (cases a)
   obtain ub sb where b: "b = (ub, sb)" by (cases b)
   from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
-  hence "cstep gs g (ua, sa, stk) (ub, sb, stk)" by (rule cstep.Intra)
+  hence "\<G>, g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule cstep.Intra)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 

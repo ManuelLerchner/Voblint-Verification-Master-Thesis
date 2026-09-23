@@ -214,8 +214,8 @@ definition ownership_split_transfer ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_transfer"
 where
-  "ownership_split_transfer gs =
-     ownership_split_transfer_gen (combine_env gs) (restrict_global_for gs) (restrict_local_for gs)"
+  "ownership_split_transfer \<G> =
+     ownership_split_transfer_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
 
 text \<open>
   What the lifter reads, in the same terms. The shared slot is read before the
@@ -248,9 +248,9 @@ definition ownership_split_enter_transfer ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_enter_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_enter_transfer"
 where
-  "ownership_split_enter_transfer gs =
-     ownership_split_enter_transfer_gen (combine_env gs) (restrict_global_for gs)
-       (restrict_local_for gs)"
+  "ownership_split_enter_transfer \<G> =
+     ownership_split_enter_transfer_gen (combine_env \<G>) (restrict_global_for \<G>)
+       (restrict_local_for \<G>)"
 
 text \<open>
   How the lifter behaves under a solution, in the same terms as the transfer it
@@ -294,9 +294,9 @@ definition ownership_split_combine_transfer ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_combine_transfer"
 where
-  "ownership_split_combine_transfer gs =
-     ownership_split_combine_transfer_gen (combine_env gs) (restrict_global_for gs)
-       (restrict_local_for gs)"
+  "ownership_split_combine_transfer \<G> =
+     ownership_split_combine_transfer_gen (combine_env \<G>) (restrict_global_for \<G>)
+       (restrict_local_for \<G>)"
 
 
 subsection \<open>The specification-to-specification lifter\<close>
@@ -316,17 +316,17 @@ definition ownership_split_lift ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) dg_spec
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
-  "ownership_split_lift gs S = local_dg_spec_template\<lparr>
-     dgs_skip := ownership_split_transfer gs (skip\<^sup># S),
-     dgs_assign := (\<lambda>x e. ownership_split_transfer gs (assign\<^sup># S x e)),
-     dgs_special := (\<lambda>sc x. ownership_split_transfer gs (special\<^sup># S sc x)),
-     dgs_branch := (\<lambda>b pol. ownership_split_transfer gs (branch\<^sup># S b pol)),
-     dgs_body := (\<lambda>p. ownership_split_transfer gs (body\<^sup># S p)),
-     dgs_return := (\<lambda>e p. ownership_split_transfer gs (return\<^sup># S e p)),
-     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer gs (enter\<^sup># S ci)),
-     dgs_event := (\<lambda>evt. ownership_split_transfer gs (event\<^sup># S evt)),
+  "ownership_split_lift \<G> S = local_dg_spec_template\<lparr>
+     dgs_skip := ownership_split_transfer \<G> (skip\<^sup># S),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer \<G> (assign\<^sup># S x e)),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer \<G> (special\<^sup># S sc x)),
+     dgs_branch := (\<lambda>b pol. ownership_split_transfer \<G> (branch\<^sup># S b pol)),
+     dgs_body := (\<lambda>p. ownership_split_transfer \<G> (body\<^sup># S p)),
+     dgs_return := (\<lambda>e p. ownership_split_transfer \<G> (return\<^sup># S e p)),
+     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer \<G> (enter\<^sup># S ci)),
+     dgs_event := (\<lambda>evt. ownership_split_transfer \<G> (event\<^sup># S evt)),
      dgs_combine_assign :=
-       (\<lambda>ci. ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)) \<rparr>"
+       (\<lambda>ci. ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)) \<rparr>"
 
 declare ownership_split_lift_def [code_unfold]
 
@@ -335,16 +335,16 @@ text \<open>Both eliminate a constructed wrapper specification and expose the
   wherever a lifted specification meets the edge or combine dispatch.\<close>
 
 lemma dg_spec_step_ownership_split_lift [simp]:
-  "dg_spec_step (ownership_split_lift gs S) a = ownership_split_transfer gs (dg_spec_step S a)"
+  "dg_spec_step (ownership_split_lift \<G> S) a = ownership_split_transfer \<G> (dg_spec_step S a)"
   unfolding ownership_split_lift_def by (cases a) simp_all
 
 lemma dgs_enter_ownership_split_lift [simp]:
-  "enter\<^sup># (ownership_split_lift gs S) ci = ownership_split_enter_transfer gs (enter\<^sup># S ci)"
+  "enter\<^sup># (ownership_split_lift \<G> S) ci = ownership_split_enter_transfer \<G> (enter\<^sup># S ci)"
   unfolding ownership_split_lift_def by simp
 
 lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
-  "dg_spec_combine_transfer (ownership_split_lift gs S) ci
-     = ownership_split_combine_transfer gs (dg_spec_combine_transfer S ci)"
+  "dg_spec_combine_transfer (ownership_split_lift \<G> S) ci
+     = ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)"
   unfolding dg_spec_combine_transfer_def ownership_split_lift_def
   by (simp add: local_transfer_def local_combine_transfer_def)
 
@@ -355,14 +355,14 @@ text \<open>The lifter preserves well-formedness: it reads the shared slot, runs
 
 lemma sp_wf_dgs_combine_assign_ownership_split_lift [intro]:
   assumes "dg_spec_wf S"
-  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift gs S) ci (mk_dg_man d key) ex)"
+  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift \<G> S) ci (mk_dg_man d key) ex)"
   unfolding ownership_split_lift_def
   by (auto simp: ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
       intro!: sp_wf_bind dg_spec_wf_combine[OF assms])
 
 lemma dg_spec_wf_ownership_split_lift [intro]:
   assumes "dg_spec_wf S"
-  shows "dg_spec_wf (ownership_split_lift gs S)"
+  shows "dg_spec_wf (ownership_split_lift \<G> S)"
   unfolding dg_spec_wf_def
   by (auto simp: ownership_split_transfer_def ownership_split_transfer_gen_def
       ownership_split_enter_transfer_def ownership_split_enter_transfer_gen_def
@@ -383,11 +383,11 @@ text \<open>
 definition gamma_ownership_split ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "gamma_ownership_split gs d g = \<lbrakk>combine_env gs d g\<rbrakk>"
+  "gamma_ownership_split \<G> d g = \<lbrakk>combine_env \<G> d g\<rbrakk>"
 
 lemma gamma_ownership_split_mono:
   assumes "d \<le> d'" and "g \<le> g'"
-  shows "gamma_ownership_split gs d g \<subseteq> gamma_ownership_split gs d' g'"
+  shows "gamma_ownership_split \<G> d g \<subseteq> gamma_ownership_split \<G> d' g'"
   unfolding gamma_ownership_split_def
   by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_env_def le_fun_def\<close>)
 
@@ -399,19 +399,19 @@ text \<open>
 \<close>
 
 lemma gamma_ownership_split_combine_env:
-  assumes cc: "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
-    and ex: "t \<in> \<lbrakk>combine_env gs de g\<rbrakk>"
-  shows "combine_env gs s t \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
+  assumes cc: "s \<in> \<lbrakk>combine_env \<G> dc g\<rbrakk>"
+    and ex: "t \<in> \<lbrakk>combine_env \<G> de g\<rbrakk>"
+  shows "combine_env \<G> s t \<in> \<lbrakk>combine_env \<G> dc g\<rbrakk>"
 proof (rule gamma_stateI)
   fix x
-  show "combine_env gs s t x \<in> gamma (combine_env gs dc g x)"
-  proof (cases "gs x")
+  show "combine_env \<G> s t x \<in> \<gamma> (combine_env \<G> dc g x)"
+  proof (cases "\<G> x")
     case True
-    have "t x \<in> gamma (combine_env gs de g x)" using ex by (simp add: gamma_state_def)
+    have "t x \<in> \<gamma> (combine_env \<G> de g x)" using ex by (simp add: gamma_state_def)
     then show ?thesis using True by (simp add: combine_env_def)
   next
     case False
-    have "s x \<in> gamma (combine_env gs dc g x)" using cc by (simp add: gamma_state_def)
+    have "s x \<in> \<gamma> (combine_env \<G> dc g x)" using cc by (simp add: gamma_state_def)
     then show ?thesis using False by (simp add: combine_env_def)
   qed
 qed
@@ -424,19 +424,19 @@ text \<open>
 \<close>
 
 lemma gamma_ownership_split_combine_assign:
-  assumes reserved: "reserved_ret_var gs"
-    and cc: "s \<in> \<lbrakk>combine_env gs dc g\<rbrakk>"
-    and ex: "t \<in> \<lbrakk>combine_env gs de g\<rbrakk>"
-  shows "combine_assign dst (t ret_var) (combine_env gs s t)
-           \<in> \<lbrakk>combine_assign dst (de ret_var) (combine_env gs dc g)\<rbrakk>"
+  assumes reserved: "reserved_ret_var \<G>"
+    and cc: "s \<in> \<lbrakk>combine_env \<G> dc g\<rbrakk>"
+    and ex: "t \<in> \<lbrakk>combine_env \<G> de g\<rbrakk>"
+  shows "combine_assign dst (t ret_var) (combine_env \<G> s t)
+           \<in> \<lbrakk>combine_assign dst (de ret_var) (combine_env \<G> dc g)\<rbrakk>"
 proof (cases dst)
   case None
   then show ?thesis using gamma_ownership_split_combine_env[OF cc ex] by simp
 next
   case (Some x)
-  have ret: "t ret_var \<in> gamma (de ret_var)"
+  have ret: "t ret_var \<in> \<gamma> (de ret_var)"
   proof -
-    have "t ret_var \<in> gamma (combine_env gs de g ret_var)"
+    have "t ret_var \<in> \<gamma> (combine_env \<G> de g ret_var)"
       using ex by (simp add: gamma_state_def)
     then show ?thesis
       using reserved by (simp add: combine_env_def reserved_ret_var_def)
@@ -469,8 +469,8 @@ text \<open>
 
 theorem (in sound_transfer_for) ownership_split_lift_core_sound:
   "sound_dg_spec_core
-     (ownership_split_lift gs (local_state_dg_spec_for gs sk asn sp br bd rt en ev))
-     (gamma_ownership_split gs) gs"
+     (ownership_split_lift \<G> (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev))
+     (gamma_ownership_split \<G>) \<G>"
 proof (unfold_locales, goal_cases)
   case 1
   show ?case by (rule dg_spec_wf_ownership_split_lift) simp

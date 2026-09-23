@@ -1951,6 +1951,16 @@ const OUTER_LAYOUT = {
   "elk.spacing.componentComponent": "60",
 };
 
+/* The room ELK reserves for an edge label: its text plus padding. */
+function elkLabel(edge, placement) {
+  return {
+    text: edge.label,
+    width: edge.labelWidth + 8,
+    height: EDGE_FONT_SIZE * 1.6,
+    layoutOptions: { "elk.edgeLabels.placement": placement },
+  };
+}
+
 function routePoints(section, dx = 0, dy = 0) {
   return [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map((point) => ({
     x: point.x + dx,
@@ -2068,10 +2078,13 @@ function callOrder(inner, crossing, parentOf) {
 }
 
 /*
- * Ports on one side at one height -- two calls entering the same callee -- would
- * share a channel all the way in; fanning them out keeps every edge its own line.
+ * Ports on one side at one height -- two calls entering the same callee, or a call
+ * leaving the point a resume returns to -- would share a channel all the way in;
+ * fanning them out keeps every edge its own line. The outer pass sets an end label
+ * below its port, so a labelled port leaves room for it above the next.
  */
 const PORT_SPREAD = 8;
+const LABELLED_PORT_SPREAD = EDGE_FONT_SIZE * 1.6 + 8;
 
 function spreadPorts(ports, width) {
   const groups = new Map();
@@ -2082,16 +2095,22 @@ function spreadPorts(ports, width) {
     groups.set(key, [...(groups.get(key) ?? []), port]);
   }
 
-  return [...groups.values()].flatMap((group) =>
-    group.map((port, index) => ({
+  return [...groups.values()].flatMap((group) => {
+    const offsets = [0];
+
+    for (const port of group.slice(0, -1)) {
+      offsets.push(offsets.at(-1) + (port.labelled ? LABELLED_PORT_SPREAD : PORT_SPREAD));
+    }
+
+    return group.map((port, index) => ({
       id: port.id,
       x: port.side === "EAST" ? width : 0,
-      y: port.y + (index - (group.length - 1) / 2) * PORT_SPREAD,
+      y: port.y + offsets[index] - offsets.at(-1) / 2,
       width: 0,
       height: 0,
       layoutOptions: { "elk.port.side": port.side },
-    })),
-  );
+    }));
+  });
 }
 
 /*
@@ -2133,9 +2152,7 @@ async function layoutGraph(elk, elements) {
       id: edge.id,
       sources: [edge.source],
       targets: [edge.target],
-      labels: edge.label
-        ? [{ text: edge.label, width: edge.labelWidth + 8, height: EDGE_FONT_SIZE * 1.6 }]
-        : [],
+      labels: edge.label ? [elkLabel(edge, "CENTER")] : [],
       layoutOptions: {
         "elk.layered.priority.straightness": looping.has(edge.id) ? "0" : "10",
         "elk.layered.priority.direction": back.has(edge.id) ? "0" : "10",
@@ -2165,16 +2182,19 @@ async function layoutGraph(elk, elements) {
 
   for (const edge of crossing) {
     const forward = edge.kind === "enter";
+    const labelled = Boolean(edge.label);
 
     ports.get(parentOf.get(edge.source)).push({
       id: `${edge.id}-out`,
       side: forward ? "EAST" : "WEST",
       y: innerCenter(edge.source).y,
+      labelled: labelled && forward,
     });
     ports.get(parentOf.get(edge.target)).push({
       id: `${edge.id}-in`,
       side: forward ? "WEST" : "EAST",
       y: innerCenter(edge.target).y,
+      labelled: labelled && !forward,
     });
   }
 
@@ -2188,10 +2208,16 @@ async function layoutGraph(elk, elements) {
       ports: spreadPorts(ports.get(box.id), box.width),
       layoutOptions: { "elk.portConstraints": "FIXED_POS" },
     })),
+    /*
+     * A call's label sits at its call site, a resume's at its return point. As end
+     * labels, the outer pass sets them beside their port and widens the gap between
+     * boxes around them, so no route between boxes runs through a label.
+     */
     edges: crossing.map((edge) => ({
       id: edge.id,
       sources: [`${edge.id}-out`],
       targets: [`${edge.id}-in`],
+      labels: edge.label ? [elkLabel(edge, edge.kind === "enter" ? "TAIL" : "HEAD")] : [],
     })),
   });
 
@@ -2226,6 +2252,10 @@ async function layoutGraph(elk, elements) {
   for (const edge of outer.edges) {
     if (edge.sections?.[0]) {
       routes.set(edge.id, routePoints(edge.sections[0]));
+    }
+
+    for (const label of edge.labels ?? []) {
+      labels.set(edge.id, { x: label.x + label.width / 2, y: label.y + label.height / 2 });
     }
   }
 
@@ -2298,8 +2328,8 @@ function applyGraphLayout({ centers, routes, labels }) {
 }
 
 /*
- * A call or resume edge crosses between boxes through channels it shares with others,
- * so its label sits on its first or last stretch, beside the node it concerns, instead
+ * A call or resume edge the layout did not place -- one within a box, or one whose box
+ * was dragged -- labels its first or last stretch, beside the node it concerns, instead
  * of midway where the channels meet: a call's above its line, a resume's below, since
  * one node can start a call and receive a resume at the same height.
  */
@@ -2426,10 +2456,6 @@ function graphStyle() {
       },
     },
     {
-      selector: "edge.placed-label",
-      style: { "text-margin-x": "data(labelX)", "text-margin-y": "data(labelY)" },
-    },
-    {
       selector: "edge.routed",
       style: {
         "curve-style": "round-segments",
@@ -2471,6 +2497,16 @@ function graphStyle() {
     {
       selector: "edge.call_to_return",
       style: { "line-color": "#9aa9ae", "target-arrow-color": "#9aa9ae" },
+    },
+    {
+      selector: "edge.placed-label",
+      style: {
+        label: "data(label)",
+        "source-label": "",
+        "target-label": "",
+        "text-margin-x": "data(labelX)",
+        "text-margin-y": "data(labelY)",
+      },
     },
   ];
 }

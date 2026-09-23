@@ -32,8 +32,8 @@ text \<open>Shared by \<open>pstep\<close>'s \<open>Special\<close> rule and the
   concrete semantics cannot drift. \<open>Nondet_Int\<close> admits every integer.\<close>
 fun special_result :: "special_call \<Rightarrow> store \<Rightarrow> int \<Rightarrow> bool" where
   "special_result Nondet_Int s v = True"
-| "special_result (Min a b) s v = (v = min (aval a s) (aval b s))"
-| "special_result (Max a b) s v = (v = max (aval a s) (aval b s))"
+| "special_result (Min a b) s v = (v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s))"
+| "special_result (Max a b) s v = (v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s))"
 
 lemma special_result_ex [simp]: "\<exists>v. special_result sc s v"
   by (cases sc) auto

@@ -29,13 +29,13 @@ definition congruence_max :: "congruence => congruence => congruence" where
 
 lemma gamma_congruence_sup_ub1: "gamma_congruence a \<subseteq> gamma_congruence (a \<squnion> b)"
 proof -
-  have "gamma (a::congruence) \<subseteq> gamma (a \<squnion> b)" by (rule gamma_mono[OF sup_ge1])
+  have "\<gamma> (a::congruence) \<subseteq> \<gamma> (a \<squnion> b)" by (rule gamma_mono[OF sup_ge1])
   then show ?thesis by simp
 qed
 
 lemma gamma_congruence_sup_ub2: "gamma_congruence b \<subseteq> gamma_congruence (a \<squnion> b)"
 proof -
-  have "gamma (b::congruence) \<subseteq> gamma (a \<squnion> b)" by (rule gamma_mono[OF sup_ge2])
+  have "\<gamma> (b::congruence) \<subseteq> \<gamma> (a \<squnion> b)" by (rule gamma_mono[OF sup_ge2])
   then show ?thesis by simp
 qed
 
@@ -73,13 +73,13 @@ lemma congruence_special_ops_max [simp]: "special_max congruence_special_ops = c
 interpretation congruence_special: sound_special_ops congruence_special_ops aval_congruence
 proof unfold_locales
   fix i j :: int and p q :: congruence
-  assume "i \<in> gamma p" and "j \<in> gamma q"
-  then show "min i j \<in> gamma (special_min congruence_special_ops p q)"
+  assume "i \<in> \<gamma> p" and "j \<in> \<gamma> q"
+  then show "min i j \<in> \<gamma> (special_min congruence_special_ops p q)"
     using congruence_min_sound by simp
 next
   fix i j :: int and p q :: congruence
-  assume "i \<in> gamma p" and "j \<in> gamma q"
-  then show "max i j \<in> gamma (special_max congruence_special_ops p q)"
+  assume "i \<in> \<gamma> p" and "j \<in> \<gamma> q"
+  then show "max i j \<in> \<gamma> (special_max congruence_special_ops p q)"
     using congruence_max_sound by simp
 next
   fix p1 p2 q1 q2 :: congruence
@@ -95,8 +95,8 @@ next
     by (simp add: congruence_max_mono)
 next
   fix s :: store and \<sigma> :: "vname \<Rightarrow> congruence" and e :: exp
-  assume "\<forall>x. s x \<in> gamma (\<sigma> x)"
-  then show "aval e s \<in> gamma (aval_congruence e \<sigma>)"
+  assume "\<forall>x. s x \<in> \<gamma> (\<sigma> x)"
+  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_congruence e \<sigma>)"
     by (rule congruence_arith.aval_dom_sound)
 next
   fix \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> congruence" and e :: exp

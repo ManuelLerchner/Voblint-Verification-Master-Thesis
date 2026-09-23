@@ -64,7 +64,7 @@ lemma compatible_components_nonbottom:
   by eval
 
 lemma compatible_components_witness:
-  "1 \<in> gamma (int_dom_sip SNonNeg (Ivl (Fin 0) (Fin 1)) POdd)"
+  "1 \<in> \<gamma> (int_dom_sip SNonNeg (Ivl (Fin 0) (Fin 1)) POdd)"
   by (simp add: int_dom_sip_def gamma_int_dom_def top_int_dom_ext_def)
 
 
@@ -116,7 +116,7 @@ lemma compatible_four_components_nonbottom:
   by eval
 
 lemma compatible_four_components_witness:
-  "1 \<in> gamma
+  "1 \<in> \<gamma>
     (int_dom_sipc
       SNonNeg
       (Ivl (Fin 0) (Fin 3))

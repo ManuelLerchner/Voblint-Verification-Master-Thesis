@@ -40,14 +40,14 @@ locale nonrelational_transfer = sound_special_ops "n_special ops" "n_aval ops"
   for ops :: "'a::sound_domain numeric_ops" +
   fixes br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes top_eq: "n_top ops = top"
-    and br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
+    and br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
     and br_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> br b pol \<sigma>1 \<le> br b pol \<sigma>2"
 begin
 
 text \<open>The whole-value element is the class \<^const>\<open>top\<close>, so its concretization is
   everything by \<open>gamma_top\<close> rather than by an assumption of its own.\<close>
 
-lemma top_gamma: "gamma (n_top ops) = UNIV"
+lemma top_gamma: "\<gamma> (n_top ops) = UNIV"
   by (simp add: top_eq)
 
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
@@ -72,10 +72,10 @@ definition ret :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<R
   "ret e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign ret_var a \<sigma>)"
 
 lemma assign_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := aval a s) \<in> \<lbrakk>assign x a \<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign x a \<sigma>\<rbrakk>"
   unfolding assign_def
-  using gamma_stateD[OF gs] gs by blast
+  using gamma_stateD[OF \<G>] \<G> by blast
 
 lemma skip_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip \<sigma>\<rbrakk>"
   by (simp add: skip_def)
@@ -87,9 +87,9 @@ lemma event_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in>
   by (simp add: event_def)
 
 lemma ret_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>ret e p \<sigma>\<rbrakk>"
-  using assign_sound[OF gs] gs by (cases e) (simp_all add: ret_def)
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<lbrakk>ret e p \<sigma>\<rbrakk>"
+  using assign_sound[OF \<G>] \<G> by (cases e) (simp_all add: ret_def)
 
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
   unfolding assign_def by (simp add: ev_mono le_funD le_funI)
@@ -115,37 +115,37 @@ text \<open>
 \<close>
 
 definition enter_frame_for :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_frame_for gs = enter_frame gs (n_top ops)"
+  "enter_frame_for \<G> = enter_frame \<G> (n_top ops)"
 
 definition enter_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_for gs = enter_binding gs (n_top ops) (n_aval ops)"
+  "enter_for \<G> = enter_binding \<G> (n_top ops) (n_aval ops)"
 
 definition enter_ci_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_ci_for gs ci = enter_for gs (ci_formals ci) (ci_args ci)"
+  "enter_ci_for \<G> ci = enter_for \<G> (ci_formals ci) (ci_args ci)"
 
 lemma enter_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state cls s)
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF gs top_gamma])
+proof (rule enter_binding_sound[OF \<G> top_gamma])
   fix e
-  show "aval e s \<in> gamma (n_aval ops e \<sigma>)"
-    using gamma_stateD[OF gs] by blast
+  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (n_aval ops e \<sigma>)"
+    using gamma_stateD[OF \<G>] by blast
 qed
 
 lemma enter_ci_for_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals (ci_formals ci) (map (\<lambda>e. aval e s) (ci_args ci)) (enter_state cls s)
+  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state cls s)
            \<in> \<lbrakk>enter_ci_for cls ci \<sigma>\<rbrakk>"
-  using enter_for_sound[OF gs, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
+  using enter_for_sound[OF \<G>, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
   by (simp add: enter_ci_for_def)
 
 lemma enter_for_mono:
   assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_for gs xs es \<sigma>1 \<le> enter_for gs xs es \<sigma>2"
+  shows "enter_for \<G> xs es \<sigma>1 \<le> enter_for \<G> xs es \<sigma>2"
   unfolding enter_for_def
   by (rule enter_binding_mono[OF assms]) (rule ev_mono[OF assms])
 
@@ -156,7 +156,7 @@ text \<open>The eight operations discharge the framework's contract in one
   so only the per-edge operations and the callee entry are the domain's own.\<close>
 
 lemma is_sound_transfer_for:
-  "sound_transfer_for gs skip assign special_transfer br body ret (enter_ci_for gs) event"
+  "sound_transfer_for \<G> skip assign special_transfer br body ret (enter_ci_for \<G>) event"
   by unfold_locales
      (simp_all add: assign_sound special_transfer_sound br_sound skip_sound body_sound
         ret_sound enter_ci_for_sound event_sound)
@@ -207,11 +207,11 @@ qed
 
 theorem tf_st_for_commute:
   assumes branch:
-    "\<And>b pol. fun_of_resolved_st_q_for gs (n_bfilter ops gs b pol s) =
-               br b pol (fun_of_resolved_st_q_for gs s)"
+    "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
+               br b pol (fun_of_resolved_st_q_for \<G> s)"
   shows
-    "fun_of_resolved_st_q_for gs (generic_tf_st_for ops gs a s) =
-     tf_abs a (fun_of_resolved_st_q_for gs s)"
+    "fun_of_resolved_st_q_for \<G> (generic_tf_st_for ops \<G> a s) =
+     tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute) (rule branch)
 

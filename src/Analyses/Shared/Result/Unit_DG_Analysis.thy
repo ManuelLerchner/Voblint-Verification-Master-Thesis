@@ -81,19 +81,19 @@ text \<open>
 \<close>
 
 definition state_at :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> 'a abs_state" where
-  "state_at gs = analysis_surface.state_at (result gs) bot_state"
+  "state_at \<G> = analysis_surface.state_at (result \<G>) bot_state"
 
 lemma state_at_unfold:
-  "state_at gs p v
-     = (case lookup_context (result gs p) v () of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
+  "state_at \<G> p v
+     = (case lookup_context (result \<G> p) v () of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
   by (simp add: state_at_def analysis_surface.state_at_def)
 
 definition report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "report gs = analysis_surface.report (result gs) bot_state classify"
+  "report \<G> = analysis_surface.report (result \<G>) bot_state classify"
 
 definition report_with_state :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a abs_state) list" where
-  "report_with_state gs = analysis_surface.report_with_state (result gs) bot_state classify"
+  "report_with_state \<G> = analysis_surface.report_with_state (result \<G>) bot_state classify"
 
 subsection \<open>What the assembly derives, for one program\<close>
 
@@ -101,7 +101,8 @@ context
   fixes p :: imp_prog
 begin
 
-abbreviation ugs :: "vname \<Rightarrow> bool" where "ugs \<equiv> declared_global p"
+abbreviation (input) ugs :: "vname \<Rightarrow> bool" where "ugs \<equiv> declared_global p"
+  \<comment> \<open>input-only, so interpreted facts print \<open>declared_global p\<close>\<close>
 
 text \<open>
   The four closure facts the routed spine turns on are the four conjuncts of
@@ -141,14 +142,14 @@ text \<open>
 \<close>
 
 theorem result_node_sound_closure:
-  "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
+  "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
 proof -
-  have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+  have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
       = activation_collect ugs (call_context_rel_of_fun enterc_unit) ()
           (prog_cfg p) (cinit_stores ugs) v ()"
     by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  also have "\<dots> \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for ugs)
-                     (reader ugs p (Inl (v, ()))))"
+  also have "\<dots> \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for ugs)
+                     (reader ugs p (Inl (v, ())))\<rbrakk>\<^sub>\<bottom>"
   proof (rule fun_route_activation_collect_sound
       [where ctx_fun = enterc_unit, OF _ solves fwd_ok _ comb_fwd_ok entry_cov])
     show "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
@@ -160,7 +161,7 @@ proof -
                  \<in> sol_vars ugs p"
       using call_fwd_ok by simp
   qed
-  finally have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+  finally have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
       \<subseteq> gamma_point (lookup_context (result ugs p) v ())"
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
@@ -172,14 +173,14 @@ qed
 theorem report_proved_sound_closure:
   fixes v :: pp and c :: exp
   assumes mem: "(v, c, Check_Proved) \<in> set (report ugs p)"
-  shows "\<forall>s \<in> ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v. truthy (aval c s)"
+  shows "\<forall>s \<in> \<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have finI: "finite (intra (prog_cfg p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
-             and reach = "ltr_collect ugs (prog_cfg p) (cinit_stores ugs)" and v = v
+             and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
              and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_proved result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
@@ -188,14 +189,14 @@ qed
 theorem report_refuted_sound_closure:
   fixes v :: pp and c :: exp
   assumes mem: "(v, c, Check_Refuted) \<in> set (report ugs p)"
-  shows "\<forall>s \<in> ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> \<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have finI: "finite (intra (prog_cfg p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
-             and reach = "ltr_collect ugs (prog_cfg p) (cinit_stores ugs)" and v = v
+             and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
              and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_refuted result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
@@ -211,9 +212,8 @@ theorem source_sound_closure:
   fixes s0 s :: store
   assumes wf: "wf_compile_input ugs (prog_table p) (prog_procs p)"
     and s0: "s0 \<in> cinit_stores ugs"
-    and run: "star (pstep ugs (prog_table p))
-                (main_body (prog_table p), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+    and run: "ugs, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+  shows "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<lbrakk>state_at ugs p v\<rbrakk>"
 proof -
   have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
@@ -228,13 +228,12 @@ theorem completed_run_sound_closure:
   fixes s0 s :: store
   assumes wf: "wf_compile_input ugs (prog_table p) (prog_procs p)"
     and s0: "s0 \<in> cinit_stores ugs"
-    and run: "star (pstep ugs (prog_table p))
-                (main_body (prog_table p), s0, []) (SKIP, s, [])"
+    and run: "ugs, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, s, [])"
   shows "s \<in> \<lbrakk>state_at ugs p (cfg_exit (prog_cfg p))\<rbrakk>"
 proof -
   have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
     by (rule prog_cfg_def)
-  have "s \<in> ltr_collect ugs (prog_cfg p) (cinit_stores ugs) (cfg_exit (prog_cfg p))"
+  have "s \<in> \<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> (cfg_exit (prog_cfg p))"
     using source_completes_ltr_collect_exit[OF wf s0 run] unfolding cfg_eq .
   then show ?thesis using result_node_sound_closure by blast
 qed
@@ -276,7 +275,7 @@ lemma cover_comb_fwd:
 theorem result_node_sound:
   assumes solves: "terminates ugs p"
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"
-  shows "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
+  shows "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
   by (rule result_node_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover]])
 
@@ -285,7 +284,7 @@ theorem report_proved_sound:
   assumes solves: "terminates ugs p"
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"
     and mem: "(v, c, Check_Proved) \<in> set (report ugs p)"
-  shows "\<forall>s \<in> ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v. truthy (aval c s)"
+  shows "\<forall>s \<in> \<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   by (rule report_proved_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover] mem])
 
@@ -294,7 +293,7 @@ theorem report_refuted_sound:
   assumes solves: "terminates ugs p"
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"
     and mem: "(v, c, Check_Refuted) \<in> set (report ugs p)"
-  shows "\<forall>s \<in> ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> \<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   by (rule report_refuted_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover] mem])
 
@@ -304,9 +303,8 @@ theorem source_sound:
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"
     and wf: "wf_compile_input ugs (prog_table p) (prog_procs p)"
     and s0: "s0 \<in> cinit_stores ugs"
-    and run: "star (pstep ugs (prog_table p))
-                (main_body (prog_table p), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
+    and run: "ugs, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+  shows "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<lbrakk>state_at ugs p v\<rbrakk>"
   by (rule source_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover]
@@ -318,8 +316,7 @@ theorem completed_run_sound:
     and cover: "vars_cover (prog_cfg p) (sol_vars ugs p)"
     and wf: "wf_compile_input ugs (prog_table p) (prog_procs p)"
     and s0: "s0 \<in> cinit_stores ugs"
-    and run: "star (pstep ugs (prog_table p))
-                (main_body (prog_table p), s0, []) (SKIP, s, [])"
+    and run: "ugs, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, s, [])"
   shows "s \<in> \<lbrakk>state_at ugs p (cfg_exit (prog_cfg p))\<rbrakk>"
   by (rule completed_run_sound_closure[OF solves cover_fwd[OF cover]
         cover_call_fwd[OF cover] cover_comb_fwd[OF cover] cover_entry[OF cover]
@@ -329,17 +326,17 @@ subsubsection \<open>The table of any terminating solve\<close>
 
 theorem result_node_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates ugs p"
-  shows "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
+  shows "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
 proof -
-  have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+  have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
       = activation_collect ugs (call_context_rel_of_fun enterc_unit) ()
           (prog_cfg p) (cinit_stores ugs) v ()"
     by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  also have "\<dots> \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for ugs)
-                     (reader ugs p (Inl (v, ()))))"
+  also have "\<dots> \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for ugs)
+                     (reader ugs p (Inl (v, ())))\<rbrakk>\<^sub>\<bottom>"
     by (rule fun_route_activation_collect_sound_of_terminates
           [where ctx_fun = enterc_unit, OF _ wf solves]) simp
-  finally have "ltr_collect ugs (prog_cfg p) (cinit_stores ugs) v
+  finally have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
       \<subseteq> gamma_point (lookup_context (result ugs p) v ())"
     unfolding gamma_reader_eq_lookup .
   then show ?thesis

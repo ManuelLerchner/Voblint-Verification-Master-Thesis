@@ -211,7 +211,7 @@ definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound[intro]:
-  assumes "s \<in> gamma_rel d" "truthy (aval b s)"
+  assumes "s \<in> gamma_rel d" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   shows "s \<in> gamma_rel (assume_step b d)"
   using assms
   by (cases d; cases b) (auto simp: assume_step_def split: exp.splits if_splits)
@@ -234,7 +234,7 @@ definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound[intro]:
-  assumes "s \<in> gamma_rel d" "\<not> truthy (aval b s)"
+  assumes "s \<in> gamma_rel d" "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   shows "s \<in> gamma_rel (assume_not_step b d)"
   using assms
   by (cases d; cases b) (auto simp: assume_not_step_def split: exp.splits if_splits)
@@ -439,7 +439,7 @@ lemma dgs_assign_rel_sound[intro]:
      (case dgs_assign_rel x e d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_Assign x e) (gammaDG_rel d g)
-      = {s(x := aval e s) | s. s \<in> gammaDG_rel d g}"
+      = {s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) | s. s \<in> gammaDG_rel d g}"
     by simp
   also have "... \<subseteq> gamma_rel (forget_relc x d) \<inter> gamma_rel (forget_relc x g)"
     using forget_relc_sound unfolding gammaDG_rel_def by blast
@@ -465,7 +465,7 @@ lemma dgs_branch_rel_sound_True[intro]:
      (case dgs_branch_rel b True d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_Assume b) (gammaDG_rel d g)
-      = {s. s \<in> gammaDG_rel d g \<and> truthy (aval b s)}"
+      = {s. s \<in> gammaDG_rel d g \<and> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
     by simp
   also have "... \<subseteq> gamma_rel (assume_step b d) \<inter> gamma_rel g"
     using assume_step_sound unfolding gammaDG_rel_def by blast
@@ -478,7 +478,7 @@ lemma dgs_branch_rel_sound_False[intro]:
      (case dgs_branch_rel b False d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_AssumeNot b) (gammaDG_rel d g)
-      = {s. s \<in> gammaDG_rel d g \<and> \<not> truthy (aval b s)}"
+      = {s. s \<in> gammaDG_rel d g \<and> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
     by simp
   also have "... \<subseteq> gamma_rel (assume_not_step b d) \<inter> gamma_rel g"
     using assume_not_step_sound unfolding gammaDG_rel_def by blast
@@ -496,7 +496,7 @@ proof (cases e)
 next
   case (Some a)
   have "edge_collect (EA_Ret (Some a) p) (gammaDG_rel d g)
-      = {s(ret_var := aval a s) | s. s \<in> gammaDG_rel d g}"
+      = {s(ret_var := \<lbrakk>a\<rbrakk>\<^sub>e s) | s. s \<in> gammaDG_rel d g}"
     by simp
   also have "... \<subseteq> gamma_rel (forget_relc ret_var d) \<inter> gamma_rel (forget_relc ret_var g)"
     using forget_relc_sound unfolding gammaDG_rel_def by blast
@@ -562,7 +562,7 @@ lemma sides_rel_combine [simp]:
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel gs
+interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel \<G>
 proof unfold_locales
   show "dg_spec_wf rel_order_spec" by (rule dg_spec_wf_rel_order_spec)
 next
@@ -582,7 +582,7 @@ next
   fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
   show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));
          t \<in> gammaDG_rel de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
-          combine_collect gs (ci_dst ci) s t
+          combine_collect \<G> (ci_dst ci) s t
             \<in> gammaDG_rel
                 (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer rel_order_spec ci

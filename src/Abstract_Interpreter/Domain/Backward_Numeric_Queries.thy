@@ -51,14 +51,14 @@ definition less_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
   "less_false a b \<longleftrightarrow> is_empty (fst (inv_less True a b)) \<or> is_empty (snd (inv_less True a b))"
 
 lemma less_true_sound:
-  assumes "less_true a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i < j"
   using assms inv_less_sound[OF assms(2,3), of False]
   unfolding less_true_def
   by (auto simp: is_empty_correct)
 
 lemma less_false_sound:
-  assumes "less_false a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "\<not> i < j"
   using assms inv_less_sound[OF assms(2,3), of True]
   unfolding less_false_def
@@ -79,7 +79,7 @@ definition eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
   "eq_true a b \<longleftrightarrow> less_false a b \<and> less_false b a"
 
 lemma eq_true_sound:
-  assumes "eq_true a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i = j"
   using assms less_false_sound[of a b i j] less_false_sound[of b a j i]
   unfolding eq_true_def
@@ -89,7 +89,7 @@ definition eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
   "eq_false a b \<longleftrightarrow> is_empty (intersect a b)"
 
 lemma eq_false_sound:
-  assumes "eq_false a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i \<noteq> j"
   using assms intersect_sound
   unfolding eq_false_def

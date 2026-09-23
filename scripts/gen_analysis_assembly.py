@@ -105,7 +105,7 @@ CONTEXTS = [
         "keys": None,
         "route_abs": None,
         "params": "r",
-        "case4": ["  case (4 gs u ctx d ca) show ?case by simp"],
+        "case4": ["  case (4 \\<G> u ctx d ca) show ?case by simp"],
     },
     {
         "suffix": "_es",
@@ -117,7 +117,7 @@ CONTEXTS = [
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",
         "case4": [
-            "  case (4 gs u ctx d ca) show ?case",
+            "  case (4 \\<G> u ctx d ca) show ?case",
             "    unfolding fun_of_exec_dg_st_for_def",
             "    by (rule exec_formals_route_commute[symmetric])",
         ],
@@ -135,7 +135,7 @@ CONTEXTS = [
         "route_abs": '"\\<lambda>_. cs_route k"',
         "params": "k r",
         "case4": [
-            "  case (4 gs u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
+            "  case (4 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
         ],
     },
 ]
@@ -249,13 +249,13 @@ def registration(dom, ctx):
     out.append(f"  for {ctx['params']}")
     out += ctx["header"]
     out += [
-        f"  case (1 gs) show ?case by (rule {r['transfer_sound']})",
+        f"  case (1 \\<G>) show ?case by (rule {r['transfer_sound']})",
         "next",
-        "  case (2 gs a s) then show ?case",
+        "  case (2 \\<G> a s) then show ?case",
         "    unfolding fun_of_exec_dg_st_for_def",
         f"    by (rule {r['tf_commute']}[unfolded {r['tf_abs_def']}])",
         "next",
-        "  case (3 gs ci s) show ?case",
+        "  case (3 \\<G> ci s) show ?case",
         f"    unfolding fun_of_exec_dg_st_for_def by (rule {r['enter_commute']})",
         "next",
         *ctx["case4"],
@@ -274,7 +274,7 @@ def registration(dom, ctx):
         "next",
         "  case 10 show ?case by (rule refl)",
         "next",
-        f"  case (11 gs) show ?case by (rule {r['init_gamma']})",
+        f"  case (11 \\<G>) show ?case by (rule {r['init_gamma']})",
         "next",
         "  case (12 eqs x) then show ?case",
         *rule_step(f"{INTERP}.solve_dom_of_solve_c"),

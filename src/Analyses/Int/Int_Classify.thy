@@ -73,22 +73,22 @@ lemma int_eq_false_eq: "int_eq_false a b = int_dom_backward_fixpoint.eq_false a 
   unfolding int_eq_false_def int_dom_backward_fixpoint.eq_false_def by (rule refl)
 
 lemma int_less_true_sound:
-  assumes "int_less_true a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "int_less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i < j"
   using assms unfolding int_less_true_eq by (rule int_dom_backward_fixpoint.less_true_sound)
 
 lemma int_less_false_sound:
-  assumes "int_less_false a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "int_less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "\<not> i < j"
   using assms unfolding int_less_false_eq by (rule int_dom_backward_fixpoint.less_false_sound)
 
 lemma int_eq_true_sound:
-  assumes "int_eq_true a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "int_eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i = j"
   using assms unfolding int_eq_true_eq by (rule int_dom_backward_fixpoint.eq_true_sound)
 
 lemma int_eq_false_sound:
-  assumes "int_eq_false a b" and "i \<in> gamma a" and "j \<in> gamma b"
+  assumes "int_eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i \<noteq> j"
   using assms unfolding int_eq_false_eq by (rule int_dom_backward_fixpoint.eq_false_sound)
 
@@ -111,8 +111,8 @@ global_interpretation int_check_domain:
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "int_dom abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD by blast
-  then show "aval e s \<in> gamma (aval_int_dom_fixpoint e \<sigma>)" using aval_int_dom_sound by simp
+  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
+  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom_fixpoint e \<sigma>)" using aval_int_dom_sound by simp
 qed
 
 text \<open>

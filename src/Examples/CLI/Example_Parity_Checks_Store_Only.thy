@@ -86,8 +86,7 @@ lemma parity_ex_fwd_ok_ball:
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
   "parity_ex_reach v =
-     ltr_collect parity_ex_gs (prog_cfg parity_ex_program)
-       (cinit_stores parity_ex_gs) v"
+     \<C>\<^bsub>parity_ex_gs,prog_cfg parity_ex_program,cinit_stores parity_ex_gs\<^esub> v"
 
 text \<open>The computed Parity environment at an arbitrary node, read out of the
   routed-unit solved table \<open>parity_rule.result\<close> the production
@@ -141,13 +140,13 @@ lemma parity_ex_classify_6:
 
 corollary parity_ex_first_check_holds:
   assumes "t \<in> parity_ex_reach (Statement 3)"
-  shows "truthy (aval (NotEq (V (STR ''y'')) (V (STR ''z''))) t)"
+  shows "truthy (\<lbrakk>NotEq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
   using assms parity_ex_node_sound parity_classify_check_proved[OF parity_ex_classify_3]
   by blast
 
 corollary parity_ex_second_check_refuted:
   assumes "t \<in> parity_ex_reach (Statement 4)"
-  shows "\<not> truthy (aval (Eq (V (STR ''y'')) (V (STR ''z''))) t)"
+  shows "\<not> truthy (\<lbrakk>Eq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
   using assms parity_ex_node_sound parity_classify_check_refuted[OF parity_ex_classify_4]
   by blast
 
@@ -178,7 +177,7 @@ text \<open>Non-vacuity: reading \<open>7\<close> for \<open>x\<close> and \<ope
 lemma parity_ex_reach_nonempty:
   "parity_ex_reach (Statement 3) \<noteq> {}" "parity_ex_reach (Statement 6) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where gs = parity_ex_gs and g = "prog_cfg parity_ex_program"
+  note step = ltr_collect_intra_step[where \<G> = parity_ex_gs and g = "prog_cfg parity_ex_program"
       and S = "cinit_stores parity_ex_gs", folded parity_ex_reach_def]
   have "(\<lambda>_. 0) \<in> parity_ex_reach (cfg_entry (prog_cfg parity_ex_program))"
     unfolding parity_ex_reach_def by (rule ltr_collect_init) (simp add: cinit_stores_def)
@@ -219,7 +218,7 @@ text \<open>The proved entry, discharged against the collecting semantics rather
   \<^theory>\<open>Voblint_Analysis_Parity.Parity_Analyses\<close>.\<close>
 
 corollary parity_ex_report_proved_entry_sound:
-  "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (NotEq (V (STR ''y'')) (V (STR ''z''))) t)"
+  "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (\<lbrakk>NotEq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
   unfolding parity_ex_reach_def
   by (rule parity_rule.report_proved_sound_closure
         [OF parity_ex_solver_terminates _ _ _ parity_ex_entry_cov])

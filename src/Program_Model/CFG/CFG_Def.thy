@@ -151,13 +151,13 @@ text \<open>\<open>edge_step\<close> is the single primitive semantics of an int
 
 fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
   "edge_step EA_Nop s = {s}"
-| "edge_step (EA_Assign x a) s = {s(x := aval a s)}"
+| "edge_step (EA_Assign x a) s = {s(x := \<lbrakk>a\<rbrakk>\<^sub>e s)}"
 | "edge_step (EA_Special sc x) s = special_step sc x s"
-| "edge_step (EA_Assume b) s = (if truthy (aval b s) then {s} else {})"
-| "edge_step (EA_AssumeNot b) s = (if truthy (aval b s) then {} else {s})"
+| "edge_step (EA_Assume b) s = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then {s} else {})"
+| "edge_step (EA_AssumeNot b) s = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then {} else {s})"
 | "edge_step (EA_Body p) s = {s}"
 | "edge_step (EA_Ret e p) s =
-     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
+     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))}"
 | "edge_step (EA_Check c) s = {s}"
 
 subsection \<open>Intra-only execution paths\<close>

@@ -33,10 +33,14 @@ text \<open>
 text \<open>
   An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
   control-flow transfer: a domain may observe it, but it must not by itself refine
-  execution. This matches Goblint's own separation of its ordinary \<open>Spec\<close>
-  transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>,
-  which handles \<open>Events.Assert\<close> and similar occurrences outside the ordinary
-  transfer vocabulary. Voblint's sole current event is a check's condition; the
+  execution. The channel mirrors Goblint's separation of its ordinary \<open>Spec\<close>
+  transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>. The
+  check itself does not: Goblint handles \<open>__goblint_check\<close> in \<open>special\<close>, as
+  the library description \<open>Assert {check = true; refine = false}\<close>, and its
+  \<open>Events.Assert\<close> is emitted only by the \<open>abortUnless\<close> analysis and refines
+  the state in Base (goblint/analyzer \<open>5320a6b7\<close>: \<open>libraryFunctions.ml\<close>,
+  \<open>assert.ml\<close>, \<open>base.ml\<close>). Voblint's sole current event is a check's
+  condition, which never refines; the
   vocabulary is deliberately left open rather than pre-populated, so that a future
   VIMP source construct with no current counterpart (e.g. a diagnostic-only
   annotation) adds a constructor here instead of a new specification field. A
@@ -99,8 +103,9 @@ where
 
 text \<open>
   \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close> rather than \<^const>\<open>dgs_skip\<close>:
-  a check is an analysis event (matching Goblint's \<open>Spec.event\<close>, not
-  \<open>Spec.skip\<close>), and conflating it with skip would make a future domain's
+  a check is an analysis event (on the channel that mirrors Goblint's
+  \<open>Spec.event\<close>; Goblint's own check goes through \<open>special\<close>, see
+  \<open>analysis_event\<close> above), and conflating it with skip would make a future domain's
   non-identity skip silently change what a check edge does. A concrete
   \<open>dg_spec\<close> therefore supplies its own notion of a
   check event directly, the same way it already supplies

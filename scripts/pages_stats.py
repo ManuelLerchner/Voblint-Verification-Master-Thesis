@@ -10,6 +10,9 @@ Isabelle figures reuse thy_stats.py's scanner, so the page and
 `pixi run theory-stats` never disagree. The session graph behind the strata
 figure comes from session_graph.py, read from ROOT files and theory imports.
 The OCaml counts are plain line counts.
+
+The thesis reads the same collection (`thesis/tools/stats.py`), so a figure
+means one thing on both: every counting rule lives here.
 """
 
 import argparse
@@ -27,6 +30,7 @@ from thy_stats import scan_theory, statement_kinds
 REPO_ROOT = Path(__file__).resolve().parent.parent
 GENERATED_ML = REPO_ROOT / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
 CLI_DIR = REPO_ROOT / "cli"
+SRC_DIR = REPO_ROOT / "src"
 CORPUS_DIR = REPO_ROOT / "tests" / "regression"
 EXAMPLES_DIR = REPO_ROOT / "src" / "Examples"
 # tests/run.py's placement convention: what the concrete program does.
@@ -73,6 +77,23 @@ def pstep_rules() -> int:
         if re.match(r"(\| )?[A-Z][A-Za-z0-9_]*:", line.strip()):
             rules += 1
     return rules
+
+
+def flatten(node: dict, prefix: str = ""):
+    """(dotted key, int) pairs of a nested stats dict; lists are not addressable."""
+    for key, value in node.items():
+        if isinstance(value, dict):
+            yield from flatten(value, f"{prefix}{key}.")
+        elif isinstance(value, int):
+            yield f"{prefix}{key}", value
+
+
+def source_directory(theory) -> str | None:
+    """Top-level directory below src/ holding the theory, or None outside src/."""
+    try:
+        return theory.path.resolve().relative_to(SRC_DIR).parts[0]
+    except ValueError:
+        return None
 
 
 def git(*args: str) -> str | None:
@@ -151,12 +172,21 @@ def collect() -> dict:
         if p.name not in GENERATED_CLI and "_build" not in p.parts
     ]
 
+    directories = {}
+    for t in theories:
+        directory = source_directory(t) or "outside_src"
+        directories[directory] = directories.get(directory, 0) + t.lines
+
     cases = sorted(CORPUS_DIR.rglob("*.vimp"))
+    groups = sorted(d.name for d in CORPUS_DIR.iterdir() if d.is_dir())
+    by_group = {group: 0 for group in groups}
     kinds = {kind: 0 for kind in CORPUS_KINDS + ("other",)}
     for case in cases:
         parts = case.relative_to(CORPUS_DIR).parts
         kind = next((k for k in CORPUS_KINDS if k in parts), "other")
         kinds[kind] += 1
+        if parts[0] in by_group:
+            by_group[parts[0]] += 1
 
     return {
         "commit": commit(),
@@ -172,6 +202,7 @@ def collect() -> dict:
             "proofs": sum(t.n_proofs for t in theories),
             "kinds": kind_counts(theories),
             "sessions": sorted(sessions.values(), key=lambda s: -s["lines"]),
+            "directories": dict(sorted(directories.items())),
         },
         "solver": {
             "theories": len(solver),
@@ -200,9 +231,10 @@ def collect() -> dict:
         "handwritten_ocaml": sum(count_lines(p) for p in handwritten),
         "corpus": {
             "cases": len(cases),
-            "groups": sum(1 for d in CORPUS_DIR.iterdir() if d.is_dir()),
+            "groups": len(groups),
             "lines": sum(count_lines(p) for p in cases),
             "kinds": kinds,
+            "by_group": by_group,
         },
         "eval_witnesses": sum(
             p.read_text(encoding="utf-8", errors="replace").count("by eval")

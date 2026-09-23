@@ -12,9 +12,12 @@ text \<open>
   it runs the specification's entry transfer on the caller's local value,
   chooses the callee's context from the entry half of the alternative that
   produced, publishes that entered state at a global proxy key --- an
-  \<^emph>\<open>activation seed\<close>, which is what makes the callee's own unknown
-  reachable at all --- reads the callee's exit back at that same context, and
-  runs the specification's combine against the alternative's continuation half.
+  \<^emph>\<open>activation seed\<close>, the only channel by which the entered state reaches
+  the callee's entry unknown --- reads the callee's exit back at that same
+  context, and runs the specification's combine against the alternative's
+  continuation half. The publication only joins into the seed and destabilizes
+  its readers; the exit read is the query that makes the solver evaluate the
+  callee at that context.
   The other half of the protocol is the callee's own entry equation reading its
   seed slot back: that is \<open>routed_entry_seed_programs\<close>.
 
@@ -49,9 +52,11 @@ text \<open>
   framework records reachable contexts on a separate global whose value is a
   set of contexts, keyed by function. It is a solver adapter, not the
   translation of any Goblint constraint constructor: the vendored solver
-  publishes to global keys only, so the one way to activate a callee's local
-  unknown is to publish at a global proxy the callee reads back. It is named to
-  say so, so that no later reader takes it for a Goblint correspondence.
+  publishes to global keys only, so the one way to hand a callee's entry
+  unknown a value is to publish at a global proxy that the entry equation reads
+  back. Publication does not demand the callee; the caller's read of the
+  callee's exit does. It is named to say so, so that no later reader takes it
+  for a Goblint correspondence.
 
   The types keep the two apart. A transfer names a global as a \<open>'v\<close> and never
   builds a key, because \<^const>\<open>mk_dg_man\<close> holds the embedding; only the routing
@@ -66,10 +71,12 @@ lemma activation_seed_ne_analysis_global [simp]:
   "Analysis_Global v \<noteq> Activation_Seed u c"
   by simp_all
 
-text \<open>Which routed keys are seeds. A seed is the join of the entry states its callers
-  publish and is never widened; the solver bridge's key-selected update rule
-  \<open>update_global_keyed\<close> takes this predicate so the analysis global keeps
-  the widening policy the analysis configured while every seed is joined.\<close>
+text \<open>Which routed keys are seeds. The solver bridge's key-selected update rule
+  \<open>update_global_keyed\<close> takes this predicate so that every seed is joined while
+  the analysis global keeps its configured rule; some example theories solve with
+  that rule. \<open>run_voblint\<close> does not: it merges into a seed with the
+  selected global rule like into any other global key, so under the two
+  warrowing rules a seed can be widened.\<close>
 fun is_activation_seed :: "('v, 'c) routed_gk \<Rightarrow> bool" where
   "is_activation_seed (Activation_Seed _ _) = True"
 | "is_activation_seed (Analysis_Global _) = False"
@@ -96,9 +103,11 @@ text \<open>
 
   This program owns the whole call lifecycle for one call action: it reads the caller once,
   routes the callee context once (\<open>ctx'\<close>), and shares that one \<open>ctx'\<close> between the
-  entry-seed publication and the combine's callee-exit read. The callee is therefore
-  activated as a side effect of whichever equation combines its result, discharging
-  \<open>enter#\<close> exactly once per call action rather than once per hook. The caller
+  entry-seed publication and the combine's callee-exit read. The publication hands
+  the callee's entry its value, and the exit read, a \<^const>\<open>QueryL\<close> of the callee's
+  \<^const>\<open>FunctionResult\<close> node at \<open>ctx'\<close>, is what makes the solver evaluate
+  the callee; both happen in the one equation that combines the result, so
+  \<open>enter#\<close> runs exactly once per call action rather than once per hook. The caller
   continuation is not reconstructed here: it is handed to
   \<^const>\<open>dg_spec_combine_transfer\<close> as the manager's own local value, and that
   pipeline runs \<open>combine_env\<^sup>#\<close> and \<open>combine_assign\<^sup>#\<close> over it,

@@ -1,0 +1,112 @@
+// PARAM: --analysis interval --globals warrow --context none
+// Backs the site figure "What the analyzer will answer" (scene-collect) and the
+// thesis's collecting-semantics figure. The concrete result is fixed: sum(2) = 3.
+// With one context per procedure, the entries of sum(2), sum(1) and sum(0) join
+// at one unknown, which the solver widens to n = [-inf,2]. The shared exit then
+// loses the return value, so x == 3 is UNKNOWN at x = [0,+inf].
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: dec / unit
+//     dec_exit_dec_ctx0
+//     dec_pp0_ctx0
+//     dec_entry_dec_ctx0
+//   cluster_ctx_1: sum / unit
+//     sum_pp3_ctx0
+//     sum_exit_sum_ctx0
+//     sum_pp2_ctx0
+//     sum_pp5_ctx0
+//     sum_pp6_ctx0
+//     sum_pp7_ctx0
+//     sum_entry_sum_ctx0
+//   cluster_ctx_2: main / unit
+//     main_pp11_ctx0
+//     main_exit_main_ctx0
+//     main_pp9_ctx0
+//     main_pp10_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   dec_exit_dec_ctx0: exit_dec
+//       x=[-∞,2]
+//   sum_pp3_ctx0: pp3
+//       n=[-∞,0]
+//       m=⊤
+//       r=⊤
+//   sum_exit_sum_ctx0: exit_sum
+//       n=[-∞,2]
+//       m=⊤
+//       r=⊤
+//   main_pp11_ctx0: pp11
+//       x=[0,+∞]
+//   main_exit_main_ctx0: exit_main
+//       x=[0,+∞]
+//   dec_pp0_ctx0: pp0
+//       x=[-∞,2]
+//   sum_pp2_ctx0: pp2
+//       n=[-∞,2]
+//       m=⊤
+//       r=⊤
+//   sum_pp5_ctx0: pp5
+//       n=[1,2]
+//       m=⊤
+//       r=⊤
+//   dec_entry_dec_ctx0: entry_dec
+//       x=[-∞,2]
+//   sum_pp6_ctx0: pp6
+//       n=[1,2]
+//       m=[-∞,1]
+//       r=⊤
+//   sum_pp7_ctx0: pp7
+//       n=[1,2]
+//       m=[-∞,1]
+//       r=[0,+∞]
+//   main_pp9_ctx0: pp9
+//       x=⊤
+//   sum_entry_sum_ctx0: entry_sum
+//       n=[-∞,2]
+//       m=⊤
+//       r=⊤
+//   main_pp10_ctx0: pp10 [unknown]
+//       x=[0,+∞]
+//       check x == 3
+//   main_entry_main_ctx0: entry_main
+//       x=⊤
+//
+// edges:
+//   dec_pp0_ctx0 -> dec_exit_dec_ctx0: return x - 1
+//   sum_pp2_ctx0 -> sum_pp3_ctx0: [n < 1]
+//   sum_pp2_ctx0 -> sum_pp5_ctx0: ![n < 1]
+//   sum_pp3_ctx0 -> sum_exit_sum_ctx0: return 0
+//   sum_pp7_ctx0 -> sum_exit_sum_ctx0: return r + n
+//   main_pp10_ctx0 -> main_pp11_ctx0: check(x == 3)
+//   main_pp11_ctx0 -> main_exit_main_ctx0: return
+//   dec_entry_dec_ctx0 -> dec_pp0_ctx0: body(dec)
+//   main_entry_main_ctx0 -> main_pp9_ctx0: body(main)
+//   sum_entry_sum_ctx0 -> sum_pp2_ctx0: body(sum)
+//   sum_pp5_ctx0 -> dec_entry_dec_ctx0: enter dec(n)
+//   dec_exit_dec_ctx0 -> sum_pp6_ctx0: combine m := dec(n)
+//   sum_pp5_ctx0 -> sum_pp6_ctx0: call-to-return dec
+//   sum_pp6_ctx0 -> sum_entry_sum_ctx0: enter sum(m)
+//   sum_exit_sum_ctx0 -> sum_pp7_ctx0: combine r := sum(m)
+//   sum_pp6_ctx0 -> sum_pp7_ctx0: call-to-return sum
+//   main_pp9_ctx0 -> sum_entry_sum_ctx0: enter sum(2)
+//   sum_exit_sum_ctx0 -> main_pp10_ctx0: combine x := sum(2)
+//   main_pp9_ctx0 -> main_pp10_ctx0: call-to-return sum
+// EXPECT-GRAPH-END
+
+
+fun dec(x) {
+  return x - 1;
+}
+
+fun sum(n) {
+  if (n < 1) { return 0; }
+  m = dec(n);
+  r = sum(m);
+  return r + n;
+}
+
+fun main() {
+  x = sum(2);
+  __voblint_check(x == 3); // UNKNOWN
+}

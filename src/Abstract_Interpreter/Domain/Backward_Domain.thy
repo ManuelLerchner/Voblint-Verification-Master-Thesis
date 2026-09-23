@@ -34,7 +34,7 @@ text \<open>
 locale semantic_intersection =
   fixes intersect :: "'a::sound_domain => 'a => 'a"
   assumes intersect_sound[intro]:
-    "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (intersect a b)"
+    "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (intersect a b)"
 
 text \<open>
   Extends @{class sound_domain} with the infrastructure for backward
@@ -57,24 +57,24 @@ locale backward_domain =
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
       aval_abs_sound[intro]:
-      "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
+      "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e \<sigma>)"
   and inv_less_sound:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
   and inv_eq_sound:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 = n2) = res
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_eq res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq res a1 a2))"
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 = n2) = res
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_eq res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_eq res a1 a2))"
   and inv_plus_sound:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 + n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_plus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus r a1 a2))"
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 + n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_plus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_plus r a1 a2))"
   and inv_minus_sound:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 - n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_minus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus r a1 a2))"
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 - n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_minus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_minus r a1 a2))"
   and inv_times_sound:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
+      "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
+       \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
   and tobool_sound:
-      "tobool p = Some b \<Longrightarrow> i \<in> gamma p \<Longrightarrow> truthy i = b"
+      "tobool p = Some b \<Longrightarrow> i \<in> \<gamma> p \<Longrightarrow> truthy i = b"
 begin
 
 text \<open>
@@ -147,7 +147,7 @@ text \<open>
 \<close>
 
 lemma feasible_of_concrete [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (aval e s) = pol"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
   shows "feasible e pol \<sigma>"
   unfolding feasible_def using assms is_empty_correct tobool_sound by blast
  
@@ -159,7 +159,7 @@ text \<open>
   Every other constructor -- \<open>N\<close>, \<open>V\<close>, \<open>Plus\<close>, \<open>Minus\<close>, \<open>Times\<close> -- has no
   Boolean-shaped narrowing operator of its own, so the fallback case reduces
   truthiness to the one comparison every domain already inverts: \<open>truthy
-  (aval e s) = res\<close> iff \<open>(aval e s = 0) = (\<not> res)\<close>, so \<open>inv_eq (\<not> res)\<close>
+  (\<lbrakk>e\<rbrakk>\<^sub>e s) = res\<close> iff \<open>(\<lbrakk>e\<rbrakk>\<^sub>e s = 0) = (\<not> res)\<close>, so \<open>inv_eq (\<not> res)\<close>
   against the abstract constant \<open>0\<close> narrows \<open>e\<close>'s own target value, and
   \<open>afilter\<close> propagates that target through \<open>e\<close>'s structure. This reuses
   \<open>inv_eq\<close>/\<open>afilter\<close> rather than adding a new domain-author operator.
@@ -233,12 +233,12 @@ text \<open>
 \<close>
 
 lemma gamma_state_update_intersect [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "s x \<in> gamma a"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "s x \<in> \<gamma> a"
   shows "s \<in> \<lbrakk>\<sigma>(x := intersect a (\<sigma> x))\<rbrakk>"
   using assms by (simp add: gamma_stateD gamma_stateI intersect_sound)
 
 lemma afilter_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> a"
   shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: a \<sigma>)
   case (V x)
@@ -246,27 +246,27 @@ using assms proof (induction e arbitrary: a \<sigma>)
     unfolding afilter.simps aval.simps by (rule gamma_state_update_intersect)
 next
   case (Plus e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Plus.prems(1)] by simp_all
-  have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by simp
+  have asum: "\<lbrakk>e1\<rbrakk>\<^sub>e s + \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Plus.prems(2) by simp
   show ?case
     unfolding afilter.simps Let_def case_prod_beta
     using e1a e2a asum Plus.prems(1)
     by (blast intro: Plus.IH)
 next
   case (Minus e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Minus.prems(1)] by simp_all
-  have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by simp
+  have adiff: "\<lbrakk>e1\<rbrakk>\<^sub>e s - \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Minus.prems(2) by simp
   show ?case
     unfolding afilter.simps Let_def case_prod_beta
     using e1a e2a adiff Minus.prems(1)
     by (blast intro: Minus.IH)
 next
   case (Times e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Times.prems(1)] by simp_all
-  have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by simp
+  have aprod: "\<lbrakk>e1\<rbrakk>\<^sub>e s * \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Times.prems(2) by simp
   show ?case
     unfolding afilter.simps Let_def case_prod_beta
     using e1a e2a aprod Times.prems(1)
@@ -284,8 +284,8 @@ text \<open>
 
 lemma afilter_pair_sound [intro]:
   assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-      and fst: "aval e1 s \<in> gamma (fst p)"
-      and snd: "aval e2 s \<in> gamma (snd p)"
+      and fst: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (fst p)"
+      and snd: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (snd p)"
   shows "s \<in> \<lbrakk>afilter e1 (fst p) (afilter e2 (snd p) \<sigma>)\<rbrakk>"
 proof -
   have inner: "s \<in> \<lbrakk>afilter e2 (snd p) \<sigma>\<rbrakk>" by (rule afilter_sound[OF st snd])
@@ -303,16 +303,16 @@ text \<open>
   arithmetic constructor.
 \<close>
 lemma bfilter_default_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
   shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma>\<rbrakk>"
 proof -
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)"
+  have ea: "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e \<sigma>)"
     using aval_abs_sound[OF assms(1)] by simp
-  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)"
+  have e0: "\<lbrakk>N 0\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs (N 0) \<sigma>)"
     by (rule aval_abs_sound[of s \<sigma> "N 0", OF assms(1)])
-  have eq0: "(aval e s = aval (N 0) s) = (\<not> res)"
+  have eq0: "(\<lbrakk>e\<rbrakk>\<^sub>e s = \<lbrakk>N 0\<rbrakk>\<^sub>e s) = (\<not> res)"
     using assms(2) by auto
-  have "aval e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
+  have "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
     using inv_eq_sound[OF ea e0 eq0] by simp
   then show ?thesis using afilter_sound[OF assms(1)]
     by simp
@@ -327,42 +327,42 @@ text \<open>
 
 lemma gated_join_sound:
   assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-    and "truthy (aval b1 s) = pol \<or> truthy (aval b2 s) = pol"
-    and f1: "truthy (aval b1 s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
-    and f2: "truthy (aval b2 s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>"
+    and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
+    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
+    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>"
   shows "s \<in> \<lbrakk>(if feasible b1 pol \<sigma> then f1 else bot)
                 \<squnion> (if feasible b2 pol \<sigma> then f2 else bot)\<rbrakk>"
   using assms(2)
 proof
-  assume h: "truthy (aval b1 s) = pol"
+  assume h: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol"
   have "feasible b1 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
   with f1[OF h] show ?thesis by (simp add: gamma_state_supI1)
 next
-  assume h: "truthy (aval b2 s) = pol"
+  assume h: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
   have "feasible b2 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
   with f2[OF h] show ?thesis by (simp add: gamma_state_supI2)
 qed
 
 lemma bfilter_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
   shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: res \<sigma>)
   case (Not e)
-  have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
+  have bv': "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
 next
   case (And e1 e2)
   show ?case
   proof (cases res)
     case True
-    have v1: "truthy (aval e1 s) = True" and v2: "truthy (aval e2 s) = True"
+    have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = True" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = True"
       using And.prems(2) True unfolding truthy_aval_And by simp_all
     show ?thesis
       using And.IH(1)[OF And.IH(2)[OF And.prems(1) v2] v1] by (simp add: True)
   next
     case False
     then have res: "res = False" by simp
-    have "truthy (aval e1 s) = False \<or> truthy (aval e2 s) = False"
+    have "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = False \<or> truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = False"
       using And.prems(2) res by (auto split: if_splits)
     then show ?thesis
       unfolding res bfilter.simps
@@ -374,68 +374,68 @@ next
   proof (cases res)
     case True
     then have res: "res = True" by simp
-    have "truthy (aval e1 s) = True \<or> truthy (aval e2 s) = True"
+    have "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = True \<or> truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = True"
       using Or.prems(2) res by auto
     then show ?thesis
       unfolding res bfilter.simps
       by (rule gated_join_sound[OF Or.prems(1) _ Or.IH[OF Or.prems(1)]])
   next
     case False
-    have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
+    have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = False" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = False"
       using Or.prems(2) False unfolding truthy_aval_Or by simp_all
     show ?thesis
       using Or.IH(1)[OF Or.IH(2)[OF Or.prems(1) v2] v1] by (simp add: False)
   qed
 next
   case (Less e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Less.prems(1)] by simp_all
-  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (auto split: if_splits)
+  have less: "(\<lbrakk>e1\<rbrakk>\<^sub>e s < \<lbrakk>e2\<rbrakk>\<^sub>e s) = res" using Less.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: Less.prems(1) inv_less_sound_fst[OF e1a e2a less]
                       inv_less_sound_snd[OF e1a e2a less])
 next
   case (GreaterEq e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF GreaterEq.prems(1)] by simp_all
-  have less: "(aval e1 s < aval e2 s) = (\<not> res)" using GreaterEq.prems(2) by (auto split: if_splits)
+  have less: "(\<lbrakk>e1\<rbrakk>\<^sub>e s < \<lbrakk>e2\<rbrakk>\<^sub>e s) = (\<not> res)" using GreaterEq.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: GreaterEq.prems(1) inv_less_sound_fst[OF e1a e2a less]
                       inv_less_sound_snd[OF e1a e2a less])
 next
   case (Greater e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Greater.prems(1)] by simp_all
-  have less: "(aval e2 s < aval e1 s) = res" using Greater.prems(2) by (auto split: if_splits)
+  have less: "(\<lbrakk>e2\<rbrakk>\<^sub>e s < \<lbrakk>e1\<rbrakk>\<^sub>e s) = res" using Greater.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: Greater.prems(1) inv_less_sound_fst[OF e2a e1a less]
                       inv_less_sound_snd[OF e2a e1a less])
 next
   case (LessEq e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF LessEq.prems(1)] by simp_all
-  have less: "(aval e2 s < aval e1 s) = (\<not> res)" using LessEq.prems(2) by (auto split: if_splits)
+  have less: "(\<lbrakk>e2\<rbrakk>\<^sub>e s < \<lbrakk>e1\<rbrakk>\<^sub>e s) = (\<not> res)" using LessEq.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: LessEq.prems(1) inv_less_sound_fst[OF e2a e1a less]
                       inv_less_sound_snd[OF e2a e1a less])
 next
   case (Eq e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF Eq.prems(1)] by simp_all
-  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by (auto split: if_splits)
+  have eq: "(\<lbrakk>e1\<rbrakk>\<^sub>e s = \<lbrakk>e2\<rbrakk>\<^sub>e s) = res" using Eq.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: Eq.prems(1) inv_eq_sound_fst[OF e1a e2a eq] inv_eq_sound_snd[OF e1a e2a eq])
 
 next
   case (NotEq e1 e2)
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" and e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 \<sigma>)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 \<sigma>)"
     using aval_abs_sound[OF NotEq.prems(1)] by simp_all
-  have eq: "(aval e1 s = aval e2 s) = (\<not> res)" using NotEq.prems(2) by (auto split: if_splits)
+  have eq: "(\<lbrakk>e1\<rbrakk>\<^sub>e s = \<lbrakk>e2\<rbrakk>\<^sub>e s) = (\<not> res)" using NotEq.prems(2) by (auto split: if_splits)
   show ?case
     unfolding bfilter.simps Let_def case_prod_beta
     by (blast intro: NotEq.prems(1) inv_eq_sound_fst[OF e1a e2a eq] inv_eq_sound_snd[OF e1a e2a eq])
@@ -449,7 +449,7 @@ text \<open>
   Goblint's \<open>Deadcode\<close> as an outer control-flow fact rather than a value of the
   domain -- while every other case narrows via \<open>bfilter\<close> and returns
   \<open>Lifted\<close>. \<open>tobool\<close>'s definite answer, when present, is exactly \<open>truthy\<close> of
-  every concrete value \<open>aval_abs e \<sigma>\<close> represents; \<open>truthy (aval e s) = pol\<close>
+  every concrete value \<open>aval_abs e \<sigma>\<close> represents; \<open>truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol\<close>
   for a represented \<open>s\<close> then forces that answer to equal \<open>pol\<close>, so the \<open>Bot\<close>
   case below is exercised only when no represented \<open>s\<close> exists at all.
 
@@ -523,37 +523,36 @@ text \<open>\<open>gated_join_sound\<close> for \<open>bfilter_lifted\<close>'s 
 
 lemma gated_join_lifted_sound:
   assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-    and "truthy (aval b1 s) = pol \<or> truthy (aval b2 s) = pol"
-    and f1: "truthy (aval b1 s) = pol \<Longrightarrow> s \<in> gamma_state_lift f1"
-    and f2: "truthy (aval b2 s) = pol \<Longrightarrow> s \<in> gamma_state_lift f2"
-  shows "s \<in> gamma_state_lift
-           ((if feasible b1 pol \<sigma> then f1 else Bot) \<squnion> (if feasible b2 pol \<sigma> then f2 else Bot))"
+    and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
+    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>\<^sub>\<bottom>"
+    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>\<^sub>\<bottom>"
+  shows "s \<in> \<lbrakk>(if feasible b1 pol \<sigma> then f1 else Bot) \<squnion> (if feasible b2 pol \<sigma> then f2 else Bot)\<rbrakk>\<^sub>\<bottom>"
   using assms(2)
 proof
-  assume h: "truthy (aval b1 s) = pol"
+  assume h: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol"
   have "feasible b1 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
   with f1[OF h] show ?thesis by (simp add: gamma_state_lift_supI1)
 next
-  assume h: "truthy (aval b2 s) = pol"
+  assume h: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
   have "feasible b2 pol \<sigma>" by (rule feasible_of_concrete[OF st h])
   with f2[OF h] show ?thesis by (simp add: gamma_state_lift_supI2)
 qed
 
 lemma bfilter_lifted_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
-  shows "s \<in> gamma_state_lift (bfilter_lifted e res \<sigma>)"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
+  shows "s \<in> \<lbrakk>bfilter_lifted e res \<sigma>\<rbrakk>\<^sub>\<bottom>"
 using assms proof (induction e arbitrary: res \<sigma>)
   case (Not e)
-  have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
+  have bv': "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
 next
   case (And e1 e2)
   show ?case
   proof (cases res)
     case True
-    have v1: "truthy (aval e1 s) = True" and v2: "truthy (aval e2 s) = True"
+    have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = True" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = True"
       using And.prems(2) True unfolding truthy_aval_And by simp_all
-    have h2: "s \<in> gamma_state_lift (bfilter_lifted e2 True \<sigma>)"
+    have h2: "s \<in> \<lbrakk>bfilter_lifted e2 True \<sigma>\<rbrakk>\<^sub>\<bottom>"
       using And.IH(2)[OF And.prems(1) v2] .
     have res_eq: "res = True" using True by simp
     show ?thesis
@@ -561,7 +560,7 @@ next
       using h2 v1 by (blast intro: And.IH(1))
   next
     case False
-    have "truthy (aval e1 s) = False \<or> truthy (aval e2 s) = False"
+    have "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = False \<or> truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = False"
       using And.prems(2) False by (auto split: if_splits)
     from gated_join_lifted_sound[OF And.prems(1) this And.IH[OF And.prems(1)]] False
     show ?thesis by (simp split del: if_split)
@@ -571,15 +570,15 @@ next
   show ?case
   proof (cases res)
     case True
-    have "truthy (aval e1 s) = True \<or> truthy (aval e2 s) = True"
+    have "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = True \<or> truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = True"
       using Or.prems(2) True by auto
     from gated_join_lifted_sound[OF Or.prems(1) this Or.IH[OF Or.prems(1)]] True
     show ?thesis by (simp split del: if_split)
   next
     case False
-    have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
+    have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = False" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = False"
       using Or.prems(2) False unfolding truthy_aval_Or by simp_all
-    have h2: "s \<in> gamma_state_lift (bfilter_lifted e2 False \<sigma>)"
+    have h2: "s \<in> \<lbrakk>bfilter_lifted e2 False \<sigma>\<rbrakk>\<^sub>\<bottom>"
       using Or.IH(2)[OF Or.prems(1) v2] .
     have res_eq: "res = False" using False by simp
     show ?thesis
@@ -605,11 +604,11 @@ lemma branch_lifted_normalized [simp]:
   unfolding branch_lifted_def by simp
 
 lemma branch_lifted_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
-  shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
+  shows "s \<in> \<lbrakk>branch_lifted e pol \<sigma>\<rbrakk>\<^sub>\<bottom>"
 proof -
   have g: "feasible e pol \<sigma>" by (rule feasible_of_concrete[OF assms])
-  have "s \<in> gamma_state_lift (bfilter_lifted e pol \<sigma>)" by (rule bfilter_lifted_sound[OF assms])
+  have "s \<in> \<lbrakk>bfilter_lifted e pol \<sigma>\<rbrakk>\<^sub>\<bottom>" by (rule bfilter_lifted_sound[OF assms])
   with g show ?thesis unfolding branch_lifted_def by simp
 qed
 
@@ -632,7 +631,7 @@ definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
   "branch e pol \<sigma> = collapse_lift (branch_lifted e pol \<sigma>)"
 
 lemma branch_sound [intro]:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
   shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
   unfolding branch_def
   by (rule gamma_collapse_lift[where gam = gamma_state,
@@ -668,8 +667,8 @@ definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
 
 lemma inv_conservative_sound:
   fixes a1 a2 :: "'a::sound_domain"
-  assumes "n1 \<in> gamma a1" and "n2 \<in> gamma a2"
-  shows "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  assumes "n1 \<in> \<gamma> a1" and "n2 \<in> \<gamma> a2"
+  shows "n1 \<in> \<gamma> (fst (inv_conservative r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_conservative r a1 a2))"
   using assms by (simp add: inv_conservative_def)
 
 end

@@ -19,7 +19,7 @@ text \<open>
 subsection \<open>Composed concretization\<close>
 
 abbreviation gamma_state_lift ::
-  "'a::sound_domain abs_state lifted \<Rightarrow> store set" where
+  "'a::sound_domain abs_state lifted \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^sub>\<bottom>") where
   "gamma_state_lift \<equiv> gamma_lift gamma_state"
 
 fun is_empty_state_lift ::
@@ -28,7 +28,7 @@ fun is_empty_state_lift ::
 | "is_empty_state_lift (Lifted \<sigma>) = is_empty_state \<sigma>"
 
 lemma is_empty_state_lift_iff:
-  "is_empty_state_lift s \<longleftrightarrow> gamma_state_lift s = {}"
+  "is_empty_state_lift s \<longleftrightarrow> \<lbrakk>s\<rbrakk>\<^sub>\<bottom> = {}"
   by (cases s) (simp_all add: is_empty_state_iff_gamma_state_empty)
 
 text \<open>
@@ -41,7 +41,7 @@ text \<open>
 \<close>
 
 lemma gamma_state_normalize_lift [simp]:
-  "gamma_state_lift (normalize_lift is_empty_state \<sigma>) = \<lbrakk>\<sigma>\<rbrakk>"
+  "\<lbrakk>normalize_lift is_empty_state \<sigma>\<rbrakk>\<^sub>\<bottom> = \<lbrakk>\<sigma>\<rbrakk>"
   by (rule gamma_normalize_lift) (rule is_empty_state_iff_gamma_state_empty)
 
 text \<open>Collapsing a witness-bottom payload changes what a value says about
@@ -51,7 +51,7 @@ text \<open>Collapsing a witness-bottom payload changes what a value says about
   entirely.\<close>
 
 lemma gamma_state_canonicalize_lift [simp]:
-  "gamma_state_lift (canonicalize_lift is_empty_state \<sigma>) = gamma_state_lift \<sigma>"
+  "\<lbrakk>canonicalize_lift is_empty_state \<sigma>\<rbrakk>\<^sub>\<bottom> = \<lbrakk>\<sigma>\<rbrakk>\<^sub>\<bottom>"
   by (cases \<sigma>) simp_all
 
 lemma normalize_state_lift_mono [intro]:
@@ -88,12 +88,12 @@ text \<open>
 \<close>
 
 lemma gamma_state_lift_supI1 [intro]:
-  "s \<in> gamma_state_lift x \<Longrightarrow> s \<in> gamma_state_lift (x \<squnion> y)"
+  "s \<in> \<lbrakk>x\<rbrakk>\<^sub>\<bottom> \<Longrightarrow> s \<in> \<lbrakk>x \<squnion> y\<rbrakk>\<^sub>\<bottom>"
   for x y :: "'a::sound_domain abs_state lifted"
   by (cases x; cases y) auto
 
 lemma gamma_state_lift_supI2 [intro]:
-  "s \<in> gamma_state_lift y \<Longrightarrow> s \<in> gamma_state_lift (x \<squnion> y)"
+  "s \<in> \<lbrakk>y\<rbrakk>\<^sub>\<bottom> \<Longrightarrow> s \<in> \<lbrakk>x \<squnion> y\<rbrakk>\<^sub>\<bottom>"
   for x y :: "'a::sound_domain abs_state lifted"
   by (cases x; cases y) auto
 
@@ -112,7 +112,7 @@ lemma transfer_lift_sound_collect:
   assumes step: "\<And>\<sigma>. C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>"
     and Cempty: "C {} = {}"
     and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "C (gamma_state_lift d) \<subseteq> gamma_state_lift (transfer_lift empty_pred f d)"
+  shows "C (\<lbrakk>d\<rbrakk>\<^sub>\<bottom>) \<subseteq> \<lbrakk>transfer_lift empty_pred f d\<rbrakk>\<^sub>\<bottom>"
 proof (cases d)
   case Bot
   then show ?thesis by (simp add: Cempty)
@@ -126,8 +126,8 @@ qed
 lemma transfer_lift_sound_mem:
   assumes step: "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> h s \<in> \<lbrakk>f \<sigma>\<rbrakk>"
     and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-    and s: "s \<in> gamma_state_lift d"
-  shows "h s \<in> gamma_state_lift (transfer_lift empty_pred f d)"
+    and s: "s \<in> \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
+  shows "h s \<in> \<lbrakk>transfer_lift empty_pred f d\<rbrakk>\<^sub>\<bottom>"
 proof (cases d)
   case Bot
   then show ?thesis using s by simp
@@ -142,9 +142,9 @@ qed
 lemma transfer_lift2_sound_mem:
   assumes step: "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow> h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>"
     and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-    and s: "s \<in> gamma_state_lift d1"
-    and t: "t \<in> gamma_state_lift d2"
-  shows "h s t \<in> gamma_state_lift (transfer_lift2 empty_pred f d1 d2)"
+    and s: "s \<in> \<lbrakk>d1\<rbrakk>\<^sub>\<bottom>"
+    and t: "t \<in> \<lbrakk>d2\<rbrakk>\<^sub>\<bottom>"
+  shows "h s t \<in> \<lbrakk>transfer_lift2 empty_pred f d1 d2\<rbrakk>\<^sub>\<bottom>"
 proof (cases d1)
   case Bot
   then show ?thesis using s by simp

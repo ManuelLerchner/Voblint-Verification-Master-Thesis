@@ -1792,24 +1792,19 @@ let rec is_bottom_sign s = equal_signa s SBot;;
 
 let rec is_empty_sign a = is_bottom_sign a;;
 
-let rec is_top_sign s = equal_signa s STop;;
-
-let rec is_full_sign a = is_top_sign a;;
-
 type 'a executable_domain =
   {bounded_semilattice_sup_bot_executable_domain :
      'a bounded_semilattice_sup_bot;
     order_top_executable_domain : 'a order_top; is_empty : 'a -> bool;
-    is_full : 'a -> bool; to_string : 'a -> string};;
+    to_string : 'a -> string};;
 let is_empty _A = _A.is_empty;;
-let is_full _A = _A.is_full;;
 let to_string _A = _A.to_string;;
 
 let executable_domain_sign =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_sign;
      order_top_executable_domain = order_top_sign; is_empty = is_empty_sign;
-     is_full = is_full_sign; to_string = to_string_sign}
+     to_string = to_string_sign}
     : sign executable_domain);;
 
 let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
@@ -2514,13 +2509,11 @@ let rec to_string_ivl a = (if is_top_ivl a then "<top>" else string_of_ivl a);;
 
 let rec is_empty_ivl a = is_bottom_ivl a;;
 
-let rec is_full_ivl a = is_top_ivl a;;
-
 let executable_domain_ivl =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_ivl;
      order_top_executable_domain = order_top_ivl; is_empty = is_empty_ivl;
-     is_full = is_full_ivl; to_string = to_string_ivl}
+     to_string = to_string_ivl}
     : ivl executable_domain);;
 
 type parity = PBot | PEven | POdd | PTop;;
@@ -2647,13 +2640,11 @@ let rec is_bottom_parity p = equal_paritya p PBot;;
 
 let rec is_empty_parity a = is_bottom_parity a;;
 
-let rec is_full_parity a = is_top_parity a;;
-
 let executable_domain_parity =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_parity;
      order_top_executable_domain = order_top_parity; is_empty = is_empty_parity;
-     is_full = is_full_parity; to_string = to_string_parity}
+     to_string = to_string_parity}
     : parity executable_domain);;
 
 type location = Local_Location of string | Global_Location of string;;
@@ -3129,14 +3120,11 @@ let rec is_bottom_congruence a = equal_congruencea a bot_congruencea;;
 
 let rec is_empty_congruence a = is_bottom_congruence a;;
 
-let rec is_full_congruence a = is_top_congruence a;;
-
 let executable_domain_congruence =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_congruence;
      order_top_executable_domain = order_top_congruence;
-     is_empty = is_empty_congruence; is_full = is_full_congruence;
-     to_string = to_string_congruence}
+     is_empty = is_empty_congruence; to_string = to_string_congruence}
     : congruence executable_domain);;
 
 type 'a int_dom_ext = Int_dom_ext of sign * ivl * parity * congruence * 'a;;
@@ -3426,6 +3414,8 @@ let rec int_dom_constant
                with None -> congruence_constant (int_congruence d)
                | Some a -> Some a));;
 
+let rec is_top_sign s = equal_signa s STop;;
+
 let rec is_top_int_dom
   d = is_top_sign (int_sign d) &&
         (is_top_ivl (int_ivl d) &&
@@ -3450,14 +3440,11 @@ let rec to_string_int_dom_ext _A d = string_of_int_dom d;;
 
 let rec is_empty_int_dom_ext _A d = is_bottom_int_dom d;;
 
-let rec is_full_int_dom_ext _A d = is_top_int_dom d;;
-
 let rec executable_domain_int_dom_ext _A =
   ({bounded_semilattice_sup_bot_executable_domain =
       (bounded_semilattice_sup_bot_int_dom_ext _A);
      order_top_executable_domain = (order_top_int_dom_ext _A);
-     is_empty = is_empty_int_dom_ext _A; is_full = is_full_int_dom_ext _A;
-     to_string = to_string_int_dom_ext _A}
+     is_empty = is_empty_int_dom_ext _A; to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
 
 type ('a, 'b) routed_gk = Analysis_Global of 'a |
@@ -4856,10 +4843,10 @@ let sign_special_ops : (sign, unit) special_ops_ext
 let rec lookup_resolved_st_q _A (Abs_resolved_st x) = lookup_resolved_st _A x;;
 
 let rec location_of
-  gs x = (if gs x then Global_Location x else Local_Location x);;
+  g x = (if g x then Global_Location x else Local_Location x);;
 
 let rec fun_of_resolved_st_q_for _A
-  gs s x = lookup_resolved_st_q _A s (location_of gs x);;
+  g s x = lookup_resolved_st_q _A s (location_of g x);;
 
 let rec be_inv_less
   (Backward_exec_ops_ext
@@ -4923,16 +4910,16 @@ let rec be_inv_plus
     = be_inv_plus;;
 
 let rec afilter_st_lift_with _A
-  ops gs x2 a x_lift = match ops, gs, x2, a, x_lift with
-    ops, gs, V x, a, x_lift ->
+  ops g x2 a x_lift = match ops, g, x2, a, x_lift with
+    ops, g, V x, a, x_lift ->
       bind_lift x_lift
         (fun s ->
-          update_resolved_st_q_lift _A (Lifted s) (location_of gs x)
+          update_resolved_st_q_lift _A (Lifted s) (location_of g x)
             (be_intersect ops a
               (fun_of_resolved_st_q_for
                 _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                gs s x)))
-    | ops, gs, Plus (e1, e2), a, x_lift ->
+                g s x)))
+    | ops, g, Plus (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -4940,15 +4927,15 @@ let rec afilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, Minus (e1, e2), a, x_lift ->
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, Minus (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -4956,15 +4943,15 @@ let rec afilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, Times (e1, e2), a, x_lift ->
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, Times (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -4972,26 +4959,26 @@ let rec afilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, N v, a, x_lift -> x_lift
-    | ops, gs, Div (v, va), a, x_lift -> x_lift
-    | ops, gs, Mod (v, va), a, x_lift -> x_lift
-    | ops, gs, Less (v, va), a, x_lift -> x_lift
-    | ops, gs, LessEq (v, va), a, x_lift -> x_lift
-    | ops, gs, Greater (v, va), a, x_lift -> x_lift
-    | ops, gs, GreaterEq (v, va), a, x_lift -> x_lift
-    | ops, gs, NotEq (v, va), a, x_lift -> x_lift
-    | ops, gs, Eq (v, va), a, x_lift -> x_lift
-    | ops, gs, Not v, a, x_lift -> x_lift
-    | ops, gs, And (v, va), a, x_lift -> x_lift
-    | ops, gs, Or (v, va), a, x_lift -> x_lift;;
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, N v, a, x_lift -> x_lift
+    | ops, g, Div (v, va), a, x_lift -> x_lift
+    | ops, g, Mod (v, va), a, x_lift -> x_lift
+    | ops, g, Less (v, va), a, x_lift -> x_lift
+    | ops, g, LessEq (v, va), a, x_lift -> x_lift
+    | ops, g, Greater (v, va), a, x_lift -> x_lift
+    | ops, g, GreaterEq (v, va), a, x_lift -> x_lift
+    | ops, g, NotEq (v, va), a, x_lift -> x_lift
+    | ops, g, Eq (v, va), a, x_lift -> x_lift
+    | ops, g, Not v, a, x_lift -> x_lift
+    | ops, g, And (v, va), a, x_lift -> x_lift
+    | ops, g, Or (v, va), a, x_lift -> x_lift;;
 
 let rec be_tobool
   (Backward_exec_ops_ext
@@ -5006,8 +4993,8 @@ let rec feasible_with _A
             (Some (not pol)));;
 
 let rec bfilter_st_lift_with _A
-  ops gs x2 res x_lift = match ops, gs, x2, res, x_lift with
-    ops, gs, Less (e1, e2), res, x_lift ->
+  ops g x2 res x_lift = match ops, g, x2, res, x_lift with
+    ops, g, Less (e1, e2), res, x_lift ->
       bind_lift x_lift
         (fun s ->
           (let (a1, a2) =
@@ -5015,15 +5002,15 @@ let rec bfilter_st_lift_with _A
                (be_aval ops e1
                  (fun_of_resolved_st_q_for
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                   gs s))
+                   g s))
                (be_aval ops e2
                  (fun_of_resolved_st_q_for
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                   gs s))
+                   g s))
              in
-            afilter_st_lift_with _A ops gs e1 a1
-              (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, GreaterEq (e1, e2), res, x_lift ->
+            afilter_st_lift_with _A ops g e1 a1
+              (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, GreaterEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -5031,15 +5018,15 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, Greater (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, Greater (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -5047,15 +5034,15 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e2 a1
-                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
-    | ops, gs, LessEq (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ops g e2 a1
+                (afilter_st_lift_with _A ops g e1 a2 (Lifted s))))
+    | ops, g, LessEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -5063,20 +5050,20 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e2 a1
-                (afilter_st_lift_with _A ops gs e1 a2 (Lifted s))))
-    | ops, gs, Not b, res, x_lift ->
-        bfilter_st_lift_with _A ops gs b (not res) x_lift
-    | ops, gs, And (b1, b2), true, x_lift ->
-        bfilter_st_lift_with _A ops gs b1 true
-          (bfilter_st_lift_with _A ops gs b2 true x_lift)
-    | ops, gs, And (b1, b2), false, x_lift ->
+              afilter_st_lift_with _A ops g e2 a1
+                (afilter_st_lift_with _A ops g e1 a2 (Lifted s))))
+    | ops, g, Not b, res, x_lift ->
+        bfilter_st_lift_with _A ops g b (not res) x_lift
+    | ops, g, And (b1, b2), true, x_lift ->
+        bfilter_st_lift_with _A ops g b1 true
+          (bfilter_st_lift_with _A ops g b2 true x_lift)
+    | ops, g, And (b1, b2), false, x_lift ->
         bind_lift x_lift
           (fun s ->
             sup_lifteda
@@ -5085,16 +5072,15 @@ let rec bfilter_st_lift_with _A
               (if feasible_with _A ops b1 false
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                      gs s)
-                then bfilter_st_lift_with _A ops gs b1 false (Lifted s)
-                else Bot)
+                      g s)
+                then bfilter_st_lift_with _A ops g b1 false (Lifted s) else Bot)
               (if feasible_with _A ops b2 false
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                      gs s)
-                then bfilter_st_lift_with _A ops gs b2 false (Lifted s)
+                      g s)
+                then bfilter_st_lift_with _A ops g b2 false (Lifted s)
                 else Bot))
-    | ops, gs, Or (b1, b2), true, x_lift ->
+    | ops, g, Or (b1, b2), true, x_lift ->
         bind_lift x_lift
           (fun s ->
             sup_lifteda
@@ -5103,18 +5089,17 @@ let rec bfilter_st_lift_with _A
               (if feasible_with _A ops b1 true
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                      gs s)
-                then bfilter_st_lift_with _A ops gs b1 true (Lifted s) else Bot)
+                      g s)
+                then bfilter_st_lift_with _A ops g b1 true (Lifted s) else Bot)
               (if feasible_with _A ops b2 true
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                      gs s)
-                then bfilter_st_lift_with _A ops gs b2 true (Lifted s)
-                else Bot))
-    | ops, gs, Or (b1, b2), false, x_lift ->
-        bfilter_st_lift_with _A ops gs b1 false
-          (bfilter_st_lift_with _A ops gs b2 false x_lift)
-    | ops, gs, Eq (e1, e2), res, x_lift ->
+                      g s)
+                then bfilter_st_lift_with _A ops g b2 true (Lifted s) else Bot))
+    | ops, g, Or (b1, b2), false, x_lift ->
+        bfilter_st_lift_with _A ops g b1 false
+          (bfilter_st_lift_with _A ops g b2 false x_lift)
+    | ops, g, Eq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -5122,15 +5107,15 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, NotEq (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, NotEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
@@ -5138,15 +5123,15 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs e1 a1
-                (afilter_st_lift_with _A ops gs e2 a2 (Lifted s))))
-    | ops, gs, N v, res, x_lift ->
+              afilter_st_lift_with _A ops g e1 a1
+                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
+    | ops, g, N v, res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5154,14 +5139,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (N v)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (N v) a1 (Lifted s)))
-    | ops, gs, V v, res, x_lift ->
+              afilter_st_lift_with _A ops g (N v) a1 (Lifted s)))
+    | ops, g, V v, res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5169,14 +5154,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (V v)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (V v) a1 (Lifted s)))
-    | ops, gs, Plus (v, va), res, x_lift ->
+              afilter_st_lift_with _A ops g (V v) a1 (Lifted s)))
+    | ops, g, Plus (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5184,14 +5169,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (Plus (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (Plus (v, va)) a1 (Lifted s)))
-    | ops, gs, Minus (v, va), res, x_lift ->
+              afilter_st_lift_with _A ops g (Plus (v, va)) a1 (Lifted s)))
+    | ops, g, Minus (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5199,14 +5184,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (Minus (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (Minus (v, va)) a1 (Lifted s)))
-    | ops, gs, Times (v, va), res, x_lift ->
+              afilter_st_lift_with _A ops g (Minus (v, va)) a1 (Lifted s)))
+    | ops, g, Times (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5214,14 +5199,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (Times (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (Times (v, va)) a1 (Lifted s)))
-    | ops, gs, Div (v, va), res, x_lift ->
+              afilter_st_lift_with _A ops g (Times (v, va)) a1 (Lifted s)))
+    | ops, g, Div (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5229,14 +5214,14 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (Div (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (Div (v, va)) a1 (Lifted s)))
-    | ops, gs, Mod (v, va), res, x_lift ->
+              afilter_st_lift_with _A ops g (Div (v, va)) a1 (Lifted s)))
+    | ops, g, Mod (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
@@ -5244,13 +5229,13 @@ let rec bfilter_st_lift_with _A
                  (be_aval ops (Mod (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                  (be_aval ops (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                     gs s))
+                     g s))
                in
-              afilter_st_lift_with _A ops gs (Mod (v, va)) a1 (Lifted s)));;
+              afilter_st_lift_with _A ops g (Mod (v, va)) a1 (Lifted s)));;
 
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
@@ -5523,20 +5508,20 @@ let rec aval_sign
                    (sign_tobool (aval_sign b sigma))));;
 
 let rec branch_sign_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with executable_domain_sign
           (Backward_exec_ops_ext
             (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
               inv_conservative, inv_conservative, inv_conservative, meet_sign,
               ()))
-          e pol (fun_of_resolved_st_q_for bot_sign gs s)
+          e pol (fun_of_resolved_st_q_for bot_sign g s)
       then collapse_lift (bot_resolved_st_q bot_sign)
              (bfilter_st_lift_with executable_domain_sign
                (Backward_exec_ops_ext
                  (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
                    inv_conservative, inv_conservative, inv_conservative,
                    meet_sign, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa bot_sign);;
 
 let sign_ops : (sign, unit) numeric_ops_ext
@@ -5548,7 +5533,7 @@ let rec c_update
   ca (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (ca c, infl, stabl, sigma, more);;
 
-let rec valid_formal gs x = not (gs x) && not ((x : string) = ret_var);;
+let rec valid_formal g x = not (g x) && not ((x : string) = ret_var);;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 
@@ -5652,9 +5637,9 @@ let rec wf_source_com
     | pi, Unwind -> false;;
 
 let rec wf_proc_decl
-  gs pi decl =
+  g pi decl =
     distinct equal_literal (formals decl) &&
-      (list_all (valid_formal gs) (formals decl) &&
+      (list_all (valid_formal g) (formals decl) &&
         wf_source_com pi (body decl));;
 
 let rec csize
@@ -5680,14 +5665,14 @@ let rec min _A a b = (if less_eq _A a b then a else b);;
 
 let rec parity_lt uu uv = None;;
 
-let rec combine_env gs s t = (fun n -> (if gs n then t n else s n));;
+let rec combine_env g s t = (fun n -> (if g n then t n else s n));;
 
-let rec enter_frame gs reset_val s = combine_env gs (fun _ -> reset_val) s;;
+let rec enter_frame g reset_val s = combine_env g (fun _ -> reset_val) s;;
 
 let rec enter_binding
-  gs reset_val ev xs es s =
+  g reset_val ev xs es s =
     fold (fun (x, v) st -> fun_upd equal_literal st x v)
-      (zip xs (map (fun e -> ev e s) es)) (enter_frame gs reset_val s);;
+      (zip xs (map (fun e -> ev e s) es)) (enter_frame g reset_val s);;
 
 let rec make
   proc_rep declared_global_vars =
@@ -5837,13 +5822,13 @@ let rec less_eq_set _A
 
 let rec equal_set _A a b = less_eq_set _A a b && less_eq_set _A b a;;
 
-let rec reserved_ret_var gs = not (gs ret_var);;
+let rec reserved_ret_var g = not (g ret_var);;
 
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in
-       let gs = declared_global p in
+       let g = declared_global p in
        let pi = map_of equal_literal procs in
-        reserved_ret_var gs &&
+        reserved_ret_var g &&
           (distinct equal_literal (prog_procs p) &&
             (equal_set equal_literal (Set (prog_procs p))
                (remove equal_literal prog_main_name (Set (map fst procs))) &&
@@ -5853,7 +5838,7 @@ let rec wf_program_compile_input_exec
                    (Some (Proc_decl_ext ([], prog_main p, ()))) &&
                   (wf_source_com pi (prog_main p) &&
                     (no_return (prog_main p) &&
-                      (list_all (fun (_, a) -> wf_proc_decl gs pi a) procs &&
+                      (list_all (fun (_, a) -> wf_proc_decl g pi a) procs &&
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
 
@@ -6119,40 +6104,39 @@ let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
 
 let rec canonical_location
-  gs loc = equal_locationa (location_of gs (location_vname loc)) loc;;
+  g loc = equal_locationa (location_of g (location_vname loc)) loc;;
 
 let rec resolved_st_is_bot _A
-  gs s =
-    (let (dl, (_, ps)) = s in
-      is_empty _A dl ||
-        list_ex
-          (fun loc ->
-            is_empty _A
-              (lookup_resolved_st
-                _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                s loc) &&
-              canonical_location gs loc)
-          (map fst ps));;
+  g s = (let (dl, (_, ps)) = s in
+          is_empty _A dl ||
+            list_ex
+              (fun loc ->
+                is_empty _A
+                  (lookup_resolved_st
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    s loc) &&
+                  canonical_location g loc)
+              (map fst ps));;
 
 let rec resolved_st_is_bot_for _A
-  globals gs s =
+  globals g s =
     list_ex
       (fun x ->
         is_empty _A
           (lookup_resolved_st
             _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            s (location_of gs x)))
+            s (location_of g x)))
       globals ||
-      resolved_st_is_bot _A gs s;;
+      resolved_st_is_bot _A g s;;
 
 let rec resolved_st_q_is_bot_for _A
   xb (Abs_resolved_st xa) =
     resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
 
 let rec combine_assign_resolved _A
-  gs dst v s =
+  g dst v s =
     (match dst with None -> s
-      | Some x -> update_resolved_st _A s (location_of gs x) v);;
+      | Some x -> update_resolved_st _A s (location_of g x) v);;
 
 let rec combine_assign_resolved_q _A
   xc xb xa (Abs_resolved_st x) =
@@ -6535,7 +6519,7 @@ let rec ci_dst
   (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
 
 let rec equations (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route gs p =
+  tf_st enter_st init_st gk0 seed route g p =
     compiled_routed_eqs_for _B
       ((equal_lifted
          (equal_resolved_st_q
@@ -6546,7 +6530,7 @@ let rec equations (_A1, _A2) _B
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
           _A1.bounded_semilattice_sup_bot_executable_domain))
-      gk0 seed (route gs)
+      gk0 seed (route g)
       (dgs_combine_assign_update
         (fun _ ci ->
           local_combine_transfer
@@ -6555,10 +6539,10 @@ let rec equations (_A1, _A2) _B
               (fun env0 de0 ->
                 combine_assign_resolved_q
                   _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                  gs (ci_dst ci)
+                  g (ci_dst ci)
                   (lookup_resolved_st_q
                     _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    de0 (location_of gs ret_var))
+                    de0 (location_of g ret_var))
                   env0)))
         (dgs_combine_env_update
           (fun _ _ ->
@@ -6577,7 +6561,7 @@ let rec equations (_A1, _A2) _B
               local_transfer
                 (transfer_lift
                   (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                  (tf_st gs (let Check_Event a = ev in EA_Check a))))
+                  (tf_st g (let Check_Event a = ev in EA_Check a))))
             (dgs_enter_update
               (fun _ ci ->
                 local_enter_transfer
@@ -6585,26 +6569,26 @@ let rec equations (_A1, _A2) _B
                     [(d, transfer_lift
                            (resolved_st_q_is_bot_for _A1
                              (declared_global_vars p))
-                           (enter_st gs ci) d)]))
+                           (enter_st g ci) d)]))
               (dgs_return_update
                 (fun _ e pa ->
                   local_transfer
                     (transfer_lift
                       (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                      (tf_st gs (EA_Ret (e, pa)))))
+                      (tf_st g (EA_Ret (e, pa)))))
                 (dgs_body_update
                   (fun _ pa ->
                     local_transfer
                       (transfer_lift
                         (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                        (tf_st gs (EA_Body pa))))
+                        (tf_st g (EA_Body pa))))
                   (dgs_branch_update
                     (fun _ b pol ->
                       local_transfer
                         (transfer_lift
                           (resolved_st_q_is_bot_for _A1
                             (declared_global_vars p))
-                          (tf_st gs
+                          (tf_st g
                             (if pol then EA_Assume b else EA_AssumeNot b))))
                     (dgs_special_update
                       (fun _ sc x ->
@@ -6612,21 +6596,21 @@ let rec equations (_A1, _A2) _B
                           (transfer_lift
                             (resolved_st_q_is_bot_for _A1
                               (declared_global_vars p))
-                            (tf_st gs (EA_Special (sc, x)))))
+                            (tf_st g (EA_Special (sc, x)))))
                       (dgs_assign_update
                         (fun _ x e ->
                           local_transfer
                             (transfer_lift
                               (resolved_st_q_is_bot_for _A1
                                 (declared_global_vars p))
-                              (tf_st gs (EA_Assign (x, e)))))
+                              (tf_st g (EA_Assign (x, e)))))
                         (dgs_skip_update
                           (fun _ ->
                             local_transfer
                               (transfer_lift
                                 (resolved_st_q_is_bot_for _A1
                                   (declared_global_vars p))
-                                (tf_st gs EA_Nop)))
+                                (tf_st g EA_Nop)))
                           (Dg_spec_ext
                             (local_transfer id, (fun _ _ -> local_transfer id),
                               (fun _ _ -> local_transfer id),
@@ -6645,45 +6629,45 @@ let rec equations (_A1, _A2) _B
           _A1.bounded_semilattice_sup_bot_executable_domain));;
 
 let rec solution (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route root_ctx solve gs p =
-    solve (equations (_A1, _A2) _B tf_st enter_st init_st gk0 seed route gs p)
+  tf_st enter_st init_st gk0 seed route root_ctx solve g p =
+    solve (equations (_A1, _A2) _B tf_st enter_st init_st gk0 seed route g p)
       (cfg_exit (prog_cfg p), root_ctx);;
 
 let rec readback_result_value _A
-  gs x1 = match gs, x1 with gs, Bot -> Bot
-    | gs, Lifted s -> Lifted (fun_of_resolved_st_q_for _A gs s);;
+  g x1 = match g, x1 with g, Bot -> Bot
+    | g, Lifted s -> Lifted (fun_of_resolved_st_q_for _A g s);;
 
 let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
 
 let rec dg_result_for _C
-  gs gl sol =
+  g gl sol =
     Analysis_Result
       (fst sol,
         (fun v ctx ->
           readback_result_value
             _C.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            gs (canonicalize_lift (resolved_st_q_is_bot_for _C gl)
-                 (locals (snd sol (Inl (v, ctx)))))));;
+            g (canonicalize_lift (resolved_st_q_is_bot_for _C gl)
+                (locals (snd sol (Inl (v, ctx)))))));;
 
 let rec result_with_globals (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route root_ctx solve gs p =
+  tf_st enter_st init_st gk0 seed route root_ctx solve g p =
     (let sol =
        solution (_A1, _A2) _B tf_st enter_st init_st gk0 seed route root_ctx
-         solve gs p
+         solve g p
        in
      let gl = declared_global_vars p in
      let read =
        (fun d ->
          readback_result_value
            _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-           gs (canonicalize_lift (resolved_st_q_is_bot_for _A1 gl) d))
+           g (canonicalize_lift (resolved_st_q_is_bot_for _A1 gl) d))
        in
-      (dg_result_for _A1 gs gl sol,
+      (dg_result_for _A1 g gl sol,
         (read (globs (snd sol (Inr gk0))),
           ((fun f ctx ->
              read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
             (fun v ctx a ->
-              read (transfer_lift (resolved_st_q_is_bot_for _A1 gl) (tf_st gs a)
+              read (transfer_lift (resolved_st_q_is_bot_for _A1 gl) (tf_st g a)
                      (locals (snd sol (Inl (v, ctx))))))))));;
 
 let rec times_congruence_rep
@@ -7135,7 +7119,7 @@ let rec interval_classify_check
           | Some true -> Check_Proved | Some false -> Check_Refuted);;
 
 let rec enter_congruence_for
-  gs = enter_binding gs top_congruencea aval_congruence;;
+  g = enter_binding g top_congruencea aval_congruence;;
 
 let rec congruence_min a b = sup_congruencea a b;;
 
@@ -7197,20 +7181,20 @@ let rec inv_eq_congruence
     | false, a, b -> (a, b);;
 
 let rec branch_congruence_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with executable_domain_congruence
           (Backward_exec_ops_ext
             (aval_congruence, congruence_tobool, inv_less_congruence,
               inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
               inv_times_congruence, intersect_congruence, ()))
-          e pol (fun_of_resolved_st_q_for bot_congruence gs s)
+          e pol (fun_of_resolved_st_q_for bot_congruence g s)
       then collapse_lift (bot_resolved_st_q bot_congruence)
              (bfilter_st_lift_with executable_domain_congruence
                (Backward_exec_ops_ext
                  (aval_congruence, congruence_tobool, inv_less_congruence,
                    inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
                    inv_times_congruence, intersect_congruence, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa bot_congruence);;
 
 let congruence_ops : (congruence, unit) numeric_ops_ext
@@ -7227,8 +7211,8 @@ let rec enter_frame_D_resolved_q _A
   xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
 
 let rec bind_formals_resolved _A
-  gs xs avs s =
-    fold (fun (x, a) t -> update_resolved_st _A t (location_of gs x) a)
+  g xs avs s =
+    fold (fun (x, a) t -> update_resolved_st _A t (location_of g x) a)
       (zip xs avs) s;;
 
 let rec bind_formals_resolved_q _A
@@ -7248,9 +7232,9 @@ let rec ci_args
   (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
 
 let rec generic_enter_st_for _A
-  ops gs ci s =
-    bind_formals_resolved_q _A gs (ci_formals ci)
-      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A gs s))
+  ops g ci s =
+    bind_formals_resolved_q _A g (ci_formals ci)
+      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A g s))
         (ci_args ci))
       (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
@@ -7511,10 +7495,10 @@ let rec initial_resolved_st_q _A
 let rec formals_context pars d = map d pars;;
 
 let rec exec_formals_route _A
-  gs u ctx d ca =
+  g u ctx d ca =
     (let CallEdge (_, pars, _) = ca in
       formals_context pars
-        (fun_of_resolved_st_q_for _A gs
+        (fun_of_resolved_st_q_for _A g
           (match d with Bot -> bot_resolved_st_qa _A | Lifted d0 -> d0)));;
 
 let rec parity_eq_false
@@ -7729,29 +7713,29 @@ let rec n_bfilter _A
   (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_bfilter;;
 
 let rec generic_tf_st_for _A
-  ops gs x2 s = match ops, gs, x2, s with ops, gs, EA_Nop, s -> s
-    | ops, gs, EA_Assign (x, a), s ->
-        update_resolved_st_q _A s (location_of gs x)
-          (n_aval _A ops a (fun_of_resolved_st_q_for _A gs s))
-    | ops, gs, EA_Special (sc, x), s ->
-        update_resolved_st_q _A s (location_of gs x)
+  ops g x2 s = match ops, g, x2, s with ops, g, EA_Nop, s -> s
+    | ops, g, EA_Assign (x, a), s ->
+        update_resolved_st_q _A s (location_of g x)
+          (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+    | ops, g, EA_Special (sc, x), s ->
+        update_resolved_st_q _A s (location_of g x)
           (match sc with Nondet_Int -> n_top _A ops
             | Min (a, b) ->
               special_min (n_special _A ops)
-                (n_aval _A ops a (fun_of_resolved_st_q_for _A gs s))
-                (n_aval _A ops b (fun_of_resolved_st_q_for _A gs s))
+                (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+                (n_aval _A ops b (fun_of_resolved_st_q_for _A g s))
             | Max (a, b) ->
               special_max (n_special _A ops)
-                (n_aval _A ops a (fun_of_resolved_st_q_for _A gs s))
-                (n_aval _A ops b (fun_of_resolved_st_q_for _A gs s)))
-    | ops, gs, EA_Assume b, s -> n_bfilter _A ops gs b true s
-    | ops, gs, EA_AssumeNot b, s -> n_bfilter _A ops gs b false s
-    | ops, gs, EA_Body p, s -> s
-    | ops, gs, EA_Ret (None, p), s -> s
-    | ops, gs, EA_Ret (Some a, p), s ->
-        update_resolved_st_q _A s (location_of gs ret_var)
-          (n_aval _A ops a (fun_of_resolved_st_q_for _A gs s))
-    | ops, gs, EA_Check cnd, s -> s;;
+                (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+                (n_aval _A ops b (fun_of_resolved_st_q_for _A g s)))
+    | ops, g, EA_Assume b, s -> n_bfilter _A ops g b true s
+    | ops, g, EA_AssumeNot b, s -> n_bfilter _A ops g b false s
+    | ops, g, EA_Body p, s -> s
+    | ops, g, EA_Ret (None, p), s -> s
+    | ops, g, EA_Ret (Some a, p), s ->
+        update_resolved_st_q _A s (location_of g ret_var)
+          (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+    | ops, g, EA_Check cnd, s -> s;;
 
 let rec congruence_tf_st_for
   x = generic_tf_st_for bot_congruence congruence_ops x;;
@@ -8038,7 +8022,7 @@ let rec aval_int_dom
                    (or_opt (int_dom_tobool a) (int_dom_tobool b))));;
 
 let rec branch_int_dom_fixpoint_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with
           (executable_domain_int_dom_ext int_dom_record_lattice_unit)
           (Backward_exec_ops_ext
@@ -8050,7 +8034,7 @@ let rec branch_int_dom_fixpoint_st
               intersect_int_dom_mode Refine_Fixpoint, ()))
           e pol
           (fun_of_resolved_st_q_for
-            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            (bot_int_dom_ext int_dom_record_lattice_unit) g s)
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
@@ -8063,7 +8047,7 @@ let rec branch_int_dom_fixpoint_st
                    inv_minus_int_dom Refine_Fixpoint,
                    inv_times_int_dom Refine_Fixpoint,
                    intersect_int_dom_mode Refine_Fixpoint, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let rec ivl_min
@@ -8132,7 +8116,7 @@ let rec int_dom_enter_fixpoint_st_for
         int_dom_ops_fixpoint x;;
 
 let rec branch_int_dom_never_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with
           (executable_domain_int_dom_ext int_dom_record_lattice_unit)
           (Backward_exec_ops_ext
@@ -8143,7 +8127,7 @@ let rec branch_int_dom_never_st
               intersect_int_dom_mode Refine_Never, ()))
           e pol
           (fun_of_resolved_st_q_for
-            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            (bot_int_dom_ext int_dom_record_lattice_unit) g s)
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
@@ -8155,7 +8139,7 @@ let rec branch_int_dom_never_st
                    inv_minus_int_dom Refine_Never,
                    inv_times_int_dom Refine_Never,
                    intersect_int_dom_mode Refine_Never, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let int_dom_ops_never : (unit int_dom_ext, unit) numeric_ops_ext
@@ -8169,7 +8153,7 @@ let rec int_dom_enter_never_st_for
         int_dom_ops_never x;;
 
 let rec branch_int_dom_once_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with
           (executable_domain_int_dom_ext int_dom_record_lattice_unit)
           (Backward_exec_ops_ext
@@ -8180,7 +8164,7 @@ let rec branch_int_dom_once_st
               ()))
           e pol
           (fun_of_resolved_st_q_for
-            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            (bot_int_dom_ext int_dom_record_lattice_unit) g s)
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
@@ -8191,7 +8175,7 @@ let rec branch_int_dom_once_st
                    inv_plus_int_dom Refine_Once, inv_minus_int_dom Refine_Once,
                    inv_times_int_dom Refine_Once,
                    intersect_int_dom_mode Refine_Once, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let int_dom_ops_once : (unit int_dom_ext, unit) numeric_ops_ext
@@ -8205,9 +8189,9 @@ let rec int_dom_enter_once_st_for
         int_dom_ops_once x;;
 
 let rec int_dom_enter_st_for
-  x0 gs = match x0, gs with Refine_Never, gs -> int_dom_enter_never_st_for gs
-    | Refine_Once, gs -> int_dom_enter_once_st_for gs
-    | Refine_Fixpoint, gs -> int_dom_enter_fixpoint_st_for gs;;
+  x0 g = match x0, g with Refine_Never, g -> int_dom_enter_never_st_for g
+    | Refine_Once, g -> int_dom_enter_once_st_for g
+    | Refine_Fixpoint, g -> int_dom_enter_fixpoint_st_for g;;
 
 let rec congruence_key
   v = (match rep_congruence v with None -> Key_List []
@@ -8598,7 +8582,7 @@ let rec sign_classify_check
   c d = (match sign_check_query c d with None -> Check_Unknown
           | Some true -> Check_Proved | Some false -> Check_Refuted);;
 
-let rec enter_parity_for gs = enter_binding gs PTop aval_parity;;
+let rec enter_parity_for g = enter_binding g PTop aval_parity;;
 
 let parity_special_ops : (parity, unit) special_ops_ext
   = Special_ops_ext (parity_min, parity_max, ());;
@@ -8609,7 +8593,7 @@ let parity_ops : (parity, unit) numeric_ops_ext
 
 let rec parity_enter_st_for x = generic_enter_st_for bot_parity parity_ops x;;
 
-let rec enter_ivl_for gs = enter_binding gs ivl_top aval_ivl;;
+let rec enter_ivl_for g = enter_binding g ivl_top aval_ivl;;
 
 let rec int_truthy_query
   e d = map_option not
@@ -8659,20 +8643,20 @@ let ivl_special_ops : (ivl, unit) special_ops_ext
   = Special_ops_ext (ivl_min, ivl_max, ());;
 
 let rec branch_ivl_st
-  gs e pol s =
+  g e pol s =
     (if feasible_with executable_domain_ivl
           (Backward_exec_ops_ext
             (aval_ivl, interval_tobool, inv_less_ivl, inv_eq_ivl,
               inv_conservative, inv_conservative, inv_conservative,
               intersect_ivl, ()))
-          e pol (fun_of_resolved_st_q_for bot_ivl gs s)
+          e pol (fun_of_resolved_st_q_for bot_ivl g s)
       then collapse_lift (bot_resolved_st_q bot_ivl)
              (bfilter_st_lift_with executable_domain_ivl
                (Backward_exec_ops_ext
                  (aval_ivl, interval_tobool, inv_less_ivl, inv_eq_ivl,
                    inv_conservative, inv_conservative, inv_conservative,
                    intersect_ivl, ()))
-               gs e pol (Lifted s))
+               g e pol (Lifted s))
       else bot_resolved_st_qa bot_ivl);;
 
 let ivl_ops : (ivl, unit) numeric_ops_ext
@@ -8681,11 +8665,11 @@ let ivl_ops : (ivl, unit) numeric_ops_ext
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
 
 let rec enter_int_dom_for
-  mode gs =
-    enter_binding gs (top_int_dom_exta int_dom_record_lattice_unit)
+  mode g =
+    enter_binding g (top_int_dom_exta int_dom_record_lattice_unit)
       (aval_int_dom mode);;
 
-let rec enter_sign_for gs = enter_binding gs STop aval_sign;;
+let rec enter_sign_for g = enter_binding g STop aval_sign;;
 
 let rec parity_tf_st_for x = generic_tf_st_for bot_parity parity_ops x;;
 
@@ -8702,9 +8686,9 @@ let rec int_tf_st_once_for
         int_dom_ops_once x;;
 
 let rec int_tf_st_for
-  x0 gs = match x0, gs with Refine_Never, gs -> int_tf_st_never_for gs
-    | Refine_Once, gs -> int_tf_st_once_for gs
-    | Refine_Fixpoint, gs -> int_tf_st_fixpoint_for gs;;
+  x0 g = match x0, g with Refine_Never, g -> int_tf_st_never_for g
+    | Refine_Once, g -> int_tf_st_once_for g
+    | Refine_Fixpoint, g -> int_tf_st_fixpoint_for g;;
 
 let rec cs_route k u ctx d ca = take k (u :: ctx);;
 

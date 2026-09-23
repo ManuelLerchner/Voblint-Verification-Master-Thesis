@@ -24,28 +24,27 @@ abbreviation twice_ctx_sg ::
   "twice_ctx_sg \<equiv> interval_es_rule.reader Globals_Warrow twice_gs twice_program"
 
 abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "twice_ctx_gamma m \<equiv> gamma_state_lift (map_lift (fun_of_resolved_st_q_for twice_gs) m)"
+  "twice_ctx_gamma m \<equiv> \<lbrakk>map_lift (fun_of_resolved_st_q_for twice_gs) m\<rbrakk>\<^sub>\<bottom>"
 
 text \<open>Context-sensitive source soundness.  Any \<open>twice\<close> run reaches a store bounded at the
   interval slot indexed by some context the trace that produced it admits.\<close>
 theorem twice_source_ctx_run_sound:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s0, []) (residual, s, frs)"
+  assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and init: "s0 \<in> cinit_stores twice_gs"
   shows "\<exists>v stk t c.
-           csim twice_pi (compile_prog twice_pi twice_procs)
-             (residual, s, frs) (v, s, stk)
+           twice_pi, compile_prog twice_pi twice_procs \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> trace_context twice_gs
                (interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program)
                [] (compile_prog twice_pi twice_procs) t c
            \<and> s \<in> twice_ctx_gamma (twice_ctx_sg (Inl (v, c)))"
 proof -
-  have run': "star (pstep twice_gs twice_pi) (main_body twice_pi, s0, []) (residual, s, frs)"
+  have run': "twice_gs, twice_pi \<turnstile> (main_body twice_pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     using run by simp
   show ?thesis
     by (rule source_sound_from_collecting_cap
           [where R = "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program"
              and startcontext = "[]"
-             and gammaM = twice_ctx_gamma,
+             and \<gamma>\<^sub>M = twice_ctx_gamma,
            OF twice_wf init run'
               interval_es_rule.entry_state_has_context[OF twice_entry_state_hyps,
                 unfolded twice_cfg_alt]
@@ -57,19 +56,18 @@ text \<open>The witness-free specialisation: a \<open>twice\<close> store reache
   activation) --- no \<^typ>\<open>ltr\<close> witness, no context existential.  This is the clean user-facing
   statement for main-level program points.\<close>
 theorem twice_source_toplevel_at_bot:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s0, []) (residual, s, [])"
+  assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
     and init: "s0 \<in> cinit_stores twice_gs"
-  shows "\<exists>v. csim twice_pi (compile_prog twice_pi twice_procs)
-               (residual, s, []) (v, s, [])
+  shows "\<exists>v. twice_pi, compile_prog twice_pi twice_procs \<turnstile> (residual, s, []) \<approx> (v, s, [])
              \<and> s \<in> twice_ctx_gamma (twice_ctx_sg (Inl (v, [])))"
 proof -
-  have run': "star (pstep twice_gs twice_pi) (main_body twice_pi, s0, []) (residual, s, [])"
+  have run': "twice_gs, twice_pi \<turnstile> (main_body twice_pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
     using run by simp
   show ?thesis
     by (rule source_sound_toplevel_from_collecting_cap
           [where R = "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program"
              and startcontext = "[]"
-             and gammaM = twice_ctx_gamma,
+             and \<gamma>\<^sub>M = twice_ctx_gamma,
            OF twice_wf init run' twice_activation_collect_sound])
 qed
 

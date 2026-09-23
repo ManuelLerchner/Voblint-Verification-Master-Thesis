@@ -81,7 +81,7 @@ text \<open>
   the frame writing the destination.
 \<close>
 
-lemma pcompletes_Check: "pcompletes gs \<Pi> (VIMP_Proc.com.Check cond) s s"
+lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.com.Check cond) s s"
   by (rule star.step) (rule pstep.Check, rule star.refl)
 
 lemma pcompletes_Call_return:
@@ -89,29 +89,29 @@ lemma pcompletes_Call_return:
       and bd: "body decl = VIMP_Proc.com.Return (Some e)"
       and arity: "length actuals = length (formals decl)"
       and dist: "distinct (formals decl)"
-      and glob: "\<not> gs ret_var"
-  shows "pcompletes gs \<Pi> (VIMP_Proc.com.Call dst p actuals) s
+      and glob: "\<not> \<G> ret_var"
+  shows "pcompletes \<G> \<Pi> (VIMP_Proc.com.Call dst p actuals) s
            (combine_assign dst
-              (aval e (bind_formals (formals decl) (map (\<lambda>a. aval a s) actuals)
-                         (enter_state gs s)))
-              (combine_env gs s
-                 (bind_formals (formals decl) (map (\<lambda>a. aval a s) actuals)
-                    (enter_state gs s))))"
+              (\<lbrakk>e\<rbrakk>\<^sub>e (bind_formals (formals decl) (map (\<lambda>a. \<lbrakk>a\<rbrakk>\<^sub>e s) actuals)
+                         (enter_state \<G> s)))
+              (combine_env \<G> s
+                 (bind_formals (formals decl) (map (\<lambda>a. \<lbrakk>a\<rbrakk>\<^sub>e s) actuals)
+                    (enter_state \<G> s))))"
 proof -
-  let ?callee = "bind_formals (formals decl) (map (\<lambda>a. aval a s) actuals) (enter_state gs s)"
+  let ?callee = "bind_formals (formals decl) (map (\<lambda>a. \<lbrakk>a\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
   let ?entered = "VIMP_Proc.com.Seq (VIMP_Proc.com.Return (Some e)) VIMP_Proc.com.Restore"
   let ?unwinding = "VIMP_Proc.com.Seq VIMP_Proc.com.Unwind VIMP_Proc.com.Restore"
-  have c1: "pstep gs \<Pi> (VIMP_Proc.com.Call dst p actuals, s, [])
-              (?entered, ?callee, [Frame s dst])"
+  have c1: "\<G>, \<Pi> \<turnstile> (VIMP_Proc.com.Call dst p actuals, s, [])
+              \<rightarrow>\<^sub>p (?entered, ?callee, [Frame s dst])"
     using arity bd dist p pstep_Call by fastforce
-  have c2: "pstep gs \<Pi> (?entered, ?callee, [Frame s dst])
-              (?unwinding, ?callee(ret_var := aval e ?callee), [Frame s dst])"
+  have c2: "\<G>, \<Pi> \<turnstile> (?entered, ?callee, [Frame s dst])
+              \<rightarrow>\<^sub>p (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])"
     by (rule pstep.Seq2) (rule pstep.ReturnSome)
-  have c3: "pstep gs \<Pi> (?unwinding, ?callee(ret_var := aval e ?callee), [Frame s dst])
-              (VIMP_Proc.com.SKIP,
-               combine_assign dst (aval e ?callee) (combine_env gs s ?callee), [])"
-    using pstep.UnwindAct [where gs = gs and \<Pi> = \<Pi> and dst = dst and fr = s and frs = "[]"
-                             and s = "?callee(ret_var := aval e ?callee)"]
+  have c3: "\<G>, \<Pi> \<turnstile> (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])
+              \<rightarrow>\<^sub>p (VIMP_Proc.com.SKIP,
+               combine_assign dst (\<lbrakk>e\<rbrakk>\<^sub>e ?callee) (combine_env \<G> s ?callee), [])"
+    using pstep.UnwindAct [where \<G> = \<G> and \<Pi> = \<Pi> and dst = dst and fr = s and frs = "[]"
+                             and s = "?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee)"]
     by (simp add: glob)
   show ?thesis
     using c1 c2 c3 by (meson star.refl star.step)
@@ -142,7 +142,7 @@ lemma certificate_demo_call:
              and decl = "\<lparr>formals = [STR ''n''],
                           body = VIMP_Proc.com.Return (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
              and e = "Plus (V (STR ''n'')) (N 1)" and actuals = "[N k]" and dst = "Some x"
-             and gs = "declared_global certificate_demo_prog" and s = s,
+             and \<G> = "declared_global certificate_demo_prog" and s = s,
            OF certificate_demo_table]
   by (simp add: certificate_demo_no_globals enter_state_def combine_env_def)
 
@@ -179,9 +179,8 @@ text \<open>The same run stopped one step short of the check: both calls are don
   \<^const>\<open>VIMP_Proc.com.Check\<close> is the command about to run.\<close>
 
 lemma certificate_demo_to_check:
-  "star (pstep (declared_global certificate_demo_prog) (prog_table certificate_demo_prog))
-     (main_body (prog_table certificate_demo_prog), \<lambda>_. 0, [])
-     (VIMP_Proc.com.Check (Less (N 0) (V (STR ''b''))),
+  "declared_global certificate_demo_prog, prog_table certificate_demo_prog \<turnstile> (main_body (prog_table certificate_demo_prog), \<lambda>_. 0, [])
+     \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.Check (Less (N 0) (V (STR ''b''))),
       (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])"
   unfolding certificate_demo_main
   using psteps_Seq2 [OF certificate_demo_calls] by (meson Seq1 star.step star.refl star_trans)
@@ -264,7 +263,7 @@ text \<open>
 
 lemma certificate_demo_enter:
   "call_enter (declared_global certificate_demo_prog) (CallEdge dst [STR ''n''] [e]) s
-     = (\<lambda>_. 0)(STR ''n'' := aval e s)"
+     = (\<lambda>_. 0)(STR ''n'' := \<lbrakk>e\<rbrakk>\<^sub>e s)"
   by (simp add: certificate_demo_no_globals call_enter_CallEdge enter_binding_def
       enter_frame_def fun_eq_iff)
 
@@ -276,21 +275,16 @@ lemma certificate_demo_combine:
 
 lemma certificate_demo_reaches_check:
   "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
-     \<in> ltr_collect (declared_global certificate_demo_prog) (prog_cfg certificate_demo_prog)
-           (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
+     \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
 proof -
-  have e0: "(\<lambda>_. 0) \<in> ltr_collect (declared_global certificate_demo_prog)
-                          (prog_cfg certificate_demo_prog)
-                          (cinit_stores (declared_global certificate_demo_prog))
+  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub>
                           (FunctionEntry (STR ''main''))"
     using ltr_collect_init
             [OF certificate_demo_init,
-             where gs = "declared_global certificate_demo_prog"
+             where \<G> = "declared_global certificate_demo_prog"
                and g = "prog_cfg certificate_demo_prog"]
     by (simp add: certificate_demo_entry_eval)
-  have s2: "(\<lambda>_. 0) \<in> ltr_collect (declared_global certificate_demo_prog)
-                          (prog_cfg certificate_demo_prog)
-                          (cinit_stores (declared_global certificate_demo_prog)) (Statement 2)"
+  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
     by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: certificate_demo_intra_eval)
   have ce1: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
@@ -305,9 +299,7 @@ proof -
     using certificate_demo_bump_body [where k = 1]
     by (simp add: certificate_demo_enter)
   have s3: "(\<lambda>_. 0)(STR ''a'' := 2)
-              \<in> ltr_collect (declared_global certificate_demo_prog)
-                    (prog_cfg certificate_demo_prog)
-                    (cinit_stores (declared_global certificate_demo_prog)) (Statement 3)"
+              \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 3)"
     using ltr_collect_call_return_step [OF s2 ce1 bd1]
     by (simp add: certificate_demo_combine)
   have ce2: "(Statement 3, CallEdge (Some (STR ''b'')) [STR ''n''] [N 41],
@@ -424,30 +416,24 @@ text \<open>
 lemma certificate_demo_checks_sound_at_check:
   assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
-      and mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
-                      (prog_cfg certificate_demo_prog)
-                      (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
+      and mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   shows "checks_sound_at res (Statement 4) s"
   using run_voblint_sound_at [OF certificate_demo_config_terminates ans mem] by blast
 
 theorem certificate_demo_check_semantically_true:
   assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
-  shows "\<forall>s \<in> ltr_collect (declared_global certificate_demo_prog)
-                  (prog_cfg certificate_demo_prog)
-                  (cinit_stores (declared_global certificate_demo_prog)) (Statement 4).
-           truthy (aval (Less (N 0) (V (STR ''b''))) s)"
+  shows "\<forall>s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4).
+           truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
 proof (intro ballI)
   fix s :: store
-  assume mem: "s \<in> ltr_collect (declared_global certificate_demo_prog)
-                     (prog_cfg certificate_demo_prog)
-                     (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
+  assume mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   obtain chk where r: "res_checks res = [chk]" and rp: "check_point chk = Statement 4"
     and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
     and rv: "check_verdict chk = Decided Check_Proved"
     using certificate_demo_check [OF ans] by blast
   from certificate_demo_checks_sound_at_check [OF ans mem] r rp re rv
-  show "truthy (aval (Less (N 0) (V (STR ''b''))) s)"
+  show "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
     unfolding checks_sound_at_def by simp
 qed
 
@@ -470,13 +456,11 @@ theorem certificate_demo_full_certificate:
        (main_body (prog_table certificate_demo_prog)) (\<lambda>_. 0)
        ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
-       \<in> ltr_collect (declared_global certificate_demo_prog)
-             (prog_cfg certificate_demo_prog)
-             (cinit_stores (declared_global certificate_demo_prog)) (Statement 4)"
+       \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
     "analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
        certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "checks_sound_at res (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-    "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
+    "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
 proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
   case (Analysed res)
@@ -485,7 +469,7 @@ proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
     using certificate_demo_report_full by simp
   have true_here:
-    "truthy (aval (Less (N 0) (V (STR ''b''))) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
+    "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
     using certificate_demo_check_semantically_true [OF Analysed]
           certificate_demo_reaches_check
     by blast
@@ -513,13 +497,9 @@ theorem certificate_demo_source_certified:
        certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved)]
-   \<and> csim (prog_table certificate_demo_prog) (prog_cfg certificate_demo_prog)
-       (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])
-       (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
+   \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog \<turnstile> (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
-       \<in> ltr_collect (declared_global certificate_demo_prog)
-             (prog_cfg certificate_demo_prog)
-             (cinit_stores (declared_global certificate_demo_prog)) v
+       \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
    \<and> analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
        certificate_demo_prog v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))
    \<and> checks_sound_at res v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
@@ -546,11 +526,9 @@ theorem certificate_demo_check_listed_sound:
            certificate_demo_prog = Analysed res
      \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Less (N 0) (V (STR ''b''))
           \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
-              \<in> ltr_collect (declared_global certificate_demo_prog)
-                   (prog_cfg certificate_demo_prog)
-                   (cinit_stores (declared_global certificate_demo_prog)) (check_point chk)
+              \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
-          \<and> truthy (aval (Less (N 0) (V (STR ''b'')))
+          \<and> truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e
                      ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
 proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
@@ -565,11 +543,9 @@ proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
     where listed: "chk \<in> set (res_checks res)"
       and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
       and mem: "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
-                  \<in> ltr_collect (declared_global certificate_demo_prog)
-                       (prog_cfg certificate_demo_prog)
-                       (cinit_stores (declared_global certificate_demo_prog)) (check_point chk)"
+                  \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (check_point chk)"
       and pr: "check_verdict chk = Decided Check_Proved
-                 \<longrightarrow> truthy (aval (Less (N 0) (V (STR ''b'')))
+                 \<longrightarrow> truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e
                             ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
     by blast
   have "(check_point chk, check_verdict chk) \<in> set [(Statement 4, Decided Check_Proved)]"

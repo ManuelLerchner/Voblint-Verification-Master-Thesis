@@ -18,7 +18,8 @@ layer without embedding line numbers that drift.
 | `value_providing` | Conservative syntactic predicate: no fall-through or void return and at least one value return. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
 | `wf_source_program` | Source contract for declarations, calls, returns, reserved variables, and a fall-through-only main. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
 | `ret_var` | Reserved internal channel carrying an explicit return value during unwinding. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
-| `enter_state` | Callee store with caller globals and fresh local variables. | `src/Program_Model/VIMP/VIMP_Globals.thy` |
+| `enter_state` | Callee store: the caller's globals kept, every other name reset to `0` (formals are bound afterwards). C leaves such locals indeterminate; VIMP defines them, as it defines `/ 0`. | `src/Program_Model/VIMP/VIMP_Globals.thy` |
+| `cinit_stores` | Initial stores of a program run: every global `0`, `main`'s locals unconstrained. Constrains only the initial store; callee locals come from `enter_state`. | `src/Program_Model/VIMP/VIMP_Globals.thy` |
 | `combine_env` | Restored caller locals combined with callee globals; Goblint's `combine_env`, split from the separate destination write (`combine_assign`). | `src/Program_Model/VIMP/VIMP_Globals.thy` |
 
 ## Procedure-aware CFG
@@ -58,8 +59,9 @@ layer without embedding line numbers that drift.
 | --- | --- | --- |
 | `abs_state` | Pointwise abstract variable environment. | `src/Abstract_Interpreter/Domain/Nonrelational_State.thy` |
 | `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Abstract_Domain.thy` |
-| `part_post_solution` | Two-part certificate (local-result bound plus every side contribution) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
-| `TD_side` | Vendored verified side-effecting top-down solver used by executable analyses. | `vendor/td-verification` |
+| `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every side contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
+| `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
+| `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) it discharges the solver assumptions of `routed_dg_analysis`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
 
 ## D/G framework
 
@@ -69,7 +71,8 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the analysis's extra programs (`routed_contribution_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
+| resume value (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume value. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
+| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 
@@ -143,9 +146,31 @@ shared global slot `Inr gk0`, and `sg_uncov` makes it empty off the solved keys.
 Unifying the two names would make a proof step that needs both
 indistinguishable.
 
+### Notation and locale-local abbreviations
+
+The notation the theories declare (global symbols such as `\<C>`, `\<T>`,
+`\<rightarrow>\<^sub>p`) and the locale-local abbreviations over a locale's
+fixed arguments (`\<C>`, `\<T>`, `\<A>`, `carries`, `admits`, `gamma_at`,
+`man_at`, `cover`) are listed once, in the table generated from their
+declarations: the [README's Notation section](../README.md#notation), appendix B
+of the thesis, and `thesis/shared/generated/notation.json`
+(`pixi run thesis-notation-write`). Edit `thesis/shared/notation.toml` for a
+reading or meaning; everything else comes from the theories.
+
+Locale abbreviations unfold at parse time, so every exported theorem is the same
+term as without them. A printing abbreviation also folds goals and facts,
+including those of every interpretation of its locale, which then print as
+`X.cover v c`. `ltr_coverage` is only interpreted inside proofs, so printing
+mode is safe there. The other locales have theory-level interpretations, so
+their abbreviations are input-only and interpreted facts keep the explicit
+terms. The anonymous contexts fixing `p` in `Routed_DG_Analysis.thy` and
+`Unit_DG_Analysis.thy` add the input-only `pgs` and `ugs` for
+`declared_global p`; they are not locales and stay out of the table.
+
 ## Source-facing endpoints
 
 | Term | Meaning | Source |
 | --- | --- | --- |
+| `config_terminates` | The termination premise of the `run_voblint` theorems: `solve_dom` of the configured solve at the program's root query. A per-program fact. Inside Isabelle it is discharged by evaluating `solve_c` with `eval` (itself a code-generator oracle) and `terminates_of_solve_c`, which the repository does for its witness programs. A CLI or browser run that returns has computed `solve_c` and so establishes it through `solve_dom_of_solve_c`, but that step runs outside Isabelle's theorem check and relies on the trusted code generator and toolchain. | `src/Executable_Surface/CLI/Analysis_Certified.thy` |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
 | `unit_dg_analysis` | The context-insensitive analysis: `routed_dg_analysis` at the unit context, with the published `state_at`/`report` and the endpoints connecting a computed solve to source execution (`source_sound`, `completed_run_sound`, `result_node_sound`). Every domain's unit route interprets it. | `src/Analyses/Shared/Result/Unit_DG_Analysis.thy` |

@@ -33,7 +33,7 @@ text \<open>
 theorem activation_collect_sound:
   fixes cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and R :: "'c call_context_rel" and startcontext :: 'c
-    and gs :: "vname \<Rightarrow> bool"
+    and \<G> :: "vname \<Rightarrow> bool"
   assumes INIT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) startcontext"
     and INTRA: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s
@@ -42,24 +42,25 @@ theorem activation_collect_sound:
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover u c
         \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) s
-              (call_enter gs (CallEdge dst pars args) s) c'
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
+              (call_enter \<G> (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s
+              \<in> cover (FunctionEntry p) c'"
     and RETURN: "\<And>cl dst pars args p cont c1 c' p' s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover cl c1
-        \<Longrightarrow> admits_call_context gs g R cl c1 p' s es c'
+        \<Longrightarrow> admits_call_context \<G> g R cl c1 p' s es c'
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
-        \<Longrightarrow> combine_collect gs dst s t \<in> cover cont c1"
-    and TOTAL: "call_context_total_on cover R gs g"
-  shows "activation_collect gs R startcontext g S v ctx \<subseteq> cover v ctx"
+        \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
+    and TOTAL: "call_context_total_on cover R \<G> g"
+  shows "activation_collect \<G> R startcontext g S v ctx \<subseteq> cover v ctx"
 proof -
-  interpret G: ltr_coverage g S cover R startcontext gs
+  interpret G: ltr_coverage g S cover R startcontext \<G>
     by (standard; blast intro: INIT INTRA CALL RETURN TOTAL)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> activation_collect gs R startcontext g S v ctx"
-    then obtain t where t: "t \<in> valid_ltr gs g S"
-      and sn: "sink_node t = v" and kc: "trace_context gs R startcontext g t ctx"
+    fix st assume "st \<in> activation_collect \<G> R startcontext g S v ctx"
+    then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+      and sn: "sink_node t = v" and kc: "trace_context \<G> R startcontext g t ctx"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
     have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_ltr_covered_at[OF t kc] .

@@ -876,7 +876,12 @@ and mark it `superseded (see below)`.
      `partial_post_solution` -- stops leaking upward. `TD_Solver_Menu` now
      imports `TD_Solver_Bridge`; no other file needed a new import, since
      every existing `"Voblint_Solver.TD_Solver_Menu"` importer gets the bridge
-     transitively.)
+     transitively.) Correction (2026-09-22): `TD_Solver_Bridge` is not the sole
+     contact with TD's vocabulary. The generated `<Domain>_Analyses.thy`
+     registrations cite `TD_side_rule_Interp.partial_post_solution` and
+     `TD_side_rule_Interp.solve_dom_of_solve_c` directly to discharge
+     `routed_dg_analysis`'s solver assumptions; `part_post_solution_of_solve_c`
+     is not on the `run_voblint` path.
   3. Deleted `Solver_Side_RG.thy` entirely (689 lines, `git rm`, no
      replacement) after a citation trace stronger than name-grep: every
      head symbol (`side_rg`, `rg_val`, `rg_state`, `rg_sides`, `rg_ug`,

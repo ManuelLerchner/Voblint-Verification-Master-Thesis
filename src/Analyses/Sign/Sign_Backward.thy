@@ -318,8 +318,8 @@ global_interpretation sign_backward_domain:
 proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
   assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  have H': "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF H] by blast
-  show "aval e s \<in> gamma (aval_sign e \<sigma>)"
+  have H': "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD[OF H] by blast
+  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_sign e \<sigma>)"
     using aval_sign_sound[of s \<sigma> e] H' by simp
 qed (use sign_tobool_mono in \<open>simp_all add: meet_sign_sound inv_less_sign_sound
        inv_eq_sign_sound inv_conservative_def sign_tobool_sound meet_sign_mono aval_sign_mono
@@ -372,7 +372,7 @@ text \<open>
 \<close>
 
 lemma branch_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.branch_sound by simp
 
 lemma branch_sign_mono:
