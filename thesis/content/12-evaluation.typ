@@ -404,10 +404,10 @@ relation. A call string of length $k$ merges paths deeper than $k$, as in
 
 === A real unsoundness, replayed: Goblint pull request 1161 <sec:eval-1161>
 
-_Evidence: executable, against a defect documented upstream._ Goblint issue
-1156 reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although
-C's truncating remainder gives $-1$ for both values (@ch:intro). Pull request
-1161 restricted the cases in which the congruence domain returns a constant
+_Evidence: executable, against a defect documented upstream._ Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue
+  1156] reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although
+C's truncating remainder gives $-1$ for both values (@ch:intro). #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+  1161] restricted the cases in which the congruence domain returns a constant
 remainder and added the program as regression test
 `37-congruence/14-negative.c` @goblint1161. That test marks the first check as
 unknown, and the second check, `c % 2 == -1`, as not yet provable.
@@ -456,7 +456,7 @@ lies in $[-7, -5]$, refutes the first check, and proves the second.
     )
   },
   kind: image,
-  caption: [Goblint's regression test for pull request 1161 in VIMP, and the
+  caption: [Goblint's regression test for #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] in VIMP, and the
     verdict and state at each check with Congruence alone and with the Int
     product, both without contexts. Concretely, `c % 2` evaluates to $-1$ on
     both executions.],
