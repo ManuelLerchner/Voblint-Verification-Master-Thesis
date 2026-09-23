@@ -42,7 +42,13 @@ objects or whether the statement expresses the intended claim. AlphaProof's
 statements were formalized by people. A manual review of the Munkres
 formalization found definitions logically weaker than the textbook's, harmless
 for the proved theorems only because each theorem assumes the missing
-constraints again @bryant26munkres[§8.1]. Software verification makes this
+constraints again @bryant26munkres[§8.1]. In September 2026, OpenAI
+released a proposed proof of finite-time blowup for the three-dimensional
+Navier–Stokes equations together with a Lean formalization
+@openai26ns @openai26nspaper @openai26nslean. The Lean theorem covers smooth
+external forcing and an initially stationary fluid of bounded energy, and the
+artifact describes its review as self-assessed. Whether this statement matches
+the intended problem is a question the kernel cannot answer. Software verification makes this
 boundary explicit. The seL4 proof relates the kernel's C implementation to an
 abstract specification in Isabelle/HOL and names as assumptions the compiler,
 assembly code, boot code, cache management and hardware @klein09.

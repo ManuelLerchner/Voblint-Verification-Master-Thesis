@@ -301,7 +301,7 @@
       it.page()
     }
     if it.level == 1 {
-      block(above: 14pt, below: 0pt, link(el.location(), text(font: sans, weight: "bold", row)))
+      block(above: 13pt, below: 12pt, link(el.location(), text(font: sans, weight: "bold", row)))
     } else {
       block(above: 6.05pt, below: 0pt, link(el.location(), row))
     }
