@@ -195,7 +195,21 @@
   // definitions here fill the line and nothing refers to them by number.
   set math.equation(numbering: none)
   show math.equation: set text(font: "Latin Modern Math")
-  show link: set text(fill: black)
+  // Web links are blue and underlined. Links into the rendered theories and
+  // the listings' playground tags keep their own styling, and internal
+  // references (citations, cross-references, contents) stay black.
+  show link: it => {
+    let web = (
+      type(it.dest) == str and not it.dest.contains("/Voblint/") and not it.dest.contains("#code=")
+    )
+    if web {
+      set text(fill: rgb("#1565C0"))
+      underline(offset: 1.5pt, it)
+    } else {
+      set text(fill: black)
+      it
+    }
+  }
 
   // Chapter-prefixed numbering. In a caption the numbering function runs at
   // the figure's own location, so reading the heading counter there is right.
