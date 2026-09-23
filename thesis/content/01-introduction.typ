@@ -68,8 +68,10 @@ the anchor. Regression programs exercise the departures (@sec:eval-corpus).
 
 == From executions to static guarantees
 
-A test observes the executions it runs. A static analysis computes a
-description of possible behavior, for instance an interval that contains every
+Programs are commonly checked by testing, if they are checked at all, often
+with unit tests and sometimes only by running them a few times and assuming
+that they work. Either way, only finitely many executions are observed. A
+static analysis instead computes a description of possible behavior, for instance an interval that contains every
 value a variable takes whenever execution reaches a program point. The
 description may include values that never occur, but soundness requires it to
 include those that do (@fig:intro-runs). An abstract state that implies a check
