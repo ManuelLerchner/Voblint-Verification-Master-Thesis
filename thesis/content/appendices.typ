@@ -245,7 +245,7 @@ collecting semantics of one program at every node:
 #proved("mf_ltr_collect_sound", note: [A mixed flow-sensitive analysis, sound
   end to end for one program (@sec:mixed-flow).])
 
-== Regression corpus <app:regressions>
+#heading(level: 2, outlined: false)[Regression corpus] <app:regressions>
 
 The corpus below `tests/regression/` holds #stat("corpus.cases") `.vimp` files
 in #stat("corpus.groups") top-level groups, counted by `scripts/pages_stats.py`
