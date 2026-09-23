@@ -151,6 +151,22 @@ A row's verdict is a `contextual_verdict = check_result lifted`
 `cli/entry/voblint.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
 the snapshot and globals strings -- is presentation with no theorem about it.
 
+Each source check carries a label, `Check l e`. Execution ignores it,
+compilation copies it onto the check's `EA_Check l e` edge, and every result row
+carries it as `check_label`. `run_voblint_check_sound` (`Analysis_Certified.thy`)
+concludes that a run about to execute `Check l e` finds a row labelled `l` for `e`
+whose verdict holds of its store, and `run_voblint_labelled_check_sound` adds
+that, when the rows' labels are distinct, every row labelled `l` is that row. The
+renderers check distinctness on the result and fail otherwise, and print each row
+at its own label. Two steps stay trusted: the parser writes the line and column of
+each check's `__voblint_check` keyword into its label, and the renderer prints the
+label it reads. No list of parser positions is zipped with the rows any more.
+
+Arithmetic diagnostics are still placed by position lookup outside the proof.
+`run_voblint_arithmetic_safe` is stated at a CFG node; the CLI finds a
+diagnostic's line through the statement positions the parser records in
+post-order and `prog_stmt_post_order`, and nothing proves that pairing.
+
 ## 8. What may be claimed
 
 Proved, for every configuration `run_voblint` answers (every domain, rule and
@@ -164,7 +180,9 @@ Not proved:
 - solver termination for an arbitrary program (key coverage is checked at run
   time rather than proved);
 - anything about the rendered graph, snapshot or globals strings;
-- the lexer and parser;
+- the lexer and parser, including that each check's label is its own source
+  position;
+- the source position printed for an arithmetic diagnostic;
 - Isabelle's code generator, the OCaml compiler and its runtime.
 
 ## Adding an executable analysis

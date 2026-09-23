@@ -189,8 +189,10 @@ Three results in the same theory specialise the guarantee to what the report
 shows:
 
 - [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy): when an execution is about to run a check,
-  the report lists it at a node reached with the current store, the check is not
-  `DEAD`, and a definite verdict is correct.
+  the report lists a row under that check's label at a node reached with the
+  current store, the row is not `DEAD`, and a definite verdict is correct.
+  `run_voblint_labelled_check_sound` adds that, when no two rows share a label,
+  every row carrying the label is that row.
 - [`run_voblint_dead_check_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy): no execution reaches a `DEAD`
   check's point.
 - [`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Analysis_Certified.thy): at a reachable point with no arithmetic
@@ -206,10 +208,10 @@ theorem run_voblint_check_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and chk: "next_check residual = Some e"
+      and chk: "next_check residual = Some (l, e)"
       and terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_exp c = e
+  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
            ∧ check_verdict c ≠ Dead
@@ -251,7 +253,7 @@ counterexample.
 | VIMP execution from an already-constructed AST | Solver termination for arbitrary programs |
 | Compilation to the procedure-aware CFG | Lexing and parsing |
 | Equation generation and the computed post-solution | Isabelle code generation, the OCaml compiler and runtime |
-| Abstract states, check rows, arithmetic safety at quiet points | Source positions, rendered graphs and state strings, the playground |
+| Abstract states, check rows under their labels, arithmetic safety at quiet points | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
 | | Completeness and precision |
 
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)

@@ -96,14 +96,15 @@
       linkText: "checks_sound_at",
     },
     next: {
-      clause: "next_check residual = Some e",
-      text: "The next command the source program will execute is `__voblint_check(e)`.",
+      clause: "next_check residual = Some (l, e)",
+      text: "The next command the source program will execute is `__voblint_check(e)`, labelled `l`. The parser writes the check's own line and column into `l`.",
       link: isaConst("Voblint_Compile", "Residual_Edges", "next_check"),
       linkText: "next_check",
     },
     listed: {
-      clause: "∃c ∈ set (res_checks res). check_exp c = e ∧ s ∈ ltr_collect … (check_point c)",
-      text: "The result lists a check `c` with condition `e`, at a node the store `s` really reaches. The node is found, not assumed: two identical procedure bodies list their checks separately.",
+      clause:
+        "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ ltr_collect … (check_point c)",
+      text: "The result lists a check `c` under the label `l`, with condition `e`, at a node the store `s` really reaches. The report prints each row at its own label, so the verdict shown at a check's line is this row's.",
       link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
       linkText: "check_sites",
     },
@@ -147,8 +148,8 @@
     },
     sites: {
       clause:
-        "map (λchk. (check_point chk, check_exp chk)) (res_checks res) = check_sites (prog_cfg p)",
-      text: "Read as (node, condition) pairs, the result's checks are exactly the check edges of the compiled graph, in the graph's edge order. Nothing is dropped or invented; pairing them with source lines happens outside the proof.",
+        "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res) = check_sites (prog_cfg p)",
+      text: "Read as (node, label, condition) triples, the result's checks are exactly the check edges of the compiled graph, in the graph's edge order. Nothing is dropped or invented, and each keeps the label of the source check it came from.",
       link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
       linkText: "check_sites",
     },

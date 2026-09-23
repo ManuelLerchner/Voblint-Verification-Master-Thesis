@@ -1398,7 +1398,7 @@ datatype ltr =
         <p>
           A local trace is a value in the logic and nowhere else. It exists so that soundness has
           something to be a statement <em>about</em>, and the proofs quantify over the set without
-          anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">9,390</span> lines of
+          anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">9,405</span> lines of
           OCaml exported from these theories, the number that mention <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a>,
           <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> or
           <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> is zero. The specification does not ship.
@@ -4396,8 +4396,8 @@ fun main() {
         </p>
         <p>
           What is left to read is <span data-stat="semantics.theories">6</span> theories,
-          <span data-stat="semantics.lines">968</span> lines out of the
-          <span data-stat="isabelle.lines">63,133</span> in <code>src/</code>, with
+          <span data-stat="semantics.lines">977</span> lines out of the
+          <span data-stat="isabelle.lines">63,247</span> in <code>src/</code>, with
           <code>pstep</code>'s <span data-stat="semantics.pstep_rules">14</span> rules among
           them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
           the equation generator, the solver, the five domains and the result table, the kernel
@@ -4974,11 +4974,11 @@ fun main() {
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
-              A run about to execute <code>__voblint_check(e)</code> finds a check for
-              <code>e</code> in the result, listed at a node its store reaches. That check is not
-              DEAD; if it says PROVED, <code>e</code> is true in the store, and if it says
-              REFUTED, <code>e</code> is false. The node is found, not assumed: two identical
-              procedure bodies list their checks separately.
+              A run about to execute <code>__voblint_check(e)</code> finds the check's row in
+              the result under the check's label, listed at a node its store reaches. That row is
+              not DEAD; if it says PROVED, <code>e</code> is true in the store, and if it says
+              REFUTED, <code>e</code> is false. The parser writes each check's line and column
+              into its label, and the report prints every row at its own label.
             </p>
             <details>
               <summary>Isabelle statement</summary>
@@ -4986,10 +4986,10 @@ fun main() {
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "next_check residual = Some e"
+      and "next_check residual = Some (l, e)"
       and "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_exp c = e
+  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
            ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s))
@@ -5059,14 +5059,14 @@ fun main() {
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
               Whatever the configuration, the result lists exactly one check per check in the
-              compiled graph, at that check's node, with its condition, in graph order. No check
-              is silently dropped. Pairing checks with source lines happens outside the proof.
+              compiled graph, at that check's node, with its label and condition, in graph order.
+              No check is silently dropped.
             </p>
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_check_sites:
   assumes "run_voblint D rule ctx p = Analysed res"
-  shows "map (λchk. (check_point chk, check_exp chk)) (res_checks res)
+  shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
             </details>
           </article>
@@ -5751,7 +5751,9 @@ qed</code></pre>
           <p>
             The <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/frontend" target="_blank" rel="noreferrer">parser</a>
             is generated from one grammar and tested. Isabelle's code generator, the OCaml compiler,
-            wasm and your browser are trusted. Source positions, badges and graph drawings
+            wasm and your browser are trusted. A check's row carries the check's label through
+            the proof, but that the parser writes the check's own line and column into it is
+            trusted. Diagnostic positions, badges and graph drawings
             (<a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/render" target="_blank" rel="noreferrer">OCaml rendering</a>,
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">this page</a>)
             are unverified.
@@ -5805,8 +5807,8 @@ qed</code></pre>
               <text class="mono" x="685" y="440" text-anchor="middle">Voblint_Solver</text>
             </g>
             <g class="berg-label below">
-              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">63,133</tspan> lines of Isabelle</text></a>
-              <text x="660" y="272"><tspan data-stat="isabelle.theories">225</tspan> theories · <tspan data-stat="isabelle.proofs">3,067</tspan> lemmas · <tspan data-stat="isabelle.defs">1,413</tspan> definitions</text>
+              <a href="Voblint/index.html"><text class="big" x="660" y="250"><tspan data-stat="isabelle.lines">63,247</tspan> lines of Isabelle</text></a>
+              <text x="660" y="272"><tspan data-stat="isabelle.theories">225</tspan> theories · <tspan data-stat="isabelle.proofs">3,070</tspan> lemmas · <tspan data-stat="isabelle.defs">1,415</tspan> definitions</text>
               <line x1="655" y1="258" x2="615" y2="250"/>
             </g>
             <g class="berg-label solver">
@@ -5816,19 +5818,19 @@ qed</code></pre>
               <line x1="695" y1="480" x2="777" y2="482"/>
             </g>
             <g class="berg-label side">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli" target="_blank" rel="noreferrer"><text x="40" y="160"><tspan data-stat="handwritten_ocaml">3,315</tspan> lines of handwritten OCaml</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli" target="_blank" rel="noreferrer"><text x="40" y="160"><tspan data-stat="handwritten_ocaml">3,311</tspan> lines of handwritten OCaml</text></a>
               <text x="40" y="178">parser glue, renderers, CLI, browser glue</text>
               <text class="muted" x="40" y="196">outside the proof</text>
             </g>
             <g class="berg-label corpus">
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">292</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
-              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">442</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/tests/regression" target="_blank" rel="noreferrer"><text x="40" y="300"><tspan data-stat="corpus.cases">293</tspan> <tspan class="mono">.vimp</tspan> regression programs</text></a>
+              <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/src/Examples" target="_blank" rel="noreferrer"><text x="40" y="318"><tspan data-stat="eval_witnesses">443</tspan> <tspan class="mono">by eval</tspan> witnesses</text></a>
               <text class="muted" x="40" y="336">tested, not proved</text>
             </g>
           </g>
           <g class="berg-label above">
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/codegen/generated/ml" target="_blank" rel="noreferrer">
-              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,390</tspan> lines</text>
+              <text class="big" x="560" y="40"><tspan data-stat="generated_ocaml">9,405</tspan> lines</text>
               <text x="560" y="60">generated OCaml: the analyzer that runs</text>
             </a>
             <line x1="555" y1="66" x2="486" y2="120"/>
@@ -5988,7 +5990,7 @@ qed</code></pre>
           everything below that, reached through those, in a lighter dotted line. The example sessions
           are drawn together at the surface. Lines are counted per <code>ROOT</code> directory with the
           scanner behind <code>pixi run theory-stats</code>:
-          <span data-stat="isabelle.lines">63,133</span> in <code>src</code> plus
+          <span data-stat="isabelle.lines">63,247</span> in <code>src</code> plus
           <span data-stat="solver.lines">31,328</span> across the
           <span data-stat="solver.theories">26</span> theory files in the vendored solver's directory,
           of which Voblint's imports reach <span data-stat="solver.used.theories">5</span> theories and
