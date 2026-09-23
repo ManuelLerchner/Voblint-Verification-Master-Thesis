@@ -29,12 +29,6 @@
     pair.at(0) + m.captures.at(0).replace("\n", pair.at(1) + "\n" + pair.at(0)) + pair.at(1)
   )
   let out = s
-  // A subscript digit has its own glyph. Using it keeps `c\<^sub>0` intact
-  // inside a `\<^bsub>…\<^esub>` group and inside highlighted strings, where
-  // the bracketing markers would nest or be split across tokens.
-  out = out.replace(regex("\\\\<\\^sub>([0-9])"), m => "₀₁₂₃₄₅₆₇₈₉"
-    .clusters()
-    .at(int(m.captures.at(0))))
   out = out.replace(regex("(?s)\\\\<\\^bsub>(.*?)\\\\<\\^esub>"), wrap(_sub))
   out = out.replace(regex("\\\\<\\^sub>" + _script-arg), wrap(_sub))
   out = out.replace(regex("\\\\<\\^sup>" + _script-arg), wrap(_sup))
@@ -89,15 +83,6 @@
 // thesis/tools/vimp_listings.py decodes every link in the built PDF and
 // compares it with the listing.
 
-// A regression fixture, linked to its file in the repository. The path is
-// relative to tests/regression; thesis/tools/vimp_listings.py checks that it
-// exists, and that no fixture path appears in the chapters without this link.
-#let repo-blob = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/"
-#let fixture(path, label: none) = link(
-  repo-blob + "tests/regression/" + path,
-  raw(if label == none { path } else { label }),
-)
-
 #let playground-base = "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html"
 
 // What the playground selects when a link names nothing (pages/playground.html;
@@ -105,10 +90,7 @@
 #let playground-defaults = (
   "analysis": "interval",
   "globals": "warrow",
-  "context": "entry-state",
-  "refinement": "fixpoint",
-  "trace": "off",
-  "placement": "flow-sensitive",
+  "context": "call-string",
   "k": 1,
 )
 
@@ -167,17 +149,9 @@
 }
 
 // `ctx` is the playground's `context` parameter; `context` is a Typst keyword.
-#let playground-link(
-  program,
-  analysis: "interval",
-  globals: "warrow",
-  ctx: "call-string",
-  k: 1,
-  placement: "flow-sensitive",
-) = {
+#let playground-link(program, analysis: "interval", globals: "warrow", ctx: "call-string", k: 1) = {
   let query = "?analysis=" + analysis + "&globals=" + globals + "&context=" + ctx
   if ctx == "call-string" { query += "&k=" + str(k) }
-  if placement != "flow-sensitive" { query += "&placement=" + placement }
   playground-base + query + "#code=" + _base64url(_deflate-stored(array(bytes(program))))
 }
 
@@ -198,7 +172,6 @@
   globals: auto,
   ctx: auto,
   k: auto,
-  placement: auto,
 ) = {
   let src = if type(body) == str { body } else { body.text }
   let code = raw(src, lang: lang, block: true)
@@ -211,13 +184,7 @@
   let run = if claim == none { playground-defaults } else {
     playground-defaults + _vimp-claims.at(claim).settings
   }
-  let given = (
-    "analysis": analysis,
-    "globals": globals,
-    "context": ctx,
-    "k": k,
-    "placement": placement,
-  )
+  let given = ("analysis": analysis, "globals": globals, "context": ctx, "k": k)
     .pairs()
     .filter(((_, v)) => v != auto)
     .to-dict()
@@ -233,7 +200,6 @@
     globals: settings.globals,
     ctx: settings.at("context"),
     k: settings.k,
-    placement: settings.placement,
   )
 
   [#metadata((
@@ -262,18 +228,8 @@
 // resolved at build time. Missing formal links fail rendering.
 #let _links = json("/shared/generated/links.json")
 
-// The typed key of a citation. An untyped one ("any": a theorem environment's
-// `isa:`, a `thy` snippet) takes the kind the checker resolved it to.
-#let _key(kind, name) = if kind == "any" {
-  assert(
-    name in _links.names,
-    message: "Missing Isabelle HTML link for " + name + "; run pixi run thesis-links-write",
-  )
-  _links.names.at(name)
-} else { kind + ":" + name }
-
 #let _url(kind, name) = {
-  let key = _key(kind, name)
+  let key = kind + ":" + name
   assert(
     _links.base != "" and key in _links.links,
     message: "Missing Isabelle HTML link for " + key + "; run pixi run thesis-links-write",
@@ -285,76 +241,30 @@
 
 // Formal entities require links. Command syntax and repository paths are
 // code labels and have no project-definition anchor.
-// An Isabelle name as it prints: `dep\<^sub>L` shows its subscript.
-#let _isa-display(name) = {
-  let parts = name.split("\<^sub>")
-  if parts.len() == 1 { name } else {
-    parts.first()
-    for p in parts.slice(1) {
-      let cs = p.clusters()
-      sub(cs.first())
-      cs.slice(1).join()
-    }
-  }
-}
-// `thy:` names the theory when several theories define the same short name;
-// thesis-links refuses an unqualified citation of such a name.
-// `display:` replaces the printed text only: `isaconst("dg_pipeline.root_query",
-// display: "root_query")` links the locale-qualified name but prints the bare one.
-// The checkers read `thy:` and `display:` as string literals, in either order.
-#let entity(name, color, kind: none, display: none, thy: none) = {
-  let key = if thy == none { name } else { thy + "." + name }
-  let href = if kind == none { none } else { _url(kind, key) }
+#let entity(name, color, kind: none, display: none) = {
+  let href = if kind == none { none } else { _url(kind, name) }
   let fill = if href == none { vb.plain } else { color }
-  let shown = if display == none { name } else { display }
-  let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if type(shown) == str {
-    _isa-display(shown)
-  } else { shown })
+  let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if display == none {
+    name
+  } else { display })
   if href == none { body } else { link(href, body) }
 }
-#let isathm(name, display: none, thy: none) = entity(
-  name,
-  vb.thm,
-  kind: "thm",
-  display: display,
-  thy: thy,
-)
-#let isaconst(name, display: none, thy: none) = entity(
-  name,
-  vb.const,
-  kind: "const",
-  display: display,
-  thy: thy,
-)
-#let isatype(name, display: none, thy: none) = entity(
-  name,
-  vb.type,
-  kind: "type",
-  display: display,
-  thy: thy,
-)
-#let isalocale(name, display: none, thy: none) = entity(
-  name,
-  vb.locale,
-  kind: "locale",
-  display: display,
-  thy: thy,
-)
+#let isathm(name) = entity(name, vb.thm, kind: "thm")
+#let isaconst(name) = entity(name, vb.const, kind: "const")
+#let isatype(name) = entity(name, vb.type, kind: "type")
+#let isalocale(name) = entity(name, vb.locale, kind: "locale")
 #let isacmd(name) = entity(name, vb.trusted)   // an Isabelle command
 #let isasession(n) = entity(n, vb.muted, kind: "session")
 #let isafile(p) = entity(p, vb.muted)
 
-// A C11 clause, linked to its paragraph in an HTML rendering of the committee
-// draft N1570, which the bibliography entry iso-c11 cites.
-#let c11(clause) = link("https://port70.net/~nsz/c/c11/n1570.html#" + clause)[§#clause]
-
 // The Isabelle name a theorem environment carries. Its kind is whatever the
-// rendered theories say it is: the checker records the typed key it resolved
-// to, and the colour follows that kind.
+// rendered theories say it is: the checker records the resolved kind under
+// `any:<name>` and the colour follows it.
 #let isaname(name) = {
+  let key = "any:" + name
   let href = _url("any", name)
-  let kind = _key("any", name).split(":").first()
-  let color = (thm: vb.thm, const: vb.const, type: vb.type, locale: vb.locale).at(
+  let kind = _links.links.at(key).split("%7C").last()
+  let color = (fact: vb.thm, thm: vb.thm, const: vb.const, type: vb.type, locale: vb.locale).at(
     kind,
     default: vb.plain,
   )
@@ -390,9 +300,8 @@
     stroke: 0.6pt + vb.accent,
     text(size: 0.5em, font: "DejaVu Sans Mono", fill: vb.accent)[thy],
   )
-  // Labelled so that the contents and running heads can drop it. The call site
-  // writes the separating space, so the badge adds none of its own.
-  [#box(if href == none { body } else { link(href, body) }) <thy-badge>]
+  h(0.35em)
+  if href == none { body } else { link(href, body) }
 }
 
 // The Concrete Semantics Fig. 4.1 table -- Isabelle symbols beside their ASCII

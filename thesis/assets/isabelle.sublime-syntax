@@ -50,6 +50,11 @@ contexts:
     - match: \b(export_code|code_identifier|value|declare|notation|print_locale|locale_deps|class_deps|thm_deps|thm_oracles)\b
       scope: support.function.command.isabelle
 
+    - include: term
+
+  # Shared by the outer syntax and quoted terms: inside a term, the logic is
+  # what a reader scans for, so it is not flattened into one string colour.
+  term:
     - match: '''{{ident}}'
       scope: storage.type.variable.isabelle
 
@@ -77,6 +82,9 @@ contexts:
     - match: '∀|∃|¬|∧|∨|⟷'
       scope: keyword.operator.logic.isabelle
 
+    - match: \b(if|then|else|let|in|case|of)\b
+      scope: keyword.operator.isabelle
+
   comment:
     - meta_scope: comment.block.isabelle
     - match: \*\)
@@ -93,10 +101,10 @@ contexts:
     - match: '‹'
       push: cartouche
 
+  # A quoted term is inner syntax, not a string: only the quotes are marked,
+  # as Isabelle/jEdit does it.
   inner-syntax:
-    - meta_scope: string.quoted.double.isabelle
     - match: '"'
       scope: punctuation.definition.string.end.isabelle
       pop: true
-    - match: '\\<\^?[A-Za-z0-9_]+>'
-      scope: constant.character.escape.isabelle
+    - include: term
