@@ -29,52 +29,23 @@ trusted inference kernel @paulson19, so the procedure that finds a proof need
 not be trusted. Recent AI-assisted mathematics relies on this separation.
 AlphaProof solved three problems of the 2024 International Mathematical
 Olympiad in Lean. Experts formalized the problem statements by hand, and
-each solution took two to three days of computation @hubert25alphaproof. A
-company preprint by Harmonic, not peer reviewed, reports
-gold-medal-equivalent performance on the 2025 problems for its Lean-based
-system Aristotle @achim25aristotle. A Lean development produced with GPT-5.2
-Pro and Aristotle resolved Erdős problem \#728 @sothanaphan26erdos.
-OpenAI released an AI-generated
-proof of finite-time blowup for the three-dimensional Navier–Stokes
-equations in September 2026, for smooth
-external forcing and an initially stationary fluid of bounded energy,
-together with a Lean formalization @openai26ns @openai26nspaper
-@openai26nslean. The artifact's metadata describes its review as
-self-assessed. Math, Inc. reports that its agent Gauss formalized known
-results from human blueprints, among them the strong prime number theorem
-@mathinc25strongpnt and the sphere-packing theorems in dimensions 8 and 24
-@mathinc26sphere. In Isabelle, #cite(<kappelmann26>, form: "prose") study
-agents that draft and generalize formalizations from human hints, and
+each solution took two to three days of computation @hubert25alphaproof. In
+Isabelle, #cite(<kappelmann26>, form: "prose") study agents that draft and
+generalize formalizations from human hints, and
 #cite(<bryant26munkres>, form: "prose") report LLM coding agents that
 produced over 85,000 lines of Isabelle/HOL covering Munkres' general topology
 in 24 active days, with all 806 results proved.
-For software, #cite(<ho26aeneas>, form: "prose") have agents write
-the Lean verification of production Rust code of Microsoft's SymCrypt, which
-the Lean kernel checks independently.
 
 A checked proof settles that the formal statement follows from the
 definitions. It does not settle whether the definitions model the intended
-objects or whether the statement expresses the intended claim, and the
-examples above meet this boundary in different ways. AlphaProof's statements
-were formalized by people. The literal statement of Erdős problem \#728 admits
-trivial solutions, so the Lean theorem resolves one reading of it, which the
-problem's curators accept as the intended one @erdos728site. The Gauss
-projects formalize proofs that mathematicians had already found. A manual
-review of the Munkres formalization found definitions logically weaker than
-the textbook's, harmless for the proved theorems only because each theorem
-assumes the missing constraints again @bryant26munkres[§8.1]. In the
-SymCrypt work, formalizing the cryptographic standards still requires expert
-design and review @ho26aeneas. Industrial
-verification treats the same boundary explicitly: AWS's Nitro Isolation Engine
-uses Isabelle/HOL to relate a model of its implementation to an abstract
-specification of isolation, and its whitepaper makes the relationship between
-model, compiled code and hardware part of the assurance argument @aws26nitro. The
-seL4 proof relates the kernel's C implementation to an abstract specification
-in Isabelle/HOL and names as assumptions the compiler, assembly code, boot code,
-cache management and hardware @klein09.
-Tao separates the generation and verification of a result from its exposition
-and its digestion by a community. In his view, a proof can be generated and
-verified and still be understood by no one @tao26ai.
+objects or whether the statement expresses the intended claim. AlphaProof's
+statements were formalized by people. A manual review of the Munkres
+formalization found definitions logically weaker than the textbook's, harmless
+for the proved theorems only because each theorem assumes the missing
+constraints again @bryant26munkres[§8.1]. Software verification makes this
+boundary explicit. The seL4 proof relates the kernel's C implementation to an
+abstract specification in Isabelle/HOL and names as assumptions the compiler,
+assembly code, boot code, cache management and hardware @klein09.
 
 These distinctions fix the division of labor in this thesis. Isabelle
 establishes that Voblint's theorems hold. The thesis explains what they state,
@@ -249,7 +220,7 @@ gap.
 
 / RQ1: Can soundness of a constraint-based, context-sensitive interprocedural
   analyzer be machine-checked end to end, from source executions to the
-  verdicts of the exported executable, and which premises and trusted
+  verdicts of the analysis function exported to the executable, and which premises and trusted
   components remain?
 / RQ2: What concrete meaning does a calling context have, and which condition
   makes context indexing lose no executions when one call may be admitted at
@@ -257,7 +228,7 @@ gap.
 / RQ3: Can the abstract domain, the context policy and the solver discharge
   their obligations independently, with one composition theorem covering every
   configuration?
-/ RQ4: Which proof obligations are necessary, and can precision differences
+/ RQ4: Which key proof obligations can be shown to be necessary, and can precision differences
   and non-vacuity be established as theorems about computed results rather
   than by testing?
 
@@ -356,7 +327,7 @@ semantics that carry contexts exist in Coq, with the context of a callee
 computed by a function @dabrowski09, and trace partitioning indexes sets of
 traces by control history, overlapping indices included @rival07.
 
-We found no work that connects the executions of a language with recursive
+To our knowledge, no work connects the executions of a language with recursive
 procedures, through context-indexed equations and a verified solver, to the
 verdicts of an executable analyzer. The contributions below fill this gap: the
 end-to-end theorem (K1) needs a mechanized concrete meaning for contexts
@@ -373,7 +344,7 @@ This document explains its definitions and proof ideas. The complete proofs
 are in the linked theories. We claim four contributions, one per research
 question.
 
-/ K1 (RQ1): _End-to-end soundness of the exported analyzer._ For every domain,
+/ K1 (RQ1): _End-to-end soundness of the exported analysis function._ For every domain,
   global update rule and context policy that #isaconst("run_voblint") offers
   and every accepted program: if the solve terminates and the analysis returns
   a result, every store a finite source execution reaches appears at a graph
@@ -437,8 +408,8 @@ question.
   (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
 
 / K4 (RQ4): _Necessity and non-vacuity as theorems._ Counterexample theorems
-  show that an obligation cannot be weakened or bypassed without admitting an
-  unsound claim: reading the callee's result in the caller's own context
+  show that several obligations are load-bearing, since weakening or bypassing
+  each admits an unsound claim: reading the callee's result in the caller's own context
   satisfies the weakened contract yet declares a reachable call unreachable
   (#isathm("return_at_caller_context_unsound")), the other four obligations
   without #oblig("TOTAL") leave a reached store uncovered
@@ -448,7 +419,8 @@ question.
   violates the obligation the shipped domain discharges
   (#isathm("prefix_congruence_mod_unsound")). Evaluation inside Isabelle,
   trusting the code generator, discharges the termination premise for named
-  programs and shows that the main theorem yields `PROVED` verdicts there
+  programs and computes `PROVED` verdicts there, which the main theorem
+  certifies
   (#isathm("certificate_demo_full_certificate"),
   #isathm("nv_source_certified")). Precision differences are stated as strict
   inequalities between computed results: call strings of length 2 are strictly
@@ -457,12 +429,15 @@ question.
   concern named programs and establish no general precision ordering
   (@sec:eval-rq4). Prior mechanizations prove precision as a general
   completeness or optimality theorem for one analysis @lammich07afp
-  @tilscher26. We found none that machine-checks strict precision separations
+  @tilscher26. To our knowledge, none machine-checks strict precision separations
   between configurations of one analyzer on concrete programs.
 
 The main theorem states partial correctness: termination of the abstract solve
-is a per-program premise, for which no general theorem is available
-(@sec:termination). Isabelle can discharge it by evaluating the solve for a given
+is a per-program premise (@sec:termination). Seidl and Vogler prove on paper
+that the side-effecting solver terminates when only finitely many unknowns are
+encountered @seidl21, and #cite(<tilscher26jar>, form: "prose") machine-check
+total correctness for top-down solvers without side effects. The
+side-effecting solver used here has no machine-checked termination theorem. Isabelle can discharge it by evaluating the solve for a given
 program (@sec:nonvacuity).
 
 We do not claim as contributions the top-down solver and its update rules
