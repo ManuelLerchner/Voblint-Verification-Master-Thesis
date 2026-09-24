@@ -98,7 +98,7 @@ derives the linear orders on VIMP's syntax, and _Root-Balanced Tree_
     lies one layer above the highest session it rests on. A layer's thickness
     grows with its lines, sessions sharing a layer split its width by their
     lines, the examples are drawn as one layer, and the bedrock is not to scale.
-    Layers show order, not every dependency.],
+    Individual dependencies are not drawn.],
 ) <fig:appendix-sessions>
 
 // The theory of an anchor is the page its verified link points into.
@@ -202,7 +202,7 @@ and to Voblint's declarations.
     caption: [Goblint constructs and their Voblint counterparts:
       #alignment-mark("modeled") modeled, #alignment-mark("simplified")
       simplified (weaker or differently encoded), #alignment-mark("absent") not
-      modeled. The status is architectural, not proof status.],
+      modeled. The status describes architecture and says nothing about proofs.],
   ) <tab:goblint-alignment>
 ]
 

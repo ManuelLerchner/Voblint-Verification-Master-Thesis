@@ -23,10 +23,10 @@ An analyzer computes with finite descriptions instead, and its solver
 they mean. A lattice of descriptions is not enough: an order unrelated to
 meaning lets the solver certify a bound that drops a store, and a state can
 denote no store without being the lattice's bottom, so a structural test loses
-dead code at the next assignment or join (@sec:lift). For RQ3 the question is
+dead code at the next assignment or join (@sec:lift). For a compositional proof the question is
 which laws a domain must satisfy so that the solver's order inequalities
 discharge the obligations, stated so that they mention neither contexts nor the
-solver. This chapter derives these laws and names those it deliberately omits.
+solver. This chapter derives these laws and names those it omits on purpose.
 
 == What an abstract value means
 
@@ -79,7 +79,7 @@ ${1, 2, 3, 4, 5}$. @fig:gamma shows one value of each carrier instantiated in
     of its components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
-The solver never touches these sets. Its certificate (@ch:background) is a
+The solver never computes with these sets. Its certificate (@ch:background) is a
 family of order inequalities $d lle sol(x)$, while the coverage obligations are
 set inclusions. If an edge transfer produces $d$ covering every successor store
 and the solver certifies $d lle sol(v)$, concluding that the successor stores
@@ -113,8 +113,8 @@ bottom, and the interval operations do not normalize such pairs away. Goblint's
 lattice signature `Lattice.Bot` likewise declares its bottom test per domain.
 Soundness uses only the direction
 $#isaconst("is_empty") (a) ==> conc(a) = emptyset$, which justifies discarding
-a state. The converse makes the test exact, and exactness is what lets the
-analyzer report the unreachability verdicts of @ch:results at all.
+a state. The converse makes the test exact. The analyzer needs exactness to
+report the unreachability verdicts of @ch:results.
 
 Intervals contain infinite ascending chains, so the solver extrapolates
 (@sec:widening), and its update rules require the carrier to instantiate
@@ -124,8 +124,8 @@ branch of warrowing therefore bounds the value it was given, and monotonicity
 of $conc$ turns that bound into set inclusion. Stabilization is not a class
 law, and termination becomes a premise (@sec:termination).
 
-These laws are everything a domain value must satisfy for soundness
-(@tab:domain-contract). Three familiar requirements are absent. No transfer has
+A domain value needs no other laws for soundness (@tab:domain-contract).
+Three familiar requirements are absent. No transfer has
 to be monotone: neither the per-operation rules of @sec:whole-state nor the
 analysis soundness contract of @sec:sound-core mention monotonicity, and the
 vendored solver's partial-correctness argument does not assume it.
@@ -157,8 +157,8 @@ all variable names; @ch:solving supplies a finite equivalent.
 == Unreachable program points <sec:lift>
 
 A check is reported dead when no execution reaches it, so the analyzer must
-recognize unreachability reliably. The pointwise form offers two encodings, and
-neither suffices. The all-bottom state is too narrow: backward filtering
+recognize unreachability reliably. The pointwise form offers two encodings of
+unreachability. The all-bottom state is too narrow: backward filtering
 (below) typically empties one variable, and ${x |-> lbot, y |-> ltop}$ is empty
 without being all-bottom. Any empty state is too fragile: the assignment
 `x = 1` turns that state into ${x |-> signval("+"), y |-> ltop}$ and makes dead
@@ -239,7 +239,7 @@ requirements through an expression once for every domain, with contract
     "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>",
   ),
 )
-A filter may keep stores that fail the guard but never drops one that passes. A
+A filter drops no store that passes the guard and may keep stores that fail it. A
 disjunction filters each arm and joins. Before joining, #isaconst("bfilter")
 drops an arm that the forward gate #isaconst("feasible") rejects, one whose
 forward value is empty or whose truth test contradicts the required polarity,
@@ -260,8 +260,8 @@ as Int has one per reduction policy #isatype("refine_mode") (@ch:instances).
 == Checks: asking instead of assuming
 
 A branch assumes its condition. A check must decide whether the current
-description already implies it. Filtering answers the wrong question, since it
-refines the state whether or not the condition was known. The locale
+description already implies it. Filtering cannot decide this, since it refines
+the state whether or not the condition was known. The locale
 #isalocale("abstract_numeric_queries") adds comparison queries answering
 definitely true, definitely false, or unknown. A definite answer $r$ for
 less-than must hold for every pair of represented operands:
@@ -316,7 +316,7 @@ never implies that its check is reached (@sec:verdicts).
     that uses it; the last two rows name what a domain does not need to provide.],
 ) <tab:domain-contract>
 
-The chapter fixes the domain's share of RQ3 and of K3: the requirements of
+A domain contributes to the composition by meeting the requirements of
 @tab:domain-contract. From them follow the join bound
 (#isathm("gamma_sup_ub1")), exact unreachability of normalized lifted values
 (#isathm("normalized_state_lift_bot_iff")) and the filter contract

@@ -6,12 +6,12 @@
 
 = What an Analysis Supplies <ch:analysis-interface>
 
-RQ3 asks whether an analysis can prove its obligations without knowing the
+An analysis should prove its obligations without knowing the
 context policy or the solver. Equations, solver, call wiring and context policy
 are the same for every analysis, so the framework should own them and prove
 them once, and the analysis should supply only its operations and their
 soundness. The task is to find the smallest interface for which this works,
-and four simpler ones fail. A single local lattice cannot hold a fact that is
+and four simpler interfaces fail. A single local lattice cannot hold a fact that is
 true throughout a run. Transfers that thread a shared value make every equation
 depend on it (@sec:dg). A return edge from the callee's exit loses the caller's
 locals, and an entry obligation under which some alternative covers the caller
@@ -22,14 +22,13 @@ one method per program construct (@tab:dg-spec-fields), and its obligations
 mention neither contexts nor the solver: #oblig("INTRA") and #oblig("RETURN")
 become one soundness rule per operation, and @ch:equations derives
 #oblig("CALL") and #oblig("TOTAL") from paired entry coverage and the routing
-policy. The correspondence with Goblint is architectural: every operation means
-what the VIMP and CFG semantics of @ch:program-model say, not what Goblint's
-OCaml code does.
+policy. The correspondence with Goblint is architectural. The meaning of each
+operation comes from the VIMP and CFG semantics of @ch:program-model, and
+Goblint's OCaml code plays no part in it.
 
 == Edges, and a shared component <sec:dg>
 
-This section fixes what an edge transfer must satisfy and where a fact lives
-that no single program point owns. An edge transfer must map every store $s in #sem($d$)$ and every successor
+An edge transfer must map every store $s in #sem($d$)$ and every successor
 #isai("s' \<in> edge_step a s") to $s' in #sem($f_a (d)$)$, which is
 #oblig("INTRA") for one edge. Seven fields of the record #isatype("dg_spec")
 are such transfers (@tab:dg-spec-fields). A check runs the event operation, not a branch:
@@ -316,7 +315,7 @@ analysis-supplied initial state, and no composition of analyses. Each would
 need its own concrete semantics and obligation. The context of a call is not a
 field either: the routing policy of @ch:equations chooses it.
 
-The chapter gives the analysis's share of RQ3 and K3. An analysis proves one
+An analysis proves one
 soundness rule per operation, and #isathm("local_state_dg_spec_for_core_sound")
 derives the analysis soundness contract #isalocale("sound_dg_spec_core") from
 these rules, as #isathm("sound_dg_spec_core_st") does for the executed variant.
@@ -324,9 +323,9 @@ The contract states #oblig("INTRA") per edge and #oblig("RETURN") for the
 composed combine, over a monotone concretization and well-formed transfers,
 for analyses with a single analysis global. It mentions no context policy, no
 solver and no variable map. Entry soundness is paired entry coverage, and the
-unpaired variant fails (#isathm("unpaired_entry_cover_unsound"), part of K4).
-The shape of the interface is Goblint's: a local and a global lattice, a manager, entry pairs
-and a two-stage return. The chapter adds a soundness contract for that shape
+unpaired variant fails (#isathm("unpaired_entry_cover_unsound")).
+The interface takes its shape from Goblint: a local and a global lattice, a manager, entry pairs
+and a two-stage return. New in this chapter are a soundness contract for that shape
 and the paired entry obligation with its counterexample.
 @ch:equations consumes exactly these two facts: it proves the five obligations
 of @ch:traces for the generated equations from the contract, paired entry

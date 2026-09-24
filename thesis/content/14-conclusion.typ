@@ -2,9 +2,9 @@
 
 = Conclusion <ch:conclusion>
 
-== Answers to the research questions
+== Answers to the questions
 
-*RQ1 (K1).* Yes, for a scalar language with recursive procedures and under a
+*Can soundness be machine-checked end to end?* Yes, for a scalar language with recursive procedures and under a
 per-program termination premise. Fix a domain, a global update rule and a
 context policy. If the solve terminates on an accepted program and
 #isaconst("run_voblint") returns a result, then every store that a finite source
@@ -18,15 +18,14 @@ termination of the abstract solve. Termination of the analyzed program is not
 required. The delivered artifacts additionally trust the parser, code
 generator, compilers, runtimes and presentation code (@sec:trust-boundary).
 
-*RQ2 (K2).* A calling context is a property of an activation-local trace, read off
+*What does a calling context denote?* A calling context is a property of an activation-local trace, read off
 how the activation was entered (@sec:contexts). The context relation may admit
 one call at several contexts, and #isathm("ov_two_contexts_admitted") shows
-such a call. Totality is the condition that loses no executions: when every
-covered call admits some callee context (#isaconst("call_context_total_on")),
-the context buckets jointly equal the context-free trace collection
+such a call. When every covered call admits some callee context (totality,
+#isaconst("call_context_total_on")), the context buckets jointly equal the context-free trace collection
 (#isathm("ltr_collect_eq_Union_activation_collect")).
 
-*RQ3 (K3).* Yes. A domain proves transfer soundness without contexts or solver, a
+*Can the ingredients be verified separately?* Yes. A domain proves transfer soundness without contexts or solver, a
 context policy proves its obligations without a domain, and the solver enters
 only through #isaconst("part_post_solution"). The routed locale discharges the
 coverage contract once for all policies and domains
@@ -35,7 +34,7 @@ source-level theorem covers every configuration #isaconst("run_voblint")
 offers. A relational carrier meets the same contract without framework changes
 (#isaconst("rel_order_spec"), @sec:relational).
 
-*RQ4 (K4).* Partly. Counterexample theorems show that reading a callee's result in
+*Is the theorem informative?* Partly. Counterexample theorems show that reading a callee's result in
 the caller's own context (#isathm("return_at_caller_context_unsound")) and
 unpaired entry coverage (#isathm("unpaired_entry_cover_unsound")) admit
 unsound claims, that a claim meeting every obligation except #oblig("TOTAL")
@@ -111,7 +110,7 @@ and one value per variable in the domains (@sec:vimp) would all change. Threads
 interleave activations, which #isaconst("valid_ltr") cannot express. The local
 traces of #cite(<schwarz21>, form: "prose") handle them, but the interface
 would also need synchronization, which it lacks (@sec:omissions). A new update
-rule that meets the vendored interface is the easy case, since only
+rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
 boundary unless verified.
 
@@ -125,8 +124,8 @@ of them determined the shape of the call interface (@sec:revealed).
 
 == Limitations
 
-The answers above hold within the following limits. Each is stated where it
-arises, and @sec:eval-threats collects the threats to the evaluation.
+The answers above hold within the following limits, each also stated where it
+arises. @sec:eval-threats collects the threats to the evaluation.
 
 + *Partial correctness.* Solver termination is a per-program premise.
   Regression programs exist whose solves do not finish, under entry-state
@@ -172,8 +171,7 @@ correctness result of #cite(<tilscher26jar>, form: "prose") covers the top-down
 solver without side effects and assumes finitely many unknowns, a precise
 widening and monotonic right-hand sides with monotonic dependencies
 (@sec:rel-solvers). Voblint's systems have side effects, and its unknowns pair
-nodes with contexts. Bounding the contexts is a first step, but it is not
-enough on its own. For call strings over a compiled program the candidate space is
+nodes with contexts. Bounding the contexts does not suffice on its own. For call strings over a compiled program the candidate space is
 finite, but that the solved keys stay inside it is a hypothesis of
 #isathm("compiled_call_string_vars_finite"), not a theorem about the routed
 solve. Entry-state contexts over infinite domains need a bound such as the

@@ -5061,8 +5061,9 @@ fun main() {
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
               Whatever the configuration, the result lists exactly one check per check in the
-              compiled graph, at that check's node, with its condition, in graph order. No check
-              is silently dropped. Pairing checks with source lines happens outside the proof.
+              compiled graph, at that check's node, with its label and condition, in graph order.
+              No check is silently dropped. The label is the check's source position. Writing it
+              in the parser and printing it in the renderer happen outside the proof.
             </p>
             <details>
               <summary>Isabelle statement</summary>
