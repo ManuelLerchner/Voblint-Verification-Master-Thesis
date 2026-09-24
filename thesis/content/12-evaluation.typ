@@ -655,7 +655,7 @@ names the kind of its evidence and the section that argues it.
 + *Totality is a premise of the per-context theorem*, and for entry-state
   routing it must be discharged against the computed result. _Machine-checked_
   (#isathm("total_dropped_unsound")), with one evaluated analyzer run
-  (#isathm("ov_empty_continuation_bot")). @sec:cover, @sec:contract.
+  (#isathm("ov_empty_continuation_bot")). @sec:contexts, @sec:contract.
 
 + *Entry coverage must be paired, and a callee's result must be read at the
   callee's own context.* This fixes #isaconst("dgs_enter") as a list of pairs

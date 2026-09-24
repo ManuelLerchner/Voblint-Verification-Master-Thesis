@@ -82,3 +82,34 @@ why = "Program-model chapter: a loop body compiles against the loop head."
 
 [facts."compile.simps(8)"]
 why = "Program-model chapter: a return edge targets the procedure's result node."
+
+[facts.return_at_caller_context_unsound]
+why = "Chapter 4: reading the callee result at the caller context is unsound."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.total_dropped_unsound]
+why = "Chapter 4: dropping TOTAL is unsound."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.ov_empty_continuation_bot]
+why = "Chapter 4: without paired entry coverage an executed point is declared unreachable."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_DG_Overlapping_Enter"
+
+[facts.source_reaches_ltr_collect]
+why = "Chapter 4: source-reachable stores are collected."
+session = "Voblint_Result"
+theory = "Voblint_Result.Source_Activation_Sound"
+
+[facts.ltr_collect_eq_Union_activation_collect]
+why = "Chapter 4: exhaustive buckets under the coverage contract."
+fact = "ltr_coverage.ltr_collect_eq_Union_activation_collect"
+session = "Voblint_CFG"
+theory = "Voblint_CFG.LTR_Abstract"
+
+[facts.cstep_preserves_ltr_repr]
+why = "Chapter 4: one graph step is matched by a trace rule."
+session = "Voblint_Compile"
+theory = "Voblint_Compile.Source_To_Trace"

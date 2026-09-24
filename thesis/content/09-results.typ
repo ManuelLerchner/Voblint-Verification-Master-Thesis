@@ -107,7 +107,7 @@ reachability claim, is defined in @sec:verdicts.
 
 At a CFG node $v$ the proof of the theorem is a chain of inclusions between
 sets of stores, followed by one implication. Writing $C_c$ for
-#isai("activation_collect \<G> R startcontext g S v c"),
+#isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"),
 $
   "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
   = union.big_c C_c, quad C_c subset.eq conc(A_(v, c))
