@@ -68,7 +68,7 @@ semantics and compiler #stat("isabelle.directories.Program_Model")\; framework
 document text (about #stat-percent("isabelle.doc", "isabelle.lines")), and the
 generated per-domain assembly theories. It excludes the vendored solver, of
 which Voblint's sessions import #stat("solver.used.theories") of
-#stat("solver.theories") theory files; @app:theory-map shows the sessions. The analyzer that runs is the
+#stat("solver.theories") theory files. The analyzer that runs is the
 #stat("generated_ocaml")-line generated OCaml module. Around it lie
 #stat("handwritten_ocaml") lines of handwritten OCaml under `cli/`, the
 unverified part this question asks about; the count excludes the lexer and parser
@@ -472,7 +472,7 @@ so the pre-fix answer is not available to the verified domain.
 
 _Evidence: executable._ The corpus holds #stat("corpus.cases") VIMP fixtures in
 #stat("corpus.groups") groups. Each fixture states its command-line flags and
-the verdict expected at each check; @app:regressions lists the groups. Cases in `precision/` must obtain a
+the verdict expected at each check. Cases in `precision/` must obtain a
 definite answer. In `soundness/`, the program has executions on both sides of
 the check, so `UNKNOWN` is the only sound answer. In `known-imprecision/`, the
 concrete result is fixed but the abstraction cannot establish it, and the
