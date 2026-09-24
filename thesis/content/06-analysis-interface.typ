@@ -236,7 +236,7 @@ failure.
   resume value has $y < 0$, whereas the run ends with $y = 1$.
 ]
 
-#definition(name: [Paired entry coverage], isa: "entry_pairs_cover")[
+#definition(name: [Paired entry coverage], isa: "entry_pairs_cover", cmd: "definition")[
   A list $P$ covers the caller store $s$ and the entered store $s'$ if
   $ exists (q, e) in P. quad s in conc(q) and s' in conc(e). $
 ]
@@ -292,7 +292,8 @@ for them the contract should reduce to one rule per operation. The builder
 #isaconst("local_state_dg_spec_for") turns seven pure edge
 operations and a callee-entry operation into a specification with a fixed call
 boundary: entry answers the single pair whose resume value is the unchanged
-caller value, and the return is the abstract #isaconst("combine_collect"). The
+caller value, and the return is #isaconst("combine_collect_abs"), the abstract
+counterpart of #isaconst("combine_collect"). The
 unchanged resume value is sound although it may describe stale globals, as in
 the `inc` program, because the return takes every global from the callee's
 exit. This builder leaves #isaconst("dgs_combine_env") the identity and does

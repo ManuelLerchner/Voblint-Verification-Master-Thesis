@@ -12,11 +12,41 @@
       "theory": "Activation_Backbone",
       "why": "Main-statements appendix: the activation-local coverage theorem."
     },
+    "compile.simps(4)": {
+      "oracles": [],
+      "statement": "compile \\<Pi> p (Seq c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) =\n       compile \\<Pi> p c1.0 (Statement (n + csize c1.0)) n;\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k (n + csize c1.0)\n in (n2, en1, E1 \\<union> E2, K1 \\<union> K2))",
+      "theory": "VIMP_Proc_to_CFG",
+      "why": "Program-model chapter: compiling a sequence hands the first command the second's entry."
+    },
+    "compile.simps(5)": {
+      "oracles": [],
+      "statement": "compile \\<Pi> p (com.If b c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c1.0 k (Suc n);\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k n1\n in (n2, Statement n,\n     {(Statement n, EA_Assume b, if c1.0 = SKIP then k else en1),\n      (Statement n, EA_AssumeNot b,\n       if c2.0 = SKIP then k else en2)} \\<union>\n     (if c1.0 = SKIP then {} else E1) \\<union>\n     (if c2.0 = SKIP then {} else E2),\n     K1 \\<union> K2))",
+      "theory": "VIMP_Proc_to_CFG",
+      "why": "Program-model chapter: both branches of a conditional compile against one continuation."
+    },
+    "compile.simps(6)": {
+      "oracles": [],
+      "statement": "compile \\<Pi> p (While b c) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c (Statement n) (Suc n)\n in (n1, Statement n,\n     {(Statement n, EA_Assume b, en1),\n      (Statement n, EA_AssumeNot b, k)} \\<union>\n     E1,\n     K1))",
+      "theory": "VIMP_Proc_to_CFG",
+      "why": "Program-model chapter: a loop body compiles against the loop head."
+    },
+    "compile.simps(8)": {
+      "oracles": [],
+      "statement": "compile \\<Pi> p (Return e) k n =\n(Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})",
+      "theory": "VIMP_Proc_to_CFG",
+      "why": "Program-model chapter: a return edge targets the procedure's result node."
+    },
     "csim_star": {
       "oracles": [],
       "statement": "\\<lbrakk>\\<Pi>,g \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p\\<^sup>*\n src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g \\<turnstile> src' \\<approx> cfg'",
       "theory": "Simulation_Preservation",
       "why": "Main-statements appendix: simulation of source runs by the compiled graph."
+    },
+    "csim_step": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<Pi>,g \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g \\<turnstile> src' \\<approx> cfg'",
+      "theory": "Simulation_Preservation",
+      "why": "Program-model chapter: one source step is matched by the compiled graph."
     },
     "ltr_collect_semantic_postfix": {
       "oracles": [],
@@ -95,6 +125,12 @@
       "statement": "\\<lbrakk>config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res; chk \\<in> set (res_checks res);\n check_verdict chk = Dead\\<rbrakk>\n\\<Longrightarrow> \\<C>\\<^bsub>declared_global\n                               p,prog_cfg\n                                  p,cinit_stores (declared_global p)\\<^esub>\n                   (check_point chk) =\n                  {}",
       "theory": "Analysis_Certified",
       "why": "Unreachability endpoint cited in the introduction."
+    },
+    "source_progress": {
+      "oracles": [],
+      "statement": "\\<lbrakk>wf_source_program \\<G> \\<Pi>;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (c, s, frs)\\<rbrakk>\n\\<Longrightarrow> c = SKIP \\<and> frs = [] \\<or>\n                  (\\<exists>cfg'.\n                      \\<G>,\\<Pi> \\<turnstile>\n                      (c, s, frs) \\<rightarrow>\\<^sub>p cfg')",
+      "theory": "Source_Progress",
+      "why": "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
     },
     "source_run_has_ltr": {
       "oracles": [],
