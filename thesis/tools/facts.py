@@ -65,19 +65,28 @@ val ctxt =
    template re-wrap instead produces a wall of text. *)
 val ops = Pretty.pure_output_ops (SOME {margin});
 fun plain p = Pretty.string_of_ops ops p;
+(* `compile.simps(4)` selects one equation of a multi-theorem fact, so a
+   chapter can show the clauses it discusses instead of the whole function. *)
+fun base_of name = hd (space_explode "(" name);
+fun lookup name =
+  (case space_explode "(" name of
+    [base, idx] =>
+      [nth (Global_Theory.get_thms thy base)
+         (the (Int.fromString (unsuffix ")" idx)) - 1)]
+  | _ => Global_Theory.get_thms thy name);
 fun statement name =
   Print_Mode.setmp [] (fn () =>
-    plain (Thm.pretty_thm ctxt (Global_Theory.get_thm thy name))) ();
+    plain (Thm.pretty_thm ctxt (the_single (lookup name)))) ();
 val out = TextIO.openOut "{outfile}";
 val sep = str (Char.chr 31) and rec_sep = str (Char.chr 30);
 (* The qualified name starts with the theory that proves the fact; the
    thesis shows that theory's source text, so the two have to agree. *)
-fun qualified name = Facts.intern (Global_Theory.facts_of thy) name;
+fun qualified name = Facts.intern (Global_Theory.facts_of thy) (base_of name);
 (* What `thm_oracles` prints, reduced to the oracle names: `sorry` and
    `skip_proof` surface as Pure.skip_proof, `eval` as the code generator's
    evaluation oracle. Recorded rather than asserted in prose. *)
 fun oracles name =
-  Thm_Deps.all_oracles (Global_Theory.get_thms thy name)
+  Thm_Deps.all_oracles (lookup name)
   |> map (fn ((ora, _), _) => ora) |> distinct (op =) |> sort_strings
   |> space_implode " ";
 fun emit name =
