@@ -109,14 +109,6 @@
 #include "content/13-related.typ"
 #include "content/14-conclusion.typ"
 
-// The figure gallery is a working reference, not thesis content: one instance
-// of every figure kind, with placeholder payloads. Build it with
-// `typst compile --input gallery=1 ...` while drafting; it is never part of the
-// document proper, and it is deleted before submission.
-#if sys.inputs.at("gallery", default: none) != none {
-  include "content/03-gallery.typ"
-}
-
 // Appendices retain stable labels while using a separate alphabetic counter.
 #set heading(numbering: "A.1.")
 #counter(heading).update(0)
@@ -134,3 +126,9 @@
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "assets/plain-numeric.csl")
+
+// The figure gallery is a working reference, not thesis content: one instance
+// of every figure kind, with placeholder payloads. It sits after the
+// bibliography while drafting and is deleted before submission.
+#pagebreak(weak: true)
+#include "content/03-gallery.typ"
