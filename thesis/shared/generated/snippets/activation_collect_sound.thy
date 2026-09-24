@@ -21,4 +21,4 @@ theorem activation_collect_sound:
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
         \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
     and TOTAL: "call_context_total_on cover R \<G> g"
-  shows "activation_collect \<G> R startcontext g S v ctx \<subseteq> cover v ctx"
+  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v ctx \<subseteq> cover v ctx"

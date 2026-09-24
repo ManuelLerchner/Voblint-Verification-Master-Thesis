@@ -32,7 +32,7 @@ admits for concrete calls (@sec:eq-routing). This chapter builds an equation
 system that meets all three, for every domain and context policy, whose
 post-solutions $sol$ satisfy, for every node $v$ and context $c$,
 $
-  #isai("activation_collect \<G> R startcontext g S v c") subset.eq conc(sol(v, c)).
+  #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc(sol(v, c)).
 $
 It links computed contexts to admitted ones and proves the obligations once
 for all policies. The running example is
@@ -49,7 +49,7 @@ contexts reports #_cli("pg-contexts-none", "a == 6", 3) with
 #_cli("pg-contexts-none", "a == 6", 4). The lower bound $-infinity$ comes from
 widening the shared entry value (@sec:eq-seed). The collecting semantics
 already assigns the two activations to different contexts
-(@tab:bump-buckets), and the fix gives the unknowns the same index.
+(@sec:contexts), and the fix gives the unknowns the same index.
 
 == Unknowns indexed by node and context <sec:eq-unknowns>
 
@@ -252,7 +252,7 @@ select a context at which no seed was published. If the caller's solved value
 only knows $n in [4, 5]$, a concrete call with $n = 4$ is routed to the context
 $[4, 5]$, while its own entered store abstracts to $[4, 4]$. Moreover, an
 entry operation may answer one call with several overlapping alternatives
-(@sec:cover).
+(@sec:contexts).
 
 The relation #isaconst("routed_entry_context_rel") therefore reads the contexts
 off the solution. It takes the solved table as a parameter and admits $c'$ for
@@ -380,7 +380,7 @@ coverage contract, discharging the five obligations once for all policies and do
   abstract state, the specification satisfy the analysis soundness contract
   #isalocale("sound_dg_spec_core"), the callee list the generator uses at each
   call site include every callee a covered call can enter, and routing be
-  adequate and total. Then #isai("activation_collect \<G> R startcontext g S v c") $subset.eq
+  adequate and total. Then #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") $subset.eq
   conc(sol(v, c))$ for every node $v$ and context $c$, and the left-hand side is
   empty outside the key set.
 ]

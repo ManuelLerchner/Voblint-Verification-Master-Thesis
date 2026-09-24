@@ -99,3 +99,46 @@ why = "Figure gallery example."
 
 [snippets.sound_dg_spec_core]
 why = "Figure gallery example."
+
+[snippets.ltr]
+why = "Chapter 4, the activation-local trace datatype."
+
+[snippets.call_context_rel]
+why = "Chapter 4, the type of a call-context relation."
+
+[snippets.trace_context]
+why = "Chapter 4, which contexts a trace may carry."
+
+[snippets.call_context_total_on]
+why = "Chapter 4, conditional totality of a call-context relation."
+
+[snippets.ltr_coverage]
+why = "Chapter 4, the coverage contract: five local obligations."
+
+[snippets.return_at_caller_context_unsound]
+why = "Chapter 4, reading the result at the caller context is unsound."
+
+[snippets.total_dropped_unsound]
+why = "Chapter 4, dropping TOTAL is unsound."
+
+[snippets.ov_empty_continuation_bot]
+why = "Chapter 4, an analysis without paired entry coverage declares an executed point unreachable."
+
+[snippets.source_reaches_ltr_collect]
+why = "Chapter 4, source-reachable stores are collected."
+
+[snippets.ltr_collect_eq_Union_activation_collect]
+why = "Chapter 4, under the whole contract the buckets recover the collection."
+
+[snippets.trace]
+why = "Chapter 4, a local path: a list of node-store pairs."
+file = "src/Program_Model/CFG/Collecting/LTR_Def.thy"
+
+[snippets.stack_repr]
+why = "Chapter 4, a frame stack matches a trace caller chain."
+
+[snippets.ltr_repr]
+why = "Chapter 4, a valid trace represents a graph configuration."
+
+[snippets.cstep_preserves_ltr_repr]
+why = "Chapter 4, a graph step keeps a representing trace."

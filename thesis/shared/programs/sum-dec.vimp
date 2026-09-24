@@ -1,0 +1,17 @@
+fun dec(x) {
+  return x - 1;
+}
+
+fun sum(n) {
+  if (n < 1) {
+    return 0;
+  }
+  m = dec(n);
+  r = sum(m);
+  return r + n;
+}
+
+fun main() {
+  x = sum(2);
+  __voblint_check(x == 3);
+}

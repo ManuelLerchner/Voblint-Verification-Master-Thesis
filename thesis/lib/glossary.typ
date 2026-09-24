@@ -355,7 +355,7 @@
     "context-indexed collecting semantics",
     _trace,
     isa: isaconst("activation_collect"),
-    see: <sec:cover>,
+    see: <sec:contexts>,
   )[
     The stores of valid traces at node $v$ that carry context $c$. As $c$
     ranges over contexts these buckets cover the trace collecting semantics

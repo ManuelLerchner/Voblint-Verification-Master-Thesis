@@ -55,7 +55,7 @@ collects this evidence.
 at several contexts, as Goblint's `enter` permits (@sec:contexts). A function
 always yields a context, while a relation may yield none. The contract
 therefore needs #oblig("TOTAL"), and under entry-state routing it must be
-discharged against the computed result (@sec:cover). A functional policy embeds
+discharged against the computed result (@sec:contexts). A functional policy embeds
 as a relation (#isaconst("call_context_rel_of_fun")) and satisfies totality
 directly, so the generality adds no cost for call strings. Only one specification uses it
 (#isathm("ov_two_contexts_admitted")).
