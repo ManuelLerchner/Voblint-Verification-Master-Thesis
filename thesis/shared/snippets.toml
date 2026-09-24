@@ -5,6 +5,18 @@
 [snippets.sound_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
+[snippets.widening]
+why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
+
+[snippets.semantic_intersection]
+why = "Background, Isabelle mechanisms: a small locale with one parameter and one assumption."
+
+[snippets.cstep]
+why = "Background, Isabelle mechanisms: an inductive definition, execution on the control-flow graph."
+
+[snippets.resolved_st_q]
+why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
+
 [snippets.caller_of]
 why = "The creating caller of a trace (traces chapter)."
 
