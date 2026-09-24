@@ -11,9 +11,8 @@ pipeline: the equations must describe the program, the solver's result must
 satisfy them,
 and the reported verdicts must follow from the solution. For Goblint's
 top-down solver, only the middle step had been verified @stade24 @tilscher26.
-The existing verification therefore stopped at the equation system: applying
-it to program analysis still required a separate argument that the equations
-soundly describe the program.
+Applying that result to program analysis still required a separate argument
+that the equations soundly describe the program.
 
 We show that the analysis pipeline can be verified from source executions to
 the reported verdicts. We build Voblint, an Isabelle/HOL formalization of a
@@ -59,11 +58,10 @@ update rule is generated, and after handwritten dispatch code, the main
 theorem covers it.
 
 Since the TD verification does not prove termination of the side-effecting
-solver, we make no attempt at total correctness:
-termination is a premise for each program, and we guarantee only partial
-correctness. Several components lie outside the verification boundary, such as the
+solver, termination is a premise for each program, and the guarantee is
+partial correctness. Several components lie outside the verification boundary, such as the
 parser, Isabelle's code generator, the OCaml and WebAssembly toolchains, and
-driver and rendering code. Finally, whether VIMP
-captures the intended language is a modeling question no proof can settle, so
-we document how it differs from C11.
+driver and rendering code. Whether VIMP captures the intended language is a
+modeling question that the proof cannot settle, so we document how it differs
+from C11.
 

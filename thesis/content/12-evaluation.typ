@@ -6,14 +6,11 @@
 
 = Evaluation <ch:evaluation>
 
-This chapter answers the four research questions of @ch:intro. For each
-question it collects the evidence the thesis offers, names the kind of that
-evidence, and states what the evidence does not show. Two sections follow the
-questions: what the results say about Goblint, and which evidence a reader
-might expect but the thesis does not supply. A short section then collects the
-threats to validity, and the last section lists design
-constraints that the formal statements expose, with a pointer to where each is
-argued.
+For each of the four questions of @sec:rqs, this chapter gives the evidence
+the thesis offers, its kind, and what it does not show. Later sections relate
+the results to Goblint, list evidence the thesis does not supply, collect the
+threats to validity, and record design constraints that the formal statements
+expose.
 
 == Kinds of evidence
 
@@ -31,9 +28,9 @@ inspection_ reads the theories, their session structure, or Goblint's code, and
 supports statements about structure only. An _argument_ is reasoning in the
 text that no theorem checks; we mark it where a claim rests on one.
 
-== RQ1: Is the analysis sound from source executions to verdicts? <sec:eval-rq1>
+== Is the analysis sound from source executions to verdicts? <sec:eval-rq1>
 
-RQ1 asks whether soundness can be machine-checked from source executions to
+The first question asks whether soundness can be machine-checked from source executions to
 the verdicts of the exported executable, and which premises and trusted
 components remain.
 
@@ -74,7 +71,7 @@ which Voblint's sessions import #stat("solver.used.theories") of
 #stat("solver.theories") theory files; @app:theory-map shows the sessions. The analyzer that runs is the
 #stat("generated_ocaml")-line generated OCaml module. Around it lie
 #stat("handwritten_ocaml") lines of handwritten OCaml under `cli/`, the
-unverified part RQ1 asks about; the count excludes the lexer and parser
+unverified part this question asks about; the count excludes the lexer and parser
 specifications, which a script generates from a grammar description, and the
 page's JavaScript.
 
@@ -83,8 +80,8 @@ source semantics over which the theorem's premises quantify is defined in
 #stat("semantics.theories") theories of #stat("semantics.lines") lines, among
 them the #stat("semantics.pstep_rules") rules of #isaconst("pstep")\; the
 conclusion additionally uses the collecting semantics and
-#isaconst("checks_sound_at"), defined elsewhere. The numbers show where the
-material is. They do not measure original proof work. We draw no comparison with other
+#isaconst("checks_sound_at"), defined elsewhere. The numbers locate the
+material and do not measure original proof work. We draw no comparison with other
 projects: reported proof-to-code ratios, such as that of
 #cite(<franceschino21>, form: "prose"), depend on language, automation, and
 scope.
@@ -153,11 +150,11 @@ CI runs both on every pull request and push to the main branch. A round trip
 cannot detect a misreading of the grammar that parser and printer share, and no
 test relates the parsed tree to the program a user meant to write.
 
-== RQ2: What does a calling context mean? <sec:eval-rq2>
+== What does a calling context mean? <sec:eval-rq2>
 
-RQ2 asks for the concrete meaning of a calling context and for the condition
-under which context indexing loses no executions when one call may be
-admitted at several contexts.
+A calling context needs a concrete meaning, and context indexing needs a
+condition under which it loses no executions when one call may be admitted at
+several contexts.
 
 _Evidence: machine-checked._ The meaning is the relation
 #isaconst("trace_context") of @sec:contexts, which reads a context off an
@@ -184,11 +181,11 @@ evaluated analyzer run shows the same failure at the executable level
 valid trace arises from a graph run is not proved (@sec:valid); soundness needs
 only the forward direction.
 
-== RQ3: Do the ingredients discharge their obligations independently? <sec:eval-rq3>
+== Do the ingredients discharge their obligations independently? <sec:eval-rq3>
 
-RQ3 asks whether the abstract domain, the context policy and the solver can
-discharge their obligations independently, with one composition theorem
-covering every configuration.
+The claim is that the abstract domain, the context policy and the solver
+discharge their obligations independently, and that one composition theorem
+covers every configuration.
 
 _Evidence: machine-checked._ A domain instance proves facts about integers,
 none of which mentions a context, a routing policy or a solver, and generic
@@ -204,8 +201,8 @@ depth as parameters (@fig:assembly), and
 #isathm("run_voblint_certified_source_sound") covers every resulting
 configuration.
 
-_Evidence: source inspection._ Extending the framework to a relational local
-state needed no change to the framework. The relational witness of @sec:relational
+_Evidence: source inspection._ Adding a relational local state needed no
+change to the framework. The relational witness of @sec:relational
 consists of two theory files in two sessions of its own:
 #isasession("Voblint_Analysis_Relational") builds on #isasession("Voblint_Exec")
 and does not import #isasession("Voblint_Nonrelational"), and
@@ -214,7 +211,7 @@ framework session imports either; the framework theories mention the witness
 only in document text. The statistics tooling measures directories, not
 sessions, so we give no line count for the extension.
 
-_Limits._ The proofs are independent, but precision is not. Which update
+_Limits._ Precision depends on how the ingredients combine. Which update
 rule decides a check depends on the program (@fig:rules-programs), and whether
 a call-string depth decides the `down` recursion below depends on widening. In
 every selectable analysis the shared component carries only entry seeds;
@@ -223,9 +220,9 @@ only (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow). The relational witness
 is not selectable through #isaconst("run_voblint"), because the assembly fixes
 a store of per-variable values (@sec:engineering).
 
-== RQ4: Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
+== Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
 
-RQ4 asks which proof obligations are necessary, and whether precision
+The last question asks which proof obligations are necessary, and whether precision
 differences and non-vacuity can be established as theorems about computed
 results rather than by testing.
 
@@ -261,7 +258,7 @@ premise of the development is needed.
 === Non-vacuity <sec:nonvacuity>
 
 _Evidence: machine-checked, with the concrete solves evaluated._ A theorem
-whose premises no configuration meets is true but says nothing. The end-to-end
+whose premises no configuration meets holds vacuously. The end-to-end
 theorem assumes an initial store, a source run, a terminating solve and an
 #isaconst("Analysed") answer. As in
 #cite(<marmsoler26stark>, form: "prose", supplement: [§9]), one small
@@ -288,8 +285,8 @@ not show that #isaconst("pstep") is the intended semantics of VIMP.
 
 === Precision witnesses: contexts, update rules, the product
 
-Each witness below first fixes the concrete behaviour and then shows what one
-mechanism keeps or loses. Each supports a claim about its program only.
+Each witness below fixes the concrete behaviour first, then shows what one
+mechanism keeps or loses, and supports a claim about its program only.
 
 #let _k99 = claim-snapshot("cost-down-k99")
 #let _k100 = claim-snapshot("cost-down-k100")
@@ -469,13 +466,11 @@ behind the verdict. For Congruence it is
 #isathm("congruence_mod_sound"): the truncating remainder of any two concrete
 values lies in the concretization of the abstract remainder. The constant 1 for
 $(1 + 2ZZ) mod 2$ violates it at $-5$ (#isathm("prefix_congruence_mod_unsound")),
-so the pre-fix answer is not available to the verified domain. A regression
-test checks one program, while the theorem covers all operands.
+so the pre-fix answer is not available to the verified domain.
 
 === The regression suite <sec:eval-corpus>
 
-_Evidence: executable._ The corpus is the testing that RQ4 contrasts with
-theorems. It holds #stat("corpus.cases") VIMP fixtures in
+_Evidence: executable._ The corpus holds #stat("corpus.cases") VIMP fixtures in
 #stat("corpus.groups") groups. Each fixture states its command-line flags and
 the verdict expected at each check; @app:regressions lists the groups. Cases in `precision/` must obtain a
 definite answer. In `soundness/`, the program has executions on both sides of
@@ -496,7 +491,7 @@ division and remainder) and #fixture("04-globals/precision/01-global_default_zer
 (@sec:eval-absent). CI runs the whole corpus on every pull request and push to
 the main branch.
 
-_Limits of the RQ4 evidence._ Every precision witness concerns one program at
+_Limits of the evidence on necessity and precision._ Every precision witness concerns one program at
 fixed configurations, and the evaluated ones trust the code generator. The
 development proves no general precision or optimality theorem, and a
 separation shown on one program does not order two configurations on all
@@ -627,8 +622,6 @@ measures whether it helps a reader understand a result.
 
 == Threats to validity <sec:eval-threats>
 
-Each threat below is discussed where it applies; this section only collects
-them.
 The main threat to construct validity is definitional adequacy: whether
 #isaconst("pstep") models the intended language is argued through its
 departures from C11 (@sec:vimp-vs-c), and no concrete executor tests the
@@ -651,9 +644,8 @@ systematic review, so a missed work could narrow the scoped novelty claims
 == What the mechanization revealed <sec:revealed>
 
 The findings below are constraints that the formal statements force on the
-design, or consequences of the source model that they make explicit. Each is
-argued where the pointer leads; the list records the finding and the kind of
-its evidence.
+design, or consequences of the source model that they make explicit. Each item
+names the kind of its evidence and the section that argues it.
 
 + *A per-context statement can hold vacuously at a callee entry* if the callee
   is indexed by the caller's context, which is why #isaconst("trace_context")
