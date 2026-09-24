@@ -167,8 +167,13 @@ def extract(
                 continue
             nxt = NEXT_COMMAND.search(text, m.end())
             body = text[m.start() : nxt.start() if nxt else len(text)]
-            if m.group(0).split(None, 1)[0] in THEOREMS:
+            command = m.group(0).split(None, 1)[0]
+            if command in THEOREMS:
                 body = statement_only(body)
+            # A locale or class opens its context with `begin`; the reader is
+            # shown the interface, not the context it opens.
+            if command in ("locale", "class"):
+                body = re.sub(r"\s*\bbegin\s*$", "", body.rstrip())
             return body.rstrip() + "\n", path
     return None
 
