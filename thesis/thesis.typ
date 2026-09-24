@@ -37,8 +37,16 @@
   inset: (x: 0.32em, y: 0.2em),
   number-format: n => text(fill: vb.muted, size: 0.75em, str(n)),
   // The tag sits inside the frame, clear of its top and right edges.
-  lang-inset: (x: 0.45em, y: 0.22em),
-  lang-outset: (x: -0.25em, y: 0.12em),
+  lang-inset: (x: 0.4em, y: 0.12em),
+  lang-outset: (x: -0.25em, y: 0em),
+  // One-line programs are only one row tall; a full-size tag would overflow.
+  lang-format: (lang, icon, color) => box(
+    radius: 2pt,
+    fill: color.lighten(80%),
+    stroke: 0.5pt + color,
+    inset: (x: 0.4em, y: 0.12em),
+    text(size: 0.78em, fill: color.darken(20%), lang),
+  ),
   languages: (
     c: (name: "VIMP", color: vb.keyword),
     isabelle: (name: "Isabelle", color: vb.accent),
@@ -77,27 +85,27 @@
 #set heading(numbering: "1.1.")
 #counter(heading).update(0)
 
-#part("The Problem")
+#part("The Problem", lbl: <part:problem>)
 #include "content/01-introduction.typ"
 #include "content/02-background.typ"
 
-#part("What Must Be Over-Approximated")
+#part("What Must Be Over-Approximated", lbl: <part:over-approx>)
 #include "content/03-program-model.typ"
 #include "content/04-traces.typ"
 
-#part("The Analyzer")
+#part("The Analyzer", lbl: <part:analyzer>)
 #include "content/05-domains.typ"
 #include "content/06-analysis-interface.typ"
 #include "content/07-equations.typ"
 #include "content/08-solving.typ"
 #include "content/09-results.typ"
 
-#part("Instances and Practice")
+#part("Instances and Practice", lbl: <part:instances>)
 #include "content/10-instances.typ"
 #include "content/11-executable.typ"
 #include "content/12-evaluation.typ"
 
-#part("Assessment")
+#part("Assessment", lbl: <part:assessment>)
 #include "content/13-related.typ"
 #include "content/14-conclusion.typ"
 

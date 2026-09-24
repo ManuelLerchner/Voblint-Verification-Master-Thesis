@@ -358,7 +358,7 @@
 
 // Chapters open on the next page (openany), so a part does too: forcing a
 // recto here would leave a blank verso before every part.
-#let part(title) = {
+#let part(title, lbl: none) = {
   pagebreak(weak: true)
   part-counter.step()
   {
@@ -382,9 +382,20 @@
       })
       v(1.6fr)
     }
-    heading(level: 1, numbering: none, supplement: [Part], title)
+    if lbl == none {
+      heading(level: 1, numbering: none, supplement: [Part], title)
+    } else {
+      [#heading(level: 1, numbering: none, supplement: [Part], title)#lbl]
+    }
   }
   pagebreak(weak: true)
+}
+
+// A part heading is unnumbered, so `@label` cannot reference it; this prints
+// "Part II" as a link to the part's divider page.
+#let partref(lbl) = context {
+  let loc = locate(lbl)
+  link(loc)[Part #numbering("I", part-counter.at(loc).first())]
 }
 
 // The contents entry for a part: a bold, unnumbered group line without a page
@@ -393,7 +404,7 @@
 #let part-outline-entry(it) = {
   if it.element.supplement == [Part] {
     let n = part-counter.at(it.element.location()).first()
-    block(above: 14pt, below: 0pt, link(it.element.location(), text(
+    block(above: 9pt, below: 0pt, link(it.element.location(), text(
       font: "Latin Modern Sans",
       weight: "bold",
     )[Part #numbering("I", n): #it.element.body]))
