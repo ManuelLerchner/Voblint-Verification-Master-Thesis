@@ -26,9 +26,8 @@
 
 = The Source-Level Soundness Theorem <ch:results>
 
-RQ1 asks for one theorem about the answers of the exported analyzer
-#isaconst("run_voblint"), from source executions to verdicts. @sec:headline
-states it. Chaining the preceding results does not yet give it. Equation
+@sec:headline states one theorem about the answers of the exported analyzer
+#isaconst("run_voblint"), from source executions to verdicts. Chaining the preceding results does not yet give it. Equation
 soundness bounds only the unknowns the solver certified, and the certificate
 is closed backward from the query, while an execution moves forward into keys
 the query need not depend on (@sec:live-keys). The client reads a table and a
@@ -87,8 +86,9 @@ is a total HOL function that denotes an unspecified answer where the solve does
 not terminate (@sec:termination).
 
 Termination is the one premise not discharged in general, so the theorem is a
-partial-correctness result. The premise concerns the abstract solve, not the
-analyzed program, whose finite prefixes are covered (@tab:headline).
+partial-correctness result. The premise concerns the abstract solve. The
+analyzed program need not terminate, since its finite prefixes are covered
+(@tab:headline).
 @sec:termination shows configurations under which the solve diverges
 and explains why no vendored termination theorem applies.
 #isathm("certificate_demo_full_certificate") discharges the premise by
@@ -114,7 +114,8 @@ $
   quad => quad "verdict at" v.
 $
 Here $A_(v,c)$ is the abstract state the published table holds for $v$ in
-context $c$. Every inclusion may lose precision, but none may lose a store.
+context $c$. Each later set in the chain may contain stores that no execution
+reaches. Soundness requires only that it contains the set before it.
 
 The recursive program below computes $f(2) = 2 dot f(1) = 2$, so every run
 reaches the check with $a = 2$. It is a regression fixture of the analyzer.
@@ -206,8 +207,7 @@ so the value `f` returns is computed from itself, and the analysis loses it.
 Widening the entry is not the cause: under the joining update rules the entry
 stays at $n in [1, 2]$, and the check is still #raw(chain-join.at(3)) with
 #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
-its own entry and exit, and the result stays exact. Precision is decided at
-the last inclusion, while soundness needs all of them.
+its own entry and exit, and the result stays exact.
 
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the collection into context
@@ -325,7 +325,7 @@ zero (@sec:vimp-vs-c), so a `PROVED` verdict can depend on that convention.
 Only the absence of an arithmetic diagnostic at a node excludes zero divisors
 there.
 
-`UNKNOWN` and `DEAD` are not a pair of reachability answers. In
+Only `DEAD` answers a reachability question. In
 @fig:verdict-regions no run reaches either check, yet the interval analysis
 marks only one of them `DEAD`.
 
@@ -401,9 +401,13 @@ fun main() {
 ) <fig:verdict-regions>
 
 For a source run about to execute a check,
-#isathm("run_voblint_check_sound") finds a listed check with the same condition
-at a node where the store is collected, and that check's verdict holds of the
-store. The listed check is existential because a source state does not
+#isathm("run_voblint_check_sound") finds a listed check with the same label
+and condition at a node where the store is collected, and that check's verdict
+holds of the store. The label is the check's source position, written by the
+parser. When the labels of a result are distinct,
+#isathm("run_voblint_labelled_check_sound") shows that every row with that
+label is this check, so the verdict printed at a position belongs to the check
+written there. The listed check is existential because a source state does not
 determine its node, so the statement cannot be read backwards to conclude that
 a `DEAD` node is unreached. #isathm("run_voblint_dead_check_unreached") proves
 that conclusion forwards instead: every store collected at the node would
@@ -413,7 +417,7 @@ diagnostics are stated per node as well. By
 divisors in every collected store. A warning only means that the abstraction
 could not exclude a zero divisor.
 
-The theorem of @sec:headline answers RQ1 and is K1. Each of its conclusions
+The theorem of @sec:headline is the end-to-end soundness result. Each of its conclusions
 rests on one step of this chapter: collection at a simulating node on the
 compiler simulation and the trace construction (@sec:chain), coverage by the
 published table on the live keys and the readback (@sec:live-keys,
@@ -425,7 +429,7 @@ components of @sec:trust-boundary. The companion theorems
 #isathm("run_voblint_dead_check_unreached") and
 #isathm("run_voblint_arithmetic_safe") give `DEAD` and the arithmetic
 diagnostic their meaning, and #isathm("certificate_demo_full_certificate")
-shows for one program and configuration that the premises can be met, which K4
-counts as a non-vacuity witness. @ch:instances compares what the shipped
+shows for one program and configuration that the premises can be met, a
+non-vacuity witness. @ch:instances compares what the shipped
 domains can prove under this theorem, and @ch:executable draws the boundary
 between the proved constant and the delivered tool.

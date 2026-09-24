@@ -8,7 +8,7 @@
 
 The equation-soundness theorem of @ch:equations,
 #isathm("activation_collect_dg_sound"), holds for any valuation that satisfies
-the generated constraints. For RQ3 the solver should enter the argument only
+the generated constraints. For a compositional proof the solver should enter the argument only
 through such a statement, so that replacing its algorithm or update rule
 leaves the rest of the proof unchanged. The obvious statement has two problems. A
 bound on every unknown's local result allows a valuation that claims a called
@@ -55,8 +55,8 @@ part its query demands @seidl21 @tilscher26. Voblint poses a single query, the
 exit of `main` in the root context (#isaconst("root_query")). Equations read
 their predecessors, so a demand-driven solve evaluates the unknowns its query
 transitively reads. From the exit of `main` these include every node from which
-the exit can be reached, in each context the solve discovers for it. So one solve
-replaces one query per program point. Apinis
+the exit can be reached, in each context the solve discovers for it. A single
+solve therefore takes the place of one query per program point. Apinis
 et al. start local solving from the same unknown @apinis12. Keys that cannot
 reach the exit, such as code after a `return`, are the subject of
 @sec:live-keys. The certificate names the set $V$ of local unknowns the solve
@@ -378,8 +378,8 @@ locations the classifier selects, and the declared globals, enumerated
 explicitly because a fresh global need not exist.
 #isathm("resolved_st_q_is_bot_for_iff") proves the test equivalent to semantic
 emptiness, provided the supplied list enumerates exactly the classifier's
-globals. Collapsing a state to #lbot is sound as soon as the test implies
-emptiness, but both directions are used. The specification collapses exactly
+globals. Soundness of collapsing a state to #lbot needs only that the test
+implies emptiness. The carrier uses both directions. The specification collapses exactly
 the empty states, so only an exact test lets the executable collapse commute
 with readback. A state the test keeps is then known to be nonempty
 (#isaconst("live_resolved_st_q")), and the numeric transfer commutes with
@@ -420,20 +420,19 @@ with a context, and the node type alone is infinite, since a statement node
 carries any natural number. This already excludes the finite domains and
 finite context spaces, where a restricted theorem would be plausible. Seidl
 and Vogler prove termination of their side-effecting variant on paper whenever
-only finitely many unknowns are encountered @seidl21. Mechanizing a result of
+only finitely many unknowns are encountered @seidl21[Thm. 5]. Mechanizing a result of
 that kind for the vendored solver, relative to the keys a program creates, is
 future work. The end-to-end theorem is therefore a partial-correctness result
 with a per-program premise (@sec:headline).
 
-The chapter gives the solver's share of RQ3 and K3. The solver enters the
-argument only through #isaconst("part_post_solution") on the stabilized set,
+The solver enters the argument only through #isaconst("part_post_solution") on the stabilized set,
 which the vendored #isathm("partial_post_solution") derives from the premise
 that the solver's recursion is defined on the query, and through the finite key
 set of #isathm("finite_stabl_solve"). One interpretation of the solver locale,
 parameterized by the rule, makes both hold for all four update rules at once
 (#isathm("update_rule_update_global_of")). The certificate idea itself is
 established practice, as in CompCert's dataflow-solver interface @compcertKildall.
-Its use for side-effecting, context-indexed systems is part of K3. The executable
+Its use for side-effecting, context-indexed systems is new. The executable
 carrier transports every soundness fact by commuting with readback
 (#isathm("generic_tf_st_for_commute")), and its finite emptiness test is exact
 (#isathm("resolved_st_q_is_bot_for_iff")). Termination is the one solver fact

@@ -18,8 +18,8 @@
 = Five Domains and a Relational Witness <ch:instances>
 
 @ch:domains claimed that a numeric domain must prove laws about integers only, with no
-reference to contexts, routing or the solver. This chapter tests that claim of
-RQ3 and K3 on the instances. Five domains prove the laws, and each is
+reference to contexts, routing or the solver. This chapter tests that claim on the
+instances. Five domains prove the laws, and each is
 interpreted into the analysis assembly of @sec:engineering, so the source-level
 theorem of @sec:headline covers it under every context policy and update rule.
 Each domain tests a different part of the interface. Sign is finite, so
@@ -129,8 +129,7 @@ the identity, sound because a guard only selects a subset of the incoming
 stores. On the contradictory guard of @fig:domain-reachability, Sign reports
 the branch #verdict("dom-disjunct-sign", "13:5"), Parity
 #verdict("dom-disjunct-parity", "16:5"). The interface therefore admits an
-instance without the precision mechanism of @ch:domains. Filtering improves
-precision, but soundness does not require it.
+instance without the precision mechanism of @ch:domains.
 
 Congruence analysis goes back to Granger @granger89. A value denotes
 $setcomp(n, n equiv c med (mod m))$, with $m = 0$ meaning the single integer
@@ -193,16 +192,14 @@ The carrier does not maintain that invariant. Join and widening do not reduce,
 so a value that reaches narrowing through a widened solver state need not be
 stable, and a narrowing built on the invariant would violate the class law at
 the instance. The instance therefore narrows componentwise and reduces only
-inside transfers and filters. So the solver's class law is an actual
-obligation on the instance, and it decides where the product may reduce.
+inside transfers and filters. The solver's narrowing law thus determines
+where the product may reduce.
 
 == A relational carrier <sec:relational>
 
 Every domain so far is pointwise, and a pointwise state forgets relations
-between variables. The question is whether that limitation belongs to the
-framework or only to these domains, that is, whether a relational local state
-needs any change to the generic interface. The type #isatype("relc") answers
-it. A value is an explicit empty element or a set of variable pairs, where
+between variables. The type #isatype("relc") tests whether a relational local
+state needs any change to the generic interface. A value is an explicit empty element or a set of variable pairs, where
 $(x, y)$ asserts $x <= y$; the order is reverse inclusion. No function from
 variables to abstract integers appears in the carrier.
 
@@ -225,12 +222,12 @@ theories the numeric domains share. The executable assembly of
 @sec:engineering fixes a reachability-lifted store of per-variable values, so
 the witness is not selectable in the analyzer.
 
-The chapter gives the instance side of RQ3 and K3. Five domains prove the
+Five domains prove the
 laws of @ch:domains with facts about integers alone, and one interpretation per
 domain and context family makes the source-level theorem hold for each. The
 instances show that the interface asks for no backward filter (Parity), no
 monotone reduction (Int in the fixpoint mode) and no pointwise store
-(#isaconst("rel_order_spec")), while the solver's narrowing law does constrain
-where the product may reduce. The precision differences of this chapter are
+(#isaconst("rel_order_spec")). The solver's narrowing law restricts where the
+product may reduce. The precision differences of this chapter are
 executable evidence about single programs; @ch:evaluation collects them with
 the machine-checked precision witnesses.

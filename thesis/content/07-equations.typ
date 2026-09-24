@@ -22,8 +22,7 @@
 
 @ch:traces reduced soundness to five local obligations on a claim
 #isai("cover v c"), and @ch:analysis-interface supplied the abstract
-operations. The claim still has to be computed, and there are three problems
-with doing so. One unknown per node, the intraprocedural recipe, merges the
+operations. Computing the claim raises three problems. One unknown per node, the intraprocedural recipe, merges the
 calls of a procedure and loses facts that every execution satisfies
 (@sec:eq-coarse). A callee's entry cannot list the calls that reach it,
 because which calls route to a context is known only once their callers are
@@ -35,8 +34,8 @@ post-solutions $sol$ satisfy, for every node $v$ and context $c$,
 $
   #isai("activation_collect \<G> R startcontext g S v c") subset.eq conc(sol(v, c)).
 $
-It serves RQ2, by linking computed contexts to admitted ones, and RQ3, by
-proving the obligations once for all policies. The running example is
+It links computed contexts to admitted ones and proves the obligations once
+for all policies. The running example is
 `bump(5); bump(4)` of @fig:program-to-equations, with call nodes $u_1$, $u_2$
 (`pp2`, `pp3`) and continuations $k_1 = u_2$, $k_2$ (`pp4`).
 
@@ -68,7 +67,7 @@ The index also fixes how a return finds its caller. The contribution of a call
 at $u$ to its continuation $(k, c)$ reads the caller's value at $(u, c)$, a key
 that already exists because the caller was analyzed there. The return
 therefore resumes the caller's context and never reconstructs it from the
-callee's. For call strings of length $k$ this matters: truncation drops the
+callee's. For call strings of length $k$, truncation drops the
 oldest call site, and recovering it on return would require joining every
 caller compatible with the truncated string. Keeping the caller's context in
 the continuation's key removes that step. Goblint's local unknowns have the
@@ -207,8 +206,8 @@ evaluate one call with such an entry transfer: the seed is published at the cont
 the entered frame, and nothing is published at the context the caller's state would
 select.
 
-The proxy has two costs. It adds one shared unknown per callee entry and
-context and one update per call. It also changes where widening happens. A
+The seed adds one shared unknown per callee entry and context and one update
+per call, and it changes where widening happens. A
 seed has no equation of its own, and #isaconst("run_voblint") merges
 contributions into it with the update rule selected for shared keys, so under
 a warrowing rule a seed can be widened. In @sec:eq-coarse the first call
@@ -371,9 +370,8 @@ lengths one and two for one program.
 
 == Discharging the contract <sec:eq-discharge>
 
-It remains to show that post-solutions of the generated system meet the
-coverage contract. The routed locale proves the five obligations once, for all
-policies and domains.
+The routed locale proves that post-solutions of the generated system meet the
+coverage contract, discharging the five obligations once for all policies and domains.
 
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
   Let $sol$ be a post-solution of the generated system on a key set that
@@ -444,7 +442,7 @@ every unknown, next to the locals. Goblint's base analysis makes the same
 choice for single-threaded programs: it reads globals from its local state and publishes nothing
 (@app:goblint-alignment). Seidl et al. present the flow-insensitive treatment
 of a global as a choice made for efficiency @seidl26. The following program
-shows what the flow-sensitive placement costs and what the alternative loses:
+compares the two placements:
 
 #listing(lang: "c", claim: "mixed-flow-sign", ```
 global Gx;
@@ -570,7 +568,7 @@ concrete return keeps the caller's locals and takes the callee's globals
 the entry: splitting the resume value discards its global half, and a proof
 that this half adds nothing would be a further obligation.
 
-What is proved has three levels. For every classifier and every whole-state
+The results come at three levels. For every classifier and every whole-state
 specification built from sound transfers,
 #isathm("ownership_split_lift_core_sound") establishes
 #isalocale("sound_dg_spec_core") for the lifted specification and
@@ -622,8 +620,7 @@ recurses with a fresh argument per level and does not finish within its time
 limit. The end-to-end theorem therefore keeps a per-program termination premise
 (@sec:termination).
 
-The chapter proves the composition step of RQ3 for the equations, and the
-routing half of RQ2. #isathm("activation_collect_dg_sound") discharges the five
+#isathm("activation_collect_dg_sound") discharges the five
 obligations of @ch:traces once for every domain, context policy and
 specification: any post-solution on a key set that contains the program entry
 and is closed under local edges and call continuations bounds every context
@@ -632,6 +629,6 @@ callee list and adequate, total routing. For functional policies totality and
 the context half of adequacy hold by construction. For entry-state policies the
 relation is read off the solved table (#isaconst("routed_entry_context_rel")),
 which makes the covering and routing parts of adequacy definitional and
-totality paired entry coverage. These results belong to K2 and K3.
+totality paired entry coverage.
 @ch:solving must supply the post-solution and its key set, and @ch:results must derive the
 closure of the key set, which the solver does not provide directly.

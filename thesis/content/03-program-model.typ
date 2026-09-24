@@ -9,7 +9,7 @@
 
 = Programs, Compilation, and Control-Flow Semantics <ch:program-model>
 
-RQ1 asks for a soundness theorem about the programs a user writes, and the
+The soundness theorem should be about the programs a user writes, and the
 analysis cannot work on those programs directly: under recursion, a
 small-step source semantics has no finite set of program points to which
 abstract states could be attached (@sec:why-graph). Voblint therefore
@@ -153,8 +153,8 @@ store. The program of @fig:program-to-equations, in which `main` calls
 
 == VIMP, and what it leaves out <sec:vimp>
 
-VIMP is deliberately small. Every construct needs a semantics, compiler clauses
-and a transfer function proved sound in every abstract domain. VIMP has integer
+VIMP is small because every construct needs a semantics, compiler clauses and
+a transfer function proved sound in every abstract domain. VIMP has integer
 variables over the mathematical integers, a split between locals and globals,
 procedures with value parameters, direct calls with an optional result,
 recursion to any depth, assignment, sequencing, conditionals, `while` loops,
@@ -287,7 +287,7 @@ of @sec:csim carries the same condition as its premise #isaconst("return_safe").
 
 #isaconst("pstep") is the definition of VIMP. Every theorem in this thesis is
 stated over it, so whether it describes the intended language can only be
-argued. This section gives that argument.
+argued.
 
 *A fragment of Goblint's input.* Goblint analyzes C after its CIL front end
 has normalized it. CIL's expressions are side-effect free, and a call is an
@@ -392,8 +392,8 @@ A program satisfying the static contract of @sec:compile does not get stuck
 before it completes: #isaconst("wf_source_program") excludes each premise
 failure of the call rules (an undeclared callee, an arity mismatch, repeated
 formals, a library call with unsuitable arguments or without a destination)
-and a return from `main`. No progress lemma states this. In any case, a stuck configuration
-could only cut off later executions, since the source-level theorems quantify
+and a return from `main`. No progress lemma states this. A stuck configuration
+would only cut off later executions, since the source-level theorems quantify
 over every finite run prefix, so no claim about an earlier point becomes
 vacuous.
 
@@ -424,9 +424,9 @@ The graph is a design decision. A _syntax-directed_ analyzer recurses over the
 command structure and iterates loops in place. Voblint is _constraint-based_,
 as Goblint is: the program becomes unknowns and equations, a call contributes
 equations to the same system, and a solver that knows nothing about programs
-finds a solution. The cost is the compiler, the simulation proof of this
-chapter and the coverage layer of @ch:traces. In return, the argument about
-programs ends at a certificate, a post-solution of the equations
+finds a solution. This design requires the compiler, the simulation proof of
+this chapter and the coverage layer of @ch:traces. It lets the argument about
+programs end at a certificate, a post-solution of the equations
 (@sec:certificate), and the solver that produces it is a verified component
 reused unchanged @tilscher26. @ch:related
 returns to the comparison.
@@ -486,14 +486,14 @@ Goblint's CFG is formalized.
     `__goblint_check` through `Proc`.],
 ) <tab:cfg-edges>
 
-Three structural choices matter later. Local edges and call edges are
-different relations. No edge action denotes a call, so a call cannot be taken
+Local edges and call edges are different relations. No edge action denotes a call, so a call cannot be taken
 as a local step, and each trace rule of @ch:traces reads exactly one relation.
 There is also no global exit. A #keyw("return") is an ordinary local edge into
 $ctor("FunctionResult") thin p$, one node shared by every caller of $p$, so
 recursion needs no duplicated nodes. Finally, a call edge carries its
 continuation $k$, so nothing has to match a return against a call later, and
-no edge leaves $ctor("FunctionResult") thin p$. @fig:cfgmap shows all three.
+no edge leaves $ctor("FunctionResult") thin p$. @fig:cfgmap shows each of
+these properties.
 
 #let _sum-procs = ```
 fun dec(x) {
@@ -662,9 +662,9 @@ both leave nodes and edges in the graph that no execution reaches. With the
 continuation as input, a node is a program point between two transfers, as in
 Goblint's CFG. There is no join node after a conditional, because both branches
 compile against the same continuation, and a loop compiles its body against the
-loop head (@fig:source-morph). The cost is a node count: to hand `c1`
-the entry of `c2` as its continuation, the compiler must know how many nodes
-`c1` allocates before compiling it (#isaconst("csize")).
+loop head (@fig:source-morph). To hand `c1` the entry of `c2` as its
+continuation, the compiler must know how many nodes `c1` allocates before
+compiling it (#isaconst("csize")).
 
 A call to a declared procedure emits only a #isaconst("calls") tuple, never a
 local edge. A #keyw("return") emits an #isaconst("EA_Ret") edge to its
@@ -785,9 +785,9 @@ from #isaconst("no_return")\; every source step preserves it
 (#isathm("return_safe_pstep")). Only this forward direction is proved;
 soundness needs no converse, because extra graph runs only lose precision.
 
-This is the first inclusion of the chain for RQ1: every finite source run of a
+This is the first inclusion of the soundness chain: every finite source run of a
 program satisfying #isaconst("wf_source_program") is matched by a graph run
 holding the same store (#isathm("csim_star")). Because #isaconst("run_voblint")
-checks well-formedness itself, the end-to-end theorem of K1 inherits no premise
+checks well-formedness itself, the end-to-end theorem inherits no premise
 from this link. @ch:traces turns that graph run into an activation-local trace
 (@sec:source-bridge).

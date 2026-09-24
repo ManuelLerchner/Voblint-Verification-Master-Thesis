@@ -28,12 +28,10 @@
 The theorems of @ch:results are about #isaconst("run_voblint"), a HOL function
 from a VIMP syntax tree and a configuration to an analysis answer. A user has
 source text and wants a report. Code generation, a compiler, a parser, and a renderer lie
-between the two, and the theorem covers none of them. This
-chapter follows the constant out of the proof assistant and states in
-@sec:trust-boundary where the proof ends. It supplies the part of RQ1 that asks
-which trusted components remain, and with it the executable half of
-contribution K1: the constant the theorem is about is the one the delivered
-tools run.
+between the two, and the theorem covers none of them. The delivered tools run
+the constant the theorem is about, which gives the executable half of the
+end-to-end result. @sec:trust-boundary states where the proof ends and which
+trusted components remain.
 
 == Code generation and the public interface <sec:codegen>
 
@@ -73,9 +71,9 @@ termination (@sec:termination). One #isacmd("export_code")
 declaration then emits #isaconst("run_voblint") and the constructors and
 selectors a caller needs as the OCaml module `Generated`.
 
-Exporting the theorem's own constant means that no handwritten entry point needs
-an agreement argument. One exported entry point per domain and context policy
-would need a lemma relating each of them to the theorem's constant. The single
+Because the export is the theorem's own constant, no handwritten entry point
+needs an agreement argument. One exported entry point per domain and context
+policy would need a lemma relating each of them to the theorem's constant. The single
 dispatcher answers every combination of its three configuration arguments, so
 the command-line tool never decides which combination is legal.
 
@@ -171,9 +169,10 @@ the relational witness of @ch:instances is not selectable through it.
 The generated module takes a syntax tree and returns a typed answer, so
 unverified OCaml surrounds it on both sides (@fig:intro-trust). Before it, an `ocamllex` lexer and a Menhir parser, which a
 project script emits from a grammar description, turn source text into an
-#isatype("imp_prog") and record source positions. After it, rendering code
-prints values, builds the contextual graph from the published routes, and
-attaches a source position to each check row. For a
+#isatype("imp_prog") and write each check's source position into its label.
+After it, rendering code prints values, builds the contextual graph from the
+published routes, prints each check row at the position its label carries, and
+places arithmetic diagnostics by statement order. For a
 #isaconst("Malformed_Program") answer it names the first well-formedness
 conjunct the program breaks. The rejection itself is decided by the generated test.
 Integers in the export are arbitrary-precision Zarith integers, matching VIMP's
@@ -211,8 +210,8 @@ the build.
 
 #let _wl = cli-row("pg-while-loop", "0 < x")
 
-*One run, three views.* @fig:pg-while-loop shows how a run relates the source
-to the graph the theorems are about. The check after the loop is
+*One run, three views.* @fig:pg-while-loop relates the source of one run to
+the graph the theorems are about. The check after the loop is
 #raw(_wl.at(3)), the inspector shows the state #raw(_wl.at(4)) at the check's
 node #raw(_wl.at(1)), and the graph names the same node.
 
@@ -345,8 +344,8 @@ are printed by #isaconst("string_of_abstract_value") (@sec:codegen), and the
 termination premise, which only a finished run discharges (@sec:termination).
 No theorem constrains `UNKNOWN` verdicts or warnings.
 
-*What is trusted.* The delivered guarantee also relies on components the
-theorem does not mention, and each can break it in its own way.
+*What is trusted.* The delivered guarantee also relies on the following
+components, which the theorem does not mention.
 
 - The lexer and parser. A fault builds a syntax tree other than the one the
   text denotes, and the verdicts then describe another program.
@@ -360,13 +359,18 @@ theorem does not mention, and each can break it in its own way.
 - The OCaml compiler and runtime, #raw("wasm_of_ocaml", lang: "sh"), Zarith
   with its JavaScript stubs, and the browser. They run the generated code.
 - The handwritten adapter and rendering code. They print values, draw the
-  graph and pair check rows with source positions by order of occurrence. A
-  fault can show a correct verdict at the wrong line or a wrong state in the
-  inspector. The page's editor and graph libraries only display their output.
+  graph, print each check row at its label and place arithmetic diagnostics
+  at statement positions. A fault in the parser's labels or in this placement
+  can show a correct answer at the wrong line, and a rendering fault can show
+  a wrong state in the inspector. The page's editor and graph libraries only display their output.
 
-Tests address these components because the theorem does not: a regression can
-detect a lost source position without touching any proof obligation
-(@sec:eval-corpus).
+Only tests cover these components. A regression can detect a lost source
+position, which no proof obligation mentions (@sec:eval-corpus). An earlier renderer paired check rows with positions by
+order of occurrence and put verdicts on the wrong lines when `main` precedes a
+procedure it calls, because the compiler lays out procedures first. Checks now
+carry their positions as labels, and
+#fixture("05-checks/precision/03-same_condition_main_first.vimp") pins the
+case.
 
 *Whether the definitions are adequate.* Machine checking proves consequences of
 the chosen execution rules. It cannot establish that #isaconst("pstep") matches
@@ -385,8 +389,7 @@ fixpoint reduction of the Int product (@ch:instances), or from the toolchain
 and the browser. An abort branch of a code equation, such as the solver's
 outside its domain, raises an exception and yields no answer.
 
-The chapter completes RQ1 and K1 on the executable side. The delivered tools
-run the constant the source-level theorem is about, through code equations
-that are theorems, and the trust boundary consists of the frontend, the code generator's
+The delivered tools run the constant the source-level theorem is about, through
+code equations that are theorems. The trust boundary consists of the frontend, the code generator's
 translation and target mappings, the compilers and runtimes, and the rendering
 code, together with the argued adequacy of #isaconst("pstep").
