@@ -69,3 +69,12 @@ why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to en
 
 [snippets.mf_after_calls]
 why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."
+
+[snippets.ltr_collect_semantic_postfix]
+why = "Figure gallery: the theorem-statement example."
+
+[snippets.combine_env]
+why = "Figure gallery example."
+
+[snippets.sound_dg_spec_core]
+why = "Figure gallery example."
