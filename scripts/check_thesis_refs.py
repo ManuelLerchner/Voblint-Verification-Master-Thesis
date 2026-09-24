@@ -209,6 +209,9 @@ def build_inventory() -> tuple[
                 if m.group(1) == "datatype":
                     for c in CONSTRUCTOR.finditer(body):
                         kinds[c.group(1)].add("const")
+                    # Named selectors, `Call (ltr_caller: ltr) trace`.
+                    for sel in re.finditer(r"\(([A-Za-z][A-Za-z0-9_']*)\s*:", body):
+                        kinds[sel.group(1)].add("const")
                 # Type-class parameters become overloaded global constants.
                 # Arbitrary locale fixes do not declare such constants.
                 if m.group(1) == "class":
