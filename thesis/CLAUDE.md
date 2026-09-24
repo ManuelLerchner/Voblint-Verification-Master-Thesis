@@ -52,7 +52,9 @@ A formal citation whose link the map cannot resolve fails the build. Regenerate
 the map and run `pixi run thesis-links`; do not replace it with plain text.
 This includes generated snippets/statements and session/theory references.
 Theorem environments take `isa: "name"` and print it,
-linked, in the header: `Definition 3.1 (Expressions, exp).`
+linked, in the header. A `definition` also takes the declaring command,
+`cmd: "datatype"`, and prints `Definition 3.1 (Expressions, datatype exp).`;
+`thesis-refs` fails when it is missing or differs from the sources.
 
 ## Scope: an overview of the formalization
 
@@ -146,3 +148,75 @@ A build can succeed with the wrong font (Typst falls back silently on missing
 glyphs), so `pdffonts` is part of verifying a typography change. `pdftotext
 -bbox-layout` gives the numbers to compare against the reference measurements
 recorded in `lib/tum.typ`.
+
+## Author preferences
+
+Rules the author set while reviewing drafts. They refine the sections above.
+
+### Wording
+
+- Plain words. No `load-bearing`, no labels such as RQ1 or K1: state the
+  research questions and contributions in prose and refer to them by topic.
+- Precise mathematics. Say post-fixpoint when a value only satisfies
+  $f(d) lle d$, say inequality when soundness needs only $lle$, write abstract
+  operations with a sharp ($sh(+)$), and do not say an iteration "reaches" a
+  limit it only approaches.
+- Define every term before its first use, including the ones that feel
+  obvious (loop head, control-flow graph, carrier, key set, shared key). When a
+  later section defines it, say so at the first use.
+- Keep one running example per chapter and derive from it (the counting loop in
+  @ch:background: its graph, its inequalities, its solutions).
+
+### Evidence
+
+- Fact-check every claim, not a sample: theorem statements and premises against
+  the theories, analyzer output against the claims machinery, literature against
+  the primary source with a locator (section, theorem or page). Prefer a
+  checkable locator such as `@mine17[Thm. 2.8]` over a bare citation.
+- Resolve unknowns instead of printing them. A table cell is never `?` or a
+  dash: read the paper or the published code until the cell has a value, and
+  explain every value in the prose.
+- Mark illustrative or unverified material as such in its caption, and keep it
+  executable and tested (`thesis/shared/code/`, `tests/test_thesis_*`).
+
+### Isabelle links
+
+- Link every concept that has a counterpart in the theories, the vendored
+  solver or Isabelle's HOL session, at its first mention in a section: classes,
+  locales and their assumptions, constants, theorems, types, sessions. Background
+  concepts such as `order`, `complete_lattice`, `lfp` and `mono` link to HOL.
+- Show real declarations with `thy(...)` rather than paraphrasing them when the
+  text teaches an Isabelle mechanism.
+
+### Figures, tables and listings
+
+- Prefer a figure to a table when the data has a shape (a graph annotated with
+  values, a lattice), and prefer prose to a table of labels.
+- Tables: no wrapped cells, first column left-aligned and the rest centered,
+  every term in the table explained in the text.
+- One concept, one colour and one line style across all figures of a chapter
+  (widening orange and dashed, narrowing purple, warrowing magenta and solid).
+  Labels never cross a line.
+- A figure shows only what the text has introduced; split it into an early and
+  a later version if needed.
+- Captions are short: what is shown, how it was obtained, what is schematic.
+- Listings are small (6.5pt or less), typed, without unused imports or aliases,
+  and read from a checked-in file that a test runs.
+
+### Layout
+
+- A section starts at the top of a page where it can, and a figure sits on the
+  page that first references it.
+- No orphaned captions, no two or three lines spilling onto a new page, no
+  half-empty page before a float. Trim or reflow text to fix it; do not add
+  forced page breaks.
+- Check the rendered pages after every change that moves text, and report the
+  page layout, not only the build result.
+
+### Workflow
+
+- Commit only when the author asks
+- Propose structural changes (moving, merging or deleting sections) before
+  making them; wording and fixes within a section need no approval.
+- When a review lists findings, verify each against its source before applying
+  it, and report which were applied, adjusted or rejected.

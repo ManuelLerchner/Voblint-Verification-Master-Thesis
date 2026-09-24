@@ -209,8 +209,9 @@ unknowns the solver stabilized form $V$.
   },
   kind: image,
   placement: auto,
-  caption: [The top-down solver on the counting loop of @fig:source-morph,
-    simplified to four local unknowns without contexts or side effects. Each row
+  caption: [The top-down solver on the compiled counting loop of
+    @fig:counting-loop, where #raw("pp0") is the start and #raw("pp1"),
+    #raw("pp2"), #raw("pp3") are $h$, $b$, $e$, simplified to four local unknowns without contexts or side effects. Each row
     is one evaluation of a right-hand side, numbered in run order (six
     bookkeeping evaluations are omitted), with the values $sigma$ after it,
     the unknowns being computed ($c$, in call order) and the loop points, as in

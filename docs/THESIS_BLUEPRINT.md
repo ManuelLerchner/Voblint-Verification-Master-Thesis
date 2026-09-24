@@ -2501,7 +2501,9 @@ stay one-way. Both a big-step and a small-step semantics exist.
    special-call nondeterminism; a progress lemma for well-formed configurations;
    an executable `pstep` interpreter run against the regression corpus, so the
    semantics is exercised rather than only reasoned about. None needs a second
-   language.
+   language. Progress is done: `source_progress` (Source_Progress.thy) proves
+   that every reachable configuration of a `wf_source_program` has finished or
+   can step, and Ch. 3 cites it.
 3. **One triangulation artifact for Ch. 12.** A single scalar, deterministic,
    check-free program carried through both worlds: IMP2's VCG proves the exact
    postcondition, the analyzer proves the envelope, and the two are shown

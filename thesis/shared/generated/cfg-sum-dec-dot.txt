@@ -3,98 +3,49 @@ digraph AnalysisCFG {
   node [shape=box,style=filled,fillcolor=lightgreen,fontname="Menlo",id="\N",URL="javascript:show_info('\N');"];
   edge [fontname="Menlo",fontsize=10,arrowsize=0.8];
   subgraph cluster_ctx_0 {
-    label="main / root context";
+    label="dec / unit";
     style=rounded; color=gray70; penwidth=1;
-    main_pp11_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp11",tooltip="pp11\nx=[3,3]"];
-    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\nx=[3,3]"];
-    main_pp9_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\nx=⊤"];
-    main_pp10_ctx0 [shape=box,style="rounded,filled",color=darkgreen,penwidth=2,fillcolor=palegreen,label="pp10\ncheck x == 3",tooltip="pp10\nx=[3,3]\ncheck x == 3"];
-    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\nx=⊤"];
+    dec_exit_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\nx=[-∞,2]"];
+    dec_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\nx=[-∞,2]"];
+    dec_entry_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\nx=[-∞,2]"];
   }
   subgraph cluster_ctx_1 {
-    label="sum / [0,0]";
+    label="sum / unit";
     style=rounded; color=gray70; penwidth=1;
-    sum_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\nn=[0,0]\nm=⊤\nr=⊤"];
-    sum_exit_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\nn=[0,0]\nm=⊤\nr=⊤"];
-    sum_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\nn=[0,0]\nm=⊤\nr=⊤"];
-    sum_pp5_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp5\nunreachable",tooltip="pp5\nunreachable"];
-    sum_pp6_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp6\nunreachable",tooltip="pp6\nunreachable"];
-    sum_pp7_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp7\nunreachable",tooltip="pp7\nunreachable"];
-    sum_entry_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\nn=[0,0]\nm=⊤\nr=⊤"];
+    sum_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\nn=[-∞,0]\nm=⊤\nr=⊤"];
+    sum_exit_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\nn=[-∞,2]\nm=⊤\nr=⊤"];
+    sum_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\nn=[-∞,2]\nm=⊤\nr=⊤"];
+    sum_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\nn=[1,2]\nm=⊤\nr=⊤"];
+    sum_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\nn=[1,2]\nm=[-∞,1]\nr=⊤"];
+    sum_pp7_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\nn=[1,2]\nm=[-∞,1]\nr=[0,+∞]"];
+    sum_entry_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\nn=[-∞,2]\nm=⊤\nr=⊤"];
   }
   subgraph cluster_ctx_2 {
-    label="dec / [1,1]";
+    label="main / unit";
     style=rounded; color=gray70; penwidth=1;
-    dec_exit_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\nx=[1,1]"];
-    dec_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\nx=[1,1]"];
-    dec_entry_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\nx=[1,1]"];
-  }
-  subgraph cluster_ctx_3 {
-    label="sum / [1,1]";
-    style=rounded; color=gray70; penwidth=1;
-    sum_pp3_ctx1 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp3\nunreachable",tooltip="pp3\nunreachable"];
-    sum_exit_sum_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\nn=[1,1]\nm=[0,0]\nr=[0,0]"];
-    sum_pp2_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\nn=[1,1]\nm=⊤\nr=⊤"];
-    sum_pp5_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\nn=[1,1]\nm=⊤\nr=⊤"];
-    sum_pp6_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\nn=[1,1]\nm=[0,0]\nr=⊤"];
-    sum_pp7_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\nn=[1,1]\nm=[0,0]\nr=[0,0]"];
-    sum_entry_sum_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\nn=[1,1]\nm=⊤\nr=⊤"];
-  }
-  subgraph cluster_ctx_4 {
-    label="dec / [2,2]";
-    style=rounded; color=gray70; penwidth=1;
-    dec_exit_dec_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\nx=[2,2]"];
-    dec_pp0_ctx1 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\nx=[2,2]"];
-    dec_entry_dec_ctx1 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\nx=[2,2]"];
-  }
-  subgraph cluster_ctx_5 {
-    label="sum / [2,2]";
-    style=rounded; color=gray70; penwidth=1;
-    sum_pp3_ctx2 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp3\nunreachable",tooltip="pp3\nunreachable"];
-    sum_exit_sum_ctx2 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\nn=[2,2]\nm=[1,1]\nr=[1,1]"];
-    sum_pp2_ctx2 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\nn=[2,2]\nm=⊤\nr=⊤"];
-    sum_pp5_ctx2 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\nn=[2,2]\nm=⊤\nr=⊤"];
-    sum_pp6_ctx2 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\nn=[2,2]\nm=[1,1]\nr=⊤"];
-    sum_pp7_ctx2 [shape=box,style=filled,fillcolor=lightgreen,label="pp7",tooltip="pp7\nn=[2,2]\nm=[1,1]\nr=[1,1]"];
-    sum_entry_sum_ctx2 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_sum",tooltip="entry_sum\nn=[2,2]\nm=⊤\nr=⊤"];
+    main_pp11_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp11",tooltip="pp11\nx=[0,+∞]"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\nx=[0,+∞]"];
+    main_pp9_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp9",tooltip="pp9\nx=⊤"];
+    main_pp10_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp10\ncheck x == 3",tooltip="pp10\nx=[0,+∞]\ncheck x == 3"];
+    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\nx=⊤"];
   }
   dec_pp0_ctx0 -> dec_exit_dec_ctx0 [weight=20,label="return x - 1"];
-  dec_pp0_ctx1 -> dec_exit_dec_ctx1 [weight=20,label="return x - 1"];
   sum_pp2_ctx0 -> sum_pp3_ctx0 [weight=20,label="[n < 1]"];
-  sum_pp2_ctx1 -> sum_pp3_ctx1 [weight=20,label="[n < 1]"];
-  sum_pp2_ctx2 -> sum_pp3_ctx2 [weight=20,label="[n < 1]"];
   sum_pp2_ctx0 -> sum_pp5_ctx0 [weight=20,label="![n < 1]"];
-  sum_pp2_ctx1 -> sum_pp5_ctx1 [weight=20,label="![n < 1]"];
-  sum_pp2_ctx2 -> sum_pp5_ctx2 [weight=20,label="![n < 1]"];
   sum_pp3_ctx0 -> sum_exit_sum_ctx0 [weight=20,label="return 0"];
-  sum_pp3_ctx1 -> sum_exit_sum_ctx1 [weight=20,label="return 0"];
-  sum_pp3_ctx2 -> sum_exit_sum_ctx2 [weight=20,label="return 0"];
   sum_pp7_ctx0 -> sum_exit_sum_ctx0 [weight=20,label="return r + n"];
-  sum_pp7_ctx1 -> sum_exit_sum_ctx1 [weight=20,label="return r + n"];
-  sum_pp7_ctx2 -> sum_exit_sum_ctx2 [weight=20,label="return r + n"];
   main_pp10_ctx0 -> main_pp11_ctx0 [weight=20,label="check(x == 3)"];
   main_pp11_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
   dec_entry_dec_ctx0 -> dec_pp0_ctx0 [weight=20,label="body(dec)"];
-  dec_entry_dec_ctx1 -> dec_pp0_ctx1 [weight=20,label="body(dec)"];
   main_entry_main_ctx0 -> main_pp9_ctx0 [weight=20,label="body(main)"];
   sum_entry_sum_ctx0 -> sum_pp2_ctx0 [weight=20,label="body(sum)"];
-  sum_entry_sum_ctx1 -> sum_pp2_ctx1 [weight=20,label="body(sum)"];
-  sum_entry_sum_ctx2 -> sum_pp2_ctx2 [weight=20,label="body(sum)"];
+  sum_pp5_ctx0 -> dec_entry_dec_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call dec(n)"];
+  dec_exit_dec_ctx0 -> sum_pp6_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / m := dec(n)"];
   sum_pp5_ctx0 -> sum_pp6_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
-  sum_pp5_ctx1 -> dec_entry_dec_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call dec(n)"];
-  dec_exit_dec_ctx0 -> sum_pp6_ctx1 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / m := dec(n)"];
-  sum_pp5_ctx1 -> sum_pp6_ctx1 [style=dashed,color=gray40,weight=20,label="continuation"];
-  sum_pp5_ctx2 -> dec_entry_dec_ctx1 [color=purple,penwidth=2,weight=6,minlen=2,label="call dec(n)"];
-  dec_exit_dec_ctx1 -> sum_pp6_ctx2 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / m := dec(n)"];
-  sum_pp5_ctx2 -> sum_pp6_ctx2 [style=dashed,color=gray40,weight=20,label="continuation"];
+  sum_pp6_ctx0 -> sum_entry_sum_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call sum(m)"];
+  sum_exit_sum_ctx0 -> sum_pp7_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := sum(m)"];
   sum_pp6_ctx0 -> sum_pp7_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
-  sum_pp6_ctx1 -> sum_entry_sum_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call sum(m)"];
-  sum_exit_sum_ctx0 -> sum_pp7_ctx1 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := sum(m)"];
-  sum_pp6_ctx1 -> sum_pp7_ctx1 [style=dashed,color=gray40,weight=20,label="continuation"];
-  sum_pp6_ctx2 -> sum_entry_sum_ctx1 [color=purple,penwidth=2,weight=6,minlen=2,label="call sum(m)"];
-  sum_exit_sum_ctx1 -> sum_pp7_ctx2 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / r := sum(m)"];
-  sum_pp6_ctx2 -> sum_pp7_ctx2 [style=dashed,color=gray40,weight=20,label="continuation"];
-  main_pp9_ctx0 -> sum_entry_sum_ctx2 [color=purple,penwidth=2,weight=6,minlen=2,label="call sum(2)"];
-  sum_exit_sum_ctx2 -> main_pp10_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / x := sum(2)"];
+  main_pp9_ctx0 -> sum_entry_sum_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call sum(2)"];
+  sum_exit_sum_ctx0 -> main_pp10_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / x := sum(2)"];
   main_pp9_ctx0 -> main_pp10_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
 }

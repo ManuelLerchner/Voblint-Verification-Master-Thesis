@@ -6,7 +6,7 @@ Abstract interpretation is a static program analysis technique that
 over-approximates every execution of a program. One way to implement it is to
 reduce the program to a system of equations over abstract values and hand it
 to a generic fixpoint solver. Goblint, a static analyzer for C, works this way
-@vojdani16. The soundness of such an analyzer depends on every step of this
+@vojdani16 @seidl26. The soundness of such an analyzer depends on every step of this
 pipeline: the equations must describe the program, the solver's result must
 satisfy them,
 and the reported verdicts must follow from the solution. For Goblint's
@@ -57,8 +57,8 @@ proofs, its registration for every policy and
 update rule is generated, and after handwritten dispatch code, the main
 theorem covers it.
 
-Since the TD verification does not prove termination of the side-effecting
-solver, termination is a premise for each program, and the guarantee is
+Because the solve diverges for some configurations, termination is a premise
+for each program, and the guarantee is
 partial correctness. Several components lie outside the verification boundary, such as the
 parser, Isabelle's code generator, the OCaml and WebAssembly toolchains, and
 driver and rendering code. Whether VIMP captures the intended language is a

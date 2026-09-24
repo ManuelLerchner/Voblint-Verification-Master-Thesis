@@ -43,7 +43,10 @@ least-upper-bound requirement of @ch:domains.
 A domain instance proves the laws of @tab:domain-contract for its carrier and
 supplies a branch transfer, either the generic filter of
 #isalocale("backward_domain") or the identity. The locale
-#isalocale("nonrelational_transfer") packages these pieces. The step from
+#isalocale("nonrelational_transfer") packages these pieces. Beyond the
+generic contract it assumes that the branch transfer and the abstract `min` and
+`max` are monotone (#isathm("nonrelational_transfer.br_mono"),
+#isathm("sound_special_ops.special_min_mono")). The step from
 generic to concrete is an interpretation: for each domain, one interpretation
 per context family discharges the contracts of #isalocale("routed_dg_analysis")
 (@fig:assembly), and the source-level theorem about #isaconst("run_voblint")

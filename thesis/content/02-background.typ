@@ -161,7 +161,7 @@ thesis shares with the theories. We use the counting loop of
     are program points: $h$ is the loop head, $b$ the start of the body, $t$
     the point after the increment and $e$ the point after the loop. Edges
     carry the assignment or the condition that leads from one point to the
-    next.],
+    next. The edge from $t$ back to $h$ has no effect.],
 ) <fig:counting-loop>
 
 A _control-flow graph_ represents a program by its program points, the nodes,
@@ -187,7 +187,7 @@ order is inclusion. The least element $lbot$ describes no states, the top
 $ltop$, when present, all states, and the join $a ljoin b$ is the least upper
 bound of its operands (#isalocale("semilattice_sup")). A complete lattice (#isalocale("complete_lattice")) has a join $lJoin X$ and a meet
 $lMeet X$ for every subset, and $f$ is monotone (#isaconst("mono")) when $a lle b$ implies
-$f(a) lle f(b)$ @nipkow14[Def. 13.1] @mine17[§2.1].
+$f(a) lle f(b)$ @nipkow14[Defs. 10.23, 10.26, 13.1] @mine17[Def. 2.9].
 
 By the Knaster–Tarski theorem, a monotone $f$ on a complete lattice has a
 least fixpoint $lfp f$, the meet of all $d$ with $f(d) lle d$ @tarski55[Thm. 1].
@@ -198,9 +198,10 @@ outside it, so it is an inductive invariant @mine17[§4.7.7]. Such an invariant
 need not be the least (@fig:loop-solutions). For functions
 that preserve joins of increasing chains, the supremum of the Kleene iterates
 $f^n(lbot)$ is $lfp f$ @mine17[Thm. 2.2]. On a finite-height order, monotone
-iteration from bottom eventually stabilizes at that fixpoint
-(#isathm("lfp_Kleene_iter"), @seidl12compiler[§1.5]). Infinite domains need an extrapolation operation
-(@sec:widening). Voblint requires less than a complete
+iteration from bottom eventually stabilizes @seidl12compiler[§1.5], and an
+iterate that no longer changes is the least fixpoint
+(#isathm("lfp_Kleene_iter")). Domains with infinite ascending chains need an
+extrapolation operation (@sec:widening). Voblint requires less than a complete
 lattice: the numeric interface of @ch:domains asks for a bounded join
 semilattice with a top (#isalocale("executable_domain"), over
 #isalocale("bounded_semilattice_sup_bot")), together with a
@@ -295,9 +296,8 @@ convex polyhedron @mine17[Ex. 2.11]. For Coq, Jourdan et al. add a further reaso
 concrete type is infinite, and a specification through $conc$ alone states
 soundness conditions and removes the obligation to prove optimality
 @jourdan15[§2]. Nipkow likewise drops $abstr$ and proves given abstract
-interpreters correct @nipkow12[§5.2]. Voblint follows this style, as do the
-concretization-based frameworks of @cousot92jlc[§7]: each domain supplies its
-own operations and proves them sound against $conc$. Its soundness theorem
+interpreters correct @nipkow12[§5.2]. Voblint follows this style, in which each domain supplies its own operations
+and proves them sound against $conc$ @mine17[§2.4]. Its soundness theorem
 claims coverage and says nothing about optimal precision, so no proof needs a
 best abstraction. The concretization of an integer domain is in general infinite, so
 only the proofs use it (@ch:domains).
@@ -316,10 +316,11 @@ joins the upper-bound laws of join and monotonicity of concretization
 A post-fixpoint $a$ of a sound abstract transfer $sh(f)$ therefore suffices
 @mine17[Thm. 2.8]. Let $F(X) = I union f(X)$ be the concrete transfer on sets of states, with
 initial states $I$, so that $lfp F$ is the set of reachable states. If
-$I subset.eq conc(a)$, $sh(f)$ is sound and $sh(f)(a) lle a$, then
+$I subset.eq conc(a)$, $sh(f)$ is sound, $conc$ is monotone and
+$sh(f)(a) lle a$, then
 $F(conc(a)) subset.eq I union conc(sh(f)(a)) subset.eq conc(a)$, so
 $conc(a)$ is a post-fixpoint of $F$ and, by Knaster–Tarski, contains
-$lfp F$. In the counting loop, $I$ is the $[0, 0]$ that `i = 0` contributes.
+$lfp F$. In the counting loop, $I = conc([0, 0])$, the states that `i = 0` produces.
 
 == Constraint systems <sec:constraints>
 
@@ -353,8 +354,8 @@ Each unknown $x$ has a right-hand side $rhs(x)$, a function of the valuation,
 and $sol$ is a _post-solution_ if
 $ rhs(x)(sol) lle sol(x) quad "for every unknown" x. $
 For the loop head, $rhs(h)(sol) = [0, 0] ljoin sol(t)$. The argument of
-@sec:abs-int applies unknown by unknown, so a post-solution bounds the
-reachable states at every program point at once. Such systems are often called
+@sec:abs-int applies to all unknowns at once, so a post-solution bounds the
+reachable states at every program point. Such systems are often called
 equation systems, although soundness only requires these inequalities. A
 solver receives the analysis in this form, and the verified solver certifies a
 partial post-solution, #isaconst("part_post_solution"), which holds on the
@@ -400,7 +401,7 @@ the same way. A widening $a widen b$ extrapolates an update and bounds both oper
 classical widening also stabilizes the corresponding iteration sequences
 @cousot77[§9.1.3] @cousot92plilp[§4]. The upper-bound law alone gives
 soundness and does not ensure termination. A common strategy widens at selected loop heads, and
-TD extrapolates where a read closes a cycle (@sec:td). The standard interval
+the top-down solver TD extrapolates where a read closes a cycle (@sec:td). The standard interval
 widening replaces a growing bound by infinity @cousot77[§9.2] @mine17[§4.5.2] (#isaconst("widen_ivl_core")),
 so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, infinity]$ at once. This value is a post-fixpoint without the bound $5$,
@@ -442,7 +443,7 @@ again: $f(a narrow f(a)) lle f(a) lle a narrow f(a)$. Being closed, the
 narrowed value stays above the least fixpoint. In the counting loop the interval narrowing
 (#isaconst("narrow_ivl_td")) reaches $[0, 5]$, but
 in general narrowing need not recover the least fixpoint. Narrowing needs this monotonicity @seidl12compiler[§1.10]. Right-hand sides
-that contain a widening are not monotone, because the interval widening itself
+that contain a widening need not be monotone, because the interval widening itself
 is not @cousot92plilp[Ex. 11]. The verified TD solver
 applies both operators through one update, warrowing. Warrowing (#isaconst("warrow")) narrows when the candidate lies
 below the current value and widens otherwise @apinis13 @grass24, so each update
@@ -452,14 +453,15 @@ returned unknown is stable (@sec:td).
 
 The strategies need not agree for arbitrary iteration schemes. Tilscher et al.
 prove them equivalent for TD without side effects under precise widening and
-monotonic right-hand sides and dependencies @tilscher26jar. The system below
+monotonic right-hand sides and dependencies @tilscher26jar[Thm. 3]. The system below
 satisfies these assumptions, but the solver of @fig:solver-sketch runs one
 global widening phase and lies outside that theorem. On the system
 $
   x gt.eq [0, 0] ljoin (y lmeet [-infinity, 5]), quad
   y gt.eq (x lmeet [-infinity, 9]) ljoin ((y lmeet [-infinity, 5]) sh(+) [2, 2]),
 $
-solved round robin with extrapolation at both unknowns, they differ. Widening until nothing changes and then narrowing yields
+solved round robin in the order $x$, $y$ with extrapolation at both
+unknowns, they differ. Widening until nothing changes and then narrowing yields
 the least solution $x = [0, 5]$, $y = [0, 7]$. Warrowing narrows $y$ to
 $[0, 9]$ while $x$ is still $[0, infinity]$. Once $x$ settles at $[0, 5]$,
 the candidate for $y$ is $[0, 7]$, but interval narrowing only refines infinite
@@ -474,12 +476,12 @@ $x = [2, 12]$ and warrowing the least $x = [2, 11]$.
 #figure(
   {
     // The file keeps PEP 8's double blank lines; the listing drops them.
-    show raw: set text(size: 5.8pt)
+    show raw: set text(size: 5.3pt)
     raw(read("/shared/code/solver_sketch.py").replace("\n\n\n", "\n"), lang: "python", block: true)
   },
   kind: raw,
   caption: [An unverified round-robin solver over intervals, run with widening and
-    then narrowing, and with warrowing, on the two-unknown system of
+    then narrowing, and with warrowing, on the first two-unknown system of
     @sec:widening.],
 ) <fig:solver-sketch>
 
@@ -626,7 +628,8 @@ the valuation is a post-solution in the sense above, side contributions
 included. The theorem needs no monotonicity of the right-hand sides and says
 nothing about unknowns outside $S$. The executable solver #isaconst("solve_c")
 returns an optional result and is proved equivalent to the solver on the
-domain predicate (#isathm("term_equivalence")), and Voblint's corollary
+domain predicate and to return the same valuation there
+(#isathm("term_equivalence"), #isathm("value_equivalence")), and Voblint's corollary
 #isathm("solve_dom_of_solve_c") concludes that a run that returns a result
 satisfies the domain predicate. The Isabelle
 formalization contains no general machine-checked termination theorem for the
@@ -639,7 +642,7 @@ its own equation system. The soundness proof meets the solver at
 valuation satisfying it over-approximates the semantics, and the solver
 theorem shows that a terminating run provides one (@sec:certificate).
 
-== Isabelle/HOL mechanisms
+== Isabelle/HOL mechanisms <sec:isabelle>
 
 // The declarations below are examples, set smaller than the running text.
 #show raw.where(block: true): set text(size: 6.5pt)
@@ -661,12 +664,13 @@ that it keeps every value both operands admit:
 #thy("semantic_intersection")
 
 An _inductive definition_ is the least relation closed under its rules and
-comes with rule induction. Execution on the control-flow graph,
-#isaconst("cstep"), has one rule per kind of step:
-#thy("cstep")
-Source execution #isaconst("pstep") is defined the same way, and
-#isacmd("inductive_set") defines a set by rules, such as the valid
-activation-local traces #isaconst("valid_ltr").
+comes with rule induction, and #isacmd("inductive_set") defines a set the same
+way. The solver's verification defines the unknowns on which a query $x$
+transitively depends, #isaconst("reach"), by two rules:
+#thy("reach")
+Source execution #isaconst("pstep") (@fig:pstep), graph execution
+#isaconst("cstep") (@fig:cstep) and the valid activation-local traces
+#isaconst("valid_ltr") are defined by rules as well.
 
 A _quotient type_ identifies representations up to an equivalence
 @huffman13. @ch:solving identifies finite executable abstract states that read
@@ -677,15 +681,12 @@ Its operations are lifted with #isacmd("lift_definition").
 _Code equations_ determine what code generation emits @haftmann10, and one
 #isacmd("export_code") declaration emits the analyzer's OCaml from them.
 @ch:executable discusses the trust that remains. Theories are grouped into
-_sessions_, which Isabelle builds and checks as units, and a session imports
-others as a whole. The control-flow graph lives in #isasession("Voblint_CFG"),
+_sessions_, which Isabelle builds and checks as units. The control-flow graph lives in #isasession("Voblint_CFG"),
 which builds on #isasession("Voblint_VIMP") (@fig:appendix-sessions).
 
 A _proof by evaluation_ extends the trusted computing base beyond Isabelle's
-inference kernel. The method `eval` compiles a closed proposition to code, runs it, and accepts the computed
-result through the code generator's
-evaluation oracle, which the theorem then trusts along with the runtime. In 2025, a defect in
+inference kernel. The method `eval` compiles a closed proposition to code, runs it, and accepts
+the result through the code generator's evaluation oracle. In 2025, a defect in
 normalization by evaluation, which also extends trust beyond the kernel,
-admitted a proof of `False` @paulson26broken. Several witnesses about fixed programs are
-proved this way, such as #isathm("nv_solve_c"),
-and @tab:oracles-audit lists those among the audited theorems.
+admitted a proof of `False` @paulson26broken. Witnesses about fixed programs such as #isathm("nv_solve_c") are proved this
+way (@tab:oracles-audit).

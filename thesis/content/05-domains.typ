@@ -125,11 +125,14 @@ of $conc$ turns that bound into set inclusion. Stabilization is not a class
 law, and termination becomes a premise (@sec:termination).
 
 A domain value needs no other laws for soundness (@tab:domain-contract).
-Three familiar requirements are absent. No transfer has
-to be monotone: neither the per-operation rules of @sec:whole-state nor the
-analysis soundness contract of @sec:sound-core mention monotonicity, and the
-vendored solver's partial-correctness argument does not assume it.
-Monotonicity would matter for termination, which is a premise. No abstraction
+Three familiar requirements are absent from the generic contract. It asks for
+no monotone transfer: neither the per-operation rules of @sec:whole-state nor
+the analysis soundness contract of @sec:sound-core mention monotonicity, and
+the vendored solver's partial-correctness argument does not assume it.
+Monotonicity would matter for termination, which is a premise. The locale that
+packages the non-relational instances (@ch:instances) does assume a monotone
+branch transfer and monotone `min` and `max`, and every shipped non-relational
+domain proves them. No abstraction
 function is needed, since no claim of optimal precision is made
 (@ch:background), and widening need not stabilize. One requirement goes beyond
 what the proofs use: the vendored solver works over a bounded join semilattice,
@@ -305,7 +308,7 @@ never implies that its check is reached (@sec:verdicts).
     [sound inverse operators], [#isathm("bfilter_sound"): a guard drops no store that passes it],
     [sound comparison queries], [definite check verdicts (@sec:verdicts)],
     table.hline(stroke: 0.5pt),
-    [_not required:_ monotone transfers, stabilizing widening],
+    [_not required by the contract:_ monotone transfers, stabilizing widening],
     [only termination would use them (@sec:termination)],
     [_not required:_ abstraction function, lattice meet],
     [no optimality claim is made; #isalocale("semantic_intersection") suffices],
