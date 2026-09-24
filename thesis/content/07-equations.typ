@@ -582,7 +582,7 @@ solved table: the solve terminates, the key set is closed, and no formal
 parameter is global. The evaluations use Isabelle's code-generator oracle,
 the trust boundary of @ch:executable. From these,
 #isathm("mf_activation_collect_sound") and #isathm("mf_ltr_collect_sound")
-(@app:statements) bound the collecting semantics at every node,
+bound the collecting semantics at every node,
 #isathm("mf_source_sound") extends the bound to source runs, and at `pp7`,
 the node #isai("Statement 7") after both calls:
 

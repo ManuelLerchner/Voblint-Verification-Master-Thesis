@@ -116,19 +116,12 @@
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
-#pagebreak(weak: true)
-#outline(title: [List of Figures], target: figure.where(kind: image))
-#outline(title: [List of Tables], target: figure.where(kind: table))
 
-#pagebreak(weak: true)
-= Glossary <glossary>
-#print-thesis-glossary(print-glossary)
+// The glossary is disabled for now.
+// #pagebreak(weak: true)
+// = Glossary <glossary>
+// #print-thesis-glossary(print-glossary)
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "assets/plain-numeric.csl")
 
-// The figure gallery is a working reference, not thesis content: one instance
-// of every figure kind, with placeholder payloads. It sits after the
-// bibliography while drafting and is deleted before submission.
-#pagebreak(weak: true)
-#include "content/03-gallery.typ"
