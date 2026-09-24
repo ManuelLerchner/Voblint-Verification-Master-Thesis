@@ -145,8 +145,7 @@ theorem result_node_sound_closure:
   "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
 proof -
   have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
-      = activation_collect ugs (call_context_rel_of_fun enterc_unit) ()
-          (prog_cfg p) (cinit_stores ugs) v ()"
+      = \<A>\<^bsub>ugs,call_context_rel_of_fun enterc_unit,(),prog_cfg p,cinit_stores ugs\<^esub> v ()"
     by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   also have "\<dots> \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for ugs)
                      (reader ugs p (Inl (v, ())))\<rbrakk>\<^sub>\<bottom>"
@@ -329,8 +328,7 @@ theorem result_node_sound_of_terminates:
   shows "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v \<subseteq> \<lbrakk>state_at ugs p v\<rbrakk>"
 proof -
   have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
-      = activation_collect ugs (call_context_rel_of_fun enterc_unit) ()
-          (prog_cfg p) (cinit_stores ugs) v ()"
+      = \<A>\<^bsub>ugs,call_context_rel_of_fun enterc_unit,(),prog_cfg p,cinit_stores ugs\<^esub> v ()"
     by (rule activation_collect_unit_eq_ltr_collect[symmetric])
   also have "\<dots> \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for ugs)
                      (reader ugs p (Inl (v, ())))\<rbrakk>\<^sub>\<bottom>"

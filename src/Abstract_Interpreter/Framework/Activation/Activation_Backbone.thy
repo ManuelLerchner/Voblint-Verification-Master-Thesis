@@ -52,13 +52,13 @@ theorem activation_collect_sound:
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
         \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
     and TOTAL: "call_context_total_on cover R \<G> g"
-  shows "activation_collect \<G> R startcontext g S v ctx \<subseteq> cover v ctx"
+  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v ctx \<subseteq> cover v ctx"
 proof -
   interpret G: ltr_coverage g S cover R startcontext \<G>
     by (standard; blast intro: INIT INTRA CALL RETURN TOTAL)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> activation_collect \<G> R startcontext g S v ctx"
+    fix st assume "st \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v ctx"
     then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
       and sn: "sink_node t = v" and kc: "trace_context \<G> R startcontext g t ctx"
       and st: "sink_store t = st"

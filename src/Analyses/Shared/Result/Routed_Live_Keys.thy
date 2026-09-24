@@ -466,8 +466,7 @@ theorem activation_collect_sound_live_keys:
                   (globs (sol_env (declared_global p) p (Inr gk0)))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
-  shows "activation_collect (declared_global p) R root_ctx (prog_cfg p)
-           (cinit_stores (declared_global p)) v ctx
+  shows "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof -
@@ -476,8 +475,7 @@ proof -
       "sol_env (declared_global p) p" "live_keys p" "root_query p" seed "\<lambda>d. d = Bot" R
       "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
     by (rule routed_analysis_sound_live_keys[where R = R, OF wf solves cover_R total_R])
-  have "activation_collect (declared_global p) R root_ctx (prog_cfg p)
-          (cinit_stores (declared_global p)) v ctx
+  have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
     by (rule live.routed_activation_collect_sound
@@ -495,8 +493,8 @@ theorem fun_route_activation_collect_sound_of_terminates:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "activation_collect (declared_global p) (call_context_rel_of_fun ctx_fun) root_ctx
-           (prog_cfg p) (cinit_stores (declared_global p)) v ctx
+  shows "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof (rule activation_collect_sound_live_keys[OF wf solves])
@@ -562,8 +560,8 @@ qed
 
 theorem entry_state_activation_collect_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
-           root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx
+  shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof -
@@ -573,8 +571,8 @@ proof -
       "admitted_contexts (declared_global p) p"
       "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
     by (rule entry_state_routed_analysis_sound_live_keys[OF wf solves])
-  have "activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
-          root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx
+  have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+          root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
     by (rule live.routed_activation_collect_sound
@@ -584,8 +582,8 @@ qed
 
 corollary entry_state_lookup_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
-           root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx
+  shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> gamma_point (lookup_context (result (declared_global p) p) v ctx)"
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
@@ -593,8 +591,8 @@ corollary entry_state_lookup_sound_of_terminates:
 theorem entry_state_ltr_collect_eq_Union_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           = (\<Union>ctx. activation_collect (declared_global p) (admitted_contexts (declared_global p) p)
-                       root_ctx (prog_cfg p) (cinit_stores (declared_global p)) v ctx)"
+           = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+                       root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
 proof (rule ltr_collect_eq_Union_activation_of_has_context)
   interpret live: routed_analysis_sound "analysis_spec (declared_global p) p" dom.gamma_exec
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot

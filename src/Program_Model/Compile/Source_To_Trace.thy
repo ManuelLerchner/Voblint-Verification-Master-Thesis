@@ -293,8 +293,7 @@ theorem source_store_in_activation_collect:
                    \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> trace_context \<G> R startcontext (compile_prog \<Pi> ps) t c
-                   \<and> s \<in> activation_collect \<G> R startcontext
-                            (compile_prog \<Pi> ps) S v c"
+                   \<and> s \<in> \<A>\<^bsub>\<G>,R,startcontext,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -304,7 +303,7 @@ proof -
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
   from has_ctx[OF tv] obtain c where tc: "trace_context \<G> R startcontext ?g t c" by blast
-  have "s \<in> activation_collect \<G> R startcontext ?g S v c"
+  have "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v c"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim tc by blast
 qed
@@ -317,8 +316,7 @@ corollary source_store_in_activation_collect_of_fun:
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> key f startcontext t = c
-                   \<and> s \<in> activation_collect \<G> (call_context_rel_of_fun f) startcontext
-                            (compile_prog \<Pi> ps) S v c"
+                   \<and> s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -329,7 +327,7 @@ proof -
     by (auto simp: ltr_repr_def)
   have tc: "trace_context \<G> (call_context_rel_of_fun f) startcontext ?g t (key f startcontext t)"
     by (simp add: trace_context_of_fun_iff[OF tv])
-  have "s \<in> activation_collect \<G> (call_context_rel_of_fun f) startcontext ?g S v
+  have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,?g,S\<^esub> v
               (key f startcontext t)"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim by blast
@@ -343,8 +341,7 @@ theorem source_toplevel_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
   shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, []) \<approx> (v, s, [])
-             \<and> s \<in> activation_collect \<G> R startcontext
-                      (compile_prog \<Pi> ps) S v startcontext"
+             \<and> s \<in> \<A>\<^bsub>\<G>,R,startcontext,compile_prog \<Pi> ps,S\<^esub> v startcontext"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -357,7 +354,7 @@ proof -
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   have covered: "trace_context \<G> R startcontext ?g t startcontext"
     by (simp add: trace_context_caller_of_None[OF cof])
-  have "s \<in> activation_collect \<G> R startcontext ?g S v startcontext"
+  have "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v startcontext"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

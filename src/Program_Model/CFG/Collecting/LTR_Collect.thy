@@ -167,11 +167,11 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): every context bucket, and so their union, is included in the
   context-insensitive collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect \<G> R startcontext g S v c \<subseteq> \<C> v"
+  "\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c \<subseteq> \<C> v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 theorem Union_activation_collect_le_ltr_collect:
-  "(\<Union>c. activation_collect \<G> R startcontext g S v c) \<subseteq> \<C> v"
+  "(\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c) \<subseteq> \<C> v"
   using activation_collect_le_ltr_collect by blast
 
 text \<open>Bridge (2): the converse needs every valid trace to carry some context.  That premise is
@@ -181,25 +181,25 @@ text \<open>Bridge (2): the converse needs every valid trace to carry some conte
   \<open>LTR_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem ltr_collect_eq_Union_activation_of_has_context:
   assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext g t c"
-  shows "\<C> v = (\<Union>c. activation_collect \<G> R startcontext g S v c)"
+  shows "\<C> v = (\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c)"
 proof
-  show "\<C> v \<subseteq> (\<Union>c. activation_collect \<G> R startcontext g S v c)"
+  show "\<C> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c)"
   proof
     fix x assume "x \<in> \<C> v"
     then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
     from has_ctx [OF t(1)] obtain c where "trace_context \<G> R startcontext g t c" ..
-    with t show "x \<in> (\<Union>c. activation_collect \<G> R startcontext g S v c)"
+    with t show "x \<in> (\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c)"
       by blast
   qed
 next
-  show "(\<Union>c. activation_collect \<G> R startcontext g S v c) \<subseteq> \<C> v"
+  show "(\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c) \<subseteq> \<C> v"
     by (rule Union_activation_collect_le_ltr_collect)
 qed
 
 theorem ltr_collect_eq_Union_activation_of_fun:
   "\<C> v
-     = (\<Union>c. activation_collect \<G> (call_context_rel_of_fun f) startcontext g S v c)"
+     = (\<Union>c. \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,g,S\<^esub> v c)"
   by (rule ltr_collect_eq_Union_activation_of_has_context)
      (simp add: trace_context_of_fun_iff)
 

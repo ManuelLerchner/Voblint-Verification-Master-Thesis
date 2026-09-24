@@ -63,7 +63,7 @@ text \<open>
 \<close>
 
 lemma activation_collect_unit_eq_ltr_collect:
-  "activation_collect \<G> (call_context_rel_of_fun enterc_unit) () g S v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
+  "\<A>\<^bsub>\<G>,call_context_rel_of_fun enterc_unit,(),g,S\<^esub> v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
   unfolding activation_collect_of_fun ltr_collect_def by simp
 
 end

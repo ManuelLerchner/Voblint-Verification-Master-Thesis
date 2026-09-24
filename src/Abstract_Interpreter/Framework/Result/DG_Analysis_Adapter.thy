@@ -167,11 +167,11 @@ lemma analyse_result_node_sound:
   fixes S0 :: "store set" and startcontext :: 'c
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "activation_collect \<G> R startcontext g S0 v ctx
+  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
            \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of
                              Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
 proof -
-  have "activation_collect \<G> R startcontext g S0 v ctx
+  have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
@@ -209,7 +209,7 @@ lemma analyse_result_lookup_sound:
   fixes S0 :: "store set" and startcontext :: 'c
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "activation_collect \<G> R startcontext g S0 v ctx
+  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
            \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
   using analyse_result_node_sound[OF entry_cov s0_sound] by simp
 
@@ -218,7 +218,7 @@ lemma analyse_result_covered_unreachable:
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and dead: "lookup_context_result analyse_result v ctx = Covered Bot"
-  shows "activation_collect \<G> R startcontext g S0 v ctx = {}"
+  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty_point
       [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
 
@@ -244,11 +244,11 @@ lemma analyse_result_node_unreachable:
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and union: "\<C>\<^bsub>\<G>,g,S0\<^esub> v
-                  = (\<Union>ctx. activation_collect \<G> R startcontext g S0 v ctx)"
+                  = (\<Union>ctx. \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx)"
     and dead: "result_node_is_bottom analyse_result v"
   shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v = {}"
 proof -
-  have bucket: "activation_collect \<G> R startcontext g S0 v ctx = {}" for ctx
+  have bucket: "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx = {}" for ctx
   proof -
     have bot: "lookup_context analyse_result v ctx = Bot"
     proof (cases "(v, ctx) \<in> vars")
@@ -260,7 +260,7 @@ proof -
       case False
       then show ?thesis unfolding lookup_context_analyse_result by simp
     qed
-    have "activation_collect \<G> R startcontext g S0 v ctx
+    have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
             \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
       by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
     then show ?thesis unfolding bot by simp
@@ -302,11 +302,11 @@ lemma analyse_report_ctx_decided:
   assumes mem: "(v, c, Decided r) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-    and smem: "s \<in> activation_collect \<G> R startcontext g S0 v ctx"
+    and smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = r"
 proof -
-  have node_sound: "activation_collect \<G> R startcontext g S0 v ctx
+  have node_sound: "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
       \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
@@ -323,11 +323,11 @@ theorem analyse_report_ctx_proved_sound:
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect \<G> R startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
            \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect \<G> R startcontext g S0 v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
@@ -338,11 +338,11 @@ theorem analyse_report_ctx_refuted_sound:
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect \<G> R startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
            \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect \<G> R startcontext g S0 v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast
