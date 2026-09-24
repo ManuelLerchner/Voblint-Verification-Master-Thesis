@@ -102,6 +102,11 @@ BODY_END = re.compile(
     re.M,
 )
 CLASS_FIX = re.compile(r"\b(?:fixes|and)\s+([A-Za-z][A-Za-z0-9_']*)\s*::")
+# `assumes gamma_mono: "..."` or `and narrow_le [simp]: "..."` in a locale or
+# class body names a fact of that locale, which prose cites as a law.
+ASSUMPTION = re.compile(
+    r"\b(?:assumes|and)\s+([A-Za-z][A-Za-z0-9_']*)\s*(?:\[[^\]]*\])?\s*:(?!:)"
+)
 # `Assign: "..."` or `| Call: "..."` in an inductive body names the fact
 # `pstep.Call`, which a theorem statement cites.
 RULE_LABEL = re.compile(r"^\s*(?:\|\s*)?([A-Za-z][A-Za-z0-9_']*)\s*:(?!:)", re.M)
@@ -128,8 +133,8 @@ ALLOWED = {
 COMMAND_DECL = re.compile(r"command_keyword>\\<open>([A-Za-z0-9_']+)\\<close>")
 
 
-def isabelle_commands() -> set[str] | None:
-    """Outer-syntax command names, or None when Isabelle is not reachable."""
+def isabelle_home() -> Path | None:
+    """The Isabelle distribution directory, or None when Isabelle is not reachable."""
     home = os.environ.get("ISABELLE_HOME")
     if not home:
         exe = shutil.which("isabelle")
@@ -145,9 +150,17 @@ def isabelle_commands() -> set[str] | None:
                 home = None
     if not home or not Path(home).is_dir():
         return None
+    return Path(home)
+
+
+def isabelle_commands() -> set[str] | None:
+    """Outer-syntax command names, or None when Isabelle is not reachable."""
+    home = isabelle_home()
+    if home is None:
+        return None
     names: set[str] = set()
     for sub in ("src/Pure", "src/HOL/Tools", "src/Tools"):
-        for path in (Path(home) / sub).rglob("*"):
+        for path in (home / sub).rglob("*"):
             if path.suffix in (".ML", ".thy") and path.is_file():
                 names |= set(COMMAND_DECL.findall(path.read_text(errors="ignore")))
     return names or None
@@ -156,8 +169,13 @@ def isabelle_commands() -> set[str] | None:
 def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
     """Map every declared name to the kinds it is declared with."""
     kinds: dict[str, set[str]] = defaultdict(set)
-    for root in ("src", "vendor"):
-        for path in (REPO / root).rglob("*.thy"):
+    # The background chapter cites HOL's own order and lattice classes, which
+    # live in the top-level theories of the HOL session.
+    home = isabelle_home()
+    library = sorted((home / "src" / "HOL").glob("*.thy")) if home else []
+    paths = [p for root in ("src", "vendor") for p in (REPO / root).rglob("*.thy")]
+    for group in (paths, library):
+        for path in group:
             original = path.read_text(errors="ignore")
             text = mask_comments_and_strings(original)
             # Cartouches contain documentation and terms, not declarations.
@@ -188,6 +206,9 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
                 if m.group(1) == "class":
                     for f in CLASS_FIX.finditer(body):
                         kinds[f.group(1)].add("const")
+                if m.group(1) in ("locale", "class"):
+                    for a in ASSUMPTION.finditer(body):
+                        kinds[a.group(1)].add("thm")
                 if m.group(1) in ("inductive", "inductive_set"):
                     for r in RULE_LABEL.finditer(body):
                         kinds[f"{m.group(2)}.{r.group(1)}"].add("thm")
