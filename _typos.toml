@@ -26,3 +26,5 @@ ded = "ded"
 eles = "eles"
 # The concretization parameter of gamma_lift in Reachability_Lift.thy.
 gam = "gam"
+# First-name fragment of Ondřej Lhoták, written Ond{\v{r}}ej in BibTeX.
+Ond = "Ond"

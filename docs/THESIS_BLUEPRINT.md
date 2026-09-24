@@ -511,10 +511,10 @@ Organized by what each source *supplies* to the thesis, not by topic.
 
 | Source | Supplies | Relevance | Thesis home |
 | --- | --- | --- | --- |
-| Cousot & Cousot, POPL 1977 | the framework itself; lattices, Galois connections, fixpoint approximation | the vocabulary every chapter uses | Ch. 2 |
+| Cousot & Cousot, POPL 1977 | the framework itself; lattices, the α/γ pair (the term Galois connection comes from POPL 1979, §5.3), fixpoint approximation | the vocabulary every chapter uses | Ch. 2 |
 | Cousot & Cousot, POPL 1979, *Systematic design* | systematic construction of abstract domains; products | justifies the `numeric_domain`/`gamma`-only presentation; background for `int_dom` | Ch. 2, Ch. 10 |
-| Cousot, TCS 2002, *Constructive design of a hierarchy of semantics* | trace semantics as the base of the hierarchy; reachable states as its abstraction | the licence for building on traces rather than reachable states | Ch. 4 |
-| Cousot & Cousot, PLILP 1992, *Comparing the Galois connection and widening/narrowing approaches* | widening/narrowing without a best abstraction | why `alpha` is never mechanized here | Ch. 2, Ch. 5 |
+| Cousot, TCS 2002, *Constructive design of a hierarchy of semantics* | trace semantics as the base of the hierarchy (it does not derive reachable states; for that use Cousot & Cousot, JLC 1992, Ex. 7.1) | the licence for building on traces rather than reachable states | Ch. 4 |
+| Cousot & Cousot, PLILP 1992, *Comparing the Galois connection and widening/narrowing approaches* | widening/narrowing laws (§4); Galois connections as the ideal case (§5); the concretization-only framework itself is Cousot & Cousot, JLC 1992, §7 | why `alpha` is never mechanized here | Ch. 2, Ch. 5 |
 | Miné, FnTPL 2017 tutorial | a modern, readable presentation of numeric domains and widening | the reference a reader without an AI background should be pointed at | Ch. 2 |
 | Rival & Yi, *Introduction to Static Analysis* (MIT 2020) | textbook treatment; domain design recipe | secondary background reference | Ch. 2 |
 
@@ -1124,6 +1124,8 @@ executable chapter's playground screenshots, the contexts run among them, were
 dropped and later restored at the author's request (the contexts caption says
 what the screenshot adds to Ch. 7's verdicts), Velvet shrank to one sentence in the mechanized-abstract-interpretation
 section of Related Work, and the part pages stay.
+
+**Unlabelled questions (2026-09-23, author decision).** The RQ1-RQ4 and K1-K4 labels are dropped. Section 1.2 states the four questions as prose bullets, Section 1.4 lists the contributions as short bullets pointing to their chapters, and the prior-work comparison per contribution lives only in Section 13.6 (`sec:where-voblint-sits`). Chapter 12 keeps one section per question, titled by the question itself, and Chapter 14 answers each under its question.
 
 **Research-question pass (2026-09-22, author decision).** Chapter 12 is organized by research question (RQ1-RQ4; for each, its evidence, the evidence kind, and its limits) and closes with one added section, "What the mechanization revealed" (`sec:revealed`), which the author approved as an exception to the frozen structure: seven design constraints exposed by the proofs, each with its evidence kind and a pointer to the chapter that states it. Chapter 1 states RQ1-RQ4 and contributions K1-K4; each core chapter opens with its problem and closes with its result.
 
