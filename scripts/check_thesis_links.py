@@ -57,7 +57,8 @@ KIND_ANCHORS = {
     "type": ("type",),
     "locale": ("locale",),
     # A theorem environment's `isa:` name: whatever the theories say it is.
-    "any": ("fact", "thm", "const", "type", "locale"),
+    # A class or locale also has an internal constant; the declaration comes first.
+    "any": ("fact", "thm", "locale", "const", "type"),
     "session": ("page",),
     "theory": ("page",),
 }
@@ -108,11 +109,17 @@ def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
             # Keep current project exports ahead of stale/library duplicates.
             # Per-domain and example sessions interpret the generic locales, so
             # an equally deep copy there is an instance, not the definition.
-            def rank(value: str) -> tuple[bool, bool, int, bool, str]:
+            # Among library pages, the HOL session defines what HOL-IMP and
+            # HOL-Library only redefine or interpret (lfp, mono).
+            # A named interpretation (`..._Interp`) copies a locale's facts;
+            # the generic locale entity is the definition a citation means.
+            def rank(value: str) -> tuple[bool, bool, bool, bool, int, bool, str]:
                 page, _, entity = value.partition("#")
                 return (
                     not page.startswith("Voblint/"),
+                    not page.startswith(("Voblint/", "HOL/HOL/")),
                     page.startswith("Unsorted/"),
+                    "_Interp." in entity,
                     entity.count("."),
                     "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
                     value,
