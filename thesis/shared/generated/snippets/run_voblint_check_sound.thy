@@ -5,10 +5,10 @@ theorem run_voblint_check_sound:
       and run: "declared_global p, prog_table p
                   \<turnstile> (main_body (prog_table p), s0, [])
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and chk: "next_check residual = Some e"
+      and chk: "next_check residual = Some (l, e)"
       and terminates: "config_terminates D rule ctx p"
       and ans: "run_voblint D rule ctx p = Analysed res"
-  shows "\<exists>c \<in> set (res_checks res). check_exp c = e
+  shows "\<exists>c \<in> set (res_checks res). check_label c = l \<and> check_exp c = e
            \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
                     cinit_stores (declared_global p)\<^esub> (check_point c)
            \<and> check_verdict c \<noteq> Dead
