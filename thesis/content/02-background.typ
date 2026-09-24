@@ -139,8 +139,7 @@ with infinite ascending chains (@sec:widening). Procedures add a second index,
 the calling context, which @sec:contexts introduces. Goblint states an analysis as a
 side-effecting constraint system (@sec:side-effects), which the verified
 top-down solver solves (@sec:td). The last section introduces the Isabelle/HOL
-mechanisms the formalization uses, and @tab:notation lists the notation the
-thesis shares with the theories. We use the counting loop of
+mechanisms the formalization uses. We use the counting loop of
 @fig:counting-loop as the intraprocedural example.
 
 #figure(
@@ -682,7 +681,7 @@ _Code equations_ determine what code generation emits @haftmann10, and one
 #isacmd("export_code") declaration emits the analyzer's OCaml from them.
 @ch:executable discusses the trust that remains. Theories are grouped into
 _sessions_, which Isabelle builds and checks as units. The control-flow graph lives in #isasession("Voblint_CFG"),
-which builds on #isasession("Voblint_VIMP") (@fig:appendix-sessions).
+which builds on #isasession("Voblint_VIMP").
 
 A _proof by evaluation_ extends the trusted computing base beyond Isabelle's
 inference kernel. The method `eval` compiles a closed proposition to code, runs it, and accepts

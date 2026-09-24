@@ -812,7 +812,7 @@
     evaluation also uses repository measurement, source inspection and
     argument, each for the claims it can support.
   ],
-  term("regression-fixture", "regression fixture", _trust, see: <app:regressions>)[
+  term("regression-fixture", "regression fixture", _trust)[
     A VIMP program of the regression corpus whose analyzer output is recorded
     and rechecked. It demonstrates one behaviour, not a general result.
   ],
@@ -869,8 +869,6 @@
     Terms are grouped by the part of the thesis that introduces them and sorted
     alphabetically within each group. An entry names its Isabelle anchors,
     its notation if it has one, and the section that introduces it.
-    @app:anchors maps concepts to the theories that define them, and
-    @tab:notation lists the notation.
   ]
   print-glossary(
     entries,
