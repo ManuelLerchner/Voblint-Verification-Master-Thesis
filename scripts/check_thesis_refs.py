@@ -84,8 +84,9 @@ FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
 
 # A datatype's constructors are constants too, and prose cites them as often as
 # it cites the type: `EA_Assign`, `Root`, `CallEdge`.  They are capitalised and
-# introduced either after `=` on the datatype line or after a leading `|`.
-CONSTRUCTOR = re.compile(r"^\s*(?:\||=)\s*([A-Z][A-Za-z0-9_']*)", re.M)
+# introduced after `=` or after a `|`, which may sit mid-line when several
+# nullary constructors share one (`Sign_Analysis | Interval_Analysis | ...`).
+CONSTRUCTOR = re.compile(r"(?:^\s*(?:\||=)|\|)\s*([A-Z][A-Za-z0-9_']*)", re.M)
 
 TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\)")
 
@@ -247,6 +248,57 @@ def collect_raw_names(thesis: Path) -> list[tuple[Path, int, str]]:
     return out
 
 
+# A declared name written into prose without the markup that colours and links
+# it. Only names that cannot be English are considered -- an underscore or an
+# inner capital (`valid_ltr`, `EA_Assign`, `FunctionEntry`) -- so a constant
+# that is also a word (`intra`, `route`) never fires. Everything the markup
+# helpers wrap is blanked first, as are comments, raw blocks and labels.
+MARKUP_CALL = re.compile(
+    r"\b(?:isa(?:thm|const|type|locale|session|cmd|name|file)|oblig|ctor|keyw|isai"
+    r"|thy-badge)\((?:[^()]|\([^()]*\))*\)"
+    r"|#isa\((?:[^()]|\([^()]*\))*\)"
+    r"|//[^\n]*"
+    r"|<[a-z]+:[^>]*>|@[a-z]+:[A-Za-z0-9_-]+"
+    # a file path handed to read()/json()/image() names a snippet, not a term
+    r"|\b(?:read|json|image|toml)\((?:[^()]|\([^()]*\))*\)",
+    re.S,
+)
+NAME_SHAPE = re.compile(r"[A-Za-z][A-Za-z0-9_']*")
+
+
+def markable(name: str) -> bool:
+    return "_" in name or re.match(r"^[A-Z][a-z]+[A-Z]", name) is not None
+
+
+def collect_unmarked(
+    thesis: Path, kinds: dict[str, set[str]]
+) -> list[tuple[Path, int, str]]:
+    names = {n for n in kinds if markable(n)}
+    out = []
+    for path in sorted((thesis / "content").glob("*.typ")):
+        # The figure gallery is a draft-only catalogue of placeholder payloads
+        # and is deleted before submission; a chapter's figure labels go
+        # through the markup helpers and are checked like any other mention.
+        if "gallery" in path.name:
+            continue
+        text = path.read_text(errors="ignore")
+        text = FENCED_RAW.sub(_blank, text)
+        text = RAW_CALL.sub(_blank, text)
+        text = ISA_ARG.sub(_blank, text)
+        text = MARKUP_CALL.sub(_blank, text)
+        lines = text.splitlines()
+        for m in NAME_SHAPE.finditer(text):
+            name = m.group(0)
+            if name not in names:
+                continue
+            line = text.count("\n", 0, m.start()) + 1
+            near = " ".join(lines[max(0, line - 2) : line])
+            if IGNORE_MARK.search(near):
+                continue
+            out.append((path, line, name))
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--thesis", default="thesis", type=Path)
@@ -323,6 +375,13 @@ def main() -> int:
                 f"  {site}: {name} is cited as a {kind}, but the sources declare "
                 f"it as {'/'.join(sorted(have))}"
             )
+
+    for path, line, name in collect_unmarked(thesis, kinds):
+        kind = "/".join(sorted(kinds[name]))
+        missing.append(
+            f"  {path.relative_to(REPO)}:{line}: {name} ({kind}) is written as prose; "
+            f"wrap it so it is coloured and linked"
+        )
 
     for path, line, name in stale_raw:
         near = difflib.get_close_matches(name, sorted(set(kinds) | theories), 1, 0.7)

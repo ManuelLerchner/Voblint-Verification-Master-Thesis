@@ -1,5 +1,6 @@
 #import "theme.typ": vb
 #import "tum.typ": thm-rich
+#import "code.typ": isaname
 
 // Minimal theorem environments, numbered per chapter. Kept local rather than
 // pulled from a package so the numbering scheme matches the LaTeX side
@@ -9,22 +10,22 @@
 // rich-counter in tum.typ, which restarts at each chapter without a reset rule.
 #let thm-counter = counter("theorem")
 
+// The header names the result twice: by its number and title, and by the
+// Isabelle name it is stated under, which links to the rendered theory.
 #let _thm-block(kind, name, isa-name, body, italic: true) = {
   (thm-rich.step)()
   block(above: 1.1em, below: 1.1em, width: 100%, {
     strong[#kind #context (thm-rich.display)("1.1")]
-    if name != none [ (#name)]
+    if name != none or isa-name != none {
+      [ (]
+      if name != none { name }
+      if name != none and isa-name != none { [, ] }
+      if isa-name != none { isaname(isa-name) }
+      [)]
+    }
     strong[.]
     h(0.4em)
     if italic { emph(body) } else { body }
-    if isa-name != none {
-      block(width: 100%, above: 0.3em, align(right, text(
-        size: 0.75em,
-        font: "DejaVu Sans Mono",
-        fill: vb.proved,
-        isa-name,
-      )))
-    }
   })
 }
 

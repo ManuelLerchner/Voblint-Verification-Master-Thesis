@@ -11,7 +11,8 @@ The following claims are outside the supported framework.
   verified solver.
 - No parallel classical intra-procedural pipeline.
 - No unconditional termination proof. Soundness theorems are conditional on
-  the explicit solver-success hypothesis (`solve_dom`); discharging that
+  the explicit solver-success hypothesis (`config_terminates` at the CLI
+  endpoints, `solve_dom` inside the vendored solver); discharging that
   hypothesis (e.g. via lattice-height induction for Sign, or a widening
   termination argument for Interval) is out of scope.
 - No generic reduced-product constructor. `int_dom` is one concrete reduced

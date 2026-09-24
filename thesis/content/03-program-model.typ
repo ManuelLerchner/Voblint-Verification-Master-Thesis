@@ -179,7 +179,9 @@ A program is a table of procedure declarations, each a list of formal parameters
 and a body, together with a list of declared global variables. The entry
 procedure is an ordinary declaration named `main`, not a separate field.
 
-== Source configurations and execution <sec:pstep>
+== Executing a source program <sec:execution>
+
+=== Configurations and frames <sec:pstep>
 
 #definition(name: [Source configuration], isa: "pstep")[
   A configuration is a triple $#config($c$, $s$, $#frstack$)$ of the command
@@ -202,21 +204,21 @@ expected ones — the interesting behaviour is at a call and at a return.
     row-gutter: 1.3em,
     prooftree(rule(
       name: [Assign],
-      $(x := e, s, kappa) arrow.r_p (sans("skip"), s[x |-> #sem($e$) _s], kappa)$,
+      $(x := e, s, kappa) arrow.r_p (keyw("skip"), s[x |-> #sem($e$) _s], kappa)$,
     )),
     prooftree(rule(
       name: [Call],
-      $(x := p(overline(e)), s, kappa) arrow.r_p (italic("body")(p) ";" sans("Restore"), s_"in", lr(⟨ s, x ⟩) "::" kappa)$,
+      $(x := p(overline(e)), s, kappa) arrow.r_p (italic("body")(p) ";" ctor("Restore"), s_"in", lr(⟨ s, x ⟩) "::" kappa)$,
       $Pi(p) = lr(⟨ overline(y), italic("body")(p) ⟩)$,
       $s_"in" = italic("bind")(overline(y), #sem($overline(e)$) _s, italic("enter")(s))$,
     )),
     prooftree(rule(
       name: [Return],
-      $(sans("return") med e, s, kappa) arrow.r_p (sans("Unwind"), s[italic("ret") |-> #sem($e$) _s], kappa)$,
+      $(keyw("return") med e, s, kappa) arrow.r_p (ctor("Unwind"), s[italic("ret") |-> #sem($e$) _s], kappa)$,
     )),
     prooftree(rule(
       name: [Restore],
-      $(sans("Restore"), s, lr(⟨ f, x ⟩) "::" kappa) arrow.r_p (sans("skip"), italic("combine")(f, s, x), kappa)$,
+      $(ctor("Restore"), s, lr(⟨ f, x ⟩) "::" kappa) arrow.r_p (keyw("skip"), italic("combine")(f, s, x), kappa)$,
     )),
   ),
   kind: image,
@@ -271,7 +273,9 @@ destination. That split is not an accident of this presentation; it mirrors the
 analyzer interface being modelled, and @ch:analysis-interface keeps both halves
 as separate operations a domain supplies.
 
-== Why a graph at all <sec:why-graph>
+== The procedure-aware control-flow graph <sec:graph>
+
+=== Why a graph at all <sec:why-graph>
 
 The semantics of @sec:pstep is a perfectly good definition of what a program
 does. It is a poor basis for an analysis, for four reasons that together
@@ -313,19 +317,19 @@ records its own continuation.
   @ch:related returns to the comparison.
 ]
 
-== The procedure-aware control-flow graph <sec:cfg>
+=== Nodes, edges, and the two relations <sec:cfg>
 
 #definition(name: [Control-flow graph], isa: "cfg")[
   A graph #cfg consists of
   #set enum(numbering: "(i)")
   + a set #isaconst("intra") of _local edges_ $(u, a, v)$, each labelled by an
     #isatype("edge_action") $a$;
-  + a set #isaconst("calls") of _call edges_ $(u, italic("ca"), sans("Entry") thin q, k)$,
+  + a set #isaconst("calls") of _call edges_ $(u, italic("ca"), ctor("Entry") thin q, k)$,
     naming the call site $u$, the call's information $italic("ca")$, the callee's
     entry node, and the node $k$ at which the caller resumes;
   + an entry node, and a set of checks.
 
-  Nodes are $sans("Stmt") thin n$, $sans("Entry") thin p$ or $sans("Result") thin p$.
+  Nodes are $ctor("Stmt") thin n$, $ctor("Entry") thin p$ or $ctor("Result") thin p$.
 ]
 
 #figure(
@@ -342,7 +346,7 @@ records its own continuation.
     [#isaconst("EA_Assume")], [lets the store through if the condition is true],
     [#isaconst("EA_AssumeNot")], [lets the store through if the condition is false],
     [#isaconst("EA_Special")], [a recognised library call: nondeterministic input, $min$, $max$],
-    [#isaconst("EA_Body")], [the single edge leaving $sans("Entry") thin p$; the identity],
+    [#isaconst("EA_Body")], [the single edge leaving $ctor("Entry") thin p$; the identity],
     [#isaconst("EA_Ret")], [writes the returned value into the reserved variable],
     [#isaconst("EA_Check")], [nothing; marks an assertion for the report],
     table.hline(),
@@ -362,7 +366,7 @@ to hold — it cannot be expressed as a local step at all. @ch:traces relies on
 this when its four trace rules each read exactly one of the two relations.
 
 *There is no global exit node.* A procedure's result is the ordinary node
-$sans("Result") thin p$, and a #keyw("return") compiles to an ordinary local
+$ctor("Result") thin p$, and a #keyw("return") compiles to an ordinary local
 edge into it. One such node serves every caller of $p$, which is what allows
 recursion without duplicating nodes.
 
@@ -383,7 +387,7 @@ into its caller.
     #set align(left)
     #text(0.9em)[*Figure to draw: A compiled two-procedure graph.*
 
-      Must show: both node kinds that are not statements ($sans("Entry") thin p$, $sans("Result") thin p$), solid local edges, a call edge entering $sans("Entry") thin f$, the dotted continuation it carries, and one $sans("Result") thin f$ serving both call sites
+      Must show: both node kinds that are not statements ($ctor("Entry") thin p$, $ctor("Result") thin p$), solid local edges, a call edge entering $ctor("Entry") thin f$, the dotted continuation it carries, and one $ctor("Result") thin f$ serving both call sites
 
       Draw from: the recursive factorial program of @ch:traces, through `voblint --graph-snapshot`]
   ],
@@ -391,7 +395,9 @@ into its caller.
   caption: [A compiled two-procedure graph],
 ) <fig:run-cfg>
 
-== Compilation <sec:compile>
+== Compilation <sec:compilation>
+
+=== Compiling a command <sec:compile>
 
 The compiler walks a command and emits nodes and edges. It is
 _continuation-passing_: the node a fragment falls through to is an _input_, not
@@ -439,9 +445,9 @@ two branches are simply compiled against the same continuation.
       #isaconst("EA_AssumeNot") edge to $k$],
     [$x := p(overline(e))$],
     [no local edge: a #isaconst("calls") tuple naming
-      $sans("Entry") thin p$ and the continuation $k$],
+      $ctor("Entry") thin p$ and the continuation $k$],
     [#keyw("return") $e$],
-    [an #isaconst("EA_Ret") edge to $sans("Result") thin p$,
+    [an #isaconst("EA_Ret") edge to $ctor("Result") thin p$,
       ignoring $k$ entirely],
     table.hline(),
   ),
@@ -454,9 +460,9 @@ two branches are simply compiled against the same continuation.
 ) <tab:compile>
 
 Compiling a whole procedure wraps its body: an #isaconst("EA_Body") edge from
-$sans("Entry") thin p$ into the body, the body compiled against an epilogue
+$ctor("Entry") thin p$ into the body, the body compiled against an epilogue
 node, and an #isaconst("EA_Ret") edge from the epilogue to
-$sans("Result") thin p$ for the fall-through case.
+$ctor("Result") thin p$ for the fall-through case.
 
 The compiler's output is not assumed to be well-formed; it is proved so.
 
@@ -489,7 +495,7 @@ Some of these rejections are representational rather than semantic: a `main`
 with an explicit #keyw("return") is rejected, though nothing about it is
 unsound. @ch:conclusion lists them.
 
-== Graph execution <sec:cstep>
+=== Graph execution <sec:cstep>
 
 The graph has its own operational semantics, independent of the compiler. This
 matters more than it may seem: because #isaconst("cstep") is defined for an
@@ -503,7 +509,7 @@ graph, not only for one this compiler produced.
   #set enum(numbering: "(i)")
   + follow a local edge and apply its transfer;
   + follow a call edge: enter the callee and push a frame;
-  + at $sans("Result") thin p$: pop the top frame and combine.
+  + at $ctor("Result") thin p$: pop the top frame and combine.
 ]
 
 #figure(
@@ -520,12 +526,12 @@ graph, not only for one this compiler produced.
     [follow an #isaconst("intra") edge; the node moves],
 
     [call],
-    [push $lr(⟨ s, x ⟩)$; continue with $italic("body")(p) ";" sans("Restore")$],
-    [push $(k, x, s)$; jump to $sans("Entry") thin p$],
+    [push $lr(⟨ s, x ⟩)$; continue with $italic("body")(p) ";" ctor("Restore")$],
+    [push $(k, x, s)$; jump to $ctor("Entry") thin p$],
 
     [return],
     [#keyw("return") publishes, #keyw("Unwind") discards, #keyw("Restore") pops],
-    [reach $sans("Result") thin p$ by an #isaconst("EA_Ret") edge, then pop],
+    [reach $ctor("Result") thin p$ by an #isaconst("EA_Ret") edge, then pop],
 
     [where the \ continuation lives],
     [nested in the command, as #keyw("Restore") wrappers],
@@ -539,11 +545,13 @@ graph, not only for one this compiler produced.
     representations, one layer per suspended caller.],
 ) <fig:pstep-cstep>
 
-Note that a return follows no edge out of $sans("Result") thin p$: the
+Note that a return follows no edge out of $ctor("Result") thin p$: the
 continuation comes from the frame, which came from the call edge. @ch:traces
 reproduces this exactly.
 
-== Relating source and graph configurations <sec:csim>
+== Relating the two executions <sec:relating>
+
+=== Relating source and graph configurations <sec:csim>
 
 #definition(name: [Simulation relation], isa: "csim")[
   #isaconst("csim") relates a source configuration $#config($c$, $s$, $#frstack$)$
@@ -552,13 +560,13 @@ reproduces this exactly.
   nothing beneath it; $sans("Nested")$ peels one suspended caller, pairing a
   #keyw("Restore") wrapper in the command against a frame on the stack; and
   $sans("Returning")$ covers the skew just after a callee finishes, where the
-  graph has already reached $sans("Result") thin p$ while the source is still
+  graph has already reached $ctor("Result") thin p$ while the source is still
   propagating #keyw("Restore") or #keyw("Unwind") towards its frame-pop rule.
 ]
 
 Both nestings run outermost-first, so the top command layer pairs with the
 _last_ frame. After `main` calls `f` calls `g`, the source command is
-$((((C ";" sans("Restore")) ";" B) ";" sans("Restore")) ";" A)$ — where $A$ is
+$((((C ";" ctor("Restore")) ";" B) ";" ctor("Restore")) ";" A)$ — where $A$ is
 `main`'s continuation and $C$ the running residual of `g` — while the graph sits
 at `g`'s node with continuation frames $[B"'s node", A"'s node"]$.
 
@@ -583,7 +591,7 @@ code.
   really reaches.
 ]
 
-== Forward simulation <sec:simulation>
+=== Forward simulation <sec:simulation>
 
 #theorem(name: [One step is matched], isa: "csim_step")[
   Let the program be well formed and every declared procedure be compiled into
@@ -614,7 +622,7 @@ One side condition is worth naming because it is deliberately _not_ part of
 this graph, with its entry and exit wiring present. Keeping it out of the
 relation is what lets the returning phase proceed without it.
 
-== What the simulation does not establish <sec:asymmetry>
+=== What the simulation does not establish <sec:asymmetry>
 
 Only the forward direction is proved. There is no theorem saying that every
 graph execution comes from a source execution, and none is wanted.
@@ -639,7 +647,7 @@ make.
   proved is one-directional and is exactly what @ch:traces consumes.
 ]
 
-== The running example <sec:running-example>
+=== The running example <sec:running-example>
 
 The program below is used from here on and returns in later chapters. It
 exercises a loop, a procedure call with a result, and a check, and is small
