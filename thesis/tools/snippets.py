@@ -141,9 +141,12 @@ def statement_only(body: str) -> str:
 
 
 def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
-    """Match the command that declares `name`, allowing type parameters."""
+    """Match the command that declares `name`, allowing type parameters.
+
+    The name may sit on the line after the command (`inductive\n  pstep ::`).
+    """
     return re.compile(
-        r"^(?:" + "|".join(commands) + r")\b[ \t]+"
+        r"^(?:" + "|".join(commands) + r")\b\s+"
         r"(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)[ \t]+)*"
         + re.escape(name)
         + r"(?![A-Za-z0-9_'])",

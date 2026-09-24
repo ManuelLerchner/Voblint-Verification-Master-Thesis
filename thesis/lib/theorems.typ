@@ -1,6 +1,6 @@
 #import "theme.typ": vb
 #import "tum.typ": thm-rich
-#import "code.typ": isaname
+#import "code.typ": isacmd, isaname
 
 // Minimal theorem environments, numbered per chapter. Kept local rather than
 // pulled from a package so the numbering scheme matches the LaTeX side
@@ -11,8 +11,10 @@
 #let thm-counter = counter("theorem")
 
 // The header names the result twice: by its number and title, and by the
-// Isabelle name it is stated under, which links to the rendered theory.
-#let _thm-block(kind, name, isa-name, body, italic: true) = {
+// Isabelle name it is stated under, which links to the rendered theory. A
+// definition also names its declaring command (`datatype exp`), which
+// thesis-refs checks against the sources.
+#let _thm-block(kind, name, isa-name, body, italic: true, cmd: none) = {
   (thm-rich.step)()
   block(above: 1.1em, below: 1.1em, width: 100%, {
     strong[#kind #context (thm-rich.display)("1.1")]
@@ -20,6 +22,7 @@
       [ (]
       if name != none { name }
       if name != none and isa-name != none { [, ] }
+      if cmd != none { [#isacmd(cmd) ] }
       if isa-name != none { isaname(isa-name) }
       [)]
     }
@@ -32,12 +35,13 @@
 #let theorem(body, name: none, isa: none) = _thm-block("Theorem", name, isa, body)
 #let lemma(body, name: none, isa: none) = _thm-block("Lemma", name, isa, body)
 #let corollary(body, name: none, isa: none) = _thm-block("Corollary", name, isa, body)
-#let definition(body, name: none, isa: none) = _thm-block(
+#let definition(body, name: none, isa: none, cmd: none) = _thm-block(
   "Definition",
   name,
   isa,
   body,
   italic: false,
+  cmd: cmd,
 )
 #let example(body, name: none, isa: none) = _thm-block("Example", name, isa, body, italic: false)
 

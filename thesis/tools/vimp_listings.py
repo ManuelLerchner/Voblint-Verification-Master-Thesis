@@ -102,6 +102,10 @@ def claim_runs() -> dict[str, dict]:
         programs = [a for a in claim["argv"] if a.endswith(".vimp")]
         if len(programs) != 1 or claim.get("expect_status", 0) != 0:
             continue
+        # A claim that only parses (--ast) runs no analysis, so it has no
+        # settings for a listing to open the playground at.
+        if "--analysis" not in claim["argv"]:
+            continue
         flags = [a for a in claim["argv"] if a != programs[0]]
         runs[name] = {
             "fixture": programs[0],

@@ -69,7 +69,7 @@ THEORY_REF = re.compile(r'\bthy-badge\(\s*"([^\"]+)"\s*,\s*"([^\"]+)"\s*\)')
 # assumption of `ltr_coverage`, which the HTML anchors as a fact of the locale.
 ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
 OBLIG = re.compile(r"\boblig\(\"([A-Z]+)\"(?:,\s*of:\s*\"([A-Za-z_]+)\")?\)")
-ANCHOR = re.compile(r'id="([A-Za-z][A-Za-z0-9_.\']*)\|([a-z]+)"')
+ANCHOR = re.compile(r'id="([A-Za-z][A-Za-z0-9_.\']*(?:\([0-9]+\))?)\|([a-z]+)"')
 
 
 def pages_base() -> str:

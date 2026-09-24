@@ -30,7 +30,8 @@ let usage =
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin] [--dot] [--timeout SECONDS] \
    FILE.vimp\n\
-   voblint --parse-only FILE.vimp\n\n\
+   voblint --parse-only FILE.vimp\n\
+   voblint --ast FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -100,6 +101,10 @@ let usage =
   \                             (e.g. a wrong-arity special call) still exits\n\
   \                             0 here: well-formedness is checked only on a\n\
   \                             full run, which rejects it with exit 4.\n\
+  \  --ast                      Print the parsed program as JSON (globals,\n\
+  \                             main's body, procedure table), the imp_prog\n\
+  \                             value the browser page passes to the analyzer,\n\
+  \                             and exit. Like --parse-only, runs no analysis.\n\
   \  --timeout SECONDS          Wall-clock budget for the analysis subprocess\n\
   \                             (default 10). The analyzer is proved sound but\n\
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
@@ -380,6 +385,7 @@ let () =
      the output directory. *)
   let html_dir = ref "build/report" in
   let parse_only = ref false in
+  let ast = ref false in
   let timeout = ref 10.0 in
   let file = ref None in
   let rec parse_args = function
@@ -457,6 +463,9 @@ let () =
     | "--parse-only" :: rest ->
         parse_only := true;
         parse_args rest
+    | "--ast" :: rest ->
+        ast := true;
+        parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v
          with _ ->
@@ -518,6 +527,10 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
+  if !ast then begin
+    print_endline (Render_json.program_json prog);
+    exit 0
+  end;
   let kind =
     match !analysis with
     | Some k -> k

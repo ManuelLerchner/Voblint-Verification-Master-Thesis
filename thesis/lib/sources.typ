@@ -42,7 +42,11 @@
 // The pretty-printer breaks a rule for its own margin, which leaves `𝒢,Π ⊢`
 // alone on a line. Rebreak it as a rule reads: one premise per line, the
 // conclusion after `⟹`, and a long conclusion before its step arrow.
+// An equation keeps Isabelle's own breaks, which fall at its `let` bindings.
+// `c1.0` is how Isabelle prints a variable whose name ends in a digit.
 #let _reflow-rule(s) = {
+  let s = s.replace(regex("([A-Za-z_]\\d+)\\.0\\b"), m => m.captures.at(0))
+  if not s.contains("⟹") and not s.contains("⊢") { return s.trim() }
   let flat = s.replace(regex("\\s+"), " ").trim()
   let (prems, concl) = if flat.starts-with("⟦") {
     let (p, c) = flat.split("⟧ ⟹ ")
@@ -69,12 +73,12 @@
     message: "`" + name + "` is not an exported fact -- add it to thesis/shared/facts.toml",
   )
   block(breakable: false, {
-    raw(
+    isalink("thm", name, raw(
       _reflow-rule(decode-isabelle(_facts.facts.at(name).statement)),
       lang: "isabelle",
       block: true,
       syntaxes: isabelle-syntax,
-    )
+    ))
     v(0.25em)
     align(right, text(size: 0.75em, isathm(name)))
   })
