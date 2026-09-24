@@ -109,7 +109,7 @@ between two proved stages therefore marks a gap.
 #subfigures(
   figure(
     listing(lang: "c", ```
-    proc fac(n) {
+    fun fac(n) {
       if (n <= 1) {
         return 1;
       } else {
@@ -117,6 +117,7 @@ between two proved stages therefore marks a gap.
         return n * r;
       }
     }
+    fun main() { x = fac(4); }
     ```),
     caption: [VIMP source],
   ),
@@ -345,7 +346,7 @@ The abstract syntax that the compiler consumes sits between source and CFG.
     bound at iteration 3, and narrowing recovers the exact one. Plots like this
     come from the analyzer's trace output instead of hand-placed
     coordinates.],
-) <fig:widening>
+) <gallery-fig-widening>
 
 == The solver
 
