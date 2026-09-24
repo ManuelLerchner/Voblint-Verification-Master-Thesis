@@ -119,6 +119,10 @@ TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\
 # only because the environment already knows it is a name.  The kind is left
 # open, since a definition may name a constant, a type or a locale.
 ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
+# A definition environment also names the command that declares its entity
+# (`cmd: "datatype"`), so the header says what kind of object it defines.
+DEFINITION_ENV = re.compile(r"#definition\((.*?)\)\[", re.S)
+CMD_ARG = re.compile(r"\bcmd:\s*\"([a-z_]+)\"")
 
 # Names that deliberately do not resolve, with the reason.
 ALLOWED = {
@@ -166,9 +170,12 @@ def isabelle_commands() -> set[str] | None:
     return names or None
 
 
-def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
-    """Map every declared name to the kinds it is declared with."""
+def build_inventory() -> tuple[
+    dict[str, set[str]], set[str], set[str], dict[str, set[str]]
+]:
+    """Map every declared name to the kinds and commands it is declared with."""
     kinds: dict[str, set[str]] = defaultdict(set)
+    declared_by: dict[str, set[str]] = defaultdict(set)
     # The background chapter cites HOL's own order and lattice classes, which
     # live in the top-level theories of the HOL session.
     home = isabelle_home()
@@ -191,6 +198,7 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
                 if ANON.match(original, m.start()):
                     continue
                 kinds[m.group(2)].add(COMMAND_KIND[m.group(1)])
+                declared_by[m.group(2)].add(m.group(1))
                 stop = BODY_END.search(text, m.end())
                 body = text[m.end() : stop.start() if stop else len(text)]
                 # Selectors belong only to this declaration, not every later
@@ -209,6 +217,8 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
                 if m.group(1) in ("locale", "class"):
                     for a in ASSUMPTION.finditer(body):
                         kinds[a.group(1)].add("thm")
+                if m.group(1) in ("fun", "primrec", "function"):
+                    kinds[f"{m.group(2)}.simps"].add("thm")
                 if m.group(1) in ("inductive", "inductive_set"):
                     for r in RULE_LABEL.finditer(body):
                         kinds[f"{m.group(2)}.{r.group(1)}"].add("thm")
@@ -229,7 +239,7 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
             re.M,
         ):
             sessions.add(m.group(1))
-    return kinds, sessions, theories
+    return kinds, sessions, theories, declared_by
 
 
 def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
@@ -382,7 +392,7 @@ def main() -> int:
         print(f"check_thesis_refs: no such directory: {thesis}", file=sys.stderr)
         return 1
 
-    kinds, sessions, theories = build_inventory()
+    kinds, sessions, theories, declared_by = build_inventory()
     commands = isabelle_commands()
     if not kinds:
         print(
@@ -412,6 +422,8 @@ def main() -> int:
         if name in ALLOWED:
             continue
         site = f"{path.relative_to(REPO)}:{line}"
+        # `compile.simps(4)` selects one theorem of the fact `compile.simps`.
+        name = re.sub(r"\([0-9]+\)$", "", name)
         if kind == "cmd":
             if commands is None:
                 skipped_cmds.append(name)
@@ -458,6 +470,25 @@ def main() -> int:
                 f"  {site}: {name} is cited as a {kind}, but the sources declare "
                 f"it as {'/'.join(sorted(have))}"
             )
+
+    for path in sorted((thesis / "content").glob("*.typ")):
+        text = path.read_text(errors="ignore")
+        for m in DEFINITION_ENV.finditer(text):
+            isa, cmd = ISA_ARG.search(m.group(1)), CMD_ARG.search(m.group(1))
+            if isa is None:
+                continue
+            site = f"{path.relative_to(REPO)}:{text.count(chr(10), 0, m.start()) + 1}"
+            have = declared_by.get(isa.group(1), set())
+            if cmd is None:
+                missing.append(
+                    f"  {site}: definition of {isa.group(1)} needs cmd: "
+                    f'"{"/".join(sorted(have)) or "?"}"'
+                )
+            elif cmd.group(1) not in have:
+                deviated.append(
+                    f'  {site}: {isa.group(1)} is cited with cmd: "{cmd.group(1)}", '
+                    f"but the sources declare it with {'/'.join(sorted(have))}"
+                )
 
     for path, line, name in collect_unmarked(thesis, kinds):
         kind = "/".join(sorted(kinds[name]))
