@@ -346,7 +346,7 @@
     {
       "id": "activation_collect",
       "group": "set",
-      "kind": "named",
+      "kind": "notation",
       "reads": "the stores collected at _v_ in context _c_",
       "meaning": "the stores valid traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_",
       "forms": [
@@ -356,8 +356,8 @@
             "kind": "const",
             "name": "activation_collect"
           },
-          "symbol": "activation_collect \\<G> R startcontext g S v c",
-          "mixfix": null,
+          "symbol": "\\<A>\\<^bsub>\\<G>,R,startcontext,g,S\\<^esub> v c",
+          "mixfix": "\\<A>\\<^bsub>_,_,_,_,_\\<^esub>",
           "declaration": "definition",
           "scope": "global",
           "pretty_printed": true,

@@ -136,7 +136,7 @@ group = "set"
 reads = "the stores collected at _v_ in context _c_"
 meaning = "the stores valid traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_"
 forms = [
-  { const = "activation_collect", named = true, args = [
+  { const = "activation_collect", args = [
     '\<G>',
     "R",
     "startcontext",
