@@ -211,6 +211,7 @@ thesis-notation-write = { cmd = "python3 thesis/tools/notation.py --write", desc
 # the same scripts/pages_stats.py collection the site reads. Also fails on a
 # statistic typed into thesis/content instead of going through stat().
 thesis-stats = { cmd = "python3 -m pytest -q tests/test_thesis_stats.py && python3 thesis/tools/stats.py --check", description = "Check the thesis's repository figures against the repository and reject hand-typed statistics." }
+thesis-sketches = { cmd = "python3 -m pytest -q tests/test_thesis_solver_sketch.py", description = "Check that code sketches printed in the thesis compute the results the text states." }
 thesis-stats-write = { cmd = "python3 thesis/tools/stats.py --write", description = "Regenerate the thesis's repository figures from the repository." }
 
 # Every VIMP listing links to the playground with the program it shows. The
@@ -256,6 +257,7 @@ thesis-check = { depends-on = [
   "thesis-alignment",
   "thesis-notation",
   "thesis-stats",
+  "thesis-sketches",
   "thesis-vimp",
   "thesis-claims",
   "thesis-facts",

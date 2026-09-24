@@ -9,3 +9,7 @@ extend-exclude = ["codegen/generated", "vendor"]
 # `select` rather than `extend-select`, so a contributor's global ruff config
 # cannot change what the project gate enforces.
 select = ["E4", "E7", "E9", "F", "B", "I"]
+
+[format]
+# Listings the thesis prints verbatim keep their hand layout (aligned comments).
+exclude = ["thesis/shared/code/*.py"]
