@@ -26,6 +26,14 @@ why = "Arithmetic-safety endpoint cited in the introduction."
 [facts.source_run_has_ltr]
 why = "Main-statements appendix: source runs are represented by valid traces."
 
+[facts.csim_step]
+why = "Program-model chapter: one source step is matched by the compiled graph."
+
+[facts.source_progress]
+why = "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
+session = "Voblint_Compile"
+theory = "Voblint_Compile.Source_Progress"
+
 [facts.csim_star]
 why = "Main-statements appendix: simulation of source runs by the compiled graph."
 
@@ -62,3 +70,15 @@ why = "Program-model chapter: the source step rule that restores the caller's fr
 
 [facts."pstep.UnwindAct"]
 why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+
+[facts."compile.simps(4)"]
+why = "Program-model chapter: compiling a sequence hands the first command the second's entry."
+
+[facts."compile.simps(5)"]
+why = "Program-model chapter: both branches of a conditional compile against one continuation."
+
+[facts."compile.simps(6)"]
+why = "Program-model chapter: a loop body compiles against the loop head."
+
+[facts."compile.simps(8)"]
+why = "Program-model chapter: a return edge targets the procedure's result node."

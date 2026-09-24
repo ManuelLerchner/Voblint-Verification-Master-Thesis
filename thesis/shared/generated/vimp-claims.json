@@ -31,7 +31,7 @@
     "program": "fun dec(x) {\n  return x - 1;\n}\n\nfun sum(n) {\n  if (n < 1) { return 0; }\n  m = dec(n);\n  r = sum(m);\n  return r + n;\n}\n\nfun main() {\n  x = sum(2);\n  __voblint_check(x == 3);\n}",
     "settings": {
       "analysis": "interval",
-      "context": "entry-state",
+      "context": "none",
       "globals": "warrow"
     }
   },

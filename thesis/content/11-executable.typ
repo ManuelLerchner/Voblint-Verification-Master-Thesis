@@ -338,7 +338,11 @@ context (#isaconst("analysis_result_covers")), and at which no listed check is
 #isathm("run_voblint_arithmetic_safe") give `DEAD` and the absence of an
 arithmetic diagnostic their meaning. The proved side includes the compiler,
 the well-formedness test, the vendored solver with its executable refinement,
-and the finite carrier. It ends at three points: the syntax tree
+and the finite carrier. The vendored solver is a local fork of the development of @tilscher26
+with two changes: a port to Isabelle2025 and the removal of an unused
+assumption from its widening and narrowing classes. Isabelle checks the
+modified theories like every other theory, so the changes are recorded for
+provenance and add nothing to what is trusted. It ends at three points: the syntax tree
 #isaconst("run_voblint") receives, the typed result before its abstract values
 are printed by #isaconst("string_of_abstract_value") (@sec:codegen), and the
 termination premise, which only a finished run discharges (@sec:termination).

@@ -320,10 +320,8 @@ fun main() {
 }
 ```)
 
-Conditions are evaluated in the VIMP semantics, where division by zero yields
-zero (@sec:vimp-vs-c), so a `PROVED` verdict can depend on that convention.
-Only the absence of an arithmetic diagnostic at a node excludes zero divisors
-there.
+Conditions are evaluated in the VIMP semantics, so a `PROVED` verdict can
+depend on its convention for division by zero (@sec:vimp-vs-c).
 
 Only `DEAD` answers a reachability question. In
 @fig:verdict-regions no run reaches either check, yet the interval analysis

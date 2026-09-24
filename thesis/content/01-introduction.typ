@@ -37,10 +37,10 @@ applies to it.
 
 The kernel checks that the formal statement follows from the definitions.
 Whether the definitions model the intended objects, and whether the statement
-expresses the intended claim, remains for human review. A manual review of the Munkres
-formalization found definitions logically weaker than the textbook's, harmless
-for the proved theorems only because each theorem assumes the missing
-constraints again @bryant26munkres[§8.1]. OpenAI's proposed Lean proof of
+expresses the intended claim, remains for human review. A manual review of parts of the
+Munkres formalization found definitions logically weaker than the textbook's.
+The authors judge them harmless for the proved theorems, because each theorem
+assumes the missing constraints again @bryant26munkres[§8.1]. OpenAI's proposed Lean proof of
 finite-time blowup for the three-dimensional Navier–Stokes equations (September
 2026, with a self-assessed review) states alternatives (C) and (D) of the Clay problem
 @openai26ns @openai26nspaper @openai26nslean. Whether that statement matches
@@ -251,7 +251,7 @@ which costs precision. Soundness needs only that it contains the set inside it.
 
 == The verified solver and the open questions <sec:rqs>
 
-Goblint is an abstract interpreter for multithreaded C programs @vojdani16. It defines analyses independently of the generic solvers that compute
+Goblint is an abstract interpreter for multithreaded C programs @vojdani16 @seidl26. It defines analyses independently of the generic solvers that compute
 their results, and the interface between the two is a side-effecting constraint
 system @apinis12 @seidl26. A side effect lets the right-hand side of one
 unknown contribute to others (@sec:side-effects). An Isabelle/HOL formalization of Goblint's top-down
@@ -395,8 +395,8 @@ partitioning indexes sets of traces by control history @rival07.
   },
   kind: table,
   placement: bottom,
-  caption: [Mechanized abstract interpreters, each proved sound against an
-    operational semantics. The text explains the entries. @ch:related gives
+  caption: [Mechanized abstract interpreters with machine-checked soundness
+    proofs. The text explains the entries. @ch:related gives
     the details.],
 ) <tab:state-of-art>
 
@@ -430,40 +430,39 @@ The contribution is the Isabelle/HOL formalization of Voblint and its
 machine-checked soundness proof. Each claim
 answers one of the questions of @sec:rqs.
 
-- _End-to-end soundness._ The definite verdicts returned by the exported
-  analysis function #isaconst("run_voblint") are correct for every source
-  execution from an initial store with zeroed globals (#isaconst("cinit_stores"))
-that reaches the corresponding program point, in every configuration it
-offers, provided the solve terminates (#isaconst("config_terminates"))
-(#isathm("run_voblint_certified_source_sound"), @sec:headline). Companion
-theorems justify `DEAD` and the absence of arithmetic warnings.
-- _A concrete semantics of calling contexts._ A context policy is a
-relation between calls and callee contexts (#isatype("call_context_rel")),
-read off activation-local traces. Under the coverage contract
-(#isalocale("ltr_coverage")), whose
-totality condition admits every reachable call at some context, the
-per-context collections together equal the context-free collection
-(#isathm("ltr_collect_eq_Union_activation_collect"), @sec:consequences).
-- _Compositional soundness._ Domain, context policy and solver are
-  verified separately. One theorem discharges the coverage contract for every
-policy and domain (#isathm("activation_collect_dg_sound"), @sec:eq-discharge),
-and the source-level theorem covers every configuration.
-- _Necessity and non-vacuity as theorems._ Counterexample theorems
-show that dropping or weakening several obligations in the exhibited ways
-admits unsound results (#isathm("total_dropped_unsound")), and theorems proved
-by evaluation give non-vacuous verdicts (#isathm("nv_check_proved_sound")) and
-a strict precision separation on concrete programs
-(#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-rq4).
+- _End-to-end soundness._ The definite verdicts returned by the analysis
+  function #isaconst("run_voblint") are correct for every source execution
+  from an initial store with zeroed globals (#isaconst("cinit_stores")) that
+  reaches the corresponding program point, in every configuration it offers,
+  provided the solve terminates (#isaconst("config_terminates"))
+  (#isathm("run_voblint_certified_source_sound"), @sec:headline). Companion
+  theorems justify `DEAD` and the absence of arithmetic warnings.
+- _A concrete semantics of calling contexts._ A context policy is a relation
+  between calls and callee contexts (#isatype("call_context_rel")), which
+  determines the contexts an activation-local trace carries. Under the
+  coverage contract (#isalocale("ltr_coverage")), whose totality condition
+  admits every call the claim covers at some context, the per-context
+  collections together equal the context-free collection
+  (#isathm("ltr_collect_eq_Union_activation_collect"), @sec:consequences).
+- _Compositional soundness._ Domain, context policy and solver are verified
+  separately. One theorem discharges the coverage contract for every policy
+  that proves its routing adequacy and totality, in every domain
+  (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
+  source-level theorem covers every configuration.
+- _Necessity and non-vacuity as theorems._ Counterexample theorems show that
+  dropping or weakening several obligations in the exhibited ways admits
+  unsound results (#isathm("total_dropped_unsound")), and theorems proved by
+  evaluation give non-vacuous verdicts (#isathm("nv_check_proved_sound")) and
+  a strict precision separation on a concrete program
+  (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-rq4).
 
 The solver, side-effecting constraint systems, local traces and Goblint's
 analysis architecture come from prior work. @sec:where-voblint-sits lists what
 is new and compares each claim with the closest existing result. The thesis
 claims no verified C frontend, heap analysis, completeness, general termination
-of the solve, or general precision ordering between configurations. VIMP's integers are unbounded, and operations
-that C11 leaves undefined @iso-c11[§6.5.5p5] have defined VIMP behavior:
-division by zero yields zero and remainder by zero yields the dividend. A
-verdict about a VIMP program therefore does not automatically transfer to a
-corresponding C program (@sec:vimp-vs-c).
+of the solve, or general precision ordering between configurations. VIMP's integers are unbounded and division by
+zero is defined, so a verdict about a VIMP program does not automatically
+transfer to a corresponding C program (@sec:vimp-vs-c).
 
 == Outline
 

@@ -43,17 +43,11 @@ viewbox = "15 8 790 254"
 chapter = "1.1"
 why = "Testing observes chosen runs; an analysis result is one region containing every run, tried or not."
 
-[figures.source-morph]
-aria_prefix = "The compiled graph of the counting loop"
-css = ["source-morph"]
-# Amber would read as "trusted"; entry and result nodes are only distinguished.
-colours = { "#d99a2b" = "neutral" }
-# "Statement n" repeats the ppN label; the caption gives the correspondence.
-drop_classes = ["sm-num"]
-# Tight around the drawn content; the page centers the graph in a wider box.
-viewbox = "73 13 314 540"
-chapter = "3.4"
-why = "The counting loop as the compiler numbers it; tests/regression/24-site-figures/precision/03-counting_loop.vimp pins the graph."
+[figures.island]
+aria_prefix = "A large region labeled C contains regions"
+css = ["island"]
+chapter = "3.1"
+why = "VIMP as a fragment of the C Goblint analyzes; the omitted constructs as the regions around it."
 
 # ---------------------------------------------------------------- Part II --
 

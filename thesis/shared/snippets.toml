@@ -11,8 +11,23 @@ why = "Background, Isabelle mechanisms: a type class, the solver's widening oper
 [snippets.semantic_intersection]
 why = "Background, Isabelle mechanisms: a small locale with one parameter and one assumption."
 
+[snippets.pstep]
+why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
+
+[snippets.cfg]
+why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry and checks."
+
+[snippets.compile_proc]
+why = "Chapter 3, compilation: a procedure body between its entry node and its epilogue."
+
 [snippets.cstep]
-why = "Background, Isabelle mechanisms: an inductive definition, execution on the control-flow graph."
+why = "Chapter 3, graph execution: every rule of the control-flow-graph semantics."
+
+[snippets.csim]
+why = "Chapter 3, the source-to-graph simulation relation: its three constructors."
+
+[snippets.reach]
+why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query transitively depends on."
 
 [snippets.resolved_st_q]
 why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
@@ -54,6 +69,12 @@ why = "Main-statements appendix: the unreachability endpoint."
 
 [snippets.source_run_has_ltr]
 why = "Main-statements appendix: every source run is represented by a valid trace."
+
+[snippets.csim_step]
+why = "Chapter 3, the simulation: one source step is matched by zero or more graph steps."
+
+[snippets.source_progress]
+why = "Chapter 3, adequacy: a well-formed program never gets stuck before it finishes."
 
 [snippets.csim_star]
 why = "Main-statements appendix: the compiled graph simulates every source run."

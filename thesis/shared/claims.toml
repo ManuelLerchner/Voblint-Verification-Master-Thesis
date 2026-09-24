@@ -186,7 +186,7 @@ argv = [
   "--globals",
   "warrow",
   "--context",
-  "entry-state",
+  "none",
   "--dot",
   "tests/regression/24-site-figures/precision/46-sum_dec_cfgmap.vimp",
 ]
@@ -714,3 +714,7 @@ argv = [
   "thesis/shared/programs/mixed-flow.vimp",
 ]
 why = "Flow-sensitive globals: Sign derives y=+ and x=+ at pp7, after both calls, where the flow-insensitive placement leaves y at ≥0."
+
+[claims.ast-contexts]
+argv = ["--ast", "docs/readme-figures/contexts.vimp"]
+why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."
