@@ -195,12 +195,16 @@
   // definitions here fill the line and nothing refers to them by number.
   set math.equation(numbering: none)
   show math.equation: set text(font: "Latin Modern Math")
-  // Web links are blue and underlined. Links into the rendered theories and
+  // Web links are blue and underlined. Links into the rendered theories (the
+  // project's and HOL's) and
   // the listings' playground tags keep their own styling, and internal
   // references (citations, cross-references, contents) stay black.
   show link: it => {
     let web = (
-      type(it.dest) == str and not it.dest.contains("/Voblint/") and not it.dest.contains("#code=")
+      type(it.dest) == str
+        and not it.dest.contains("/Voblint/")
+        and not it.dest.contains("/HOL/")
+        and not it.dest.contains("#code=")
     )
     if web {
       set text(fill: rgb("#1565C0"))
