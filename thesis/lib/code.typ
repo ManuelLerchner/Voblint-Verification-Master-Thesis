@@ -266,6 +266,10 @@
 #let isasession(n) = entity(n, vb.muted, kind: "session")
 #let isafile(p) = entity(p, vb.muted)
 
+// A C11 clause, linked to its paragraph in an HTML rendering of the committee
+// draft N1570, which the bibliography entry iso-c11 cites.
+#let c11(clause) = link("https://port70.net/~nsz/c/c11/n1570.html#" + clause)[§#clause]
+
 // The Isabelle name a theorem environment carries. Its kind is whatever the
 // rendered theories say it is: the checker records the resolved kind under
 // `any:<name>` and the colour follows it.
