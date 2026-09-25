@@ -116,7 +116,7 @@ name = "source_reaches_ltr_collect"
 chapter = "ch:domains"
 concept = "Abstract domain interface"
 kind = "locale"
-name = "sound_domain"
+name = "numeric_domain"
 
 [[anchor]]
 chapter = "ch:domains"
@@ -152,7 +152,7 @@ name = "dg_state"
 chapter = "ch:analysis-interface"
 concept = "Specification soundness obligations"
 kind = "locale"
-name = "sound_dg_spec_core"
+name = "analysis_contract"
 
 [[anchor]]
 chapter = "ch:equations"
