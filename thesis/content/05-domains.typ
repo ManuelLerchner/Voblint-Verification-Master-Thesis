@@ -472,46 +472,39 @@ fact.
         x = __voblint_nondet_int();
         y = __voblint_nondet_int();
         if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
-          __voblint_check(x == 5);
+          __voblint_check(false);
         }
       }
       ```.text,
     )
   })),
   kind: image,
-  placement: none,
-  caption: [A guard no execution satisfies. Its two disjuncts empty different
-    variables, so a pointwise join of the arms restores both. With the lifted
-    states of this section, the analyzer reports the check in the branch as
-    #raw(_r.verdict) (claim `dom-disjunct-sign`).],
+  placement: auto,
+  caption: [A branch no execution enters: no integer equals both $0$ and $1$.
+    Sign refines the left disjunct to
+    ${x |-> signval(bot), y |-> signval(top)}$ and the right one to
+    ${x |-> signval(top), y |-> signval(bot)}$. Both are empty, but their
+    pointwise join is ${x |-> signval(top), y |-> signval(top)}$. With the
+    lifted states of this section, both arms become #ctor("Bot"), and the
+    analyzer reports the check in the branch as #raw(_r.verdict) (claim
+    `dom-disjunct-sign`).],
 ) <fig:domain-reachability>
 
 Goblint tracks reachability separately from the store description: a transfer
 function that finds its path unreachable raises the `Deadcode` exception, and
 the path contributes no further states. Voblint keeps the same separation, but
-inside the lattice. The datatype
-#isatype("lifted") adds an outer constructor #ctor("Bot"), meaning
-"unreachable", below every #ctor("Lifted") payload, with
-$conc(ctor("Bot")) = emptyset$. #ctor("Bot") is the identity of the lifted
-join. Since #isatype("lifted") has the shape of an option type, a payload
-transfer $f$ lifts to it by monadic bind, #isaconst("transfer_lift"):
-#align(
-  center,
-  isai("transfer_lift empty_pred f x = do { a <- x; normalize_lift empty_pred (f a) }"),
-)
-#ctor("Bot") passes
-through without running $f$, and the result of $f$ on a #ctor("Lifted")
-payload goes through #isaconst("normalize_lift"), which replaces a result the
-emptiness test classifies as empty by #ctor("Bot") (@fig:lifted-hasse). Joins preserve normalization
-(#isathm("normalized_lift_sup")), and for a normalized value the emptiness test
-holds exactly when the value is #ctor("Bot")
-(#isathm("normalized_state_lift_bot_iff")). With the exact test, denoting no
-store is then the same as being #ctor("Bot"), so dead code stays dead.
-Normalization is not required for soundness. Its role is to preserve explicit
-reachability information. It never changes the denoted set
-(#isathm("gamma_state_normalize_lift")), so soundness does not need every solved
-value to be normalized, and the published result canonicalizes each value it
-reads back (#isaconst("canonicalize_lift")).
+inside the lattice. The datatype #isatype("lifted") adds a constructor
+#ctor("Bot") for "unreachable" below every #ctor("Lifted") state, with
+$conc(ctor("Bot")) = emptyset$ (@fig:lifted-hasse). The analyzer normalizes
+after every transfer: the lifted transfer #isaconst("transfer_lift") replaces
+each result that the executable emptiness test #isaconst("is_empty") of
+#isalocale("executable_domain") finds empty by #ctor("Bot"). Once a value is
+#ctor("Bot"), the analysis short-circuits: transfers pass it on without
+computing on a payload, and joins ignore it. Joins also keep the normal form,
+so a normalized state denotes no store exactly when it is #ctor("Bot"), and
+dead code stays dead. The normalization only gains precision. It never changes
+the denoted set (#isathm("gamma_state_normalize_lift")), so soundness does not
+depend on it.
 
 #let _lnode(pos, name, body, empty: false) = node(
   pos,
