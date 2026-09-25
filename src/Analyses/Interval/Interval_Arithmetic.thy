@@ -1,5 +1,5 @@
 theory Interval_Arithmetic
-  imports Interval_Lattice
+  imports Interval_Warrowing
 begin
 
 section \<open>Adding, subtracting and multiplying whole ranges\<close>

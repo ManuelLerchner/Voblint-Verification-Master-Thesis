@@ -1,6 +1,6 @@
 theory Int_Refinement
   imports
-    Int_Domain
+    Int_Warrowing
     "HOL-Library.While_Combinator"
 begin
 

@@ -536,13 +536,13 @@ lemma bind_lift_mono2:
 subsection \<open>Solver update integration\<close>
 
 text \<open>
-  The warrowing update rule needs \<open>'d::bounded_warrowing\<close>. \<^typ>\<open>'a lifted\<close> already
-  carries \<open>widening\<close>/\<open>narrowing\<close> separately and \<open>bounded_semilattice_sup_bot\<close>; this
-  registers the combined class explicitly, mirroring \<open>bounded_semilattice_sup_bot\<close>'s own
-  combined registration above.
+  The solver's update rules need \<open>'d::{bounded_semilattice_sup_bot, warrowing}\<close>.
+  \<^typ>\<open>'a lifted\<close> already carries \<open>widening\<close> and \<open>narrowing\<close> separately; this
+  registers their combination \<open>warrowing\<close>, which Isabelle does not derive from
+  the two arities by itself.
 \<close>
 
-instance lifted :: (bounded_warrowing) bounded_warrowing ..
+instance lifted :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
 
 subsection \<open>Transporting a lifted transfer along a representation map\<close>
 

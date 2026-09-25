@@ -108,7 +108,7 @@ instance resolved_st_q ::
 subsection \<open>Widening and narrowing\<close>
 
 definition widen_resolved_st ::
-  "('a::bounded_warrowing) resolved_st =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st =>
    'a resolved_st => 'a resolved_st"
 where
   "widen_resolved_st s t = map2_resolved_st (\<nabla>) s t"
@@ -139,7 +139,7 @@ text \<open>
 \<close>
 
 lift_definition widen_on_resolved_st_q ::
-  "('a::bounded_warrowing) resolved_st_q =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st_q =>
    'a resolved_st_q => 'a resolved_st_q"
   is widen_resolved_st
   by (rule eq_resolved_st_widen)
@@ -149,16 +149,16 @@ lemma lookup_widen_on_resolved_st_q [simp]:
      lookup_resolved_st_q s loc \<nabla> lookup_resolved_st_q t loc"
   by transfer (rule lookup_widen_resolved_st)
 
-instantiation resolved_st_q :: (bounded_warrowing) widening
+instantiation resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") widening
 begin
 definition widen_resolved_st_q ::
-  "('a::bounded_warrowing) resolved_st_q =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st_q =>
    'a resolved_st_q => 'a resolved_st_q"
 where
   "widen_resolved_st_q s t = widen_on_resolved_st_q s t"
 instance
 proof
-  fix a b :: "('a::bounded_warrowing) resolved_st_q"
+  fix a b :: "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st_q"
   show "a \<le> widen a b"
     by (simp add: le_resolved_st_q_iff widen_resolved_st_q_def widen_ge1)
   show "b \<le> widen a b"
@@ -172,7 +172,7 @@ lemma lookup_widen_resolved_st_q [simp]:
   by (simp add: widen_resolved_st_q_def)
 
 definition narrow_resolved_st ::
-  "('a::bounded_warrowing) resolved_st =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st =>
    'a resolved_st => 'a resolved_st"
 where
   "narrow_resolved_st s t = map2_resolved_st (\<Delta>) s t"
@@ -191,7 +191,7 @@ lemma eq_resolved_st_narrow:
   by (rule eq_resolved_st_map2)
 
 lift_definition narrow_on_resolved_st_q ::
-  "('a::bounded_warrowing) resolved_st_q =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st_q =>
    'a resolved_st_q => 'a resolved_st_q"
   is narrow_resolved_st
   by (rule eq_resolved_st_narrow)
@@ -201,10 +201,10 @@ lemma lookup_narrow_on_resolved_st_q [simp]:
      lookup_resolved_st_q s loc \<Delta> lookup_resolved_st_q t loc"
   by transfer (rule lookup_narrow_resolved_st)
 
-instantiation resolved_st_q :: (bounded_warrowing) narrowing
+instantiation resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") narrowing
 begin
 definition narrow_resolved_st_q ::
-  "('a::bounded_warrowing) resolved_st_q =>
+  "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st_q =>
    'a resolved_st_q => 'a resolved_st_q"
 where
   "narrow_resolved_st_q s t = narrow_on_resolved_st_q s t"
@@ -219,9 +219,6 @@ lemma lookup_narrow_resolved_st_q [simp]:
      lookup_resolved_st_q s loc \<Delta> lookup_resolved_st_q t loc"
   by (simp add: narrow_resolved_st_q_def)
 
-instance resolved_st_q :: (bounded_warrowing) warrowing ..
-
-
-instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
+instance resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
 
 end

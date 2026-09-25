@@ -798,48 +798,4 @@ definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> String.literal"
           + STR ''; parities:'' + string_of_parity (int_parity d)
           + STR ''; congruences:'' + string_of_congruence (int_congruence d))"
 
-instantiation int_dom_ext ::
-  (int_dom_record_lattice) numeric_domain
-begin
-
-definition gamma_abs_int_dom_ext [simp]:
-  "\<gamma> (d :: 'a int_dom_scheme) = gamma_int_dom d"
-
-definition is_empty_int_dom_ext [simp]:
-  "is_empty (d :: 'a int_dom_scheme) = is_bottom_int_dom d"
-
-definition to_string_int_dom_ext [simp]:
-  "to_string (d :: 'a int_dom_scheme) = string_of_int_dom d"
-
-instance
-proof intro_classes
-  show "\<gamma> (bot :: 'a int_dom_scheme) = {}"
-    by (simp add: gamma_int_dom_def bot_int_dom_ext_def
-          bot_sign_def bot_ivl_def bot_parity_def)
-next
-  show "\<gamma> (top :: 'a int_dom_scheme) = UNIV"
-    by (simp add: gamma_int_dom_def top_int_dom_ext_def
-          gamma_sign_top gamma_ivl_top top_ivl_def gamma_parity_top)
-next
-  fix a b :: "'a int_dom_scheme"
-  show "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
-    by (simp add: gamma_int_dom_mono)
-next
-  fix a :: "'a int_dom_scheme"
-  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
-    by (simp add: is_bottom_int_dom_correct)
-qed
-
-end
-
-lemma to_string_int_dom_regression:
-  "to_string (bot :: int_dom) = STR ''<bottom>''"
-  "to_string (top :: int_dom) = STR ''<top>''"
-  "to_string (int_dom_sipc STop (Ivl (Fin 5) (Fin 5)) PTop top) = STR ''5''"
-  "to_string (int_dom_sipc SPos (Ivl (Fin 1) (Fin 9)) POdd (mk_congruence 1 2)) =
-     STR ''signs:+; intervals:[1,9]; parities:1+2<int>; congruences:1+2<int>''"
-  "to_string (int_dom_sipc SNonNeg (Ivl (Fin 0) PlusInf) PTop top) =
-     STR ''signs:<ge>0; intervals:[0,+<infinity>]; parities:<int>; congruences:<int>''"
-  by eval+
-
 end

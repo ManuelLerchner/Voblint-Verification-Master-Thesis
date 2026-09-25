@@ -22,10 +22,10 @@ is the one analysis session that sees more than its own domain, by construction.
 
 ```text
 Int_Domain              the four-component record and its concretization
+Int_Warrowing           componentwise widen/narrow and the numeric_domain instance
 Int_Refinement          exactness of reduction steps; one refinement round
 Int_Refinement_Control  the three refine modes
-  -> Int_Arithmetic / Int_Backward / Int_Warrowing   mode-aware forward, backward,
-                                                     and componentwise widen/narrow
+  -> Int_Arithmetic / Int_Backward                   mode-aware forward and backward
   -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
   -> Int_Exec_Sound                                  the transfer and entry dispatchers
                                                      over refine_mode
