@@ -486,10 +486,10 @@ fact.
     #raw(_r.verdict) (claim `dom-disjunct-sign`).],
 ) <fig:domain-reachability>
 
-The fix keeps reachability apart from the store description, as Goblint does.
-Goblint's transfer functions raise the `Deadcode` exception on a path they find
-unreachable, which stops it from contributing further states. Voblint mirrors
-this inside the lattice. The datatype
+Goblint tracks reachability separately from the store description: a transfer
+function that finds its path unreachable raises the `Deadcode` exception, and
+the path contributes no further states. Voblint keeps the same separation, but
+inside the lattice. The datatype
 #isatype("lifted") adds an outer constructor #ctor("Bot"), meaning
 "unreachable", below every #ctor("Lifted") payload, with
 $conc(ctor("Bot")) = emptyset$. #ctor("Bot") is the identity of the lifted
