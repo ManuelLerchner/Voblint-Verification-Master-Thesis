@@ -396,17 +396,15 @@ has no such component. This argument is not machine-checked.
 == From values to stores <sec:domain-states>
 
 The simplest description of a set of stores assigns one abstract value to each
-variable. The type #isatype("abs_state") is such a function: an abstract state
-$sigma$ maps every variable name $x$ to an abstract value $sigma(x)$. The
+variable. A store, of type #isatype("store") $=$ #isatype("vname") $=>$
+`int`, maps every variable name to an integer. An abstract state replaces the
+integer by an abstract value: #isatype("abs_state") $=$ #isatype("vname")
+$=>$ `'a`, so a state $sigma$ maps every variable name $x$ to $sigma(x)$. The
 function #isaconst("gamma_state") gives it a meaning, the set of stores whose
 every variable lies in the concretization of its abstract value:
 $ sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x))). $
-Order and join work variable by variable (@fig:pointwise), so the construction forgets every
-relation between variables. Take intervals and a program that sets both
-$x$ and $y$ to $1$ on one branch and both to $5$ on the other. After the join,
-$sigma(x) = sigma(y) = [1, 5]$, which also admits the store with $x = 1$ and
-$y = 5$, so the check `x == y` cannot be proved. @sec:relational shows that the
-framework does not require this form.
+Order and join work variable by variable (@fig:pointwise), so the
+construction forgets every relation between variables.
 
 #let _pw-vals = ($bot$, "0", $top$)
 #figure(
@@ -440,29 +438,13 @@ framework does not require this form.
     },
   ),
   kind: image,
-  placement: auto,
+  placement: none,
   caption: [Pointwise states over two variables, each pair giving
     $(sigma(x), sigma(y))$ with values from the fragment
     $signval(bot) lle signval("0") lle signval(top)$ of Sign, ordered
     variable by variable. The dashed states have a #signval($bot$) component and
     denote no store, although only the lowest one is the bottom state.],
 ) <fig:pointwise>
-
-The law #isathm("gamma_mono") turns each certified inequality
-$d lle sol(x)$ into the inclusion $conc(d) subset.eq conc(sol(x))$
-(@sec:abs-int). With $a lle a ljoin b$ it also shows that a merge keeps the
-stores of both predecessors (#isathm("gamma_sup_ub1")). The law
-$conc(lbot) = emptyset$ lets a contradictory guard answer "no value", and
-$conc(ltop) = ZZ$ makes "unknown" a sound answer. The law
-#isathm("is_empty_correct") makes emptiness a semantic test: a carrier may
-represent the empty set in several ways, such as every interval whose lower
-bound lies above its upper bound, so comparing with $lbot$ would miss empty
-values.
-
-The set $sem(sigma)$ is empty exactly when one variable has an empty
-concretization (#isathm("is_empty_state_iff_gamma_state_empty")): a store needs
-a value for every variable. This test quantifies over all variable names;
-@ch:solving supplies a finite equivalent.
 
 == Unreachable program points <sec:lift>
 
@@ -479,55 +461,42 @@ pointwise join of two differently empty arms restores both variables
 fact.
 
 #let _r = claim-row("dom-disjunct-sign", "13:5")
-#let _disjunct-program = ```
-fun main() {
-  x = __voblint_nondet_int();
-  y = __voblint_nondet_int();
-  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
-    __voblint_check(x == 5);
-  }
-}
-```
 #figure(
-  {
-    align(center, block(width: 72%, {
-      show raw: set text(size: 6.5pt)
-      listing(lang: "c", claim: "dom-disjunct-sign", _disjunct-program.text)
-    }))
-    v(0.4em)
-    table(
-      columns: (auto, 1fr, 1fr),
-      align: (left, left, left),
-      stroke: none,
-      table.hline(),
-      [*after*], [*pointwise states only*], [*lifted and normalized*],
-      table.hline(stroke: 0.5pt),
-      [`x == 0 && x == 1`], [${x |-> signval(bot), y |-> signval(top)}$], [#ctor("Bot")],
-      [`y == 0 && y == 1`], [${x |-> signval(top), y |-> signval(bot)}$], [#ctor("Bot")],
-      [join of both arms], [${x |-> signval(top), y |-> signval(top)}$], [#ctor("Bot")],
-      [check in the branch], [`UNKNOWN`], [#raw(_r.verdict)],
-      table.hline(),
+  align(center, block(width: 72%, {
+    show raw: set text(size: 6.5pt)
+    listing(
+      lang: "c",
+      claim: "dom-disjunct-sign",
+      ```
+      fun main() {
+        x = __voblint_nondet_int();
+        y = __voblint_nondet_int();
+        if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
+          __voblint_check(x == 5);
+        }
+      }
+      ```.text,
     )
-  },
-  kind: table,
+  })),
+  kind: image,
   placement: auto,
-  caption: [Sign states in the branch of the program above, whose guard
-    no execution satisfies. The check in the branch only probes reachability:
-    its verdict shows whether the analyzer recognizes the branch as dead. The
-    middle column is a hand calculation; the last verdict is the analyzer's
-    output (claim `dom-disjunct-sign`).],
+  caption: [A guard no execution satisfies. Its two disjuncts empty different
+    variables, so a pointwise join of the arms restores both. With the lifted
+    states of this section, the analyzer reports the check in the branch as
+    #raw(_r.verdict) (claim `dom-disjunct-sign`).],
 ) <fig:domain-reachability>
 
-The fix keeps reachability apart from the store description. The datatype
+The fix keeps reachability apart from the store description, as Goblint does.
+Goblint's transfer functions raise the `Deadcode` exception on a path they find
+unreachable, which stops it from contributing further states. Voblint mirrors
+this inside the lattice. The datatype
 #isatype("lifted") adds an outer constructor #ctor("Bot"), meaning
 "unreachable", below every #ctor("Lifted") payload, with
 $conc(ctor("Bot")) = emptyset$. #ctor("Bot") is the identity of the lifted
 join, and #isaconst("transfer_lift") passes it through without running the
 payload transfer. On a #ctor("Lifted") payload it runs the transfer and then
 #isaconst("normalize_lift"), which replaces a result the emptiness test
-classifies as empty by #ctor("Bot") (@fig:lifted-hasse). #ctor("Bot") plays the role that Goblint's
-`Deadcode` exception plays operationally: it stops an unreachable path from
-contributing further states. Joins preserve normalization
+classifies as empty by #ctor("Bot") (@fig:lifted-hasse). Joins preserve normalization
 (#isathm("normalized_lift_sup")), and for a normalized value the emptiness test
 holds exactly when the value is #ctor("Bot")
 (#isathm("normalized_state_lift_bot_iff")). With the exact test, denoting no
