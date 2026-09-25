@@ -203,17 +203,6 @@ file = "~~/src/HOL/Orderings.thy"
 [snippets.backward_domain]
 why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
 
-[snippets.intersect_shared_not_empty]
-why = "Chapter 5, a fact every domain gets from the laws of semantic_intersection, with its one-line proof."
-proof = true
-
-[snippets.sign_interface_regression]
-why = "Chapter 5, Sign's meet, emptiness test and a guard inverse, evaluated by the code generator."
-proof = true
-
-[snippets.sign_meet_zero_not_empty]
-why = "Chapter 5, the generic intersection fact instantiated to Sign."
-proof = true
 
 [snippets.sound_evaluator]
 why = "Chapter 5, the forward evaluator every expression-level interface of a domain shares."
