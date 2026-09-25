@@ -28,8 +28,9 @@ Goblint's OCaml code plays no part in it.
 
 == Edges, and a shared component <sec:dg>
 
-An edge transfer must map every store $s in #sem($d$)$ and every successor
-#isai("s' \<in> edge_step a s") to $s' in #sem($f_a (d)$)$, which is
+For a concretization $conc_(D)$ of the analysis's values, an edge transfer
+must map every store $s in conc_(D)(d)$ and every successor
+#isai("s' \<in> edge_step a s") to $s' in conc_(D)(f_a (d))$, which is
 #oblig("INTRA") for one edge. Seven fields of the record #isatype("dg_spec")
 are such transfers (@tab:dg-spec-fields). A check runs the event operation, not a branch:
 observing a check must keep the stores that violate it, since those are what
@@ -237,8 +238,8 @@ failure.
 ]
 
 #definition(name: [Paired entry coverage], isa: "entry_pairs_cover", cmd: "definition")[
-  A list $P$ covers the caller store $s$ and the entered store $s'$ if
-  $ exists (q, e) in P. quad s in conc(q) and s' in conc(e). $
+  Under a concretization $conc_(D)$, a list $P$ covers the caller store $s$ and the entered store $s'$ if
+  $ exists (q, e) in P. quad s in conc_(D)(q) and s' in conc_(D)(e). $
 ]
 
 The covering pair's entry selects a callee context covering the real
@@ -258,7 +259,7 @@ specification may do the whole return in either stage (@sec:whole-state).
 
 @ch:equations proves the coverage obligations once, so it needs from each
 analysis a fixed set of facts that mention neither contexts nor the solver. The
-locale #isalocale("sound_dg_spec_core"), the _analysis soundness contract_,
+locale #isalocale("analysis_contract"), the _analysis soundness contract_,
 states what a specification owes a concretization $conc_(D G)(d, g)$ of a local
 and a shared value. Two of its assumptions are structural. The concretization
 is monotone in both arguments, which turns the solver's order inequalities into
@@ -299,13 +300,13 @@ the `inc` program, because the return takes every global from the callee's
 exit. This builder leaves #isaconst("dgs_combine_env") the identity and does
 the whole return in #isaconst("dgs_combine_assign"). The analysis proves one
 rule per operation in #isalocale("sound_transfer_for"), and
-#isathm("local_state_dg_spec_for_core_sound") derives the analysis soundness
+#isathm("local_state_dg_spec_for_contract") derives the analysis soundness
 contract.
 
 The executed analyses use a variant, #isaconst("local_state_dg_spec_st_for_lifted"),
 over the executable carrier of @ch:solving. It splits the return as Goblint
 does: the environment stage takes caller locals and callee globals, and the
-assign stage writes the result. #isathm("sound_dg_spec_core_st") derives its
+assign stage writes the result. #isathm("analysis_contract_st") derives its
 analysis soundness contract from the same per-operation rules, pulled back
 along the readback of @ch:solving.
 
@@ -317,9 +318,9 @@ need its own concrete semantics and obligation. The context of a call is not a
 field either: the routing policy of @ch:equations chooses it.
 
 An analysis proves one
-soundness rule per operation, and #isathm("local_state_dg_spec_for_core_sound")
-derives the analysis soundness contract #isalocale("sound_dg_spec_core") from
-these rules, as #isathm("sound_dg_spec_core_st") does for the executed variant.
+soundness rule per operation, and #isathm("local_state_dg_spec_for_contract")
+derives the analysis soundness contract #isalocale("analysis_contract") from
+these rules, as #isathm("analysis_contract_st") does for the executed variant.
 The contract states #oblig("INTRA") per edge and #oblig("RETURN") for the
 composed combine, over a monotone concretization and well-formed transfers,
 for analyses with a single analysis global. It mentions no context policy, no

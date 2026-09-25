@@ -86,7 +86,7 @@ concretization would put the concretization into every dictionary, and a
 function into sets of integers, such as the residue class of a congruence, has
 no executable code equation in general. The domain classes therefore split
 (@fig:domain-contract): #isalocale("executable_domain") holds the runtime
-operations and #isalocale("sound_domain") adds the concretization and its
+operations and #isalocale("numeric_domain") adds the concretization and its
 laws. The executable pipeline and the solver's class
 #isalocale("bounded_warrowing") mention only the former. A type has at most one
 instance of each class, while transfer functions, routing policy and solver
@@ -99,7 +99,7 @@ classifier) and assumes nothing, so its definitions become code equations
 directly. Even the bottom state is a parameter, because a least element taken
 from a type class would have to be executable at a function type.
 #isalocale("routed_dg_analysis") imports it, strengthens the value type to
-#isalocale("sound_domain"), and adds the contracts, among them soundness of the
+#isalocale("numeric_domain"), and adds the contracts, among them soundness of the
 abstract transfer and of the initial state, agreement of the executable
 transfer, entry and routing with their abstract counterparts, the solver
 certificate, discharge of the termination premise by a finished executable
@@ -136,7 +136,7 @@ the relational witness of @ch:instances is not selectable through it.
         (1, 1),
         isalocale("routed_dg_analysis"),
         [adds the contracts; value type \
-          strengthened to #isalocale("sound_domain")],
+          strengthened to #isalocale("numeric_domain")],
         color: vb.proved,
       ),
       loc(
