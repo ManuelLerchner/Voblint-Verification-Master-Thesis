@@ -98,13 +98,16 @@ contexts nor the solver, and names the laws it omits on purpose.
 == The domain contract <sec:domain-contract>
 
 A domain must supply the operations the analysis computes with and the laws
-that connect them to $conc$. Voblint states them in two parts. The carrier type
-of abstract values instantiates a hierarchy of type classes: order classes from
-Isabelle's HOL library, two classes of Voblint's own
-(@fig:domain-contract) and the update classes of the vendored solver. The
-operations that refine values at guards form a locale over that carrier
-(@fig:backward-contract). @fig:domain-carrier collects every operation and law
-of both parts in one place.
+that connect them to $conc$. Voblint states them in three layers. The carrier
+type of abstract values instantiates a hierarchy of type classes: order classes
+from Isabelle's HOL library, two classes of Voblint's own
+(@fig:domain-contract) and the update classes of the vendored solver. Over that
+carrier, a forward interface evaluates expressions and tests truth
+(@fig:forward-contract), and a backward interface refines values at guards
+(@fig:backward-contract). Every expression-level use of a domain builds on the
+same forward interface, so a domain proves its laws once and the transfer
+functions, the guard filters and the check layer reuse them.
+@fig:domain-carrier collects every operation and law of all three layers.
 
 #block(breakable: false)[
   #definition(name: [Numeric domain], isa: "sound_domain", cmd: "class")[
@@ -126,12 +129,11 @@ of both parts in one place.
   ) <fig:domain-contract>
 ]
 
-#definition(name: [Backward domain], isa: "backward_domain", cmd: "locale")[
-  A backward domain over a numeric domain adds an intersection that keeps
-  every value both operands admit, a forward evaluator of expressions, a
-  truth test, and inverse operators that refine the operands of a
-  comparison or an arithmetic operation to values that still contain every
-  concrete pair producing the required result.
+#definition(name: [Forward interface], isa: "sound_evaluator", cmd: "locale")[
+  A sound evaluator maps an expression and an abstract state to an abstract
+  value that contains the expression's value in every store the state
+  describes. A sound truth test may answer that every value an abstract value
+  denotes is non-zero, or that every one is zero.
 ]
 
 #figure(
@@ -139,15 +141,42 @@ of both parts in one place.
     show raw.where(block: true): set text(size: 6.2pt)
     thy("sound_evaluator")
     thy("sound_truth_test")
+  },
+  kind: image,
+  placement: none,
+  caption: [The declarations of the forward evaluator
+    #isalocale("sound_evaluator") and the truth test #isalocale("sound_truth_test"),
+    lifted from the theory.],
+) <fig:forward-contract>
+
+The evaluator is stated over any state type $d$ together with the set of stores
+#isai("gamma_state d") a state describes. The numeric domains use it at their
+pointwise abstract states, whose meaning @sec:domain-states defines. The check
+layer states its evaluator requirement over an arbitrary state type through the
+same locale, and every shipped domain instantiates it at the pointwise states.
+The numeric queries that decide checks complete the forward interface
+(@sec:queries).
+
+#block(breakable: false)[
+  #definition(name: [Backward domain], isa: "backward_domain", cmd: "locale")[
+    A backward domain extends the forward interface with an intersection that
+    keeps every value both operands admit and with inverse operators that refine
+    the operands of a comparison or an arithmetic operation to values that still
+    contain every concrete pair producing the required result.
+  ]
+]
+
+#figure(
+  {
+    show raw.where(block: true): set text(size: 6.2pt)
     thy("semantic_intersection")
     thy("backward_domain")
   },
   kind: image,
-  placement: auto,
-  caption: [The declarations of the forward evaluator
-    #isalocale("sound_evaluator"), the truth test #isalocale("sound_truth_test"),
-    #isalocale("semantic_intersection") and #isalocale("backward_domain"), which
-    combines them with the inverse operators, lifted from the theories.],
+  placement: none,
+  caption: [The declarations of #isalocale("semantic_intersection") and
+    #isalocale("backward_domain"), which combines the intersection and the
+    forward interface with the inverse operators, lifted from the theory.],
 ) <fig:backward-contract>
 
 The inverse operators form a locale, while $conc$ is a class operation, because
@@ -336,11 +365,14 @@ difference.
 
 The contract has no abstraction function, because Voblint makes no claim of
 optimal precision (@sec:abs-int). Termination is a premise of the main theorem
-(@sec:termination), so widening need not stabilize. Transfer monotonicity is
-not required by the core transfer-soundness contracts of
-@ch:analysis-interface or by the solver's partial-correctness theorem
-(@sec:td). Some reusable instance interfaces impose it separately and therefore
-prove more than soundness alone requires (@ch:instances).
+(@sec:termination), so widening need not stabilize. Monotonicity is a separate
+layer of every interface: #isalocale("mono_evaluator"),
+#isalocale("mono_truth_test") and #isalocale("mono_intersection") add it to the
+sound versions. The transfer-soundness contracts of @ch:analysis-interface and
+the solver's partial-correctness theorem (@sec:td) use none of these layers.
+The refined backward interface #isalocale("backward_domain_refined") and the
+transfer interface of @ch:instances impose them, and therefore prove more than
+soundness alone requires.
 
 The interface is executable and it can be reasoned about. Sign instantiates the
 classes with its seven values and the locale with #isaconst("meet_sign") as
@@ -355,7 +387,9 @@ domain and follows from the laws alone: a value both operands admit keeps
 their intersection non-empty, by #isathm("intersect_sound") and
 #isathm("is_empty_correct"). The third lemma obtains the same fact for Sign
 without evaluation, by instantiating the second through Sign's interpretation
-of the locale.
+of the locale. The layers pay off in that interpretation too: Sign's expression
+domain already establishes the forward laws, so its backward interpretation
+proves only the laws of the intersection and the inverse operators.
 
 #figure(
   {
