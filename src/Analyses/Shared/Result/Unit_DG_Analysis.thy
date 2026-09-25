@@ -180,7 +180,7 @@ proof -
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
              and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
-             and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
+             and \<gamma>\<^sub>S = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_proved result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
 qed
@@ -196,7 +196,7 @@ proof -
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
              and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
-             and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
+             and \<gamma>\<^sub>S = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_refuted result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
 qed

@@ -63,10 +63,10 @@ text \<open>
 \<close>
 
 locale abstract_expression_domain =
-  abstract_numeric_queries less eq + sound_evaluator gamma_state aval_abs
+  abstract_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
     for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
       and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-      and gamma_state :: "'d \<Rightarrow> store set"
+      and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
       and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
 
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>
@@ -89,10 +89,10 @@ text \<open>
 \<close>
 
 locale abstract_check_domain =
-  abstract_expression_domain less eq gamma_state aval_abs
+  abstract_expression_domain less eq \<gamma>\<^sub>S aval_abs
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-    and gamma_state :: "'d \<Rightarrow> store set"
+    and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
 begin
 
@@ -114,7 +114,7 @@ definition truthy_query :: "exp \<Rightarrow> 'd \<Rightarrow> bool option" wher
  [code]: "truthy_query e d = map_option HOL.Not (eq (aval_abs e d) (aval_abs (N 0) d))"
 
 lemma truthy_query_sound:
-  assumes mem: "s \<in> gamma_state d"
+  assumes mem: "s \<in> \<gamma>\<^sub>S d"
     and query: "truthy_query e d = Some r"
   shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = r"
   using assms aval_abs_sound eq_sound truthy_query_def
@@ -140,7 +140,7 @@ text \<open>Soundness of the arithmetic fallback, proved once and cited by every
   \<open>map_option\<close>'s own case split.\<close>
 
 theorem check_query_sound:
-  assumes mem: "s \<in> gamma_state d"
+  assumes mem: "s \<in> \<gamma>\<^sub>S d"
   shows "check_query c d = Some r \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s) = r"
 using truthy_query_sound[OF mem] proof (induction c arbitrary: r)
   case (And b1 b2)
@@ -202,14 +202,14 @@ definition classify_check :: "exp \<Rightarrow> 'd \<Rightarrow> check_result" w
       | None \<Rightarrow> Check_Unknown)"
 
 lemma classify_check_proved:
-  assumes "classify_check c d = Check_Proved" and "s \<in> gamma_state d"
+  assumes "classify_check c d = Check_Proved" and "s \<in> \<gamma>\<^sub>S d"
   shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   using assms check_query_sound
   unfolding classify_check_def
   by (fastforce split: option.splits bool.splits)
 
 lemma classify_check_refuted:
-  assumes "classify_check c d = Check_Refuted" and "s \<in> gamma_state d"
+  assumes "classify_check c d = Check_Refuted" and "s \<in> \<gamma>\<^sub>S d"
   shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
   using assms check_query_sound
   unfolding classify_check_def
@@ -232,7 +232,7 @@ lemma abstract_checks_provenD [dest]:
   unfolding abstract_checks_proven_def by blast
 
 theorem abstract_checks_proven_sound:
-  assumes node_sound: "\<And>v c. (v, c) \<in> ck \<Longrightarrow> reach v \<le> gamma_state (env v)"
+  assumes node_sound: "\<And>v c. (v, c) \<in> ck \<Longrightarrow> reach v \<le> \<gamma>\<^sub>S (env v)"
     and checked: "abstract_checks_proven ck env"
   shows "checks_proven ck reach"
 proof (rule checks_provenI)
@@ -240,7 +240,7 @@ proof (rule checks_provenI)
   assume ck': "(v, c) \<in> ck" and mem: "s \<in> reach v"
   have proven: "check_query c (env v) = Some True"
     using checked ck' by blast
-  have in_gamma: "s \<in> gamma_state (env v)"
+  have in_gamma: "s \<in> \<gamma>\<^sub>S (env v)"
     using node_sound[OF ck'] mem by blast
   show "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     using check_query_sound[OF in_gamma proven] by simp

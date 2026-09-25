@@ -98,14 +98,14 @@ begin
 
 lemma arithmetic_classify_safe:
   assumes "classify_check (arithmetic_condition obligation) d = Check_Proved"
-    and "s \<in> gamma_state d"
+    and "s \<in> \<gamma>\<^sub>S d"
   shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   using classify_check_proved[OF assms]
   by (auto simp: arithmetic_condition_def split: if_splits)
 
 lemma arithmetic_classify_zero:
   assumes "classify_check (arithmetic_condition obligation) d = Check_Refuted"
-    and "s \<in> gamma_state d"
+    and "s \<in> \<gamma>\<^sub>S d"
   shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s = 0"
   using classify_check_refuted[OF assms]
   by (auto simp: arithmetic_condition_def split: if_splits)

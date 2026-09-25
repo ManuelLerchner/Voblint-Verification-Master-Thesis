@@ -15,16 +15,16 @@ text \<open>
   the same operations inherits them instead of asking again.
 
   The evaluator is stated over any state type \<open>'d\<close> together with the stores
-  \<open>gamma_state d\<close> a state describes.  The pointwise abstract states of the
+  \<open>\<gamma>\<^sub>S d\<close> a state describes.  The pointwise abstract states of the
   numeric domains are the instance at their pointwise \<open>gamma_state\<close>; the check layer keeps
   the state type open.
 \<close>
 
 locale sound_evaluator =
-  fixes gamma_state :: "'d \<Rightarrow> store set"
+  fixes \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain"
   assumes aval_abs_sound[intro]:
-    "s \<in> gamma_state d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
+    "s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
 
 locale sound_truth_test =
   fixes tobool :: "'a::numeric_domain \<Rightarrow> bool option"
@@ -38,8 +38,8 @@ text \<open>
   sharper non-empty one.
 \<close>
 
-locale mono_evaluator = sound_evaluator gamma_state aval_abs
-  for gamma_state :: "'d::order \<Rightarrow> store set"
+locale mono_evaluator = sound_evaluator \<gamma>\<^sub>S aval_abs
+  for \<gamma>\<^sub>S :: "'d::order \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" +
   assumes aval_abs_mono[intro]:
     "d1 \<le> d2 \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
