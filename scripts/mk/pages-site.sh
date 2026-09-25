@@ -44,7 +44,8 @@ find "$SITE_DIR" -name '.DS_Store' -type f -delete
 
 # Derived on every build so they never go stale: the explainer's size figures,
 # and the regression corpus the playground offers as examples.
-python3 "$REPO_ROOT/scripts/pages_stats.py" --out "$SITE_DIR/assets/site-stats.js"
+python3 "$REPO_ROOT/scripts/pages_stats.py" --out "$SITE_DIR/assets/site-stats.js" \
+  --fill "$SITE_DIR"/*.html
 python3 "$REPO_ROOT/scripts/pages_examples.py" --out "$SITE_DIR/assets/regression-examples.json"
 
 # The sitemap is derived too, so its lastmod cannot go stale. Only the pages a

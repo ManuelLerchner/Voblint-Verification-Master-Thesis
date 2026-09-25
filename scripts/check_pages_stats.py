@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Check that the site's repository figures are derived, not written by hand.
 
-`scripts/pages_stats.py` measures the repository at site-build time and the page
-fills every `[data-stat]` from it. Two ways that goes wrong, both silent:
+`scripts/pages_stats.py` measures the repository, and the site build writes
+every `[data-stat]` figure into the published HTML from that measurement
+(`--fill`). The source keeps only the neutral fallback, which cannot drift.
 
-  * a figure typed straight into the prose, which no build ever refreshes;
-  * a `[data-stat]` whose literal fallback -- what a source checkout renders --
-    has drifted from what the repository now measures.
-
-This checks both. It needs no Isabelle: pages_stats.py reads the sources.
+This checks that no figure is typed straight into the prose, where no build
+refreshes it; that every `[data-stat]` names a measured figure and holds the
+fallback; and that the corpus counts agree. It needs no Isabelle:
+pages_stats.py reads the sources.
 """
 
 import argparse
@@ -70,14 +70,7 @@ def corpus_problems(stats):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--fix",
-        action="store_true",
-        help="rewrite stale [data-stat] fallbacks in place (hand-written figures are never "
-        "rewritten: those need a data-stat around them, which is a judgement about the prose)",
-    )
-    args = parser.parse_args()
+    argparse.ArgumentParser(description=__doc__).parse_args()
 
     # collect() reads the vendored solver, so without the submodule it dies deep
     # inside session_graph with a FileNotFoundError. pages_stats.py refuses to
@@ -96,9 +89,7 @@ def main():
 
     stats = pages_stats.collect()
     values = {k: v for k, v in pages_stats.flatten(stats) if v >= MIN}
-    problems = [] if args.fix else corpus_problems(stats)
-
-    fixed = 0
+    problems = corpus_problems(stats)
 
     for page in sorted(PAGES.glob("*.html")):
         raw = page.read_text(encoding="utf-8")
@@ -109,46 +100,29 @@ def main():
             for match in re.finditer(
                 rf"(?<![\d,.]){re.escape(grouped)}(?![\d,.])", text
             ):
-                before = text[max(0, match.start() - 120) : match.start()]
-                if "data-stat" in before[-90:]:
-                    continue
                 line = text[: match.start()].count("\n") + 1
                 problems.append(
                     f"{page.relative_to(REPO)}:{line}: {grouped} is {key}; "
-                    f'write it as <span data-stat="{key}">{grouped}</span>'
+                    f'write it as <span data-stat="{key}">{pages_stats.FALLBACK}</span>'
                 )
 
-        for match in re.finditer(r'data-stat="([^"]+)"[^>]*>([^<]*)<', raw):
-            key, literal = match.group(1), match.group(2).strip()
-            current = key.split(".")
-            value = stats
-            for part in current:
-                value = value.get(part) if isinstance(value, dict) else None
-            if value is None or not isinstance(value, int):
-                continue
-            if literal and literal.replace(",", "") != str(value):
-                line = raw[: match.start()].count("\n") + 1
-                if args.fix:
-                    raw = raw[: match.start(2)] + f"{value:,}" + raw[match.end(2) :]
-                    fixed += 1
-                    print(
-                        f"{page.relative_to(REPO)}:{line}: {key} {literal} -> {value:,}"
-                    )
-                    break
+        # The site build writes every figure (pages_stats.py --fill), so the source
+        # holds only the neutral fallback: a number here would go stale unnoticed.
+        for match in pages_stats.DATA_STAT.finditer(raw):
+            key, literal = match.group(2), match.group(3).strip()
+            line = raw[: match.start()].count("\n") + 1
+            where = f"{page.relative_to(REPO)}:{line}"
+            value = pages_stats.lookup(stats, key)
+            if value is None or isinstance(value, dict):
+                problems.append(f"{where}: data-stat={key!r} names no measured figure")
+            elif literal != pages_stats.FALLBACK:
                 problems.append(
-                    f"{page.relative_to(REPO)}:{line}: fallback for {key} reads {literal}, "
-                    f"repository measures {value:,}"
+                    f"{where}: {key} reads {literal!r}; the source keeps the fallback "
+                    f"{pages_stats.FALLBACK!r} and the site build writes the figure"
                 )
-
-        if args.fix and raw != page.read_text(encoding="utf-8"):
-            page.write_text(raw, encoding="utf-8")
 
     for problem in problems:
         print(problem)
-    if args.fix:
-        print(f"check_pages_stats: {fixed} fallback(s) refreshed; re-run to confirm")
-        return 0
-
     print(
         f"check_pages_stats: {len(values)} derived figure(s), "
         f"{stats['corpus']['cases']} corpus case(s), {len(problems)} problem(s)"

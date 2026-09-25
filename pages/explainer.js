@@ -61,10 +61,10 @@ const REPO_URL = "https://github.com/ManuelLerchner/Voblint-Verification-Master-
 /* -------------------------------------------------------------------------- */
 
 /* Repository figures are never written into the markup by hand: scripts/pages_stats.py
-   derives them at site-build time and the page fills every [data-stat] from that.
-   The literal in the markup is the fallback a source checkout renders, so it goes
-   stale silently -- data-stat is what keeps the published page honest. The figure
-   scripts fill their own scopes too; filling twice writes the same value. */
+   measures them at site-build time and writes every [data-stat] into the built HTML
+   (--fill); the source keeps a neutral dash. Filling here again only matters for a
+   page opened without that build step, and writes the same values. The figure
+   scripts fill their own scopes too. */
 for (const element of document.querySelectorAll("[data-stat]")) {
   const value = element.dataset.stat
     .split(".")
