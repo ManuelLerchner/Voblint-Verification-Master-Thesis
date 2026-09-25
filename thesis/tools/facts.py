@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Put the proved statement itself in the thesis, not a retyped copy of it.
+"""Check that every theorem the thesis cites is one Isabelle proved.
 
 Isabelle's own document preparation gives this away for free -- `@{thm foo}`
-typesets the statement it actually proved, and the build fails if `foo` is
-gone -- but only to a document written inside a theory file. This gets the same
-guarantee from outside one: it asks a built session for each fact the thesis
-cites, stores the result, and the template renders it. A missing key is a
-compile error, and a changed statement is a diff here.
+fails the build if `foo` is gone -- but only to a document written inside a
+theory file. This gets the same guarantee from outside one: it asks a built
+session for each fact the thesis cites and stores its statement and theory.
 
-Statements come back in ASCII symbol form (`\\<Longrightarrow>`), which is what
-the Typst side already knows how to decode.
+The page shows a theorem as its source text (tools/snippets.py), so this also
+checks that a shown theorem was lifted from the theory that proves it. The
+printed statements are not rendered; they are kept so that a statement changed
+without an edit to its source text (notation, an abbreviation) is a diff here.
+proved(...) refuses to compile for a name missing from facts.json.
+
+Each fact also records the oracles its proof rests on, as Isabelle's
+`thm_oracles` reports them, so the evaluation chapter renders the audit from
+the built session instead of transcribing it.
 
     thesis/tools/facts.py --write [--session Voblint_CFG]
     thesis/tools/facts.py --check
@@ -36,6 +41,8 @@ THESIS = Path(__file__).resolve().parent.parent
 REPO = THESIS.parent
 MANIFEST = THESIS / "shared" / "facts.toml"
 OUT = THESIS / "shared" / "generated" / "facts.json"
+SNIPPETS = THESIS / "shared" / "snippets.toml"
+SNIPPET_DIR = THESIS / "shared" / "generated" / "snippets"
 MARGIN = 76  # characters; matches what fits a framed block on A4
 SEP = "\x1f"  # field separator
 REC = "\x1e"  # record separator: statements contain pretty-printed newlines
@@ -58,13 +65,34 @@ val ctxt =
    template re-wrap instead produces a wall of text. *)
 val ops = Pretty.pure_output_ops (SOME {margin});
 fun plain p = Pretty.string_of_ops ops p;
+(* `compile.simps(4)` selects one equation of a multi-theorem fact, so a
+   chapter can show the clauses it discusses instead of the whole function. *)
+fun base_of name = hd (space_explode "(" name);
+fun lookup name =
+  (case space_explode "(" name of
+    [base, idx] =>
+      [nth (Global_Theory.get_thms thy base)
+         (the (Int.fromString (unsuffix ")" idx)) - 1)]
+  | _ => Global_Theory.get_thms thy name);
+(* A lemma may state several facts at once; each prints on its own line. *)
 fun statement name =
   Print_Mode.setmp [] (fn () =>
-    plain (Thm.pretty_thm ctxt (Global_Theory.get_thm thy name))) ();
+    cat_lines (map (plain o Thm.pretty_thm ctxt) (lookup name))) ();
 val out = TextIO.openOut "{outfile}";
 val sep = str (Char.chr 31) and rec_sep = str (Char.chr 30);
+(* The qualified name starts with the theory that proves the fact; the
+   thesis shows that theory's source text, so the two have to agree. *)
+fun qualified name = Facts.intern (Global_Theory.facts_of thy) (base_of name);
+(* What `thm_oracles` prints, reduced to the oracle names: `sorry` and
+   `skip_proof` surface as Pure.skip_proof, `eval` as the code generator's
+   evaluation oracle. Recorded rather than asserted in prose. *)
+fun oracles name =
+  Thm_Deps.all_oracles (lookup name)
+  |> map (fn ((ora, _), _) => ora) |> distinct (op =) |> sort_strings
+  |> space_implode " ";
 fun emit name =
-  (TextIO.output (out, name ^ sep ^ statement name ^ rec_sep)
+  (TextIO.output (out, name ^ sep ^ statement name ^ sep ^ qualified name
+     ^ sep ^ oracles name ^ rec_sep)
    handle _ => TextIO.output (out, name ^ sep ^ "!MISSING" ^ rec_sep));
 val _ = List.app emit [{names}];
 val _ = TextIO.closeOut out;
@@ -82,8 +110,10 @@ def wanted() -> tuple[dict, str, str]:
     )
 
 
-def ask_isabelle(names: list[str], session: str, theory: str) -> dict[str, str]:
-    """Run one Isabelle ML session and collect `name -> statement`."""
+def ask_isabelle(
+    names: list[str], session: str, theory: str
+) -> dict[str, tuple[str, str, list[str]]]:
+    """Run one Isabelle ML session and collect `name -> (statement, theory, oracles)`."""
     with tempfile.TemporaryDirectory() as tmp:
         outfile = Path(tmp) / "facts.txt"
         script = Path(tmp) / "facts.ML"
@@ -117,9 +147,34 @@ def ask_isabelle(names: list[str], session: str, theory: str) -> dict[str, str]:
         for record in outfile.read_text().split(REC):
             if not record.strip():
                 continue
-            name, _, stmt = record.partition(SEP)
-            result[name.strip()] = stmt
+            name, stmt, qualified, oracles = (record.split(SEP) + ["", "", ""])[:4]
+            result[name.strip()] = (
+                stmt,
+                qualified.split(".", 1)[0],
+                oracles.split(),
+            )
         return result
+
+
+def snippet_mismatches(got: dict[str, tuple[str, str, list[str]]]) -> list[str]:
+    """A shown theorem must be lifted from the theory that proves it.
+
+    proved(...) renders the snippet's source text, and this is what ties that
+    text to the fact Isabelle checked: same name, same theory.
+    """
+    shown = tomllib.loads(SNIPPETS.read_text()).get("snippets", {})
+    out = []
+    for name, (_, thy, _) in sorted(got.items()):
+        if name not in shown:
+            continue
+        snippet = SNIPPET_DIR / f"{name}.thy"
+        if not snippet.is_file():
+            out.append(f"  {name}: no snippet; run pixi run thesis-snippets-write")
+            continue
+        source = Path(snippet.read_text().splitlines()[0].strip("(*) "))
+        if source.stem != thy:
+            out.append(f"  {name}: shown from {source}, proved in theory {thy}")
+    return out
 
 
 def main() -> int:
@@ -144,8 +199,20 @@ def main() -> int:
         print("facts: nothing cited")
         return 0
 
-    got = ask_isabelle(names, session, theory)
-    unresolved = [n for n in names if got.get(n, "!MISSING") == "!MISSING"]
+    # A fact may name its own session and theory: an example session's
+    # theorems are not visible from the default theory's context.
+    groups: dict[tuple[str, str], list[str]] = {}
+    for n in names:
+        key = (facts[n].get("session", session), facts[n].get("theory", theory))
+        groups.setdefault(key, []).append(n)
+    # `fact` names a locale fact by its qualified name; the thesis keeps the
+    # short name its snippet is lifted under.
+    got = {}
+    for (group_session, group_theory), group in groups.items():
+        isa_name = {n: facts[n].get("fact", n) for n in group}
+        answer = ask_isabelle(list(isa_name.values()), group_session, group_theory)
+        got.update({n: answer[f] for n, f in isa_name.items() if f in answer})
+    unresolved = [n for n in names if got.get(n, ("!MISSING",))[0] == "!MISSING"]
     if unresolved:
         print(
             f"facts: {len(unresolved)} cited fact(s) did not resolve in "
@@ -158,13 +225,24 @@ def main() -> int:
         print("Either the fact was renamed, or its session is not built.")
         return 1
 
+    mismatched = snippet_mismatches(got)
+    if mismatched:
+        print("facts: shown source text does not come from the proving theory:")
+        print("\n".join(mismatched))
+        return 1
+
     payload = (
         json.dumps(
             {
                 "session": session,
                 "theory": theory,
                 "facts": {
-                    n: {"statement": got[n], "why": facts[n].get("why", "")}
+                    n: {
+                        "statement": got[n][0],
+                        "theory": got[n][1],
+                        "oracles": got[n][2],
+                        "why": facts[n].get("why", ""),
+                    }
                     for n in names
                 },
             },

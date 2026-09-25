@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/precision/09-two_sites_warrow_per_origin.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -------
+48:3      pp0    x <= 2     PROVED   x=[1,2]

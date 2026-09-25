@@ -1,0 +1,9 @@
+tests/regression/18-parity/precision/01-even_odd_distinct.vimp [congruence]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------------
+20:3      pp3    x != y     UNKNOWN  x=2ℤ, y=1+2ℤ

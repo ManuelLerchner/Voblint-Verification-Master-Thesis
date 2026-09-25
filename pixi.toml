@@ -153,6 +153,7 @@ pages-site-serve = { cmd = "python3 -m http.server --directory build/github-page
 pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
 pages-stats = { cmd = "python3 scripts/check_pages_stats.py", description = "Check that the site's repository figures are derived (data-stat) and the sources keep their neutral fallback." }
 pages-terms = { cmd = "python3 scripts/check_pages_terms.py", description = "Check that every Isabelle name the site pages set in code is linked into the theory HTML." }
+check-ref = { cmd = "bash scripts/mk/check-ref.sh", description = "Run the fast source checks against a committed ref instead of the working tree: pixi run check-ref <ref>." }
 theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
@@ -196,6 +197,33 @@ thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", descript
 thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check", description = "Check the thesis's playground figures against docs/images and docs/readme-figures." }
 thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", description = "Copy the README playground figures and their programs into thesis assets." }
 
+# The Goblint comparison appendix renders the explainer's alignment rows, so
+# the page stays the one copy. Reads pages/, never writes to it.
+thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check the thesis's Goblint comparison data against the explainer page's alignment rows." }
+thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis appendix." }
+
+# One notation table, derived from the theories' declarations and rendered in
+# appendix B, the README and the explainer's legend. Checks the rendered anchors
+# when build/isabelle-html exists, and the link map otherwise.
+thesis-notation = { cmd = "python3 -m pytest -q tests/test_thesis_notation.py && python3 thesis/tools/notation.py --check --lenient", description = "Check the notation table in the thesis, README and explainer against the theories' declarations and anchors." }
+thesis-notation-write = { cmd = "python3 thesis/tools/notation.py --write", description = "Regenerate the notation table data and its README and explainer blocks from the theories." }
+
+# Repository figures the thesis cites (line counts, corpus sizes), measured by
+# the same scripts/pages_stats.py collection the site reads. Also fails on a
+# statistic typed into thesis/content instead of going through stat().
+thesis-stats = { cmd = "python3 -m pytest -q tests/test_thesis_stats.py && python3 thesis/tools/stats.py --check", description = "Check the thesis's repository figures against the repository and reject hand-typed statistics." }
+thesis-sketches = { cmd = "python3 -m pytest -q tests/test_thesis_solver_sketch.py", description = "Check that code sketches printed in the thesis compute the results the text states." }
+thesis-stats-write = { cmd = "python3 thesis/tools/stats.py --write", description = "Regenerate the thesis's repository figures from the repository." }
+
+# Every VIMP listing links to the playground with the program it shows. The
+# check compiles the thesis, decodes each link and requires it as a PDF link
+# annotation; claim programs are extracted because Typst cannot read tests/.
+thesis-vimp = { cmd = "python3 -m pytest -q tests/test_thesis_vimp_listings.py && python3 thesis/tools/vimp_listings.py --check", depends-on = [
+  "cli-build",
+], description = "Check that every VIMP listing links its program and settings to the playground, clickably." }
+thesis-vimp-source = { cmd = "python3 thesis/tools/vimp_listings.py --source", description = "Check VIMP listings at the source level: no unlinked VIMP code, current claim programs, playground defaults." }
+thesis-vimp-write = { cmd = "python3 thesis/tools/vimp_listings.py --write", description = "Extract the programs and settings of thesis claims for linked VIMP listings." }
+
 # Warnings are failures; an unresolved reference must not scroll past unread.
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
 
@@ -215,6 +243,10 @@ thesis-generated = { depends-on = [
   "thesis-facts-write",
   "thesis-figures-write",
   "thesis-playground-write",
+  "thesis-alignment-write",
+  "thesis-notation-write",
+  "thesis-stats-write",
+  "thesis-vimp-write",
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
 # Every drift check, in one name.
@@ -223,6 +255,11 @@ thesis-check = { depends-on = [
   "thesis-snippets",
   "thesis-figures",
   "thesis-playground",
+  "thesis-alignment",
+  "thesis-notation",
+  "thesis-stats",
+  "thesis-sketches",
+  "thesis-vimp",
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
@@ -230,9 +267,10 @@ thesis-check = { depends-on = [
 ], description = "Run all thesis drift and theorem checks." }
 
 # Entity citations link to their definition in the rendered theories, anchor by
-# anchor. Locally this is advisory: a working copy rarely has a current
-# build/isabelle-html, and a link cannot be validated before the theories are built.
-thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Check thesis entity links against available generated HTML." }
+# anchor. Missing stored targets always fail; local anchor validation can be
+# skipped when HTML is unavailable. Deployment CI checks the published targets.
+thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Require HTML targets for every citation and check available generated HTML." }
+thesis-links-coverage = { cmd = "python3 scripts/check_thesis_links.py --coverage", description = "Require a stored HTML target for every Isabelle citation, without a local HTML build." }
 thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
 thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }
 
@@ -440,6 +478,7 @@ verify = { depends-on = [
   "pages-lint",
   "pages-links",
   "pages-stats",
+  "thesis-stats",
   "pages-terms",
   "theory-anchors-check",
   "pages-scripts-check",
@@ -458,6 +497,8 @@ verify = { depends-on = [
   "locale-parameters-check",
   "thesis-refs",
   "thesis-snippets",
+  "thesis-alignment",
+  "thesis-notation",
 
   # ------------------------------------------------------------------------
   # Cheap standalone builds / generated-code consumers
@@ -476,6 +517,7 @@ verify = { depends-on = [
   "html-report-corpus-audit",
   "html-report-config-audit",
   "thesis-claims",
+  "thesis-vimp",
 
   # ------------------------------------------------------------------------
   # Isabelle-dependent checks

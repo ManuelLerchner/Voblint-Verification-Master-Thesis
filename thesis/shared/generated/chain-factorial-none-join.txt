@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+82:3      pp6    a == 2     UNKNOWN  a=⊤

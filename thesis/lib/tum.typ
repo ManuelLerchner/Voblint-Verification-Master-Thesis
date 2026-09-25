@@ -39,13 +39,15 @@
 // tall and the leading is what the baseline pitch leaves over.
 #let leading-for(pitch, size) = pitch - 0.685 * size
 #let margin-bottom = 115pt
-#let margin-inside = 89.9pt
-#let margin-outside = 73.6pt
+// One-sided: the TUM two-sided margins (89.9pt inside, 73.6pt outside)
+// averaged, so the text width is unchanged.
+#let margin-inside = 81.75pt
+#let margin-outside = 81.75pt
 #let rule = 0.4pt
 
-// The running head sits above a rule at 81.9pt and shows the chapter on even
-// pages and the section on odd ones, in italics; a chapter's first page has
-// neither. The page number sits below a rule at 759.4pt, on the outer side.
+// The running head sits above a rule at 81.9pt and shows the chapter, in
+// italics; a chapter's first page has none. The page number sits below a rule
+// at 759.4pt, on the right.
 #let opener-page(pg) = query(heading.where(level: 1)).any(h => h.location().page() == pg)
 
 #let running-head() = context {
@@ -63,7 +65,7 @@
     h(0.5em)
     cand.body
   }
-  let level = if calc.odd(pg) { 2 } else { 1 }
+  let level = 1
   let title = hydra(
     level,
     prev-filter: (ctx, cands) => cands.primary.next == none and marks(cands.primary.prev),
@@ -74,7 +76,7 @@
   set text(style: "italic")
   block(width: 100%, below: 0pt, {
     if title != none {
-      align(if calc.odd(pg) { right } else { left }, title)
+      align(right, title)
     } else {
       v(1.2em)
     }
@@ -91,7 +93,7 @@
     return
   }
   stack(dir: ttb, spacing: 3.2pt, line(length: 100%, stroke: rule), if page.numbering != none {
-    align(if calc.odd(pg) { right } else { left }, counter(page).display(page.numbering))
+    align(right, counter(page).display(page.numbering))
   })
 }
 
@@ -100,9 +102,11 @@
 #let front-chapter(body) = {
   show heading.where(level: 1): it => {
     pagebreak(weak: true)
-    v(83.5pt)
+    // Tighter than the TUM LaTeX template (83.5pt / 40.2pt) so the abstract
+    // fits on one page.
+    v(4pt)
     align(center, text(font: serif-12, size: 14.4pt, weight: "bold", it.body))
-    v(40.2pt)
+    v(8pt)
   }
   body
 }
@@ -191,18 +195,42 @@
   // definitions here fill the line and nothing refers to them by number.
   set math.equation(numbering: none)
   show math.equation: set text(font: "Latin Modern Math")
-  show link: set text(fill: black)
+  // Web links are blue and underlined. Links into the rendered theories (the
+  // project's and HOL's) and
+  // the listings' playground tags keep their own styling, and internal
+  // references (citations, cross-references, contents) stay black.
+  show link: it => {
+    let web = (
+      type(it.dest) == str
+        and not it.dest.contains("/Voblint/")
+        and not it.dest.contains("/HOL/")
+        and not it.dest.contains("#code=")
+    )
+    if web {
+      set text(fill: rgb("#1565C0"))
+      underline(offset: 1.5pt, it)
+    } else {
+      set text(fill: black)
+      it
+    }
+  }
 
   // Chapter-prefixed numbering. In a caption the numbering function runs at
   // the figure's own location, so reading the heading counter there is right.
   // In a *reference* it runs at the reference site, which silently renders a
   // chapter-3 figure as "Figure 1.1" when cited from chapter 1 -- so
   // references are resolved separately, in the `show ref` rule below.
-  set figure(numbering: n => context {
-    let c = counter(heading).get()
-    let chapter = if c.len() > 0 { c.at(0) } else { 0 }
-    [#chapter.#n]
-  })
+  let chapter-number(loc) = {
+    let c = counter(heading).at(loc).at(0, default: 0)
+    let chapters = query(heading.where(level: 1).before(loc))
+    let h = chapters.last(default: none)
+    if h != none and type(h.numbering) == str and h.numbering.starts-with("A") {
+      numbering("A", c)
+    } else {
+      str(c)
+    }
+  }
+  set figure(numbering: n => context [#chapter-number(here()).#n])
 
   show ref: it => {
     let el = it.element
@@ -213,14 +241,28 @@
     // A heading is numbered "3.1." on the page and in the contents, as KOMA
     // does, but a reference to it reads "Section 3.1".
     if el.func() == heading {
-      return link(loc, [#el.supplement #numbering("1.1", ..counter(heading).at(loc))])
+      let pattern = if type(el.numbering) == str { el.numbering.trim(".", at: end) } else {
+        el.numbering
+      }
+      let in-appendix = type(el.numbering) == str and el.numbering.starts-with("A")
+      let supplement = if in-appendix and el.level == 1 { [Appendix] } else { el.supplement }
+      return link(loc, [#supplement #numbering(pattern, ..counter(heading).at(loc))])
     }
     if el.func() != figure {
       return it
     }
     // Resolve both halves of the number where the figure is, not where the
     // sentence citing it happens to sit.
-    let chapter = counter(heading).at(loc).at(0, default: 0)
+    let chapter = chapter-number(loc)
+    // A subpar part is the only unlisted figure. Its own counter may be of
+    // another kind (a listing inside an image figure), so it takes the number
+    // of the enclosing figure and its position among the parts.
+    if el.outlined == false {
+      let parent = query(figure.where(kind: image, outlined: true).before(loc)).last()
+      let n = counter(figure.where(kind: image)).at(parent.location()).first()
+      let sub = counter("__subpar:sub-figure-counter").at(loc).first() + 1
+      return link(loc, [#el.supplement #chapter.#n#numbering("a", sub)])
+    }
     let n = counter(figure.where(kind: el.kind)).at(loc).at(0, default: 0)
     link(loc, [#el.supplement #chapter.#n])
   }
@@ -229,9 +271,18 @@
   show figure.caption: it => block(width: 92%, align(left, {
     set text(size: 0.92em)
     set par(justify: true)
-    strong[#it.supplement #context it.counter.display(it.numbering).: ]
+    strong[#it.supplement #context it.counter.display(it.numbering): ]
     it.body
   }))
+  // KOMA's \textfloatsep and \intextsep: a float or an in-text figure stands
+  // 18pt clear of the text around it, so a caption never sits on the next
+  // paragraph. A subfigure starts its grid cell, where weak spacing vanishes.
+  set place(clearance: 18pt)
+  show figure: it => if it.placement == none {
+    v(14pt, weak: true)
+    it
+    v(18pt, weak: true)
+  } else { it }
 
   // The contents, as KOMA sets it: chapters in bold sans without leaders,
   // sections and subsections in serif with dot leaders, numbers in fixed
@@ -239,6 +290,13 @@
   // each chapter line.
   show outline.entry: it => {
     let el = it.element
+    if el.func() == figure and el.numbering != none {
+      let loc = el.location()
+      let chapter = chapter-number(loc)
+      let n = counter(figure.where(kind: el.kind)).at(loc).at(0, default: 0)
+      // The list is rendered after the chapters; resolve at the figure itself.
+      return link(loc, it.indented([#el.supplement #chapter.#n], it.inner()))
+    }
     if el.func() != heading {
       return it
     }
@@ -261,19 +319,25 @@
       it.page()
     }
     if it.level == 1 {
-      block(above: 17pt, below: 0pt, link(el.location(), text(font: sans, weight: "bold", row)))
+      block(above: 13pt, below: 12pt, link(el.location(), text(font: sans, weight: "bold", row)))
     } else {
       block(above: 6.05pt, below: 0pt, link(el.location(), row))
     }
   }
 
-  set table(stroke: none)
+  set table(stroke: none, align: left)
+  // A narrow cell cannot be justified without rivers or forced breaks.
+  show table.cell: set par(justify: false)
+  show table.cell: set text(hyphenate: false)
   set raw(tab-size: 2)
   // Isabelle's DejaVu build, vendored under assets/fonts: stock DejaVu Sans
   // Mono has no glyph for \<And> and friends, and a missing glyph inside a
   // theorem statement is a wrong page, not a cosmetic problem. It is DejaVu
   // plus the extra symbols, so ordinary listings are unaffected.
   show raw: set text(font: ("Isabelle DejaVu Sans Mono", "DejaVu Sans Mono"))
+  // One size for every listing, in running text or inside a figure: Typst's
+  // default scales raw text with its surroundings (6.4pt in an 8pt figure).
+  show raw.where(block: true): set text(size: 8pt)
 
   // ------------------------------------------------------------- cover ----
   // Positions are the glyph tops the template produces: logo 102pt, school
@@ -308,7 +372,7 @@
     size: 17.28pt,
     author,
   ))
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // --------------------------------------------------------- title page ---
   head-block(logo-top: 102pt - margin-top)
@@ -334,7 +398,7 @@
       [Date:], [#date],
     )
   })
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // --------------------------------------------------------- disclaimer ---
   set align(left)
@@ -346,7 +410,7 @@
     [Munich, #date]
   })
   place(top + left, dx: 237.5pt, dy: 553pt + 2 * 13.55pt + 56.5pt - margin-top, [#author])
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
 
   // ------------------------------------------------------- front matter ---
   set page(
@@ -363,7 +427,7 @@
 
 // Switch from roman front matter to arabic main matter.
 #let main-matter() = {
-  pagebreak(to: "odd")
+  pagebreak(weak: true)
   set page(numbering: "1")
   counter(page).update(1)
 }

@@ -17,6 +17,14 @@ thesis prose is written here.
 
 ## 1. Executive thesis story
 
+**Author clarification, 2026-09-21:** the main contribution is the Isabelle
+formalization and verification. This plan organizes an explanatory companion
+to that artifact, not a second complete proof development. Chapters should
+highlight definitions, theorem scope, proof dependencies, and difficult proof
+insights, with checked references to the complete formal proofs. Mathematical
+notation and illustrative arguments serve understanding; they need not
+reconstruct every Isabelle proof as an independent paper proof.
+
 A test runs a program on some inputs and watches what happens. A static analyzer
 computes with descriptions of values instead — "an integer between 0 and 5" —
 each kept large enough to cover every value a real run could produce, so that a
@@ -129,15 +137,21 @@ consumed through a single certificate.
 | Int (reduced product) | `src/Analyses/Int` | 5 324 | 12 |
 | Relational witness | `src/Analyses/Relational` | 576 | 1 |
 | CLI + codegen | `src/Executable_Surface` | 2 250 | 8 |
-| Examples and regressions | `src/Examples` | 14 382 | 65 |
-| **Total `src/`** | | **61 255** | **223** |
-| Vendored TD solver | `vendor/td-verification` | 31 322 | 26 |
-| Handwritten OCaml | `cli/` | 3 675 | — |
-| Generated OCaml | `codegen/generated/ml` | 9 400 | — |
+| Examples and regressions | `src/Examples` | 14 482 | 65 |
+| **Total `src/`** | | **62 098** | **223** |
+| Vendored TD solver | `vendor/td-verification` | 31 328 | 26 |
+| Handwritten OCaml | `cli/` | 3 315 | — |
+| Generated OCaml | `codegen/generated/ml` | 9 406 | — |
 
 No `sorry` and no `oops` in `src/`; none in the vendored solver theories
-either. 283 `.vimp` regression fixtures across 25 groups, partitioned into
-`precision/` (197), `known-imprecision/` (48) and `soundness/` (9).
+either. 289 `.vimp` regression fixtures across 25 groups: `precision/` (196),
+`known-imprecision/` (54), `soundness/` (10), and 29 outside these directories.
+
+The thesis takes its repository figures from `thesis/shared/generated/stats.json`
+(`pixi run thesis-stats-write` regenerates it, `stat("key")` reads it), never
+from this table. The `src/` total, the line counts of `src/Examples` and
+`src/Executable_Surface`, and the solver and OCaml rows match that file; the
+other per-directory figures are not tracked there and may lag.
 
 ### 2.2 Session graph
 
@@ -215,8 +229,8 @@ interface (`less`, `eq`) the check layer consumes.
 **`Voblint_Solver`.** The vendored solver's strategy-tree language
 (`Answer | QueryL | QueryG | Side`) with a typed continuation-passing frontend
 (`strategy_program`), the right-hand-side fold, per-key side buffering, the
-`part_post_solution` vocabulary, the bridge `part_post_solution_of_solve_c`,
-and `globals_rule` as a value so one interpretation covers all four update
+`part_post_solution` vocabulary, the bridge `solve_dom_of_solve_c` from an
+executable solve to the solver's domain, and `globals_rule` as a value so one interpretation covers all four update
 rules.
 
 **`Voblint_Framework`.** The D/G analysis framework, domain-free and
@@ -388,7 +402,7 @@ L7  SOLVER
     TD_side_upd_rule: solve / solve_c,
       term_equivalence, solve_code_equation [code],
       partial_post_solution                        vendor TD_side_upd_rule
-    part_post_solution_of_solve_c                  TD_Solver_Bridge
+    solve_dom_of_solve_c                           TD_Solver_Bridge
     globals_rule (four vendored update rules)      Globals_Rule
              │
              v
@@ -488,16 +502,19 @@ argument solver-independent.
 
 ## 4. Literature map
 
+The [source review](THESIS_READING_NOTES.md) records the bookmark and knowledge-base
+review, new bibliography entries, reading depth, and chapter-specific uses.
+
 Organized by what each source *supplies* to the thesis, not by topic.
 
 ### 4.1 Abstract interpretation: the framework
 
 | Source | Supplies | Relevance | Thesis home |
 | --- | --- | --- | --- |
-| Cousot & Cousot, POPL 1977 | the framework itself; lattices, Galois connections, fixpoint approximation | the vocabulary every chapter uses | Ch. 2 |
+| Cousot & Cousot, POPL 1977 | the framework itself; lattices, the α/γ pair (the term Galois connection comes from POPL 1979, §5.3), fixpoint approximation | the vocabulary every chapter uses | Ch. 2 |
 | Cousot & Cousot, POPL 1979, *Systematic design* | systematic construction of abstract domains; products | justifies the `numeric_domain`/`gamma`-only presentation; background for `int_dom` | Ch. 2, Ch. 10 |
-| Cousot, TCS 2002, *Constructive design of a hierarchy of semantics* | trace semantics as the base of the hierarchy; reachable states as its abstraction | the licence for building on traces rather than reachable states | Ch. 4 |
-| Cousot & Cousot, PLILP 1992, *Comparing the Galois connection and widening/narrowing approaches* | widening/narrowing without a best abstraction | why `alpha` is never mechanized here | Ch. 2, Ch. 5 |
+| Cousot, TCS 2002, *Constructive design of a hierarchy of semantics* | trace semantics as the base of the hierarchy (it does not derive reachable states; for that use Cousot & Cousot, JLC 1992, Ex. 7.1) | the licence for building on traces rather than reachable states | Ch. 4 |
+| Cousot & Cousot, PLILP 1992, *Comparing the Galois connection and widening/narrowing approaches* | widening/narrowing laws (§4); Galois connections as the ideal case (§5); the concretization-only framework itself is Cousot & Cousot, JLC 1992, §7 | why `alpha` is never mechanized here | Ch. 2, Ch. 5 |
 | Miné, FnTPL 2017 tutorial | a modern, readable presentation of numeric domains and widening | the reference a reader without an AI background should be pointed at | Ch. 2 |
 | Rival & Yi, *Introduction to Static Analysis* (MIT 2020) | textbook treatment; domain design recipe | secondary background reference | Ch. 2 |
 
@@ -581,9 +598,9 @@ that ratio to a syntax-directed interval analyzer, and losing it means nothing.
 
 | Source | Supplies | Relevance | Thesis home |
 | --- | --- | --- | --- |
-| Jourdan, Laporte, Blazy, Leroy, Pichardie, POPL 2015, *A formally-verified C static analyzer* (Verasco) | the reference point: a full verified analyzer in Coq, extracted, over CompCert C | **the closest comparable artifact**; the contrast is structural iterator + monolithic proof vs constraint system + borrowed solver | Ch. 1, Ch. 13 |
+| Jourdan, Laporte, Blazy, Leroy, Pichardie, POPL 2015, *A formally-verified C static analyzer* (Verasco) | the reference point: a full verified analyzer in Coq, extracted, over CompCert C | **the closest comparable artifact**; the contrast is structural iterator with modular domain interfaces vs constraint system + borrowed solver | Ch. 1, Ch. 13 |
 | Jourdan, PhD 2016 | Verasco in depth; domain combination and communication | detailed comparison for the reduced product and for interprocedural handling | Ch. 10, Ch. 13 |
-| Blazy, Laporte, Maroneze, Pichardie, NFM 2013, *Formal verification of a C value analysis* | the earlier value analysis | precursor to Verasco | Ch. 13 |
+| Blazy, Laporte, Maroneze, Pichardie, SAS 2013, *Formal verification of a C value analysis* | the earlier value analysis | precursor to Verasco | Ch. 13 |
 | Leroy, CACM 2009 (CompCert) | the verified-compiler methodology; forward simulation | the proof technique `csim_step`/`csim_star` instantiates | Ch. 3, Ch. 13 |
 | Cachera & Pichardie, ITP 2010, *A certified denotational abstract interpreter* | certified AI in Coq, extraction | methodological comparison | Ch. 13 |
 | Nipkow, ITP 2012, *Abstract interpretation of annotated commands*; AFP `Abs_Int_ITP2012` | the Isabelle reference formalization; `Abs_State`, widening, `Abs_Int1` | **the Isabelle baseline**; `Exec_St_Base` explicitly argues against its single-default `Abs_State` | Ch. 2, Ch. 5, Ch. 13 |
@@ -696,17 +713,24 @@ says so.
 **Claim.** The whole soundness argument depends on the external verified
 solver only through `part_post_solution`. `activation_collect_dg_sound` proves
 collecting soundness from *any* valuation satisfying that certificate, without
-asking how it was computed; `part_post_solution_of_solve_c` is the only bridge
-from an executable solve. Consequently all four vendored update rules are
-covered by one interpretation, and swapping the solver would not touch the
-semantic layer.
+asking how it was computed. The analysis locale `routed_dg_analysis` takes the
+solver's `solve`, its domain predicate `solve_dom` and its executable `solve_c`
+as parameters and asks for two facts about them: `solve_dom x` implies
+`part_post_solution` for `solve x`, and `solve_c x ≠ None` implies
+`solve_dom x`. Every domain registration (the generated
+`<Domain>_Analyses.thy`) discharges the first with the vendored
+`TD_side_rule_Interp.partial_post_solution` and the second with
+`TD_side_rule_Interp.solve_dom_of_solve_c`; the termination premise of
+`run_voblint`'s theorems is `solve_dom`. The composite
+`part_post_solution_of_solve_c` is not on this path; only two Sign examples
+cite it. Consequently all four vendored update rules are covered by one
+interpretation, and swapping the solver would not touch the semantic layer.
 
 **Evidence.** `TD_Solver_Bridge.thy`, `Globals_Rule.thy`, `Routed_Context.thy`,
-and the fact that the domain registrations discharge their post-solution
-obligation with the vendored `TD_side_rule_Interp.partial_post_solution`
-directly.
+`Routed_DG_Analysis.thy` (the locale assumptions and `terminates_of_solve_c`),
+and the generated `<Domain>_Analyses.thy` registrations.
 
-**Must compare.** Verasco's monolithic iterator; La Spina's Coq WTO solvers
+**Must compare.** Verasco's structural iterator and modular domain interfaces; La Spina's Coq WTO solvers
 (verified engine, no pipeline); the AFP `Top_Down_Solver` entry standing alone.
 
 **Confidence.** **High.** This is a structural property of the development and
@@ -804,10 +828,20 @@ the scoping must be explicit: these are forcing witnesses for specific
 programs, not theorems that one policy dominates another.
 
 **Confidence.** **High as scoped**, and it would be **indefensible** if stated
-generally. The Sign choice is itself principled and worth explaining: Sign is
-finite, so the plain-join rule computes an exact least post-solution and the
-witness sits inside the vendored optimality theorem's own envelope, where an
-Interval-plus-warrowing witness would not.
+generally. The Sign choice is principled for a narrower reason than optimality.
+Sign's widening is its join and its narrowing returns the current value
+(`Sign_Lattice.thy`), so warrowing on Sign updates a value by joining, and the
+precision difference between `k = 1` and `k = 2` cannot come from a widening.
+The witness does not lie inside the optimality envelope of Tilscher, Graß and
+Seidl (NFM 2026, Theorem 2; `TD_side_mono.least_partial_post_solution` in the
+vendored `TD_side.thy`). That theorem covers the side-effecting solver without
+widening and narrowing, on a threefold-monotonic system. Voblint instantiates
+`TD_side_upd_rule`, which warrows every local unknown at a widening point under
+every global rule (`Globals_Rule.thy`) and carries no leastness theorem. The
+generic monotonicity lemmas `routed_node_rhs_mono_*` (`DG_Keyed_Generator.thy`)
+are conditional on per-hook monotonicity, and no shipped analysis discharges
+them. The witness compares two computed
+results; it makes no claim about least solutions.
 
 ### C9 — The framework is not secretly non-relational
 
@@ -890,7 +924,7 @@ State these plainly so a reader does not have to guess: the top-down solver
 (vendored, verified elsewhere); the side-effecting constraint system (Apinis et
 al.); local traces (Schwarz et al.); the D/G architecture (Goblint); widening
 and narrowing; the reduced-product idea. The CLI, the browser playground, the
-grammar pipeline and the 283-fixture regression suite are engineering that
+grammar pipeline and the regression suite are engineering that
 makes the work usable and checkable, not results.
 
 ---
@@ -1027,8 +1061,73 @@ domains (Ch. 5) come after traces and before the analysis interface, because
 
 ## 7. Recommended thesis structure
 
-Five parts, fourteen chapters. Rough weight is given as a share of the body;
+Five parts, fifteen chapters after the author-requested engineering chapter.
+
+**2026-09-21 amendment (author request):** insert *Engineering the Isabelle
+development* after analysis instances and before the executable-artifact chapter.
+It explains the locale inheritance, computational/semantic type-class split,
+construction-versus-correctness locales, refinement interfaces, and proof
+organization. These design decisions are not adequately covered by the
+foundations chapter's introduction to Isabelle mechanisms or by the artifact's
+trust-boundary discussion. Existing Chapters 11–14 become 12–15; older design notes below refer to their original chapters. The new
+file is `thesis/content/11-isabelle-engineering.typ`; existing filenames stay
+stable. This is an explicitly requested scope change, not an expansion inferred
+from additional repository material. Rough weight is given as a share of the body;
 use it to allocate pages, not as a rule.
+
+**Compression pass (2026-09-22).** The body was cut from 164 to about 120
+pages to fit the page budget. Content moved or was shortened; no chapter was
+added, removed or reordered. Headings that changed:
+
+- Ch. 1: "Correctness of the analyzer" became "From executions to static
+  guarantees"; "The analysis pipeline" merged into "The verified solver and the
+  research question"; the main result and the three guarantees moved under
+  "Contributions"; "Scope" and "Outline" merged.
+- Ch. 3: the execution, graph and simulation subsections were flattened
+  (`sec:execution`, `sec:relating` and `sec:simulation` folded into `sec:pstep`
+  and `sec:csim`); "What the simulation does not establish" (`sec:asymmetry`)
+  and "Where this leaves us" were cut. `sec:csim` states the asymmetry in
+  three sentences.
+- Ch. 4: "Three views of one run" (`sec:three-views`) and the closing summary
+  (`sec:closing`) were cut; the notation it summarized is appendix B's table.
+- Ch. 6: the "Two combine stages" subsection folded into "The call boundary".
+- Ch. 6 → Ch. 7: the ownership-split lifter (planned 6.7) moved to a new 7.8
+  "Program globals as flow-insensitive unknowns" (`sec:mixed-flow`). Its
+  explanation needs the `(v, c)` unknowns, side-effect trees and seeds of
+  Ch. 7. Ch. 6 keeps "Whole-state analyses" (`sec:whole-state`).
+- Ch. 8: "Deciding emptiness finitely" folded into the carrier sections.
+- Ch. 9: "What the theorem rests on" cut; it only pointed to the trust-boundary
+  section of Ch. 12, which states the boundary once.
+- Ch. 10: the four per-domain sections merged into "One loop, five answers",
+  one program run through all five domains.
+- Ch. 11: "Representation boundaries have their own proofs" (planned 11.4)
+  folded into "Construction and correctness are distinct interfaces"; both
+  describe the same refinement interfaces.
+- Ch. 12: "Executable definitions" and the playground walkthrough subsections
+  merged into the code-generation and artifact sections; "What the playground
+  demonstrates" (playground limits) merged into "What remains outside the
+  proof".
+- Ch. 13: "Runtime behaviour and its limits" cut; the non-termination of the
+  joining rules and the missing throughput comparison moved into the precision
+  section, and the entry-state divergence example was dropped.
+- Ch. 15: "Closing" cut.
+- Appendices: "Coverage Obligations by Context Policy" removed (the obligations
+  are discharged once in Ch. 7, per policy by instantiation); the corpus index
+  merged into "Main Statements and Regression Corpus".
+
+**Cut pass (2026-09-22, author decision).** The engineering chapter (Ch. 11)
+was folded into the executable chapter as the section "Interfaces that separate
+execution from proof" (`sec:engineering`); its other content duplicated
+Ch. 5-8 (emptiness test, paired entry coverage, single global name,
+commutation and certificate). Chapters 12-15 become 11-14; filenames stay. The
+executable chapter's playground screenshots, the contexts run among them, were
+dropped and later restored at the author's request (the contexts caption says
+what the screenshot adds to Ch. 7's verdicts), Velvet shrank to one sentence in the mechanized-abstract-interpretation
+section of Related Work, and the part pages stay.
+
+**Unlabelled questions (2026-09-23, author decision).** The RQ1-RQ4 and K1-K4 labels are dropped. Section 1.2 states the four questions as prose bullets, Section 1.4 lists the contributions as short bullets pointing to their chapters, and the prior-work comparison per contribution lives only in Section 13.6 (`sec:where-voblint-sits`). Chapter 12 keeps one section per question, titled by the question itself, and Chapter 14 answers each under its question.
+
+**Research-question pass (2026-09-22, author decision).** Chapter 12 is organized by research question (RQ1-RQ4; for each, its evidence, the evidence kind, and its limits) and closes with one added section, "What the mechanization revealed" (`sec:revealed`), which the author approved as an exception to the frozen structure: seven design constraints exposed by the proofs, each with its evidence kind and a pointer to the chapter that states it. Chapter 1 states RQ1-RQ4 and contributions K1-K4; each core chapter opens with its problem and closes with its result.
 
 ```text
 Abstract
@@ -1133,47 +1232,51 @@ PART IV — INSTANCES AND PRACTICE
   10.7 Why narrowing cannot refine (a negative result)
   10.8 Rel_Order_Domain: a carrier that is not a map
 
-11 From formalization to executable analyzer                       [8%]
-  11.1 Executable Isabelle definitions: what makes a definition run
-  11.2 Code generation, one module, and the public run_voblint interface
-  11.3 The OCaml and browser boundary
-  11.4 An interactive analyzer artifact
-  11.5 What the playground demonstrates, and what it cannot
-  11.6 What remains outside the trusted boundary
+11 Engineering the Isabelle development
+  (folded into Ch. 12 by the 2026-09-22 cut pass; see above)
 
-12 Evaluation                                                      [8%]
-  12.1 Three kinds of evidence, and what each can support
+12 From formalization to executable analyzer                       [8%]
+  12.1 Executable Isabelle definitions: what makes a definition run
+  12.2 Code generation, one module, and the public run_voblint interface
+  12.3 The OCaml and browser boundary
+  12.4 An interactive analyzer artifact
+  12.5 What the playground demonstrates, and what it cannot
+  12.6 What remains outside the trusted boundary
+
+13 Evaluation                                                      [8%]
+  13.1 Three kinds of evidence, and what each can support
        (machine-checked | executable | explorable)
-  12.2 Proof effort: where the lines are
-  12.3 The regression suite: precision, soundness, known-imprecision
-  12.4 Precision witnesses: contexts, update rules, the product
-  12.5 Known imprecision, with mechanisms named
-  12.6 A real unsoundness, replayed: goblint/analyzer #1161
-  12.7 Runtime behaviour and its limits
-  12.8 Goblint alignment: an audited difference table
+  13.2 Proof effort: where the lines are
+  13.3 The regression suite: precision, soundness, known-imprecision
+  13.4 Precision witnesses: contexts, update rules, the product
+  13.5 Known imprecision, with mechanisms named
+  13.6 A real unsoundness, replayed: goblint/analyzer #1161
+  13.7 Runtime behaviour and its limits
+  13.8 Goblint alignment: an audited difference table
 
 PART V — ASSESSMENT
-13 Related work                                                    [8%]
-  13.1 Verified analyzers: Verasco and the CompCert line
-  13.2 Mechanized abstract interpretation in Isabelle
-  13.3 Verified fixpoint solvers
-  13.4 Goblint, local traces, and thread-modular analysis
-  13.5 Context sensitivity and trace partitioning
-  13.6 Where Voblint sits
+14 Related work                                                    [8%]
+  14.1 Verified analyzers: Verasco and the CompCert line
+  14.2 Mechanized abstract interpretation in Isabelle
+  14.3 Verified fixpoint solvers
+  14.4 Goblint, local traces, and thread-modular analysis
+  14.5 Context sensitivity and trace partitioning
+  14.6 Where Voblint sits
 
-14 Conclusion                                                      [6%]
-  14.1 What was established
-  14.2 Limitations, honestly enumerated
-  14.3 Future work: termination, context bounding, relational domains,
+15 Conclusion                                                      [6%]
+  15.1 What was established
+  15.2 Limitations, honestly enumerated
+  15.3 Future work: termination, context bounding, relational domains,
        richer source language, multi-analysis composition
-  14.4 Closing
+  15.4 Closing
 
-Appendices
-  A  Isabelle theory map and session graph
-  B  Notation reference, mapped to Isabelle names
-  C  The five obligations, per policy instance
-  D  The Goblint alignment register (condensed)
-  E  Regression corpus index
+Appendices (as of the 2026-09-22 compression pass)
+  A  Session structure (the session graph)
+  B  Formalization anchor index (concept, theory, item) and the retained
+     notations, mapped to their Isabelle declarations
+  C  Comparison with Goblint (the alignment register, condensed)
+  D  Main statements, lifted with proved(...), and the regression corpus
+     index
 ```
 
 ### 7.1 Per-chapter design notes
@@ -1282,7 +1385,7 @@ strength, and the chapter should say which each later claim rests on:
 | Kind | What it can establish | Instances |
 | --- | --- | --- |
 | machine-checked | a theorem, for every input the statement ranges over | the five endpoints; `sign_k2_strictly_more_precise_than_k1_at_g`; `certificate_demo_full_certificate`; `thm_oracles = []` |
-| executable | that *this* program, at *this* configuration, answers *this* | the 283-fixture corpus; the `by eval` witnesses; the site-figure fixtures |
+| executable | that *this* program, at *this* configuration, answers *this* | the regression corpus; the `by eval` witnesses; the site-figure fixtures |
 | explorable | that a reader can check the above without Isabelle | the playground (C11) |
 
 §12.6 is the chapter's strongest section and should be written early — see
@@ -1333,7 +1436,7 @@ thesis section → theories → central definitions → central theorems.
 | 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context_base_hetero`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
-| 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
+| 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `solve_dom_of_solve_c` |
 | 8.4–8.6 | `Voblint_Exec.Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer`, `Exec_St_Reachability`, `Exec_DG_State` | `resolved_st`, `resolved_st_q` (quotient), `location`, `location_of`, `fun_of_resolved_st_q_for`, `resolved_st_is_bot`, `canonical_location`, `exec_dg_st`, `fun_of_dg_st_for` | `resolved_st_q_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
 | 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_keys`, `lookup_context`, `wf_analysis_result`, `live_keys`, `cfg_succ_rel` | `live_keys_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
@@ -1462,7 +1565,7 @@ Prefer generated over drawn wherever the infrastructure already exists
 **Tables:**
 
 1. Goblint `Spec` ↔ `dg_spec` field correspondence (Ch. 6).
-2. The Goblint alignment register, condensed (Ch. 12 and Appendix D).
+2. The Goblint alignment register, condensed (Ch. 13 and Appendix C).
 3. Proof effort by layer (Ch. 12) — the table in §2.1 above.
 4. Verasco / Abs_Int_ITP2012 / Top_Down_Solver / Voblint comparison (Ch. 13).
 5. Regression corpus by category and outcome class (Ch. 12).
@@ -1647,6 +1750,60 @@ conversation with its author and has a long lead time. U1 (the title and
 framing) gates Ch. 1, Ch. 14 and the abstract — three of the four things an
 examiner reads first.
 
+### 11.1 Exposition lessons from comparable theses
+
+Reading notes, 2026-09-21. These recommendations concern exposition within the
+existing chapters; they introduce no changes to the frozen chapter structure.
+The sources below are examples of thesis writing, not evidence for Voblint's
+formal properties. Page numbers refer to printed pages.
+
+- **Alexandra Graß, [*Towards the Verification of Top-Down Solvers*](https://www.tcs.ifi.lmu.de/staff/alexandra-grass/master-thesis-alexandra-grass.pdf),
+  master's thesis, TUM, 2024, §§3.1–3.4, pp. 21–33.**
+  The exposition introduces the solver invariant, establishes operator
+  properties, and then gives the mutual partial-correctness theorem and its
+  induction argument. The final solver corollary explicitly assumes
+  termination. The discussion uses a small counterexample to explain a failed
+  solver construction.
+  **Apply in Chapters 8–9:** state the property needed by the next layer before
+  introducing supporting invariants. Explain the difficult preservation step
+  and show how initialization yields the public result. Keep the termination
+  premise visible. Retain the planned scope of Chapter 8: explain the solver
+  interface and integration obligations without reproducing its internal
+  verification. The selected thesis is not evidence that Voblint uses the same
+  solver variant or satisfies its assumptions.
+
+- **A. Halkjær From, [*Formalized First-Order Logic*](https://people.compute.dtu.dk/ahfrom/Formalized%20First-Order%20Logic.pdf),
+  bachelor's thesis, DTU, 2017, Chapter 7, pp. 49–58.**
+  A big-picture account precedes the intermediate constructions leading to
+  model existence and completeness. Chapter 8 then explains their
+  formalization.
+  **Apply in Chapters 4 and 9:** give a short mathematical account of the proof
+  dependencies before presenting Isabelle declarations. Explain what each
+  intermediate result supplies to the next step. Use this ordering locally
+  within the existing chapters; a second chapter sequence repeating the
+  mathematical development in Isabelle would add duplication.
+
+- **Vootele Rõtov, [*Time Partitioning in Goblint: Extending Region Analysis with Happens-Before Information*](https://dspace.ut.ee/bitstreams/cd12fc78-1098-4df0-84e8-65e9f8f27e8a/download),
+  master's thesis, University of Tartu, 2016, §§6.1–6.3, pp. 44–51.**
+  A pipeline diagram and a small analysis instance introduce the implementation
+  interfaces. A worked program precedes a benchmark table comparing the
+  original and extended analyses. The discussion defines the reported warning
+  categories and acknowledges how benchmark inspection informed the extension.
+  **Apply in Chapters 6 and 12:** explain an interface through one concrete
+  analysis. Pair comparison tables with a program explaining an observed
+  difference and an unchanged case. Define every measurement and disclose
+  fixture-selection criteria. Register commands and outputs in the thesis
+  evidence machinery. Treat this 2016 architecture description as historical;
+  current Goblint comparisons still require the alignment register and current
+  upstream evidence.
+
+**Next drafting step: Chapter 9, as already scheduled above.** Begin with the
+question of what a returned source-level result guarantees. Within its planned
+sections, introduce the result objects, state the theorem's assumptions and
+conclusion, explain the dependency chain, and interpret the verdicts using the
+spine program. Check these details against the theories before drafting;
+the comparison above supplies an exposition method, not theorem statements.
+
 ---
 
 ## 12. Visualization audit and figure supply
@@ -1768,7 +1925,7 @@ Verified defects in the current gallery, all in figure payloads:
 | `fig:cfg-source`, `fig:ast` | `proc fac(n) { … }` | VIMP's keyword is `fun` (`manifests/vimp-grammar.yaml`, `keywords: fun: FUN`) |
 | `fig:validltr` | constructors `Called`, `Resumed` | `Call`, `Resume`; the step rule appends through `extend` |
 | `tab:oracles` | a `sorry` column with ✓ marks, reading as “has a sorry”; `source_sound` attributed to `Voblint_CLI` | no `sorry` anywhere in `src/`; `source_sound` is `unit_dg_analysis.source_sound` in `Voblint_Result` |
-| `tab:size` | 105 theories / 56 800 lines (caption admits placeholders) | 223 theories / 61 255 lines (§2.1) |
+| `tab:size` | 105 theories / 56 800 lines (caption admits placeholders) | 223 theories / 62 098 lines (§2.1) |
 | `fig:eval` | invented bar values | no such measurement exists yet (U8) |
 
 None of this matters while the gallery is a gallery — the chapter is marked
@@ -2136,8 +2293,9 @@ by the same areas as §4's literature map.
 The `verified` section replays **goblint/analyzer #1161**: Goblint's congruence
 domain read `c % 2` as the constant `1` for every `c` it knew to be odd, sign
 included. In C, `%` truncates toward zero, so for `c ∈ {−5, −7}` every run gives
-`−1`. Goblint therefore reported a check that every run violates as succeeding,
-and the check every run satisfies as failing — *both verdicts backwards*.
+`−1`. Issue #1156 documents that Goblint therefore claimed `c % 2 == 1` holds,
+a check every run violates. No primary source records its verdict on the second
+check (`c % 2 == -1`).
 
 This is checked here, not asserted. `tests/regression/24-site-figures/precision/04-goblint_1161_congruence_mod.vimp`
 is Goblint's own regression test for the fix (`37-congruence/14-negative.c`)
@@ -2228,11 +2386,12 @@ Verified against `VIMP_Expr.thy` and `VIMP_Globals.thy`.
 | `a % 0` | **defined as `a`** (`c_mod`) | undefined behaviour |
 | `/` rounding | truncates toward zero | the same, since C99 |
 | `&&`, `\|\|` | both operands evaluated | short-circuits |
-| uninitialised locals | an arbitrary integer | undefined behaviour |
+| uninitialised locals of `main` | unconstrained (`cinit_stores`) | indeterminate |
+| uninitialised locals of a callee | **reset to `0`** (`enter_state`) | indeterminate |
 | globals at entry | zero (`cinit_stores`) | zero |
 | `main` | may not `return` explicitly | may |
 
-Three of these need a sentence of consequence rather than a table row.
+Four of these need a sentence of consequence rather than a table row.
 
 **Division is the sharpest.** VIMP *defines* what C leaves undefined, so a
 `PROVED` verdict on a program that divides by zero is a true statement about
@@ -2247,10 +2406,20 @@ expressions are total and pure, evaluating both operands of `&&` yields the same
 diagnostic traverses both operands, so `x != 0 && 10 / x > 1` draws a divisor
 warning where a C reader expects the guard to protect it.
 
-**Arbitrary locals are more general than C, hence sound-safe.** C leaves an
-uninitialised local undefined; VIMP admits any integer. The analyzer must
-therefore handle a strictly larger set of initial states than C requires, which
-can only cost precision.
+**`main`'s locals are more general than C, hence sound-safe.** C leaves an
+uninitialised automatic local indeterminate; `cinit_stores` constrains only the
+globals, so `main` starts with every local at any integer. The analyzer must
+therefore handle a superset of the initial states C permits, which can only
+cost precision.
+
+**A callee's locals are a definition of undefined behaviour.** `enter_state`
+keeps the globals and sets every other name to `0` before the formals are bound
+(`enter_state_apply`), in `pstep` and in `cstep` alike. Reading such a local
+before assigning it is undefined in C; VIMP, as with `/ 0`, gives it a value.
+The shipped analyses do not use the zero: the abstract entry resets locals to
+`top`, so `__voblint_check(y == 0)` on an unassigned callee local is `UNKNOWN`. The
+soundness theorem is stated over `pstep` and would equally accept an analysis
+that proved it, which would be a true statement about VIMP and not about C.
 
 ### 15.3 What a reviewer must check, in order of what a mistake would cost
 
@@ -2311,8 +2480,8 @@ stay one-way. Both a big-step and a small-step semantics exist.
   that makes IMP2 *recognised* is its VCG, and the VCG is big-step.
 - **The nondeterministic fragment is not expressible.** IMP2's `small_step` is a
   function; its semantics is deterministic. VIMP's `__voblint_nondet_int()`
-  makes `pstep` genuinely nondeterministic, and **63 of the 283 regression
-  fixtures use it, 7 of them in `soundness/`** — the category that exists to
+  makes `pstep` genuinely nondeterministic, and **66 regression fixtures
+  use it, 8 of them in `soundness/`** — the category that exists to
   show `UNKNOWN` is the only sound answer. An IMP2 anchor would exclude exactly
   the cases that demonstrate the analyzer is not overclaiming.
 - **It trades one adequacy question for two.** Today a reviewer must believe
@@ -2332,7 +2501,9 @@ stay one-way. Both a big-step and a small-step semantics exist.
    special-call nondeterminism; a progress lemma for well-formed configurations;
    an executable `pstep` interpreter run against the regression corpus, so the
    semantics is exercised rather than only reasoned about. None needs a second
-   language.
+   language. Progress is done: `source_progress` (Source_Progress.thy) proves
+   that every reachable configuration of a `wf_source_program` has finished or
+   can step, and Ch. 3 cites it.
 3. **One triangulation artifact for Ch. 12.** A single scalar, deterministic,
    check-free program carried through both worlds: IMP2's VCG proves the exact
    postcondition, the analyzer proves the envelope, and the two are shown

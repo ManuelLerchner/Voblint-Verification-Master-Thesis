@@ -1,0 +1,30 @@
+// PARAM: --analysis interval --globals warrow --context none
+// EXPECT-ARITHMETIC
+// Backs the thesis introduction's verdict figure: a function one would normally
+// unit-test, analyzed for every input at once. clamp returns a value in
+// [lo, hi], so p = [0,100]: the range check is proved, p > 100 is refuted,
+// p == 50 is undecided, and the check under p > 100 is dead. 1000 / (p + 1)
+// cannot divide by zero; 1000 / p can, since clamp may return 0.
+
+fun clamp(x, lo, hi) {
+  if (x < lo) {
+    return lo;
+  }
+  if (x > hi) {
+    return hi;
+  }
+  return x;
+}
+
+fun main() {
+  t = __voblint_nondet_int();
+  p = clamp(t, 0, 100);
+  __voblint_check(0 <= p && p <= 100);  // PROVED
+  __voblint_check(p > 100);             // REFUTED
+  __voblint_check(p == 50);             // UNKNOWN
+  a = 1000 / (p + 1);                   // ARITH: NONE
+  b = 1000 / p;                         // ARITH: WARN division-by-zero
+  if (p > 100) {
+    __voblint_check(p == 0);            // NOWARN
+  }
+}

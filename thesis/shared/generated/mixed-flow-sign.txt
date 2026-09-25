@@ -1,0 +1,60 @@
+clusters:
+  cluster_ctx_0: set / unit
+    set_pp1_ctx0
+    set_exit_set_ctx0
+    set_pp0_ctx0
+    set_entry_set_ctx0
+  cluster_ctx_1: get / unit
+    get_exit_get_ctx0
+    get_pp2_ctx0
+    get_entry_get_ctx0
+  cluster_ctx_2: main / unit
+    main_exit_main_ctx0
+    main_pp4_ctx0
+    main_pp5_ctx0
+    main_pp6_ctx0
+    main_pp7_ctx0
+    main_entry_main_ctx0
+
+nodes:
+  set_pp1_ctx0: pp1
+  set_exit_set_ctx0: exit_set
+  get_exit_get_ctx0: exit_get
+  main_exit_main_ctx0: exit_main
+      x=+
+      y=+
+  get_pp2_ctx0: pp2
+  main_pp4_ctx0: pp4
+      x=⊤
+      y=⊤
+  set_pp0_ctx0: pp0
+  main_pp5_ctx0: pp5
+      x=+
+      y=⊤
+  set_entry_set_ctx0: entry_set
+  main_pp6_ctx0: pp6
+      x=+
+      y=⊤
+  get_entry_get_ctx0: entry_get
+  main_pp7_ctx0: pp7
+      x=+
+      y=+
+  main_entry_main_ctx0: entry_main
+      x=⊤
+      y=⊤
+
+edges:
+  set_pp0_ctx0 -> set_pp1_ctx0: Gx := 1
+  set_pp1_ctx0 -> set_exit_set_ctx0: return
+  get_pp2_ctx0 -> get_exit_get_ctx0: return Gx
+  main_pp4_ctx0 -> main_pp5_ctx0: x := 1
+  main_pp7_ctx0 -> main_exit_main_ctx0: return
+  get_entry_get_ctx0 -> get_pp2_ctx0: body(get)
+  main_entry_main_ctx0 -> main_pp4_ctx0: body(main)
+  set_entry_set_ctx0 -> set_pp0_ctx0: body(set)
+  main_pp5_ctx0 -> set_entry_set_ctx0: enter set()
+  set_exit_set_ctx0 -> main_pp6_ctx0: combine
+  main_pp5_ctx0 -> main_pp6_ctx0: call-to-return set
+  main_pp6_ctx0 -> get_entry_get_ctx0: enter get()
+  get_exit_get_ctx0 -> main_pp7_ctx0: combine y := get()
+  main_pp6_ctx0 -> main_pp7_ctx0: call-to-return get

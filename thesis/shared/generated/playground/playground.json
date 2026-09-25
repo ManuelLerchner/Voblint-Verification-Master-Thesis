@@ -1,4 +1,13 @@
 {
+  "clamp": {
+    "analysis": "interval",
+    "context": "none",
+    "globals": "warrow",
+    "image": "clamp.png",
+    "program": "clamp.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=dY_NCoMwEITveYo5SaSBxkNPmr5KUKsYqjFIFKH47t0afy71Ena_mZ3s1qNF2ead47NA2ws0JsaHAaYGn5ERCz0wVH4cLIGU2uWwPI-Rw9KY3bKBOWULYzX91eXG8mD3UNB66ovWWK9tb1-V11Ty-DftSA2LeQEpkEi58nOibKryzSUyReYoooeqK5ujPa81pfAIWo41Q-IO4jckKy1O6tLt8j1xO_1vaMhc6Pgv",
+    "why": "Every answer kind in one run of a clamp function, each shown inline at its line: Figure 1.2."
+  },
   "contexts": {
     "analysis": "interval",
     "context": "entry-state",
@@ -6,7 +15,7 @@
     "image": "contexts.png",
     "program": "contexts.vimp",
     "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
-    "why": "The same two calls without and with entry-state contexts: UNKNOWN twice, then PROVED twice with one box per argument."
+    "why": "The running example without and with entry-state contexts: per-context values inline and one graph box per context of bump; also the program listing of the program-to-equations figure."
   },
   "division-definite": {
     "analysis": "interval",
@@ -51,6 +60,6 @@
     "image": "while-loop.png",
     "program": "while-loop.vimp",
     "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmquUCAA",
-    "why": "The running example: a PROVED check in the source, its state, and the solved graph."
+    "why": "One run in three views: the PROVED check in the source, the state inspector at the check, and the solved graph."
   }
 }

@@ -1,0 +1,9 @@
+tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp [parity]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+16:5      pp3    x == 5     UNKNOWN  x=⊤

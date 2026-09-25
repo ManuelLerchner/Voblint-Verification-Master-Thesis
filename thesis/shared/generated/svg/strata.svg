@@ -6,7 +6,7 @@
 <style>
   .strata-svg { max-width: 1000px; }
   .stratum-part { outline: none; }
-  .stratum-part rect { fill: #D9C8A2; stroke: rgb(40 30 20 / 0.35); stroke-width: 1; }
+  .stratum-part rect { fill: #D9C8A2; stroke: #37474F; stroke-opacity: 0.35; stroke-width: 1; }
   .stratum-bedrock rect { fill: #5B5048; }
   .stratum-d1 rect { fill: #8A6D52; }
   .stratum-d2 rect { fill: #A47D58; }
@@ -24,8 +24,6 @@
   .stratum-part text { fill: #37474F; font: 700 12px "Isabelle DejaVu Sans Mono", "DejaVu Sans Mono", monospace; text-anchor: middle; }
   .stratum-bedrock .stratum-part text, .stratum-d1 .stratum-part text { fill: #FAFAFA; }
   .stratum-name { fill: #78909C; font-size: 12.5px; font-weight: 650; }
-  .stratum-name { fill: #EF6C00; }
-  .stratum-part rect { opacity: 0.45; }
 </style>
               <g class="stratum stratum-examples" data-layer="examples">
                 <text class="stratum-name" x="236" y="52" text-anchor="end">Examples and regressions</text>

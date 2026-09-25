@@ -4915,6 +4915,11 @@ fun main() {
           <tr><td class="nl-sym">𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em></td><td><a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst"><code>psteps</code></a></td></tr>
           <tr><td class="nl-sym">𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em> in <em>g</em></td><td><a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst"><code>csteps</code></a></td></tr>
           <tr><td class="nl-sym">Π,g ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
+          <tr><td class="nl-sym">skip<sup>#</sup> S / assign<sup>#</sup> S / special<sup>#</sup> S / branch<sup>#</sup> S / body<sup>#</sup> S / return<sup>#</sup> S / event<sup>#</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
+          <tr><td class="nl-sym">enter<sup>#</sup> S / combine_env<sup>#</sup> S / combine_assign<sup>#</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
+          <tr><td class="nl-sym">combine<sup>#</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
+          <tr><td class="nl-sym">context<sup>#</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale"><code>route</code></a></td></tr>
+          <tr><td class="nl-sym">a ∇ b / a Δ b</td><td><em>a</em> widened by <em>b</em>, <em>a</em> narrowed by <em>b</em></td><td><a href="Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.widening_class.widen%7Cconst"><code>widen</code></a> <a href="Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst"><code>narrow</code></a></td></tr>
           <tr><td class="nl-sym">𝒢</td><td>the globals classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
           <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></td></tr>
           <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a></td></tr>
@@ -4976,11 +4981,11 @@ fun main() {
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
-              A run about to execute <code>__voblint_check(e)</code> finds the check's row in
-              the result under the check's label, listed at a node its store reaches. That row is
-              not DEAD; if it says PROVED, <code>e</code> is true in the store, and if it says
-              REFUTED, <code>e</code> is false. The parser writes each check's line and column
-              into its label, and the report prints every row at its own label.
+              A run about to execute <code>__voblint_check(e)</code> finds a check for
+              <code>e</code> in the result, listed at a node its store reaches. That check is not
+              DEAD; if it says PROVED, <code>e</code> is true in the store, and if it says
+              REFUTED, <code>e</code> is false. The node is found, not assumed: two identical
+              procedure bodies list their checks separately.
             </p>
             <details>
               <summary>Isabelle statement</summary>
@@ -4988,10 +4993,10 @@ fun main() {
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "next_check residual = Some (l, e)"
+      and "next_check residual = Some e"
       and "config_terminates D rule ctx p"
       and "run_voblint D rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
+  shows "∃c ∈ set (res_checks res). check_exp c = e
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
            ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s))
@@ -5062,13 +5067,14 @@ fun main() {
             <p class="thm-plain">
               Whatever the configuration, the result lists exactly one check per check in the
               compiled graph, at that check's node, with its label and condition, in graph order.
-              No check is silently dropped.
+              No check is silently dropped. The label is the check's source position. Writing it
+              in the parser and printing it in the renderer happen outside the proof.
             </p>
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_check_sites:
   assumes "run_voblint D rule ctx p = Analysed res"
-  shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
+  shows "map (λchk. (check_point chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
             </details>
           </article>
@@ -5753,9 +5759,7 @@ qed</code></pre>
           <p>
             The <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/frontend" target="_blank" rel="noreferrer">parser</a>
             is generated from one grammar and tested. Isabelle's code generator, the OCaml compiler,
-            wasm and your browser are trusted. A check's row carries the check's label through
-            the proof, but that the parser writes the check's own line and column into it is
-            trusted. Diagnostic positions, badges and graph drawings
+            wasm and your browser are trusted. Source positions, badges and graph drawings
             (<a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/cli/render" target="_blank" rel="noreferrer">OCaml rendering</a>,
             <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">this page</a>)
             are unverified.

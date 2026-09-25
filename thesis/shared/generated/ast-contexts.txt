@@ -1,0 +1,1 @@
+{"declared_global_vars":[],"prog_main":{"Seq":[{"Seq":[{"Seq":[{"Call":["a","bump",[{"N":5}]]},{"Call":["b","bump",[{"N":4}]]}]},{"Check":[[8,3],{"Eq":[{"V":"a"},{"N":6}]}]}]},{"Check":[[9,3],{"Eq":[{"V":"b"},{"N":5}]}]}]},"prog_table":[["bump",{"formals":["n"],"body":{"Return":{"Plus":[{"V":"n"},{"N":1}]}}}]]}

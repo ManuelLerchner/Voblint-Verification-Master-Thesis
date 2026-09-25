@@ -1,0 +1,978 @@
+{
+  "source": "thesis/shared/notation.toml",
+  "base": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/",
+  "groups": {
+    "operator": {
+      "title": "Semantic operators and relations"
+    },
+    "set": {
+      "title": "Semantic sets",
+      "note": "A calligraphic capital names a semantic set. Its global form lists every parameter; inside a locale or a theory's context block that fixes them, they are omitted."
+    },
+    "shorthand": {
+      "title": "Proof-local shorthands",
+      "note": "These names are local abbreviations available while writing proofs in the indicated locales. They are not new definitions: they unfold when parsed, and outside those locale contexts Isabelle shows the underlying expressions."
+    }
+  },
+  "entries": [
+    {
+      "id": "gamma",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "gamma of _a_",
+      "meaning": "the integers the abstract value _a_ represents",
+      "forms": [
+        {
+          "const": "gamma",
+          "cite": {
+            "kind": "const",
+            "name": "gamma"
+          },
+          "symbol": "\\<gamma> a",
+          "mixfix": "\\<gamma>",
+          "declaration": "class numeric_domain",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Abstract_Domain",
+          "file": "src/Abstract_Interpreter/Domain/Abstract_Domain.thy",
+          "href": "Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst",
+          "session": "Voblint_Domain"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "aval",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the value of _e_ in _s_",
+      "meaning": "the integer expression _e_ evaluates to in store _s_",
+      "forms": [
+        {
+          "const": "aval",
+          "cite": {
+            "kind": "const",
+            "name": "aval"
+          },
+          "symbol": "\\<lbrakk>e\\<rbrakk>\\<^sub>e s",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sub>e",
+          "declaration": "fun",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "VIMP_Expr",
+          "file": "src/Program_Model/VIMP/VIMP_Expr.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.aval%7Cconst",
+          "session": "Voblint_VIMP"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "gamma_state",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the stores _σ_ represents",
+      "meaning": "stores _s_ with {s x \\<in> \\<gamma> (\\<sigma> x)} for every variable _x_",
+      "forms": [
+        {
+          "const": "gamma_state",
+          "cite": {
+            "kind": "const",
+            "name": "gamma_state"
+          },
+          "symbol": "\\<lbrakk>\\<sigma>\\<rbrakk>",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Nonrelational_State",
+          "file": "src/Abstract_Interpreter/Domain/Nonrelational_State.thy",
+          "href": "Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.gamma_state%7Cconst",
+          "session": "Voblint_Domain"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "gamma_state_lift",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the stores _d_ represents",
+      "meaning": "concretization of a lifted state; the unreachable state Bot represents no store",
+      "forms": [
+        {
+          "const": "gamma_state_lift",
+          "cite": {
+            "kind": "const",
+            "name": "gamma_state_lift"
+          },
+          "symbol": "\\<lbrakk>d\\<rbrakk>\\<^sub>\\<bottom>",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sub>\\<bottom>",
+          "declaration": "abbreviation",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Nonrelational_Reachability",
+          "file": "src/Abstract_Interpreter/Domain/Nonrelational_Reachability.thy",
+          "href": "Voblint/Voblint_Domain/Nonrelational_Reachability.html#Nonrelational_Reachability.gamma_state_lift%7Cconst",
+          "session": "Voblint_Domain"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "pstep",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "_c_ steps to _c′_",
+      "meaning": "one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure",
+      "forms": [
+        {
+          "const": "pstep",
+          "cite": {
+            "kind": "const",
+            "name": "pstep"
+          },
+          "symbol": "\\<G>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p c'",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>p/ _)",
+          "declaration": "inductive",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "VIMP_Proc",
+          "file": "src/Program_Model/VIMP/VIMP_Proc.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst",
+          "session": "Voblint_VIMP"
+        },
+        {
+          "const": "psteps",
+          "cite": {
+            "kind": "const",
+            "name": "psteps"
+          },
+          "symbol": "\\<G>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p\\<^sup>* c'",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>p\\<^sup>*/ _)",
+          "declaration": "abbreviation",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "VIMP_Proc",
+          "file": "src/Program_Model/VIMP/VIMP_Proc.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst",
+          "session": "Voblint_VIMP"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "cstep",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "_c_ steps to _c′_ in _g_",
+      "meaning": "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_; the starred arrow is its reflexive-transitive closure",
+      "forms": [
+        {
+          "const": "cstep",
+          "cite": {
+            "kind": "const",
+            "name": "cstep"
+          },
+          "symbol": "\\<G>,g \\<turnstile> c \\<rightarrow>\\<^sub>c c'",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>c/ _)",
+          "declaration": "inductive",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "CFG_Exec",
+          "file": "src/Program_Model/CFG/CFG_Exec.thy",
+          "href": "Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst",
+          "session": "Voblint_CFG"
+        },
+        {
+          "const": "csteps",
+          "cite": {
+            "kind": "const",
+            "name": "csteps"
+          },
+          "symbol": "\\<G>,g \\<turnstile> c \\<rightarrow>\\<^sub>c\\<^sup>* c'",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>c\\<^sup>*/ _)",
+          "declaration": "abbreviation",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "CFG_Exec",
+          "file": "src/Program_Model/CFG/CFG_Exec.thy",
+          "href": "Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst",
+          "session": "Voblint_CFG"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "csim",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "_c_ is matched with _c′_",
+      "meaning": "the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_",
+      "forms": [
+        {
+          "const": "csim",
+          "cite": {
+            "kind": "const",
+            "name": "csim"
+          },
+          "symbol": "\\<Pi>,g \\<turnstile> c \\<approx> c'",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<approx>/ _)",
+          "declaration": "inductive",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Simulation_Relation",
+          "file": "src/Program_Model/Compile/Simulation/Simulation_Relation.thy",
+          "href": "Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst",
+          "session": "Voblint_Compile"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dgs_skip",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the _op_ transfer of specification _S_",
+      "meaning": "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to",
+      "forms": [
+        {
+          "const": "dgs_skip",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_skip"
+          },
+          "symbol": "skip\\<^sup># S",
+          "mixfix": "skip\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_assign",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_assign"
+          },
+          "symbol": "assign\\<^sup># S",
+          "mixfix": "assign\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_special",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_special"
+          },
+          "symbol": "special\\<^sup># S",
+          "mixfix": "special\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_branch",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_branch"
+          },
+          "symbol": "branch\\<^sup># S",
+          "mixfix": "branch\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_body",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_body"
+          },
+          "symbol": "body\\<^sup># S",
+          "mixfix": "body\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_return",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_return"
+          },
+          "symbol": "return\\<^sup># S",
+          "mixfix": "return\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_event",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_event"
+          },
+          "symbol": "event\\<^sup># S",
+          "mixfix": "event\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dgs_enter",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the call-boundary transfers of specification _S_",
+      "meaning": "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result",
+      "forms": [
+        {
+          "const": "dgs_enter",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_enter"
+          },
+          "symbol": "enter\\<^sup># S",
+          "mixfix": "enter\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_combine_env",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_combine_env"
+          },
+          "symbol": "combine_env\\<^sup># S",
+          "mixfix": "combine'_env\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_combine_assign",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_combine_assign"
+          },
+          "symbol": "combine_assign\\<^sup># S",
+          "mixfix": "combine'_assign\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "combine_collect_abs",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the abstract return of _σe_ into _σc_",
+      "meaning": "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination",
+      "forms": [
+        {
+          "const": "combine_collect_abs",
+          "cite": {
+            "kind": "const",
+            "name": "combine_collect_abs"
+          },
+          "symbol": "combine\\<^sup># \\<G> dst \\<sigma>c \\<sigma>e",
+          "mixfix": "combine\\<^sup>#",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Transfer_Algebra",
+          "file": "src/Abstract_Interpreter/Framework/State/Transfer_Algebra.thy",
+          "href": "Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "routed_context_base_hetero",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the computed callee context",
+      "meaning": "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value",
+      "forms": [
+        {
+          "const": "route",
+          "cite": {
+            "kind": "locale",
+            "name": "routed_context_base_hetero"
+          },
+          "symbol": "context\\<^sup>#",
+          "mixfix": "context\\<^sup>#",
+          "declaration": "locale routed_context_base_hetero",
+          "scope": "routed_context_base_hetero",
+          "pretty_printed": true,
+          "theory": "Routed_Context",
+          "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "widen",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "_a_ widened by _b_, _a_ narrowed by _b_",
+      "meaning": "the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_",
+      "forms": [
+        {
+          "const": "widen",
+          "cite": {
+            "kind": "const",
+            "name": "widen"
+          },
+          "symbol": "a \\<nabla> b",
+          "mixfix": "_ \\<nabla> _",
+          "declaration": "class widening",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Update_rules",
+          "file": "vendor/td-verification/Update_rules.thy",
+          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.widening_class.widen%7Cconst",
+          "session": "Voblint_Domain"
+        },
+        {
+          "const": "narrow",
+          "cite": {
+            "kind": "const",
+            "name": "narrow"
+          },
+          "symbol": "a \\<Delta> b",
+          "mixfix": "_ \\<Delta> _",
+          "declaration": "class narrowing",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Update_rules",
+          "file": "vendor/td-verification/Update_rules.thy",
+          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst",
+          "session": "Voblint_Domain"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "declared_global",
+      "group": "operator",
+      "kind": "convention",
+      "reads": "the globals classifier",
+      "meaning": "the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter",
+      "forms": [
+        {
+          "const": "declared_global",
+          "cite": {
+            "kind": "const",
+            "name": "declared_global"
+          },
+          "symbol": "\\<G>",
+          "mixfix": null,
+          "declaration": "variable convention",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "VIMP_Program",
+          "file": "src/Program_Model/VIMP/VIMP_Program.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst",
+          "session": "Voblint_VIMP"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "valid_ltr",
+      "group": "set",
+      "kind": "notation",
+      "reads": "the valid traces of _g_ from _S_",
+      "meaning": "the activation-local traces of graph _g_ from initial stores _S_",
+      "forms": [
+        {
+          "const": "valid_ltr",
+          "cite": {
+            "kind": "const",
+            "name": "valid_ltr"
+          },
+          "symbol": "\\<T>\\<^bsub>\\<G>,g,S\\<^esub>",
+          "mixfix": "\\<T>\\<^bsub>_,_,_\\<^esub>",
+          "declaration": "inductive_set",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "LTR_Def",
+          "file": "src/Program_Model/CFG/Collecting/LTR_Def.thy",
+          "href": "Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst",
+          "session": "Voblint_CFG"
+        }
+      ],
+      "local": {
+        "const": "traces",
+        "cite": {
+          "kind": "const",
+          "name": "ltr_coverage.traces"
+        },
+        "symbol": "\\<T>",
+        "mixfix": "\\<T>",
+        "declaration": "abbreviation",
+        "scope": "ltr_coverage",
+        "pretty_printed": true,
+        "theory": "LTR_Abstract",
+        "file": "src/Program_Model/CFG/Collecting/LTR_Abstract.thy",
+        "expands": "valid_ltr \\<G> g S",
+        "shorthand_for": "valid_ltr",
+        "href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.traces%7Cconst",
+        "scope_href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale",
+        "session": "Voblint_CFG"
+      }
+    },
+    {
+      "id": "ltr_collect",
+      "group": "set",
+      "kind": "notation",
+      "reads": "the stores collected at _v_",
+      "meaning": "the stores valid traces reach at node _v_",
+      "forms": [
+        {
+          "const": "ltr_collect",
+          "cite": {
+            "kind": "const",
+            "name": "ltr_collect"
+          },
+          "symbol": "\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v",
+          "mixfix": "\\<C>\\<^bsub>_,_,_\\<^esub>",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "LTR_Collect",
+          "file": "src/Program_Model/CFG/Collecting/LTR_Collect.thy",
+          "href": "Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst",
+          "session": "Voblint_CFG"
+        }
+      ],
+      "local": {
+        "const": "collect",
+        "cite": {
+          "kind": "const",
+          "name": "ltr_coverage.collect"
+        },
+        "symbol": "\\<C> v",
+        "mixfix": "\\<C>",
+        "declaration": "abbreviation",
+        "scope": "ltr_coverage",
+        "pretty_printed": true,
+        "theory": "LTR_Abstract",
+        "file": "src/Program_Model/CFG/Collecting/LTR_Abstract.thy",
+        "expands": "ltr_collect \\<G> g S",
+        "shorthand_for": "ltr_collect",
+        "href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.collect%7Cconst",
+        "scope_href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale",
+        "session": "Voblint_CFG"
+      }
+    },
+    {
+      "id": "activation_collect",
+      "group": "set",
+      "kind": "notation",
+      "reads": "the stores collected at _v_ in context _c_",
+      "meaning": "the stores valid traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_",
+      "forms": [
+        {
+          "const": "activation_collect",
+          "cite": {
+            "kind": "const",
+            "name": "activation_collect"
+          },
+          "symbol": "\\<A>\\<^bsub>\\<G>,R,startcontext,g,S\\<^esub> v c",
+          "mixfix": "\\<A>\\<^bsub>_,_,_,_,_\\<^esub>",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "LTR_Activation_Context",
+          "file": "src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy",
+          "href": "Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst",
+          "session": "Voblint_CFG"
+        }
+      ],
+      "local": {
+        "const": "buckets",
+        "cite": {
+          "kind": "const",
+          "name": "ltr_coverage.buckets"
+        },
+        "symbol": "\\<A> v c",
+        "mixfix": "\\<A>",
+        "declaration": "abbreviation",
+        "scope": "ltr_coverage",
+        "pretty_printed": true,
+        "theory": "LTR_Abstract",
+        "file": "src/Program_Model/CFG/Collecting/LTR_Abstract.thy",
+        "expands": "activation_collect \\<G> R startcontext g S",
+        "shorthand_for": "activation_collect",
+        "href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.buckets%7Cconst",
+        "scope_href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale",
+        "session": "Voblint_CFG"
+      }
+    },
+    {
+      "id": "ltr_coverage.carries",
+      "group": "shorthand",
+      "kind": "locale_abbreviation",
+      "reads": "_t_ carries context _c_",
+      "meaning": "the context relation of the locale's policy, between a valid trace and the contexts it may run in",
+      "forms": [
+        {
+          "const": "carries",
+          "cite": {
+            "kind": "const",
+            "name": "ltr_coverage.carries"
+          },
+          "symbol": "carries t c",
+          "mixfix": null,
+          "declaration": "abbreviation",
+          "scope": "ltr_coverage",
+          "pretty_printed": true,
+          "theory": "LTR_Abstract",
+          "file": "src/Program_Model/CFG/Collecting/LTR_Abstract.thy",
+          "expands": "trace_context \\<G> R startcontext g",
+          "href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.carries%7Cconst",
+          "scope_href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale",
+          "session": "Voblint_CFG"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "ltr_coverage.admits",
+      "group": "shorthand",
+      "kind": "locale_abbreviation",
+      "reads": "_ctx′_ is admitted for the call at _u_",
+      "meaning": "some call edge at _u_ to _p_ enters _es_ from _s_, and the context relation admits _ctx′_ for it",
+      "forms": [
+        {
+          "const": "admits",
+          "cite": {
+            "kind": "const",
+            "name": "ltr_coverage.admits"
+          },
+          "symbol": "admits u ctx p s es ctx'",
+          "mixfix": null,
+          "declaration": "abbreviation",
+          "scope": "ltr_coverage",
+          "pretty_printed": true,
+          "theory": "LTR_Abstract",
+          "file": "src/Program_Model/CFG/Collecting/LTR_Abstract.thy",
+          "expands": "admits_call_context \\<G> g R",
+          "href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.admits%7Cconst",
+          "scope_href": "Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale",
+          "session": "Voblint_CFG"
+        },
+        {
+          "const": "admits",
+          "cite": {
+            "kind": "const",
+            "name": "routed_context_base_hetero.admits"
+          },
+          "symbol": "admits u ctx p s es ctx'",
+          "mixfix": null,
+          "declaration": "abbreviation (input)",
+          "scope": "routed_context_base_hetero",
+          "pretty_printed": false,
+          "theory": "Routed_Context",
+          "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
+          "expands": "admits_call_context \\<G> g R",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.admits%7Cconst",
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dg_ctx_activation_base.gamma_at",
+      "group": "shorthand",
+      "kind": "locale_abbreviation",
+      "reads": "the stores the solution gives _v_ in _ctx_",
+      "meaning": "proof-local shorthand for applying {\\<gamma>\\<^sub>D\\<^sub>G} to the local and global components selected by the solved state; it is not a separate semantic operation",
+      "forms": [
+        {
+          "const": "gamma_at",
+          "cite": {
+            "kind": "const",
+            "name": "dg_ctx_activation_base.gamma_at"
+          },
+          "symbol": "gamma_at v ctx",
+          "mixfix": null,
+          "declaration": "abbreviation (input)",
+          "scope": "dg_ctx_activation_base",
+          "pretty_printed": false,
+          "theory": "DG_Ctx_Activation",
+          "file": "src/Abstract_Interpreter/Framework/Activation/DG_Ctx_Activation.thy",
+          "expands": "\\<gamma>\\<^sub>D\\<^sub>G (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))",
+          "href": "Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base.gamma_at%7Cconst",
+          "scope_href": "Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dg_ctx_activation_base.man_at",
+      "group": "shorthand",
+      "kind": "locale_abbreviation",
+      "reads": "the manager at _v_ in _ctx_",
+      "meaning": "proof-local shorthand for the manager built from the solved local state at (_v_, _ctx_) and the shared global key; it is not a separate semantic operation",
+      "forms": [
+        {
+          "const": "man_at",
+          "cite": {
+            "kind": "const",
+            "name": "dg_ctx_activation_base.man_at"
+          },
+          "symbol": "man_at v ctx",
+          "mixfix": null,
+          "declaration": "abbreviation (input)",
+          "scope": "dg_ctx_activation_base",
+          "pretty_printed": false,
+          "theory": "DG_Ctx_Activation",
+          "file": "src/Abstract_Interpreter/Framework/Activation/DG_Ctx_Activation.thy",
+          "expands": "mk_dg_man (locals (sigma (Inl (v, ctx)))) (\\<lambda>_. gk0)",
+          "href": "Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base.man_at%7Cconst",
+          "scope_href": "Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "routed_context_base_hetero.cover",
+      "group": "shorthand",
+      "kind": "locale_abbreviation",
+      "reads": "the stores claimed at _v_ in _ctx_",
+      "meaning": "proof-local shorthand for applying {\\<gamma>\\<^sub>M} to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation",
+      "forms": [
+        {
+          "const": "cover",
+          "cite": {
+            "kind": "const",
+            "name": "routed_context_base_hetero.cover"
+          },
+          "symbol": "cover v ctx",
+          "mixfix": null,
+          "declaration": "abbreviation (input)",
+          "scope": "routed_context_base_hetero",
+          "pretty_printed": false,
+          "theory": "Routed_Context",
+          "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
+          "expands": "\\<gamma>\\<^sub>M (sg (Inl (v, ctx)))",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.cover%7Cconst",
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    }
+  ],
+  "citations": [
+    {
+      "kind": "const",
+      "name": "gamma"
+    },
+    {
+      "kind": "const",
+      "name": "aval"
+    },
+    {
+      "kind": "const",
+      "name": "gamma_state"
+    },
+    {
+      "kind": "const",
+      "name": "gamma_state_lift"
+    },
+    {
+      "kind": "const",
+      "name": "pstep"
+    },
+    {
+      "kind": "const",
+      "name": "psteps"
+    },
+    {
+      "kind": "const",
+      "name": "cstep"
+    },
+    {
+      "kind": "const",
+      "name": "csteps"
+    },
+    {
+      "kind": "const",
+      "name": "csim"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_skip"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_assign"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_special"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_branch"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_body"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_return"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_event"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_enter"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_env"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_assign"
+    },
+    {
+      "kind": "const",
+      "name": "combine_collect_abs"
+    },
+    {
+      "kind": "locale",
+      "name": "routed_context_base_hetero"
+    },
+    {
+      "kind": "const",
+      "name": "widen"
+    },
+    {
+      "kind": "const",
+      "name": "narrow"
+    },
+    {
+      "kind": "const",
+      "name": "declared_global"
+    },
+    {
+      "kind": "const",
+      "name": "valid_ltr"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_coverage.traces"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_collect"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_coverage.collect"
+    },
+    {
+      "kind": "const",
+      "name": "activation_collect"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_coverage.buckets"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_coverage.carries"
+    },
+    {
+      "kind": "const",
+      "name": "ltr_coverage.admits"
+    },
+    {
+      "kind": "const",
+      "name": "routed_context_base_hetero.admits"
+    },
+    {
+      "kind": "const",
+      "name": "dg_ctx_activation_base.gamma_at"
+    },
+    {
+      "kind": "const",
+      "name": "dg_ctx_activation_base.man_at"
+    },
+    {
+      "kind": "const",
+      "name": "routed_context_base_hetero.cover"
+    },
+    {
+      "kind": "locale",
+      "name": "ltr_coverage"
+    },
+    {
+      "kind": "locale",
+      "name": "dg_ctx_activation_base"
+    }
+  ]
+}

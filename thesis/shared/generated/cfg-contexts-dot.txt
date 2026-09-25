@@ -1,0 +1,35 @@
+digraph AnalysisCFG {
+  graph [rankdir=TB,ordering=out,splines=polyline,nodesep=0.5,ranksep=0.8,remincross=true,mclimit=4,fontname="Menlo"];
+  node [shape=box,style=filled,fillcolor=lightgreen,fontname="Menlo",id="\N",URL="javascript:show_info('\N');"];
+  edge [fontname="Menlo",fontsize=10,arrowsize=0.8];
+  subgraph cluster_ctx_0 {
+    label="bump / unit";
+    style=rounded; color=gray70; penwidth=1;
+    bump_exit_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_bump",tooltip="exit_bump\nn=[-∞,5]"];
+    bump_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\nn=[-∞,5]"];
+    bump_entry_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_bump",tooltip="entry_bump\nn=[-∞,5]"];
+  }
+  subgraph cluster_ctx_1 {
+    label="main / unit";
+    style=rounded; color=gray70; penwidth=1;
+    main_pp5_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp5\ncheck b == 5",tooltip="pp5\na=[-∞,6]\nb=[-∞,6]\ncheck b == 5"];
+    main_pp6_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp6",tooltip="pp6\na=[-∞,6]\nb=[-∞,6]"];
+    main_exit_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_main",tooltip="exit_main\na=[-∞,6]\nb=[-∞,6]"];
+    main_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\na=⊤\nb=⊤"];
+    main_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\na=[-∞,6]\nb=⊤"];
+    main_pp4_ctx0 [shape=box,style="rounded,filled",color=darkgoldenrod,penwidth=2,fillcolor=lightgoldenrod1,label="pp4\ncheck a == 6",tooltip="pp4\na=[-∞,6]\nb=[-∞,6]\ncheck a == 6"];
+    main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\na=⊤\nb=⊤"];
+  }
+  bump_pp0_ctx0 -> bump_exit_bump_ctx0 [weight=20,label="return n + 1"];
+  main_pp4_ctx0 -> main_pp5_ctx0 [weight=20,label="check(a == 6)"];
+  main_pp5_ctx0 -> main_pp6_ctx0 [weight=20,label="check(b == 5)"];
+  main_pp6_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
+  bump_entry_bump_ctx0 -> bump_pp0_ctx0 [weight=20,label="body(bump)"];
+  main_entry_main_ctx0 -> main_pp2_ctx0 [weight=20,label="body(main)"];
+  main_pp2_ctx0 -> bump_entry_bump_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call bump(5)"];
+  bump_exit_bump_ctx0 -> main_pp3_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / a := bump(5)"];
+  main_pp2_ctx0 -> main_pp3_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+  main_pp3_ctx0 -> bump_entry_bump_ctx0 [color=purple,penwidth=2,weight=6,minlen=2,label="call bump(4)"];
+  bump_exit_bump_ctx0 -> main_pp4_ctx0 [style=dashed,color=blue,constraint=false,weight=0,arrowsize=0.65,penwidth=1,xlabel="resume / b := bump(4)"];
+  main_pp3_ctx0 -> main_pp4_ctx0 [style=dashed,color=gray40,weight=20,label="continuation"];
+}

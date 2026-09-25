@@ -3,6 +3,7 @@
 #import "@preview/commute:0.3.0" as commute
 #import "@preview/subpar:0.2.2"
 #import "theme.typ": vb
+#import "code.typ": listing
 
 // Reusable figure vocabulary. Same principle as the LaTeX style file: a CFG
 // node looks the same everywhere, and restyling all of them is one edit.
@@ -336,15 +337,10 @@
   [#chapter.#n]
 }
 
-#let subfigures(..args) = subpar.grid(
-  numbering: chapter-numbering,
-  numbering-sub-ref: (m, n) => context {
-    let c = counter(heading).get()
-    let chapter = if c.len() > 0 { c.at(0) } else { 0 }
-    [#chapter.#m#numbering("a", n)]
-  },
-  ..args,
-)
+// A reference to a part ("Figure 5.2b") is resolved by the `show ref` rule in
+// tum.typ, at the part's own location: subpar's `numbering-sub-ref` would run
+// at the citing sentence and count the part's own kind.
+#let subfigures(..args) = subpar.grid(numbering: chapter-numbering, ..args)
 
 
 // ------------------------------------------------------------------ parts --
@@ -360,8 +356,10 @@
 // at the heading's location.
 #let part-counter = counter("voblint-part")
 
-#let part(title) = {
-  pagebreak(to: "odd", weak: true)
+// Chapters open on the next page (openany), so a part does too: forcing a
+// recto here would leave a blank verso before every part.
+#let part(title, lbl: none) = {
+  pagebreak(weak: true)
   part-counter.step()
   {
     show heading.where(level: 1): it => {
@@ -384,9 +382,20 @@
       })
       v(1.6fr)
     }
-    heading(level: 1, numbering: none, supplement: [Part], title)
+    if lbl == none {
+      heading(level: 1, numbering: none, supplement: [Part], title)
+    } else {
+      [#heading(level: 1, numbering: none, supplement: [Part], title)#lbl]
+    }
   }
   pagebreak(weak: true)
+}
+
+// A part heading is unnumbered, so `@label` cannot reference it; this prints
+// "Part II" as a link to the part's divider page.
+#let partref(lbl) = context {
+  let loc = locate(lbl)
+  link(loc)[Part #numbering("I", part-counter.at(loc).first())]
 }
 
 // The contents entry for a part: a bold, unnumbered group line without a page
@@ -395,7 +404,7 @@
 #let part-outline-entry(it) = {
   if it.element.supplement == [Part] {
     let n = part-counter.at(it.element.location()).first()
-    block(above: 17pt, below: 0pt, link(it.element.location(), text(
+    block(above: 9pt, below: 0pt, link(it.element.location(), text(
       font: "Latin Modern Sans",
       weight: "bold",
     )[Part #numbering("I", n): #it.element.body]))
@@ -419,16 +428,170 @@
   raw(parts.join(", "))
 }
 
-#let playground-figure(name, caption, width: 100%, label: none) = {
+// `crop: (x0, y0, x1, y1)`, fractions of the screenshot, shows one pane of it
+// at `width` (then a length), so its code stays at a readable size.
+#let playground-figure(
+  name,
+  caption,
+  width: 100%,
+  crop: none,
+  label: none,
+  placement: none,
+) = {
   let r = _playground.at(name)
+  let path = "/shared/generated/playground/" + r.image
+  let shot = if crop == none { image(path, width: width) } else {
+    let (x0, y0, x1, y1) = crop
+    // The PNG header holds the pixel size: width at byte 16, height at 20.
+    let png = read(path, encoding: none)
+    let be32(i) = array(png.slice(i, i + 4)).fold(0, (a, b) => a * 256 + b)
+    let aspect = be32(20) / be32(16)
+    layout(size => {
+      let width = if type(width) == ratio { size.width * width } else { width }
+      let full = width / (x1 - x0)
+      let height = full * aspect
+      block(
+        width: width,
+        height: height * (y1 - y0),
+        clip: true,
+        // Sized to the whole image: an image larger than the clipping block
+        // would otherwise be centred in it.
+        align(top + left, move(dx: -full * x0, dy: -height * y0, box(
+          width: full,
+          height: height,
+          image(path, width: full),
+        ))),
+      )
+    })
+  }
   figure(
-    image("/shared/generated/playground/" + r.image, width: width),
+    shot,
+    placement: placement,
     caption: [#caption #h(0.4em) #link(r.url, text(fill: vb.accent, size: 0.9em)[open this run]).],
   )
 }
 
-// The program a playground figure was run on, as a listing.
+// The program a playground figure was run on, as a listing linked to that run.
 #let playground-program(name) = {
   let r = _playground.at(name)
-  raw(read("/shared/generated/playground/" + r.program), lang: "c", block: true)
+  listing(
+    read("/shared/generated/playground/" + r.program),
+    lang: "c",
+    analysis: r.analysis,
+    globals: r.globals,
+    ctx: r.context,
+    k: if "k" in r { int(r.k) } else { auto },
+  )
+}
+
+// ------------------------------------------------------- integer strips ---
+// A set of integers drawn over a window lo..hi, one cell per integer, with an
+// overflow cell at each end that is filled when the set continues past it.
+// Analyzer values are parsed from the CLI's printed form, so a strip drawn from
+// a registered claim cannot disagree with what the claim quotes.
+
+#let _bound(s) = if s.contains("∞") { none } else { int(s.replace("−", "-")) }
+
+// The set a printed abstract integer denotes, as a predicate. Understands the
+// forms the CLI prints: ⊤, ⊥, n, [l,u], c+mℤ, the Sign names, and the Int
+// product `signs:…; intervals:…; parities:…; congruences:…`.
+#let printed-set(v) = {
+  let v = v.trim()
+  if v.contains(";") {
+    let parts = v.split(";").map(p => printed-set(p.split(":").at(1)))
+    return x => parts.all(p => p(x))
+  }
+  if v == "⊤" or v == "" { return x => true }
+  if v == "⊥" { return x => false }
+  let sign = (
+    "+": x => x > 0,
+    "-": x => x < 0,
+    "0": x => x == 0,
+    "≥0": x => x >= 0,
+    "≤0": x => x <= 0,
+  )
+  if v in sign { return sign.at(v) }
+  let ivl = v.match(regex("^\[([^,]+),([^\]]+)\]$"))
+  if ivl != none {
+    let (l, u) = ivl.captures.map(_bound)
+    return x => (l == none or l <= x) and (u == none or x <= u)
+  }
+  let cong = v.match(regex("^(-?\d+)\+(\d+)ℤ$"))
+  if cong != none {
+    let (c, m) = cong.captures.map(int)
+    return x => calc.rem-euclid(x - c, m) == 0
+  }
+  assert(v.match(regex("^-?\d+$")) != none, message: "unparsed abstract value " + v)
+  x => x == int(v)
+}
+
+// kind(x) picks each cell's fill: "run" (a value some execution has), "extra"
+// (admitted, reached by no execution), "cond" (a condition's truth set), none.
+#let int-strip(lo, hi, kind, left: none, right: none, cell: 4.6mm) = {
+  let fill(k) = if k == "run" { vb.proved.lighten(25%) } else if k == "extra" {
+    vb.accent.lighten(72%)
+  } else if k == "cond" { vb.neutral.lighten(55%) } else { none }
+  let box-of(k, body: none) = box(
+    width: cell,
+    height: 3.6mm,
+    radius: 1pt,
+    stroke: 0.5pt + vb.frame,
+    fill: fill(k),
+    align(center + horizon, text(size: 6pt, body)),
+  )
+  let left = if left == none { kind(lo - 1) } else { left }
+  let right = if right == none { kind(hi + 1) } else { right }
+  (
+    box-of(left, body: sym.dots.h),
+    ..range(lo, hi + 1).map(x => box-of(kind(x))),
+    box-of(right, body: sym.dots.h),
+  )
+}
+
+// The axis row matching int-strip: labels every `step`-th integer.
+#let int-axis(lo, hi, step: 1) = (
+  [],
+  ..range(lo, hi + 1).map(x => if calc.rem-euclid(x, step) == 0 {
+    text(size: 6.5pt, fill: vb.muted, str(x).replace("-", "−"))
+  } else { [] }),
+  [],
+)
+
+// ------------------------------------------------- registered CLI output ---
+// Readers for thesis/shared/generated/<claim>.txt, so a figure quotes the
+// analyzer's output by name and a changed output fails the build or the check.
+
+// One variable's printed value at one node of a `--graph-snapshot` claim;
+// "⊥" at a node the snapshot marks unreachable.
+#let snapshot-var(name, node, var) = {
+  let lines = read("/shared/generated/" + name + ".txt").split("\n")
+  let i = lines.position(l => l.starts-with("  " + node + ": "))
+  assert(i != none, message: "claim " + name + " has no node " + node)
+  let rows = lines.slice(i + 1)
+  let end = rows.position(l => not l.starts-with("      "))
+  let rows = if end == none { rows } else { rows.slice(0, end) }
+  if rows.any(l => l.trim() == "unreachable") { return "⊥" }
+  let row = rows.find(l => l.trim().starts-with(var + "="))
+  assert(row != none, message: "claim " + name + " has no " + var + " at " + node)
+  row.trim().slice(var.len() + 1)
+}
+
+// One row of a claim's check or diagnostics table, found by its first cell
+// (a source location) or by `cond` (the check's condition), as a dictionary.
+#let check-row(name, loc: none, cond: none) = {
+  let rows = read("/shared/generated/" + name + ".txt")
+    .split("\n")
+    .map(l => l.trim().split(regex("\s{2,}")))
+  let row = rows.find(c => c.len() >= 4 and (c.at(0) == loc or (cond != none and c.at(2) == cond)))
+  assert(
+    row != none,
+    message: "claim " + name + " has no row " + repr(if loc == none { cond } else { loc }),
+  )
+  (
+    loc: row.at(0),
+    point: row.at(1),
+    cond: row.at(2),
+    verdict: row.at(3),
+    state: row.at(4, default: ""),
+  )
 }

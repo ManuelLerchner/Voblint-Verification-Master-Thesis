@@ -1,22 +1,20 @@
 #import "theme.typ": vb
-// Notation library. Same rule as on the LaTeX side: never write a semantic
-// bracket, a sharp, or a lattice symbol directly in the text -- go through a
-// binding here, so a notational decision is one edit.
+// Notation library. Only mathematical notation lives here, and each symbol is
+// the one the theories print: gamma for the class parameter of numeric_domain,
+// the semantic brackets for gamma_state, HOL's order, lattice and function-
+// update syntax, and the solver's widening and narrowing. Every other formal
+// object is written under its Isabelle name (isaconst, isai), not a macro.
 
 // ============================================================== brackets ====
 #let sem(x) = $lr(⟦ #x ⟧)$
-#let asem(x) = $lr(⟦ #x ⟧)^sharp$
 #let sh(x) = $#x^sharp$
-#let shn(x) = $#x^natural$
 #let setof(x) = $lr({ #x })$
-#let tup(x) = $lr(⟨ #x ⟩)$
-#let card(x) = $lr(bar.v #x bar.v)$
 #let setcomp(x, y) = $lr({ #x mid(bar.v) #y })$
 
 // ============================================================== lattices ====
-#let lle = $subset.sq.eq$
-#let llt = $subset.sq$
-#let lge = $supset.sq.eq$
+// HOL's order classes: the theories write <= for every carrier's order.
+#let lle = $lt.eq$
+#let llt = $lt$
 #let ljoin = $union.sq$
 #let lmeet = $inter.sq$
 #let lJoin = $union.sq.big$
@@ -24,109 +22,66 @@
 #let lbot = $bot$
 #let ltop = $top$
 #let widen = $nabla$
-#let narrow = $triangle.t.small$
+#let narrow = $Delta$
 #let lfp = $op("lfp")$
-#let gfp = $op("gfp")$
 #let lat(x) = $bb(#x)$
 
 #let abstr = $alpha$
 #let conc = $gamma$
-// C <alpha,gamma> A
-#let galois(c, a) = $#c attach(arrows.rl, t: alpha, b: gamma) #a$
 
 // ========================================================= source syntax ====
-#let Var = $italic("Var")$
-#let Val = $italic("Val")$
-#let Store = $Sigma$
 // VIMP keywords and datatype constructors are coloured like the identifiers
 // of code.typ: keywords in the listing keyword colour, constructors in the
 // colour of the type they build.
 // Both are text, not math alphabets: the math font's sans and bold ranges
 // are not what a reader expects a keyword or a constructor to look like.
-#let keyw(x) = text(weight: "bold", fill: vb.keyword, x)
+// The font is named because math sets text in Latin Modern Math, which has
+// no bold face.
+//
+// Syntax displays follow one rule: a token a VIMP program contains is set in
+// the keyword colour (keyw for words, vop for operator symbols), a constructor
+// with no source token (Restore, Entry, Root) is set with ctor, and
+// metavariables and the notation around them (:=, ";", brackets) stay math.
+#let keyw(x) = text(font: "Latin Modern Roman", weight: "bold", fill: vb.keyword, x)
 #let ctor(x) = text(font: "Latin Modern Sans", fill: vb.type, x)
+// Math only: the class restores the operator spacing that text drops.
+#let vop(x, unary: false) = math.class(
+  if unary { "unary" } else { "binary" },
+  text(font: "Latin Modern Roman", fill: vb.keyword, x),
+)
 #let skipC = keyw("skip")
 #let assign(x, e) = $#x := #e$
-#let pstep = $arrow.r_p$
-#let psteps = $arrow.r_p^*$
-#let pcompletes = $arrow.b.double_p$
-#let frstack = $kappa$
-#let config(c, s, k) = $lr(⟨ #c, #s, #k ⟩)$
 
-// =================================================================== CFG ====
-#let FunEntry(p) = $ctor("Entry") thin #p$
-#let FunResult(p) = $ctor("Result") thin #p$
-#let Stmt(n) = $ctor("Stmt") thin #n$
-#let cfgedge(u, a, v) = $#u attach(arrow.r.long, t: #a) #v$
-#let cfgcall(u, a, p, v) = $#u attach(arrow.r.dashed, t: #[#a, #p]) #v$
-#let cfg = $cal(G)$
-#let prog = $P$
-
-// ============================================== activation-local traces =====
-#let Ltr = $italic("Ltr")$
-#let validltr = $italic("valid")$
-#let ltrcollect = $cal(C)$
-#let actcollect = $cal(C)_"act"$
-#let keyfun = $beta$
-#let sinkstore = $italic("state")$
-#let sinknode = $italic("node")$
-#let tracepath = $italic("path")$
-#let callerof = $italic("caller")$
+// ======================================================= trace constructors ====
 #let Root(p) = $ctor("Root") thick #p$
 #let CallT(t, p) = $ctor("Call") thick #t med #p$
 #let ResumeT(t, u, p) = $ctor("Resume") thick #t med #u med #p$
-#let extend(t, x) = $#t med dot.c med #x$
-
-// Concrete transfers: what an edge, a call and a return do to a store.
-#let edgecollect = $italic("step")$
-#let callenter = $italic("enter")$
-#let combinecollect = $italic("combine")$
-#let cinit = $Sigma_0$
-
-// Calling context, as a relation on concrete calls.
-#let ctxrel = $cal(R)$
-#let admits = $italic("admits")$
-#let tracectx = $italic("ctx")$
-#let ctxtotal = $italic("total")$
-#let startctx = $c_0$
-#let cover = $italic("cov")$
 
 // ========================================== equation system and solver ======
 #let Unk = $cal(X)$
 #let rhs(x) = $italic("rhs")_#x$
 #let sol = $sigma$
-#let stable = $italic("stable")$
-#let called = $italic("called")$
-#let infl = $italic("infl")$
-#let partpost = $italic("part_post")$
-#let sidefx = $arrow.squiggly$
-#let TDside = $"TD"_"side"$
 
-// ========================================================== D/G framework ===
-#let Dfact = $sans("D")$
-#let Gfact = $sans("G")$
-#let Ctxt = $sans("C")$
-#let GVar = $sans("V")$
-#let dgstate(l, g) = $lr(⟨ #l mid(bar.v) #g ⟩)$
-
-#let tf(a) = $sh(delta) lr([#a])$
-#let enterh = $italic("enter")^sharp$
-#let combineh = $italic("combine")^sharp$
-#let combineenvh = $italic("combine_env")^sharp$
-#let combineassignh = $italic("combine_assign")^sharp$
-#let ctxh = $italic("context")^sharp$
+// ================================================ D/G specification fields ===
+// The mixfix syntax of the dg_spec record fields and of routed_context's route.
+#let enterh = $italic("enter")^\#$
+#let combineenvh = $italic("combine_env")^\#$
+#let combineassignh = $italic("combine_assign")^\#$
+#let ctxh = $italic("context")^\#$
 
 // =============================================================== domains ====
-#let DSign = $cal(S)$
-#let DIvl = $cal(I)$
-#let DPar = $cal(P)$
-#let DCong = $cal(K)$
-#let DInt = $cal(N)$
-#let signval(x) = $mono(#x)$
+// Sign values are constructors printed as +, ≥0, ...; the chip keeps them
+// apart from the operators and relations they share glyphs with.
+#let signval(x) = box(
+  fill: vb.type.lighten(90%),
+  radius: 1.5pt,
+  inset: (x: 1.5pt),
+  outset: (y: 1.5pt),
+  ctor(x),
+)
 #let ivl(a, b) = $[#a, #b]$
 
 // =============================================================== helpers ====
-#let defeq = $:=$
-#let soundby = $in gamma$
-#let upd(f, x, v) = $#f [#x |-> #v]$
+// HOL's function update.
+#let upd(f, x, v) = $#f (#x := #v)$
 #let restrict(f, s) = $#f harpoon.tr_#s$

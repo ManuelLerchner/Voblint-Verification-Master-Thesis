@@ -22,7 +22,9 @@ GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
 GRAPH_END = "// EXPECT-GRAPH-END"
 
 # Flags that choose what voblint prints, not what it computes.
-OUTPUT_FLAGS = frozenset({"--dot", "--graph-snapshot", "--parse-only", "--html"})
+OUTPUT_FLAGS = frozenset(
+    {"--dot", "--graph-snapshot", "--parse-only", "--ast", "--html"}
+)
 
 # Flags that bound the run rather than select an analysis.
 RUNNER_FLAGS = frozenset({"--timeout"})

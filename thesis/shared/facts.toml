@@ -5,8 +5,115 @@
 # facts are resolved in; both must be built. Facts from other sessions are
 # reported as unresolved rather than silently dropped.
 
-session = "Voblint_CFG"
-theory = "Voblint_CFG.LTR_Abstract"
+session = "Voblint_CLI"
+theory = "Voblint_CLI.Analysis_Certified"
 
 [facts.ltr_collect_semantic_postfix]
 why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+
+[facts.run_voblint_certified_source_sound]
+why = "The introduction states the source-level soundness result with its actual premises."
+
+[facts.run_voblint_check_sound]
+why = "Check-verdict endpoint cited in the introduction."
+
+[facts.run_voblint_dead_check_unreached]
+why = "Unreachability endpoint cited in the introduction."
+
+[facts.run_voblint_arithmetic_safe]
+why = "Arithmetic-safety endpoint cited in the introduction."
+
+[facts.source_run_has_ltr]
+why = "Main-statements appendix: source runs are represented by valid traces."
+
+[facts.csim_step]
+why = "Program-model chapter: one source step is matched by the compiled graph."
+
+[facts.source_progress]
+why = "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
+session = "Voblint_Compile"
+theory = "Voblint_Compile.Source_Progress"
+
+[facts.csim_star]
+why = "Main-statements appendix: simulation of source runs by the compiled graph."
+
+[facts.activation_collect_sound]
+why = "Main-statements appendix: the activation-local coverage theorem."
+
+[facts.activation_collect_dg_sound]
+why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
+fact = "routed_context_base_hetero.activation_collect_dg_sound"
+
+[facts.nv_source_certified]
+why = "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.mf_ltr_collect_sound]
+why = "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
+
+[facts.mf_after_calls]
+why = "Mixed flow-sensitivity section: the concrete consequence of the solved flow-insensitive global."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
+
+[facts."pstep.Call"]
+why = "Program-model chapter: the source step rule for a call."
+
+[facts."pstep.ReturnSome"]
+why = "Program-model chapter: the source step rule for returning a value."
+
+[facts."pstep.RestoreStep"]
+why = "Program-model chapter: the source step rule that restores the caller's frame."
+
+[facts."pstep.UnwindAct"]
+why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+
+[facts."compile.simps(4)"]
+why = "Program-model chapter: compiling a sequence hands the first command the second's entry."
+
+[facts."compile.simps(5)"]
+why = "Program-model chapter: both branches of a conditional compile against one continuation."
+
+[facts."compile.simps(6)"]
+why = "Program-model chapter: a loop body compiles against the loop head."
+
+[facts."compile.simps(8)"]
+why = "Program-model chapter: a return edge targets the procedure's result node."
+
+[facts.return_at_caller_context_unsound]
+why = "Chapter 4: reading the callee result at the caller context is unsound."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.total_dropped_unsound]
+why = "Chapter 4: dropping TOTAL is unsound."
+session = "Voblint_Examples"
+theory = "Voblint_Examples.Example_Non_Vacuity"
+
+[facts.ov_empty_continuation_bot]
+why = "Chapter 4: without paired entry coverage an executed point is declared unreachable."
+session = "Voblint_Examples_Sign"
+theory = "Voblint_Examples_Sign.Example_Sign_DG_Overlapping_Enter"
+
+[facts.source_reaches_ltr_collect]
+why = "Chapter 4: source-reachable stores are collected."
+session = "Voblint_Result"
+theory = "Voblint_Result.Source_Activation_Sound"
+
+[facts.ltr_collect_eq_Union_activation_collect]
+why = "Chapter 4: exhaustive buckets under the coverage contract."
+fact = "ltr_coverage.ltr_collect_eq_Union_activation_collect"
+session = "Voblint_CFG"
+theory = "Voblint_CFG.LTR_Abstract"
+
+[facts.cstep_preserves_ltr_repr]
+why = "Chapter 4: one graph step is matched by a trace rule."
+session = "Voblint_Compile"
+theory = "Voblint_Compile.Source_To_Trace"
+
+[facts.bfilter_sound]
+why = "Chapter 5, the guard filter drops no store that passes the guard."
+fact = "backward_domain.bfilter_sound"

@@ -24,7 +24,9 @@ from __future__ import annotations
 import argparse
 import difflib
 import re
+import subprocess
 import sys
+from functools import cache
 from pathlib import Path
 
 import tomllib
@@ -44,6 +46,7 @@ COMMANDS = (
     "abbreviation",
     "inductive",
     "inductive_set",
+    "inductive_cases",
     "function",
     "partial_function",
     "lift_definition",
@@ -51,6 +54,7 @@ COMMANDS = (
     "type_synonym",
     "record",
     "typedef",
+    "quotient_type",
     "locale",
     "class",
     "instantiation",
@@ -92,6 +96,7 @@ DEFINING = (
     "type_synonym",
     "record",
     "typedef",
+    "quotient_type",
     "locale",
     "class",
     "lemma",
@@ -101,10 +106,49 @@ DEFINING = (
 )
 
 
+# A theorem is shown as its statement. The proof is the theory's business, and
+# the thesis cites it rather than reproducing it.
+THEOREMS = ("lemma", "theorem", "corollary", "proposition")
+PROOF_START = re.compile(
+    r"(?<![A-Za-z0-9_'.])"
+    r"(?:proof|by|using|unfolding|apply|including|supply|sorry|oops)"
+    r"(?![A-Za-z0-9_'])"
+)
+# Terms and cartouches may contain any of those words; skip over them.
+QUOTED = re.compile(r'"[^"]*"|\\<open>|\(\*.*?\*\)', re.S)
+CARTOUCHE = re.compile(r"\\<open>|\\<close>")
+
+
+def statement_only(body: str) -> str:
+    """Cut a theorem declaration at the first proof command outside its terms."""
+    pos, depth = 0, 0
+    while pos < len(body):
+        if depth:
+            nxt = CARTOUCHE.search(body, pos)
+            if nxt is None:
+                break
+            depth += 1 if nxt.group(0) == "\\<open>" else -1
+            pos = nxt.end()
+            continue
+        proof = PROOF_START.search(body, pos)
+        quoted = QUOTED.search(body, pos)
+        if proof is None:
+            break
+        if quoted is None or proof.start() < quoted.start():
+            return body[: proof.start()]
+        if quoted.group(0) == "\\<open>":
+            depth = 1
+        pos = quoted.end()
+    sys.exit(f"snippets: no proof found after the statement:\n{body}")
+
+
 def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
-    """Match the command that declares `name`, allowing type parameters."""
+    """Match the command that declares `name`, allowing type parameters.
+
+    The name may sit on the line after the command (`inductive\n  pstep ::`).
+    """
     return re.compile(
-        r"^(?:" + "|".join(commands) + r")\b[ \t]+"
+        r"^(?:" + "|".join(commands) + r")\b\s+"
         r"(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)[ \t]+)*"
         + re.escape(name)
         + r"(?![A-Za-z0-9_'])",
@@ -112,10 +156,40 @@ def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
     )
 
 
+# Isabelle writes its own sources as `~~/src/HOL/...`. A snippet pinned there
+# is lifted from the installed distribution, so HOL classes the thesis builds on
+# are quoted from the same text the session was checked against.
+ISABELLE_PREFIX = "~~/"
+
+
+@cache
+def isabelle_home() -> Path | None:
+    """The Isabelle distribution, or None where Isabelle is not installed."""
+    try:
+        out = subprocess.run(
+            ["isabelle", "getenv", "-b", "ISABELLE_HOME"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    home = Path(out.stdout.strip())
+    return home if home.is_dir() else None
+
+
+def display_path(path: Path) -> str:
+    if path.is_relative_to(REPO):
+        return str(path.relative_to(REPO))
+    return ISABELLE_PREFIX + str(path.relative_to(isabelle_home()))
+
+
 def extract(
-    name: str, files: list[Path], pin: str | None = None
+    name: str, files: list[Path], pin: str | None = None, with_proof: bool = False
 ) -> tuple[str, Path] | None:
-    if pin:
+    if pin and pin.startswith(ISABELLE_PREFIX):
+        files = [isabelle_home() / pin.removeprefix(ISABELLE_PREFIX)]
+    elif pin:
         files = [p for p in files if str(p.relative_to(REPO)) == pin] or files
     for commands in (DEFINING, COMMANDS):
         for path in files:
@@ -125,6 +199,15 @@ def extract(
                 continue
             nxt = NEXT_COMMAND.search(text, m.end())
             body = text[m.start() : nxt.start() if nxt else len(text)]
+            command = m.group(0).split(None, 1)[0]
+            # A snippet may keep a short proof when the proof is the point,
+            # such as a lemma derived in one step from a class's laws.
+            if command in THEOREMS and not with_proof:
+                body = statement_only(body)
+            # A locale or class opens its context with `begin`; the reader is
+            # shown the interface, not the context it opens.
+            if command in ("locale", "class"):
+                body = re.split(r"\s*^begin\b", body, maxsplit=1, flags=re.M)[0]
             return body.rstrip() + "\n", path
     return None
 
@@ -158,20 +241,27 @@ def main() -> int:
     missing: list[str] = []
     stale: list[str] = []
 
+    # HOL's sources change only with the Isabelle release, so a job without
+    # Isabelle leaves them to the jobs that have it instead of failing.
+    skipped: list[str] = []
     for name, meta in sorted(wanted.items()):
-        found = extract(name, files, meta.get("file"))
+        if (
+            str(meta.get("file", "")).startswith(ISABELLE_PREFIX)
+            and isabelle_home() is None
+        ):
+            skipped.append(name)
+            continue
+        found = extract(name, files, meta.get("file"), meta.get("proof", False))
         if found is None:
             missing.append(f"  {name}: no declaration found in any theory")
             continue
         body, path = found
-        header = f"(* {path.relative_to(REPO)} *)\n"
+        header = f"(* {display_path(path)} *)\n"
         text = header + body
         out = OUTDIR / f"{name}.thy"
         if args.write:
             out.write_text(text)
-            print(
-                f"snippets: wrote {out.relative_to(REPO)} from {path.relative_to(REPO)}"
-            )
+            print(f"snippets: wrote {out.relative_to(REPO)} from {display_path(path)}")
             continue
         stored = out.read_text() if out.is_file() else ""
         if stored != text:
@@ -200,7 +290,12 @@ def main() -> int:
             )
         return 1
 
-    print(f"snippets: {len(wanted)} snippet(s) match the theories")
+    print(f"snippets: {len(wanted) - len(skipped)} snippet(s) match the theories")
+    if skipped:
+        print(
+            f"snippets: {len(skipped)} HOL snippet(s) not re-extracted without Isabelle: "
+            + ", ".join(skipped)
+        )
     return 0
 
 

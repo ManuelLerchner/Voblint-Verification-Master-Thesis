@@ -1,0 +1,76 @@
+{
+  "snapshot": "2026-09-25",
+  "git": {
+    "commits": 1523,
+    "merges": 83,
+    "ai_trailer": 261,
+    "first_month": "2026-04",
+    "last_month": "2026-09"
+  },
+  "rule_files": {
+    "per_file": {
+      "AGENTS.md": 115,
+      ".claude/CLAUDE.md": 5,
+      "thesis/CLAUDE.md": 4,
+      "docs/ISABELLE_AGENT_NOTES.md": 24
+    },
+    "commits": 132
+  },
+  "claude_code": {
+    "project_dirs": 3,
+    "top_level": {
+      "sessions": 110,
+      "assistant_messages": 52374,
+      "human_messages": 2434,
+      "tool_calls": 56474,
+      "bash": 27525,
+      "isabelle_builds": 726,
+      "edits": 850,
+      "reads": 1864,
+      "isabelle_mcp": 24149,
+      "subagent_launches": 467,
+      "first_day": "2026-08-24",
+      "last_day": "2026-09-25"
+    },
+    "subagents": {
+      "sessions": 451,
+      "assistant_messages": 22755,
+      "human_messages": 427,
+      "tool_calls": 27952,
+      "bash": 17568,
+      "isabelle_builds": 97,
+      "edits": 1340,
+      "reads": 2815,
+      "isabelle_mcp": 5032,
+      "subagent_launches": 71,
+      "first_day": "2026-08-24",
+      "last_day": "2026-09-25"
+    }
+  },
+  "codex": {
+    "top_level": {
+      "sessions": 121,
+      "assistant_messages": 15063,
+      "human_messages": 1227,
+      "tool_calls": 25235,
+      "bash": 4026,
+      "isabelle_builds": 361,
+      "edits": 600,
+      "isabelle_mcp": 18251,
+      "first_day": "2026-06-27",
+      "last_day": "2026-09-21"
+    },
+    "subagents": {
+      "sessions": 47,
+      "assistant_messages": 484,
+      "human_messages": 315,
+      "tool_calls": 2402,
+      "bash": 121,
+      "isabelle_builds": 1,
+      "edits": 22,
+      "isabelle_mcp": 1247,
+      "first_day": "2026-06-27",
+      "last_day": "2026-09-21"
+    }
+  }
+}

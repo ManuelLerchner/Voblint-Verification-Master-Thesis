@@ -1,0 +1,359 @@
+{
+  "source": "pages/index.html",
+  "revision": "5320a6b741e50dc049f7a1b85e1709e9565cc54a",
+  "rows": [
+    {
+      "status": "modeled",
+      "goblint": {
+        "name": "Spec",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168-L263",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "dg_spec",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "dg_spec"
+          }
+        ]
+      },
+      "note": "An analysis is a record with one transfer per edge action plus the call and return operations, matching Goblint's method-per-construct shape. Spec's startstate, exitstate and morphstate have no counterpart."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "D / G lattices",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L170-L173",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "'dl / 'dg carriers",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "dg_spec"
+          }
+        ]
+      },
+      "note": "The local/global split exists, but the shipped domains keep their whole state local."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "TD3 solver",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50",
+        "file": "src/solver/td3.ml"
+      },
+      "voblint": {
+        "label": "Top-down solver with side effects",
+        "refs": [
+          {
+            "kind": "locale",
+            "name": "TD_side_upd_rule"
+          }
+        ]
+      },
+      "note": "Vendored from td-verification with a partial-correctness proof; it has neither Goblint's sidel nor its demandl."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "sidel into a function entry",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245",
+        "file": "src/framework/constraints.ml"
+      },
+      "voblint": {
+        "label": "Side effect into an entry proxy",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "routed_gk"
+          }
+        ]
+      },
+      "note": "A callee entry is published to a global proxy key and read back by the entry's local unknown, so it widens one hop later; no equivalence to Goblint's fixpoint is claimed."
+    },
+    {
+      "status": "modeled",
+      "goblint": {
+        "name": "enter returning alternatives",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L233-L237",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "dgs_enter",
+        "refs": [
+          {
+            "kind": "const",
+            "name": "dgs_enter"
+          }
+        ]
+      },
+      "note": "A list of alternatives, each a pair of caller continuation and callee entry state; the call-site equation routes each alternative and joins their contributions."
+    },
+    {
+      "status": "modeled",
+      "goblint": {
+        "name": "context from the callee state",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L196-L197",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "Context selector on the entered state",
+        "refs": [
+          {
+            "kind": "locale",
+            "name": "routed_context_base_hetero"
+          }
+        ]
+      },
+      "note": "The context is chosen from the state after enter, as in Goblint, though the selector does not see which callee it is choosing for."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "combine_env / combine_assign",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L239-L251",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "dgs_combine_env / dgs_combine_assign",
+        "refs": [
+          {
+            "kind": "const",
+            "name": "dgs_combine_env"
+          },
+          {
+            "kind": "const",
+            "name": "dgs_combine_assign"
+          }
+        ]
+      },
+      "note": "Both hooks exist: the specifications the analyses execute split the environment merge from the return write, as Goblint does; only the proof-side whole-state specifications leave the environment merge the identity."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "Widening and narrowing",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L381-L394",
+        "file": "src/solver/td3.ml"
+      },
+      "voblint": {
+        "label": "Four global update rules",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "globals_rule"
+          }
+        ]
+      },
+      "note": "Local unknowns are warrowed at widening points under every rule; the merge rule for side-effected globals is chosen once per run, not per unknown."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "Context-sensitivity options",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/callstring.ml#L19-L55",
+        "file": "src/analyses/callstring.ml"
+      },
+      "voblint": {
+        "label": "None, entry state, call strings",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "context_mode"
+          }
+        ]
+      },
+      "note": "Bounded call strings give a finite context space over a compiled program; nothing certifies that entry-state contexts stay finite, and lifters such as context gas are absent."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "IntDomTuple",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27",
+        "file": "src/cdomain/value/cdomains/int/intDomTuple.ml"
+      },
+      "voblint": {
+        "label": "Int product: sign × interval × parity × congruence",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "int_dom"
+          }
+        ]
+      },
+      "note": "Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked."
+    },
+    {
+      "status": "absent",
+      "goblint": {
+        "name": "Machine integers (ikind)",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intervalDomain.ml#L35-L69",
+        "file": "src/cdomain/value/cdomains/int/intervalDomain.ml"
+      },
+      "voblint": {
+        "label": "Mathematical integers",
+        "refs": []
+      },
+      "note": "No soundness theorem here covers wrap-around arithmetic."
+    },
+    {
+      "status": "absent",
+      "goblint": {
+        "name": "Queries (ask)",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167",
+        "file": "src/domains/queries.ml"
+      },
+      "voblint": {
+        "label": "Two numeric queries in the check layer",
+        "refs": [
+          {
+            "kind": "locale",
+            "name": "abstract_numeric_queries"
+          }
+        ]
+      },
+      "note": "A transfer function cannot ask a query at all."
+    },
+    {
+      "status": "absent",
+      "goblint": {
+        "name": "sync",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L199",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "none",
+        "refs": []
+      },
+      "note": "The analysis record has no sync hook; publication happens only in an edge transfer's result."
+    },
+    {
+      "status": "absent",
+      "goblint": {
+        "name": "Threads and the analysis manager",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260",
+        "file": "src/framework/analyses.ml"
+      },
+      "voblint": {
+        "label": "none",
+        "refs": []
+      },
+      "note": "Goblint composes many analyses through its manager and handles thread creation and privatization. None of it is modeled here."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "Solver termination",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50",
+        "file": "src/solver/td3.ml"
+      },
+      "voblint": {
+        "label": "config_terminates",
+        "refs": [
+          {
+            "kind": "const",
+            "name": "config_terminates"
+          }
+        ]
+      },
+      "note": "Termination is a premise of the end-to-end soundness theorem, discharged per program by evaluation; no general termination theorem exists here."
+    },
+    {
+      "status": "simplified",
+      "goblint": {
+        "name": "Any program CIL accepts",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/util/cilfacade.ml#L110-L119",
+        "file": "src/common/util/cilfacade.ml"
+      },
+      "voblint": {
+        "label": "Admissible input",
+        "refs": [
+          {
+            "kind": "const",
+            "name": "wf_program_compile_input_exec"
+          }
+        ]
+      },
+      "note": "A well-formedness gate inside the analysis function rejects inputs the compiler proof does not cover, and no guarantee applies to them; Goblint has no admissibility predicate."
+    },
+    {
+      "status": "absent",
+      "goblint": {
+        "name": "C through CIL",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/util/cilfacade.ml#L110-L119",
+        "file": "src/common/util/cilfacade.ml"
+      },
+      "voblint": {
+        "label": "VIMP",
+        "refs": [
+          {
+            "kind": "theory",
+            "name": "Voblint_VIMP.VIMP_Proc"
+          }
+        ]
+      },
+      "note": "A small language of integer variables and procedures: no memory, pointers, arrays or floating point."
+    }
+  ],
+  "citations": [
+    {
+      "kind": "type",
+      "name": "dg_spec"
+    },
+    {
+      "kind": "locale",
+      "name": "TD_side_upd_rule"
+    },
+    {
+      "kind": "type",
+      "name": "routed_gk"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_enter"
+    },
+    {
+      "kind": "locale",
+      "name": "routed_context_base_hetero"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_env"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_assign"
+    },
+    {
+      "kind": "type",
+      "name": "globals_rule"
+    },
+    {
+      "kind": "type",
+      "name": "context_mode"
+    },
+    {
+      "kind": "type",
+      "name": "int_dom"
+    },
+    {
+      "kind": "locale",
+      "name": "abstract_numeric_queries"
+    },
+    {
+      "kind": "const",
+      "name": "config_terminates"
+    },
+    {
+      "kind": "const",
+      "name": "wf_program_compile_input_exec"
+    },
+    {
+      "kind": "theory",
+      "name": "Voblint_VIMP.VIMP_Proc"
+    }
+  ]
+}

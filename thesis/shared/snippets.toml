@@ -2,11 +2,210 @@
 # the name has to resolve, and the extracted text is committed, so a rename
 # fails the build and an edit to a shown definition surfaces as a diff.
 
+[snippets.executable_domain]
+why = "Chapter 5, the domain interface figure: the executable operations a domain supplies."
+
 [snippets.numeric_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
+[snippets.abstract_numeric_queries]
+why = "Chapter 5, the soundness condition of the comparison queries a check asks."
+
+[snippets.widening]
+why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
+
+[snippets.semantic_intersection]
+why = "Background, Isabelle mechanisms: a small locale with one parameter and one assumption."
+
+[snippets.pstep]
+why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
+
+[snippets.cfg]
+why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry and checks."
+
+[snippets.compile_proc]
+why = "Chapter 3, compilation: a procedure body between its entry node and its epilogue."
+
+[snippets.cstep]
+why = "Chapter 3, graph execution: every rule of the control-flow-graph semantics."
+
+[snippets.csim]
+why = "Chapter 3, the source-to-graph simulation relation: its three constructors."
+
+[snippets.reach]
+why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query transitively depends on."
+
+[snippets.resolved_st_q]
+why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
+
+[snippets.caller_of]
+why = "The creating caller of a trace (traces chapter)."
+
+[snippets.valid_ltr]
+why = "The four rules of valid activation-local traces (traces chapter)."
+
+[snippets.ltr_collect]
+why = "The context-insensitive collecting semantics (traces chapter)."
+
+[snippets.activation_collect]
+why = "The context-indexed collecting semantics (traces chapter)."
+
+[snippets.part_post_solution]
+file = "vendor/td-verification/Basics_side.thy"
+why = "The certificate between the vendored solver and the semantic proof (solving chapter)."
+
+[snippets.lookup_resolved_st]
+why = "The executable carrier's lookup: two defaults and an override list (solving chapter)."
+
+[snippets.run_voblint]
+why = "The public operation and its type: what the executable chapter says the browser and CLI call."
+
+# Theorems shown with proved(...): the statement as the theory states it, cut
+# before the proof. Each is also listed in facts.toml, which checks that the
+# built session proves a fact of this name in the theory the text came from.
+
+[snippets.run_voblint_certified_source_sound]
+why = "The source-level soundness theorem (introduction and results chapter)."
+
+[snippets.run_voblint_check_sound]
+why = "Main-statements appendix: the check-verdict endpoint."
+
+[snippets.run_voblint_dead_check_unreached]
+why = "Main-statements appendix: the unreachability endpoint."
+
+[snippets.source_run_has_ltr]
+why = "Main-statements appendix: every source run is represented by a valid trace."
+
+[snippets.csim_step]
+why = "Chapter 3, the simulation: one source step is matched by zero or more graph steps."
+
+[snippets.source_progress]
+why = "Chapter 3, adequacy: a well-formed program never gets stuck before it finishes."
+
+[snippets.csim_star]
+why = "Main-statements appendix: the compiled graph simulates every source run."
+
+[snippets.activation_collect_sound]
+why = "Main-statements appendix: the local obligations bound the context-indexed collecting semantics."
+
+[snippets.activation_collect_dg_sound]
+why = "Main-statements appendix: a solved D/G table bounds the collecting semantics."
+
+[snippets.mf_ltr_collect_sound]
+why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to end for one program."
+
+[snippets.mf_after_calls]
+why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."
+
+[snippets.ltr_collect_semantic_postfix]
+why = "Figure gallery: the theorem-statement example."
+
 [snippets.combine_env]
-why = "Named in the transfer-function box as the structural default combine."
+why = "Figure gallery example."
 
 [snippets.analysis_contract]
-why = "The D/G soundness obligations the per-domain instantiations discharge."
+why = "Figure gallery example."
+
+[snippets.ltr]
+why = "Chapter 4, the activation-local trace datatype."
+
+[snippets.call_context_rel]
+why = "Chapter 4, the type of a call-context relation."
+
+[snippets.trace_context]
+why = "Chapter 4, which contexts a trace may carry."
+
+[snippets.call_context_total_on]
+why = "Chapter 4, conditional totality of a call-context relation."
+
+[snippets.ltr_coverage]
+why = "Chapter 4, the coverage contract: five local obligations."
+
+[snippets.return_at_caller_context_unsound]
+why = "Chapter 4, reading the result at the caller context is unsound."
+
+[snippets.total_dropped_unsound]
+why = "Chapter 4, dropping TOTAL is unsound."
+
+[snippets.ov_empty_continuation_bot]
+why = "Chapter 4, an analysis without paired entry coverage declares an executed point unreachable."
+
+[snippets.source_reaches_ltr_collect]
+why = "Chapter 4, source-reachable stores are collected."
+
+[snippets.ltr_collect_eq_Union_activation_collect]
+why = "Chapter 4, under the whole contract the buckets recover the collection."
+
+[snippets.trace]
+why = "Chapter 4, a local path: a list of node-store pairs."
+file = "src/Program_Model/CFG/Collecting/LTR_Def.thy"
+
+[snippets.stack_repr]
+why = "Chapter 4, a frame stack matches a trace caller chain."
+
+[snippets.ltr_repr]
+why = "Chapter 4, a valid trace represents a graph configuration."
+
+[snippets.cstep_preserves_ltr_repr]
+why = "Chapter 4, a graph step keeps a representing trace."
+
+[snippets.bfilter_sound]
+why = "Chapter 5, the guard filter drops no store that passes the guard."
+file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
+
+[snippets.semilattice_sup]
+why = "Chapter 5, the join laws executable_domain inherits from HOL."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.order_bot]
+why = "Chapter 5, the least-element law executable_domain inherits from HOL."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.bounded_semilattice_sup_bot]
+why = "Chapter 5, the HOL order class executable_domain extends."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.order_top]
+why = "Chapter 5, the greatest-element law executable_domain inherits from HOL."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.narrowing]
+why = "Chapter 5, the solver's narrowing operator and its laws."
+
+[snippets.warrowing]
+why = "Chapter 5, widening and narrowing combined into the solver's update class."
+file = "vendor/td-verification/Update_rules.thy"
+
+[snippets.ord]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.preorder]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.order]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.sup]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.bot]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.top]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.backward_domain]
+why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
+
+
+[snippets.sound_evaluator]
+why = "Chapter 5, the forward evaluator every expression-level interface of a domain shares."
+
+[snippets.sound_truth_test]
+why = "Chapter 5, the truth test every expression-level interface of a domain shares."

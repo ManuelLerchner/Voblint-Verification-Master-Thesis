@@ -1,0 +1,289 @@
+# The notation table, typed once and rendered in three places: appendix B of
+# the thesis, the README's Notation section and the explainer's legend above
+# the flagship theorems. Only the reading and the meaning are typed here.
+# `thesis/tools/notation.py` finds each declaration in the theories and derives
+# the symbol from its mixfix, the theory, the scope, the print mode, an
+# abbreviation's expansion and the rendered-theory link; `--check` fails when
+# any of them drifts, when a declaration changes shape, or when its anchor is
+# missing from the rendered theories.
+#
+# In `reads` and `meaning`, _x_ is a metavariable (set in italics) and {...}
+# an Isabelle fragment in ASCII symbols (set as the theories print it).
+#
+# [[entry]]
+#   group     operator | set | shorthand (the keys of [groups])
+#   reads     how to read the symbol aloud
+#   meaning   one line
+#   forms     the declarations presenting the concept; for a shorthand, one per
+#             locale that declares it
+#     const   the constant (for a shorthand, the abbreviation's local name)
+#     args    argument names, filled into the mixfix's `_` slots in order; the
+#             rest are applied after it
+#     class   the type class declaring the constant as a parameter, if any
+#     locale  the locale declaring a shorthand
+#     named   true when the constant deliberately has no notation
+#   local     for a set: the locale abbreviation that writes the same set with
+#             the locale's fixed parameters omitted (locale, const, args); its
+#             expansion must be the global constant at the locale's parameters
+#   symbol, bound_in
+#             instead of forms, for a variable convention: the symbol, which
+#             each `bound_in` declaration fixes with `for`, and `const`, the
+#             constant a program supplies for it
+
+[groups.operator]
+title = "Semantic operators and relations"
+
+[groups.set]
+title = "Semantic sets"
+note = "A calligraphic capital names a semantic set. Its global form lists every parameter; inside a locale or a theory's context block that fixes them, they are omitted."
+
+[groups.shorthand]
+title = "Proof-local shorthands"
+note = "These names are local abbreviations available while writing proofs in the indicated locales. They are not new definitions: they unfold when parsed, and outside those locale contexts Isabelle shows the underlying expressions."
+
+[[entry]]
+group = "operator"
+reads = "gamma of _a_"
+meaning = "the integers the abstract value _a_ represents"
+forms = [{ const = "gamma", class = "numeric_domain", args = ["a"] }]
+
+[[entry]]
+group = "operator"
+reads = "the value of _e_ in _s_"
+meaning = "the integer expression _e_ evaluates to in store _s_"
+forms = [{ const = "aval", args = ["e", "s"] }]
+
+[[entry]]
+group = "operator"
+reads = "the stores _σ_ represents"
+meaning = 'stores _s_ with {s x \<in> \<gamma> (\<sigma> x)} for every variable _x_'
+forms = [{ const = "gamma_state", args = ['\<sigma>'] }]
+
+[[entry]]
+group = "operator"
+reads = "the stores _d_ represents"
+meaning = "concretization of a lifted state; the unreachable state Bot represents no store"
+forms = [{ const = "gamma_state_lift", args = ["d"] }]
+
+[[entry]]
+group = "operator"
+reads = "_c_ steps to _c′_"
+meaning = "one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure"
+forms = [
+  { const = "pstep", args = [
+    '\<G>',
+    '\<Pi>',
+    "c",
+    "c'",
+  ] },
+  { const = "psteps", args = [
+    '\<G>',
+    '\<Pi>',
+    "c",
+    "c'",
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "_c_ steps to _c′_ in _g_"
+meaning = "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_; the starred arrow is its reflexive-transitive closure"
+forms = [
+  { const = "cstep", args = [
+    '\<G>',
+    "g",
+    "c",
+    "c'",
+  ] },
+  { const = "csteps", args = [
+    '\<G>',
+    "g",
+    "c",
+    "c'",
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "_c_ is matched with _c′_"
+meaning = "the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_"
+forms = [{ const = "csim", args = ['\<Pi>', "g", "c", "c'"] }]
+
+[[entry]]
+group = "operator"
+reads = "the _op_ transfer of specification _S_"
+meaning = "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to"
+forms = [
+  { const = "dgs_skip", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_assign", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_special", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_branch", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_body", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_return", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_event", record = "dg_spec", args = [
+    "S",
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "the call-boundary transfers of specification _S_"
+meaning = "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result"
+forms = [
+  { const = "dgs_enter", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_combine_env", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_combine_assign", record = "dg_spec", args = [
+    "S",
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "the abstract return of _σe_ into _σc_"
+meaning = "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination"
+forms = [
+  { const = "combine_collect_abs", args = [
+    '\<G>',
+    "dst",
+    '\<sigma>c',
+    '\<sigma>e',
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "the computed callee context"
+meaning = "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value"
+forms = [{ const = "route", parameter_of = "routed_context_base_hetero" }]
+
+[[entry]]
+group = "operator"
+reads = "_a_ widened by _b_, _a_ narrowed by _b_"
+meaning = "the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_"
+forms = [
+  { const = "widen", class = "widening", args = [
+    "a",
+    "b",
+  ] },
+  { const = "narrow", class = "narrowing", args = [
+    "a",
+    "b",
+  ] },
+]
+
+[[entry]]
+group = "operator"
+reads = "the globals classifier"
+meaning = "the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter"
+symbol = '\<G>'
+const = "declared_global"
+bound_in = ["pstep", "cstep"]
+
+[[entry]]
+group = "set"
+reads = "the valid traces of _g_ from _S_"
+meaning = "the activation-local traces of graph _g_ from initial stores _S_"
+forms = [{ const = "valid_ltr", args = ['\<G>', "g", "S"] }]
+local = { locale = "ltr_coverage", const = "traces", args = [] }
+
+[[entry]]
+group = "set"
+reads = "the stores collected at _v_"
+meaning = "the stores valid traces reach at node _v_"
+forms = [{ const = "ltr_collect", args = ['\<G>', "g", "S", "v"] }]
+local = { locale = "ltr_coverage", const = "collect", args = ["v"] }
+
+[[entry]]
+group = "set"
+reads = "the stores collected at _v_ in context _c_"
+meaning = "the stores valid traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_"
+forms = [
+  { const = "activation_collect", args = [
+    '\<G>',
+    "R",
+    "startcontext",
+    "g",
+    "S",
+    "v",
+    "c",
+  ] },
+]
+local = { locale = "ltr_coverage", const = "buckets", args = ["v", "c"] }
+
+[[entry]]
+group = "shorthand"
+reads = "_t_ carries context _c_"
+meaning = "the context relation of the locale's policy, between a valid trace and the contexts it may run in"
+forms = [{ locale = "ltr_coverage", const = "carries", args = ["t", "c"] }]
+
+[[entry]]
+group = "shorthand"
+reads = "_ctx′_ is admitted for the call at _u_"
+meaning = "some call edge at _u_ to _p_ enters _es_ from _s_, and the context relation admits _ctx′_ for it"
+forms = [
+  { locale = "ltr_coverage", const = "admits", args = [
+    "u",
+    "ctx",
+    "p",
+    "s",
+    "es",
+    "ctx'",
+  ] },
+  { locale = "routed_context_base_hetero", const = "admits", args = [
+    "u",
+    "ctx",
+    "p",
+    "s",
+    "es",
+    "ctx'",
+  ] },
+]
+
+[[entry]]
+group = "shorthand"
+reads = "the stores the solution gives _v_ in _ctx_"
+meaning = 'proof-local shorthand for applying {\<gamma>\<^sub>D\<^sub>G} to the local and global components selected by the solved state; it is not a separate semantic operation'
+forms = [
+  { locale = "dg_ctx_activation_base", const = "gamma_at", args = [
+    "v",
+    "ctx",
+  ] },
+]
+
+[[entry]]
+group = "shorthand"
+reads = "the manager at _v_ in _ctx_"
+meaning = "proof-local shorthand for the manager built from the solved local state at (_v_, _ctx_) and the shared global key; it is not a separate semantic operation"
+forms = [
+  { locale = "dg_ctx_activation_base", const = "man_at", args = [
+    "v",
+    "ctx",
+  ] },
+]
+
+[[entry]]
+group = "shorthand"
+reads = "the stores claimed at _v_ in _ctx_"
+meaning = 'proof-local shorthand for applying {\<gamma>\<^sub>M} to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation'
+forms = [
+  { locale = "routed_context_base_hetero", const = "cover", args = [
+    "v",
+    "ctx",
+  ] },
+]
