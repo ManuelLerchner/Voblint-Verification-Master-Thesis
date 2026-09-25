@@ -2,6 +2,7 @@
 #import "../lib/stats.typ": stat, stat-percent, stat-sum
 #import "../lib/alignment.typ": alignment, alignment-count
 #import "../lib/claims.typ": claim-check, claim-snapshot, claim-timed-out, snapshot-verdict
+#import "../lib/math.typ": signval
 #import "../lib/theme.typ": vb
 
 = Evaluation <ch:evaluation>
@@ -389,7 +390,7 @@ decides a check that none of its components decides alone.
 
 _Evidence: executable, except where marked._ Sign has no magnitude: in the
 claim `sign-cannot-bound-magnitude`, `total` is 7 and Sign reports it as
-positive, yet `total < 100` stays `UNKNOWN`. No context policy or update rule
+#signval("+"), yet `total < 100` stays `UNKNOWN`. No context policy or update rule
 can change this, because Sign's comparison has no case for a nonzero constant:
 a positive value may lie on either side of 100. Intervals lose nonconvex
 information, as the multiples of three of @fig:verdict-regions show. Pointwise
