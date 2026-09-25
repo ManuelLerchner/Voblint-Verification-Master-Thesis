@@ -37,7 +37,7 @@ text \<open>
 \<close>
 
 locale nonrelational_transfer = mono_special_ops "n_special ops" "n_aval ops"
-  for ops :: "'a::sound_domain numeric_ops" +
+  for ops :: "'a::numeric_domain numeric_ops" +
   fixes br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes top_eq: "n_top ops = top"
     and br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"

@@ -154,8 +154,8 @@ subsection \<open>Abstract arithmetic operations\<close>
 subsection \<open>Typeclass instances\<close>
 
 text \<open>
-  Hoisted above the \<open>sound_domain\<close> instance because the
-  \<open>sound_domain\<close> locale's class constraint is
+  Hoisted above the \<open>numeric_domain\<close> instance because the
+  \<open>numeric_domain\<close> locale's class constraint is
   \<open>bounded_semilattice_sup_bot\<close>.
 \<close>
 
@@ -264,7 +264,7 @@ fun string_of_sign :: "sign \<Rightarrow> String.literal" where
 
 subsection \<open>Abstract domain instantiation\<close>
 
-instantiation sign :: sound_domain begin
+instantiation sign :: numeric_domain begin
 definition gamma_abs_sign [simp]: "\<gamma> (a :: sign) = gamma_sign a"
 definition is_empty_sign [simp]: "is_empty (a :: sign) = is_bottom_sign a"
 definition to_string_sign [simp]: "to_string (a :: sign) = string_of_sign a"

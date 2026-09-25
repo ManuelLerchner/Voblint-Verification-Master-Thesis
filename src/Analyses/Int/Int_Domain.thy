@@ -799,7 +799,7 @@ definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> String.literal"
           + STR ''; congruences:'' + string_of_congruence (int_congruence d))"
 
 instantiation int_dom_ext ::
-  (int_dom_record_lattice) sound_domain
+  (int_dom_record_lattice) numeric_domain
 begin
 
 definition gamma_abs_int_dom_ext [simp]:

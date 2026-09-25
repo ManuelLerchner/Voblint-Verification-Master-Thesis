@@ -284,7 +284,7 @@ lemma string_of_ivl_regression:
   "string_of_ivl (Ivl PlusInf PlusInf) = STR ''<bottom>''"
   by eval+
 
-instantiation ivl :: sound_domain begin
+instantiation ivl :: numeric_domain begin
 definition gamma_abs_ivl [simp]: "\<gamma> (a :: ivl) = gamma_ivl a"
 definition is_empty_ivl [simp]: "is_empty (a :: ivl) = is_bottom_ivl a"
 definition to_string_ivl [simp]:

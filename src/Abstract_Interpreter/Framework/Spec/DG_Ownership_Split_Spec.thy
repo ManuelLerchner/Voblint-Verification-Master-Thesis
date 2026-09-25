@@ -381,7 +381,7 @@ text \<open>
 \<close>
 
 definition gamma_ownership_split ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::numeric_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
   "gamma_ownership_split \<G> d g = \<lbrakk>combine_env \<G> d g\<rbrakk>"
 

@@ -7,7 +7,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 
 | File | Role |
 | --- | --- |
-| `Sign_Lattice.thy` | 7-element sign lattice, order operations, concretization, and `sound_domain` instance |
+| `Sign_Lattice.thy` | 7-element sign lattice, order operations, concretization, and `numeric_domain` instance |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
 | `Sign_Backward.thy` | backward guard/filter operators; names the sign `afilter_sign_st`/`bfilter_sign_st` executable mirror via `Exec_Backward` |
 | `Sign_Special.thy` | `sign_min`/`sign_max`, the abstract implementation of the `Min`/`Max` special calls |

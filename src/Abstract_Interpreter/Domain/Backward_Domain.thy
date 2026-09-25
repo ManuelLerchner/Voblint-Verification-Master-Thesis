@@ -32,7 +32,7 @@ text \<open>
 
 
 locale semantic_intersection =
-  fixes intersect :: "'a::sound_domain => 'a => 'a"
+  fixes intersect :: "'a::numeric_domain => 'a => 'a"
   assumes intersect_sound[intro]:
     "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (intersect a b)"
 
@@ -52,7 +52,7 @@ locale mono_intersection = semantic_intersection +
     "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
 
 text \<open>
-  Extends @{class sound_domain} with the infrastructure for backward
+  Extends @{class numeric_domain} with the infrastructure for backward
   (inverse) evaluation of guards and arithmetic expressions. Per-domain:
   provide a @{locale semantic_intersection} instance, the forward operations of
   @{locale sound_evaluator} and @{locale sound_truth_test}, and \<open>inv_*\<close>
@@ -64,7 +64,7 @@ text \<open>
 locale backward_domain =
   semantic_intersection intersect + sound_evaluator gamma_state aval_abs
     + sound_truth_test tobool
-    for intersect :: "'a::sound_domain => 'a => 'a"
+    for intersect :: "'a::numeric_domain => 'a => 'a"
     and aval_abs :: "exp => 'a abs_state => 'a"
     and tobool :: "'a => bool option" +
   fixes
@@ -672,7 +672,7 @@ text \<open>
   which cannot narrow either operand of a plus/minus/times from its result)
   instantiates @{term inv_plus} / @{term inv_minus} / @{term inv_times} with
   this shared no-op: both operands pass through unchanged. Any
-  @{class sound_domain} discharges its soundness for free, so domains share
+  @{class numeric_domain} discharges its soundness for free, so domains share
   one proof instead of each restating the same trivial obligation.
 \<close>
 
@@ -680,7 +680,7 @@ definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
   "inv_conservative r a1 a2 = (a1, a2)"
 
 lemma inv_conservative_sound:
-  fixes a1 a2 :: "'a::sound_domain"
+  fixes a1 a2 :: "'a::numeric_domain"
   assumes "n1 \<in> \<gamma> a1" and "n2 \<in> \<gamma> a2"
   shows "n1 \<in> \<gamma> (fst (inv_conservative r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_conservative r a1 a2))"
   using assms by (simp add: inv_conservative_def)

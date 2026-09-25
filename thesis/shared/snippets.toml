@@ -2,7 +2,7 @@
 # the name has to resolve, and the extracted text is committed, so a rename
 # fails the build and an edit to a shown definition surfaces as a diff.
 
-[snippets.sound_domain]
+[snippets.numeric_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
 [snippets.combine_env]

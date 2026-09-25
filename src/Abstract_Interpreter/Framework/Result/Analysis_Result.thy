@@ -56,7 +56,7 @@ fun is_reachable_point :: "'a lifted \<Rightarrow> bool" where
 lemma is_reachable_point_iff: "is_reachable_point p \<longleftrightarrow> p \<noteq> Bot"
   by (cases p) simp_all
 
-definition gamma_point :: "'a::sound_domain abs_state lifted \<Rightarrow> store set" where
+definition gamma_point :: "'a::numeric_domain abs_state lifted \<Rightarrow> store set" where
   "gamma_point p = (case p of Bot \<Rightarrow> {} | Lifted st \<Rightarrow> \<lbrakk>st\<rbrakk>)"
 
 lemma gamma_point_Bot [simp]: "gamma_point Bot = {}"
@@ -74,7 +74,7 @@ text \<open>
 
 lemma gamma_state_of_reachable_env [simp]:
   "\<lbrakk>case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = gamma_point p"
-  for p :: "'a::sound_domain abs_state lifted"
+  for p :: "'a::numeric_domain abs_state lifted"
   by (cases p) simp_all
 
 subsection \<open>The result table\<close>
@@ -465,7 +465,7 @@ text \<open>And what canonicality buys: on a well-formed result the structural
   the exact emptiness test its adapters use.\<close>
 
 lemma wf_analysis_result_gamma_point_eq_empty_iff:
-  fixes r :: "('ctx, 'a::sound_domain abs_state) analysis_result"
+  fixes r :: "('ctx, 'a::numeric_domain abs_state) analysis_result"
     and empty_pred :: "'a abs_state \<Rightarrow> bool"
   assumes wf: "wf_analysis_result empty_pred r"
     and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<lbrakk>st\<rbrakk> = {}"

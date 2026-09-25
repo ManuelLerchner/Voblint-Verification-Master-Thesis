@@ -1,5 +1,5 @@
 (* src/Abstract_Interpreter/Domain/Abstract_Domain.thy *)
-class sound_domain = executable_domain +
+class numeric_domain = executable_domain +
   fixes gamma :: "'a \<Rightarrow> int set" ("\<gamma>")
   assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"
   assumes gamma_top[simp]: "\<gamma> \<top> = UNIV"

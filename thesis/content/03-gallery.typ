@@ -307,7 +307,7 @@ Between the two sits the abstract syntax the compiler actually consumes.
   align: bottom,
   caption: [Hasse diagrams of two component domains and the abstraction they
     induce. The formalization fixes only $conc$; $abstr$ is drawn for
-    intuition and is not required by #isalocale("sound_domain").],
+    intuition and is not required by #isalocale("numeric_domain").],
   label: <fig:lattices>,
 )
 
@@ -449,7 +449,7 @@ the trust boundary follows @leroy09.
     spacing: (16mm, 10mm),
     locale-node((0, 0), "ord"),
     locale-node((0, 1), "bounded_lattice"),
-    locale-node((0, 2), "sound_domain"),
+    locale-node((0, 2), "numeric_domain"),
     locale-node((-1, 3), "man_transfer"),
     locale-node((1, 3), "dg_ctx_activation_base"),
     locale-node((0, 4), "dg_spec"),
@@ -494,7 +494,7 @@ the trust boundary follows @leroy09.
     table.hline(),
     [locale / class], [Sign], [Interval], [Parity], [Congruence], [Int product],
     table.hline(stroke: 0.5pt),
-    [#isalocale("sound_domain")], yes, yes, yes, yes, yes,
+    [#isalocale("numeric_domain")], yes, yes, yes, yes, yes,
     [#isatype("man_transfer")], yes, yes, yes, yes, yes,
     [#isalocale("dg_ctx_activation_base")], yes, yes, yes, no, yes,
     [#isatype("dg_spec")], yes, yes, yes, no, yes,
@@ -522,7 +522,7 @@ Snippets are written in ASCII source form, exactly as the repository stores
 them, and decoded at render time with Isabelle's own symbol table.
 
 #figure(
-  thy("sound_domain"),
+  thy("numeric_domain"),
   kind: image,
   caption: [The domain interface as the sources state it, lifted by name from
     the theory rather than retyped. Presenting it verbatim is what lets a
@@ -639,7 +639,7 @@ material this chapter quotes, so it grows when a new snippet does.
 
 #figure(
   symbol-table((
-    read("/shared/generated/snippets/sound_domain.thy"),
+    read("/shared/generated/snippets/numeric_domain.thy"),
     read("/shared/generated/snippets/sound_dg_spec_core.thy"),
     read("/shared/generated/snippets/combine_env.thy"),
     json("/shared/generated/facts.json").facts.values().map(f => f.statement).join(" "),

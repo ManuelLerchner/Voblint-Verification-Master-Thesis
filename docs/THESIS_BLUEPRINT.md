@@ -205,7 +205,7 @@ the forward simulation `csim_step`/`csim_star`; procedure ownership; live
 nodes; and the one theory that needs both halves, `Source_To_Trace`, which
 turns a source run into a `valid_ltr` witness.
 
-**`Voblint_Domain`.** The `sound_domain` type class (carrier, order,
+**`Voblint_Domain`.** The `numeric_domain` type class (carrier, order,
 concretization, no `alpha`); the reachability lift `'a lifted` mirroring
 Goblint's `Lattice.LiftConf`; pointwise `'a abs_state = vname => 'a` with
 `gamma_state` and `is_empty_state`; the `backward_domain` locale for guard
@@ -495,7 +495,7 @@ Organized by what each source *supplies* to the thesis, not by topic.
 | Source | Supplies | Relevance | Thesis home |
 | --- | --- | --- | --- |
 | Cousot & Cousot, POPL 1977 | the framework itself; lattices, Galois connections, fixpoint approximation | the vocabulary every chapter uses | Ch. 2 |
-| Cousot & Cousot, POPL 1979, *Systematic design* | systematic construction of abstract domains; products | justifies the `sound_domain`/`gamma`-only presentation; background for `int_dom` | Ch. 2, Ch. 10 |
+| Cousot & Cousot, POPL 1979, *Systematic design* | systematic construction of abstract domains; products | justifies the `numeric_domain`/`gamma`-only presentation; background for `int_dom` | Ch. 2, Ch. 10 |
 | Cousot, TCS 2002, *Constructive design of a hierarchy of semantics* | trace semantics as the base of the hierarchy; reachable states as its abstraction | the licence for building on traces rather than reachable states | Ch. 4 |
 | Cousot & Cousot, PLILP 1992, *Comparing the Galois connection and widening/narrowing approaches* | widening/narrowing without a best abstraction | why `alpha` is never mechanized here | Ch. 2, Ch. 5 |
 | Miné, FnTPL 2017 tutorial | a modern, readable presentation of numeric domains and widening | the reference a reader without an AI background should be pointed at | Ch. 2 |
@@ -600,7 +600,7 @@ that ratio to a syntax-directed interval analyzer, and losing it means nothing.
 | Ballarin, *Locales — a module system for mathematical theories* (JAR 2014) | locales, interpretation, sublocale | Ch. 2 |
 | Haftmann & Nipkow, *Code generation from Isabelle/HOL theories* | the code generator and its trust story | Ch. 11 |
 | Huffman & Kunčar, *Lifting and Transfer* | quotient types; `resolved_st_q` | Ch. 8 |
-| Haftmann & Wenzel, *Constructive type classes in Isabelle* | type classes; `sound_domain`, `widening` | Ch. 2, Ch. 5 |
+| Haftmann & Wenzel, *Constructive type classes in Isabelle* | type classes; `numeric_domain`, `widening` | Ch. 2, Ch. 5 |
 
 ---
 
@@ -1021,7 +1021,7 @@ thesis's climax is that nothing is left, not that a long proof finally runs.
 The remaining six steps keep the expected order, with one refinement: abstract
 domains (Ch. 5) come after traces and before the analysis interface, because
 `sound_dg_spec_core` needs a concretization `gammaDG` in its statement, so
-`sound_domain` and `gamma_state` must already exist.
+`numeric_domain` and `gamma_state` must already exist.
 
 ---
 
@@ -1078,7 +1078,7 @@ PART II — WHAT MUST BE OVER-APPROXIMATED
 
 PART III — THE ANALYZER
 5 Abstract domains                                                 [8%]
-  5.1 The sound_domain class: what a domain is, minimally
+  5.1 The numeric_domain class: what a domain is, minimally
   5.2 Pointwise abstract states; when a state denotes nothing
   5.3 The reachability lift: dead code as an explicit tag
   5.4 Backward filtering: guards that narrow (backward_domain)
@@ -1190,7 +1190,7 @@ ending with "only `gamma` is mechanized here, because soundness never needs
 `alpha` and no optimality is claimed". Widening gets a figure. Isabelle
 mechanisms get exactly what the later chapters use, with a forward pointer each
 time — locales because the soundness obligations are locale assumptions; type
-classes because `sound_domain` is one; quotient types because the executable
+classes because `numeric_domain` is one; quotient types because the executable
 state is one; code equations because the export depends on them. *Defer*
 strategy trees to Ch. 8.
 
@@ -1323,7 +1323,7 @@ thesis section → theories → central definitions → central theorems.
 | 4.5–4.6 | `Voblint_CFG.LTR_Activation_Context` | `call_context_rel`, `call_context_rel_of_fun`, `admits_call_context`, `trace_context`, `call_context_total_on`, `activation_collect`, `startcontext` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
 | 4.7–4.8 | `Voblint_CFG.LTR_Abstract`, `Voblint_Framework.Activation_Backbone` | locale `ltr_coverage`, `trace_covered` | `valid_ltr_covered_at`, `ltr_collect_semantic_postfix`, `ltr_collect_eq_Union_activation_collect`, `activation_collect_sound` |
 | 4.10 | `Voblint_Compile.Source_To_Trace` | `stack_repr` | `source_run_has_ltr`, `source_reaches_ltr_collect` |
-| 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `sound_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
+| 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Abstract_Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `abstract_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
 | 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `sound_dg_spec_core`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_core_sound`, `combine_sound_program` |
@@ -1440,7 +1440,7 @@ Prefer generated over drawn wherever the infrastructure already exists
    and one commuting square for a transfer.
 8. **The locale hierarchy** (Ch. 6 or Appendix A), generated by
    `tools/locale_graph.ML`.
-9. **The `sound_domain` / `widening` class hierarchy** (Ch. 5), generated by
+9. **The `numeric_domain` / `widening` class hierarchy** (Ch. 5), generated by
    `class_deps`.
 10. **`thm_deps` for `run_voblint_certified_source_sound`** (Ch. 9 or 12) —
     what the headline actually rests on, machine-generated.
@@ -1828,8 +1828,8 @@ colours, with no linked assets.
 
 | Figure | What is wrong | Work |
 | --- | --- | --- |
-| class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `sound_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_warrowing`, `bounded_semilattice_sup_bot` |
-| locale graph | four nodes come out isolated (`sound_domain`, `ltr_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
+| class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `numeric_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_warrowing`, `bounded_semilattice_sup_bot` |
+| locale graph | four nodes come out isolated (`numeric_domain`, `ltr_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
 | `cost-nodes` / `cost-contexts` | the bar values are the explainer's, not measured here | re-derive from the regression runner (U8) and keep the extracted figure as the layout |
 | `strata` | eleven session colours collapse to a depth ramp, which is right for print but drops the identity the web version carries | add a legend, or label each stratum |
 | `iceberg`, `export-lane` | vendor logos dropped (Typst cannot nest an SVG) | fine as is; the shapes still read |

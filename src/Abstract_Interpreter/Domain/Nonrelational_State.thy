@@ -30,7 +30,7 @@ text \<open>Pointwise join on abstract states is idempotent because the value-do
   standard idempotent-join laws without a separate state-level assumption.\<close>
 subsection \<open>State concretization\<close>
 
-definition gamma_state :: "('a::sound_domain) abs_state \<Rightarrow> store set"
+definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store set"
     ("\<lbrakk>_\<rbrakk>") where
   "\<lbrakk>\<sigma>\<rbrakk> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
 
@@ -48,23 +48,23 @@ text \<open>Every value-level concretization law, lifted to states.  All of them
   are read one variable at a time, and no law here needs a relation between variables.\<close>
 lemma gamma_state_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> \<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma2\<rbrakk>"
-  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def le_fun_def
   using gamma_mono by blast
 
 lemma gamma_state_bot [simp]:
-  "\<lbrakk>bot :: 'a::sound_domain abs_state\<rbrakk> = {}"
+  "\<lbrakk>bot :: 'a::numeric_domain abs_state\<rbrakk> = {}"
   unfolding gamma_state_def bot_fun_def using gamma_bot by auto
 
 lemma gamma_state_sup_ub1 [intro]:
   "\<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
-  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub1 by blast
 
 lemma gamma_state_sup_ub2 [intro]:
   "\<lbrakk>sigma2\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
-  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 
@@ -80,12 +80,12 @@ text \<open>
 
 lemma gamma_state_supI1 [intro]:
   "s \<in> \<lbrakk>sigma1\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
-  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   using gamma_state_sup_ub1 by blast
 
 lemma gamma_state_supI2 [intro]:
   "s \<in> \<lbrakk>sigma2\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
-  for sigma1 sigma2 :: "'a::sound_domain abs_state"
+  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   using gamma_state_sup_ub2 by blast
 
 text \<open>
@@ -96,7 +96,7 @@ text \<open>
 \<close>
 lemma gamma_stateD:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s x \<in> \<gamma> (\<sigma> x)"
-  for \<sigma> :: "'a::sound_domain abs_state"
+  for \<sigma> :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def by simp
 
 subsection \<open>Witness-bottom abstract states\<close>
@@ -186,7 +186,7 @@ lemma is_empty_state_iff_gamma_state_empty:
   using is_empty_state_gamma_state_empty gamma_state_empty_is_empty_state by blast
 
 lemma is_empty_state_bot [simp]:
-  "is_empty_state (bot :: 'a::sound_domain abs_state)"
+  "is_empty_state (bot :: 'a::numeric_domain abs_state)"
   unfolding is_empty_state_def bot_fun_def
   using is_empty_correct gamma_bot by blast
 
@@ -201,7 +201,7 @@ lemma gamma_state_witness_not_empty:
 
 lemma is_empty_state_antimono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>1"
-  for \<sigma>1 \<sigma>2 :: "'a::sound_domain abs_state"
+  for \<sigma>1 \<sigma>2 :: "'a::numeric_domain abs_state"
   unfolding is_empty_state_def le_fun_def using is_empty_antimono by blast
 
 end

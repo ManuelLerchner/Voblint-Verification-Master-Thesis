@@ -99,7 +99,7 @@ text \<open>
 \<close>
 
 definition table_covers ::
-    "('c, 'a::sound_domain abs_state) analysis_result \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
+    "('c, 'a::numeric_domain abs_state) analysis_result \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
   "table_covers r v s \<longleftrightarrow> (\<exists>c st. lookup_context r v c = Lifted st \<and> s \<in> \<lbrakk>st\<rbrakk>)"
 
 lemma table_coversI [intro]:
@@ -134,7 +134,7 @@ text \<open>
 \<close>
 
 lemma ctx_checks_sound_at:
-  fixes r :: "('c, 'a::sound_domain abs_state) analysis_result"
+  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes fin: "finite (contexts_at r v)"
       and look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
@@ -201,7 +201,7 @@ text \<open>
 \<close>
 
 lemma lookup_context_covers_of_activation:
-  fixes r :: "('c, 'a::sound_domain abs_state) analysis_result"
+  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
   assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v c)"
       and sound: "\<And>ctx. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx
                     \<subseteq> gamma_point (lookup_context r v ctx)"
@@ -249,7 +249,7 @@ lemma map_run_result_sound_at [simp]:
 
 locale sound_table =
   fixes p :: imp_prog
-    and r :: "('c, 'a::sound_domain abs_state) analysis_result"
+    and r :: "('c, 'a::numeric_domain abs_state) analysis_result"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes finite_contexts: "\<And>v. finite (contexts_at r v)"
       and covers: "\<And>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
@@ -388,7 +388,7 @@ text \<open>
 \<close>
 
 lemma sound_table_of_activation:
-  fixes r :: "('c, 'a::sound_domain abs_state) analysis_result"
+  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
                     \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
                                 cinit_stores (declared_global p)\<^esub> u c)"
@@ -409,7 +409,7 @@ proof (rule sound_table.intro)
 qed (fact proved, fact refuted)
 
 lemma sound_table_of_unit:
-  fixes r :: "(unit, 'a::sound_domain abs_state) analysis_result"
+  fixes r :: "(unit, 'a::numeric_domain abs_state) analysis_result"
   assumes node: "\<And>v. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
                     \<subseteq> gamma_point (lookup_context r v ())"
       and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"

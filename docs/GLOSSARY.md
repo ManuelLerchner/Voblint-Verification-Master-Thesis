@@ -58,7 +58,7 @@ layer without embedding line numbers that drift.
 | Term | Meaning | Source |
 | --- | --- | --- |
 | `abs_state` | Pointwise abstract variable environment. | `src/Abstract_Interpreter/Domain/Nonrelational_State.thy` |
-| `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Abstract_Domain.thy` |
+| `numeric_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Abstract_Domain.thy` |
 | `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every side contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
 | `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) it discharges the solver assumptions of `routed_dg_analysis`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |

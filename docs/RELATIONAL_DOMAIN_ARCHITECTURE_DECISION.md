@@ -56,7 +56,7 @@ Tracing the DG layer directly (not assumed — read below) shows:
 
 What **is** box-only is not the framework — it's every existing
 *interpretation* of it: `gamma_dg d g = ⟦d⟧ ∩ ⟦g⟧` (`DG_Soundness.thy:106-109`)
-calls `gamma_state`, which is `'a::sound_domain abs_state => store set`
+calls `gamma_state`, which is `'a::numeric_domain abs_state => store set`
 (`Abstract_Domain.thy:58`, "lifts `gamma` pointwise," per the domain README).
 `ownership_split_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
 `'dg = 'b abs_state` — a choice, not a constraint the locale imposes.
@@ -181,7 +181,7 @@ independent improvement.
 ### Two prior attempts already exist in this repo's history
 
 - **`docs/history/DOMAIN_TYPECLASS_MIGRATION.md`** — status "DONE," commit `52d7486`:
-  a full locale-to-type-class migration of `sound_domain`/`abstract_domain`
+  a full locale-to-type-class migration of `numeric_domain`/`abstract_domain`
   was built and completed once, under the *prior* `src/Analysis/Domains/`
   layout. The codebase was later restructured (`d91fa93f`, "move analysis
   theories into generic and instance folders," 2026-06-30) into today's
@@ -255,7 +255,7 @@ independent improvement.
 `apply_assign`, `apply_assume`, `combine`. Every consumer signature
 (`domain_transfer`, `rhs`, `TD_Side_CFG.thy`'s combinators, eventually
 `dg_spec` if pushed all the way) becomes polymorphic over `'a::abstract_state`.
-Interval instantiates the class the way it instantiates `sound_domain` today.
+Interval instantiates the class the way it instantiates `numeric_domain` today.
 An Octagon domain would define its DBM type and prove the same class axioms
 — `join_state` becomes real DBM-join, `gamma_state` a real polyhedron
 concretization, no `vname => 'a` anywhere in its type.
@@ -268,7 +268,7 @@ need genericity. This project's own prior attempt at exactly this shape
 restructuring, which is a concrete, not hypothetical, maintainability signal
 against a class-wide commitment. Type classes also don't compose well with
 this project's existing pattern of *multiple* interpretations of the same
-carrier for different purposes (`abs_state` is `sound_domain`-constrained in
+carrier for different purposes (`abs_state` is `numeric_domain`-constrained in
 `Constraint_System.thy` but wants `bounded_semilattice_sup_bot` in
 `Exec_St.thy`) — a class forces one coherent instance per type, where this
 codebase currently gets that flexibility from locale interpretation
@@ -292,8 +292,8 @@ actually execute through.
 `DG_Ctx_Activation.thy`, all Interval Ctx examples) — they never mention
 `abs_state`'s type-class status directly, only `bounded_semilattice_sup_bot`.
 Requiring generalization: every flat-layer lemma stated with a bare `'a`
-implicitly assumed `sound_domain`-instantiated at `abs_state`'s current
-shape; each needs its `'a::sound_domain` constraint re-checked against the
+implicitly assumed `numeric_domain`-instantiated at `abs_state`'s current
+shape; each needs its `'a::numeric_domain` constraint re-checked against the
 new class's axiom set. New abstraction lemmas: none obviously required
 beyond the class's own axioms — this is the option with the least *new*
 lemma-writing, at the cost of the widest *touched-file* footprint.
@@ -325,7 +325,7 @@ are all "one locale, many `interpretation`s" already. Locales compose with
 existing soundness proofs by construction (an `interpretation` just
 discharges obligations once, downstream lemmas are unaffected). No global
 class-wide commitment; two interpretations of the same carrier for different
-purposes are ordinary and already how this project handles `sound_domain`
+purposes are ordinary and already how this project handles `numeric_domain`
 vs. `bounded_semilattice_sup_bot` today.
 
 **Where the original document's scope is stale, precisely.** `Approach A`
@@ -757,7 +757,7 @@ numeric example like the one above before trusting it.
 **The key structural observation:** this representation has *exactly the
 same shape* as `abs_state = vname => 'a`, just reindexed from `vname` to
 `svar \<times> svar`. Every argument this document has made about `abs_state`
-being "an indexed function into a `sound_domain`-like codomain" applies
+being "an indexed function into a `numeric_domain`-like codomain" applies
 verbatim with the index set swapped. This is not a coincidence to route
 around — it's the cheapest possible design, and it's why the rest of this
 section comes out easier than it might look at first glance.

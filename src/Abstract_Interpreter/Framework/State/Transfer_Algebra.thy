@@ -39,14 +39,14 @@ lemma combine_env_mono:
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
   a callee-exit store (sound for se) yields a store sound for \<open>combine_env \<G> sc se\<close>.
-  A pure \<open>sound_domain\<close> fact -- independent of any transfer function -- reused by
+  A pure \<open>numeric_domain\<close> fact -- independent of any transfer function -- reused by
   both the interprocedural constraint-system soundness and the effectful pipeline.
   \<open>combine_env\<close> is the fixed structural merge the Base call boundary uses; an
   analysis that wants a different one overrides its specification's own
   environment stage instead.
 \<close>
 lemma combine_env_sound [intro]:
-  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
+  fixes \<sigma>c \<sigma>e :: "'a::numeric_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_env \<G> s t \<in> \<lbrakk>combine_env \<G> \<sigma>c \<sigma>e\<rbrakk>"
   using assms by (auto simp: gamma_state_def le_fun_def)
@@ -58,7 +58,7 @@ text \<open>The two facts a call boundary keeps re-deriving: writing one variabl
   arbitrary domain and no transfer function, so every analysis picks them up rather than
   proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
-  fixes \<sigma> :: "'a::sound_domain abs_state"
+  fixes \<sigma> :: "'a::numeric_domain abs_state"
   assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and v: "v \<in> \<gamma> a"
   shows "s(x := v) \<in> \<lbrakk>\<sigma>(x := a)\<rbrakk>"
   using s v unfolding gamma_state_def by auto
@@ -68,7 +68,7 @@ text \<open>
   same formals yield a sound entry state.
 \<close>
 lemma bind_formals_sound [intro]:
-  fixes \<sigma> :: "'a::sound_domain abs_state"
+  fixes \<sigma> :: "'a::numeric_domain abs_state"
   assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a) vs avs"
   shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals xs avs \<sigma>\<rbrakk>"
@@ -110,7 +110,7 @@ text \<open>
 \<close>
 
 lemma enter_frame_sound [intro]:
-  fixes reset_val :: "'a::sound_domain"
+  fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
   shows "enter_state \<G> s \<in> \<lbrakk>enter_frame \<G> reset_val \<sigma>\<rbrakk>"
   unfolding gamma_state_def enter_state_def
@@ -136,7 +136,7 @@ lemma list_all2_map_mapI [intro]:
   using assms by (induction xs) auto
 
 lemma enter_binding_sound_list_all2 [intro]:
-  fixes reset_val :: "'a::sound_domain"
+  fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
                  (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
@@ -146,7 +146,7 @@ lemma enter_binding_sound_list_all2 [intro]:
   by (rule bind_formals_sound[OF enter_frame_sound[OF sv reset_full] vals])
 
 lemma enter_binding_sound [intro]:
-  fixes reset_val :: "'a::sound_domain"
+  fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
     and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e \<sigma>)"
   shows "enter_binding \<G> 0 aval xs es s
@@ -234,12 +234,12 @@ subsection \<open>Soundness of the structural return combine\<close>
 
 text \<open>
   Soundness of the abstract combine including result publication.  A pure
-  @{class sound_domain} fact: the destination slot is sound because the callee's
+  @{class numeric_domain} fact: the destination slot is sound because the callee's
   @{const ret_var} slot is, and every other slot is handled by
   @{thm combine_env_sound}.
 \<close>
 lemma combine_collect_sound [intro]:
-  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
+  fixes \<sigma>c \<sigma>e :: "'a::numeric_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
   shows "combine_collect \<G> dst s t \<in> \<lbrakk>combine\<^sup># \<G> dst \<sigma>c \<sigma>e\<rbrakk>"
   unfolding combine_collect_def combine_collect_abs_def

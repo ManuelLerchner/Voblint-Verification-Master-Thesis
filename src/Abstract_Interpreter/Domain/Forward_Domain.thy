@@ -22,12 +22,12 @@ text \<open>
 
 locale sound_evaluator =
   fixes gamma_state :: "'d \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::sound_domain"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain"
   assumes aval_abs_sound[intro]:
     "s \<in> gamma_state d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
 
 locale sound_truth_test =
-  fixes tobool :: "'a::sound_domain \<Rightarrow> bool option"
+  fixes tobool :: "'a::numeric_domain \<Rightarrow> bool option"
   assumes tobool_sound:
     "tobool p = Some b \<Longrightarrow> i \<in> \<gamma> p \<Longrightarrow> truthy i = b"
 
@@ -40,7 +40,7 @@ text \<open>
 
 locale mono_evaluator = sound_evaluator gamma_state aval_abs
   for gamma_state :: "'d::order \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::sound_domain" +
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" +
   assumes aval_abs_mono[intro]:
     "d1 \<le> d2 \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
 

@@ -73,7 +73,7 @@ lemma or_opt_mono:
 
 locale expression_domain_sound =
   sound_truth_test tobool + abstract_numeric_queries lt eqb
-  for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::sound_domain) \<Rightarrow> 'a"
+  for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::numeric_domain) \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
     and pls :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and mns :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"

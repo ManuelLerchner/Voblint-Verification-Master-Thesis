@@ -64,7 +64,7 @@ text \<open>
 
 locale abstract_expression_domain =
   abstract_numeric_queries less eq + sound_evaluator gamma_state aval_abs
-    for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
+    for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
       and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
       and gamma_state :: "'d \<Rightarrow> store set"
       and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
@@ -90,7 +90,7 @@ text \<open>
 
 locale abstract_check_domain =
   abstract_expression_domain less eq gamma_state aval_abs
-  for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
+  for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and gamma_state :: "'d \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"

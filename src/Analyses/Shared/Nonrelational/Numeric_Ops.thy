@@ -43,9 +43,9 @@ text \<open>
 text \<open>
   Constrained to \<open>'a::bot\<close> only -- exactly what \<^const>\<open>fun_of_resolved_st_q_for\<close>/
   \<^const>\<open>bind_formals_resolved_q\<close>/\<^const>\<open>enter_frame_D_resolved_q\<close> actually
-  need -- rather than \<open>'a::sound_domain\<close>. This is deliberate, not merely
-  weaker-than-necessary: \<open>sound_domain\<close> also fixes \<open>gamma\<close> as a class
-  operation, and code generation for a \<open>'a::sound_domain\<close>-constrained
+  need -- rather than \<open>'a::numeric_domain\<close>. This is deliberate, not merely
+  weaker-than-necessary: \<open>numeric_domain\<close> also fixes \<open>gamma\<close> as a class
+  operation, and code generation for a \<open>'a::numeric_domain\<close>-constrained
   definition must resolve every fixed operation's code equation for the
   concrete type, including \<open>gamma\<close>, even though nothing here ever calls it.
   \<open>ivl\<close>'s own \<open>gamma_ivl\<close> code equation is not actually well-sorted

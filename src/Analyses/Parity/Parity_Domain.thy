@@ -271,7 +271,7 @@ lemma string_of_parity_regression:
   "string_of_parity PTop = STR ''<int>''"
   by eval+
 
-instantiation parity :: sound_domain begin
+instantiation parity :: numeric_domain begin
 definition gamma_abs_parity [simp]: "\<gamma> (a :: parity) = gamma_parity a"
 definition is_empty_parity [simp]: "is_empty (a :: parity) = is_bottom_parity a"
 definition to_string_parity [simp]:

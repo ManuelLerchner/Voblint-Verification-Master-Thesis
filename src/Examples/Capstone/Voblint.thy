@@ -313,7 +313,7 @@ text \<open>
   \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} ---
-      \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, and
+      \<^verbatim>\<open>numeric_domain\<close>, lifted state concretization, and
       display support.
     \<^item> @{theory Voblint_Framework.Transfer_Algebra} --- the pure
       abstract-state algebra: call-entry frame reset, formal binding, structural

@@ -180,7 +180,7 @@ relational domain actually follows it.
 ### One open question that affects what "done" means
 
 **Must the Galois `α` be formalized, or does `γ`-only suffice?** The domains use
-semantic `γ`-axioms (`sound_domain`); no best-abstraction `α` is mechanized.
+semantic `γ`-axioms (`numeric_domain`); no best-abstraction `α` is mechanized.
 Soundness needs only `γ`. The M4 precision witness sidesteps `α` entirely — its
 strictness is *forced by soundness alone* (in the sign domain only `STop`
 concretizes both a positive and a negative). If the thesis claims *optimality*

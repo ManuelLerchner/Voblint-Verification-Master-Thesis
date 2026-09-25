@@ -218,7 +218,7 @@
 # record-application function and the lemmas phrased through it are gone.
 # reference survives.
 # remove_resolved_key was proved equal to AList.delete on the spot and used
-# resolved_st_is_bot_for_iff holds at executable_domain, not just sound_domain;
+# resolved_st_is_bot_for_iff holds at executable_domain, not just numeric_domain;
 # results, are now sound_dg_spec_core_st and sound_dg_spec_core_*.
 # return_calls/return_call_list were the return enumeration for the flat,
 # returns only the callee state) and `ownership_split_dg_spec_for`, replaced by
@@ -3189,3 +3189,7 @@ sides_of_rhs_side_rhs_fold_dg_char
 # and never looks at the ROOT.
 DG_Constraint_Trees
 Routed_Call_Trees
+
+# --- Renamed to the concept names the thesis uses (2026-09-25) ---
+# sound_domain became numeric_domain.
+sound_domain

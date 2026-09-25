@@ -76,7 +76,7 @@ they classify is the registration's `analysis_result` table, which
 
 ### `Abstract_Domain.thy` — lattice and backward refinement
 
-Owns `sound_domain`/`abstract_domain` (the type-class every domain value
+Owns `numeric_domain`/`abstract_domain` (the type-class every domain value
 type instantiates), `semantic_intersection`, `backward_domain` (guard narrowing: `inv_less`,
 `inv_eq`, `afilter`/`bfilter`), and `backward_domain_mono`. Nothing here
 knows about checks. `derived_less_queries`/`derived_eq_true_from_less`/

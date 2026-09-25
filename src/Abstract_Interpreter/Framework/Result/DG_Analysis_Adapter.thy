@@ -55,7 +55,7 @@ locale dg_analysis_adapter =
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and R :: "'c call_context_rel" +
-  fixes rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
+  fixes rd :: "'D \<Rightarrow> 'a::numeric_domain abs_state lifted"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = \<lbrakk>rd d\<rbrakk>\<^sub>\<bottom>"
     and classify_proved:

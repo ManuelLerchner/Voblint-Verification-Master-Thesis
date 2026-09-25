@@ -43,7 +43,7 @@ locale unit_dg_analysis =
     "\<lambda>_. route_unit" "()" solve solve_dom bot_state classify
     sk asn spc br bd rt en ev "\<lambda>_. route_unit" solve_c
   for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
-                  \<Rightarrow> 'a::sound_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
+                  \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and init_st :: "'a exec_dg_st"
     and solve :: "(pp \<times> unit, (unit, unit) routed_gk,

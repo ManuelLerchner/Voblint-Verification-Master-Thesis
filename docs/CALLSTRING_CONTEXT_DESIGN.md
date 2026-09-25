@@ -61,7 +61,7 @@ Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
 
 ```isabelle
 locale dg_ctx_activation = sound_dg_spec_core S gamma_ownership_split gs
-  for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
+  for S :: "('a::numeric_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname => bool" +
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp => 'c => 'a abs_state => call_action => 'c"

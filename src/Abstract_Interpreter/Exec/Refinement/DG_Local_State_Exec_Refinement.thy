@@ -68,7 +68,7 @@ lemma dg_reader_commute_gen_lifted_for:
 
 locale routed_dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
-    and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and sk :: "'a abs_state \<Rightarrow> 'a abs_state"

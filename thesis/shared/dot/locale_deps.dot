@@ -1,7 +1,7 @@
 digraph locales {
   rankdir=TB;
   edge [arrowsize=0.7];
-  "sound_domain" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
+  "numeric_domain" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "analysis_surface" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "dg_analysis_adapter" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "dg_ctx_activation_base" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];

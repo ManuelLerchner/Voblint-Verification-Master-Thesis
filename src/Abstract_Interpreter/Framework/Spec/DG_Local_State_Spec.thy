@@ -49,7 +49,7 @@ text \<open>One assumption per operation, each an inference rule from a concrete
 
 locale sound_transfer_for =
   fixes \<G> :: "vname \<Rightarrow> bool"
-    and sk :: "'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
+    and sk :: "'a::numeric_domain abs_state \<Rightarrow> 'a abs_state"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -129,7 +129,7 @@ text \<open>What a whole-state analysis actually supplies: eight pure operations
   lifted sibling further down differs only in carrying the dead-code lift.\<close>
 definition local_state_dg_spec_for ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
+   \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -170,7 +170,7 @@ subsection \<open>The reachability-lifted construction\<close>
 definition local_state_dg_spec_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
-   \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
+   \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -244,7 +244,7 @@ text \<open>
 \<close>
 
 definition gamma_dg_local_state ::
-  "'a::sound_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
+  "'a::numeric_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
 where
   "gamma_dg_local_state d g = \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
 
