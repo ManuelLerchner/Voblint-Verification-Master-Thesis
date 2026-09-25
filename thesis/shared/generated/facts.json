@@ -60,12 +60,6 @@
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
     },
-    "intersect_shared_not_empty": {
-      "oracles": [],
-      "statement": "\\<lbrakk>semantic_intersection intersect; n \\<in> \\<gamma> a;\n n \\<in> \\<gamma> b\\<rbrakk>\n\\<Longrightarrow> \\<not> is_empty (intersect a b)",
-      "theory": "Example_Sign_Domain_Ops",
-      "why": "Chapter 5, a fact every domain gets from the laws of semantic_intersection."
-    },
     "ltr_collect_eq_Union_activation_collect": {
       "oracles": [],
       "statement": "ltr_coverage g S cover R startcontext \\<G> \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<G>,R,startcontext,g,S\\<^esub> v))",
@@ -165,20 +159,6 @@
       "statement": "\\<lbrakk>config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res; chk \\<in> set (res_checks res);\n check_verdict chk = Dead\\<rbrakk>\n\\<Longrightarrow> \\<C>\\<^bsub>declared_global\n                               p,prog_cfg\n                                  p,cinit_stores (declared_global p)\\<^esub>\n                   (check_point chk) =\n                  {}",
       "theory": "Analysis_Certified",
       "why": "Unreachability endpoint cited in the introduction."
-    },
-    "sign_interface_regression": {
-      "oracles": [
-        "Code_Generator.holds_by_evaluation"
-      ],
-      "statement": "meet_sign SNonNeg SNonPos = SZero\nis_empty (meet_sign SPos SNeg)\ninv_less_sign True STop SZero = (SNeg, SZero)",
-      "theory": "Example_Sign_Domain_Ops",
-      "why": "Chapter 5, Sign's meet, emptiness test and a guard inverse, evaluated by the code generator."
-    },
-    "sign_meet_zero_not_empty": {
-      "oracles": [],
-      "statement": "\\<not> is_empty (meet_sign SNonNeg SNonPos)",
-      "theory": "Example_Sign_Domain_Ops",
-      "why": "Chapter 5, the generic intersection fact instantiated to Sign."
     },
     "source_progress": {
       "oracles": [],
