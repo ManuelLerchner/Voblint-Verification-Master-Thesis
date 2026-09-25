@@ -103,7 +103,7 @@ command, so a theorem snippet is its `fixes`/`assumes`/`shows` header in the
 author's notation. This is the only way the thesis shows a formal statement.
 
 ```typst
-#thy("sound_domain")     // the declaration, verbatim, with its file header
+#thy("numeric_domain")     // the declaration, verbatim, with its file header
 #proved("run_voblint_certified_source_sound", note: [...]) // a theorem statement and its linked name
 ```
 

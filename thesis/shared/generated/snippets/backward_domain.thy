@@ -2,7 +2,7 @@
 locale backward_domain =
   semantic_intersection intersect + sound_evaluator gamma_state aval_abs
     + sound_truth_test tobool
-    for intersect :: "'a::sound_domain => 'a => 'a"
+    for intersect :: "'a::numeric_domain => 'a => 'a"
     and aval_abs :: "exp => 'a abs_state => 'a"
     and tobool :: "'a => bool option" +
   fixes

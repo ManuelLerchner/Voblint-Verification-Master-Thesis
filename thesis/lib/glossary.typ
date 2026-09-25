@@ -385,10 +385,10 @@
 
   // ---------------------------------------------------------------- domains --
   term(
-    "abstract-domain",
-    "abstract domain",
+    "numeric-domain",
+    "numeric domain",
     _dom,
-    isa: [#isalocale("sound_domain"), #isalocale("executable_domain"), #isaconst("is_empty")],
+    isa: [#isalocale("numeric_domain"), #isalocale("executable_domain"), #isaconst("is_empty")],
     see: <ch:domains>,
   )[
     A type of abstract integers with order, join, bottom and top, an exact
@@ -524,7 +524,7 @@
     "sound-spec",
     "analysis soundness contract",
     _eq,
-    isa: isalocale("sound_dg_spec_core"),
+    isa: isalocale("analysis_contract"),
     see: <sec:sound-core>,
   )[
     The obligations a specification owes its concretization: monotonicity,
