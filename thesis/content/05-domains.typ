@@ -647,37 +647,51 @@ The guard refinement of $h$ by $[-infinity, 4]$ in the example of
 @sec:constraints, written there with the interval meet, stands for this
 filter.
 
-== Asking instead of assuming <sec:queries>
+== Answering queries <sec:queries>
 
-A branch assumes its condition. A check must decide whether the current
-description already implies it. The backward domain alone cannot decide
-this: a sound filter may keep stores that fail the condition, so filtering does
-not show that the original state implied it. A domain therefore also answers
-comparison queries with definitely true, definitely false or unknown
-(@fig:numeric-queries). The unknown answer #isai("None") carries no
-obligation, so a domain may give it whenever it cannot decide, and queries may
-be incomplete. Congruence
+An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
+reaches its program point. The analysis has to answer from the abstract state
+at that point alone. Filtering does not answer it: a filter may keep stores
+that fail the condition, so the filtered state does not show that the
+condition held. Voblint therefore asks the domain directly.
+
+#definition(name: [Query], isa: "check_query", cmd: "fun")[
+  A query asks whether a condition $c$ holds in the stores an abstract state
+  $d$ describes. Its answer is _true_ if $c$ holds in every such store,
+  _false_ if it holds in none, and _unknown_ otherwise.
+]
+
+The framework answers queries generically, so that a domain only has to
+answer two small ones. A domain supplies a comparison $a < b$ and an equality
+$a = b$ on abstract values (@fig:numeric-queries). A definite answer must hold
+for every pair of integers the two values denote, and _unknown_, written
+#isai("None"), is always allowed. From these two, #isaconst("check_query")
+answers any condition: it evaluates the operands of a comparison with the
+forward evaluator of @sec:domain-contract and asks the domain, combines the
+answers for `!`, `&&` and `||` in three-valued logic, and compares any other
+expression with $0$. One proof covers every domain: when
+#isaconst("check_query") answers true or false, the condition has that truth
+value in every store the state describes (#isathm("check_query_sound")). The
+answer becomes the verdict of the assertion, `PROVED` for true, `REFUTED` for
+false and `UNKNOWN` otherwise.
+
+#figure(
+  {
+    show raw.where(block: true): set text(size: 6.2pt)
+    thy("abstract_numeric_queries")
+  },
+  kind: image,
+  placement: auto,
+  caption: [The two queries a domain answers, lifted from the theory. A
+    definite answer must hold for every pair of integers the operands denote.],
+) <fig:numeric-queries>
+
+Because _unknown_ carries no obligation, queries may be incomplete, and a
+domain can answer _unknown_ whenever it cannot decide. Congruence
 #let _c = claim-row("dom-even-odd-congruence", "20:3")
 stores the disjoint classes #raw(_c.state) for `x = 2 * n; y = 2 * n + 1`, yet
 its equality query decides only between single integers, so #box[`x != y`]
 stays #raw(_c.verdict).
-
-#block(breakable: false)[
-  #definition(name: [Numeric queries], isa: "abstract_numeric_queries", cmd: "locale")[
-    A definite answer must hold for every pair of integers the operands denote.
-  ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
-      thy("abstract_numeric_queries")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declaration of #isalocale("abstract_numeric_queries"), lifted
-      from the theory.],
-  ) <fig:numeric-queries>
-]
 
 #figure(
   table(
@@ -697,7 +711,7 @@ stays #raw(_c.verdict).
     table.hline(stroke: 0.5pt),
     [_not required:_ abstraction function], [no optimality claim],
     [_not required:_ lattice meet], [#isalocale("semantic_intersection") suffices],
-    [_not required by core soundness:_ monotone transfers], [some instance interfaces impose it],
+    [_not required:_ monotone transfers], [imposed only by some instances],
     [_not required:_ stabilizing widening], [termination is a premise],
     table.hline(),
   ),
