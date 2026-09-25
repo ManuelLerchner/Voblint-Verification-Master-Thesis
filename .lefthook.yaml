@@ -64,6 +64,19 @@ pre-commit:
               - "src/Analyses/**/*.thy"
             run: pixi run assembly-check
 
+          # The thesis quotes repository figures from stats.json; regenerate it
+          # whenever what it measures changes, and fail so the refreshed file
+          # is staged with the change that moved it.
+          - name: thesis-stats-drift
+            glob:
+              - "src/**"
+              - "tests/regression/**"
+              - "cli/**"
+              - "codegen/generated/**"
+              - "scripts/pages_stats.py"
+              - "thesis/tools/stats.py"
+            run: pixi run thesis-stats-write && bash scripts/mk/check-clean.sh thesis/shared/generated/stats.json
+
     # ----------------------------------------------------------------------
     # Formatters
     #
