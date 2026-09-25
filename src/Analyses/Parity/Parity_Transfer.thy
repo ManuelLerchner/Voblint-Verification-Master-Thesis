@@ -85,8 +85,8 @@ proof -
     by unfold_locales
        (auto simp: top_parity_def
              intro: parity_min_sound parity_max_sound parity_min_combine_mono
-                    parity_max_combine_mono aval_parity_sound
-                    parity_arith.aval_dom_mono branch_parity_sound branch_parity_mono)
+                    parity_max_combine_mono parity_arith.aval_abs_sound[unfolded gamma_abs_parity]
+                    branch_parity_sound branch_parity_mono)
   show "n_aval parity_ops = aval_parity" by simp
   show "n_special parity_ops = parity_special_ops" by simp
   show "n_top parity_ops = PTop" by simp

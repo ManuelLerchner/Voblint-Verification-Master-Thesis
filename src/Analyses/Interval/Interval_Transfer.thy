@@ -92,7 +92,8 @@ proof -
     by unfold_locales
        (auto simp: top_ivl_def
              intro: ivl_min_sound ivl_max_sound ivl_min_combine_mono ivl_max_combine_mono
-                    aval_ivl_sound ivl_arith.aval_dom_mono branch_ivl_sound
+                    ivl_arith.aval_abs_sound[unfolded gamma_abs_ivl]
+                    branch_ivl_sound
                     ivl_backward_domain.branch_mono)
   show "n_aval ivl_ops = aval_ivl" by simp
   show "n_special ivl_ops = ivl_special_ops" by simp

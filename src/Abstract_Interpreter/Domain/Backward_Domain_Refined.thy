@@ -71,9 +71,7 @@ text \<open>
   out of its reach.
 \<close>
 
-locale backward_domain_reductive = backward_domain +
-  assumes intersect_reductive1[intro]: "intersect a b \<le> a"
-  and intersect_reductive2[intro]: "intersect a b \<le> b"
+locale backward_domain_reductive = backward_domain + reductive_intersection intersect
 begin
 
 text \<open>
@@ -225,12 +223,10 @@ text \<open>The monotonicity half of the strengthening.  Each inverse operator i
   induction.  \<open>tobool_mono\<close> is the one assumption that does not read that way: a definite
   truth value found at the coarser value must survive at the sharper one, and only a
   non-empty sharper value can be asked -- an empty one decides everything vacuously.\<close>
-locale backward_domain_refined = backward_domain_reductive +
-  assumes intersect_mono[intro]:
-      "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
-  and aval_abs_mono[intro]:
-      "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
-  and inv_less_mono:
+locale backward_domain_refined =
+  backward_domain_reductive + mono_intersection intersect
+    + mono_evaluator gamma_state aval_abs + mono_truth_test tobool +
+  assumes inv_less_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_less res x1 y1) (inv_less res x2 y2)"
   and inv_eq_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_eq res x1 y1) (inv_eq res x2 y2)"
@@ -240,8 +236,6 @@ locale backward_domain_refined = backward_domain_reductive +
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_minus r1 x1 y1) (inv_minus r2 x2 y2)"
   and inv_times_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_times r1 x1 y1) (inv_times r2 x2 y2)"
-  and tobool_mono:
-      "\<not> is_empty (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
 begin
 
 lemmas inv_less_mono_fst [intro] = inv_less_mono[THEN le_pair_fst]

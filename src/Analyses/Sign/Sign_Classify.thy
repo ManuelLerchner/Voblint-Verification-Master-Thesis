@@ -30,13 +30,7 @@ global_interpretation sign_check_domain:
     and sign_check_query = sign_check_domain.check_query
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_sign e \<sigma>)"
-    by (rule sign_arith.aval_dom_sound)
-qed
+  by unfold_locales (rule sign_arith.aval_abs_sound)
 
 text \<open>
   Only the consumer-facing aliases get a short Sign-prefixed name:

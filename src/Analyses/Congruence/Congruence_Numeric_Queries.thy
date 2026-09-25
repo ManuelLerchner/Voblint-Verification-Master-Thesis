@@ -13,21 +13,13 @@ text \<open>
 
   Both operations and their soundness already live in
   \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Arithmetic\<close>, where the reduced
-  product \<open>int_dom\<close> reads them. This theory only interprets the
-  generic query interface at them, so the check layer can consume Congruence
-  the same way it consumes every other domain.
+  product \<open>int_dom\<close> reads them. The expression domain interpreted there also
+  registers them as sound numeric queries, so this interpretation only gives
+  them the name the check layer consumes and reuses that registered fact.
 \<close>
 
 global_interpretation congruence_numeric_queries:
   abstract_numeric_queries congruence_lt congruence_eqb
-proof unfold_locales
-  fix a b :: congruence and r :: bool and i j :: int
-  assume "congruence_lt a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
-  then show "(i < j) = r" using congruence_lt_sound by simp
-next
-  fix a b :: congruence and r :: bool and i j :: int
-  assume "congruence_eqb a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
-  then show "(i = j) = r" using congruence_eqb_sound by simp
-qed
+  by (rule congruence_arith.abstract_numeric_queries_axioms)
 
 end

@@ -22,11 +22,10 @@ where
 definition ivl_special_ops :: "ivl special_ops" where
   "ivl_special_ops = (| special_min = ivl_min, special_max = ivl_max |)"
 
-interpretation ivl_special: sound_special_ops ivl_special_ops aval_ivl
+interpretation ivl_special: mono_special_ops ivl_special_ops aval_ivl
   by unfold_locales
      (auto simp: ivl_special_ops_def top_ivl_def gamma_ivl_top
-           intro: ivl_min_sound ivl_max_sound ivl_min_combine_mono ivl_max_combine_mono
-                  aval_ivl_sound aval_ivl_mono)
+           intro: ivl_min_sound ivl_max_sound ivl_min_combine_mono ivl_max_combine_mono)
 
 lemma ivl_special_ops_min [simp]: "special_min ivl_special_ops = ivl_min"
   by (simp add: ivl_special_ops_def)

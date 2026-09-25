@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Repository size figures for the Pages explainer.
 
-Writes a classic script assigning `window.VOBLINT_STATS`, which the page reads
-at load. A script rather than JSON because the explainer must also open from
-file://, where fetch is blocked; a missing file leaves the page's fallback
-figures in place.
+Writes a classic script assigning `window.VOBLINT_STATS`, which the page's
+figure scripts read at load. A script rather than JSON because the explainer
+must also open from file://, where fetch is blocked. With `--fill`, the same
+collection also writes every `[data-stat]` figure into the built HTML, so the
+published page carries real numbers without running any script. The sources
+keep the neutral FALLBACK there, which cannot go stale.
 
 Isabelle figures reuse thy_stats.py's scanner, so the page and
 `pixi run theory-stats` never disagree. The session graph behind the strata
@@ -77,6 +79,32 @@ def pstep_rules() -> int:
         if re.match(r"(\| )?[A-Z][A-Za-z0-9_]*:", line.strip()):
             rules += 1
     return rules
+
+
+# What a source checkout shows for a figure; the site build replaces it.
+FALLBACK = "\u2014"
+DATA_STAT = re.compile(r'(data-stat="([^"]+)"[^>]*>)([^<]*)(<)')
+
+
+def lookup(stats: dict, key: str):
+    """The value of a dotted `data-stat` key, or None when nothing is measured under it."""
+    value = stats
+    for part in key.split("."):
+        value = value.get(part) if isinstance(value, dict) else None
+    return value
+
+
+def fill(html: str, stats: dict) -> str:
+    """Write every `[data-stat]` figure into `html`; an unknown key is an error."""
+
+    def figure(match: re.Match) -> str:
+        value = lookup(stats, match.group(2))
+        if value is None or isinstance(value, dict):
+            raise KeyError(f"data-stat={match.group(2)!r} names no measured figure")
+        text = f"{value:,}" if isinstance(value, int) else str(value)
+        return match.group(1) + text + match.group(4)
+
+    return DATA_STAT.sub(figure, html)
 
 
 def flatten(node: dict, prefix: str = ""):
@@ -248,6 +276,13 @@ def main() -> int:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--out", type=Path, help="script to write; stdout when omitted")
+    ap.add_argument(
+        "--fill",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="built HTML files whose [data-stat] figures to write in place",
+    )
     args = ap.parse_args()
 
     missing = [root for root in VENDOR_SESSIONS if not (root / "ROOT").is_file()]
@@ -270,7 +305,11 @@ def main() -> int:
         )
         return 1
 
-    script = f"window.VOBLINT_STATS = {json.dumps(collect(), indent=2)};\n"
+    stats = collect()
+    for page in args.fill:
+        page.write_text(fill(page.read_text(encoding="utf-8"), stats), encoding="utf-8")
+
+    script = f"window.VOBLINT_STATS = {json.dumps(stats, indent=2)};\n"
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)
         args.out.write_text(script, encoding="utf-8")

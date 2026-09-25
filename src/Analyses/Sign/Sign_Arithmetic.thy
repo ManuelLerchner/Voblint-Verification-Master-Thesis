@@ -350,12 +350,11 @@ interpretation sign_arith: expression_domain_mono
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
                         sup_sign_def
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
-  apply (blast intro: sign_lt_mono[unfolded is_empty_sign])
-  apply (blast intro: sign_eqb_mono[unfolded is_empty_sign])
-  apply (blast intro: sign_tobool_mono[unfolded is_empty_sign])
+  apply (blast intro: sign_lt_mono[unfolded is_empty_sign] sign_eqb_mono[unfolded is_empty_sign]
+                      sign_tobool_mono[unfolded is_empty_sign])+
   done
 
-lemmas aval_sign_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
+lemmas aval_sign_sound = sign_arith.aval_abs_sound[unfolded gamma_abs_sign]
 lemmas aval_sign_mono = sign_arith.aval_dom_mono
 
 end

@@ -64,7 +64,7 @@ proof -
     by unfold_locales
        (auto simp: top_sign_def
              intro: sign_min_sound sign_max_sound sign_min_combine_mono
-                    sign_max_combine_mono aval_sign_sound sign_arith.aval_dom_mono
+                    sign_max_combine_mono sign_arith.aval_abs_sound[unfolded gamma_abs_sign]
                     branch_sign_sound branch_sign_mono)
   show "n_aval sign_ops = aval_sign" by simp
   show "n_special sign_ops = sign_special_ops" by simp

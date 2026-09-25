@@ -1,5 +1,6 @@
 theory Abstract_Checks
   imports Check_Result Checks "Voblint_Domain.Abstract_Numeric_Queries"
+    "Voblint_Domain.Forward_Domain"
 begin
 
 
@@ -62,13 +63,11 @@ text \<open>
 \<close>
 
 locale abstract_expression_domain =
-  abstract_numeric_queries less eq
+  abstract_numeric_queries less eq + sound_evaluator gamma_state aval_abs
     for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
-      and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" +
-  fixes gamma_state :: "'d \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
-  assumes aval_abs_sound[intro]:
-      "s \<in> gamma_state d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
+      and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
+      and gamma_state :: "'d \<Rightarrow> store set"
+      and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
 
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>
 

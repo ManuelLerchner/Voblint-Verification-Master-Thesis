@@ -9,6 +9,7 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     Reachability_Lift
     Nonrelational_State
     Nonrelational_Reachability
+    Forward_Domain
     Backward_Domain
     Backward_Domain_Refined
     Abstract_Numeric_Queries

@@ -26,13 +26,7 @@ global_interpretation congruence_check_domain:
     and congruence_check_query = congruence_check_domain.check_query
     and congruence_classify_check = congruence_check_domain.classify_check
     and congruence_checks_proven = congruence_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "congruence abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_congruence e \<sigma>)"
-    by (rule congruence_arith.aval_dom_sound)
-qed
+  by unfold_locales (rule congruence_arith.aval_abs_sound)
 
 lemmas congruence_classify_check_proved = congruence_check_domain.classify_check_proved
 lemmas congruence_classify_check_refuted = congruence_check_domain.classify_check_refuted

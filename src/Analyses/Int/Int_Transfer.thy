@@ -76,8 +76,7 @@ where
 
 lemma assign_int_dom_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign_int_dom mode x a \<sigma>\<rbrakk>"
-  unfolding gamma_state_def assign_int_dom_def
-  by (auto simp: aval_int_dom_sound)
+  by (frule aval_int_dom_sound) (auto simp: gamma_state_def assign_int_dom_def)
 
 lemma assign_int_dom_mono:
   assumes "mode ~= Refine_Fixpoint" and "sigma1 <= sigma2"
@@ -221,9 +220,9 @@ next
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
     using \<G> unfolding gamma_state_def by simp
   have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
-    by (rule aval_int_dom_sound[OF V])
+    by (rule aval_int_dom_sound[OF \<G>])
   have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
-    by (rule aval_int_dom_sound[OF V])
+    by (rule aval_int_dom_sound[OF \<G>])
   have v: "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
     using sr unfolding Min by simp
   have "v : gamma_int_dom (int_dom_min mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
@@ -235,9 +234,9 @@ next
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
     using \<G> unfolding gamma_state_def by simp
   have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
-    by (rule aval_int_dom_sound[OF V])
+    by (rule aval_int_dom_sound[OF \<G>])
   have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
-    by (rule aval_int_dom_sound[OF V])
+    by (rule aval_int_dom_sound[OF \<G>])
   have v: "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
     using sr unfolding Max by simp
   have "v : gamma_int_dom (int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
@@ -356,10 +355,8 @@ proof (rule enter_binding_sound[OF \<G>])
   show "\<gamma> (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 next
   fix e
-  have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using \<G> unfolding gamma_state_def by simp
   show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom mode e \<sigma>)"
-    using V by (simp add: aval_int_dom_sound)
+    using aval_int_dom_sound[OF \<G>] by simp
 qed
 
 lemma enter_frame_int_dom_for_mono:

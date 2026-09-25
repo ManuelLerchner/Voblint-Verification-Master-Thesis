@@ -31,13 +31,7 @@ global_interpretation parity_check_domain:
     and parity_check_query = parity_check_domain.check_query
     and parity_classify_check = parity_check_domain.classify_check
     and parity_checks_proven = parity_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "parity abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_parity e \<sigma>)"
-    by (rule parity_arith.aval_dom_sound)
-qed
+  by unfold_locales (rule parity_arith.aval_abs_sound)
 
 text \<open>
   Only the consumer-facing aliases get a short Parity-prefixed name, matching

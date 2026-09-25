@@ -36,7 +36,7 @@ text \<open>
   inherit the executable mirror's commutation instead of restating it.
 \<close>
 
-locale nonrelational_transfer = sound_special_ops "n_special ops" "n_aval ops"
+locale nonrelational_transfer = mono_special_ops "n_special ops" "n_aval ops"
   for ops :: "'a::sound_domain numeric_ops" +
   fixes br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes top_eq: "n_top ops = top"
@@ -92,7 +92,7 @@ lemma ret_sound:
   using assign_sound[OF \<G>] \<G> by (cases e) (simp_all add: ret_def)
 
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
-  unfolding assign_def by (simp add: ev_mono le_funD le_funI)
+  unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
 
 lemma skip_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> skip \<sigma>1 \<le> skip \<sigma>2"
   by (simp add: skip_def)
@@ -147,7 +147,7 @@ lemma enter_for_mono:
   assumes "\<sigma>1 \<le> \<sigma>2"
   shows "enter_for \<G> xs es \<sigma>1 \<le> enter_for \<G> xs es \<sigma>2"
   unfolding enter_for_def
-  by (rule enter_binding_mono[OF assms]) (rule ev_mono[OF assms])
+  by (rule enter_binding_mono[OF assms]) (rule aval_abs_mono[OF assms])
 
 subsection \<open>The transfer contract, and the per-edge dispatcher\<close>
 

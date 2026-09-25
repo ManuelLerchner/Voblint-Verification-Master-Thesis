@@ -1,6 +1,7 @@
 theory Abstract_Arithmetic
   imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
-    "Voblint_Framework.Abstract_Checks"
+    "Voblint_Framework.Abstract_Checks" "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Nonrelational_State"
 begin
 
 section \<open>Generic expression soundness\<close>
@@ -71,7 +72,8 @@ lemma or_opt_mono:
   unfolding or_opt_def by (cases b) (auto split: if_splits)
 
 locale expression_domain_sound =
-  fixes ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::sound_domain) \<Rightarrow> 'a"
+  sound_truth_test tobool + abstract_numeric_queries lt eqb
+  for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::sound_domain) \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
     and pls :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and mns :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
@@ -80,7 +82,7 @@ locale expression_domain_sound =
     and rem :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and lt :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and eqb :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-    and tobool :: "'a \<Rightarrow> bool option"
+    and tobool :: "'a \<Rightarrow> bool option" +
   assumes ev_N[simp]: "ev (N n) sigma = lit n"
     and ev_V[simp]: "ev (V x) sigma = sigma x"
     and ev_Plus[simp]: "ev (Plus e1 e2) sigma = pls (ev e1 sigma) (ev e2 sigma)"
@@ -126,9 +128,6 @@ locale expression_domain_sound =
       "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_div i j \<in> \<gamma> (dvs p q)"
     and mod_sound[intro]:
       "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_mod i j \<in> \<gamma> (rem p q)"
-    and lt_sound: "lt p q = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> (i < j) = b"
-    and eqb_sound: "eqb p q = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> (i = j) = b"
-    and tobool_sound: "tobool p = Some b \<Longrightarrow> i \<in> \<gamma> (p::'a) \<Longrightarrow> truthy i = b"
 begin
 
 text \<open>
@@ -145,43 +144,43 @@ lemma of_bool_option_sound:
   by (cases r) (auto intro: gamma_sup_ub1[THEN subsetD] gamma_sup_ub2[THEN subsetD])
 
 lemma aval_dom_sound:
-  "(\<forall>x. s x \<in> \<gamma> (sigma x)) \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a sigma)"
+  "s \<in> \<lbrakk>sigma\<rbrakk> \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a sigma)"
 proof (induction a arbitrary: s sigma)
   case (Less e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Less by simp_all
   show ?case unfolding ev_Less aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct less_sound[OF _ h1 h2] in auto)
 next
   case (LessEq e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using LessEq by simp_all
   show ?case unfolding ev_LessEq aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct less_sound[OF _ h2 h1] in auto)
 next
   case (Greater e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Greater by simp_all
   show ?case unfolding ev_Greater aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h2 h1] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct less_sound[OF _ h2 h1] in auto)
 next
   case (GreaterEq e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using GreaterEq by simp_all
   show ?case unfolding ev_GreaterEq aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct lt_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct less_sound[OF _ h1 h2] in auto)
 next
   case (NotEq e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using NotEq by simp_all
   show ?case unfolding ev_NotEq aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eq_sound[OF _ h1 h2] in auto)
 next
   case (Eq e1 e2)
   have h1: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e1 sigma)" and h2: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e2 sigma)"
     using Eq by simp_all
   show ?case unfolding ev_Eq aval.simps
-    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eqb_sound[OF _ h1 h2] in auto)
+    by (rule of_bool_option_sound) (use h1 h2 is_empty_correct eq_sound[OF _ h1 h2] in auto)
 next
   case (Not e)
   have h: "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e sigma)" using Not by simp
@@ -203,9 +202,20 @@ next
     by (rule of_bool_option_sound)
        (use h1 h2 is_empty_correct
           or_opt_sound[OF _ tobool_sound[OF _ h1] tobool_sound[OF _ h2]] in auto)
-qed auto
+qed (auto dest: gamma_stateD)
 
 end
+
+text \<open>
+  The expression domain extends the truth test and the numeric queries, whose laws it
+  assumes, and derives its evaluator's soundness by induction.  An interpretation of
+  \<^locale>\<open>expression_domain_sound\<close> therefore registers the whole forward interface
+  once, and a later \<open>backward_domain\<close>, \<open>sound_special_ops\<close> or check-layer
+  interpretation over the same operations does not ask for these laws again.
+\<close>
+
+sublocale expression_domain_sound \<subseteq> sound_evaluator gamma_state ev
+  by unfold_locales (rule aval_dom_sound)
 
 text \<open>
   Monotonicity needs strictly more than soundness does, and one domain can
@@ -217,7 +227,7 @@ text \<open>
   than repeat both proofs by hand.
 \<close>
 
-locale expression_domain_mono = expression_domain_sound +
+locale expression_domain_mono = expression_domain_sound + mono_truth_test tobool +
   assumes plus_mono[intro]:
       "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> pls p1 q1 \<le> pls p2 q2"
     and minus_mono[intro]:
@@ -234,8 +244,6 @@ locale expression_domain_mono = expression_domain_sound +
     and eqb_mono:
       "\<not> is_empty p1 \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
        eqb p2 q2 = Some b \<Longrightarrow> eqb p1 q1 = Some b"
-    and tobool_mono:
-      "\<not> is_empty p1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some b \<Longrightarrow> tobool p1 = Some b"
 begin
 
 lemma of_bool_option_mono:
@@ -311,5 +319,8 @@ next
 qed (auto simp add: le_funD)
 
 end
+
+sublocale expression_domain_mono \<subseteq> mono_evaluator gamma_state ev
+  by unfold_locales (rule aval_dom_mono)
 
 end

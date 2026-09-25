@@ -199,7 +199,7 @@ interpretation ivl_arith: expression_domain_mono
                      interval_lt_mono interval_eqb_mono interval_tobool_mono
                      sup_ivl_def)
 
-lemmas aval_ivl_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
+lemmas aval_ivl_sound = ivl_arith.aval_abs_sound[unfolded gamma_abs_ivl]
 
 
 subsection \<open>Backward inverse operators\<close>
@@ -404,12 +404,6 @@ proof unfold_locales
   assume "n \<in> \<gamma> a" and "n \<in> \<gamma> b"
   then have "n \<in> gamma_ivl a" and "n \<in> gamma_ivl b" by simp_all
   then show "n \<in> \<gamma> (intersect_ivl a b)" using intersect_ivl_gamma by simp
-next
-  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> ivl"
-  assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using gamma_stateD[OF H] by simp
-  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_ivl e \<sigma>)"
-    using aval_ivl_sound[OF h] by simp
 qed (simp_all add: inv_less_ivl_sound inv_eq_ivl_sound
        interval_tobool_sound[unfolded truthy_def] intersect_ivl_mono aval_ivl_mono
        inv_less_ivl_mono inv_eq_ivl_mono inv_conservative_def

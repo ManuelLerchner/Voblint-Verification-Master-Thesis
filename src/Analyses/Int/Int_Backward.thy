@@ -404,15 +404,12 @@ lemma int_dom_backward_domain_reductive:
   "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof unfold_locales
-  fix s :: store and e :: exp and sigma :: "vname => int_dom"
-  assume "s \<in> \<lbrakk>sigma\<rbrakk>"
-  then have "\<forall>x. s x \<in> \<gamma> (sigma x)" using gamma_stateD by blast
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom mode e sigma)"
-    using aval_int_dom_sound by simp
+proof (intro backward_domain_reductive.intro backward_domain.intro semantic_intersection.intro
+    int_dom_sound_evaluator mono_truth_test.axioms(1)[OF int_dom_truth_test]
+    backward_domain_axioms.intro reductive_intersection.intro reductive_intersection_axioms.intro)
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound
-       inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound int_dom_tobool_sound
+       inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound
        intersect_int_dom_mode_reductive1 intersect_int_dom_mode_reductive2)
 
 lemma int_dom_backward_domain_refined:
@@ -421,11 +418,14 @@ lemma int_dom_backward_domain_refined:
     "backward_domain_refined (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
        (inv_less_int_dom mode) (inv_eq_int_dom mode)
        (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (rule backward_domain_refined.intro[OF int_dom_backward_domain_reductive], unfold_locales)
+proof (intro backward_domain_refined.intro int_dom_backward_domain_reductive
+    int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_refined_axioms.intro
+    mono_intersection.intro mono_intersection_axioms.intro
+    semantic_intersection.intro)
 qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_dom_mode_mono
-       aval_int_dom_mono inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
-       inv_plus_int_dom_raw_mono inv_minus_int_dom_raw_mono inv_times_int_dom_raw_mono
-     intro: int_dom_tobool_mono)
+       refine_exact intersect_int_dom_mode_sound
+       inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
+       inv_plus_int_dom_raw_mono inv_minus_int_dom_raw_mono inv_times_int_dom_raw_mono)
 
 abbreviation intersect_int_dom_never :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_never == intersect_int_dom_mode Refine_Never"

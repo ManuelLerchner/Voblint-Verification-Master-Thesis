@@ -733,6 +733,10 @@ text \<open>
   exported \<open>aval_int_dom_mono\<close> and keeps it off \<open>aval_int_dom_sound\<close>.
 \<close>
 
+lemma int_dom_truth_test: "mono_truth_test int_dom_tobool"
+  by unfold_locales
+     (auto dest: int_dom_tobool_sound intro: int_dom_tobool_mono)
+
 context
   fixes mode :: refine_mode
 begin
@@ -745,7 +749,10 @@ interpretation int_arith: expression_domain_sound
      (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
 
-lemmas aval_int_dom_sound = int_arith.aval_dom_sound[unfolded gamma_abs_int_dom_ext]
+lemmas aval_int_dom_sound = int_arith.aval_abs_sound[unfolded gamma_abs_int_dom_ext]
+
+lemma int_dom_sound_evaluator: "sound_evaluator gamma_state (aval_int_dom mode)"
+  by unfold_locales (rule int_arith.aval_abs_sound)
 
 end
 
@@ -769,6 +776,10 @@ interpretation int_arith_mono: expression_domain_mono
                     int_dom_lt_mono int_dom_eqb_mono int_dom_tobool_mono)
 
 lemmas aval_int_dom_mono = int_arith_mono.aval_dom_mono
+
+lemma int_dom_mono_evaluator: "mono_evaluator gamma_state (aval_int_dom mode)"
+  by (intro mono_evaluator.intro int_dom_sound_evaluator mono_evaluator_axioms.intro)
+     (rule int_arith_mono.aval_abs_mono)
 
 end
 

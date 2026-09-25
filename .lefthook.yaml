@@ -397,6 +397,8 @@ pre-commit:
 # - thesis-claims builds/uses the CLI and compares analyzer-derived figures.
 # - thesis-facts queries a built Isabelle session.
 # - thesis-typst rebuilds the thesis PDF and treats warnings as errors.
+# - codegen-check builds the export session and fails when the OCaml or its
+#   source stamp no longer matches the theories.
 #
 # Running them here catches stale thesis material before it reaches CI without
 # turning every small commit into a full build.
@@ -415,3 +417,16 @@ pre-push:
 
           - name: thesis-build
             run: pixi run thesis-typst
+
+          # The OCaml export is stamped with a hash of the theories it came
+          # from. Regenerate it whenever those theories change and fail on
+          # drift, so a push never carries a stale export or a stale stamp.
+          # Needs an Isabelle session build, hence pre-push.
+          - name: codegen-current
+            glob:
+              - "src/**/*.thy"
+              - "src/**/ROOT"
+              - "ROOTS"
+              - "scripts/regenerate-codegen.sh"
+              - "scripts/mk/codegen.sh"
+            run: pixi run codegen-check

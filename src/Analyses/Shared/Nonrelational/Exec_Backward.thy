@@ -1,4 +1,4 @@
-  theory Exec_Backward
+theory Exec_Backward
     imports "Voblint_Exec.Exec_St_Reachability" "Voblint_Domain.Backward_Domain_Refined"
 begin
 
