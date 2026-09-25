@@ -49,40 +49,40 @@ text \<open>
   genuinely fails --- given the same two facts every per-domain instance
   already proves once: a \<open>classify_check_proved\<close>/\<open>classify_check_refuted\<close>-
   shaped soundness obligation for the domain's own \<open>classify\<close>, and node-local
-  collecting soundness (\<open>reach v \<le> gamma_state (env v)\<close>) for the checked
+  collecting soundness (\<open>reach v \<le> \<gamma>\<^sub>S (env v)\<close>) for the checked
   node. Neither theorem invents new domain reasoning; both only relocate an
   existing per-node fact to every entry of the whole-program report.
   \<^term>\<open>Check_Unknown\<close> gets no counterpart, matching \<open>classify_check\<close> itself.
 \<close>
 
 theorem classify_checks_proved_sound:
-  fixes gamma_state :: "'s \<Rightarrow> store set"
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Proved) \<in> set (classify_checks g env classify)"
-    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and node_sound: "reach v \<le> gamma_state (env v)"
+    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
   shows "\<forall>s \<in> reach v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof
   fix s assume s: "s \<in> reach v"
   have "classify c (env v) = Check_Proved"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
-  moreover have "s \<in> gamma_state (env v)" using node_sound s by blast
+  moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
   ultimately show "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved by blast
 qed
 
 theorem classify_checks_refuted_sound:
-  fixes gamma_state :: "'s \<Rightarrow> store set"
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
     and classify_refuted: "\<And>d s. classify c d = Check_Refuted
-                              \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and node_sound: "reach v <= gamma_state (env v)"
+                              \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    and node_sound: "reach v <= \<gamma>\<^sub>S (env v)"
   shows "\<forall>s \<in> reach v. ~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof
   fix s assume s: "s : reach v"
   have "classify c (env v) = Check_Refuted"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
-  moreover have "s : gamma_state (env v)" using node_sound s by blast
+  moreover have "s : \<gamma>\<^sub>S (env v)" using node_sound s by blast
   ultimately show "~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted by blast
 qed
 

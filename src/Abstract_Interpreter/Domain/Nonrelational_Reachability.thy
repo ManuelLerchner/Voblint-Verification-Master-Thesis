@@ -19,7 +19,7 @@ text \<open>
 subsection \<open>Composed concretization\<close>
 
 abbreviation gamma_state_lift ::
-  "'a::sound_domain abs_state lifted \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^sub>\<bottom>") where
+  "'a::numeric_domain abs_state lifted \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^sub>\<bottom>") where
   "gamma_state_lift \<equiv> gamma_lift gamma_state"
 
 fun is_empty_state_lift ::
@@ -55,13 +55,13 @@ lemma gamma_state_canonicalize_lift [simp]:
   by (cases \<sigma>) simp_all
 
 lemma normalize_state_lift_mono [intro]:
-  fixes \<sigma>1 \<sigma>2 :: "'a::sound_domain abs_state"
+  fixes \<sigma>1 \<sigma>2 :: "'a::numeric_domain abs_state"
   assumes le: "\<sigma>1 \<le> \<sigma>2"
   shows "normalize_lift is_empty_state \<sigma>1 \<le> normalize_lift is_empty_state \<sigma>2"
   by (rule normalize_lift_mono[OF le]) (rule is_empty_state_antimono[OF le])
 
 lemma normalized_state_lift_sup [intro]:
-  fixes s1 s2 :: "'a::sound_domain abs_state lifted"
+  fixes s1 s2 :: "'a::numeric_domain abs_state lifted"
   assumes n1: "normalized_lift is_empty_state s1" and n2: "normalized_lift is_empty_state s2"
   shows "normalized_lift is_empty_state (s1 \<squnion> s2)"
   by (rule normalized_lift_sup[OF is_empty_state_antimono n1 n2])
@@ -89,12 +89,12 @@ text \<open>
 
 lemma gamma_state_lift_supI1 [intro]:
   "s \<in> \<lbrakk>x\<rbrakk>\<^sub>\<bottom> \<Longrightarrow> s \<in> \<lbrakk>x \<squnion> y\<rbrakk>\<^sub>\<bottom>"
-  for x y :: "'a::sound_domain abs_state lifted"
+  for x y :: "'a::numeric_domain abs_state lifted"
   by (cases x; cases y) auto
 
 lemma gamma_state_lift_supI2 [intro]:
   "s \<in> \<lbrakk>y\<rbrakk>\<^sub>\<bottom> \<Longrightarrow> s \<in> \<lbrakk>x \<squnion> y\<rbrakk>\<^sub>\<bottom>"
-  for x y :: "'a::sound_domain abs_state lifted"
+  for x y :: "'a::numeric_domain abs_state lifted"
   by (cases x; cases y) auto
 
 subsection \<open>Carrying a transfer's soundness through the lift\<close>

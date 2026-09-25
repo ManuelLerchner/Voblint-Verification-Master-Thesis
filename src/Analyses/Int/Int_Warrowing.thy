@@ -46,7 +46,7 @@ text \<open>
 \<close>
 
 text \<open>
-  The composite carrier's \<open>sound_domain\<close> instance (\<open>Int_Domain\<close>) is
+  The composite carrier's \<open>numeric_domain\<close> instance (\<open>Int_Domain\<close>) is
   registered on the extensible record scheme \<open>'a int_dom_scheme\<close>, not the
   closed \<open>int_dom\<close> type alias, so \<open>widen\<close>/\<open>narrow\<close> follow the same route:
   \<open>int_dom_record_lattice\<close> alone has no \<open>widen\<close>/\<open>narrow\<close> for the scheme's

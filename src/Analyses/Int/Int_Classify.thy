@@ -10,7 +10,7 @@ hide_const phase.N
 section \<open>Int instance of the generic check-discharge interface\<close>
 
 text \<open>
-  \<open>int_dom\<close> already carries a \<open>sound_domain\<close> instance (\<^theory>\<open>Voblint_Analysis_Int.Int_Domain\<close>) and
+  \<open>int_dom\<close> already carries a \<open>numeric_domain\<close> instance (\<^theory>\<open>Voblint_Analysis_Int.Int_Domain\<close>) and
   three \<^locale>\<open>backward_domain\<close> interpretations, one per refinement mode
   (\<^theory>\<open>Voblint_Analysis_Int.Int_Backward\<close>). Unlike Sign and Interval, which each hand-roll their own
   sharper \<open>less_true\<close>/\<open>less_false\<close>/\<open>eq_true\<close>/\<open>eq_false\<close> comparison tables

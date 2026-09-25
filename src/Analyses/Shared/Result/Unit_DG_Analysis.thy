@@ -43,7 +43,7 @@ locale unit_dg_analysis =
     "\<lambda>_. route_unit" "()" solve solve_dom bot_state classify
     sk asn spc br bd rt en ev "\<lambda>_. route_unit" solve_c
   for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
-                  \<Rightarrow> 'a::sound_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
+                  \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and init_st :: "'a exec_dg_st"
     and solve :: "(pp \<times> unit, (unit, unit) routed_gk,
@@ -180,7 +180,7 @@ proof -
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
              and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
-             and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
+             and \<gamma>\<^sub>S = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_proved result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
 qed
@@ -196,7 +196,7 @@ proof -
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at ugs p" and classify = classify
              and reach = "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub>" and v = v
-             and gamma_state = "gamma_state :: 'a abs_state \<Rightarrow> store set",
+             and \<gamma>\<^sub>S = "gamma_state :: 'a abs_state \<Rightarrow> store set",
            OF finI _ classify_refuted result_node_sound_closure])
        (use mem in \<open>simp add: report_def state_at_def surface_unfold\<close>)
 qed

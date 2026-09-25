@@ -178,7 +178,7 @@ lemma enter_deps_local_enter_transfer_mk_dg_man [intro]:
   using enter_deps_local_enter_transfer[of f "mk_dg_man d key" sigma] by simp
 
 text \<open>
-  The core carries everything that is independent of how a call is compiled:
+  The analysis contract carries everything that is independent of how a call is compiled:
   the ordinary edge transfers and the return combine. Entry is not here. A
   \<^const>\<open>dgs_enter\<close> answers a list, which is not an equation's answer, so what
   makes it sound is a property of the program the routed generator builds from
@@ -186,10 +186,10 @@ text \<open>
   the solved system actually selects --- a property this locale alone cannot
   state, since it never mentions how a call compiles.
 
-  So \<open>sound_dg_spec_core\<close> is the common core and not a complete soundness statement:
-  interpreting it alone leaves a call's entry entirely unconstrained.
+  So \<open>analysis_contract\<close> is the entry-independent part and not a complete soundness
+  statement: interpreting it alone leaves a call's entry entirely unconstrained.
   \<open>routed_context_base_hetero\<close> (\<open>Routed_Context\<close>, downstream in this session) is
-  the complete statement, extending this core with that entry obligation for
+  the complete statement, extending this contract with that entry obligation for
   the routed equation shape, and is what an analysis should be asked to
   establish.
 \<close>
@@ -315,7 +315,7 @@ text \<open>The contract a specification signs: its concretization is monotone, 
   over-approximates the concrete edge step, and its combine over-approximates the concrete
   return.  Both soundness obligations read the shared slot through the same valuation the
   program does, which is what lets an analysis publish to that slot and still be covered.\<close>
-locale sound_dg_spec_core =
+locale analysis_contract =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -351,7 +351,7 @@ text \<open>
   lost for a generator that reads both sides from unknowns.
 \<close>
 
-lemma (in sound_dg_spec_core) combine_sound_program:
+lemma (in analysis_contract) combine_sound_program:
   assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
     and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
   shows "combine_collect \<G> (ci_dst ci) s t
@@ -396,8 +396,8 @@ locale sound_local_dg_spec =
         combine_collect \<G> (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
 begin
 
-theorem local_spec_core_sound:
-  "sound_dg_spec_core (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) \<G>"
+theorem local_spec_contract:
+  "analysis_contract (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) \<G>"
 proof (unfold_locales, goal_cases wf mono step comb)
   case wf
   then show ?case

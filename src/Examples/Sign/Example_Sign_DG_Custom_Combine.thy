@@ -140,7 +140,7 @@ text \<open>
   monotone in exactly that argument. So the answer and the published
   contribution both move up, and \<^const>\<open>gamma_ownership_split\<close>'s monotonicity
   carries the stock membership across. No second soundness chain appears: this
-  instance reuses \<open>ownership_split_lift_core_sound\<close> for everything else.
+  instance reuses \<open>ownership_split_lift_contract\<close> for everything else.
 \<close>
 
 abbreviation sign_base_spec ::
@@ -223,7 +223,7 @@ text \<open>
   So the answer and the published contribution both move up, and
   \<^const>\<open>gamma_ownership_split\<close>'s monotonicity carries the stock membership
   across. No second soundness chain appears --- everything but the combine is
-  inherited from \<open>ownership_split_lift_core_sound\<close>.
+  inherited from \<open>ownership_split_lift_contract\<close>.
 \<close>
 
 lemma combine_env_join_ge:
@@ -319,16 +319,16 @@ lemma sides_combine_env_join_ge:
   unfolding sides_combine_stock sides_combine_env_join
   by (rule restrict_global_for_mono[OF combine_collect_abs_join_ge])
 
-theorem sound_dg_spec_core_sign_dg_spec_env_join:
-  "sound_dg_spec_core (sign_dg_spec_env_join \<G>) (gamma_ownership_split \<G>) \<G>"
+theorem analysis_contract_sign_dg_spec_env_join:
+  "analysis_contract (sign_dg_spec_env_join \<G>) (gamma_ownership_split \<G>) \<G>"
 proof -
   interpret sign_tf: sound_transfer_for \<G>
       skip_sign assign_sign special_sign branch_sign body_sign return_sign
       "enter_sign_ci_for \<G>" event_sign
     by (rule sign_tf.is_sound_transfer_for)
-  interpret stock: sound_dg_spec_core
+  interpret stock: analysis_contract
     "ownership_split_lift \<G> (sign_base_spec \<G>)" "gamma_ownership_split \<G>" \<G>
-    by (rule sign_tf.ownership_split_lift_core_sound)
+    by (rule sign_tf.ownership_split_lift_contract)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case 1 show ?case by (rule dg_spec_wf_sign_dg_spec_env_join)

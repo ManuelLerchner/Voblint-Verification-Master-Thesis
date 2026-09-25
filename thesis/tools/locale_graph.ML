@@ -11,7 +11,7 @@
 
       ML_file "thesis/tools/locale_graph.ML"
       ML \<open>Locale_Graph.write "thesis/shared/dot/locale_deps.dot"
-                                 ["sound_domain", "dg_spec"] @{theory}\<close>
+                                 ["numeric_domain", "dg_spec"] @{theory}\<close>
 
     The string list restricts the graph to locales whose name contains one of
     the given fragments; pass [] for everything, which is unreadably large in

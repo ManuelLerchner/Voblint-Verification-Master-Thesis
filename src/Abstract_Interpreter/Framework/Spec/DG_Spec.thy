@@ -373,7 +373,7 @@ text \<open>
   sound for it. It is false in general -- an assignment analysis that leaves
   \<open>dgs_assign\<close> at the identity does not track assignments -- and nothing here
   checks it. Whether a specification, defaulted fields included, means
-  anything is settled by \<open>sound_dg_spec_core\<close> together with the entry
+  anything is settled by \<open>analysis_contract\<close> together with the entry
   obligation that locale deliberately leaves open --- never by how the record
   was assembled.
 

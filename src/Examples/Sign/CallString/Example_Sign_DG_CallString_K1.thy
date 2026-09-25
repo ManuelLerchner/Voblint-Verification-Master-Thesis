@@ -136,9 +136,9 @@ interpretation sign_nest_domain: routed_dg_domain_exec
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
   by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
-interpretation sign_nest_dg_sound: sound_dg_spec_core sign_nest_S_st sign_nest_gamma sign_nest_gs
+interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
-  by (rule sign_nest_domain.sound_dg_spec_core_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_transfer_for])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 

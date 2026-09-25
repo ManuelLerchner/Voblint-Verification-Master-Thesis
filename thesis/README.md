@@ -97,7 +97,7 @@ is committed, so a rename fails and an edit to a shown definition surfaces as a
 diff.
 
 ```typst
-#thy("sound_domain")     // the declaration, verbatim, with its file header
+#thy("numeric_domain")     // the declaration, verbatim, with its file header
 ```
 
 ### `pixi run thesis-facts` -- is this still what Isabelle proves?

@@ -10,7 +10,7 @@ text \<open>
   bridge \<open>source_store_in_activation_collect\<close> with \<open>activation_collect_sound\<close>.
 
   The cap-consuming theorems read the abstract map through a supplied concretization \<open>\<gamma>\<^sub>M\<close>
-  instead of fixing it to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>:
+  instead of fixing it to \<open>'a::numeric_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>:
   the cap is the only thing they touch, so a reachability-lifted map fits as readily as a raw one.
   The backbone corollaries below read it at \<^const>\<open>gamma_state\<close>, which is what
   \<open>activation_collect_sound\<close> produces.
@@ -70,7 +70,7 @@ qed
 subsection \<open>Backbone corollaries: discharge the five coverage obligations to build the cap\<close>
 
 theorem source_activation_sound:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::numeric_domain abs_state"
     and R :: "'c call_context_rel" and startcontext :: 'c
   assumes wf: "wf_compile_input \<G> Pi ps"
     and s0: "s0 \<in> S"

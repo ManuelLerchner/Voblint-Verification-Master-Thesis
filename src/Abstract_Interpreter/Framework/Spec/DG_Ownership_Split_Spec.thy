@@ -381,7 +381,7 @@ text \<open>
 \<close>
 
 definition gamma_ownership_split ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::numeric_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
   "gamma_ownership_split \<G> d g = \<lbrakk>combine_env \<G> d g\<rbrakk>"
 
@@ -467,8 +467,8 @@ text \<open>
   side condition arises.
 \<close>
 
-theorem (in sound_transfer_for) ownership_split_lift_core_sound:
-  "sound_dg_spec_core
+theorem (in sound_transfer_for) ownership_split_lift_contract:
+  "analysis_contract
      (ownership_split_lift \<G> (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev))
      (gamma_ownership_split \<G>) \<G>"
 proof (unfold_locales, goal_cases)

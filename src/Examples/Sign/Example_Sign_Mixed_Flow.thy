@@ -66,8 +66,8 @@ next
         intro!: sp_wf_bind)
 qed
 
-theorem sound_dg_spec_core_mf:
-  "sound_dg_spec_core (mf_spec \<G>) (split_gamma \<G>) \<G>"
+theorem analysis_contract_mf:
+  "analysis_contract (mf_spec \<G>) (split_gamma \<G>) \<G>"
 proof (unfold_locales, goal_cases)
   case 1 show ?case by (rule dg_spec_wf_mf_spec)
 next
@@ -244,7 +244,7 @@ interpretation mf_routed: routed_context_base_hetero
   "snd mf_sol" "fst mf_sol" "(cfg_exit mf_cfg, ())" mf_reader Activation_Seed
   "static_resolve mf_cfg" "\<lambda>d. d = bot" mf_gammaM "call_context_rel_of_fun enterc_unit"
 proof (rule routed_context_base_hetero.intro
-    [OF dg_ctx_activation_base.intro[OF sound_dg_spec_core_mf]],
+    [OF dg_ctx_activation_base.intro[OF analysis_contract_mf]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_mf_spec])

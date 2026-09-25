@@ -68,7 +68,7 @@ lemma dg_reader_commute_gen_lifted_for:
 
 locale routed_dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
-    and empty_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and sk :: "'a abs_state \<Rightarrow> 'a abs_state"
@@ -214,7 +214,7 @@ text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
   \<open>'a abs_state lifted\<close>: with the concretization read through
   \<^const>\<open>fun_of_resolved_st_q_for\<close>, the executable Base-style spec is itself a
-  \<^locale>\<open>sound_dg_spec_core\<close>, and the field equations above are all that the proof
+  \<^locale>\<open>analysis_contract\<close>, and the field equations above are all that the proof
   needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
   concretization feeds it the solver's own table and never transports a solved
   system between carriers.
@@ -227,7 +227,7 @@ lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
 
 text \<open>
-  Entry is not part of \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance needs it
+  Entry is not part of \<^locale>\<open>analysis_contract\<close>, so a routed instance needs it
   separately. This is the same fact the collapse below proves for its own entry
   obligation, exported once because every routed instance over this carrier
   discharges its entry coverage from it.
@@ -259,15 +259,15 @@ proof -
        (simp_all add: sin entered)
 qed
 
-theorem sound_dg_spec_core_st:
+theorem analysis_contract_st:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
-  shows "sound_dg_spec_core spec_st gamma_exec \<G>"
+  shows "analysis_contract spec_st gamma_exec \<G>"
 proof -
   have geq: "gamma_exec = (\<lambda>d g. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)"
     by (simp add: fun_eq_iff gamma_exec_def)
   show ?thesis
     unfolding local_state_dg_spec_st_for_lifted_def geq
-  proof (rule sound_local_dg_spec.local_spec_core_sound, unfold_locales, goal_cases)
+  proof (rule sound_local_dg_spec.local_spec_contract, unfold_locales, goal_cases)
     case 1
     then show ?case
       by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)

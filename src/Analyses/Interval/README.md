@@ -8,7 +8,7 @@ Executable witnesses live under
 | File | Role |
 | --- | --- |
 | `Interval_Bounds.thy` | extended integer bounds and bound operations |
-| `Interval_Lattice.thy` | interval order, lattice, concretization, and `sound_domain` instance |
+| `Interval_Lattice.thy` | interval order, lattice, concretization, and `numeric_domain` instance |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
 | `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |
@@ -18,7 +18,7 @@ Executable witnesses live under
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
 | `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
-| `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
+| `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
 | `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule` of the shared `unit_dg_analysis`, and `interval_es_rule` and `interval_cs_rule` of `routed_dg_analysis` at the entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 

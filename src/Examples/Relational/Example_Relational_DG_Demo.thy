@@ -18,7 +18,7 @@ section \<open>End-to-end demo: a relational analysis on the same executable pip
 
 text \<open>
   @{theory Voblint_Analysis_Relational.Rel_Order_Domain} interprets
-  \<^locale>\<open>sound_dg_spec_core\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
+  \<^locale>\<open>analysis_contract\<close> over \<open>relc\<close>, a non-\<open>abs_state\<close> relational carrier,
   with zero DG-framework changes -- the mathematical half of the claim.
   This file is the executable half: the same CFG, the same generic
   \<open>compiled_routed_eqs_for\<close> generator, and the same vendored solver that runs Interval

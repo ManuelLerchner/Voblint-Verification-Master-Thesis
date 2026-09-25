@@ -845,14 +845,14 @@ text \<open>
 \<close>
 
 definition formals_route_lifted ::
-  "'a::sound_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
+  "'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
 where
   "formals_route_lifted d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
 
 definition formals_route_lifted_gen ::
-  "pp \<Rightarrow> 'a list \<Rightarrow> 'a::sound_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
+  "pp \<Rightarrow> 'a list \<Rightarrow> 'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
 where
   "formals_route_lifted_gen u ctx d ca = formals_route_lifted d ca"
 

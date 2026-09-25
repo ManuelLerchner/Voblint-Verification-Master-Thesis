@@ -3,7 +3,7 @@ theory Rel_Order_Domain
     "Voblint_Framework.State_Restriction"
 begin
 
-section \<open>A minimal relational carrier for \<^const>\<open>sound_dg_spec_core\<close>\<close>
+section \<open>A minimal relational carrier for \<^const>\<open>analysis_contract\<close>\<close>
 
 text \<open>
   \<open>relc\<close> tracks a finite set of known pairwise-ordered variables, \<open>(x, y)\<close>
@@ -14,7 +14,7 @@ text \<open>
   (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier).
 
   The purpose of this file is not a useful analysis.  It demonstrates that a
-  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec_core\<close> with zero
+  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>analysis_contract\<close> with zero
   changes to the DG framework.
   Every transfer below is deliberately the most imprecise sound choice
   (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
@@ -357,7 +357,7 @@ where
 
 text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answer is the operation's
   local half, and what it publishes at the routed key is the global half. These are
-  what \<^locale>\<open>sound_dg_spec_core\<close> is stated against.\<close>
+  what \<^locale>\<open>analysis_contract\<close> is stated against.\<close>
 
 lemma traverse_rel_transfer [simp]:
   "locals (traverse_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
@@ -562,7 +562,7 @@ lemma sides_rel_combine [simp]:
 
 subsection \<open>The interpretation\<close>
 
-interpretation rel_order: sound_dg_spec_core rel_order_spec gammaDG_rel \<G>
+interpretation rel_order: analysis_contract rel_order_spec gammaDG_rel \<G>
 proof unfold_locales
   show "dg_spec_wf rel_order_spec" by (rule dg_spec_wf_rel_order_spec)
 next

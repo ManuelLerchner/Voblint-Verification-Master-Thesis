@@ -24,7 +24,7 @@ text \<open>
 
   Classification tests @{const is_empty}, not canonical-\<open>bot\<close> equality: a value
   can denote \<open>{}\<close> without being the representation's chosen \<open>bot\<close> element
-  (@{class sound_domain}'s whole reason for distinguishing the two), so a
+  (@{class numeric_domain}'s whole reason for distinguishing the two), so a
   \<open>= bot\<close> test would under-classify any domain with non-canonical empty
   representations. \<open>less_true\<close>/\<open>less_false\<close>/\<open>eq_true\<close>/\<open>eq_false\<close> stay implementation
   judgments, not the public interface \<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>

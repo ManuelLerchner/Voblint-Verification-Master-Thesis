@@ -23,7 +23,7 @@ lattice to an abstract one. The
 formalization fixes only the concretization $conc$, since soundness never
 needs a best abstraction:
 
-#definition(name: [Sound domain], isa: "sound_domain")[
+#definition(name: [Sound domain], isa: "numeric_domain")[
   $sh(d)$ describes $s$ when $s in conc sh(d)$, and $conc$ is monotone:
   $sh(d_1) lle sh(d_2) ==> conc sh(d_1) subset.eq conc sh(d_2)$.
 ]

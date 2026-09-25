@@ -44,7 +44,7 @@ text \<open>The soundness obligation, stated so that a \<open>Some\<close> answe
   says.  \<open>None\<close> carries no obligation at all, which is what lets a domain answer it whenever
   it cannot decide.\<close>
 locale abstract_numeric_queries = executable_numeric_queries less eq
-  for less :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool option"
+  for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" +
   assumes less_sound[intro]:
       "less a b = Some r \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> (i < j) = r"
@@ -76,7 +76,7 @@ text \<open>
 \<close>
 
 locale numeric_query_judgments =
-  fixes less_true :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool"
+  fixes less_true :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool"
     and less_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"

@@ -22,7 +22,7 @@ class executable_domain = bounded_semilattice_sup_bot + order_top +
   fixes is_empty :: "'a \<Rightarrow> bool"
   fixes to_string :: "'a \<Rightarrow> String.literal"
 
-class sound_domain = executable_domain +
+class numeric_domain = executable_domain +
   fixes gamma :: "'a \<Rightarrow> int set" ("\<gamma>")
   assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"
   assumes gamma_top[simp]: "\<gamma> \<top> = UNIV"
@@ -34,7 +34,7 @@ text \<open>
   concrete domain's runtime representation needs: the lattice structure,
   \<open>is_empty\<close> (a finite decision procedure on every real instance
   -- Interval's bound comparison, Sign's constructor match, ...), and
-  \<open>to_string\<close> for reporting a solved value back to a caller. \<open>sound_domain\<close>
+  \<open>to_string\<close> for reporting a solved value back to a caller. \<open>numeric_domain\<close>
   extends it with \<open>gamma\<close>, which is not executable in general (an infinite
   \<^typ>\<open>int set\<close>) and exists purely to state and prove soundness. Splitting the
   class this way keeps \<open>gamma\<close> out of the type-class dictionary that code
@@ -42,7 +42,7 @@ text \<open>
   (the finite witness-bottom tests over a resolved state, in
   particular): requesting \<open>'a::executable_domain\<close> there never drags \<^const>\<open>gamma\<close>'s
   code equation into the dependency closure, even though every
-  \<^class>\<open>sound_domain\<close> instance is automatically a \<^class>\<open>executable_domain\<close>
+  \<^class>\<open>numeric_domain\<close> instance is automatically a \<^class>\<open>executable_domain\<close>
   instance too.
 \<close>
 
@@ -63,7 +63,7 @@ text \<open>
   of them favored over \<open>bot\<close> itself), so \<open>a = bot\<close> would silently miss some
   of them. Fixing \<open>is_empty\<close> as its own class operation, correct against
   \<^const>\<open>gamma\<close> rather than against \<^const>\<open>bot\<close>, makes every
-  \<^class>\<open>sound_domain\<close> instance responsible for its own exact emptiness
+  \<^class>\<open>numeric_domain\<close> instance responsible for its own exact emptiness
   test, the same obligation every domain already carries for
   \<^const>\<open>gamma\<close> itself. The lattice constant \<open>bot\<close> stays the canonical
   representative; \<open>is_empty\<close> answers a different question (what a
@@ -73,10 +73,10 @@ text \<open>
 
 subsection \<open>Concretization bounds\<close>
 
-lemma gamma_sup_ub1[intro]: "\<gamma> a \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::sound_domain"
+lemma gamma_sup_ub1[intro]: "\<gamma> a \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::numeric_domain"
   by (rule gamma_mono[OF sup_ge1])
 
-lemma gamma_sup_ub2[intro]: "\<gamma> b \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::sound_domain"
+lemma gamma_sup_ub2[intro]: "\<gamma> b \<subseteq> \<gamma> (a \<squnion> b)" for a b :: "'a::numeric_domain"
   by (rule gamma_mono[OF sup_ge2])
 
 text \<open>
@@ -86,7 +86,7 @@ text \<open>
   can only be witness-empty \<^emph>\<open>more\<close> often than a larger one, never less.
 \<close>
 lemma is_empty_antimono:
-  "a \<le> b \<Longrightarrow> is_empty b \<Longrightarrow> is_empty a" for a b :: "'a::sound_domain"
+  "a \<le> b \<Longrightarrow> is_empty b \<Longrightarrow> is_empty a" for a b :: "'a::numeric_domain"
   using gamma_mono unfolding is_empty_correct by blast
 
 subsection \<open>Domains with widening\<close>

@@ -109,12 +109,12 @@ text \<open>
 \<close>
 
 lemma gamma_state_case_eq_point:
-  fixes x :: "'a::sound_domain abs_state lifted"
-  shows "gamma_state (case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st) = gamma_point x"
+  fixes x :: "'a::numeric_domain abs_state lifted"
+  shows "\<lbrakk>case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = gamma_point x"
   by (cases x) (simp_all add: gamma_point_def)
 
 lemma gamma_point_canonicalize:
-  fixes x :: "'a::sound_domain abs_state lifted"
+  fixes x :: "'a::numeric_domain abs_state lifted"
   shows "gamma_point (canonicalize_lift is_empty_state x) = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
   by (cases x)
      (simp_all add: gamma_point_def normalize_lift_def is_empty_state_gamma_state_empty)
@@ -369,7 +369,7 @@ locale routed_dg_analysis =
   routed_dg_pipeline tf_st enter_st init_st gk0 seed route root_ctx solve solve_dom
     bot_state classify
   for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
-                  \<Rightarrow> 'a::sound_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
+                  \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and init_st :: "'a exec_dg_st"
     and gk0 :: 'k
@@ -599,8 +599,8 @@ text \<open>
   soundness, so the routed statement below never re-derives it.
 \<close>
 
-interpretation dg_base: sound_dg_spec_core "analysis_spec pgs p" dom.gamma_exec pgs
-  unfolding analysis_spec_def by (rule dom.sound_dg_spec_core_st[OF tf_sound])
+interpretation dg_base: analysis_contract "analysis_spec pgs p" dom.gamma_exec pgs
+  unfolding analysis_spec_def by (rule dom.analysis_contract_st[OF tf_sound])
 
 lemma routed_analysis_sound_of_live:
   fixes R :: "'c call_context_rel"

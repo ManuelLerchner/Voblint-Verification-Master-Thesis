@@ -435,7 +435,7 @@ lemma string_of_congruence_regression:
   "string_of_congruence (mk_congruence 4 3) = STR ''1+3<int>''"
   by eval+
 
-instantiation congruence :: sound_domain
+instantiation congruence :: numeric_domain
 begin
 
 definition gamma_abs_congruence [simp]:

@@ -49,7 +49,7 @@ text \<open>One assumption per operation, each an inference rule from a concrete
 
 locale sound_transfer_for =
   fixes \<G> :: "vname \<Rightarrow> bool"
-    and sk :: "'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
+    and sk :: "'a::numeric_domain abs_state \<Rightarrow> 'a abs_state"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -129,7 +129,7 @@ text \<open>What a whole-state analysis actually supplies: eight pure operations
   lifted sibling further down differs only in carrying the dead-code lift.\<close>
 definition local_state_dg_spec_for ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
+   \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -150,9 +150,9 @@ lemma dg_spec_step_local_state_for:
      = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: local_state_dg_spec_for_def)
 
-theorem (in sound_transfer_for) local_state_dg_spec_for_core_sound:
-  "sound_dg_spec_core (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
-  unfolding local_state_dg_spec_for_def by (rule base.local_spec_core_sound)
+theorem (in sound_transfer_for) local_state_dg_spec_for_contract:
+  "analysis_contract (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
+  unfolding local_state_dg_spec_for_def by (rule base.local_spec_contract)
 
 
 subsection \<open>Transporting soundness through the reachability lift\<close>
@@ -170,7 +170,7 @@ subsection \<open>The reachability-lifted construction\<close>
 definition local_state_dg_spec_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
-   \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
+   \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -244,20 +244,20 @@ text \<open>
 \<close>
 
 definition gamma_dg_local_state ::
-  "'a::sound_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
+  "'a::numeric_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
 where
   "gamma_dg_local_state d g = \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
 
-theorem (in sound_transfer_for) local_state_dg_spec_for_lifted_core_sound:
+theorem (in sound_transfer_for) local_state_dg_spec_for_lifted_contract:
   assumes empty_pred_sound: "\<And>sigma. empty_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec_core (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)
+  shows "analysis_contract (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)
            gamma_dg_local_state \<G>"
 proof -
   have geq: "gamma_dg_local_state = (\<lambda>d g. \<lbrakk>d\<rbrakk>\<^sub>\<bottom>)"
     by (simp add: fun_eq_iff gamma_dg_local_state_def)
   show ?thesis
     unfolding local_state_dg_spec_for_lifted_def geq
-  proof (rule sound_local_dg_spec.local_spec_core_sound, unfold_locales, goal_cases)
+  proof (rule sound_local_dg_spec.local_spec_contract, unfold_locales, goal_cases)
     case 1
     then show ?case by (meson gamma_lift_mono gamma_state_mono)
   next

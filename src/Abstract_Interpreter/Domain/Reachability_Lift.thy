@@ -22,7 +22,7 @@ text \<open>
   payload \<open>top\<close>: \<open>Lattice.LiftConf\<close>'s \<open>join\<close>/\<open>widen\<close> fall back to \<open>`Top\<close> whenever the base
   domain's own \<open>join\<close>/\<open>widen\<close> raises \<open>TopValue\<close> or \<open>Uncomparable\<close>, i.e. whenever the base
   domain is partial enough that two of its values have no expressible join, and \<open>unlift\<close>
-  rejects \<open>`Top\<close> exactly like \<open>`Bot\<close>. Every @{class sound_domain} instance here is instead a
+  rejects \<open>`Top\<close> exactly like \<open>`Bot\<close>. Every @{class numeric_domain} instance here is instead a
   total \<open>bounded_semilattice_sup_bot\<close> with its own \<open>top\<close>: \<open>\<squnion>\<close> and \<open>\<nabla>\<close> always return a value,
   so a lifted operation here can never fail the way Goblint's can, and \<open>Lifted top\<close> already
   says everything an outer \<open>`Top\<close> would. This lift therefore stays two-valued. At the raw
@@ -395,7 +395,7 @@ text \<open>
   primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
   program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>empty_pred\<close>
   itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
-  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>sound_domain\<close>, or \<open>resolved_st_q_is_bot_for\<close>'s own
+  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close>, or \<open>resolved_st_q_is_bot_for\<close>'s own
   monotonicity once bridged through \<open>fun_of_resolved_st_q_for_mono\<close> -- not any fact
   specific to how \<open>empty_pred\<close> itself is computed.
 \<close>

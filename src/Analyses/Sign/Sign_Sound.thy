@@ -86,11 +86,11 @@ lemma sign_conf_gamma_eq: "sign_conf_gamma \<G> = sign_dom.gamma_exec"
   by (intro ext) (simp add: sign_conf_gamma_def sign_dom.gamma_exec_def)
 
 theorem sign_conf_sound_exec:
-  "sound_dg_spec_core (sign_conf_spec \<G> empty_pred) (sign_conf_gamma \<G>) \<G>"
+  "analysis_contract (sign_conf_spec \<G> empty_pred) (sign_conf_gamma \<G>) \<G>"
   unfolding sign_conf_gamma_eq sign_conf_spec_def
-  by (rule sign_dom.sound_dg_spec_core_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_dom.analysis_contract_st[OF sign_tf.is_sound_transfer_for])
 
-text \<open>Entry is stated apart from \<^locale>\<open>sound_dg_spec_core\<close>, so a routed instance cites
+text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
 
 theorem sign_conf_entry_cover_exec:

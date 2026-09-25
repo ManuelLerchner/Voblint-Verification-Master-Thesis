@@ -270,7 +270,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 
 | Symbol | Reads as | Isabelle | Meaning |
 | --- | --- | --- | --- |
-| γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.sound_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
+| γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
 | ⟦e⟧<sub>e</sub> s | the value of _e_ in _s_ | [`aval`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.aval%7Cconst) | the integer expression _e_ evaluates to in store _s_ |
 | ⟦σ⟧ | the stores _σ_ represents | [`gamma_state`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.gamma_state%7Cconst) | stores _s_ with s x ∈ γ (σ x) for every variable _x_ |
 | ⟦d⟧<sub>⊥</sub> | the stores _d_ represents | [`gamma_state_lift`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Nonrelational_Reachability.html#Nonrelational_Reachability.gamma_state_lift%7Cconst) | concretization of a lifted state; the unreachable state Bot represents no store |

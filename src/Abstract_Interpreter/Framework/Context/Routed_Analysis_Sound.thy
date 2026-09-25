@@ -79,7 +79,7 @@ locale routed_analysis_sound =
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and R :: "'c call_context_rel"
-    and rd :: "'D \<Rightarrow> 'a::sound_domain abs_state lifted"
+    and rd :: "'D \<Rightarrow> 'a::numeric_domain abs_state lifted"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
 begin
 
