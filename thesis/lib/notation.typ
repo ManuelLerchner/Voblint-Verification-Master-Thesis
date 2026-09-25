@@ -23,7 +23,7 @@
 
 // The declaring constant, linked, with its theory beneath it.
 #let _decl(f) = {
-  entity(f.cite.name, vb.const, kind: "const", display: f.const)
+  entity(f.cite.name, vb.const, kind: f.cite.kind, display: f.const)
   let page = f.href.split("#").first()
   linebreak()
   // The same theory style as the anchor index of appendix B.1.
