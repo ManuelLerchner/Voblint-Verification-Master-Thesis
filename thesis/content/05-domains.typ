@@ -401,12 +401,52 @@ $sigma$ maps every variable name $x$ to an abstract value $sigma(x)$. The
 function #isaconst("gamma_state") gives it a meaning, the set of stores whose
 every variable lies in the concretization of its abstract value:
 $ sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x))). $
-Order and join work variable by variable, so the construction forgets every
+Order and join work variable by variable (@fig:pointwise), so the construction forgets every
 relation between variables. Take intervals and a program that sets both
 $x$ and $y$ to $1$ on one branch and both to $5$ on the other. After the join,
 $sigma(x) = sigma(y) = [1, 5]$, which also admits the store with $x = 1$ and
 $y = 5$, so the check `x == y` cannot be proved. @sec:relational shows that the
 framework does not require this form.
+
+#let _pw-vals = ($bot$, "0", $top$)
+#figure(
+  diagram(
+    spacing: (10mm, 7mm),
+    ..for i in range(3) {
+      for j in range(3) {
+        let empty = i == 0 or j == 0
+        let body = $(signval(#_pw-vals.at(i)), signval(#_pw-vals.at(j)))$
+        (
+          node(
+            (j - i, 4 - i - j),
+            text(size: 8pt, fill: if empty { vb.muted } else { vb.plain }, body),
+            name: label("pw-" + str(i) + str(j)),
+            inset: 3pt,
+            stroke: if empty { stroke(paint: vb.muted, thickness: 0.5pt, dash: "dashed") } else {
+              none
+            },
+            shape: rect,
+            corner-radius: 2pt,
+          ),
+        )
+      }
+    },
+    ..for i in range(3) {
+      for j in range(3) {
+        let here = label("pw-" + str(i) + str(j))
+        if i < 2 { (edge(here, label("pw-" + str(i + 1) + str(j)), "-", stroke: _order),) }
+        if j < 2 { (edge(here, label("pw-" + str(i) + str(j + 1)), "-", stroke: _order),) }
+      }
+    },
+  ),
+  kind: image,
+  placement: auto,
+  caption: [Pointwise states over two variables, each pair giving
+    $(sigma(x), sigma(y))$ with values from the fragment
+    $signval(bot) lle signval("0") lle signval(top)$ of Sign, ordered
+    variable by variable. The dashed states have a #signval($bot$) component and
+    denote no store, although only the lowest one is the bottom state.],
+) <fig:pointwise>
 
 The law #isathm("gamma_mono") turns each certified inequality
 $d lle sol(x)$ into the inclusion $conc(d) subset.eq conc(sol(x))$
@@ -430,7 +470,8 @@ A `DEAD` verdict is meant to certify that no execution reaches a check, so the
 analyzer should recognize unreachability reliably. The pointwise form offers
 two encodings of unreachability. The all-bottom state is too narrow: backward
 filtering (@sec:branches) typically empties one variable, and
-${x |-> signval(bot), y |-> signval(top)}$ is empty without being all-bottom. Any empty state
+${x |-> signval(bot), y |-> signval(top)}$ is empty without being all-bottom
+(@fig:pointwise). Any empty state
 is too fragile: the assignment `x = 1` turns that state into
 ${x |-> signval("+"), y |-> signval(top)}$ and makes dead code live again, and a
 pointwise join of two differently empty arms restores both variables
