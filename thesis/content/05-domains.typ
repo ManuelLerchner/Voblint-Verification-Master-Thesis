@@ -1,7 +1,10 @@
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 #import "../lib/math.typ": *
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
-#import "../lib/figures.typ": int-axis, int-strip, printed-set
-#import "../lib/sources.typ": thy
+#import "../lib/code.typ": (
+  decode-isabelle, isabelle-scripts, isaconst, isai, isalocale, isathm, isatype, listing, oblig,
+)
+#import "../lib/sources.typ": proved, thy
+#import "../lib/theorems.typ": definition, theorem
 #import "../lib/theme.typ": vb
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
@@ -20,197 +23,505 @@
 @ch:traces reduced soundness to five obligations over arbitrary sets of stores.
 An analyzer computes with finite descriptions instead, and its solver
 (@ch:solving) compares, joins, widens and narrows them without knowing what
-they mean. A lattice of descriptions is not enough: an order unrelated to
-meaning lets the solver certify a bound that drops a store, and a state can
-denote no store without being the lattice's bottom, so a structural test loses
-dead code at the next assignment or join (@sec:lift). For a compositional proof the question is
-which laws a domain must satisfy so that the solver's order inequalities
-discharge the obligations, stated so that they mention neither contexts nor the
-solver. This chapter derives these laws and names those it omits on purpose.
+they mean. Recall from @sec:abs-int that an abstract value $a$ denotes a set
+$conc(a)$ of concrete values. For the numeric domains of this chapter,
+$conc(a) subset.eq ZZ$, and @sec:domain-states lifts this meaning pointwise to
+stores. An arbitrary lattice of descriptions is not enough, for two reasons.
+First, the order must agree with the meaning. The solver only proves
+inequalities $a lle b$ in the abstract order, while the obligations of
+@ch:traces are inclusions between sets. The class law
+$ a lle b ==> conc(a) subset.eq conc(b) $
+turns each such inequality into an inclusion (@fig:sign-conc). Second, a
+description can describe no store at all without being the lattice's bottom
+element: in the state ${x |-> lbot, y |-> ltop}$, variable $x$ has no possible
+value, so the state describes no store. If the analyzer only recognizes the
+bottom element as unreachable, such a state looks reachable, and after the next
+assignment or join the information that the point is dead is gone (@sec:lift).
+This chapter derives the laws a domain must satisfy so that the solver's
+inequalities discharge the obligations, stated so that they mention neither
+contexts nor the solver, and names the laws it omits on purpose.
 
-== What an abstract value means
+#let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
+#let _order = 0.7pt + vb.neutral
+#let _hit = 1.1pt + vb.accent
+#figure(
+  diagram(
+    spacing: (13mm, 11mm),
+    _snode((1, 0), <s-top>, signval($top$)),
+    _snode((0.5, 1), <s-le>, signval("≤0")),
+    _snode((1.5, 1), <s-ge>, signval("≥0")),
+    _snode((0, 2), <s-neg>, signval("−")),
+    _snode((1, 2), <s-zero>, signval("0")),
+    _snode((2, 2), <s-pos>, signval("+")),
+    _snode((1, 3), <s-bot>, signval($bot$)),
+    _snode((5.5, 0), <c-top>, $ZZ$),
+    _snode((6.2, 1), <c-le>, $setcomp(n, n <= 0)$),
+    _snode((4.8, 1), <c-ge>, $setcomp(n, n >= 0)$),
+    _snode((6.7, 2), <c-neg>, $setcomp(n, n < 0)$),
+    _snode((5.5, 2), <c-zero>, ${0}$),
+    _snode((4.3, 2), <c-pos>, $setcomp(n, n > 0)$),
+    _snode((5.5, 3), <c-bot>, $emptyset$),
+    ..(
+      ("top", "le"),
+      ("top", "ge"),
+      ("le", "neg"),
+      ("le", "zero"),
+      ("ge", "zero"),
+      ("neg", "bot"),
+      ("zero", "bot"),
+      ("pos", "bot"),
+    )
+      .map(((hi, lo)) => (
+        edge(label("s-" + hi), label("s-" + lo), "-", stroke: _order),
+        edge(label("c-" + hi), label("c-" + lo), "-", stroke: _order),
+      ))
+      .flatten(),
+    edge(<s-ge>, <s-pos>, "-", stroke: _hit, label: $lle$, label-side: left),
+    edge(<c-ge>, <c-pos>, "-", stroke: _hit, label: $subset.eq$, label-side: right),
+    edge(<s-top>, <c-top>, "|-->", stroke: 0.7pt + vb.muted, label: $conc$),
+    edge(<s-ge>, <c-ge>, "|-->", stroke: 0.7pt + vb.accent),
+    edge(<s-pos>, <c-pos>, "|-->", stroke: 0.7pt + vb.accent),
+    edge(<s-bot>, <c-bot>, "|-->", stroke: 0.7pt + vb.muted),
+  ),
+  kind: image,
+  placement: none,
+  caption: [The Sign domain (left) and the sets of integers its values denote
+    (right, drawn mirrored), each ordered bottom to top. The solid lines are
+    the orders $lle$ and $subset.eq$. The dashed arrows show four instances of
+    $conc$, which maps every value to the set at the mirrored position.
+    Since $conc$ is monotone, the blue step
+    $signval("+") lle signval("≥0")$ becomes the inclusion
+    $conc(signval("+")) subset.eq conc(signval("≥0"))$. Adapted from the
+    parity figure of @nipkow14[Fig. 13.5].],
+) <fig:sign-conc>
 
-An abstract integer is useful only through the set of integers it stands for.
-The concretization $conc$ assigns that set: the Sign value #signval("≥0")
-denotes $setcomp(n, n >= 0)$, the interval $ivl(1, 5)$ denotes
-${1, 2, 3, 4, 5}$. @fig:gamma shows one value of each carrier instantiated in
-@ch:instances.
+== The domain contract <sec:domain-contract>
+
+A domain must supply the operations the analysis computes with and the laws
+that connect them to $conc$. Voblint states them in two parts. The carrier type
+of abstract values instantiates a hierarchy of type classes: order classes from
+Isabelle's HOL library, two classes of Voblint's own
+(@fig:domain-contract) and the update classes of the vendored solver. The
+operations that refine values at guards form a locale over that carrier
+(@fig:backward-contract). @fig:domain-carrier collects every operation and law
+of both parts in one place.
+
+#block(breakable: false)[
+  #definition(name: [Numeric domain], isa: "sound_domain", cmd: "class")[
+    A numeric domain is an executable join semilattice of abstract integers
+    with a concretization into sets of integers that respects its order, its
+    bottom, its top and its emptiness test.
+  ]
+
+  #figure(
+    {
+      show raw.where(block: true): set text(size: 6.2pt)
+      thy("executable_domain")
+      thy("sound_domain")
+    },
+    kind: image,
+    placement: none,
+    caption: [The declarations of #isalocale("executable_domain") and
+      #isalocale("sound_domain"), lifted from the theory.],
+  ) <fig:domain-contract>
+]
+
+#definition(name: [Backward domain], isa: "backward_domain", cmd: "locale")[
+  A backward domain over a numeric domain adds an intersection that keeps
+  every value both operands admit, a forward evaluator of expressions, a
+  truth test, and inverse operators that refine the operands of a
+  comparison or an arithmetic operation to values that still contain every
+  concrete pair producing the required result.
+]
 
 #figure(
   {
-    set text(size: 8.5pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let (lo, hi) = (-6, 10)
-    let row(domain, value, shown: none) = {
-      let inside = printed-set(value)
-      (
-        domain,
-        if shown == none { raw(value) } else { shown },
-        ..int-strip(lo, hi, x => if inside(x) { "extra" } else { none }),
-      )
-    }
-    table(
-      columns: (auto, auto) + (auto,) * (hi - lo + 3),
-      column-gutter: (5pt, 5pt) + (0pt,) * (hi - lo + 2),
-      stroke: none,
-      inset: (x: 0.9pt, y: 1.8pt),
-      align: (left + horizon, left + horizon) + (center + horizon,) * (hi - lo + 3),
-      table.hline(stroke: 0.5pt),
-      [*domain*], [*value*], table.cell(colspan: hi - lo + 3)[*the integers it denotes*],
-      [], [], ..int-axis(lo, hi, step: 2),
-      table.hline(stroke: 0.4pt),
-      ..row([Sign], "≥0"),
-      ..row([Interval], "[-2,5]"),
-      ..row([Parity], "1+2ℤ", shown: [`1+2ℤ` (odd)]),
-      ..row([Congruence], "2+3ℤ"),
-      ..row(
-        [Int],
-        "signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+4ℤ",
-        shown: [`+`, `[1,9]`, `1+2ℤ`, `1+4ℤ`],
-      ),
-      table.hline(stroke: 0.5pt),
-    )
+    show raw.where(block: true): set text(size: 6.2pt)
+    thy("sound_evaluator")
+    thy("sound_truth_test")
+    thy("semantic_intersection")
+    thy("backward_domain")
   },
   kind: image,
   placement: auto,
-  caption: [One value of each shipped domain, as the analyzer prints it, and
-    the integers it denotes between $-6$ and $10$; an end cell is filled when
-    the set continues beyond the window. The Int value denotes the intersection
-    of its components' meanings, here ${1, 5, 9}$.],
-) <fig:gamma>
+  caption: [The declarations of the forward evaluator
+    #isalocale("sound_evaluator"), the truth test #isalocale("sound_truth_test"),
+    #isalocale("semantic_intersection") and #isalocale("backward_domain"), which
+    combines them with the inverse operators, lifted from the theories.],
+) <fig:backward-contract>
 
-The solver never computes with these sets. Its certificate (@ch:background) is a
-family of order inequalities $d lle sol(x)$, while the coverage obligations are
-set inclusions. If an edge transfer produces $d$ covering every successor store
-and the solver certifies $d lle sol(v)$, concluding that the successor stores
-lie in $conc(sol(v))$ needs exactly
-$ a lle b quad ==> quad conc(a) subset.eq conc(b). $
-Without this law, the order says nothing about the denoted sets. If intervals
-were ordered by their lower bounds alone, $ivl(0, 5) lle ivl(0, 3)$ would hold
-and a store with value five would disappear. The same law gives joins their
-meaning: since $a lle a ljoin b$, it yields
-$conc(a) union conc(b) subset.eq conc(a ljoin b)$ (#isathm("gamma_sup_ub1")),
-which preserves both predecessors at a merge, so no separate join law is
-assumed. Two boundary laws complete the meaning: $conc(lbot) = emptyset$ lets a
-contradictory guard answer "no value", and $conc(ltop) = ZZ$ makes "unknown" a
-sound answer, for instance for a nondeterministic input. The type class
-#isalocale("sound_domain") collects these laws (@fig:domain-contract).
+The inverse operators form a locale, while $conc$ is a class operation, because
+Int has one sound backward interpretation per reduction policy
+#isatype("refine_mode") (@ch:instances). A class would allow only one
+instance per type. The intersection need not be the lattice meet, and the
+carrier need not have a meet at all (@sec:branches).
+
+// Everything a domain's carrier supplies, as one UML class box. The classes,
+// their order and their members are read from the lifted declarations,
+// starting at the two classes a domain instantiates and following each
+// declaration's parents, so the figure cannot drift from the sources.
+#let _decl(src) = {
+  let src = src.split("\n").slice(1).join("\n")
+  let head = src.match(regex("^(?:class|locale)\s+(\S+)\s*=([^\n]*)"))
+  let (fixes, laws, mode) = ((), (), none)
+  let member = regex(
+    "\b(fixes|assumes|and)\s+([A-Za-z_][A-Za-z0-9_']*)(?:\s*\[[^\]]*\])?\s*(::|:)\s*(\"[^\"]*\"|'[a-z]+)"
+      + "(?:\s*\((?:infix[lr]?\s+)?(?:\\\\<open>(.*?)\\\\<close>|\"([^\"]*)\")[^)]*\))?",
+  )
+  for m in src.slice(head.end).matches(member) {
+    let (kw, name, _, rhs, n1, n2) = m.captures
+    if kw != "and" { mode = kw }
+    let entry = (
+      name: name,
+      rhs: rhs.trim("\"").replace(regex("\s+"), " "),
+      notation: if n1 != none { n1 } else { n2 },
+    )
+    if mode == "fixes" { fixes.push(entry) } else { laws.push(entry) }
+  }
+  (
+    name: head.captures.at(0),
+    parents: head.captures.at(1).split("+").map(str.trim).filter(q => q != ""),
+    fixes: fixes,
+    laws: laws,
+  )
+}
+#let _snip(n) = read("/shared/generated/snippets/" + n + ".thy")
+#let _visit(d, acc) = {
+  if acc.any(e => e.name == d.name) { return acc }
+  for q in d.parents { acc = _visit(_decl(_snip(q)), acc) }
+  acc + (d,)
+}
+#let _carrier = (
+  _decl(read("/shared/generated/snippets/sound_domain.thy")),
+  _decl(read("/shared/generated/snippets/bounded_warrowing.thy")),
+  _decl(read("/shared/generated/snippets/sound_evaluator.thy")),
+  _decl(read("/shared/generated/snippets/sound_truth_test.thy")),
+  _decl(read("/shared/generated/snippets/semantic_intersection.thy")),
+  _decl(read("/shared/generated/snippets/backward_domain.thy")),
+)
+#let _inherited = _carrier.fold((), (acc, d) => _visit(d, acc))
 
 #figure(
-  thy("sound_domain"),
+  {
+    set text(size: 6.4pt)
+    set par(justify: false, leading: 0.45em)
+    show: isabelle-scripts
+    let code(s, fill: vb.plain) = text(fill: fill, raw(decode-isabelle(s)))
+    let compartment(title, pick, show-member) = {
+      let rows = ()
+      for d in _inherited {
+        let items = pick(d)
+        for (i, it) in items.enumerate() {
+          if i == 0 and rows.len() > 0 { rows.push(table.hline(stroke: 0.3pt + vb.frame)) }
+          rows.push(if i == 0 { text(size: 7pt, isalocale(d.name)) } else { [] })
+          rows += show-member(it)
+        }
+      }
+      let head = table.cell(colspan: 3, inset: (top: 4pt, bottom: 2pt), text(
+        size: 7pt,
+        style: "italic",
+        fill: vb.muted,
+        title,
+      ))
+      (head,) + rows
+    }
+    block(stroke: 0.7pt + vb.neutral, radius: 2pt, clip: true, table(
+      columns: (auto, auto, 1fr),
+      stroke: none,
+      inset: (x: 4pt, y: 1.6pt),
+      align: left + top,
+      table.cell(colspan: 3, fill: vb.frame.lighten(50%), inset: 5pt, align(center)[
+        #text(
+          size: 7.5pt,
+        )[#raw("'a") :: #isalocale("sound_domain") + #isalocale("bounded_warrowing"), with #isalocale("backward_domain")]
+      ]),
+      table.hline(stroke: 0.5pt + vb.neutral),
+      ..compartment(
+        [operations],
+        d => d.fixes,
+        it => (
+          code(it.name, fill: vb.const) + if it.notation != none { [ (#code(it.notation))] },
+          code(":: " + it.rhs),
+        ),
+      ),
+      table.hline(stroke: 0.5pt + vb.neutral),
+      ..compartment(
+        [laws],
+        d => d.laws,
+        it => (
+          code(it.name, fill: vb.thm),
+          code(it.rhs),
+        ),
+      ),
+    ))
+  },
+  kind: image,
   placement: auto,
-  caption: [The numeric domain contract, verbatim. The parent class
-    #isalocale("executable_domain") supplies order, join, $lbot$, $ltop$, the
-    emptiness test #isaconst("is_empty") and the printer
-    #isaconst("to_string")\; #isalocale("sound_domain") adds $conc$ and its
-    laws, which generated code never needs (@sec:engineering).],
-) <fig:domain-contract>
+  caption: [Everything a domain supplies over its carrier type #raw("'a"), as a
+    UML class box. The operations and laws come from the classes and locales on
+    the left: Isabelle's HOL classes #isalocale("ord"), #isalocale("preorder"),
+    #isalocale("order"), #isalocale("sup"), #isalocale("semilattice_sup"),
+    #isalocale("bot"), #isalocale("order_bot"), #isalocale("top") and
+    #isalocale("order_top"), Voblint's #isalocale("executable_domain") and
+    #isalocale("sound_domain"), and the solver's #isalocale("widening") and
+    #isalocale("narrowing"), and the locales #isalocale("sound_evaluator"),
+    #isalocale("sound_truth_test"), #isalocale("semantic_intersection") and
+    #isalocale("backward_domain"). #isalocale("bounded_semilattice_sup_bot"),
+    #isalocale("warrowing") and #isalocale("bounded_warrowing") only combine
+    classes and add no member. Rows are read from the declarations.],
+) <fig:domain-carrier>
 
-The law for #isaconst("is_empty") makes emptiness a semantic test. A structural
-test $a = lbot$ would be sound but would miss empty values: an interval whose
-lower bound exceeds its upper bound denotes nothing without being the canonical
-bottom, and the interval operations do not normalize such pairs away. Goblint's
-lattice signature `Lattice.Bot` likewise declares its bottom test per domain.
-Soundness uses only the direction
-$#isaconst("is_empty") (a) ==> conc(a) = emptyset$, which justifies discarding
-a state. The converse makes the test exact. The analyzer needs exactness to
-report the unreachability verdicts of @ch:results.
 
-Intervals contain infinite ascending chains, so the solver extrapolates
-(@sec:widening), and its update rules require the carrier to instantiate
-#isalocale("bounded_warrowing"). Its laws are order laws: $a lle a widen b$ and
-$b lle a widen b$, and $b lle a narrow b lle a$ whenever $b lle a$. Either
-branch of warrowing therefore bounds the value it was given, and monotonicity
-of $conc$ turns that bound into set inclusion. Stabilization is not a class
-law, and termination becomes a premise (@sec:termination).
+The HOL classes fix the order structure (@fig:domain-carrier). #isalocale("ord") fixes $lle$ and $<$,
+and #isalocale("preorder") and #isalocale("order") make $lle$ a partial order.
+In a #isalocale("semilattice_sup") the join $a ljoin b$ lies above both operands
+(#isathm("sup_ge1"), #isathm("sup_ge2")) and below every other upper bound
+(#isathm("sup_least")). #isalocale("order_bot") and #isalocale("order_top") add
+a least element $lbot$ and a greatest element $ltop$. On top of this,
+#isalocale("executable_domain") adds the emptiness test #isaconst("is_empty")
+and the printer #isaconst("to_string"), which completes what the solver and the
+generated code compute with. #isalocale("sound_domain") adds $conc$ and its
+laws (@fig:domain-contract). Generated code never needs $conc$
+(@sec:engineering).
 
-A domain value needs no other laws for soundness (@tab:domain-contract).
-Three familiar requirements are absent from the generic contract. It asks for
-no monotone transfer: neither the per-operation rules of @sec:whole-state nor
-the analysis soundness contract of @sec:sound-core mention monotonicity, and
-the vendored solver's partial-correctness argument does not assume it.
-Monotonicity would matter for termination, which is a premise. The locale that
-packages the non-relational instances (@ch:instances) does assume a monotone
-branch transfer and monotone `min` and `max`, and every shipped non-relational
-domain proves them. No abstraction
-function is needed, since no claim of optimal precision is made
-(@ch:background), and widening need not stabilize. One requirement goes beyond
-what the proofs use: the vendored solver works over a bounded join semilattice,
-so joins must be least, although soundness uses only their upper-bound half.
-This restricts the carriers. Over unbounded integers, two distinct singletons ${x}$
-and ${y}$ have no least upper bound among cofinite exclusion sets: every
-$ZZ without {p}$ with $p in.not {x, y}$ bounds both, and no two of these are
-comparable. The Int product therefore cannot carry an exclusion-set component
-like Goblint's `DefExc` (@app:goblint-alignment).
 
-== From values to stores
+The law #isathm("gamma_mono") is the one that turns each certified inequality
+$d lle sol(x)$ into the inclusion $conc(d) subset.eq conc(sol(x))$
+(@sec:abs-int). With $a lle a ljoin b$ it also gives
+$conc(a) union conc(b) subset.eq conc(a ljoin b)$ (#isathm("gamma_sup_ub1")), so
+a merge keeps the stores of both predecessors and no separate join law is
+needed. The law $conc(lbot) = emptyset$ lets a contradictory guard answer "no
+value", and $conc(ltop) = ZZ$ makes "unknown" a sound answer, for instance for
+a nondeterministic input or for the locals of a callee at its entry.
 
-The simplest store description assigns one abstract value to each variable.
-The type #isatype("abs_state") is such a function, and
-#isaconst("gamma_state") reads it as
-$ sem(a) = setcomp(s, forall x. s(x) in conc(a(x))). $
-Order and join are pointwise, and the meaning is a Cartesian product, so the
-construction forgets every relation between variables: joining $(x, y) = (2, 2)$
-and $(7, 7)$ admits $(2, 7)$. @sec:relational shows that the framework does not
-require this form. A product with one empty factor is empty, so $sem(a)$ is
-empty exactly when some $conc(a(x))$ is
-(#isathm("is_empty_state_iff_gamma_state_empty")). That test quantifies over
-all variable names; @ch:solving supplies a finite equivalent.
+The law #isathm("is_empty_correct") makes emptiness a semantic test. A
+structural test $a = lbot$ would miss empty values, because a carrier may
+represent the empty set in several ways. Voblint's interval type
+#isatype("ivl") stores raw bound pairs and never normalizes them. Its bottom
+#isaconst("bot_ivl") is the pair $[infinity, -infinity]$, but under
+#isaconst("gamma_ivl") every pair with a lower bound above its upper bound also
+denotes $emptyset$, and so do $[-infinity, -infinity]$ and
+$[infinity, infinity]$, which contain no integer. Goblint's lattice signature
+`Lattice.Bot` likewise declares its bottom test per domain. Discarding a state
+is sound as soon as the test implies emptiness. The converse makes the test
+exact. Voblint uses this exactness to derive that emptiness is downward closed
+(#isathm("is_empty_antimono")), which normalization needs (@sec:lift), and in
+the correspondence between the executable carrier's canonicalization and
+semantic readback (@sec:readback).
+
+Two stronger algebraic requirements come from the solver interface. The
+vendored solver is stated over #isalocale("bounded_semilattice_sup_bot"), so
+the join must be the least upper bound. The carrier must also instantiate
+#isalocale("bounded_warrowing"), which adds the solver's widening $widen$ and
+narrowing $narrow$ with the laws of @sec:widening. Each domain declares this
+instance on its own, next to its executable operations. At the semantic-domain
+layer, the join is used only through the fact that it lies above both
+operands. Leastness and #isalocale("bounded_warrowing") are structural
+requirements of the solver.
+
+The least-upper-bound requirement excludes some carriers. Consider a simplified
+form of Goblint's exclusion-set domain `DefExc`, which describes an integer
+either by its exact value, a singleton ${n}$, or by a finite set $F$ of values
+it cannot have, the set $ZZ without F$. The singletons ${1}$ and ${2}$ have
+many upper bounds in this carrier, among them $ZZ without {3}$ and
+$ZZ without {4}$. A least upper bound would have to lie below all of them, and
+the only set with this property that still contains $1$ and $2$ is ${1, 2}$.
+This set is neither a singleton nor of the form $ZZ without F$, so ${1}$ and
+${2}$ have no least upper bound in the carrier. This rules out a direct
+singleton/cofinite `DefExc`-style component over Voblint's unbounded
+mathematical integers under the current
+#isalocale("bounded_semilattice_sup_bot") requirement. Goblint's `DefExc` is
+bounded by the range of the integer kind; @app:goblint-alignment discusses this
+difference.
+
+The contract has no abstraction function, because Voblint makes no claim of
+optimal precision (@sec:abs-int). Termination is a premise of the main theorem
+(@sec:termination), so widening need not stabilize. Transfer monotonicity is
+not required by the core transfer-soundness contracts of
+@ch:analysis-interface or by the solver's partial-correctness theorem
+(@sec:td). Some reusable instance interfaces impose it separately and therefore
+prove more than soundness alone requires (@ch:instances).
+
+The interface is executable and it can be reasoned about. Sign instantiates the
+classes with its seven values and the locale with #isaconst("meet_sign") as
+intersection and #isaconst("inv_less_sign") as the inverse of $<$
+(@fig:interface-at-work). The first lemma is proved by evaluation: Isabelle
+generates code for the Sign operations and runs it. The meet of #signval("≥0")
+and #signval("≤0") is #signval("0"), the meet of #signval("+") and
+#signval("−") is empty, and when $x < 0$ holds for an unknown $x$, the inverse
+refines $x$ to #signval("−"). Such proofs rest on the code generator's
+evaluation oracle (@tab:oracles-audit). The second lemma holds for every
+domain and follows from the laws alone: a value both operands admit keeps
+their intersection non-empty, by #isathm("intersect_sound") and
+#isathm("is_empty_correct"). The third lemma obtains the same fact for Sign
+without evaluation, by instantiating the second through Sign's interpretation
+of the locale.
+
+#figure(
+  {
+    show raw.where(block: true): set text(size: 6.2pt)
+    thy("sign_interface_regression")
+    thy("intersect_shared_not_empty")
+    thy("sign_meet_zero_not_empty")
+  },
+  kind: image,
+  placement: auto,
+  caption: [Three lemmas about the interface, lifted with their proofs from an
+    example theory: concrete Sign operations evaluated by generated code, a
+    fact derived from the laws of #isalocale("semantic_intersection") for every
+    domain, and its instance for Sign.],
+) <fig:interface-at-work>
+
+== From values to stores <sec:domain-states>
+
+The simplest description of a set of stores assigns one abstract value to each
+variable. The type #isatype("abs_state") is such a function: an abstract state
+$sigma$ maps every variable name $x$ to an abstract value $sigma(x)$. The
+function #isaconst("gamma_state") gives it a meaning, the set of stores whose
+every variable lies in the concretization of its abstract value:
+$ sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x))). $
+Order and join work variable by variable, so the construction forgets every
+relation between variables. Take intervals and a program that sets both
+$x$ and $y$ to $1$ on one branch and both to $5$ on the other. After the join,
+$sigma(x) = sigma(y) = [1, 5]$, which also admits the store with $x = 1$ and
+$y = 5$, so the check `x == y` cannot be proved. @sec:relational shows that the
+framework does not require this form.
+
+The set $sem(sigma)$ is empty exactly when one variable has an empty
+concretization (#isathm("is_empty_state_iff_gamma_state_empty")): a store needs
+a value for every variable. This test quantifies over all variable names;
+@ch:solving supplies a finite equivalent.
 
 == Unreachable program points <sec:lift>
 
-A check is reported dead when no execution reaches it, so the analyzer must
-recognize unreachability reliably. The pointwise form offers two encodings of
-unreachability. The all-bottom state is too narrow: backward filtering
-(below) typically empties one variable, and ${x |-> lbot, y |-> ltop}$ is empty
-without being all-bottom. Any empty state is too fragile: the assignment
-`x = 1` turns that state into ${x |-> signval("+"), y |-> ltop}$ and makes dead
-code live again, and a pointwise join of two differently empty arms restores both
-variables (@fig:domain-reachability). Both failures are sound but lose the
-reachability fact.
+A `DEAD` verdict is meant to certify that no execution reaches a check, so the
+analyzer should recognize unreachability reliably. The pointwise form offers
+two encodings of unreachability. The all-bottom state is too narrow: backward
+filtering (@sec:branches) typically empties one variable, and
+${x |-> signval(bot), y |-> signval(top)}$ is empty without being all-bottom. Any empty state
+is too fragile: the assignment `x = 1` turns that state into
+${x |-> signval("+"), y |-> signval(top)}$ and makes dead code live again, and a
+pointwise join of two differently empty arms restores both variables
+(@fig:domain-reachability). Both failures are sound but lose the reachability
+fact.
 
 #let _r = claim-row("dom-disjunct-sign", "13:5")
+#let _disjunct-program = ```
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
+    __voblint_check(x == 5);
+  }
+}
+```
 #figure(
-  table(
-    columns: (auto, 1fr, 1fr),
-    align: (left, left, left),
-    stroke: none,
-    table.hline(),
-    [*after*], [*pointwise states only*], [*lifted and normalized*],
-    table.hline(stroke: 0.5pt),
-    [`x == 0 && x == 1`], [${x |-> lbot, y |-> ltop}$], [#ctor("Bot")],
-    [`y == 0 && y == 1`], [${x |-> ltop, y |-> lbot}$], [#ctor("Bot")],
-    [join of both arms], [${x |-> ltop, y |-> ltop}$], [#ctor("Bot")],
-    [check `x == 5`], [`UNKNOWN`], [#raw(_r.verdict)],
-    table.hline(),
-  ),
+  {
+    align(center, block(width: 72%, {
+      show raw: set text(size: 6.5pt)
+      listing(lang: "c", claim: "dom-disjunct-sign", _disjunct-program.text)
+    }))
+    v(0.4em)
+    table(
+      columns: (auto, 1fr, 1fr),
+      align: (left, left, left),
+      stroke: none,
+      table.hline(),
+      [*after*], [*pointwise states only*], [*lifted and normalized*],
+      table.hline(stroke: 0.5pt),
+      [`x == 0 && x == 1`], [${x |-> signval(bot), y |-> signval(top)}$], [#ctor("Bot")],
+      [`y == 0 && y == 1`], [${x |-> signval(top), y |-> signval(bot)}$], [#ctor("Bot")],
+      [join of both arms], [${x |-> signval(top), y |-> signval(top)}$], [#ctor("Bot")],
+      [check in the branch], [`UNKNOWN`], [#raw(_r.verdict)],
+      table.hline(),
+    )
+  },
+  kind: table,
   placement: auto,
-  caption: [Sign states inside
-    `if ((x == 0 && x == 1) || (y == 0 && y == 1))` with $x$, $y$
-    unconstrained. The middle column is a hand calculation; the last verdict is
-    the analyzer's output (claim `dom-disjunct-sign`).],
+  caption: [Sign states in the branch of the program above, whose guard
+    no execution satisfies. The check in the branch only probes reachability:
+    its verdict shows whether the analyzer recognizes the branch as dead. The
+    middle column is a hand calculation; the last verdict is the analyzer's
+    output (claim `dom-disjunct-sign`).],
 ) <fig:domain-reachability>
 
-The fix keeps reachability apart from the store description. The datatype #isatype("lifted") adds an
-outer constructor #ctor("Bot"), meaning "unreachable", below every
-#ctor("Lifted") payload, with $conc(ctor("Bot")) = emptyset$. #ctor("Bot") is
-the identity of the lifted join, and #isaconst("transfer_lift") passes it
-through without running the payload transfer. On a #ctor("Lifted") payload it
-runs the transfer and then #isaconst("normalize_lift"), which replaces a result
-the emptiness test classifies as empty by #ctor("Bot"). This is Goblint's
-`Deadcode` exception turned into a value: a Goblint transfer raises it on
-reaching bottom, and a lifted transfer returns #ctor("Bot"). Joins preserve
-normalization (#isathm("normalized_lift_sup")), and for a normalized value,
-denoting no store is the same as being #ctor("Bot")
-(#isathm("normalized_state_lift_bot_iff")), so the structural test is exact and
-dead code stays dead. No theorem states the invariant for solved values. The
-published result instead canonicalizes each value it reads back
-(#isaconst("canonicalize_lift")), which leaves its concretization unchanged.
-Normalization is a precision device: soundness of a lifted transfer reduces to
-soundness of the payload transfer and to the sound direction of the emptiness
-law, and a `DEAD` verdict needs only $conc(ctor("Bot")) = emptyset$.
+The fix keeps reachability apart from the store description. The datatype
+#isatype("lifted") adds an outer constructor #ctor("Bot"), meaning
+"unreachable", below every #ctor("Lifted") payload, with
+$conc(ctor("Bot")) = emptyset$. #ctor("Bot") is the identity of the lifted
+join, and #isaconst("transfer_lift") passes it through without running the
+payload transfer. On a #ctor("Lifted") payload it runs the transfer and then
+#isaconst("normalize_lift"), which replaces a result the emptiness test
+classifies as empty by #ctor("Bot") (@fig:lifted-hasse). #ctor("Bot") plays the role that Goblint's
+`Deadcode` exception plays operationally: it stops an unreachable path from
+contributing further states. Joins preserve normalization
+(#isathm("normalized_lift_sup")), and for a normalized value the emptiness test
+holds exactly when the value is #ctor("Bot")
+(#isathm("normalized_state_lift_bot_iff")). With the exact test, denoting no
+store is then the same as being #ctor("Bot"), so dead code stays dead.
+Normalization is not required for soundness. Its role is to preserve explicit
+reachability information. It never changes the denoted set
+(#isathm("gamma_state_normalize_lift")), so soundness does not need every solved
+value to be normalized, and the published result canonicalizes each value it
+reads back (#isaconst("canonicalize_lift")).
 
-== Branches: learning from a guard
+#let _lnode(pos, name, body, empty: false) = node(
+  pos,
+  text(size: 7pt, body),
+  name: name,
+  stroke: if empty { (paint: vb.muted, dash: "dashed", thickness: 0.7pt) } else {
+    0.7pt + vb.neutral
+  },
+  fill: if empty { vb.bg } else { white },
+  corner-radius: 3pt,
+  inset: 3.5pt,
+)
+#figure(
+  diagram(
+    spacing: (14mm, 7mm),
+    _lnode((1, 0), <l-top>, [#ctor("Lifted") ${x |-> signval(top), y |-> signval(top)}$]),
+    _lnode((0, 1), <l-xp>, [#ctor("Lifted") ${x |-> signval("+"), y |-> signval(top)}$]),
+    _lnode((2, 1), <l-yp>, [#ctor("Lifted") ${x |-> signval(top), y |-> signval("+")}$]),
+    _lnode(
+      (0, 2),
+      <l-xb>,
+      [#ctor("Lifted") ${x |-> signval(bot), y |-> signval(top)}$],
+      empty: true,
+    ),
+    _lnode(
+      (2, 2),
+      <l-yb>,
+      [#ctor("Lifted") ${x |-> signval(top), y |-> signval(bot)}$],
+      empty: true,
+    ),
+    _lnode(
+      (1, 3),
+      <l-bb>,
+      [#ctor("Lifted") ${x |-> signval(bot), y |-> signval(bot)}$],
+      empty: true,
+    ),
+    _lnode((1, 4.6), <l-bot>, [#ctor("Bot")]),
+    edge(<l-top>, <l-xp>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-top>, <l-yp>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-xp>, <l-xb>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-yp>, <l-yb>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-xb>, <l-bb>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-yb>, <l-bb>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-bb>, <l-bot>, "-", stroke: 0.8pt + vb.neutral),
+    edge(<l-xb>, <l-bot>, "..|>", stroke: 0.7pt + vb.accent, bend: -35deg),
+    edge(<l-yb>, <l-bot>, "..|>", stroke: 0.7pt + vb.accent, bend: 35deg),
+    edge(<l-bb>, <l-bot>, "..|>", stroke: 0.7pt + vb.accent, bend: 70deg),
+  ),
+  kind: image,
+  placement: none,
+  caption: [Part of the lifted Sign states over two variables $x$ and $y$,
+    ordered bottom to top. #ctor("Bot") lies below every #ctor("Lifted")
+    payload, including the all-bottom one. The dashed payloads describe no
+    store; #isaconst("normalize_lift") maps them to #ctor("Bot") (blue
+    arrows). Illustrative.],
+) <fig:lifted-hasse>
+
+== Learning from a guard <sec:branches>
 
 A guard changes no variable, yet the stores that pass it satisfy it. In
 
@@ -221,109 +532,106 @@ A guard changes no variable, yet the stores that pass it satisfy it. In
 )))
 
 $y$ is always $|x|$. A branch transfer that only evaluates the guard keeps
-$x = ltop$ in both arms, and the check is `UNKNOWN`. The locale
-#isalocale("backward_domain") asks a domain for inverse operators: given
-abstract operands and a required result, return refined operands that still
-contain every concrete pair producing it. It also asks for a forward evaluator
-#isai("aval_abs") of expressions, a truth test #isai("tobool") that may answer
-definitely true or false, and an intersection that keeps every concrete value
-both operands share (#isalocale("semantic_intersection")) without having to be
-the lattice meet. Sign refines $x$ to #signval("+") on
-the true arm and #signval("≤0") on the false arm, $y$ joins to #signval("≥0"),
+$x = signval(top)$ in both arms, and the check is `UNKNOWN`. The inverse
+operators of #isalocale("backward_domain") (@fig:backward-contract) use the
+guard instead: given abstract operands and the required result, they return
+refined operands. Sign refines $x$ to
+#signval("+") on the true arm and #signval("≤0") on the false arm, $y$ joins to
+#signval("≥0"),
 #let _g = claim-row("dom-guard-sign", "18:3")
 and the analyzer reports #raw(_g.verdict) with #raw(_g.state).
 
+The intersection only has to keep every value both operands share, so it need
+not be the lattice meet, and the carrier need not have a meet at all. For
+intervals, #isaconst("intersect_ivl") maps $[1, 2]$ and $[5, 6]$ to the
+canonical bottom (#isathm("interval_intersect_of_witness_bot")), while the
+greatest lower bound in the raw bound order is the inverted pair $[5, 2]$.
+
 The generic filters #isaconst("afilter") and #isaconst("bfilter") push these
-requirements through an expression once for every domain, with contract
-#isathm("bfilter_sound"):
-#align(
-  center,
-  isai(
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>",
-  ),
-)
-A filter drops no store that passes the guard and may keep stores that fail it. A
-disjunction filters each arm and joins. Before joining, #isaconst("bfilter")
-drops an arm that the forward gate #isaconst("feasible") rejects, one whose
-forward value is empty or whose truth test contradicts the required polarity,
-as Goblint's backward evaluation of guards drops a contradictory arm. The gate
-looks only forward, so an arm can pass it and still be emptied by backward
-refinement, and the pointwise join then produces the leak of
-@fig:domain-reachability. The lifted filter #isaconst("bfilter_lifted")
-therefore normalizes each arm to #ctor("Bot") before the join. The correction
-cannot be placed in #isaconst("bfilter"): emptiness of a pointwise state quantifies
-over all variable names and has no code equation, so it would make every case
-of the filter non-executable. The executable filter uses the finite emptiness
-test of @ch:solving instead.
+requirements through an expression once for every domain. A filter may keep
+stores that fail the guard, but it drops none that pass it.
 
-The inverse operators form a locale, while $conc$ is a type-class operation: a
-carrier has one meaning but may have several sound backward interpretations,
-as Int has one per reduction policy #isatype("refine_mode") (@ch:instances).
+#block(breakable: false)[
+  #theorem(name: [Sound guard filter], isa: "bfilter_sound")[
+    If a store $s$ lies in $sem(sigma)$ and the guard $e$ has truth value
+    #isai("res") at $s$, then $s$ lies in the meaning of the filtered state.
+  ]
 
-== Checks: asking instead of assuming
+  #proved("bfilter_sound")
+]
+
+For a true disjunction, #isaconst("bfilter") filters each alternative
+separately, drops one that the forward test #isaconst("feasible") rejects, and
+joins the rest. An arm can still become empty by backward refinement, so
+#isaconst("bfilter_lifted") normalizes each arm to #ctor("Bot") before the join
+and avoids the leak of @fig:domain-reachability. In the example of
+@sec:constraints, the guard refinement of $h$ by $[-infinity, 4]$, written
+there with the interval meet, stands for this filter.
+
+== Asking instead of assuming <sec:queries>
 
 A branch assumes its condition. A check must decide whether the current
-description already implies it. Filtering cannot decide this, since it refines
-the state whether or not the condition was known. The locale
-#isalocale("abstract_numeric_queries") adds comparison queries answering
-definitely true, definitely false, or unknown. A definite answer $r$ for
-less-than must hold for every pair of represented operands:
-$ i in conc(a) and j in conc(b) quad ==> quad (i < j) = r, $
-and equality has the same obligation. A domain gets these queries without
-extra work: every #isalocale("backward_domain") yields sound queries by reading four
-judgments (definitely less, definitely not less, and the same for equality)
-off its inverse operators, defined once in
-#isalocale("numeric_query_judgments"). Int uses these derived queries; Sign
-and Interval supply more precise judgments. Queries may be incomplete: Congruence
+description already implies it. The filtering contract alone cannot decide
+this: a sound filter may keep stores that fail the condition, so filtering does
+not show that the original state implied it. A domain therefore also answers
+comparison queries with definitely true, definitely false or unknown
+(@fig:numeric-queries). The unknown answer #isai("None") carries no
+obligation, so a domain may give it whenever it cannot decide, and queries may
+be incomplete. Congruence
 #let _c = claim-row("dom-even-odd-congruence", "20:3")
 stores the disjoint classes #raw(_c.state) for `x = 2 * n; y = 2 * n + 1`, yet
-its equality query decides only between single integers, so `x != y` stays
-#raw(_c.verdict).
+its equality query decides only between single integers, so #box[`x != y`]
+stays #raw(_c.verdict).
 
-An empty operand makes every definite answer vacuously sound, so a verdict
-never implies that its check is reached (@sec:verdicts).
+#block(breakable: false)[
+  #definition(name: [Numeric queries], isa: "abstract_numeric_queries", cmd: "locale")[
+    A definite answer must hold for every pair of integers the operands denote.
+  ]
+
+  #figure(
+    {
+      show raw.where(block: true): set text(size: 6.2pt)
+      thy("abstract_numeric_queries")
+    },
+    kind: image,
+    placement: none,
+    caption: [The declaration of #isalocale("abstract_numeric_queries"), lifted
+      from the theory.],
+  ) <fig:numeric-queries>
+]
 
 #figure(
   table(
-    columns: (46%, 1fr),
-    align: (left, left),
+    columns: (auto, auto),
+    align: (left, center),
     stroke: none,
     inset: (x: 4pt, y: 3pt),
     table.hline(),
     [*requirement*], [*what the proofs use it for*],
     table.hline(stroke: 0.5pt),
-    [$a lle b ==> conc(a) subset.eq conc(b)$],
-    [turns each certified inequality $d lle sol(x)$ into an inclusion; with
-      $a lle a ljoin b$ it keeps both predecessors at a merge],
-    [$conc(lbot) = emptyset$], [lets $lbot$ answer "no value" for a contradictory guard],
-    [$conc(ltop) = ZZ$],
-    [makes $ltop$ sound for nondeterministic input and for callee locals at entry],
-    [#isaconst("is_empty") $a ==> conc(a) = emptyset$],
-    [discarding a state, normalizing to #ctor("Bot") (@sec:lift)],
-    [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$],
-    [exactness: `DEAD` is reported for every empty state (@sec:verdicts)],
-    [order laws of #isalocale("bounded_warrowing")],
-    [each solver update bounds the value it was given],
-    [least upper bounds], [the vendored solver's value class; soundness uses only the upper bound],
-    [sound inverse operators], [#isathm("bfilter_sound"): a guard drops no store that passes it],
-    [sound comparison queries], [definite check verdicts (@sec:verdicts)],
+    [#isaconst("is_empty") $a ==> conc(a) = emptyset$], [discarding an empty state (@sec:lift)],
+    [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$], [normalization, readback (@sec:readback)],
+    [least upper bounds], [the solver's order class],
+    [#isalocale("bounded_warrowing")], [the solver's update rule],
+    [sound inverse operators, if any], [#isathm("bfilter_sound") (@sec:branches)],
+    [sound comparison queries], [check verdicts (@sec:verdicts)],
     table.hline(stroke: 0.5pt),
-    [_not required by the contract:_ monotone transfers, stabilizing widening],
-    [only termination would use them (@sec:termination)],
-    [_not required:_ abstraction function, lattice meet],
-    [no optimality claim is made; #isalocale("semantic_intersection") suffices],
+    [_not required:_ abstraction function], [no optimality claim],
+    [_not required:_ lattice meet], [#isalocale("semantic_intersection") suffices],
+    [_not required by core soundness:_ monotone transfers], [some instance interfaces impose it],
+    [_not required:_ stabilizing widening], [termination is a premise],
     table.hline(),
   ),
   placement: auto,
-  caption: [The domain contract. Each requirement is listed with the proof step
-    that uses it; the last two rows name what a domain does not need to provide.],
+  caption: [The requirements this chapter adds to the laws of $conc$ from
+    @sec:abs-int, each with the proof step that uses it. The last rows name
+    what a domain does not need to provide.],
 ) <tab:domain-contract>
 
-A domain contributes to the composition by meeting the requirements of
-@tab:domain-contract. From them follow the join bound
-(#isathm("gamma_sup_ub1")), exact unreachability of normalized lifted values
-(#isathm("normalized_state_lift_bot_iff")) and the filter contract
-(#isathm("bfilter_sound")). None of them mentions a context, an equation or a
-solver, so a domain proves them once for every configuration.
-@ch:analysis-interface turns these per-value laws into the per-edge form of
-#oblig("INTRA") and asks what else an analysis must supply at calls.
+A domain contributes to the composition by proving the laws of
+#isalocale("sound_domain") and the requirements of @tab:domain-contract. None
+of them mentions a context, an equation or a solver, so a domain proves them
+once per domain instance (and, where applicable, refinement mode) and reuses them across context policies
+and solver configurations. @ch:analysis-interface turns these per-value laws
+into the per-edge form of #oblig("INTRA") and asks what else an analysis must
+supply at calls.

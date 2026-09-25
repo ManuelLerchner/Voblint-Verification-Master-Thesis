@@ -1,4 +1,5 @@
 #import "../lib/code.typ": fixture, isaconst, isalocale, isasession, isathm, isatype, listing
+#import "../lib/figures.typ": int-axis, int-strip, printed-set
 #import "../lib/math.typ": *
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
@@ -40,17 +41,69 @@ least-upper-bound requirement of @ch:domains.
 
 == What an instance supplies
 
-A domain instance proves the laws of @tab:domain-contract for its carrier and
-supplies a branch transfer, either the generic filter of
-#isalocale("backward_domain") or the identity. The locale
-#isalocale("nonrelational_transfer") packages these pieces. Beyond the
-generic contract it assumes that the branch transfer and the abstract `min` and
-`max` are monotone (#isathm("nonrelational_transfer.br_mono"),
-#isathm("sound_special_ops.special_min_mono")). The step from
-generic to concrete is an interpretation: for each domain, one interpretation
-per context family discharges the contracts of #isalocale("routed_dg_analysis")
-(@fig:assembly), and the source-level theorem about #isaconst("run_voblint")
-is proved from these interpretations.
+A domain instance proves the laws of #isalocale("sound_domain") and of
+@tab:domain-contract for its carrier and supplies a branch transfer, either the
+generic filter of #isalocale("backward_domain") or the identity. @fig:gamma
+shows one value of each carrier and the integers it denotes.
+
+#figure(
+  {
+    set text(size: 8.5pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let (lo, hi) = (-6, 10)
+    let row(domain, value, shown: none) = {
+      let inside = printed-set(value)
+      (
+        domain,
+        if shown == none { raw(value) } else { shown },
+        ..int-strip(lo, hi, x => if inside(x) { "extra" } else { none }),
+      )
+    }
+    table(
+      columns: (auto, auto) + (auto,) * (hi - lo + 3),
+      column-gutter: (5pt, 5pt) + (0pt,) * (hi - lo + 2),
+      stroke: none,
+      inset: (x: 0.9pt, y: 1.8pt),
+      align: (left + horizon, left + horizon) + (center + horizon,) * (hi - lo + 3),
+      table.hline(stroke: 0.5pt),
+      [*domain*], [*value*], table.cell(colspan: hi - lo + 3)[*the integers it denotes*],
+      [], [], ..int-axis(lo, hi, step: 2),
+      table.hline(stroke: 0.4pt),
+      ..row([Sign], "≥0"),
+      ..row([Interval], "[-2,5]"),
+      ..row([Parity], "1+2ℤ", shown: [`1+2ℤ` (odd)]),
+      ..row([Congruence], "2+3ℤ"),
+      ..row(
+        [Int],
+        "signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+4ℤ",
+        shown: [`+`, `[1,9]`, `1+2ℤ`, `1+4ℤ`],
+      ),
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: image,
+  placement: auto,
+  caption: [One value of each shipped domain, as the analyzer prints it, and
+    the integers it denotes between $-6$ and $10$; an end cell is filled when
+    the set continues beyond the window. The Int value denotes the intersection
+    of its components' meanings, here ${1, 5, 9}$.],
+) <fig:gamma>
+
+Sign, Interval, Parity and Congruence package their transfer functions by
+interpreting the locale #isalocale("nonrelational_transfer"). Beyond soundness
+it assumes that the branch transfer, the expression evaluator and the abstract
+`min` and `max` are monotone (#isathm("nonrelational_transfer.br_mono"),
+#isathm("mono_evaluator.aval_abs_mono"),
+#isathm("mono_special_ops.special_min_mono")). Int does not interpret it,
+because its operations carry the refinement mode, and for the fixpoint mode
+no monotonicity is proved (@sec:reduced-product). No soundness theorem uses
+these monotonicity facts. They match the hypotheses of
+#isathm("routed_node_rhs_mono_eq"), which prepares the vendored least-solution
+theorem for the solver without widening, and the analyzer does not use that
+solver. The step from generic to concrete is an interpretation: for each
+domain, one interpretation per context family discharges the contracts of
+#isalocale("routed_dg_analysis") (@fig:assembly), and the source-level theorem
+about #isaconst("run_voblint") is proved from these interpretations.
 
 == One loop, five answers <sec:stride2>
 
@@ -145,7 +198,7 @@ is unreachable. Parity knows only that both are odd and answers
 #verdict("dom-crt-congruence", "21:7"). The intersection is exact
 (#isathm("gamma_intersect_congruence")).
 
-== The reduced product
+== The reduced product <sec:reduced-product>
 
 Combined, the four domains should prove facts that none proves alone. The
 carrier
@@ -182,10 +235,10 @@ Reducing after every operation, including narrowing, would break the solver's
 narrowing law, which requires $b lle a narrow b lle a$ whenever $b lle a$.
 Reduction only moves down, so the upper half survives; the lower half fails
 whenever reduction lowers the narrowed value below $b$. Take $a = ltop$ and let
-$b$ hold Sign $ltop$, interval $ivl(-1, 0)$ and even parity. Together these
-denote only zero, but Sign still says $ltop$. Componentwise narrowing returns a
+$b$ hold Sign $signval(top)$, interval $ivl(-1, 0)$ and even parity. Together these
+denote only zero, but Sign still says $signval(top)$. Componentwise narrowing returns a
 value between $b$ and $a$, and one round of reduction afterwards lowers its
-Sign component below $b$'s $ltop$. The lemma
+Sign component below $b$'s $signval(top)$. The lemma
 #isathm("post_narrow_refinement_would_violate_narrow_ge") checks this by
 evaluation.
 

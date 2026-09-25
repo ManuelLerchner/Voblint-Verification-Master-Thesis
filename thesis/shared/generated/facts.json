@@ -12,6 +12,12 @@
       "theory": "Activation_Backbone",
       "why": "Main-statements appendix: the activation-local coverage theorem."
     },
+    "bfilter_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>backward_domain intersect aval_abs tobool inv_less inv_eq inv_plus\n          inv_minus inv_times;\n s \\<in> \\<lbrakk>\\<sigma>\\<rbrakk>;\n truthy (\\<lbrakk>e\\<rbrakk>\\<^sub>e s) = res\\<rbrakk>\n\\<Longrightarrow> s \\<in> \\<lbrakk>backward_domain.bfilter intersect\n                                    aval_abs tobool inv_less inv_eq inv_plus\n                                    inv_minus inv_times e res\n                                    \\<sigma>\\<rbrakk>",
+      "theory": "Backward_Domain",
+      "why": "Chapter 5, the guard filter drops no store that passes the guard."
+    },
     "compile.simps(4)": {
       "oracles": [],
       "statement": "compile \\<Pi> p (Seq c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) =\n       compile \\<Pi> p c1.0 (Statement (n + csize c1.0)) n;\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k (n + csize c1.0)\n in (n2, en1, E1 \\<union> E2, K1 \\<union> K2))",
@@ -53,6 +59,12 @@
       "statement": "\\<lbrakk>wf_compile_input \\<G> \\<Pi> ps;\n \\<G>,compile_prog \\<Pi> ps \\<turnstile> cf \\<rightarrow>\\<^sub>c cf';\n ltr_repr \\<G> (compile_prog \\<Pi> ps) S cf t\\<rbrakk>\n\\<Longrightarrow> \\<exists>t'.\n                     ltr_repr \\<G> (compile_prog \\<Pi> ps) S cf' t'",
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
+    },
+    "intersect_shared_not_empty": {
+      "oracles": [],
+      "statement": "\\<lbrakk>semantic_intersection intersect; n \\<in> \\<gamma> a;\n n \\<in> \\<gamma> b\\<rbrakk>\n\\<Longrightarrow> \\<not> is_empty (intersect a b)",
+      "theory": "Example_Sign_Domain_Ops",
+      "why": "Chapter 5, a fact every domain gets from the laws of semantic_intersection."
     },
     "ltr_collect_eq_Union_activation_collect": {
       "oracles": [],
@@ -153,6 +165,20 @@
       "statement": "\\<lbrakk>config_terminates D rule ctx p;\n run_voblint D rule ctx p = Analysed res; chk \\<in> set (res_checks res);\n check_verdict chk = Dead\\<rbrakk>\n\\<Longrightarrow> \\<C>\\<^bsub>declared_global\n                               p,prog_cfg\n                                  p,cinit_stores (declared_global p)\\<^esub>\n                   (check_point chk) =\n                  {}",
       "theory": "Analysis_Certified",
       "why": "Unreachability endpoint cited in the introduction."
+    },
+    "sign_interface_regression": {
+      "oracles": [
+        "Code_Generator.holds_by_evaluation"
+      ],
+      "statement": "meet_sign SNonNeg SNonPos = SZero\nis_empty (meet_sign SPos SNeg)\ninv_less_sign True STop SZero = (SNeg, SZero)",
+      "theory": "Example_Sign_Domain_Ops",
+      "why": "Chapter 5, Sign's meet, emptiness test and a guard inverse, evaluated by the code generator."
+    },
+    "sign_meet_zero_not_empty": {
+      "oracles": [],
+      "statement": "\\<not> is_empty (meet_sign SNonNeg SNonPos)",
+      "theory": "Example_Sign_Domain_Ops",
+      "why": "Chapter 5, the generic intersection fact instantiated to Sign."
     },
     "source_progress": {
       "oracles": [],

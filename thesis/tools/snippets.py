@@ -24,7 +24,9 @@ from __future__ import annotations
 import argparse
 import difflib
 import re
+import subprocess
 import sys
+from functools import cache
 from pathlib import Path
 
 import tomllib
@@ -154,10 +156,35 @@ def declaration_re(name: str, commands: tuple[str, ...]) -> re.Pattern:
     )
 
 
+# Isabelle writes its own sources as `~~/src/HOL/...`. A snippet pinned there
+# is lifted from the installed distribution, so HOL classes the thesis builds on
+# are quoted from the same text the session was checked against.
+ISABELLE_PREFIX = "~~/"
+
+
+@cache
+def isabelle_home() -> Path:
+    out = subprocess.run(
+        ["isabelle", "getenv", "-b", "ISABELLE_HOME"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return Path(out.stdout.strip())
+
+
+def display_path(path: Path) -> str:
+    if path.is_relative_to(REPO):
+        return str(path.relative_to(REPO))
+    return ISABELLE_PREFIX + str(path.relative_to(isabelle_home()))
+
+
 def extract(
-    name: str, files: list[Path], pin: str | None = None
+    name: str, files: list[Path], pin: str | None = None, with_proof: bool = False
 ) -> tuple[str, Path] | None:
-    if pin:
+    if pin and pin.startswith(ISABELLE_PREFIX):
+        files = [isabelle_home() / pin.removeprefix(ISABELLE_PREFIX)]
+    elif pin:
         files = [p for p in files if str(p.relative_to(REPO)) == pin] or files
     for commands in (DEFINING, COMMANDS):
         for path in files:
@@ -168,12 +195,14 @@ def extract(
             nxt = NEXT_COMMAND.search(text, m.end())
             body = text[m.start() : nxt.start() if nxt else len(text)]
             command = m.group(0).split(None, 1)[0]
-            if command in THEOREMS:
+            # A snippet may keep a short proof when the proof is the point,
+            # such as a lemma derived in one step from a class's laws.
+            if command in THEOREMS and not with_proof:
                 body = statement_only(body)
             # A locale or class opens its context with `begin`; the reader is
             # shown the interface, not the context it opens.
             if command in ("locale", "class"):
-                body = re.sub(r"\s*\bbegin\s*$", "", body.rstrip())
+                body = re.split(r"\s*^begin\b", body, maxsplit=1, flags=re.M)[0]
             return body.rstrip() + "\n", path
     return None
 
@@ -208,19 +237,17 @@ def main() -> int:
     stale: list[str] = []
 
     for name, meta in sorted(wanted.items()):
-        found = extract(name, files, meta.get("file"))
+        found = extract(name, files, meta.get("file"), meta.get("proof", False))
         if found is None:
             missing.append(f"  {name}: no declaration found in any theory")
             continue
         body, path = found
-        header = f"(* {path.relative_to(REPO)} *)\n"
+        header = f"(* {display_path(path)} *)\n"
         text = header + body
         out = OUTDIR / f"{name}.thy"
         if args.write:
             out.write_text(text)
-            print(
-                f"snippets: wrote {out.relative_to(REPO)} from {path.relative_to(REPO)}"
-            )
+            print(f"snippets: wrote {out.relative_to(REPO)} from {display_path(path)}")
             continue
         stored = out.read_text() if out.is_file() else ""
         if stored != text:

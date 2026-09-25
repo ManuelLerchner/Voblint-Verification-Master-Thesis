@@ -2,8 +2,14 @@
 # the name has to resolve, and the extracted text is committed, so a rename
 # fails the build and an edit to a shown definition surfaces as a diff.
 
+[snippets.executable_domain]
+why = "Chapter 5, the domain interface figure: the executable operations a domain supplies."
+
 [snippets.sound_domain]
 why = "The domain interface figure: what a domain must supply and prove."
+
+[snippets.abstract_numeric_queries]
+why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
 [snippets.widening]
 why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
@@ -142,3 +148,78 @@ why = "Chapter 4, a valid trace represents a graph configuration."
 
 [snippets.cstep_preserves_ltr_repr]
 why = "Chapter 4, a graph step keeps a representing trace."
+
+[snippets.bfilter_sound]
+why = "Chapter 5, the guard filter drops no store that passes the guard."
+file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
+
+[snippets.bounded_warrowing]
+why = "Chapter 5, the solver-side class a carrier must also instantiate."
+
+[snippets.semilattice_sup]
+why = "Chapter 5, the join laws executable_domain inherits from HOL."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.order_bot]
+why = "Chapter 5, the least-element law executable_domain inherits from HOL."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.bounded_semilattice_sup_bot]
+why = "Chapter 5, the HOL order class executable_domain and bounded_warrowing extend."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.order_top]
+why = "Chapter 5, the greatest-element law executable_domain inherits from HOL."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.narrowing]
+why = "Chapter 5, the solver's narrowing operator and its laws."
+
+[snippets.warrowing]
+why = "Chapter 5, widening and narrowing combined into the solver's update class."
+file = "vendor/td-verification/Update_rules.thy"
+
+[snippets.ord]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.preorder]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.order]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.sup]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Lattices.thy"
+
+[snippets.bot]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.top]
+why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
+file = "~~/src/HOL/Orderings.thy"
+
+[snippets.backward_domain]
+why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
+
+[snippets.intersect_shared_not_empty]
+why = "Chapter 5, a fact every domain gets from the laws of semantic_intersection, with its one-line proof."
+proof = true
+
+[snippets.sign_interface_regression]
+why = "Chapter 5, Sign's meet, emptiness test and a guard inverse, evaluated by the code generator."
+proof = true
+
+[snippets.sign_meet_zero_not_empty]
+why = "Chapter 5, the generic intersection fact instantiated to Sign."
+proof = true
+
+[snippets.sound_evaluator]
+why = "Chapter 5, the forward evaluator every expression-level interface of a domain shares."
+
+[snippets.sound_truth_test]
+why = "Chapter 5, the truth test every expression-level interface of a domain shares."

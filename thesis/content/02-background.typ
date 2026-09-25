@@ -201,10 +201,7 @@ iteration from bottom eventually stabilizes @seidl12compiler[§1.5], and an
 iterate that no longer changes is the least fixpoint
 (#isathm("lfp_Kleene_iter")). Domains with infinite ascending chains need an
 extrapolation operation (@sec:widening). Voblint requires less than a complete
-lattice: the numeric interface of @ch:domains asks for a bounded join
-semilattice with a top (#isalocale("executable_domain"), over
-#isalocale("bounded_semilattice_sup_bot")), together with a
-monotone concretization (#isalocale("sound_domain"), @sec:abs-int). A solver need not compute the least fixpoint
+lattice, a bounded join semilattice with a top element (@ch:domains). A solver need not compute the least fixpoint
 either, and a widening-based solver need not return it (@sec:widening). @sec:abs-int shows why a post-fixpoint
 suffices.
 
@@ -230,10 +227,8 @@ when $l' <= l$ and $u <= u'$ (#isaconst("less_eq_ivl")). The join $[l, u] ljoin 
 [min(l, l'), max(u, u')]$ (#isaconst("sup_ivl")) is the smallest interval containing both, and may
 contain values neither operand does: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
 intersects the bounds (#isaconst("meet_ivl")). Voblint's type #isatype("ivl")
-keeps raw bound pairs: $lbot$ is #isaconst("bot_ivl") $= [infinity, -infinity]$,
-other inverted pairs also denote $emptyset$, and order and join compare
-bounds, which agrees with the description above on non-empty intervals. Its
-concretization is #isaconst("gamma_ivl") (@ch:domains).
+keeps raw bound pairs, whose order and join agree with this description on
+non-empty intervals (@sec:domain-contract).
 
 At the loop head both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
 as is every interval that contains $[0, 5]$. An analysis aims for the most
@@ -299,7 +294,7 @@ interpreters correct @nipkow12[§5.2]. Voblint follows this style, in which each
 and proves them sound against $conc$ @mine17[§2.4]. Its soundness theorem
 claims coverage and says nothing about optimal precision, so no proof needs a
 best abstraction. The concretization of an integer domain is in general infinite, so
-only the proofs use it (@ch:domains).
+only the proofs use it (@sec:engineering).
 
 For a concrete operation $f : C -> C$ and an abstract operation, or transfer
 function, $sh(f) : A -> A$, the required local property @cousot77[§6] @mine17[Def. 2.15] is
@@ -406,7 +401,7 @@ so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, infinity]$ at once. This value is a post-fixpoint without the bound $5$,
 which the program states in the loop condition `i < 5`. The branch into the body refines the head's value against the
 condition, a backward step from the guard to the stores that pass it
-(#isalocale("backward_domain")), and restricts $[0, infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
+(#isalocale("backward_domain"), @sec:branches), and restricts $[0, infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
 The body yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$ (@fig:widening).
 

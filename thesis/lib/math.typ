@@ -71,7 +71,15 @@
 #let ctxh = $italic("context")^\#$
 
 // =============================================================== domains ====
-#let signval(x) = $mono(#x)$
+// Sign values are constructors printed as +, ≥0, ...; the chip keeps them
+// apart from the operators and relations they share glyphs with.
+#let signval(x) = box(
+  fill: vb.type.lighten(90%),
+  radius: 1.5pt,
+  inset: (x: 1.5pt),
+  outset: (y: 1.5pt),
+  ctor(x),
+)
 #let ivl(a, b) = $[#a, #b]$
 
 // =============================================================== helpers ====
