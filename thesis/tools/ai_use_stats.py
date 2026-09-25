@@ -27,12 +27,13 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 OUT = REPO / "thesis" / "shared" / "generated" / "ai-use-stats.json"
 HOME = Path.home()
-# Claude Code keys projects by working directory; sessions started in a
-# subdirectory or in the companion knowledge base get their own folder.
+# Claude Code keys projects by working directory, so sessions started in a
+# subdirectory get their own folder. The sibling knowledge-base repository
+# shares the prefix and is excluded.
 CLAUDE_PROJECTS = HOME / ".claude" / "projects"
 CLAUDE_PREFIX = "-Users-manuellerchner-git-goblint-formalization"
+CLAUDE_EXCLUDED = {CLAUDE_PREFIX + "-kb"}
 CODEX_SESSIONS = HOME / ".codex" / "sessions"
-CODEX_CWD = "/git/goblint-formalization"
 BRANCHES = ["main", "writing"]
 
 AI_TRAILER = re.compile(
@@ -181,6 +182,10 @@ def _codex_meta(path: Path) -> dict | None:
     return first.get("payload", {})
 
 
+def _in_repo(cwd: str) -> bool:
+    return cwd == str(REPO) or cwd.startswith(f"{REPO}/")
+
+
 def codex_stats(paths: list[Path]) -> dict:
     sessions = assistant = human = tool_calls = shell = edits = mcp = builds = 0
     stamps: list[str] = []
@@ -226,14 +231,18 @@ def codex_stats(paths: list[Path]) -> dict:
 
 
 def main() -> None:
-    dirs = sorted(CLAUDE_PROJECTS.glob(CLAUDE_PREFIX + "*"))
+    dirs = sorted(
+        d
+        for d in CLAUDE_PROJECTS.glob(CLAUDE_PREFIX + "*")
+        if d.name not in CLAUDE_EXCLUDED
+    )
     top = sorted(f for d in dirs for f in d.glob("*.jsonl"))
     sub = sorted(f for d in dirs for f in d.glob("*/subagents/*.jsonl"))
     codex_main: list[Path] = []
     codex_sub: list[Path] = []
     for path in sorted(CODEX_SESSIONS.rglob("*.jsonl")):
         meta = _codex_meta(path)
-        if meta is None or CODEX_CWD not in meta.get("cwd", ""):
+        if meta is None or not _in_repo(meta.get("cwd", "")):
             continue
         (codex_sub if meta.get("thread_source") == "subagent" else codex_main).append(
             path
