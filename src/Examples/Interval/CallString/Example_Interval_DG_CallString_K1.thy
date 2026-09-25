@@ -394,7 +394,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
   local unknown at that key, read back into an abstract state.\<close>
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (call_context_rel_of_fun (cs_context 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 1),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule nest_1_cs.activation_collect_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])

@@ -264,7 +264,7 @@ qed
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
 
 theorem nest_2_activation_collect_sound:
-  "activation_collect nest_gs (call_context_rel_of_fun (cs_context 2)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 2),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_2_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule nest_2_cs.activation_collect_sound[unfolded nest_cfg_compile,
             OF entry_covered_2 nest_cinit_le_cinit_ivl_st])

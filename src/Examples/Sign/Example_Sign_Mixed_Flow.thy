@@ -324,7 +324,7 @@ lemma mf_cinit_sound:
   by (simp add: split_gamma_def fun_of_exec_dg_st_for_def del: fun_of_resolved_st_q_for_combine)
 
 theorem mf_activation_collect_sound:
-  "activation_collect mf_gs (call_context_rel_of_fun enterc_unit) () mf_cfg (cinit_stores mf_gs) v ()
+  "\<A>\<^bsub>mf_gs,call_context_rel_of_fun enterc_unit,(),mf_cfg,cinit_stores mf_gs\<^esub> v ()
      \<subseteq> mf_gammaM (mf_reader (Inl (v, ())))"
   using mf_snapshot
   by (intro mf_routed.activation_collect_dg_sound mf_cinit_sound) blast
@@ -371,8 +371,7 @@ theorem mf_source_sound:
 proof -
   obtain v stk t c
     where sim: "prog_table mf_program, mf_cfg \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and act: "s \<in> activation_collect mf_gs (call_context_rel_of_fun enterc_unit) ()
-                     mf_cfg (cinit_stores mf_gs) v c"
+      and act: "s \<in> \<A>\<^bsub>mf_gs,call_context_rel_of_fun enterc_unit,(),mf_cfg,cinit_stores mf_gs\<^esub> v c"
     using source_store_in_activation_collect_of_fun[OF mf_wf init run,
         of enterc_unit "()"]
     unfolding mf_cfg_def by blast

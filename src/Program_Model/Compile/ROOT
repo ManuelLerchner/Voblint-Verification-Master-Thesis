@@ -18,6 +18,9 @@ session Voblint_Compile in "." = "Voblint_CFG" +
     Residual_Edges
     Simulation_Relation
     Simulation_Preservation
+    (* Reachable source configurations of an accepted program are finished or
+       can step, with csim reused as the shape invariant. *)
+    Source_Progress
     (* Per-procedure node classification and edge locality; carries
        valid_ltr_entry_result_eq, the activation procedure-locality theorem.
        Independent of Simulation/. *)

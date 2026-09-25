@@ -773,7 +773,7 @@ lemma activation_collect_sound_of:
                   (globs (sol_env pgs p (Inr gk0)))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
-  shows "activation_collect pgs R root_ctx (prog_cfg p) (cinit_stores pgs) v ctx
+  shows "\<A>\<^bsub>pgs,R,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for pgs)
                  (reader pgs p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof -
@@ -948,8 +948,7 @@ lemmas entry_state_routed_context_comb = entry.routed_context_comb
 
 theorem entry_state_activation_collect_sound:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
-           (cinit_stores pgs) v ctx
+  shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for pgs)
                  (reader pgs p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding reader_def
@@ -972,8 +971,7 @@ text \<open>
 theorem entry_state_ltr_collect_eq_Union:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-           = (\<Union>ctx. activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
-                        (cinit_stores pgs) v ctx)"
+           = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
   by (rule ltr_collect_eq_Union_activation_of_has_context)
      (rule entry_state_has_context [OF entry_cov])
 
@@ -990,8 +988,7 @@ text \<open>
 theorem entry_state_activation_collect_sound_of_cover:
   assumes solves: "terminates pgs p"
     and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
-           (cinit_stores pgs) v ctx
+  shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for pgs)
                  (reader pgs p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule entry_state_activation_collect_sound
@@ -1004,8 +1001,7 @@ theorem entry_state_ltr_collect_eq_Union_of_cover:
   assumes solves: "terminates pgs p"
     and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-           = (\<Union>ctx. activation_collect pgs entry_context_rel root_ctx (prog_cfg p)
-                        (cinit_stores pgs) v ctx)"
+           = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
   by (rule entry_state_ltr_collect_eq_Union
         [OF solves ctx_vars_cover_edgeD [OF cover]
             ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
@@ -1034,8 +1030,7 @@ theorem fun_route_activation_collect_sound:
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
     and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx (prog_cfg p)
-           (cinit_stores pgs) v ctx
+  shows "\<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for pgs)
                  (reader pgs p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof (rule activation_collect_sound_of[OF solves entry_cov fwd_ok comb_fwd_ok])
@@ -1077,8 +1072,7 @@ text \<open>
 
 theorem fun_route_ltr_collect_eq_Union:
   "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-     = (\<Union>ctx. activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx
-                  (prog_cfg p) (cinit_stores pgs) v ctx)"
+     = (\<Union>ctx. \<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
   by (rule ltr_collect_eq_Union_activation_of_fun)
 
 theorem fun_route_activation_collect_sound_of_cover:
@@ -1086,8 +1080,7 @@ theorem fun_route_activation_collect_sound_of_cover:
   assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
     and solves: "terminates pgs p"
     and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "activation_collect pgs (call_context_rel_of_fun ctx_fun) root_ctx (prog_cfg p)
-           (cinit_stores pgs) v ctx
+  shows "\<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for pgs)
                  (reader pgs p (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
 proof (rule fun_route_activation_collect_sound

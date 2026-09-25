@@ -435,26 +435,27 @@ text \<open>The activation-sensitive collecting is the sink stores of valid trac
 
 definition activation_collect ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c
-     \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "activation_collect \<G> R startcontext g S v c =
+     \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
+    ("\<A>\<^bsub>_,_,_,_,_\<^esub>") where
+  "\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c =
      {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v
                         \<and> trace_context \<G> R startcontext g t c}"
 
 lemma activation_collect_I [intro]:
   "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t = v \<Longrightarrow> trace_context \<G> R startcontext g t c
-   \<Longrightarrow> sink_store t \<in> activation_collect \<G> R startcontext g S v c"
+   \<Longrightarrow> sink_store t \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"
   unfolding activation_collect_def by blast
 
 text \<open>Every collected state has a valid trace witness carrying the queried \<open>c\<close>.\<close>
 lemma activation_collect_E [elim]:
-  assumes "s \<in> activation_collect \<G> R startcontext g S v c"
+  assumes "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"
   obtains t where "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" "sink_node t = v"
     "trace_context \<G> R startcontext g t c" "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 
 text \<open>Under a functional policy the buckets are \<^const>\<open>key\<close>'s fibres.\<close>
 lemma activation_collect_of_fun:
-  "activation_collect \<G> (call_context_rel_of_fun f) startcontext g S v c =
+  "\<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,g,S\<^esub> v c =
      {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v \<and> key f startcontext t = c}"
   unfolding activation_collect_def
   by (auto simp: trace_context_of_fun_iff)

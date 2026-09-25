@@ -129,9 +129,9 @@ lemmas rc_entry_state_hyps =
   rc_routed_hyps rc_entry_covered[folded interval_es_rule.sol_vars_def rc_cfg_alt]
 
 theorem rc_activation_collect_sound:
-  "activation_collect rc_gs
-     (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
-     [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs) v ctx
+  "\<A>\<^bsub>rc_gs,
+     interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program,
+     [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub> v ctx
    \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
        (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding rc_cfg_alt[symmetric]
@@ -237,9 +237,9 @@ text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<o
   \<open>rc_activation_collect_sound\<close> then bounds this whole set, every context alike.\<close>
 
 corollary rc_activation_ctx_key:
-  "activation_collect rc_gs
-     (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
-     [] (compile_prog rc_pi rc_procs) (cinit_stores rc_gs)
+  "\<A>\<^bsub>rc_gs,
+     interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program,
+     [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub>
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t.
         t \<in> \<T>\<^bsub>rc_gs,compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub>

@@ -202,14 +202,14 @@ text \<open>
 
 lemma lookup_context_covers_of_activation:
   fixes r :: "('c, 'a::sound_domain abs_state) analysis_result"
-  assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. activation_collect \<G> R rc g S v c)"
-      and sound: "\<And>ctx. activation_collect \<G> R rc g S v ctx
+  assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v c)"
+      and sound: "\<And>ctx. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx
                     \<subseteq> gamma_point (lookup_context r v ctx)"
       and mem: "s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  obtains ctx st where "s \<in> activation_collect \<G> R rc g S v ctx"
+  obtains ctx st where "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx"
     and "lookup_context r v ctx = Lifted st" and "s \<in> \<lbrakk>st\<rbrakk>"
 proof -
-  from mem union obtain ctx where a: "s \<in> activation_collect \<G> R rc g S v ctx" by blast
+  from mem union obtain ctx where a: "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx" by blast
   with sound have g: "s \<in> gamma_point (lookup_context r v ctx)" by blast
   show ?thesis
   proof (cases "lookup_context r v ctx")
@@ -390,10 +390,10 @@ text \<open>
 lemma sound_table_of_activation:
   fixes r :: "('c, 'a::sound_domain abs_state) analysis_result"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
-                    \<subseteq> (\<Union>c. activation_collect (declared_global p) R rc (prog_cfg p)
-                                (cinit_stores (declared_global p)) u c)"
-      and sound: "\<And>u ctx. activation_collect (declared_global p) R rc (prog_cfg p)
-                              (cinit_stores (declared_global p)) u ctx
+                    \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
+                                cinit_stores (declared_global p)\<^esub> u c)"
+      and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
+                              cinit_stores (declared_global p)\<^esub> u ctx
                     \<subseteq> gamma_point (lookup_context r u ctx)"
       and fin: "finite_analysis_result r"
       and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"

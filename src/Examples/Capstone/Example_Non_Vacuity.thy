@@ -514,11 +514,11 @@ text \<open>
 \<close>
 
 lemma resume_keeps_context:
-  assumes s: "s \<in> activation_collect \<G> R c0 g S u ctx"
+  assumes s: "s \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> u ctx"
     and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
     and body: "intra_path g (FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)
                  (FunctionResult q, t)"
-  shows "combine_collect \<G> dst s t \<in> activation_collect \<G> R c0 g S cont ctx"
+  shows "combine_collect \<G> dst s t \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> cont ctx"
 proof -
   from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
     and cn: "sink_node caller = u" and ck: "trace_context \<G> R c0 g caller ctx"
@@ -537,7 +537,7 @@ proof -
               (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
   have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
     by (rule valid_ltr.ret [OF dv _ dn]) (use dc ce cn in simp_all)
-  have "sink_store ?r \<in> activation_collect \<G> R c0 g S (sink_node ?r) ctx"
+  have "sink_store ?r \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
 qed
@@ -583,8 +583,8 @@ text \<open>
 
 theorem total_dropped_unsound:
   "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> activation_collect (declared_global ret_prog) tot_R 0 (prog_cfg ret_prog)
-         (cinit_stores (declared_global ret_prog)) (Statement 3) 0
+     \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,
+         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3) 0
    \<and> (\<lambda>_. 0)(STR ''a'' := 1) \<notin> tot_cover (Statement 3) 0"
 proof
   let ?S = "cinit_stores (declared_global ret_prog)"
@@ -598,11 +598,10 @@ proof
     using valid_ltr.intra [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2"
                                   and s' = "\<lambda>_. 0"]
     by (simp add: ret_intra sink_node_def sink_store_def)
-  have s2: "(\<lambda>_. 0) \<in> activation_collect (declared_global ret_prog) tot_R 0 (prog_cfg ret_prog)
-              ?S (Statement 2) 0"
+  have s2: "(\<lambda>_. 0) \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 2) 0"
   proof -
     have "sink_store (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])
-            \<in> activation_collect (declared_global ret_prog) tot_R 0 (prog_cfg ret_prog) ?S
+            \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub>
                 (sink_node (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])) 0"
       by (rule activation_collect_I [OF v1 refl]) simp
     then show ?thesis by (simp add: sink_node_def sink_store_def)
@@ -617,8 +616,7 @@ proof
               (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := 1))(ret_var := 1))"
     using ret_f_body [where k = 1] by (simp add: ret_enter)
   show "(\<lambda>_. 0)(STR ''a'' := 1)
-          \<in> activation_collect (declared_global ret_prog) tot_R 0 (prog_cfg ret_prog)
-              ?S (Statement 3) 0"
+          \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 3) 0"
     using resume_keeps_context [OF s2 ce bd]
     by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
   show "(\<lambda>_. 0)(STR ''a'' := 1) \<notin> tot_cover (Statement 3) 0"

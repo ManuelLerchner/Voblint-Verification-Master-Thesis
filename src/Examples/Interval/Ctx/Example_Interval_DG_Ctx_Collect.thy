@@ -152,9 +152,9 @@ lemmas twice_entry_state_hyps =
     folded interval_es_rule.sol_vars_def twice_cfg_alt]
 
 theorem twice_activation_collect_sound:
-  "activation_collect twice_gs
-     (interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program)
-     [] (compile_prog twice_pi twice_procs) (cinit_stores twice_gs) v ctx
+  "\<A>\<^bsub>twice_gs,
+     interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program,
+     [],compile_prog twice_pi twice_procs,cinit_stores twice_gs\<^esub> v ctx
    \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for twice_gs)
        (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding twice_cfg_alt[symmetric]
