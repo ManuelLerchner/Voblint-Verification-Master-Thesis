@@ -564,33 +564,69 @@ depend on it.
 
 == Learning from a guard <sec:branches>
 
-A guard changes no variable, yet the stores that pass it satisfy it. In
+When the analysis enters a branch, it knows whether the condition held. On the
+true arm of `if (0 < x)`, for example, $x$ is positive, even though the
+condition assigns no variable. Evaluating the condition forward cannot use
+this: it only tells the analysis whether the condition may hold, not which
+values of $x$ make it hold.
 
+#let _g = claim-row("dom-guard-sign", "18:3")
 #align(center, block(width: 80%, listing(
   "x = __voblint_nondet_int();\nif (0 < x) { y = x; } else { y = 0 - x; }\n__voblint_check(y >= 0);",
   lang: "c",
   claim: "dom-guard-sign",
 )))
 
-$y$ is always $|x|$. A branch transfer that only evaluates the guard keeps
-$x = signval(top)$ in both arms, and the check is `UNKNOWN`. The inverse
-operators of #isalocale("backward_domain") (@fig:domain-carrier) use the
-guard instead: given abstract operands and the required result, they return
-refined operands. Sign refines $x$ to
-#signval("+") on the true arm and #signval("≤0") on the false arm, $y$ joins to
-#signval("≥0"),
-#let _g = claim-row("dom-guard-sign", "18:3")
-and the analyzer reports #raw(_g.verdict) with #raw(_g.state).
+In this program $y$ ends up as $|x|$, so the check always holds. With forward
+evaluation only, `0 < x` is unknown for $x = signval(top)$, both arms keep
+$x = signval(top)$, $y$ becomes #signval($top$), and the check is `UNKNOWN`.
+Backward refinement instead runs the condition in reverse, as in the backward
+analysis of Nipkow and Klein @nipkow14[Sect. 13.7.2]. Given the truth value the
+branch requires, the inverse operators of #isalocale("backward_domain") shrink
+the operands to values that can still produce it. Sign refines $x$ to
+#signval("+") on the true arm and to #signval("≤0") on the false arm. Both arms
+then give $y$ a non-negative value, the join yields $y = signval("≥0")$, and the
+analyzer reports #raw(_g.verdict) with #raw(_g.state).
 
-The intersection only has to keep every value both operands share, so it need
-not be the lattice meet, and the carrier need not have a meet at all. For
-intervals, #isaconst("intersect_ivl") maps $[1, 2]$ and $[5, 6]$ to the
-canonical bottom (#isathm("interval_intersect_of_witness_bot")), while the
-greatest lower bound in the raw bound order is the inverted pair $[5, 2]$.
+The function #isaconst("bfilter") performs this refinement. It takes a
+condition, the required truth value and a state, and returns the refined state.
+It follows the structure of the condition (@tab:bfilter) and hands arithmetic
+operands to #isaconst("afilter"), which refines a state so that an expression
+evaluates within a required abstract value. Both are defined once, generically
+for every backward domain.
 
-The generic filters #isaconst("afilter") and #isaconst("bfilter") push these
-requirements through an expression once for every domain. A filter may keep
-stores that fail the guard, but it drops none that pass it.
+#figure(
+  table(
+    columns: 2,
+    align: (left, left),
+    stroke: none,
+    table.hline(),
+    [*condition*], [*refinement*],
+    table.hline(stroke: 0.5pt),
+    [$e_1 < e_2$, $e_1 <= e_2$, $e_1 > e_2$, $e_1 >= e_2$],
+    [both operands by the inverse of $<$],
+    [$e_1 = e_2$, $e_1 != e_2$], [both operands by the inverse of $=$],
+    [`!b`], [`b` with the opposite truth value],
+    [`b1 && b2` true, `b1 || b2` false], [`b1`, then `b2`],
+    [`b1 && b2` false, `b1 || b2` true], [each feasible alternative, then join],
+    [any other $e$], [$e$ to non-zero or zero],
+    table.hline(stroke: 0.5pt),
+    [variable $x$ (#isaconst("afilter"))], [intersect with the required value],
+    [$e_1 + e_2$, $e_1 - e_2$, $e_1 times e_2$], [both operands by the inverse operator],
+    [any other expression], [unchanged],
+    table.hline(),
+  ),
+  kind: table,
+  placement: auto,
+  caption: [How #isaconst("bfilter") refines a state for each form of
+    condition (top), and how #isaconst("afilter") refines it for each form of
+    arithmetic operand (bottom).],
+) <tab:bfilter>
+
+Refinement is a matter of precision, not soundness. A branch that ignores its
+condition keeps every incoming store, and that is already sound. What the
+filter must guarantee is that it never removes a store that satisfies the
+condition. It may keep stores that fail it.
 
 #block(breakable: false)[
   #theorem(name: [Sound guard filter], isa: "bfilter_sound")[
@@ -601,13 +637,15 @@ stores that fail the guard, but it drops none that pass it.
   #proved("bfilter_sound")
 ]
 
-For a true disjunction, #isaconst("bfilter") filters each alternative
-separately, drops one that the forward test #isaconst("feasible") rejects, and
-joins the rest. An arm can still become empty by backward refinement, so
-#isaconst("bfilter_lifted") normalizes each arm to #ctor("Bot") before the join
-and avoids the leak of @fig:domain-reachability. In the example of
-@sec:constraints, the guard refinement of $h$ by $[-infinity, 4]$, written
-there with the interval meet, stands for this filter.
+A disjunction needs one more step. For a true `a || b`, #isaconst("bfilter")
+refines each alternative separately, drops one that the forward test
+#isaconst("feasible") rejects, and joins the rest. An alternative can also
+become empty only during refinement, as both do in
+@fig:domain-reachability. #isaconst("bfilter_lifted") therefore normalizes
+each alternative to #ctor("Bot") before the join, which keeps that branch dead.
+The guard refinement of $h$ by $[-infinity, 4]$ in the example of
+@sec:constraints, written there with the interval meet, stands for this
+filter.
 
 == Asking instead of assuming <sec:queries>
 
