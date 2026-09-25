@@ -298,12 +298,13 @@ tree with three parts.
   #isalocale("numeric_domain") adds $conc$ with the laws that turn the solver's
   inequalities into inclusions. A _numeric domain_ is a type of this class.
 - *Forward interface.* Assignments, branches and checks evaluate expressions
-  over abstract states. Their soundness reduces to one statement per
+  over abstract states, as in the generic abstract interpreter of Nipkow and
+  Klein @nipkow14[Sect. 13.5.2]. Their soundness reduces to one statement per
   expression: the abstract result contains every concrete result, which
   #isalocale("sound_evaluator") requires. #isalocale("sound_truth_test") rules out a branch whose condition is certainly zero or certainly non-zero.
 - *Backward domain.* A guard such as $x < 10$ tells the analysis more about $x$
   on each branch, but forward evaluation only yields the guard's truth value.
-  Inverse operators run the other way: they refine the operands of a
+  Inverse operators @nipkow14[Sect. 13.7.1] run the other way: they refine the operands of a
   comparison or an arithmetic operation to values that still contain every
   concrete pair producing the required result.
   #isalocale("semantic_intersection") combines the result with what was known,
@@ -329,8 +330,11 @@ state type through the same locale, and every shipped domain instantiates it at
 the pointwise states. The numeric queries that decide checks (@sec:queries)
 are a further forward operation outside this interface.
 
-The intersection need not be the lattice meet, and the carrier need not have a
-meet at all (@sec:branches).
+Nipkow and Klein require the carrier of their backward analysis to be a lattice
+whose meet is precise, $conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$
+@nipkow14[Sect. 13.7]. Voblint's #isalocale("semantic_intersection") asks only
+for the inclusion $conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2))$ that the backward analysis uses. The intersection need not be the
+lattice meet, and the carrier need not have a meet at all (@sec:branches).
 
 
 
