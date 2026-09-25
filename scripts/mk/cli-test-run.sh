@@ -25,4 +25,13 @@ if [ "$test_status" -ne 0 ]; then
   exit "$test_status"
 fi
 
+if [ "$source_mismatch" -ne 0 ]; then
+  cat >&2 <<'EOF'
+cli-test: FAILED although every regression case passed.
+codegen/generated/.source-hash does not match the current theories, so the
+tested OCaml may not be the code the theories export. Regenerate and commit it:
+  pixi run codegen
+  git add codegen/generated/
+EOF
+fi
 exit "$source_mismatch"
