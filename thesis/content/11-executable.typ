@@ -85,7 +85,7 @@ at run time. A class holding both the operations of a domain and its
 concretization would put the concretization into every dictionary, and a
 function into sets of integers, such as the residue class of a congruence, has
 no executable code equation in general. The domain classes therefore split
-(@fig:domain-contract): #isalocale("executable_domain") holds the runtime
+(@fig:domain-carrier): #isalocale("executable_domain") holds the runtime
 operations and #isalocale("numeric_domain") adds the concretization and its
 laws. The executable pipeline mentions only the former. The solver asks for
 less: #isalocale("bounded_semilattice_sup_bot") and #isalocale("warrowing"),

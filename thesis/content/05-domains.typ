@@ -98,97 +98,8 @@ contexts nor the solver, and names the laws it omits on purpose.
 == The domain interface <sec:domain-contract>
 
 A domain must supply the operations the analysis computes with and the laws
-that connect them to $conc$. Voblint states them in three layers. The carrier
-type of abstract values instantiates a hierarchy of type classes: order classes
-from Isabelle's HOL library, two classes of Voblint's own
-(@fig:domain-contract) and the update classes of the vendored solver. Over that
-carrier, a forward interface evaluates expressions and tests truth
-(@fig:forward-contract), and a backward domain refines values at guards
-(@fig:backward-contract). Every expression-level use of a domain builds on the
-same forward interface, so a domain proves its laws once and the transfer
-functions, the guard filters and the check layer reuse them.
-@fig:domain-carrier shows every operation and law of the three layers in the class or locale that declares it.
-
-#block(breakable: false)[
-  #definition(name: [Numeric domain], isa: "numeric_domain", cmd: "class")[
-    A numeric domain is an executable join semilattice of abstract integers
-    with a concretization into sets of integers that respects its order, its
-    bottom, its top and its emptiness test.
-  ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6.2pt)
-      thy("executable_domain")
-      thy("numeric_domain")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declarations of #isalocale("executable_domain") and
-      #isalocale("numeric_domain"), lifted from the theory. The lattice classes
-      appear as the sort of #raw("'a") because the solver's #isalocale("widening") and
-      #isalocale("narrowing") constrain their type variable to #isalocale("order")
-      instead of extending it, and a class built on them must do the same to use
-      $lbot$ and $ltop$. The sort still makes them superclasses.],
-  ) <fig:domain-contract>
-]
-
-#definition(name: [Forward interface], isa: "sound_evaluator", cmd: "locale")[
-  A sound evaluator maps an expression and an abstract state to an abstract
-  value that contains the expression's value in every store the state
-  describes. A sound truth test may answer that every value an abstract value
-  denotes is non-zero, or that every one is zero.
-]
-
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("sound_evaluator")
-    thy("sound_truth_test")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declarations of the forward evaluator
-    #isalocale("sound_evaluator") and the truth test #isalocale("sound_truth_test"),
-    lifted from the theory.],
-) <fig:forward-contract>
-
-The evaluator is stated over any state type $d$ together with a parameter
-#isai("\<gamma>\<^sub>S") that gives the set of stores #isai("\<gamma>\<^sub>S d") a
-state describes. The numeric domains instantiate it with their pointwise
-abstract states and their state concretization, which @sec:domain-states
-defines. The check layer states its evaluator requirement over an arbitrary
-state type through the same locale, and every shipped domain instantiates it at
-the pointwise states. The numeric queries that decide checks (@sec:queries)
-are a further forward operation outside this definition.
-
-#block(breakable: false)[
-  #definition(name: [Backward domain], isa: "backward_domain", cmd: "locale")[
-    A backward domain extends the forward interface with an intersection that
-    keeps every value both operands admit and with inverse operators that refine
-    the operands of a comparison or an arithmetic operation to values that still
-    contain every concrete pair producing the required result.
-  ]
-]
-
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("semantic_intersection")
-    thy("backward_domain")
-  },
-  kind: image,
-  placement: none,
-  caption: [The declarations of #isalocale("semantic_intersection") and
-    #isalocale("backward_domain"), which combines the intersection and the
-    forward interface with the inverse operators, lifted from the theory.],
-) <fig:backward-contract>
-
-The inverse operators form a locale, while $conc$ is a class operation, because
-Int has one sound backward interpretation per reduction policy
-#isatype("refine_mode") (@ch:instances). A class would allow only one
-instance per type. The intersection need not be the lattice meet, and the
-carrier need not have a meet at all (@sec:branches).
+that connect them to $conc$. @fig:domain-carrier draws them as one inheritance
+tree with three parts.
 
 // Everything a domain supplies, as a UML inheritance tree. Each node is a
 // class or locale read from its lifted declaration and lists only the members
@@ -293,7 +204,7 @@ carrier need not have a meet at all (@sec:branches).
     let box-of(d) = {
       let rows = (
         table.cell(colspan: 2, fill: vb.at(d.origin).lighten(82%), align: center, text(
-          size: 6.4pt,
+          size: 5.8pt,
           isalocale(d.name),
         )),
       )
@@ -314,7 +225,7 @@ carrier need not have a meet at all (@sec:branches).
       }
       // Styled inside, so that `measure` sees the size the node is drawn at.
       let t = {
-        set text(size: 5.6pt)
+        set text(size: 5pt)
         set par(justify: false, leading: 0.4em)
         show: isabelle-scripts
         table(columns: 2, stroke: none, inset: (x: 2.5pt, y: 1.2pt), align: left + top, ..rows)
@@ -342,7 +253,7 @@ carrier need not have a meet at all (@sec:branches).
       let h = calc.max(..row.keys().map(n => measure(boxes.at(n)).height))
       // Physical coordinates grow upwards.
       for (n, x) in row { at.insert(n, (x * size.width, -(y + h / 2))) }
-      y += h + 13pt
+      y += h + 6pt
     }
     let hollow = (inherit: "stealth", stealth: 0, fill: white, size: 7)
     diagram(
@@ -368,16 +279,60 @@ carrier need not have a meet at all (@sec:branches).
     )
   }),
   kind: image,
-  placement: auto,
-  caption: [Everything a domain supplies over its carrier type #raw("'a"), as a
-    UML inheritance tree. Each class (solid) or locale (dashed) lists the
-    operations and laws it declares, not the theorems it derives; a solid arrow
-    points to a declaration it extends, a dashed one to the class its type
-    variable is constrained to. The colour gives where each node is declared:
-    #swatch(vb.hol) Isabelle's HOL library, #swatch(vb.solver) the
-    vendored solver, #swatch(vb.voblint) Voblint. Nodes and arrows are read from
-    the declarations.],
+  placement: top,
+  caption: [What a domain supplies over its carrier type #raw("'a"). Each
+    class (solid) or locale (dashed) lists the operations and laws it declares.
+    Solid arrows point to what a declaration extends, dashed ones to the class
+    its type variable is constrained to. Colour gives where a node is declared:
+    #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
+    #swatch(vb.voblint) Voblint. Read from the declarations.],
 ) <fig:domain-carrier>
+
+- *Carrier classes.* The solver compares, joins, widens and narrows abstract
+  values, and the proof must read each solved value as a set of integers. Isabelle's HOL library supplies the order in
+  which the solver's inequalities are stated, the join that merges control
+  flow, and the bounds $lbot$ and $ltop$. The solver's own classes supply the
+  widening $widen$ and the narrowing $narrow$ it applies at loop heads.
+  #isalocale("executable_domain") adds an emptiness test, so that the analysis
+  can discard a state no store reaches, and a printer for reporting results.
+  #isalocale("numeric_domain") adds $conc$ with the laws that turn the solver's
+  inequalities into inclusions. A _numeric domain_ is a type of this class.
+- *Forward interface.* Assignments, branches and checks evaluate expressions
+  over abstract states. Their soundness reduces to one statement per
+  expression: the abstract result contains every concrete result, which
+  #isalocale("sound_evaluator") requires. #isalocale("sound_truth_test") rules out a branch whose condition is certainly zero or certainly non-zero.
+- *Backward domain.* A guard such as $x < 10$ tells the analysis more about $x$
+  on each branch, but forward evaluation only yields the guard's truth value.
+  Inverse operators run the other way: they refine the operands of a
+  comparison or an arithmetic operation to values that still contain every
+  concrete pair producing the required result.
+  #isalocale("semantic_intersection") combines the result with what was known,
+  and #isalocale("backward_domain") adds both to the forward interface.
+
+The forward interface and the backward domain are locales rather than classes
+because a carrier type can carry several of them: Int has one backward interpretation per reduction policy
+(@ch:instances), and an evaluator relates a state type to a value type, which a
+single-parameter type class cannot express. The locales therefore constrain
+their carrier to #isalocale("numeric_domain"), the dashed arrows in
+@fig:domain-carrier, instead of extending it. Every expression-level use of a domain builds on the same forward interface, so a
+domain proves its laws once and the transfer functions, the guard filters and
+the check layer reuse them.
+
+
+
+The evaluator is stated over any state type $d$ together with a parameter
+#isai("\<gamma>\<^sub>S") that gives the set of stores #isai("\<gamma>\<^sub>S d") a
+state describes. The numeric domains instantiate it with their pointwise
+abstract states and their state concretization, which @sec:domain-states
+defines. The check layer states its evaluator requirement over an arbitrary
+state type through the same locale, and every shipped domain instantiates it at
+the pointwise states. The numeric queries that decide checks (@sec:queries)
+are a further forward operation outside this interface.
+
+The intersection need not be the lattice meet, and the carrier need not have a
+meet at all (@sec:branches).
+
+
 
 
 The HOL classes fix the order structure (@fig:domain-carrier). #isalocale("ord") fixes $lle$ and $<$,
@@ -390,9 +345,13 @@ a least element $lbot$ and a greatest element $ltop$. On top of this,
 #isalocale("warrowing"), which brings the widening $widen$ and the narrowing
 $narrow$, and adds the emptiness test #isaconst("is_empty") and the printer
 #isaconst("to_string"). This completes what the solver and the generated code
-compute with. #isalocale("numeric_domain") adds $conc$ and its
-laws (@fig:domain-contract). Generated code never needs $conc$
-(@sec:engineering).
+compute with. #isalocale("numeric_domain") adds $conc$ and its laws.
+Generated code never needs $conc$ (@sec:engineering). In the theory the
+lattice classes enter #isalocale("executable_domain") as the sort of its type
+variable. The solver's #isalocale("widening") and #isalocale("narrowing")
+constrain their type variable to #isalocale("order") instead of extending it,
+and a class built on them must do the same to use $lbot$ and $ltop$. Isabelle
+still records the lattice classes as superclasses, and the tree draws them so.
 
 
 The law #isathm("gamma_mono") is the one that turns each certified inequality
@@ -648,7 +607,7 @@ A guard changes no variable, yet the stores that pass it satisfy it. In
 
 $y$ is always $|x|$. A branch transfer that only evaluates the guard keeps
 $x = signval(top)$ in both arms, and the check is `UNKNOWN`. The inverse
-operators of #isalocale("backward_domain") (@fig:backward-contract) use the
+operators of #isalocale("backward_domain") (@fig:domain-carrier) use the
 guard instead: given abstract operands and the required result, they return
 refined operands. Sign refines $x$ to
 #signval("+") on the true arm and #signval("≤0") on the false arm, $y$ joins to
