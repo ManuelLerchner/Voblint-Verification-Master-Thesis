@@ -74,9 +74,10 @@ fun lookup name =
       [nth (Global_Theory.get_thms thy base)
          (the (Int.fromString (unsuffix ")" idx)) - 1)]
   | _ => Global_Theory.get_thms thy name);
+(* A lemma may state several facts at once; each prints on its own line. *)
 fun statement name =
   Print_Mode.setmp [] (fn () =>
-    plain (Thm.pretty_thm ctxt (the_single (lookup name)))) ();
+    cat_lines (map (plain o Thm.pretty_thm ctxt) (lookup name))) ();
 val out = TextIO.openOut "{outfile}";
 val sep = str (Char.chr 31) and rec_sep = str (Char.chr 30);
 (* The qualified name starts with the theory that proves the fact; the
