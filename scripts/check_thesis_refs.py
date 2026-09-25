@@ -219,6 +219,18 @@ def build_inventory() -> tuple[
                 if target.startswith("HOL/") and kind != "any":
                     kinds[name].add(kind)
 
+    # Without an Isabelle installation the HOL sources are not readable. The
+    # committed link map was generated from HOL's rendered theories and records
+    # every HOL entity the thesis links, with its kind, so it stands in for them.
+    if not home:
+        links = REPO / "thesis" / "shared" / "generated" / "links.json"
+        if links.is_file():
+            data = json.loads(links.read_text(encoding="utf-8"))
+            for key, target in data.get("links", data).items():
+                kind, _, name = key.partition(":")
+                if target.startswith("HOL/") and kind != "any":
+                    kinds[name].add(kind)
+
     # Theory names, so a figure that labels a node with a theory is not
     # mistaken for one naming a declaration that does not exist.
     theories: set[str] = {
