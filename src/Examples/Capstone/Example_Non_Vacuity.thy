@@ -115,16 +115,16 @@ qed
 text \<open>The source run, stopped with the first check about to execute.\<close>
 
 lemma nv_to_check:
-  "star (pstep (declared_global nv_prog) (prog_table nv_prog))
-     (main_body (prog_table nv_prog), \<lambda>_. 0, [])
+  "declared_global nv_prog, prog_table nv_prog \<turnstile>
+     (main_body (prog_table nv_prog), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
      (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
         (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
 proof -
-  have "star (pstep (declared_global nv_prog) (prog_table nv_prog))
+  have "declared_global nv_prog, prog_table nv_prog \<turnstile>
           (VIMP_Proc.com.Seq
              (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
                 (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
-             (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, [])
+             (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
           (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
     using psteps_Seq2 [OF nv_calls] by (meson Seq1 star.step star.refl star_trans)
   then show ?thesis unfolding nv_main by (rule psteps_Seq2)
@@ -149,14 +149,14 @@ theorem nv_source_certified:
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved),
           (Statement 5, Decided Check_Proved)]
-   \<and> csim (prog_table nv_prog) (prog_cfg nv_prog)
+   \<and> prog_table nv_prog, prog_cfg nv_prog \<turnstile>
        (VIMP_Proc.com.Seq
           (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
           (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, [])
+        nv_final, []) \<approx>
        (v, nv_final, stk)
-   \<and> nv_final \<in> ltr_collect (declared_global nv_prog) (prog_cfg nv_prog)
-                   (cinit_stores (declared_global nv_prog)) v
+   \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
+                   cinit_stores (declared_global nv_prog)\<^esub> v
    \<and> analysis_result_covers
        Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog v nv_final
    \<and> checks_sound_at res v nv_final"
@@ -178,10 +178,10 @@ text \<open>
 theorem nv_check_proved_sound:
   "\<exists>res. run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog = Analysed res
      \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
-          \<and> nv_final \<in> ltr_collect (declared_global nv_prog) (prog_cfg nv_prog)
-                          (cinit_stores (declared_global nv_prog)) (check_point chk)
+          \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
+                          cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
-          \<and> truthy (aval (Eq (V (STR ''a'')) (N 6)) nv_final))"
+          \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
 proof -
   obtain res where ans: "run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog
                            = Analysed res"
@@ -195,10 +195,10 @@ proof -
   obtain chk
     where listed: "chk \<in> set (res_checks res)"
       and re: "check_exp chk = Eq (V (STR ''a'')) (N 6)"
-      and mem: "nv_final \<in> ltr_collect (declared_global nv_prog) (prog_cfg nv_prog)
-                              (cinit_stores (declared_global nv_prog)) (check_point chk)"
+      and mem: "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
+                              cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)"
       and pr: "check_verdict chk = Decided Check_Proved
-                 \<longrightarrow> truthy (aval (Eq (V (STR ''a'')) (N 6)) nv_final)"
+                 \<longrightarrow> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final)"
     by auto
   have "(check_point chk, check_verdict chk)
           \<in> set [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
@@ -240,8 +240,8 @@ lemma nv_dead_terminates:
      (simp only: interval_rule.root_query_def, eval)
 
 theorem nv_dead_unreached:
-  "ltr_collect (declared_global nv_dead_prog) (prog_cfg nv_dead_prog)
-     (cinit_stores (declared_global nv_dead_prog)) (Statement 3) = {}"
+  "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
+     cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
 proof -
   obtain res where ans: "run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog
                            = Analysed res"
@@ -281,8 +281,8 @@ text \<open>
 
 lemma nv_dead_reaches_first_check:
   "(\<lambda>_. 0)(STR ''x'' := 1)
-     \<in> ltr_collect (declared_global nv_dead_prog) (prog_cfg nv_dead_prog)
-         (cinit_stores (declared_global nv_dead_prog)) (Statement 1)"
+     \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
+         cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 1)"
 proof -
   have intra: "intra (prog_cfg nv_dead_prog) =
      {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
@@ -296,13 +296,13 @@ proof -
     unfolding prog_cfg_def by eval
   have entry: "cfg_entry (prog_cfg nv_dead_prog) = FunctionEntry (STR ''main'')"
     by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
-  have e0: "(\<lambda>_. 0) \<in> ltr_collect (declared_global nv_dead_prog) (prog_cfg nv_dead_prog)
-              (cinit_stores (declared_global nv_dead_prog)) (FunctionEntry (STR ''main''))"
+  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
+              cinit_stores (declared_global nv_dead_prog)\<^esub> (FunctionEntry (STR ''main''))"
     using ltr_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global nv_dead_prog)"
                                "declared_global nv_dead_prog" "prog_cfg nv_dead_prog"]
     by (simp add: entry cinit_stores_def)
-  have s0: "(\<lambda>_. 0) \<in> ltr_collect (declared_global nv_dead_prog) (prog_cfg nv_dead_prog)
-              (cinit_stores (declared_global nv_dead_prog)) (Statement 0)"
+  have s0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
+              cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 0)"
     by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: intra)
   show ?thesis
@@ -381,7 +381,7 @@ lemma ret_no_globals: "declared_global ret_prog = (\<lambda>_. False)"
 
 lemma ret_enter:
   "call_enter (declared_global ret_prog) (CallEdge dst [STR ''n''] [e]) s
-     = (\<lambda>_. 0)(STR ''n'' := aval e s)"
+     = (\<lambda>_. 0)(STR ''n'' := \<lbrakk>e\<rbrakk>\<^sub>e s)"
   by (simp add: ret_no_globals call_enter_CallEdge enter_binding_def enter_frame_def fun_eq_iff)
 
 text \<open>The policy of the illustration: the callee context is the entry value of \<open>n\<close>.\<close>
@@ -465,16 +465,16 @@ qed
 
 lemma ret_reaches_second_call:
   "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> ltr_collect (declared_global ret_prog) (prog_cfg ret_prog)
-         (cinit_stores (declared_global ret_prog)) (Statement 3)"
+     \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
+         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3)"
 proof -
-  have e0: "(\<lambda>_. 0) \<in> ltr_collect (declared_global ret_prog) (prog_cfg ret_prog)
-              (cinit_stores (declared_global ret_prog)) (FunctionEntry (STR ''main''))"
+  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
+              cinit_stores (declared_global ret_prog)\<^esub> (FunctionEntry (STR ''main''))"
     using ltr_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global ret_prog)"
                                "declared_global ret_prog" "prog_cfg ret_prog"]
     by (simp add: ret_entry cinit_stores_def)
-  have s2: "(\<lambda>_. 0) \<in> ltr_collect (declared_global ret_prog) (prog_cfg ret_prog)
-              (cinit_stores (declared_global ret_prog)) (Statement 2)"
+  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
+              cinit_stores (declared_global ret_prog)\<^esub> (Statement 2)"
     by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: ret_intra)
   have ce: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
@@ -500,8 +500,8 @@ text \<open>
 
 theorem return_at_caller_context_unsound:
   "(\<lambda>_. 0)(STR ''a'' := 1)
-     \<in> ltr_collect (declared_global ret_prog) (prog_cfg ret_prog)
-         (cinit_stores (declared_global ret_prog)) (Statement 3)
+     \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
+         cinit_stores (declared_global ret_prog)\<^esub> (Statement 3)
    \<and> (\<Union>c. ret_cover (Statement 3) c) = {}"
   using ret_reaches_second_call by (simp add: ret_cover_def)
 

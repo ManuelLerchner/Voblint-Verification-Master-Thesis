@@ -110,7 +110,7 @@ text \<open>
 
 lemma gamma_state_case_eq_point:
   fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "gamma_state (case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st) = gamma_point x"
+  shows "\<lbrakk>case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = gamma_point x"
   by (cases x) (simp_all add: gamma_point_def)
 
 lemma gamma_point_canonicalize:
