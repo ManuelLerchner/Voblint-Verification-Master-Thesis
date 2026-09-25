@@ -15,8 +15,10 @@ hand-written copies would drift from each other and from the theories, so
 
 It recognizes only the declaration shapes the table uses: a mixfix on a
 top-level `definition`/`fun`/`inductive`/`inductive_set`/`abbreviation`, a
-mixfix on a class parameter, and an `abbreviation` inside a named locale. Any
-other shape fails with the file and line instead of being guessed at.
+mixfix or infix on a class parameter (also in the vendored solver), a mixfix on
+a record field, a mixfix on a locale parameter, and an `abbreviation` inside a
+named locale. Any other shape fails with the file and line instead of being
+guessed at.
 
 Output: `thesis/shared/generated/notation.json` (read by the appendix), and the
 generated blocks between `notation:begin`/`notation:end` markers in README.md
@@ -58,6 +60,8 @@ GLOBAL_COMMANDS = "definition|fun|inductive|inductive_set|abbreviation"
 TYPE = r'::\s*"[^"]*"'
 # `("mixfix")` or `("mixfix" [51, 51] 50)`.
 MIXFIX = r'\(\s*"([^"]*)"[^)"]*\)'
+# `(infixl "sym" 65)`: the mixfix `_ sym _`.
+INFIX = r'\(\s*infix[lr]?\s+"([^"]*)"\s*\d+\s*\)'
 
 
 class NotationError(ValueError):
@@ -112,11 +116,15 @@ def scope_at(text: str, pos: int) -> str:
 # ------------------------------------------------------- declarations
 
 
-def _texts() -> list[tuple[Path, str]]:
+def _texts(vendor: bool = False) -> list[tuple[Path, str]]:
     files = theory_files()
     if not files:
         raise NotationError("no .thy files -- is vendor/td-verification checked out?")
-    return [(p, p.read_text(errors="ignore")) for p in files if "/src/" in str(p)]
+    return [
+        (p, p.read_text(errors="ignore"))
+        for p in files
+        if "/src/" in str(p) or (vendor and "/vendor/" in str(p))
+    ]
 
 
 def _mentions(name: str, texts) -> str:
@@ -172,7 +180,7 @@ def find_global(name: str, texts, want_mixfix: bool) -> dict:
 
 def find_class_param(name: str, cls: str, texts) -> dict:
     head = re.compile(rf"^class\s+{re.escape(cls)}\b", re.M)
-    fix = re.compile(rf"\bfixes\s+{re.escape(name)}\s*{TYPE}\s*{MIXFIX}")
+    fix = re.compile(rf"\bfixes\s+{re.escape(name)}\s*{TYPE}\s*(?:{MIXFIX}|{INFIX})")
     for path, text in texts:
         h = head.search(text)
         if not h:
@@ -187,7 +195,7 @@ def find_class_param(name: str, cls: str, texts) -> dict:
             )
         return {
             "declaration": f"class {cls}",
-            "mixfix": m[1],
+            "mixfix": m[1] if m[1] is not None else f"_ {m[2]} _",
             "scope": "global",
             "pretty_printed": True,
             "path": path,
@@ -195,6 +203,66 @@ def find_class_param(name: str, cls: str, texts) -> dict:
             "pos": m.start(),
         }
     raise NotationError(f"{name}: no class {cls}")
+
+
+def _block(text: str, start: int) -> int:
+    """The end of the top-level command starting at `start`."""
+    nxt = re.compile(r"^\S", re.M).search(text, text.index("\n", start) + 1)
+    return nxt.start() if nxt else len(text)
+
+
+def find_record_field(name: str, record: str, texts) -> dict:
+    head = re.compile(
+        rf"^record\s+(?:\([^)]*\)\s*|'\w+\s+)?{re.escape(record)}\s*=", re.M
+    )
+    field = re.compile(rf"^\s+{re.escape(name)}\s*{TYPE}\s*{MIXFIX}", re.M)
+    for path, text in texts:
+        h = head.search(text)
+        if not h:
+            continue
+        m = field.search(text, h.end(), _block(text, h.start()))
+        if not m:
+            raise NotationError(
+                f"{name}: record {record} at {where(path, text, h.start())} has no "
+                f'field `{name} :: "..." ("...")`'
+            )
+        return {
+            "declaration": f"record {record}",
+            "mixfix": m[1],
+            "scope": "global",
+            "pretty_printed": True,
+            "path": path,
+            "text": text,
+            "pos": m.start(),
+        }
+    raise NotationError(f"{name}: no record {record}")
+
+
+def find_locale_param(name: str, locale: str, texts) -> dict:
+    head = re.compile(rf"^locale\s+{re.escape(locale)}\s*=", re.M)
+    param = re.compile(
+        rf"\b(?:fixes|for|and)\s+{re.escape(name)}\s*(?:{TYPE}\s*)?{MIXFIX}"
+    )
+    for path, text in texts:
+        h = head.search(text)
+        if not h:
+            continue
+        m = param.search(text, h.end(), _block(text, h.start()))
+        if not m:
+            raise NotationError(
+                f"{name}: locale {locale} at {where(path, text, h.start())} has no "
+                f'parameter `{name} ("...")`'
+            )
+        return {
+            "declaration": f"locale {locale}",
+            "mixfix": m[1],
+            "scope": locale,
+            "pretty_printed": True,
+            "path": path,
+            "text": text,
+            "pos": m.start(),
+        }
+    raise NotationError(f"{name}: no locale {locale}")
 
 
 LOCAL_ABBREV = r"^[ \t]*abbreviation(\s*\(input\))?\s+{name}\b(?:\s*{type})?(?:\s*{mixfix})?\s*where\s*\"([^\"]*)\""
@@ -349,11 +417,13 @@ def resolve_links(
 # ----------------------------------------------------------------- build
 
 
-def form_record(decl: dict, const: str, key: str, symbol: str) -> dict:
+def form_record(
+    decl: dict, const: str, key: str, symbol: str, kind: str = "const"
+) -> dict:
     theory = decl["path"].stem
     rec = {
         "const": const,
-        "cite": {"kind": "const", "name": key},
+        "cite": {"kind": kind, "name": key},
         "symbol": symbol,
         "mixfix": decl["mixfix"],
         "declaration": decl["declaration"],
@@ -369,6 +439,7 @@ def form_record(decl: dict, const: str, key: str, symbol: str) -> dict:
 
 def build(manifest: dict, lenient: bool) -> tuple[dict, list[str]]:
     texts = _texts()
+    solver_texts = _texts(vendor=True)
     groups = manifest["groups"]
     entries = []
     for n, raw in enumerate(manifest["entry"], 1):
@@ -395,12 +466,22 @@ def build(manifest: dict, lenient: bool) -> tuple[dict, list[str]]:
             )
         for f in raw.get("forms", []):
             const, args = f["const"], f.get("args", [])
+            cite_kind = "const"
             if "locale" in f:
                 decl = find_local(const, f["locale"], texts)
                 key = f"{f['locale']}.{const}"
                 entry["kind"] = "locale_abbreviation"
+            elif "parameter_of" in f:
+                # A locale parameter has no entity of its own; it links to its locale.
+                decl = find_locale_param(const, f["parameter_of"], texts)
+                key, cite_kind = f["parameter_of"], "locale"
+                entry["kind"] = "notation"
+            elif "record" in f:
+                decl = find_record_field(const, f["record"], texts)
+                key = const
+                entry["kind"] = "notation"
             elif "class" in f:
-                decl = find_class_param(const, f["class"], texts)
+                decl = find_class_param(const, f["class"], solver_texts)
                 key = const
                 entry["kind"] = "notation"
             else:
@@ -409,7 +490,9 @@ def build(manifest: dict, lenient: bool) -> tuple[dict, list[str]]:
                 key = const
                 entry["kind"] = "named" if named else "notation"
             entry["forms"].append(
-                form_record(decl, const, key, fill(decl["mixfix"], const, args))
+                form_record(
+                    decl, const, key, fill(decl["mixfix"], const, args), cite_kind
+                )
             )
         if "local" in raw:
             loc = raw["local"]
@@ -441,13 +524,13 @@ def build(manifest: dict, lenient: bool) -> tuple[dict, list[str]]:
     ]
     cites = list(
         dict.fromkeys(
-            [("const", f["cite"]["name"]) for f in forms]
+            [(f["cite"]["kind"], f["cite"]["name"]) for f in forms]
             + [("locale", f["scope"]) for f in forms if f["scope"] != "global"]
         )
     )
     links, problems, drift = resolve_links(cites, lenient)
     for f in forms:
-        href = links.get(("const", f["cite"]["name"]))
+        href = links.get((f["cite"]["kind"], f["cite"]["name"]))
         f["href"] = href
         if f["scope"] != "global":
             f["scope_href"] = links.get(("locale", f["scope"]))
