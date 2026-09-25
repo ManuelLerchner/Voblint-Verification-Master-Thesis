@@ -149,7 +149,7 @@ arises. @sec:eval-threats collects the threats to the evaluation.
   (@sec:eval-absent).
 + *Shared unknowns.* The analysis soundness contract admits a single global
   name (@sec:sound-core). The selectable analyses keep program globals in the
-  flow-sensitive local state, and the flow-insensitive placement is proved sound for every program at the level of the analysis contract (#isathm("ownership_split_lift_core_sound")), but end to end only for one program, whose routing obligations are evaluated (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
+  flow-sensitive local state, and the flow-insensitive placement is proved sound for every program at the level of the analysis soundness contract (#isathm("ownership_split_lift_contract")), but end to end only for one program, whose routing obligations are evaluated (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
 + *Coverage of the configuration space.* Every shipped entry operation
   answers a call with one alternative, so admission at several contexts is
   exercised outside #isaconst("run_voblint") only, and the relational witness

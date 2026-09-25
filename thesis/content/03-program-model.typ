@@ -330,11 +330,12 @@ caller waits while its callee runs. It also has to say how a #keyw("return")
 skips the rest of the callee's body. VIMP keeps the remaining work inside the command and saves
 only data on a stack.
 
-#definition(name: [Source configuration], isa: "pstep", cmd: "inductive")[
-  A configuration is a triple $(c, s, italic("frs"))$ of the command that
+#definition(name: [Source execution], isa: "pstep", cmd: "inductive")[
+  A source configuration is a triple $(c, s, italic("frs"))$ of the command that
   remains to run, a store $s$, and a list $italic("frs")$ of
   #isatype("frame") values for the suspended activations. Each frame records
-  the caller's store and the variable, if any, that receives the result.
+  the caller's store and the variable, if any, that receives the result. The
+  step relation #isaconst("pstep") relates a configuration to its successor.
 ]
 
 #figure(

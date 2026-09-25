@@ -41,7 +41,7 @@ least-upper-bound requirement of @ch:domains.
 
 == What an instance supplies
 
-A domain instance proves the laws of #isalocale("sound_domain") and of
+A domain instance proves the laws of #isalocale("numeric_domain") and of
 @tab:domain-contract for its carrier and supplies a branch transfer, either the
 generic filter of #isalocale("backward_domain") or the identity. @fig:gamma
 shows one value of each carrier and the integers it denotes.
@@ -260,7 +260,7 @@ $(x, y)$ asserts $x <= y$; the order is reverse inclusion. No function from
 variables to abstract integers appears in the carrier.
 
 The specification #isaconst("rel_order_spec") discharges the analysis soundness
-contract #isalocale("sound_dg_spec_core") of the numeric analyses without any
+contract #isalocale("analysis_contract") of the numeric analyses without any
 change to the framework, because the contract already ranges over arbitrary
 local and shared carriers with a joint concretization (@ch:analysis-interface).
 On `if (x < y) { z = 1; } else { z = 0; }` with $x$ and $y$ unconstrained,

@@ -190,7 +190,7 @@ covers every configuration.
 
 _Evidence: machine-checked._ A domain instance proves facts about integers,
 none of which mentions a context, a routing policy or a solver, and generic
-results lift them to the analysis contract #isalocale("sound_dg_spec_core")
+results lift them to the analysis soundness contract #isalocale("analysis_contract")
 (@ch:instances). The routing
 obligations are discharged once for all domains
 (#isathm("activation_collect_dg_sound")). The solver is consumed only through
