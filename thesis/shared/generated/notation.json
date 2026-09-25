@@ -30,12 +30,12 @@
           },
           "symbol": "\\<gamma> a",
           "mixfix": "\\<gamma>",
-          "declaration": "class sound_domain",
+          "declaration": "class numeric_domain",
           "scope": "global",
           "pretty_printed": true,
           "theory": "Abstract_Domain",
           "file": "src/Abstract_Interpreter/Domain/Abstract_Domain.thy",
-          "href": "Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.sound_domain_class.gamma%7Cconst",
+          "href": "Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst",
           "session": "Voblint_Domain"
         }
       ],
@@ -225,6 +225,281 @@
           "file": "src/Program_Model/Compile/Simulation/Simulation_Relation.thy",
           "href": "Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst",
           "session": "Voblint_Compile"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dgs_skip",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the _op_ transfer of specification _S_",
+      "meaning": "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to",
+      "forms": [
+        {
+          "const": "dgs_skip",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_skip"
+          },
+          "symbol": "skip\\<^sup># S",
+          "mixfix": "skip\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_assign",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_assign"
+          },
+          "symbol": "assign\\<^sup># S",
+          "mixfix": "assign\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_special",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_special"
+          },
+          "symbol": "special\\<^sup># S",
+          "mixfix": "special\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_branch",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_branch"
+          },
+          "symbol": "branch\\<^sup># S",
+          "mixfix": "branch\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_body",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_body"
+          },
+          "symbol": "body\\<^sup># S",
+          "mixfix": "body\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_return",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_return"
+          },
+          "symbol": "return\\<^sup># S",
+          "mixfix": "return\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_event",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_event"
+          },
+          "symbol": "event\\<^sup># S",
+          "mixfix": "event\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "dgs_enter",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the call-boundary transfers of specification _S_",
+      "meaning": "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result",
+      "forms": [
+        {
+          "const": "dgs_enter",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_enter"
+          },
+          "symbol": "enter\\<^sup># S",
+          "mixfix": "enter\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_combine_env",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_combine_env"
+          },
+          "symbol": "combine_env\\<^sup># S",
+          "mixfix": "combine'_env\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst",
+          "session": "Voblint_Framework"
+        },
+        {
+          "const": "dgs_combine_assign",
+          "cite": {
+            "kind": "const",
+            "name": "dgs_combine_assign"
+          },
+          "symbol": "combine_assign\\<^sup># S",
+          "mixfix": "combine'_assign\\<^sup>#",
+          "declaration": "record dg_spec",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "DG_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "combine_collect_abs",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the abstract return of _σe_ into _σc_",
+      "meaning": "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination",
+      "forms": [
+        {
+          "const": "combine_collect_abs",
+          "cite": {
+            "kind": "const",
+            "name": "combine_collect_abs"
+          },
+          "symbol": "combine\\<^sup># \\<G> dst \\<sigma>c \\<sigma>e",
+          "mixfix": "combine\\<^sup>#",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Transfer_Algebra",
+          "file": "src/Abstract_Interpreter/Framework/State/Transfer_Algebra.thy",
+          "href": "Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "routed_context_base_hetero",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the computed callee context",
+      "meaning": "the routing policy's abstract context function: the callee context the equations compute from an abstract entry value",
+      "forms": [
+        {
+          "const": "route",
+          "cite": {
+            "kind": "locale",
+            "name": "routed_context_base_hetero"
+          },
+          "symbol": "context\\<^sup>#",
+          "mixfix": "context\\<^sup>#",
+          "declaration": "locale routed_context_base_hetero",
+          "scope": "routed_context_base_hetero",
+          "pretty_printed": true,
+          "theory": "Routed_Context",
+          "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "widen",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "_a_ widened by _b_, _a_ narrowed by _b_",
+      "meaning": "the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_",
+      "forms": [
+        {
+          "const": "widen",
+          "cite": {
+            "kind": "const",
+            "name": "widen"
+          },
+          "symbol": "a \\<nabla> b",
+          "mixfix": "_ \\<nabla> _",
+          "declaration": "class widening",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Update_rules",
+          "file": "vendor/td-verification/Update_rules.thy",
+          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.widening_class.widen%7Cconst",
+          "session": "Voblint_Domain"
+        },
+        {
+          "const": "narrow",
+          "cite": {
+            "kind": "const",
+            "name": "narrow"
+          },
+          "symbol": "a \\<Delta> b",
+          "mixfix": "_ \\<Delta> _",
+          "declaration": "class narrowing",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Update_rules",
+          "file": "vendor/td-verification/Update_rules.thy",
+          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst",
+          "session": "Voblint_Domain"
         }
       ],
       "local": null
@@ -585,6 +860,62 @@
     },
     {
       "kind": "const",
+      "name": "dgs_skip"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_assign"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_special"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_branch"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_body"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_return"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_event"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_enter"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_env"
+    },
+    {
+      "kind": "const",
+      "name": "dgs_combine_assign"
+    },
+    {
+      "kind": "const",
+      "name": "combine_collect_abs"
+    },
+    {
+      "kind": "locale",
+      "name": "routed_context_base_hetero"
+    },
+    {
+      "kind": "const",
+      "name": "widen"
+    },
+    {
+      "kind": "const",
+      "name": "narrow"
+    },
+    {
+      "kind": "const",
       "name": "declared_global"
     },
     {
@@ -638,10 +969,6 @@
     {
       "kind": "locale",
       "name": "ltr_coverage"
-    },
-    {
-      "kind": "locale",
-      "name": "routed_context_base_hetero"
     },
     {
       "kind": "locale",
