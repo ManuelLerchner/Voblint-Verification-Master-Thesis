@@ -163,14 +163,19 @@ ISABELLE_PREFIX = "~~/"
 
 
 @cache
-def isabelle_home() -> Path:
-    out = subprocess.run(
-        ["isabelle", "getenv", "-b", "ISABELLE_HOME"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return Path(out.stdout.strip())
+def isabelle_home() -> Path | None:
+    """The Isabelle distribution, or None where Isabelle is not installed."""
+    try:
+        out = subprocess.run(
+            ["isabelle", "getenv", "-b", "ISABELLE_HOME"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    home = Path(out.stdout.strip())
+    return home if home.is_dir() else None
 
 
 def display_path(path: Path) -> str:
@@ -236,7 +241,16 @@ def main() -> int:
     missing: list[str] = []
     stale: list[str] = []
 
+    # HOL's sources change only with the Isabelle release, so a job without
+    # Isabelle leaves them to the jobs that have it instead of failing.
+    skipped: list[str] = []
     for name, meta in sorted(wanted.items()):
+        if (
+            str(meta.get("file", "")).startswith(ISABELLE_PREFIX)
+            and isabelle_home() is None
+        ):
+            skipped.append(name)
+            continue
         found = extract(name, files, meta.get("file"), meta.get("proof", False))
         if found is None:
             missing.append(f"  {name}: no declaration found in any theory")
@@ -276,7 +290,12 @@ def main() -> int:
             )
         return 1
 
-    print(f"snippets: {len(wanted)} snippet(s) match the theories")
+    print(f"snippets: {len(wanted) - len(skipped)} snippet(s) match the theories")
+    if skipped:
+        print(
+            f"snippets: {len(skipped)} HOL snippet(s) not re-extracted without Isabelle: "
+            + ", ".join(skipped)
+        )
     return 0
 
 

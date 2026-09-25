@@ -655,18 +655,6 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
-      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
-      # resolved against the command that declares it, so a rename in the
-      # theories fails here instead of leaving the thesis describing something
-      # that no longer exists. Reads .thy sources directly -- no Isabelle.
-      - name: Thesis references resolve against the theories (no build needed)
-        run: pixi run thesis-refs
-
-      # Declarations the thesis shows are lifted out of the theories by name.
-      # Text extraction only, so this catches an edited definition without
-      # waiting for Isabelle.
-      - name: Thesis snippets match the theories (no build needed)
-        run: pixi run thesis-snippets
 
       # The Goblint comparison appendix is generated from the explainer's
       # alignment rows; the committed JSON must match the page.
@@ -694,6 +682,20 @@ jobs:
           git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
+
+      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
+      # resolved against the command that declares it, so a rename in the
+      # theories fails here instead of leaving the thesis describing something
+      # that no longer exists. Reads .thy sources directly -- no Isabelle; HOL
+      # names resolve through the committed link map. Needs td-verification.
+      - name: Thesis references resolve against the theories (no build needed)
+        run: pixi run thesis-refs
+
+      # Declarations the thesis shows are lifted out of the theories by name.
+      # Text extraction only, so this catches an edited definition without
+      # waiting for Isabelle. HOL snippets are left to the jobs that have it.
+      - name: Thesis snippets match the theories (no build needed)
+        run: pixi run thesis-snippets
 
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
