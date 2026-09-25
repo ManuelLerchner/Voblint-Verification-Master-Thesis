@@ -95,7 +95,7 @@ contexts nor the solver, and names the laws it omits on purpose.
     parity figure of @nipkow14[Fig. 13.5].],
 ) <fig:sign-conc>
 
-== The domain contract <sec:domain-contract>
+== The domain interface <sec:domain-contract>
 
 A domain must supply the operations the analysis computes with and the laws
 that connect them to $conc$. Voblint states them in three layers. The carrier
@@ -364,12 +364,12 @@ mathematical integers under the current
 bounded by the range of the integer kind; @app:goblint-alignment discusses this
 difference.
 
-The contract has no abstraction function, because Voblint makes no claim of
+The interface has no abstraction function, because Voblint makes no claim of
 optimal precision (@sec:abs-int). Termination is a premise of the main theorem
 (@sec:termination), so widening need not stabilize. Monotonicity is a separate
 layer of every interface: #isalocale("mono_evaluator"),
 #isalocale("mono_truth_test") and #isalocale("mono_intersection") add it to the
-sound versions. The transfer-soundness contracts of @ch:analysis-interface and
+sound versions. The analysis soundness contract (@sec:sound-core) and
 the solver's partial-correctness theorem (@sec:td) use none of these layers.
 The refined backward domain #isalocale("backward_domain_refined") and the
 transfer interface of @ch:instances impose them, and therefore prove more than
@@ -606,7 +606,7 @@ there with the interval meet, stands for this filter.
 == Asking instead of assuming <sec:queries>
 
 A branch assumes its condition. A check must decide whether the current
-description already implies it. The filtering contract alone cannot decide
+description already implies it. The backward domain alone cannot decide
 this: a sound filter may keep stores that fail the condition, so filtering does
 not show that the original state implied it. A domain therefore also answers
 comparison queries with definitely true, definitely false or unknown
