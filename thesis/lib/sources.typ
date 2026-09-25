@@ -85,7 +85,7 @@
 }
 
 /// The notation a declaration gives a constant, read from its lifted source
-/// text: `mixfix("sound_domain", "gamma")` is the symbol the theory declares.
+/// text: `mixfix("numeric_domain", "gamma")` is the symbol the theory declares.
 #let mixfix(snippet, const) = {
   let src = read("/shared/generated/snippets/" + snippet + ".thy")
   let m = src.match(regex(

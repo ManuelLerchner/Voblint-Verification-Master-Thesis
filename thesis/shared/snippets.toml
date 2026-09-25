@@ -5,7 +5,7 @@
 [snippets.executable_domain]
 why = "Chapter 5, the domain interface figure: the executable operations a domain supplies."
 
-[snippets.sound_domain]
+[snippets.numeric_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
 [snippets.abstract_numeric_queries]
@@ -103,7 +103,7 @@ why = "Figure gallery: the theorem-statement example."
 [snippets.combine_env]
 why = "Figure gallery example."
 
-[snippets.sound_dg_spec_core]
+[snippets.analysis_contract]
 why = "Figure gallery example."
 
 [snippets.ltr]

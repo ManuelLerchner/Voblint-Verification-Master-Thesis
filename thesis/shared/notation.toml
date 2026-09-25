@@ -114,13 +114,27 @@ group = "operator"
 reads = "the _op_ transfer of specification _S_"
 meaning = "the edge transfers of a D/G specification, one field per program construct, each named after the Goblint {Spec} method it answers to"
 forms = [
-  { const = "dgs_skip", record = "dg_spec", args = ["S"] },
-  { const = "dgs_assign", record = "dg_spec", args = ["S"] },
-  { const = "dgs_special", record = "dg_spec", args = ["S"] },
-  { const = "dgs_branch", record = "dg_spec", args = ["S"] },
-  { const = "dgs_body", record = "dg_spec", args = ["S"] },
-  { const = "dgs_return", record = "dg_spec", args = ["S"] },
-  { const = "dgs_event", record = "dg_spec", args = ["S"] },
+  { const = "dgs_skip", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_assign", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_special", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_branch", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_body", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_return", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_event", record = "dg_spec", args = [
+    "S",
+  ] },
 ]
 
 [[entry]]
@@ -128,9 +142,15 @@ group = "operator"
 reads = "the call-boundary transfers of specification _S_"
 meaning = "entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result"
 forms = [
-  { const = "dgs_enter", record = "dg_spec", args = ["S"] },
-  { const = "dgs_combine_env", record = "dg_spec", args = ["S"] },
-  { const = "dgs_combine_assign", record = "dg_spec", args = ["S"] },
+  { const = "dgs_enter", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_combine_env", record = "dg_spec", args = [
+    "S",
+  ] },
+  { const = "dgs_combine_assign", record = "dg_spec", args = [
+    "S",
+  ] },
 ]
 
 [[entry]]
@@ -157,8 +177,14 @@ group = "operator"
 reads = "_a_ widened by _b_, _a_ narrowed by _b_"
 meaning = "the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_"
 forms = [
-  { const = "widen", class = "widening", args = ["a", "b"] },
-  { const = "narrow", class = "narrowing", args = ["a", "b"] },
+  { const = "widen", class = "widening", args = [
+    "a",
+    "b",
+  ] },
+  { const = "narrow", class = "narrowing", args = [
+    "a",
+    "b",
+  ] },
 ]
 
 [[entry]]
