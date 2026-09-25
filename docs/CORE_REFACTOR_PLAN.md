@@ -157,7 +157,7 @@ what a later phase deletes.
 | # | Step | Status |
 | --- | --- | --- |
 | 0.1 | Move `type_synonym pp = cfg_node` from `Abstract_Domain` to `CFG_Def`; drop `Abstract_Domain`'s `CFG_Def` import. | landed |
-| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Constraint_Programs`'s `Exec_St` and `Exec_Placement` imports. | landed |
+| 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Constraint_Programs`'s `Exec_St` and `Exec_Placement` imports. (`bounded_warrowing` has since been folded into `executable_domain`.) | landed |
 | 0.3 | Move the `se_constraint_holds` block (`Constraint_System` 1008-1053: definition, two `[dest]` halves, `part_post_solution_imp_se_constraint_holds`, `part_post_solution_iff_se_constraint_holds`) to a new `Solver/Strategy_Tree/Post_Solution.thy` importing `Strategy_Tree_Rhs`. Repoint `Context_Refinement`. | landed |
 | 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
 | 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Result_Normalization`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |

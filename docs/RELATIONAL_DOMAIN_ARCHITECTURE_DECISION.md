@@ -1158,7 +1158,10 @@ checks by name, not the raw sort intersection, and Isabelle does not
 compose that registration automatically from the two separate instances —
 needs its own `instance relc :: bounded_warrowing ..` line, one line, easy
 to forget, silently blocks the whole pipeline with a sort-mismatch error
-until found.
+until found. (Since retired: `bounded_warrowing` is gone, `executable_domain`
+now includes `warrowing`, and the solver-state types spell the sort
+`{bounded_semilattice_sup_bot, warrowing}` directly, so `relc` needs no extra
+line.)
 
 ### The comparison, computed
 

@@ -2341,8 +2341,10 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
             solver finds the widening points itself, on meeting an unknown that is already being
             computed, and warrows every local unknown that sits at one, whichever
             <a href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype">rule</a>
-            a run picks for the globals. A domain joins in by instantiating
-            <a href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.bounded_warrowing%7Cclass"><code>bounded_warrowing</code></a>.
+            a run picks for the globals. A domain joins in through
+            <a href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.executable_domain%7Cclass"><code>executable_domain</code></a>,
+            which includes the solver's
+            <a href="Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.warrowing%7Cclass"><code>warrowing</code></a> class.
             Step through it below.
           </p>
         </div>
