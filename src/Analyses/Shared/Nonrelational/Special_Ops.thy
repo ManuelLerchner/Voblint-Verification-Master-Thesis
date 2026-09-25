@@ -1,5 +1,5 @@
 theory Special_Ops
-  imports "Voblint_Framework.Transfer_Algebra"
+  imports "Voblint_Framework.Transfer_Algebra" "Voblint_Domain.Forward_Domain"
 begin
 
 section \<open>Generic special-call dispatch\<close>
@@ -23,21 +23,26 @@ record 'a special_ops =
   special_min :: "'a => 'a => 'a"
   special_max :: "'a => 'a => 'a"
 
-locale sound_special_ops =
-  fixes ops :: "'a::sound_domain special_ops"
-    and ev  :: "exp => (vname => 'a) => 'a"
+locale sound_special_ops = sound_evaluator gamma_state ev
+  for ops :: "'a::sound_domain special_ops"
+    and ev  :: "exp => 'a abs_state => 'a" +
   assumes special_min_sound[intro]:
     "i \<in> \<gamma> p \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> min i j \<in> \<gamma> (special_min ops p q)"
   assumes special_max_sound[intro]:
     "i \<in> \<gamma> p \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> max i j \<in> \<gamma> (special_max ops p q)"
+
+text \<open>
+  Monotonicity is a separate layer, as for the evaluator and the backward
+  operations: soundness of the special calls needs none of it.
+\<close>
+
+locale mono_special_ops = sound_special_ops + mono_evaluator gamma_state ev +
   assumes special_min_mono[intro]:
     "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
   assumes special_max_mono[intro]:
     "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
-  assumes ev_sound[intro]:
-    "(\<forall>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (ev e \<sigma>)"
-  assumes ev_mono[intro]:
-    "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
+
+context sound_special_ops
 begin
 
 definition special_transfer ::
@@ -74,8 +79,6 @@ lemma special_transfer_sound:
   assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
   shows "s(x := v) \<in> \<lbrakk>special_transfer sc x \<sigma>\<rbrakk>"
 proof -
-  from \<G> have V: "\<forall>z. s z \<in> \<gamma> (\<sigma> z)"
-    unfolding gamma_state_def by simp
   show ?thesis
   proof (cases sc)
     case Nondet_Int
@@ -83,17 +86,22 @@ proof -
   next
     case (Min a b)
     with sr have "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from V have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
-      using ev_sound by blast+
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
+      by (rule aval_abs_sound)+
     ultimately show ?thesis using Min \<G> by auto
   next
     case (Max a b)
     with sr have "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from V have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
-      using ev_sound by blast+
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
+      by (rule aval_abs_sound)+
     ultimately show ?thesis using Max \<G> by auto
   qed
 qed
+
+end
+
+context mono_special_ops
+begin
 
 lemma special_transfer_mono:
   assumes le: "sigma1 \<le> sigma2"
@@ -105,13 +113,13 @@ next
   case (Min a b)
   have "special_min ops (ev a sigma1) (ev b sigma1)
           \<le> special_min ops (ev a sigma2) (ev b sigma2)"
-    using le by (intro special_min_mono ev_mono)
+    using le by (intro special_min_mono aval_abs_mono)
   with le Min show ?thesis unfolding le_fun_def by auto
 next
   case (Max a b)
   have "special_max ops (ev a sigma1) (ev b sigma1)
           \<le> special_max ops (ev a sigma2) (ev b sigma2)"
-    using le by (intro special_max_mono ev_mono)
+    using le by (intro special_max_mono aval_abs_mono)
   with le Max show ?thesis unfolding le_fun_def by auto
 qed
 

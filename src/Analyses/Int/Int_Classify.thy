@@ -108,12 +108,7 @@ global_interpretation int_check_domain:
     and int_check_query = int_check_domain.check_query
     and int_classify_check = int_check_domain.classify_check
     and int_checks_proven = int_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "int_dom abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD by blast
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom_fixpoint e \<sigma>)" using aval_int_dom_sound by simp
-qed
+  by unfold_locales (rule sound_evaluator.aval_abs_sound[OF int_dom_sound_evaluator])
 
 text \<open>
   Only the consumer-facing aliases get a short Int-prefixed name, the same choice

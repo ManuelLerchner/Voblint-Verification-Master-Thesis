@@ -1,5 +1,5 @@
 theory Backward_Domain
-  imports Nonrelational_Reachability "Voblint_VIMP.VIMP_Expr"
+  imports Nonrelational_Reachability Forward_Domain
 begin
 
 section \<open>Refining an abstract state against a guard\<close>
@@ -37,28 +37,44 @@ locale semantic_intersection =
     "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (intersect a b)"
 
 text \<open>
+  The intersection has the same layers as the forward operations: soundness
+  above, and two properties the solver-facing filters need on top of it.  A
+  reductive intersection never goes above its operands, which bounds each
+  refinement step; a monotone one keeps the filters monotone.
+\<close>
+
+locale reductive_intersection = semantic_intersection +
+  assumes intersect_reductive1[intro]: "intersect a b \<le> a"
+    and intersect_reductive2[intro]: "intersect a b \<le> b"
+
+locale mono_intersection = semantic_intersection +
+  assumes intersect_mono[intro]:
+    "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
+
+text \<open>
   Extends @{class sound_domain} with the infrastructure for backward
   (inverse) evaluation of guards and arithmetic expressions. Per-domain:
-  provide a @{locale semantic_intersection} instance, \<open>aval_abs\<close>, and \<open>inv_*\<close>
+  provide a @{locale semantic_intersection} instance, the forward operations of
+  @{locale sound_evaluator} and @{locale sound_truth_test}, and \<open>inv_*\<close>
   operators; the generic afilter / bfilter and their soundness theorems
-  follow by induction.
+  follow by induction.  A domain that already interpreted the forward locales
+  (through its expression domain) is not asked for their laws again.
 \<close>
 
 locale backward_domain =
-  semantic_intersection intersect
-    for intersect :: "'a::sound_domain => 'a => 'a" +
+  semantic_intersection intersect + sound_evaluator gamma_state aval_abs
+    + sound_truth_test tobool
+    for intersect :: "'a::sound_domain => 'a => 'a"
+    and aval_abs :: "exp => 'a abs_state => 'a"
+    and tobool :: "'a => bool option" +
   fixes
-    aval_abs  :: "exp => 'a abs_state => 'a"
-    and tobool :: "'a => bool option"
-    and inv_less  :: "bool => 'a => 'a => 'a * 'a"
+    inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
     and inv_minus :: "'a => 'a => 'a => 'a * 'a"
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
-      aval_abs_sound[intro]:
-      "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e \<sigma>)"
-  and inv_less_sound:
+      inv_less_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
   and inv_eq_sound:
@@ -73,8 +89,6 @@ locale backward_domain =
   and inv_times_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
-  and tobool_sound:
-      "tobool p = Some b \<Longrightarrow> i \<in> \<gamma> p \<Longrightarrow> truthy i = b"
 begin
 
 text \<open>

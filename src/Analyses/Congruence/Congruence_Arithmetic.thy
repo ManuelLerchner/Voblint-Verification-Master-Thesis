@@ -842,9 +842,9 @@ interpretation congruence_arith: expression_domain_mono
                         congruence_plus_mono congruence_minus_mono congruence_times_mono congruence_div_mono congruence_mod_mono
                         congruence_lt_sound congruence_eqb_sound
                         congruence_tobool_sound[unfolded truthy_def])
-  apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence])
-  apply (blast intro: congruence_eqb_mono[unfolded is_empty_congruence])
-  apply (blast intro: congruence_tobool_mono[unfolded is_empty_congruence])
+  apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence]
+                      congruence_eqb_mono[unfolded is_empty_congruence]
+                      congruence_tobool_mono[unfolded is_empty_congruence])+
   done
 
 end

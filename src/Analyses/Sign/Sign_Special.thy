@@ -120,11 +120,10 @@ where
 definition sign_special_ops :: "sign special_ops" where
   "sign_special_ops = (| special_min = sign_min, special_max = sign_max |)"
 
-interpretation sign_special: sound_special_ops sign_special_ops aval_sign
+interpretation sign_special: mono_special_ops sign_special_ops aval_sign
   by unfold_locales
      (auto simp: sign_special_ops_def gamma_sign_top
-           intro: sign_min_sound sign_max_sound sign_min_combine_mono sign_max_combine_mono
-                  aval_sign_sound aval_sign_mono)
+           intro: sign_min_sound sign_max_sound sign_min_combine_mono sign_max_combine_mono)
 
 lemma sign_special_ops_min [simp]: "special_min sign_special_ops = sign_min"
   by (simp add: sign_special_ops_def)

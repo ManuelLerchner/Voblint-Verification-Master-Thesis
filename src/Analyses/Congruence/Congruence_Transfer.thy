@@ -88,8 +88,7 @@ proof -
     by unfold_locales
        (auto simp: congruence_min_mono congruence_max_mono
              intro: congruence_min_sound congruence_max_sound
-                    congruence_arith.aval_dom_sound[unfolded gamma_abs_congruence]
-                    congruence_arith.aval_dom_mono
+                    congruence_arith.aval_abs_sound[unfolded gamma_abs_congruence]
                     branch_congruence_sound branch_congruence_mono)
   show "n_aval congruence_ops = aval_congruence" by simp
   show "n_special congruence_ops = congruence_special_ops" by simp

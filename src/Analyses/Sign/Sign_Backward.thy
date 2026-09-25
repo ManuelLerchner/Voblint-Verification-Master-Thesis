@@ -316,11 +316,6 @@ global_interpretation sign_backward_domain:
     and sign_eq_true_of_less = sign_backward_domain.eq_true
     and sign_eq_false_of_intersection = sign_backward_domain.eq_false
 proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
-  assume H: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  have H': "\<forall>x. s x \<in> \<gamma> (\<sigma> x)" using gamma_stateD[OF H] by blast
-  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_sign e \<sigma>)"
-    using aval_sign_sound[of s \<sigma> e] H' by simp
 qed (use sign_tobool_mono in \<open>simp_all add: meet_sign_sound inv_less_sign_sound
        inv_eq_sign_sound inv_conservative_def sign_tobool_sound meet_sign_mono aval_sign_mono
        inv_less_sign_mono inv_eq_sign_mono meet_sign_le1 meet_sign_le2\<close>)

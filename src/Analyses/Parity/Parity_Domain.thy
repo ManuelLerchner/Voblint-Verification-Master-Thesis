@@ -428,12 +428,12 @@ interpretation parity_arith: expression_domain_mono
                         parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
                         sup_parity_def
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
-  apply (blast intro: parity_lt_mono[unfolded is_empty_parity])
-  apply (blast intro: parity_eqb_mono[unfolded is_empty_parity])
-  apply (blast intro: parity_tobool_mono[unfolded is_empty_parity])
+  apply (blast intro: parity_lt_mono[unfolded is_empty_parity]
+                      parity_eqb_mono[unfolded is_empty_parity]
+                      parity_tobool_mono[unfolded is_empty_parity])+
   done
 
-lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
+lemmas aval_parity_sound = parity_arith.aval_abs_sound[unfolded gamma_abs_parity]
 lemmas aval_parity_mono = parity_arith.aval_dom_mono
 
 end

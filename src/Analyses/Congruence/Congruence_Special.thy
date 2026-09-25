@@ -70,7 +70,7 @@ lemma congruence_special_ops_min [simp]: "special_min congruence_special_ops = c
 lemma congruence_special_ops_max [simp]: "special_max congruence_special_ops = congruence_max"
   by (simp add: congruence_special_ops_def)
 
-interpretation congruence_special: sound_special_ops congruence_special_ops aval_congruence
+interpretation congruence_special: mono_special_ops congruence_special_ops aval_congruence
 proof unfold_locales
   fix i j :: int and p q :: congruence
   assume "i \<in> \<gamma> p" and "j \<in> \<gamma> q"
@@ -93,16 +93,6 @@ next
   then show "special_max congruence_special_ops p1 q1
                \<le> special_max congruence_special_ops p2 q2"
     by (simp add: congruence_max_mono)
-next
-  fix s :: store and \<sigma> :: "vname \<Rightarrow> congruence" and e :: exp
-  assume "\<forall>x. s x \<in> \<gamma> (\<sigma> x)"
-  then show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_congruence e \<sigma>)"
-    by (rule congruence_arith.aval_dom_sound)
-next
-  fix \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> congruence" and e :: exp
-  assume "\<sigma>1 \<le> \<sigma>2"
-  then show "aval_congruence e \<sigma>1 \<le> aval_congruence e \<sigma>2"
-    by (rule congruence_arith.aval_dom_mono)
 qed
 
 fun special_congruence ::
