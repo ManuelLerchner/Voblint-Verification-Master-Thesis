@@ -18,8 +18,8 @@ roots = [
 rows = [
   { ord = 0.36 },
   { preorder = 0.36 },
-  { bot = 0.048, top = 0.155, order = 0.36, sup = 0.6 },
-  { order_bot = 0.058, order_top = 0.18, widening = 0.82 },
+  { bot = 0.048, top = 0.17, order = 0.37, sup = 0.6 },
+  { order_bot = 0.058, order_top = 0.205, widening = 0.82 },
   { semilattice_sup = 0.42, narrowing = 0.68 },
   { bounded_semilattice_sup_bot = 0.11, warrowing = 0.9 },
   { executable_domain = 0.32 },
