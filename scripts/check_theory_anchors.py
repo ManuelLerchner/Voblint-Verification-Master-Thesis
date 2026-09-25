@@ -95,7 +95,8 @@ def main() -> int:
         m = THEORY_LINK.match(path)
         if not m or not fragment:
             continue
-        theory = m.group("theory")
+        # A session-qualified theory (`TD.Update_rules`) renders its ids under the base name.
+        theory = m.group("theory").rsplit(".", 1)[-1]
         name = fragment.split("|", 1)[0]
         if not name.startswith(f"{theory}."):
             problems.append(

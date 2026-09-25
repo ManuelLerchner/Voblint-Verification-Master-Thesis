@@ -20,8 +20,6 @@ text \<open>
   \<open>parity_enter_st_for_commute\<close> for entry.
 \<close>
 
-instance parity :: bounded_warrowing ..
-
 text \<open>The state a run starts in: a declared global holds \<open>PEven\<close>, a local \<open>PTop\<close>.\<close>
 
 abbreviation cinit_parity_st :: "parity resolved_st_q" where

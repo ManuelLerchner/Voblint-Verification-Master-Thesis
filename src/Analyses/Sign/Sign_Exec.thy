@@ -7,8 +7,6 @@ begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
 
-instance sign :: bounded_warrowing ..
-
 text \<open>The state a run starts in: a declared global holds \<open>SZero\<close>, a local \<open>STop\<close>.\<close>
 
 abbreviation cinit_sign_st :: "sign resolved_st_q" where

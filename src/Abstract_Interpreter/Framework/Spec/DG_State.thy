@@ -109,7 +109,8 @@ lemma DG_le_DG [simp]:
   shows "DG d g \<le> DG d' g' \<longleftrightarrow> d \<le> d' \<and> g \<le> g'"
   by (simp add: less_eq_dg_state_def)
 
-instantiation dg_state :: (bounded_warrowing, bounded_warrowing) bounded_warrowing
+instantiation dg_state ::
+  ("{bounded_semilattice_sup_bot, warrowing}", "{bounded_semilattice_sup_bot, warrowing}") warrowing
 begin
 
 definition widen_dg_state ::

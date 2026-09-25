@@ -58,7 +58,7 @@ and terminates without acceleration.
 | --- | --- |
 | `Congruence_Domain.thy` | the type and its concretization |
 | `Congruence_Lattice.thy` | normalization, order, join and meet |
-| `Congruence_Warrowing.thy` | the `warrowing` instance the TD solver's sort requires: widening is join, narrowing keeps the left argument |
+| `Congruence_Warrowing.thy` | the `warrowing` instance the TD solver's sort requires (widening is join, narrowing keeps the left argument), then the `numeric_domain` instance, which needs it |
 | `Congruence_Arithmetic.thy` | modular `+`, `-`, `*` on residue classes |
 | `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand |
 | `Congruence_Special.thy` | `Min`/`Max` return an operand, so both answer with the join of their arguments; `Nondet_Int` lands at `top` |

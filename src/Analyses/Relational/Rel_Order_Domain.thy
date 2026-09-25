@@ -105,15 +105,6 @@ qed
 
 end
 
-text \<open>Registers the sort intersection under its named synonym -- the vendored
-  solver's \<open>TD_side_upd_rule\<close> locale is generated against \<open>bounded_warrowing\<close>
-  by name, not the raw \<open>{bounded_semilattice_sup_bot, warrowing}\<close> sort, and
-  Isabelle does not compose that registration automatically from the two
-  separate instances above.  \<^type>\<open>dg_state\<close> already carries the same
-  explicit step generically (\<open>DG_Constraint_Programs\<close>) once its component types
-  have it.\<close>
-instance relc :: bounded_warrowing ..
-
 text \<open>\<open>top_relc\<close> is the empty-relation-set top element: vacuously true of
   every pair, so its concretization is \<open>UNIV\<close> (\<open>gamma_rel_top\<close>).\<close>
 definition top_relc :: relc where

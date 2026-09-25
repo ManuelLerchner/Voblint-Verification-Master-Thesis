@@ -1828,7 +1828,7 @@ colours, with no linked assets.
 
 | Figure | What is wrong | Work |
 | --- | --- | --- |
-| class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `numeric_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_warrowing`, `bounded_semilattice_sup_bot` |
+| class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `numeric_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_semilattice_sup_bot` |
 | locale graph | four nodes come out isolated (`numeric_domain`, `ltr_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
 | `cost-nodes` / `cost-contexts` | the bar values are the explainer's, not measured here | re-derive from the regression runner (U8) and keep the extracted figure as the layout |
 | `strata` | eleven session colours collapse to a depth ramp, which is right for print but drops the identity the web version carries | add a legend, or label each stratum |
@@ -1981,9 +1981,10 @@ the example-first structure.
 
 **`class_deps` needs work before it is a figure.** `Sorts.super_classes`
 returns the transitive closure, so 33 classes produce roughly 50 edges. The
-content is right — `bounded_warrowing` sits on
-`bounded_semilattice_sup_bot` + `widening` + `narrowing`, which is exactly what
-the solver demands of a domain — but it needs transitive reduction first.
+content is right — `executable_domain` sits on
+`bounded_semilattice_sup_bot` + `order_top` + `warrowing`, and the first and
+last are exactly what the solver demands of a domain — but it needs
+transitive reduction first.
 
 ### Nothing here contradicts the recommended structure
 

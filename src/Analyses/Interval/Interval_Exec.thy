@@ -7,9 +7,6 @@ begin
 
 section \<open>Interval executable transfer mirror\<close>
 
-instance ivl :: bounded_warrowing ..
-
-
 text \<open>
   Executable mirror of @{const ivl_tf_abs} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook

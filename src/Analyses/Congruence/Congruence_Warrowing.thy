@@ -41,6 +41,48 @@ qed
 
 end
 
-instance congruence :: bounded_warrowing ..
+section \<open>Numeric domain instance\<close>
+
+text \<open>\<open>numeric_domain\<close> extends \<open>executable_domain\<close>, which includes the solver's
+  \<open>warrowing\<close>, so the instance follows the widening and narrowing above.\<close>
+
+instantiation congruence :: numeric_domain
+begin
+
+definition gamma_abs_congruence [simp]:
+  "\<gamma> (a :: congruence) = gamma_congruence a"
+
+definition is_empty_congruence [simp]:
+  "is_empty (a :: congruence) = is_bottom_congruence a"
+
+definition to_string_congruence [simp]:
+  "to_string (a :: congruence) =
+     (if is_top_congruence a then sym_top else string_of_congruence a)"
+
+instance
+proof intro_classes
+  show "\<gamma> (bot :: congruence) = {}"
+    unfolding bot_congruence_def by simp
+next
+  show "\<gamma> (top :: congruence) = UNIV"
+    by simp
+next
+  fix a b :: congruence
+  assume "a <= b"
+  then show "\<gamma> a \<subseteq> \<gamma> b"
+    unfolding less_eq_congruence_iff_gamma
+    by simp
+next
+  fix a :: congruence
+  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
+    by (simp add: is_bottom_congruence_correct)
+qed
+
+end
+
+lemma to_string_congruence_regression:
+  "to_string (top :: congruence) = STR ''<top>''"
+  "to_string (mk_congruence 1 2) = STR ''1+2<int>''"
+  by eval+
 
 end

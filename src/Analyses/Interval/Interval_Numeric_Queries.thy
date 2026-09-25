@@ -1,5 +1,5 @@
 theory Interval_Numeric_Queries
-  imports Interval_Lattice "Voblint_Domain.Backward_Numeric_Queries"
+  imports Interval_Warrowing "Voblint_Domain.Backward_Numeric_Queries"
 begin
 
 section \<open>Interval interpretation of the generic numeric-query interface\<close>

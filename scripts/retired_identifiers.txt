@@ -3203,3 +3203,8 @@ local_spec_core_sound
 local_state_dg_spec_for_core_sound
 local_state_dg_spec_for_lifted_core_sound
 ownership_split_lift_core_sound
+
+# --- Folded into executable_domain (2026-09-25) ---
+# Solver-state types that need only the solver's pair spell it as the sort
+# {bounded_semilattice_sup_bot, warrowing}.
+bounded_warrowing

@@ -9,21 +9,28 @@ unbundle lattice_syntax
 section \<open>Abstract value domains\<close>
 
 text \<open>
-  An executable domain supplies the required lattice operations and an exact
-  emptiness test. Sound domains add a concretization into integers. The
-  widening and narrowing the solver applies come from the vendored
-  \<open>warrowing\<close> class, required as \<open>bounded_warrowing\<close> below. Abstract states and
-  control-flow reachability are separate modules.
+  An executable domain supplies the required lattice operations, the widening
+  and narrowing the solver applies (the vendored \<open>warrowing\<close> class), and an
+  exact emptiness test. Sound domains add a concretization into integers.
+  Abstract states and control-flow reachability are separate modules.
 \<close>
 
 subsection \<open>Executable and sound domains\<close>
 
-class executable_domain = bounded_semilattice_sup_bot + order_top +
-  fixes is_empty :: "'a \<Rightarrow> bool"
+text \<open>
+  The vendored \<open>widening\<close> and \<open>narrowing\<close> classes constrain their type
+  parameter (\<open>'a::order\<close>) instead of naming \<open>order\<close> as a superclass, so a class
+  extending them starts from \<open>order\<close> and would reject \<open>\<bottom>\<close> and \<open>\<top>\<close> in its
+  axioms. The lattice classes therefore enter the same way, through the sort of
+  the first parameter, and \<open>numeric_domain\<close> repeats that sort.
+\<close>
+
+class executable_domain = warrowing +
+  fixes is_empty :: "'a::{bounded_semilattice_sup_bot, order_top} \<Rightarrow> bool"
   fixes to_string :: "'a \<Rightarrow> String.literal"
 
 class numeric_domain = executable_domain +
-  fixes gamma :: "'a \<Rightarrow> int set" ("\<gamma>")
+  fixes gamma :: "'a::{bounded_semilattice_sup_bot, order_top} \<Rightarrow> int set" ("\<gamma>")
   assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"
   assumes gamma_top[simp]: "\<gamma> \<top> = UNIV"
   assumes gamma_mono: "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
@@ -31,8 +38,8 @@ class numeric_domain = executable_domain +
 
 text \<open>
   \<open>executable_domain\<close> carries exactly the executable per-element operations a
-  concrete domain's runtime representation needs: the lattice structure,
-  \<open>is_empty\<close> (a finite decision procedure on every real instance
+  concrete domain's runtime representation needs: the lattice structure, the
+  solver's \<open>widen\<close> and \<open>narrow\<close>, \<open>is_empty\<close> (a finite decision procedure on every real instance
   -- Interval's bound comparison, Sign's constructor match, ...), and
   \<open>to_string\<close> for reporting a solved value back to a caller. \<open>numeric_domain\<close>
   extends it with \<open>gamma\<close>, which is not executable in general (an infinite
@@ -90,11 +97,6 @@ lemma is_empty_antimono:
   using gamma_mono unfolding is_empty_correct by blast
 
 subsection \<open>Domains with widening\<close>
-
-text \<open>The vendored solver states its combined update rule over a bounded
-  semilattice carrying both widening and narrowing.\<close>
-
-class bounded_warrowing = bounded_semilattice_sup_bot + warrowing
 
 text \<open>
   \<open>warrow\<close> is deliberately not join-like: it takes the narrowing branch
