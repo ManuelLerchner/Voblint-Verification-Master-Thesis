@@ -107,7 +107,7 @@ carrier, a forward interface evaluates expressions and tests truth
 (@fig:backward-contract). Every expression-level use of a domain builds on the
 same forward interface, so a domain proves its laws once and the transfer
 functions, the guard filters and the check layer reuse them.
-@fig:domain-carrier collects every operation and law of all three layers.
+@fig:domain-carrier shows every operation and law of the three layers in the class or locale that declares it.
 
 #block(breakable: false)[
   #definition(name: [Numeric domain], isa: "numeric_domain", cmd: "class")[
@@ -186,19 +186,33 @@ Int has one sound backward interpretation per reduction policy
 instance per type. The intersection need not be the lattice meet, and the
 carrier need not have a meet at all (@sec:branches).
 
-// Everything a domain's carrier supplies, as one UML class box. The classes,
-// their order and their members are read from the lifted declarations,
-// starting at the two classes a domain instantiates and following each
-// declaration's parents, so the figure cannot drift from the sources.
+// Everything a domain supplies, as a UML inheritance tree. Each node is a
+// class or locale read from its lifted declaration and lists only the members
+// it declares; the edges are its declared parents, followed from the
+// declarations a domain instantiates, so the figure cannot drift from the
+// sources. Only the roots and node positions are chosen, in
+// shared/domain-tree.toml.
 #let _decl(src) = {
-  let src = src.split("\n").slice(1).join("\n")
-  let head = src.match(regex("^(?:class|locale)\s+(\S+)\s*=([^\n]*)"))
+  // The first line names the source file, and with it the origin.
+  let (path, ..rest) = src.split("\n")
+  let origin = if path.contains("~~/src/HOL/") { "hol" } else if path.contains(
+    "vendor/td-verification/",
+  ) { "solver" } else { "voblint" }
+  let src = rest.join("\n")
+  let head = src.match(regex("^(class|locale)\s+(\S+)\s*="))
+  let body = src.slice(head.end)
+  // The parent expression ends at the `for` clause or the first member; the
+  // `for` clause only renames inherited parameters, so members start after it.
+  let stop = body.match(regex("\b(for|fixes|assumes)\b"))
+  let parent-text = if stop == none { body } else { body.slice(0, stop.start) }
+  let first = body.match(regex("\b(fixes|assumes)\b"))
+  let members = if first == none { "" } else { body.slice(first.start) }
   let (fixes, laws, mode) = ((), (), none)
   let member = regex(
     "\b(fixes|assumes|and)\s+((?:[A-Za-z_]|\\\\<[A-Za-z]+>)(?:[A-Za-z0-9_']|\\\\<\^?[A-Za-z]+>)*)(?:\s*\[[^\]]*\])?\s*(::|:)\s*(\"[^\"]*\"|'[a-z]+)"
       + "(?:\s*\((?:infix[lr]?\s+)?(?:\\\\<open>(.*?)\\\\<close>|\"([^\"]*)\")[^)]*\))?",
   )
-  for m in src.slice(head.end).matches(member) {
+  for m in members.matches(member) {
     let (kw, name, _, rhs, n1, n2) = m.captures
     if kw != "and" { mode = kw }
     let entry = (
@@ -209,10 +223,21 @@ carrier need not have a meet at all (@sec:branches).
     if mode == "fixes" { fixes.push(entry) } else { laws.push(entry) }
   }
   (
-    name: head.captures.at(0),
-    parents: head.captures.at(1).split("+").map(str.trim).filter(q => q != ""),
+    name: head.captures.at(1),
+    kind: head.captures.at(0),
+    origin: origin,
+    parents: parent-text
+      .split("+")
+      .map(p => p.trim().split(regex("\s+")).at(0))
+      .filter(p => p != ""),
     fixes: fixes,
     laws: laws,
+    // A type variable constrained to a class (`'a::numeric_domain`) is a
+    // dependency, not an extension.
+    bounds: fixes
+      .map(f => f.rhs.matches(regex("'[a-z]+\s*::\s*([A-Za-z_]+)")).map(m => m.captures.at(0)))
+      .flatten()
+      .dedup(),
   )
 }
 #let _snip(n) = read("/shared/generated/snippets/" + n + ".thy")
@@ -221,84 +246,112 @@ carrier need not have a meet at all (@sec:branches).
   for q in d.parents { acc = _visit(_decl(_snip(q)), acc) }
   acc + (d,)
 }
-#let _carrier = (
-  _decl(read("/shared/generated/snippets/numeric_domain.thy")),
-  _decl(read("/shared/generated/snippets/bounded_warrowing.thy")),
-  _decl(read("/shared/generated/snippets/sound_evaluator.thy")),
-  _decl(read("/shared/generated/snippets/sound_truth_test.thy")),
-  _decl(read("/shared/generated/snippets/semantic_intersection.thy")),
-  _decl(read("/shared/generated/snippets/backward_domain.thy")),
+#let _tree = toml("/shared/domain-tree.toml")
+#let _hierarchy = _tree.roots.fold((), (acc, n) => _visit(_decl(_snip(n)), acc))
+#let _rows = _tree.rows
+#{
+  let names = _hierarchy.map(d => d.name)
+  let placed = _rows.map(r => r.keys()).flatten()
+  let unplaced = names.filter(n => n not in placed)
+  let stale = placed.filter(n => n not in names)
+  assert(
+    unplaced == () and stale == (),
+    message: "domain tree positions: unplaced " + repr(unplaced) + ", stale " + repr(stale),
+  )
+}
+
+#let swatch(c) = box(
+  width: 0.8em,
+  height: 0.8em,
+  baseline: 0.1em,
+  radius: 1pt,
+  fill: c.lighten(82%),
+  stroke: 0.7pt + c,
 )
-#let _inherited = _carrier.fold((), (acc, d) => _visit(d, acc))
 
 #figure(
-  {
-    set text(size: 6.4pt)
-    set par(justify: false, leading: 0.45em)
-    show: isabelle-scripts
+  layout(size => context {
     let code(s, fill: vb.plain) = text(fill: fill, raw(decode-isabelle(s)))
-    let compartment(title, pick, show-member) = {
-      let rows = ()
-      for d in _inherited {
-        let items = pick(d)
-        for (i, it) in items.enumerate() {
-          if i == 0 and rows.len() > 0 { rows.push(table.hline(stroke: 0.3pt + vb.frame)) }
-          rows.push(if i == 0 { text(size: 7pt, isalocale(d.name)) } else { [] })
-          rows += show-member(it)
+    let box-of(d) = {
+      let rows = (
+        table.cell(colspan: 2, fill: vb.at(d.origin).lighten(82%), align: center, text(
+          size: 6.4pt,
+          isalocale(d.name),
+        )),
+      )
+      for (items, fill) in ((d.fixes, vb.const), (d.laws, vb.thm)) {
+        if items == () { continue }
+        rows.push(table.hline(stroke: 0.4pt + vb.at(d.origin)))
+        for it in items {
+          let head = code(it.name, fill: fill)
+          if it.notation != none { head += [ (#code(it.notation))] }
+          rows.push(head)
+          rows.push(code(if fill == vb.const { ":: " + it.rhs } else { it.rhs }))
         }
       }
-      let head = table.cell(colspan: 3, inset: (top: 4pt, bottom: 2pt), text(
-        size: 7pt,
-        style: "italic",
-        fill: vb.muted,
-        title,
-      ))
-      (head,) + rows
+      // Styled inside, so that `measure` sees the size the node is drawn at.
+      let t = {
+        set text(size: 5.6pt)
+        set par(justify: false, leading: 0.4em)
+        show: isabelle-scripts
+        table(columns: 2, stroke: none, inset: (x: 2.5pt, y: 1.2pt), align: left + top, ..rows)
+      }
+      // A node that shares its row wraps its statements beyond this width.
+      let alone = _rows.any(r => r.len() == 1 and d.name in r)
+      let cap = if alone { size.width } else { 0.46 * size.width }
+      block(
+        width: calc.min(measure(t).width, cap),
+        stroke: (
+          paint: vb.at(d.origin),
+          thickness: 0.7pt,
+          dash: if d.kind == "locale" { "dashed" } else { none },
+        ),
+        radius: 2pt,
+        clip: true,
+        fill: white,
+        t,
+      )
     }
-    block(stroke: 0.7pt + vb.neutral, radius: 2pt, clip: true, table(
-      columns: (auto, auto, 1fr),
-      stroke: none,
-      inset: (x: 4pt, y: 1.6pt),
-      align: left + top,
-      table.cell(colspan: 3, fill: vb.frame.lighten(50%), inset: 5pt, align(center)[
-        #text(
-          size: 7.5pt,
-        )[#raw("'a") :: #isalocale("numeric_domain") + #isalocale("bounded_warrowing"), with #isalocale("backward_domain")]
-      ]),
-      table.hline(stroke: 0.5pt + vb.neutral),
-      ..compartment(
-        [operations],
-        d => d.fixes,
-        it => (
-          code(it.name, fill: vb.const) + if it.notation != none { [ (#code(it.notation))] },
-          code(":: " + it.rhs),
-        ),
-      ),
-      table.hline(stroke: 0.5pt + vb.neutral),
-      ..compartment(
-        [laws],
-        d => d.laws,
-        it => (
-          code(it.name, fill: vb.thm),
-          code(it.rhs),
-        ),
-      ),
-    ))
-  },
+    let boxes = (:)
+    for d in _hierarchy { boxes.insert(d.name, box-of(d)) }
+    let (at, y) = ((:), 0pt)
+    for row in _rows {
+      let h = calc.max(..row.keys().map(n => measure(boxes.at(n)).height))
+      // Physical coordinates grow upwards.
+      for (n, x) in row { at.insert(n, (x * size.width, -(y + h / 2))) }
+      y += h + 13pt
+    }
+    let hollow = (inherit: "stealth", stealth: 0, fill: white, size: 7)
+    diagram(
+      node-inset: 0pt,
+      ..for d in _hierarchy {
+        (node(at.at(d.name), boxes.at(d.name), name: label(d.name)),)
+      },
+      ..for d in _hierarchy {
+        for p in d.parents {
+          (edge(label(d.name), label(p), marks: (none, hollow), stroke: 0.5pt + vb.neutral),)
+        }
+        for b in d.bounds.filter(b => b in at) {
+          (
+            edge(label(d.name), label(b), "-straight", stroke: (
+              paint: vb.muted,
+              thickness: 0.5pt,
+              dash: "dashed",
+            )),
+          )
+        }
+      },
+    )
+  }),
   kind: image,
   placement: auto,
   caption: [Everything a domain supplies over its carrier type #raw("'a"), as a
-    UML class box. The operations and laws come from the classes and locales on
-    the left: Isabelle's HOL classes #isalocale("ord"), #isalocale("preorder"),
-    #isalocale("order"), #isalocale("sup"), #isalocale("semilattice_sup"),
-    #isalocale("bot"), #isalocale("order_bot"), #isalocale("top") and
-    #isalocale("order_top"), Voblint's #isalocale("executable_domain") and
-    #isalocale("numeric_domain"), and the solver's #isalocale("widening") and
-    #isalocale("narrowing"), and the locales #isalocale("sound_evaluator"),
-    #isalocale("sound_truth_test"), #isalocale("semantic_intersection") and
-    #isalocale("backward_domain"). #isalocale("bounded_semilattice_sup_bot"),
-    #isalocale("warrowing") and #isalocale("bounded_warrowing") only combine
-    classes and add no member. Rows are read from the declarations.],
+    UML inheritance tree. Each class (solid) or locale (dashed) lists the
+    operations and laws it declares; a solid arrow points to a declaration it
+    extends, a dashed one to the class its type variable is constrained to. The
+    colour gives the origin: #swatch(vb.hol) Isabelle's HOL library,
+    #swatch(vb.solver) the vendored solver, #swatch(vb.voblint) Voblint. Nodes
+    and arrows are read from the declarations.],
 ) <fig:domain-carrier>
 
 

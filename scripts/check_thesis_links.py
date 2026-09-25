@@ -228,8 +228,9 @@ def cited() -> list[tuple[Path, int, str, str]]:
 def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
     """Names Typst cites by iterating a manifest, which no source text spells out.
 
-    The anchor index appendix renders every `anchors.toml` item, and the oracle
-    audit table every `facts.toml` key.
+    The anchor index appendix renders every `anchors.toml` item, the oracle
+    audit table every `facts.toml` key, and the domain tree every class or
+    locale placed in `domain-tree.toml`.
     """
     refs = []
     anchors = shared / "anchors.toml"
@@ -243,6 +244,13 @@ def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
         refs += [
             (facts, 1, "thm", name)
             for name in tomllib.loads(facts.read_text()).get("facts", {})
+        ]
+    tree = shared / "domain-tree.toml"
+    if tree.is_file():
+        refs += [
+            (tree, 1, "locale", name)
+            for row in tomllib.loads(tree.read_text()).get("rows", [])
+            for name in row
         ]
     return refs
 

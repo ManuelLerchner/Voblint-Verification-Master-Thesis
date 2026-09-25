@@ -1,0 +1,29 @@
+# Layout of the domain inheritance tree in chapter 5 (fig:domain-carrier).
+# The nodes, members and arrows are read from the lifted declarations, starting
+# at `roots` and following each declaration's parents; the build fails when a
+# declaration reached that way has no position here, or a position names none.
+
+# The declarations a domain instantiates.
+roots = [
+  "numeric_domain",
+  "bounded_warrowing",
+  "sound_evaluator",
+  "sound_truth_test",
+  "semantic_intersection",
+  "backward_domain",
+]
+
+# One table per row, from the most general declaration down to the most
+# derived; each value is the node's horizontal centre as a fraction of the text
+# width. Row heights are measured.
+rows = [
+  { ord = 0.3, widening = 0.62, narrowing = 0.88 },
+  { preorder = 0.3, warrowing = 0.76 },
+  { bot = 0.08, order = 0.3, sup = 0.54, top = 0.74 },
+  { order_bot = 0.1, semilattice_sup = 0.4, order_top = 0.74 },
+  { bounded_semilattice_sup_bot = 0.3 },
+  { executable_domain = 0.3, bounded_warrowing = 0.9 },
+  { numeric_domain = 0.23, sound_evaluator = 0.6 },
+  { semantic_intersection = 0.22, sound_truth_test = 0.8 },
+  { backward_domain = 0.5 },
+]
