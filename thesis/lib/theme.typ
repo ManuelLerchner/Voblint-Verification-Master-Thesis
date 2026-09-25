@@ -31,9 +31,9 @@
   bg: rgb("#FAFAFA"),
 
   // where a declaration comes from
-  hol: rgb("#607D8B"), // Isabelle's HOL library
+  hol: rgb("#8D8D8D"), // Isabelle's HOL library
   solver: rgb("#EF6C00"), // the vendored TD solver
-  voblint: rgb("#00695C"), // this formalization
+  voblint: rgb("#1E88E5"), // this formalization
 
   // domains
   sign: rgb("#00695C"),

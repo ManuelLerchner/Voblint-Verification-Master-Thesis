@@ -176,7 +176,7 @@ finite, but that the solved keys stay inside it is a hypothesis of
 #isathm("compiled_call_string_vars_finite"), not a theorem about the routed
 solve. Entry-state contexts over infinite domains need a bound such as the
 context lifters of #cite(<erhard25>, form: "prose"). Even a finite key space
-admits values that increase forever, because stabilization is not a law of #isalocale("bounded_warrowing")
+admits values that increase forever, because stabilization is not a law of #isalocale("warrowing")
 (@sec:eq-finite, @sec:termination).
 
 The adequacy of #isaconst("pstep") is argued and checked against example

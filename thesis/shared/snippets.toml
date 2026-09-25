@@ -153,9 +153,6 @@ why = "Chapter 4, a graph step keeps a representing trace."
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
 
-[snippets.bounded_warrowing]
-why = "Chapter 5, the solver-side class a carrier must also instantiate."
-
 [snippets.semilattice_sup]
 why = "Chapter 5, the join laws executable_domain inherits from HOL."
 file = "~~/src/HOL/Lattices.thy"
@@ -165,7 +162,7 @@ why = "Chapter 5, the least-element law executable_domain inherits from HOL."
 file = "~~/src/HOL/Orderings.thy"
 
 [snippets.bounded_semilattice_sup_bot]
-why = "Chapter 5, the HOL order class executable_domain and bounded_warrowing extend."
+why = "Chapter 5, the HOL order class executable_domain extends."
 file = "~~/src/HOL/Lattices.thy"
 
 [snippets.order_top]
