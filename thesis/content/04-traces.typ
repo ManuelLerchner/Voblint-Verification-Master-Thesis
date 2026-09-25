@@ -33,7 +33,7 @@ From this semantics we derive a local _coverage contract_. Its obligations are
 the concrete interface that the abstract analyses and the equation system of
 @ch:domains to @ch:solving must satisfy. Once they hold, every
 context-indexed claim covers the executions assigned to its context, and the
-union of the context-indexed collections is the ordinary collecting semantics.
+union of the context-indexed collections is the trace collecting semantics (@sec:collect).
 
 == Why contexts need traces <sec:why-traces>
 
@@ -85,7 +85,7 @@ local trace is one activation's view of a sequential execution
 
 @sec:traces turns this grouping into a datatype, gives the rules that make a
 trace valid, shows that every graph run is represented by a valid trace, and
-reads the collecting semantics off the valid traces. @sec:contexts then reads
+reads the trace collecting semantics off the valid traces. @sec:contexts then reads
 calling contexts off the same traces.
 
 #let _acts = (vb.neutral, vb.accent, vb.sign, vb.par, vb.cong, vb.trusted)
@@ -344,14 +344,14 @@ simulation of @ch:program-model, it extends to VIMP programs.
 
 #proved("source_run_has_ltr")
 
-=== The collecting semantics <sec:collect>
+=== The trace collecting semantics <sec:collect>
 
 From the valid traces we can read off which stores some activation can hold
-at a node. This gives a counterpart of the node-indexed collecting semantics of
-@ch:background.
+at a node. This gives the _trace collecting semantics_, a counterpart of the
+node-indexed collecting semantics of @ch:background.
 
 #block(breakable: false)[
-  #definition(name: [Collecting semantics], isa: "ltr_collect", cmd: "definition")[
+  #definition(name: [Trace collecting semantics], isa: "ltr_collect", cmd: "definition")[
     #thy("ltr_collect")
   ]
 ]
@@ -371,7 +371,7 @@ it alone is context-insensitive. The trace structure remains available in
 #isaconst("valid_ltr"), and @sec:contexts reads the context off it.
 
 By @sec:source-bridge, every store that a finite source execution of a
-well-formed program reaches lies in the collecting semantics at a related node
+well-formed program reaches lies in the trace collecting semantics at a related node
 (#isathm("source_reaches_ltr_collect")).
 The node is existential because #isaconst("csim") is not functional
 (@sec:csim).
@@ -468,7 +468,7 @@ other procedures.
 The classifier, the graph, the relation $R$ and the initial context are fixed
 per program.
 
-With the context of a trace in hand, the collecting semantics of @sec:collect
+With the context of a trace in hand, the trace collecting semantics of @sec:collect
 can be split by context. A store belongs to context $c$ at node $v$ if some
 valid trace ending at $v$ with that store carries $c$.
 
@@ -484,11 +484,13 @@ valid trace ending at $v$ with that store carries $c$.
 
 #isaconst("activation_collect") collects the final stores of the valid traces
 that end at $v$ and carry $c$. This is the concrete set that the claim for
-$[v, c]$ must over-approximate, relative to the policy #isai("R"). In the example of @sec:why-traces, with one context per argument,
-the final store of the `bump(5)` activation belongs to the bucket of context
-$5$, and the final store of `bump(4)` to the bucket of context $4$.
+$[v, c]$ must over-approximate, relative to the policy #isai("R"). For a
+fixed node $v$, we call these context-indexed sets the _buckets_ of $v$, an
+informal shorthand for #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c").
+In the example of @sec:why-traces, with one context per argument, the final
+store of the `bump(5)` activation belongs to the bucket of context $5$, and
+the final store of `bump(4)` to the bucket of context $4$.
 
-For a fixed node $v$, these context-indexed sets are the _buckets_ of $v$.
 Unlike the classes of a partition, buckets may overlap: one trace may carry
 several contexts, as the call of `h` with $x = 4$ does (@fig:buckets, right).
 Under a functional policy the bucket of $c$ contains the final stores of the
@@ -500,7 +502,7 @@ overlap, because two traces in different contexts may end in the same store.
 Soundness needs neither functional contexts nor disjoint buckets. The claim for
 each context only has to cover that context's bucket. A store in two buckets is
 covered twice, once by each claim. The end-to-end argument does need the
-buckets together to cover the collecting semantics, since a store in no bucket
+buckets together to cover the trace collecting semantics, since a store in no bucket
 would escape every claim. The contract establishes the stronger sufficient property that every valid
 trace carries at least one context.
 
@@ -542,7 +544,7 @@ trace carries at least one context.
   ),
   kind: image,
   placement: none,
-  caption: [Buckets inside the collecting semantics #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
+  caption: [Buckets inside the trace collecting semantics #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
     (black frame). In these examples the buckets together fill it. Left: the runs of
     `bump` split into the buckets of contexts $5$ and $4$, a partition. Right:
     with overlapping entry alternatives $[0, 5]$ and $[3, 9]$, the call with
@@ -751,7 +753,7 @@ $p' = p$.
 The contract has two consequences. First, each context's bucket lies inside
 that context's claim, which is the per-context soundness statement. Second, under the full contract, #oblig("TOTAL") supplies the existence step
 that shows every valid trace carries at least one context, so the
-union of the buckets is exactly the ordinary collecting semantics
+union of the buckets is exactly the trace collecting semantics
 (@fig:buckets).
 
 The proof of the first consequence is a rule induction over the valid traces.
@@ -790,7 +792,7 @@ hypothesis is strengthened to every trace on the chain of creating callers
 With this equality, a context-specific claim can be more precise than a single
 sound claim that must cover the whole node, as "result $6$ in context $5$" for
 `bump`, while the union of the buckets still contains every store of the
-collecting semantics. For the abstract side, Apinis et al. @apinis12[§3] observe that after local
+trace collecting semantics. For the abstract side, Apinis et al. @apinis12[§3] observe that after local
 solving, a program point can only be reached by
 abstract values bounded by the join of the partial solution's values at that
 point over the contexts that the solver encountered. Here we make the corresponding concrete sets explicit for our relational
@@ -799,7 +801,7 @@ trace semantics and prove that each is covered by its claim.
 @fig:ch4-chain summarizes the chapter. A context is a property of an
 activation trace, and the five coverage obligations guarantee that the claim
 covers every context's bucket. With #oblig("TOTAL"), the buckets together
-recover the ordinary collecting semantics. For well-formed programs, the trace
+recover the trace collecting semantics. For well-formed programs, the trace
 representation and the forward simulation of @ch:program-model transfer these
 guarantees to finite VIMP source executions. The following chapters construct
 such claims from abstract domains and equations.
@@ -842,5 +844,5 @@ such claims from abstract domains and equations.
     trace. The trace's contexts place its store in the buckets of those
     contexts. The
     coverage contract bounds each bucket by the claim for its context, and with
-    #oblig("TOTAL") the union of all buckets is the collecting semantics.],
+    #oblig("TOTAL") the union of all buckets is the trace collecting semantics.],
 ) <fig:ch4-chain>

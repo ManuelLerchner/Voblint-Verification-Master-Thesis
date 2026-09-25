@@ -1,6 +1,6 @@
 #import "../lib/code.typ": isaconst, isalocale, isathm, isatype
 #import "../lib/sources.typ": thy
-#import "../lib/math.typ": conc, lbot, lle, ltop, sol
+#import "../lib/math.typ": lbot, lle, ltop, sem, sol
 #import "../lib/theme.typ": vb
 #import "../lib/claims.typ": claim-snapshot
 
@@ -369,7 +369,7 @@ carrier, we show that each carrier operation commutes with readback $rho$:
 $ rho("op"_"exec" (s)) = "op"_"abs" (rho(s)). $
 For the generic numeric transfer this is #isathm("generic_tf_st_for_commute"),
 with the branch filter as the one per-domain premise, and concretizing a
-carrier state as $conc(rho(s))$ transports every soundness fact. A
+carrier state as $sem(rho(s))$ transports every soundness fact. A
 carrier-level proof per domain would repeat every transfer argument for each
 representation.
 

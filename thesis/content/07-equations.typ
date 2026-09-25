@@ -32,8 +32,9 @@ admits for concrete calls (@sec:eq-routing). This chapter builds an equation
 system that meets all three, for every domain and context policy, whose
 post-solutions $sol$ satisfy, for every node $v$ and context $c$,
 $
-  #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc(sol(v, c)).
+  #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
+where $conc_(M)$ gives the stores that the solver's value at an unknown describes.
 It links computed contexts to admitted ones and proves the obligations once
 for all policies. The running example is
 `bump(5); bump(4)` of @fig:program-to-equations, with call nodes $u_1$, $u_2$
@@ -378,10 +379,10 @@ coverage contract, discharging the five obligations once for all policies and do
   contains the program entry in the initial context and is closed under local
   edges and call continuations. Let the initial stores be covered by the initial
   abstract state, the specification satisfy the analysis soundness contract
-  #isalocale("sound_dg_spec_core"), the callee list the generator uses at each
+  #isalocale("analysis_contract"), the callee list the generator uses at each
   call site include every callee a covered call can enter, and routing be
   adequate and total. Then #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") $subset.eq
-  conc(sol(v, c))$ for every node $v$ and context $c$, and the left-hand side is
+  conc_(M)(sol(v, c))$ for every node $v$ and context $c$, and the left-hand side is
   empty outside the key set.
 ]
 
@@ -570,12 +571,12 @@ that this half adds nothing would be a further obligation.
 
 The results come at three levels. For every classifier and every whole-state
 specification built from sound transfers,
-#isathm("ownership_split_lift_core_sound") establishes
-#isalocale("sound_dg_spec_core") for the lifted specification and
+#isathm("ownership_split_lift_contract") establishes
+#isalocale("analysis_contract") for the lifted specification and
 #isaconst("gamma_ownership_split"). The proof reduces each obligation to the
 wrapped transfer's soundness, since restricting and reassembling rebuilds the
 state the transfer ran on. At the executable carrier,
-#isathm("sound_dg_spec_core_mf") proves the same for Sign. The routed
+#isathm("analysis_contract_mf") proves the same for Sign. The routed
 obligations of @sec:eq-routing are discharged for the program above only,
 under the unit context and the join update rule, from facts evaluated on its
 solved table: the solve terminates, the key set is closed, and no formal
@@ -598,7 +599,7 @@ The shipped analyzer therefore makes little use of the shared unknowns. In
 selectable analysis instantiates #isaconst("analysis_spec"), which never writes
 $kappa$ and whose concretization ignores it. One unknown per program global, as
 in Seidl et al. @seidl26, needs a concretization that reads an environment of
-shared values, since #isalocale("sound_dg_spec_core") admits a single global
+shared values, since #isalocale("analysis_contract") admits a single global
 name. The manager is already generic in the name type. @ch:related compares
 the instance with earlier mechanizations of mixed flow sensitivity.
 

@@ -1,7 +1,7 @@
 #import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/sources.typ": proved
 #import "../lib/theme.typ": vb
-#import "../lib/math.typ": conc, ctor
+#import "../lib/math.typ": ctor, sem
 #import "../lib/figures.typ": check-row, int-axis, int-strip, printed-set, snapshot-var
 
 // One check row of a registered CLI claim (shared/claims.toml), so a verdict
@@ -110,11 +110,12 @@ sets of stores, followed by one implication. Writing $C_c$ for
 #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"),
 $
   "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
-  = union.big_c C_c, quad C_c subset.eq conc(A_(v, c))
+  = union.big_c C_c, quad C_c subset.eq sem(A_(v, c))_bot
   quad => quad "verdict at" v.
 $
-Here $A_(v,c)$ is the abstract state the published table holds for $v$ in
-context $c$. Each later set in the chain may contain stores that no execution
+Here $A_(v,c)$ is the lifted abstract state the published table holds for $v$
+in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
+unreachable state #ctor("Bot"). Each later set in the chain may contain stores that no execution
 reaches. Soundness requires only that it contains the set before it.
 
 The recursive program below computes $f(2) = 2 dot f(1) = 2$, so every run
@@ -176,11 +177,11 @@ fun main() {
       ..strip((2, 2)),
       [],
 
-      label-col(3, [$conc(A)$ without contexts, #raw(chain-none.at(4))]),
+      label-col(3, [$sem(A)_bot$ without contexts, #raw(chain-none.at(4))]),
       ..strip(a-range(chain-none.at(4))),
       raw(chain-none.at(3)),
 
-      label-col(4, [$conc(A)$ with entry-state contexts, #raw(chain-entry.at(4))]),
+      label-col(4, [$sem(A)_bot$ with entry-state contexts, #raw(chain-entry.at(4))]),
       ..strip(a-range(chain-entry.at(4))),
       raw(chain-entry.at(3)),
 
@@ -257,7 +258,7 @@ every node and context. Unsolved keys read as unreachable. This is sound
 because every key an execution visits is live, and live keys are solved.
 
 A reached store is covered at its node _in some context_:
-$ exists c, A. quad "lookup"(v, c) = A and s in conc(A). $
+$ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A). $
 The quantifier cannot become universal. Under entry-state routing the test in
 `f` is analyzed in one context per recursion depth, and a store with $n = 2$
 lies in the bucket of the outer call only. For entry-state policies the
@@ -295,7 +296,7 @@ reaching the check:
   run has, so a condition that fails at every admitted store does not imply
   that any admitted store is reached.
 - `UNKNOWN`: the abstraction decides neither.
-- `DEAD`: the collecting semantics at the node is empty, so no covered
+- `DEAD`: the trace collecting semantics at the node is empty, so no covered
   execution reaches the check. This is the one reachability claim. The other
   three verdicts constrain each store at the node and hold vacuously when there
   is none. `DEAD` constrains the whole set.

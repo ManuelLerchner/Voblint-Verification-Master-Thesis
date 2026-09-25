@@ -103,14 +103,14 @@ type of abstract values instantiates a hierarchy of type classes: order classes
 from Isabelle's HOL library, two classes of Voblint's own
 (@fig:domain-contract) and the update classes of the vendored solver. Over that
 carrier, a forward interface evaluates expressions and tests truth
-(@fig:forward-contract), and a backward interface refines values at guards
+(@fig:forward-contract), and a backward domain refines values at guards
 (@fig:backward-contract). Every expression-level use of a domain builds on the
 same forward interface, so a domain proves its laws once and the transfer
 functions, the guard filters and the check layer reuse them.
 @fig:domain-carrier collects every operation and law of all three layers.
 
 #block(breakable: false)[
-  #definition(name: [Numeric domain], isa: "sound_domain", cmd: "class")[
+  #definition(name: [Numeric domain], isa: "numeric_domain", cmd: "class")[
     A numeric domain is an executable join semilattice of abstract integers
     with a concretization into sets of integers that respects its order, its
     bottom, its top and its emptiness test.
@@ -120,12 +120,12 @@ functions, the guard filters and the check layer reuse them.
     {
       show raw.where(block: true): set text(size: 6.2pt)
       thy("executable_domain")
-      thy("sound_domain")
+      thy("numeric_domain")
     },
     kind: image,
     placement: none,
     caption: [The declarations of #isalocale("executable_domain") and
-      #isalocale("sound_domain"), lifted from the theory.],
+      #isalocale("numeric_domain"), lifted from the theory.],
   ) <fig:domain-contract>
 ]
 
@@ -149,13 +149,14 @@ functions, the guard filters and the check layer reuse them.
     lifted from the theory.],
 ) <fig:forward-contract>
 
-The evaluator is stated over any state type $d$ together with the set of stores
-#isai("gamma_state d") a state describes. The numeric domains use it at their
-pointwise abstract states, whose meaning @sec:domain-states defines. The check
-layer states its evaluator requirement over an arbitrary state type through the
-same locale, and every shipped domain instantiates it at the pointwise states.
-The numeric queries that decide checks complete the forward interface
-(@sec:queries).
+The evaluator is stated over any state type $d$ together with a parameter
+#isai("\<gamma>\<^sub>S") that gives the set of stores #isai("\<gamma>\<^sub>S d") a
+state describes. The numeric domains instantiate it with their pointwise
+abstract states and their state concretization, which @sec:domain-states
+defines. The check layer states its evaluator requirement over an arbitrary
+state type through the same locale, and every shipped domain instantiates it at
+the pointwise states. The numeric queries that decide checks (@sec:queries)
+are a further forward operation outside this definition.
 
 #block(breakable: false)[
   #definition(name: [Backward domain], isa: "backward_domain", cmd: "locale")[
@@ -194,7 +195,7 @@ carrier need not have a meet at all (@sec:branches).
   let head = src.match(regex("^(?:class|locale)\s+(\S+)\s*=([^\n]*)"))
   let (fixes, laws, mode) = ((), (), none)
   let member = regex(
-    "\b(fixes|assumes|and)\s+([A-Za-z_][A-Za-z0-9_']*)(?:\s*\[[^\]]*\])?\s*(::|:)\s*(\"[^\"]*\"|'[a-z]+)"
+    "\b(fixes|assumes|and)\s+((?:[A-Za-z_]|\\\\<[A-Za-z]+>)(?:[A-Za-z0-9_']|\\\\<\^?[A-Za-z]+>)*)(?:\s*\[[^\]]*\])?\s*(::|:)\s*(\"[^\"]*\"|'[a-z]+)"
       + "(?:\s*\((?:infix[lr]?\s+)?(?:\\\\<open>(.*?)\\\\<close>|\"([^\"]*)\")[^)]*\))?",
   )
   for m in src.slice(head.end).matches(member) {
@@ -221,7 +222,7 @@ carrier need not have a meet at all (@sec:branches).
   acc + (d,)
 }
 #let _carrier = (
-  _decl(read("/shared/generated/snippets/sound_domain.thy")),
+  _decl(read("/shared/generated/snippets/numeric_domain.thy")),
   _decl(read("/shared/generated/snippets/bounded_warrowing.thy")),
   _decl(read("/shared/generated/snippets/sound_evaluator.thy")),
   _decl(read("/shared/generated/snippets/sound_truth_test.thy")),
@@ -262,7 +263,7 @@ carrier need not have a meet at all (@sec:branches).
       table.cell(colspan: 3, fill: vb.frame.lighten(50%), inset: 5pt, align(center)[
         #text(
           size: 7.5pt,
-        )[#raw("'a") :: #isalocale("sound_domain") + #isalocale("bounded_warrowing"), with #isalocale("backward_domain")]
+        )[#raw("'a") :: #isalocale("numeric_domain") + #isalocale("bounded_warrowing"), with #isalocale("backward_domain")]
       ]),
       table.hline(stroke: 0.5pt + vb.neutral),
       ..compartment(
@@ -292,7 +293,7 @@ carrier need not have a meet at all (@sec:branches).
     #isalocale("order"), #isalocale("sup"), #isalocale("semilattice_sup"),
     #isalocale("bot"), #isalocale("order_bot"), #isalocale("top") and
     #isalocale("order_top"), Voblint's #isalocale("executable_domain") and
-    #isalocale("sound_domain"), and the solver's #isalocale("widening") and
+    #isalocale("numeric_domain"), and the solver's #isalocale("widening") and
     #isalocale("narrowing"), and the locales #isalocale("sound_evaluator"),
     #isalocale("sound_truth_test"), #isalocale("semantic_intersection") and
     #isalocale("backward_domain"). #isalocale("bounded_semilattice_sup_bot"),
@@ -309,7 +310,7 @@ In a #isalocale("semilattice_sup") the join $a ljoin b$ lies above both operands
 a least element $lbot$ and a greatest element $ltop$. On top of this,
 #isalocale("executable_domain") adds the emptiness test #isaconst("is_empty")
 and the printer #isaconst("to_string"), which completes what the solver and the
-generated code compute with. #isalocale("sound_domain") adds $conc$ and its
+generated code compute with. #isalocale("numeric_domain") adds $conc$ and its
 laws (@fig:domain-contract). Generated code never needs $conc$
 (@sec:engineering).
 
@@ -370,7 +371,7 @@ layer of every interface: #isalocale("mono_evaluator"),
 #isalocale("mono_truth_test") and #isalocale("mono_intersection") add it to the
 sound versions. The transfer-soundness contracts of @ch:analysis-interface and
 the solver's partial-correctness theorem (@sec:td) use none of these layers.
-The refined backward interface #isalocale("backward_domain_refined") and the
+The refined backward domain #isalocale("backward_domain_refined") and the
 transfer interface of @ch:instances impose them, and therefore prove more than
 soundness alone requires.
 
@@ -663,7 +664,7 @@ stays #raw(_c.verdict).
 ) <tab:domain-contract>
 
 A domain contributes to the composition by proving the laws of
-#isalocale("sound_domain") and the requirements of @tab:domain-contract. None
+#isalocale("numeric_domain") and the requirements of @tab:domain-contract. None
 of them mentions a context, an equation or a solver, so a domain proves them
 once per domain instance (and, where applicable, refinement mode) and reuses them across context policies
 and solver configurations. @ch:analysis-interface turns these per-value laws
