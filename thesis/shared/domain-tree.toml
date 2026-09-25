@@ -6,7 +6,6 @@
 # The declarations a domain instantiates.
 roots = [
   "numeric_domain",
-  "bounded_warrowing",
   "sound_evaluator",
   "sound_truth_test",
   "semantic_intersection",
@@ -17,12 +16,13 @@ roots = [
 # derived; each value is the node's horizontal centre as a fraction of the text
 # width. Row heights are measured.
 rows = [
-  { ord = 0.3, widening = 0.62, narrowing = 0.88 },
-  { preorder = 0.3, warrowing = 0.76 },
-  { bot = 0.08, order = 0.3, sup = 0.54, top = 0.74 },
-  { order_bot = 0.1, semilattice_sup = 0.4, order_top = 0.74 },
-  { bounded_semilattice_sup_bot = 0.3 },
-  { executable_domain = 0.3, bounded_warrowing = 0.9 },
+  { ord = 0.36 },
+  { preorder = 0.36 },
+  { bot = 0.048, top = 0.155, order = 0.36, sup = 0.6 },
+  { order_bot = 0.058, order_top = 0.18, widening = 0.82 },
+  { semilattice_sup = 0.42, narrowing = 0.68 },
+  { bounded_semilattice_sup_bot = 0.11, warrowing = 0.9 },
+  { executable_domain = 0.32 },
   { numeric_domain = 0.23, sound_evaluator = 0.6 },
   { semantic_intersection = 0.22, sound_truth_test = 0.8 },
   { backward_domain = 0.5 },

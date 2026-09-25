@@ -87,8 +87,9 @@ function into sets of integers, such as the residue class of a congruence, has
 no executable code equation in general. The domain classes therefore split
 (@fig:domain-contract): #isalocale("executable_domain") holds the runtime
 operations and #isalocale("numeric_domain") adds the concretization and its
-laws. The executable pipeline and the solver's class
-#isalocale("bounded_warrowing") mention only the former. A type has at most one
+laws. The executable pipeline mentions only the former. The solver asks for
+less: #isalocale("bounded_semilattice_sup_bot") and #isalocale("warrowing"),
+both of which #isalocale("executable_domain") extends. A type has at most one
 instance of each class, while transfer functions, routing policy and solver
 vary over one carrier. They are therefore locale parameters.
 
