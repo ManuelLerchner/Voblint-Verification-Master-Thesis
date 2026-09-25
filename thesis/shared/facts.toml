@@ -117,19 +117,3 @@ theory = "Voblint_Compile.Source_To_Trace"
 [facts.bfilter_sound]
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 fact = "backward_domain.bfilter_sound"
-
-[facts.intersect_shared_not_empty]
-why = "Chapter 5, a fact every domain gets from the laws of semantic_intersection."
-fact = "semantic_intersection.intersect_shared_not_empty"
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_Domain_Ops"
-
-[facts.sign_interface_regression]
-why = "Chapter 5, Sign's meet, emptiness test and a guard inverse, evaluated by the code generator."
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_Domain_Ops"
-
-[facts.sign_meet_zero_not_empty]
-why = "Chapter 5, the generic intersection fact instantiated to Sign."
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_Domain_Ops"

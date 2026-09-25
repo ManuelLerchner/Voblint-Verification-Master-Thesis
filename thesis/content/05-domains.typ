@@ -310,145 +310,88 @@ tree with three parts.
   #isalocale("semantic_intersection") combines the result with what was known,
   and #isalocale("backward_domain") adds both to the forward interface.
 
-The forward interface and the backward domain are locales rather than classes
-because a carrier type can carry several of them: Int has one backward interpretation per reduction policy
-(@ch:instances), and an evaluator relates a state type to a value type, which a
-single-parameter type class cannot express. The locales therefore constrain
-their carrier to #isalocale("numeric_domain"), the dashed arrows in
-@fig:domain-carrier, instead of extending it. Every expression-level use of a domain builds on the same forward interface, so a
-domain proves its laws once and the transfer functions, the guard filters and
-the check layer reuse them.
+The interface asks for less than Nipkow and Klein's backward analysis, whose
+carrier must be a lattice with a precise meet,
+$conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$ @nipkow14[Sect. 13.7].
+#isalocale("semantic_intersection") asks only for the inclusion
+$conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2))$ that the
+analysis uses, so the carrier need not have a meet at all. The interface also
+has no abstraction function, since Voblint claims no optimal precision.
+Monotonicity is a separate layer, #isalocale("mono_evaluator") and its
+siblings, which soundness does not need.
 
+=== A carrier the interface excludes <sec:no-defexc>
 
-
-The evaluator is stated over any state type $d$ together with a parameter
-#isai("\<gamma>\<^sub>S") that gives the set of stores #isai("\<gamma>\<^sub>S d") a
-state describes. The numeric domains instantiate it with their pointwise
-abstract states and their state concretization, which @sec:domain-states
-defines. The check layer states its evaluator requirement over an arbitrary
-state type through the same locale, and every shipped domain instantiates it at
-the pointwise states. The numeric queries that decide checks (@sec:queries)
-are a further forward operation outside this interface.
-
-Nipkow and Klein require the carrier of their backward analysis to be a lattice
-whose meet is precise, $conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$
-@nipkow14[Sect. 13.7]. Voblint's #isalocale("semantic_intersection") asks only
-for the inclusion $conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2))$ that the backward analysis uses. The intersection need not be the
-lattice meet, and the carrier need not have a meet at all (@sec:branches).
-
-
-
-
-The HOL classes fix the order structure (@fig:domain-carrier). #isalocale("ord") fixes $lle$ and $<$,
-and #isalocale("preorder") and #isalocale("order") make $lle$ a partial order.
-In a #isalocale("semilattice_sup") the join $a ljoin b$ lies above both operands
-(#isathm("sup_ge1"), #isathm("sup_ge2")) and below every other upper bound
-(#isathm("sup_least")). #isalocale("order_bot") and #isalocale("order_top") add
-a least element $lbot$ and a greatest element $ltop$. On top of this,
-#isalocale("executable_domain") extends the solver's class
-#isalocale("warrowing"), which brings the widening $widen$ and the narrowing
-$narrow$, and adds the emptiness test #isaconst("is_empty") and the printer
-#isaconst("to_string"). This completes what the solver and the generated code
-compute with. #isalocale("numeric_domain") adds $conc$ and its laws.
-Generated code never needs $conc$ (@sec:engineering). In the theory the
-lattice classes enter #isalocale("executable_domain") as the sort of its type
-variable. The solver's #isalocale("widening") and #isalocale("narrowing")
-constrain their type variable to #isalocale("order") instead of extending it,
-and a class built on them must do the same to use $lbot$ and $ltop$. Isabelle
-still records the lattice classes as superclasses, and the tree draws them so.
-
-
-The law #isathm("gamma_mono") is the one that turns each certified inequality
-$d lle sol(x)$ into the inclusion $conc(d) subset.eq conc(sol(x))$
-(@sec:abs-int). With $a lle a ljoin b$ it also gives
-$conc(a) union conc(b) subset.eq conc(a ljoin b)$ (#isathm("gamma_sup_ub1")), so
-a merge keeps the stores of both predecessors and no separate join law is
-needed. The law $conc(lbot) = emptyset$ lets a contradictory guard answer "no
-value", and $conc(ltop) = ZZ$ makes "unknown" a sound answer, for instance for
-a nondeterministic input or for the locals of a callee at its entry.
-
-The law #isathm("is_empty_correct") makes emptiness a semantic test. A
-structural test $a = lbot$ would miss empty values, because a carrier may
-represent the empty set in several ways. Voblint's interval type
-#isatype("ivl") stores raw bound pairs and never normalizes them. Its bottom
-#isaconst("bot_ivl") is the pair $[infinity, -infinity]$, but under
-#isaconst("gamma_ivl") every pair with a lower bound above its upper bound also
-denotes $emptyset$, and so do $[-infinity, -infinity]$ and
-$[infinity, infinity]$, which contain no integer. Goblint's lattice signature
-`Lattice.Bot` likewise declares its bottom test per domain. Discarding a state
-is sound as soon as the test implies emptiness. The converse makes the test
-exact. Voblint uses this exactness to derive that emptiness is downward closed
-(#isathm("is_empty_antimono")), which normalization needs (@sec:lift), and in
-the correspondence between the executable carrier's canonicalization and
-semantic readback (@sec:readback).
-
-Two stronger algebraic requirements come from the solver interface. The
-vendored solver is stated over #isalocale("bounded_semilattice_sup_bot"), so
-the join must be the least upper bound. It also needs $widen$ and $narrow$ with
-the laws of #isalocale("warrowing") (@sec:widening). Because
-#isalocale("executable_domain") extends both classes, a domain meets these
-requirements by instantiating it, after proving its widening and narrowing
-laws. At the semantic-domain layer, the join is used only through the fact
-that it lies above both operands. Leastness and the laws of
-#isalocale("warrowing") are structural requirements of the solver.
-
-The least-upper-bound requirement excludes some carriers. Consider a simplified
-form of Goblint's exclusion-set domain `DefExc`, which describes an integer
+The domain laws use the join only through the fact that it lies above both
+operands. The carrier classes demand more: #isalocale("semilattice_sup")
+requires the join to be the _least_ upper bound, and the solver and the
+generic framework are stated over this class. Leastness rules out a domain
+that Goblint uses. Its exclusion-set domain
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`] describes an integer
 either by its exact value, a singleton ${n}$, or by a finite set $F$ of values
-it cannot have, the set $ZZ without F$. The singletons ${1}$ and ${2}$ have
-many upper bounds in this carrier, among them $ZZ without {3}$ and
-$ZZ without {4}$. A least upper bound would have to lie below all of them, and
-the only set with this property that still contains $1$ and $2$ is ${1, 2}$.
-This set is neither a singleton nor of the form $ZZ without F$, so ${1}$ and
-${2}$ have no least upper bound in the carrier. This rules out a direct
-singleton/cofinite `DefExc`-style component over Voblint's unbounded
-mathematical integers under the current
-#isalocale("bounded_semilattice_sup_bot") requirement. Goblint's `DefExc` is
-bounded by the range of the integer kind; @app:goblint-alignment discusses this
-difference.
-
-The interface has no abstraction function, because Voblint makes no claim of
-optimal precision (@sec:abs-int). Termination is a premise of the main theorem
-(@sec:termination), so widening need not stabilize. Monotonicity is a separate
-layer of every interface: #isalocale("mono_evaluator"),
-#isalocale("mono_truth_test") and #isalocale("mono_intersection") add it to the
-sound versions. The analysis soundness contract (@sec:sound-core) and
-the solver's partial-correctness theorem (@sec:td) use none of these layers.
-The refined backward domain #isalocale("backward_domain_refined") and the
-transfer interface of @ch:instances impose them, and therefore prove more than
-soundness alone requires.
-
-The interface is executable and it can be reasoned about. Sign instantiates the
-classes with its seven values and the locale with #isaconst("meet_sign") as
-intersection and #isaconst("inv_less_sign") as the inverse of $<$
-(@fig:interface-at-work). The first lemma is proved by evaluation: Isabelle
-generates code for the Sign operations and runs it. The meet of #signval("≥0")
-and #signval("≤0") is #signval("0"), the meet of #signval("+") and
-#signval("−") is empty, and when $x < 0$ holds for an unknown $x$, the inverse
-refines $x$ to #signval("−"). Such proofs rest on the code generator's
-evaluation oracle (@tab:oracles-audit). The second lemma holds for every
-domain and follows from the laws alone: a value both operands admit keeps
-their intersection non-empty, by #isathm("intersect_sound") and
-#isathm("is_empty_correct"). The third lemma obtains the same fact for Sign
-without evaluation, by instantiating the second through Sign's interpretation
-of the locale. The layers pay off in that interpretation too: Sign's expression
-domain already establishes the forward laws, so its backward interpretation
-proves only the laws of the intersection and the inverse operators.
+it cannot have, the cofinite set $ZZ without F$.
 
 #figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("sign_interface_regression")
-    thy("intersect_shared_not_empty")
-    thy("sign_meet_zero_not_empty")
-  },
+  diagram(
+    spacing: (9mm, 8mm),
+    _snode((1.5, 0), <x-top>, $ZZ$),
+    _snode((0.8, 1), <x-3>, $ZZ without {3}$),
+    _snode((2.2, 1), <x-4>, $ZZ without {4}$),
+    _snode((3.1, 1), <x-more>, $dots.c$),
+    _snode((1.5, 2), <x-34>, $ZZ without {3, 4}$),
+    _snode((1.5, 3), <x-345>, $ZZ without {3, 4, 5}$),
+    _snode((1.5, 3.9), <x-down>, $dots.v$),
+    node(
+      (1.5, 4.9),
+      text(size: 8pt, fill: vb.muted, ${1, 2}$),
+      name: <x-12>,
+      inset: 3pt,
+      stroke: stroke(paint: vb.muted, thickness: 0.6pt, dash: "dashed"),
+      shape: rect,
+      corner-radius: 2pt,
+    ),
+    _snode((-0.7, 5.8), <x-s0>, ${0}$),
+    _snode((0.3, 5.8), <x-s1>, ${1}$),
+    _snode((2.7, 5.8), <x-s2>, ${2}$),
+    _snode((3.7, 5.8), <x-s3>, ${3}$),
+    _snode((4.4, 5.8), <x-smore>, $dots.c$),
+    _snode((1.5, 6.9), <x-bot>, $emptyset$),
+    edge(<x-top>, <x-3>, "-", stroke: _order),
+    edge(<x-top>, <x-4>, "-", stroke: _order),
+    edge(<x-3>, <x-34>, "-", stroke: _hit),
+    edge(<x-4>, <x-34>, "-", stroke: _hit),
+    edge(<x-34>, <x-345>, "-", stroke: _hit),
+    edge(<x-345>, <x-down>, "-", stroke: _hit),
+    edge(<x-345>, <x-s1>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-345>, <x-s2>, "-", stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted")),
+    edge(<x-12>, <x-s1>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    edge(<x-12>, <x-s2>, "-", stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed")),
+    ..("s0", "s1", "s2", "s3").map(n => edge(label("x-" + n), <x-bot>, "-", stroke: _order)),
+  ),
   kind: image,
   placement: auto,
-  caption: [Three lemmas about the interface, lifted with their proofs from an
-    example theory: concrete Sign operations evaluated by generated code, a
-    fact derived from the laws of #isalocale("semantic_intersection") for every
-    domain, and its instance for Sign.],
-) <fig:interface-at-work>
+  caption: [A sketch of the simplified exclusion-set carrier, each value drawn as
+    the set of integers it denotes and ordered bottom to top. Every
+    $ZZ without F$ with $1, 2 in.not F$ lies above ${1}$ and ${2}$. The blue
+    chain of such upper bounds descends forever, and every element of it lies
+    above both singletons (dotted). A least upper bound would denote ${1, 2}$ (dashed),
+    which the carrier does not contain. Illustrative, not machine-checked.],
+) <fig:defexc>
+
+Over unbounded integers (@fig:defexc), the singletons ${1}$ and ${2}$ have no least upper
+bound in this carrier. Every $ZZ without {p}$ with $p in.not {1, 2}$ is an
+upper bound, and no two of them are comparable, so no single value lies below
+all of them. A least upper bound would have to denote exactly ${1, 2}$, which
+is neither a singleton nor cofinite. Goblint avoids the problem in two ways. Its exclusion sets carry the bit
+range of the integer kind, so the upper bounds of ${1}$ and ${2}$ are
+finitely many. Its join is also not least: joining two different values
+excludes only $0$. Voblint could keep this carrier only by bounding its
+integers, or by weakening #isalocale("semilattice_sup") to an upper-bound
+law, which the vendored solver's own definitions rule out. A carrier that also
+holds finite sets has no such problem. Finite and cofinite sets are closed
+under union, so the join of ${1}$ and ${2}$ is ${1, 2}$. Goblint's enumeration
+domain #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/enumsDomain.ml")[`Enums`] has this shape, and Voblint
+has no such component. This argument is not machine-checked.
 
 == From values to stores <sec:domain-states>
 
@@ -464,6 +407,17 @@ $x$ and $y$ to $1$ on one branch and both to $5$ on the other. After the join,
 $sigma(x) = sigma(y) = [1, 5]$, which also admits the store with $x = 1$ and
 $y = 5$, so the check `x == y` cannot be proved. @sec:relational shows that the
 framework does not require this form.
+
+The law #isathm("gamma_mono") turns each certified inequality
+$d lle sol(x)$ into the inclusion $conc(d) subset.eq conc(sol(x))$
+(@sec:abs-int). With $a lle a ljoin b$ it also shows that a merge keeps the
+stores of both predecessors (#isathm("gamma_sup_ub1")). The law
+$conc(lbot) = emptyset$ lets a contradictory guard answer "no value", and
+$conc(ltop) = ZZ$ makes "unknown" a sound answer. The law
+#isathm("is_empty_correct") makes emptiness a semantic test: a carrier may
+represent the empty set in several ways, such as every interval whose lower
+bound lies above its upper bound, so comparing with $lbot$ would miss empty
+values.
 
 The set $sem(sigma)$ is empty exactly when one variable has an empty
 concretization (#isathm("is_empty_state_iff_gamma_state_empty")): a store needs
