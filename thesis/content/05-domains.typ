@@ -479,7 +479,7 @@ fact.
     )
   })),
   kind: image,
-  placement: auto,
+  placement: none,
   caption: [A guard no execution satisfies. Its two disjuncts empty different
     variables, so a pointwise join of the arms restores both. With the lifted
     states of this section, the analyzer reports the check in the branch as
@@ -493,10 +493,16 @@ inside the lattice. The datatype
 #isatype("lifted") adds an outer constructor #ctor("Bot"), meaning
 "unreachable", below every #ctor("Lifted") payload, with
 $conc(ctor("Bot")) = emptyset$. #ctor("Bot") is the identity of the lifted
-join, and #isaconst("transfer_lift") passes it through without running the
-payload transfer. On a #ctor("Lifted") payload it runs the transfer and then
-#isaconst("normalize_lift"), which replaces a result the emptiness test
-classifies as empty by #ctor("Bot") (@fig:lifted-hasse). Joins preserve normalization
+join. Since #isatype("lifted") has the shape of an option type, a payload
+transfer $f$ lifts to it by monadic bind, #isaconst("transfer_lift"):
+#align(
+  center,
+  isai("transfer_lift empty_pred f x = do { a <- x; normalize_lift empty_pred (f a) }"),
+)
+#ctor("Bot") passes
+through without running $f$, and the result of $f$ on a #ctor("Lifted")
+payload goes through #isaconst("normalize_lift"), which replaces a result the
+emptiness test classifies as empty by #ctor("Bot") (@fig:lifted-hasse). Joins preserve normalization
 (#isathm("normalized_lift_sup")), and for a normalized value the emptiness test
 holds exactly when the value is #ctor("Bot")
 (#isathm("normalized_state_lift_bot_iff")). With the exact test, denoting no
