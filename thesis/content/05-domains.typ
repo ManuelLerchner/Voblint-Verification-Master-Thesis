@@ -125,7 +125,11 @@ functions, the guard filters and the check layer reuse them.
     kind: image,
     placement: none,
     caption: [The declarations of #isalocale("executable_domain") and
-      #isalocale("numeric_domain"), lifted from the theory.],
+      #isalocale("numeric_domain"), lifted from the theory. The lattice classes
+      appear as the sort of #raw("'a") because the solver's #isalocale("widening") and
+      #isalocale("narrowing") constrain their type variable to #isalocale("order")
+      instead of extending it, and a class built on them must do the same to use
+      $lbot$ and $ltop$. The sort still makes them superclasses.],
   ) <fig:domain-contract>
 ]
 
@@ -222,22 +226,32 @@ carrier need not have a meet at all (@sec:branches).
     )
     if mode == "fixes" { fixes.push(entry) } else { laws.push(entry) }
   }
+  let kind = head.captures.at(0)
+  let parents = parent-text
+    .split("+")
+    .map(p => p.trim().split(regex("\s+")).at(0))
+    .filter(p => p != "")
+  // The sort a parameter's type variable is constrained to
+  // (`'a::numeric_domain`, `'a::{order_bot, order_top}`).
+  let sorts = fixes
+    .map(f => f
+      .rhs
+      .matches(regex("'[a-z]+\s*::\s*(\{[^}]*\}|[A-Za-z_]+)"))
+      .map(m => m.captures.at(0)))
+    .flatten()
+    .map(s => s.trim("{").trim("}").split(",").map(c => c.trim()))
+    .flatten()
+    .dedup()
   (
     name: head.captures.at(1),
-    kind: head.captures.at(0),
+    kind: kind,
     origin: origin,
-    parents: parent-text
-      .split("+")
-      .map(p => p.trim().split(regex("\s+")).at(0))
-      .filter(p => p != ""),
+    // In a class the sort of its own type variable becomes a superclass, as
+    // for the solver's `widening`; in a locale it is a dependency.
+    parents: if kind == "class" { (parents + sorts).dedup() } else { parents },
     fixes: fixes,
     laws: laws,
-    // A type variable constrained to a class (`'a::numeric_domain`) is a
-    // dependency, not an extension.
-    bounds: fixes
-      .map(f => f.rhs.matches(regex("'[a-z]+\s*::\s*([A-Za-z_]+)")).map(m => m.captures.at(0)))
-      .flatten()
-      .dedup(),
+    bounds: if kind == "class" { () } else { sorts },
   )
 }
 #let _snip(n) = read("/shared/generated/snippets/" + n + ".thy")
@@ -249,6 +263,10 @@ carrier need not have a meet at all (@sec:branches).
 #let _tree = toml("/shared/domain-tree.toml")
 #let _hierarchy = _tree.roots.fold((), (acc, n) => _visit(_decl(_snip(n)), acc))
 #let _rows = _tree.rows
+#let _ancestors(n) = {
+  let d = _hierarchy.find(e => e.name == n)
+  if d == none { () } else { d.parents + d.parents.map(_ancestors).flatten() }
+}
 #{
   let names = _hierarchy.map(d => d.name)
   let placed = _rows.map(r => r.keys()).flatten()
@@ -286,7 +304,12 @@ carrier need not have a meet at all (@sec:branches).
           let head = code(it.name, fill: fill)
           if it.notation != none { head += [ (#code(it.notation))] }
           rows.push(head)
-          rows.push(code(if fill == vb.const { ":: " + it.rhs } else { it.rhs }))
+          // A class draws its type variable's sort as arrows, so the
+          // signature omits it.
+          let rhs = if d.kind == "class" {
+            it.rhs.replace(regex("('[a-z]+)\s*::\s*(\{[^}]*\}|[A-Za-z_]+)"), m => m.captures.at(0))
+          } else { it.rhs }
+          rows.push(code(if fill == vb.const { ":: " + rhs } else { rhs }))
         }
       }
       // Styled inside, so that `measure` sees the size the node is drawn at.
@@ -328,7 +351,8 @@ carrier need not have a meet at all (@sec:branches).
         (node(at.at(d.name), boxes.at(d.name), name: label(d.name)),)
       },
       ..for d in _hierarchy {
-        for p in d.parents {
+        // An arrow implied by a longer path is left out.
+        for p in d.parents.filter(p => not d.parents.any(q => q != p and p in _ancestors(q))) {
           (edge(label(d.name), label(p), marks: (none, hollow), stroke: 0.5pt + vb.neutral),)
         }
         for b in d.bounds.filter(b => b in at) {
@@ -347,11 +371,12 @@ carrier need not have a meet at all (@sec:branches).
   placement: auto,
   caption: [Everything a domain supplies over its carrier type #raw("'a"), as a
     UML inheritance tree. Each class (solid) or locale (dashed) lists the
-    operations and laws it declares; a solid arrow points to a declaration it
-    extends, a dashed one to the class its type variable is constrained to. The
-    colour gives the origin: #swatch(vb.hol) Isabelle's HOL library,
-    #swatch(vb.solver) the vendored solver, #swatch(vb.voblint) Voblint. Nodes
-    and arrows are read from the declarations.],
+    operations and laws it declares, not the theorems it derives; a solid arrow
+    points to a declaration it extends, a dashed one to the class its type
+    variable is constrained to. The colour gives where each node is declared:
+    #swatch(vb.hol) Isabelle's HOL library, #swatch(vb.solver) the
+    vendored solver, #swatch(vb.voblint) Voblint. Nodes and arrows are read from
+    the declarations.],
 ) <fig:domain-carrier>
 
 
@@ -361,9 +386,11 @@ In a #isalocale("semilattice_sup") the join $a ljoin b$ lies above both operands
 (#isathm("sup_ge1"), #isathm("sup_ge2")) and below every other upper bound
 (#isathm("sup_least")). #isalocale("order_bot") and #isalocale("order_top") add
 a least element $lbot$ and a greatest element $ltop$. On top of this,
-#isalocale("executable_domain") adds the emptiness test #isaconst("is_empty")
-and the printer #isaconst("to_string"), which completes what the solver and the
-generated code compute with. #isalocale("numeric_domain") adds $conc$ and its
+#isalocale("executable_domain") extends the solver's class
+#isalocale("warrowing"), which brings the widening $widen$ and the narrowing
+$narrow$, and adds the emptiness test #isaconst("is_empty") and the printer
+#isaconst("to_string"). This completes what the solver and the generated code
+compute with. #isalocale("numeric_domain") adds $conc$ and its
 laws (@fig:domain-contract). Generated code never needs $conc$
 (@sec:engineering).
 
@@ -394,13 +421,13 @@ semantic readback (@sec:readback).
 
 Two stronger algebraic requirements come from the solver interface. The
 vendored solver is stated over #isalocale("bounded_semilattice_sup_bot"), so
-the join must be the least upper bound. The carrier must also instantiate
-#isalocale("bounded_warrowing"), which adds the solver's widening $widen$ and
-narrowing $narrow$ with the laws of @sec:widening. Each domain declares this
-instance on its own, next to its executable operations. At the semantic-domain
-layer, the join is used only through the fact that it lies above both
-operands. Leastness and #isalocale("bounded_warrowing") are structural
-requirements of the solver.
+the join must be the least upper bound. It also needs $widen$ and $narrow$ with
+the laws of #isalocale("warrowing") (@sec:widening). Because
+#isalocale("executable_domain") extends both classes, a domain meets these
+requirements by instantiating it, after proving its widening and narrowing
+laws. At the semantic-domain layer, the join is used only through the fact
+that it lies above both operands. Leastness and the laws of
+#isalocale("warrowing") are structural requirements of the solver.
 
 The least-upper-bound requirement excludes some carriers. Consider a simplified
 form of Goblint's exclusion-set domain `DefExc`, which describes an integer
@@ -700,7 +727,7 @@ stays #raw(_c.verdict).
     [#isaconst("is_empty") $a ==> conc(a) = emptyset$], [discarding an empty state (@sec:lift)],
     [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$], [normalization, readback (@sec:readback)],
     [least upper bounds], [the solver's order class],
-    [#isalocale("bounded_warrowing")], [the solver's update rule],
+    [#isalocale("warrowing")], [the solver's update rule],
     [sound inverse operators, if any], [#isathm("bfilter_sound") (@sec:branches)],
     [sound comparison queries], [check verdicts (@sec:verdicts)],
     table.hline(stroke: 0.5pt),
