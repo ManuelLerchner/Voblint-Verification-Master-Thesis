@@ -1420,42 +1420,31 @@ let narrow _A = _A.narrow;;
 type 'a warrowing =
   {narrowing_warrowing : 'a narrowing; widening_warrowing : 'a widening};;
 
-type 'a bounded_warrowing =
-  {bounded_semilattice_sup_bot_bounded_warrowing :
-     'a bounded_semilattice_sup_bot;
-    warrowing_bounded_warrowing : 'a warrowing};;
+let rec widen_dg_state (_A1, _A2) (_B1, _B2)
+  a b = DG (widen _A2.widening_warrowing (locals a) (locals b),
+             widen _B2.widening_warrowing (globs a) (globs b));;
 
-let rec widen_dg_state _A _B
-  a b = DG (widen _A.warrowing_bounded_warrowing.widening_warrowing (locals a)
-              (locals b),
-             widen _B.warrowing_bounded_warrowing.widening_warrowing (globs a)
-               (globs b));;
-
-let rec widening_dg_state _A _B =
+let rec widening_dg_state (_A1, _A2) (_B1, _B2) =
   ({order_widening =
-      (order_dg_state
-        _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.order_order_bot
-        _B.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.order_order_bot);
-     widen = widen_dg_state _A _B}
+      (order_dg_state _A1.order_bot_bounded_semilattice_sup_bot.order_order_bot
+        _B1.order_bot_bounded_semilattice_sup_bot.order_order_bot);
+     widen = widen_dg_state (_A1, _A2) (_B1, _B2)}
     : ('a, 'b) dg_state widening);;
 
-let rec narrow_dg_state _A _B
-  a b = DG (narrow _A.warrowing_bounded_warrowing.narrowing_warrowing (locals a)
-              (locals b),
-             narrow _B.warrowing_bounded_warrowing.narrowing_warrowing (globs a)
-               (globs b));;
+let rec narrow_dg_state (_A1, _A2) (_B1, _B2)
+  a b = DG (narrow _A2.narrowing_warrowing (locals a) (locals b),
+             narrow _B2.narrowing_warrowing (globs a) (globs b));;
 
-let rec narrowing_dg_state _A _B =
+let rec narrowing_dg_state (_A1, _A2) (_B1, _B2) =
   ({order_narrowing =
-      (order_dg_state
-        _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.order_order_bot
-        _B.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.order_order_bot);
-     narrow = narrow_dg_state _A _B}
+      (order_dg_state _A1.order_bot_bounded_semilattice_sup_bot.order_order_bot
+        _B1.order_bot_bounded_semilattice_sup_bot.order_order_bot);
+     narrow = narrow_dg_state (_A1, _A2) (_B1, _B2)}
     : ('a, 'b) dg_state narrowing);;
 
-let rec warrowing_dg_state _A _B =
-  ({narrowing_warrowing = (narrowing_dg_state _A _B);
-     widening_warrowing = (widening_dg_state _A _B)}
+let rec warrowing_dg_state (_A1, _A2) (_B1, _B2) =
+  ({narrowing_warrowing = (narrowing_dg_state (_A1, _A2) (_B1, _B2));
+     widening_warrowing = (widening_dg_state (_A1, _A2) (_B1, _B2))}
     : ('a, 'b) dg_state warrowing);;
 
 let rec semilattice_sup_dg_state _A _B =
@@ -1769,17 +1758,6 @@ let semilattice_sup_sign =
   ({sup_semilattice_sup = sup_sign; order_semilattice_sup = order_sign} :
     sign semilattice_sup);;
 
-let bounded_semilattice_sup_bot_sign =
-  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_sign;
-     order_bot_bounded_semilattice_sup_bot = order_bot_sign}
-    : sign bounded_semilattice_sup_bot);;
-
-let bounded_warrowing_sign =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      bounded_semilattice_sup_bot_sign;
-     warrowing_bounded_warrowing = warrowing_sign}
-    : sign bounded_warrowing);;
-
 let rec string_of_sign = function SBot -> "<bottom>"
                          | SNeg -> "-"
                          | SNonPos -> "<le>" ^ "0"
@@ -1797,15 +1775,22 @@ let rec is_empty_sign a = is_bottom_sign a;;
 type 'a executable_domain =
   {bounded_semilattice_sup_bot_executable_domain :
      'a bounded_semilattice_sup_bot;
-    order_top_executable_domain : 'a order_top; is_empty : 'a -> bool;
+    order_top_executable_domain : 'a order_top;
+    warrowing_executable_domain : 'a warrowing; is_empty : 'a -> bool;
     to_string : 'a -> string};;
 let is_empty _A = _A.is_empty;;
 let to_string _A = _A.to_string;;
 
+let bounded_semilattice_sup_bot_sign =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_sign;
+     order_bot_bounded_semilattice_sup_bot = order_bot_sign}
+    : sign bounded_semilattice_sup_bot);;
+
 let executable_domain_sign =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_sign;
-     order_top_executable_domain = order_top_sign; is_empty = is_empty_sign;
+     order_top_executable_domain = order_top_sign;
+     warrowing_executable_domain = warrowing_sign; is_empty = is_empty_sign;
      to_string = to_string_sign}
     : sign executable_domain);;
 
@@ -2454,17 +2439,6 @@ let semilattice_sup_ivl =
   ({sup_semilattice_sup = sup_ivl; order_semilattice_sup = order_ivl} :
     ivl semilattice_sup);;
 
-let bounded_semilattice_sup_bot_ivl =
-  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_ivl;
-     order_bot_bounded_semilattice_sup_bot = order_bot_ivl}
-    : ivl bounded_semilattice_sup_bot);;
-
-let bounded_warrowing_ivl =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      bounded_semilattice_sup_bot_ivl;
-     warrowing_bounded_warrowing = warrowing_ivl}
-    : ivl bounded_warrowing);;
-
 let rec modulo_nat
   m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));;
 
@@ -2521,10 +2495,16 @@ let rec to_string_ivl a = (if is_top_ivl a then "<top>" else string_of_ivl a);;
 
 let rec is_empty_ivl a = is_bottom_ivl a;;
 
+let bounded_semilattice_sup_bot_ivl =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_ivl;
+     order_bot_bounded_semilattice_sup_bot = order_bot_ivl}
+    : ivl bounded_semilattice_sup_bot);;
+
 let executable_domain_ivl =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_ivl;
-     order_top_executable_domain = order_top_ivl; is_empty = is_empty_ivl;
+     order_top_executable_domain = order_top_ivl;
+     warrowing_executable_domain = warrowing_ivl; is_empty = is_empty_ivl;
      to_string = to_string_ivl}
     : ivl executable_domain);;
 
@@ -2627,17 +2607,6 @@ let semilattice_sup_parity =
   ({sup_semilattice_sup = sup_parity; order_semilattice_sup = order_parity} :
     parity semilattice_sup);;
 
-let bounded_semilattice_sup_bot_parity =
-  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_parity;
-     order_bot_bounded_semilattice_sup_bot = order_bot_parity}
-    : parity bounded_semilattice_sup_bot);;
-
-let bounded_warrowing_parity =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      bounded_semilattice_sup_bot_parity;
-     warrowing_bounded_warrowing = warrowing_parity}
-    : parity bounded_warrowing);;
-
 let rec string_of_parity = function PBot -> "<bottom>"
                            | PEven -> "2" ^ "<int>"
                            | POdd -> "1+2" ^ "<int>"
@@ -2652,10 +2621,16 @@ let rec is_bottom_parity p = equal_paritya p PBot;;
 
 let rec is_empty_parity a = is_bottom_parity a;;
 
+let bounded_semilattice_sup_bot_parity =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_parity;
+     order_bot_bounded_semilattice_sup_bot = order_bot_parity}
+    : parity bounded_semilattice_sup_bot);;
+
 let executable_domain_parity =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_parity;
-     order_top_executable_domain = order_top_parity; is_empty = is_empty_parity;
+     order_top_executable_domain = order_top_parity;
+     warrowing_executable_domain = warrowing_parity; is_empty = is_empty_parity;
      to_string = to_string_parity}
     : parity executable_domain);;
 
@@ -2729,15 +2704,15 @@ let rec narrowing_lifted (_A1, _A2) =
   ({order_narrowing = (order_lifted _A1); narrow = narrow_lifted (_A1, _A2)} :
     'a lifted narrowing);;
 
-let rec warrowing_lifted _A =
+let rec warrowing_lifted (_A1, _A2) =
   ({narrowing_warrowing =
       (narrowing_lifted
-        (_A.bounded_semilattice_sup_bot_bounded_warrowing.semilattice_sup_bounded_semilattice_sup_bot,
-          _A.warrowing_bounded_warrowing.narrowing_warrowing));
+        (_A1.semilattice_sup_bounded_semilattice_sup_bot,
+          _A2.narrowing_warrowing));
      widening_warrowing =
        (widening_lifted
-         (_A.bounded_semilattice_sup_bot_bounded_warrowing.semilattice_sup_bounded_semilattice_sup_bot,
-           _A.warrowing_bounded_warrowing.widening_warrowing))}
+         (_A1.semilattice_sup_bounded_semilattice_sup_bot,
+           _A2.widening_warrowing))}
     : 'a lifted warrowing);;
 
 let rec semilattice_sup_lifted _A =
@@ -2749,13 +2724,6 @@ let rec bounded_semilattice_sup_bot_lifted _A =
   ({semilattice_sup_bounded_semilattice_sup_bot = (semilattice_sup_lifted _A);
      order_bot_bounded_semilattice_sup_bot = (order_bot_lifted _A)}
     : 'a lifted bounded_semilattice_sup_bot);;
-
-let rec bounded_warrowing_lifted _A =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      (bounded_semilattice_sup_bot_lifted
-        _A.bounded_semilattice_sup_bot_bounded_warrowing.semilattice_sup_bounded_semilattice_sup_bot);
-     warrowing_bounded_warrowing = (warrowing_lifted _A)}
-    : 'a lifted bounded_warrowing);;
 
 type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 
@@ -2932,45 +2900,43 @@ let rec order_bot_resolved_st_q _A =
      order_order_bot = (order_resolved_st_q _A)}
     : 'a resolved_st_q order_bot);;
 
-let rec widen_resolved_st _A
-  s t = map2_resolved_st
-          _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          (widen _A.warrowing_bounded_warrowing.widening_warrowing) s t;;
+let rec widen_resolved_st (_A1, _A2)
+  s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          (widen _A2.widening_warrowing) s t;;
 
-let rec widen_on_resolved_st_q _A
+let rec widen_on_resolved_st_q (_A1, _A2)
   (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (widen_resolved_st _A xa x);;
+    Abs_resolved_st (widen_resolved_st (_A1, _A2) xa x);;
 
-let rec widen_resolved_st_q _A s t = widen_on_resolved_st_q _A s t;;
+let rec widen_resolved_st_q (_A1, _A2)
+  s t = widen_on_resolved_st_q (_A1, _A2) s t;;
 
-let rec widening_resolved_st_q _A =
+let rec widening_resolved_st_q (_A1, _A2) =
   ({order_widening =
-      (order_resolved_st_q
-        _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot);
-     widen = widen_resolved_st_q _A}
+      (order_resolved_st_q _A1.order_bot_bounded_semilattice_sup_bot);
+     widen = widen_resolved_st_q (_A1, _A2)}
     : 'a resolved_st_q widening);;
 
-let rec narrow_resolved_st _A
-  s t = map2_resolved_st
-          _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          (narrow _A.warrowing_bounded_warrowing.narrowing_warrowing) s t;;
+let rec narrow_resolved_st (_A1, _A2)
+  s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          (narrow _A2.narrowing_warrowing) s t;;
 
-let rec narrow_on_resolved_st_q _A
+let rec narrow_on_resolved_st_q (_A1, _A2)
   (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (narrow_resolved_st _A xa x);;
+    Abs_resolved_st (narrow_resolved_st (_A1, _A2) xa x);;
 
-let rec narrow_resolved_st_q _A s t = narrow_on_resolved_st_q _A s t;;
+let rec narrow_resolved_st_q (_A1, _A2)
+  s t = narrow_on_resolved_st_q (_A1, _A2) s t;;
 
-let rec narrowing_resolved_st_q _A =
+let rec narrowing_resolved_st_q (_A1, _A2) =
   ({order_narrowing =
-      (order_resolved_st_q
-        _A.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot);
-     narrow = narrow_resolved_st_q _A}
+      (order_resolved_st_q _A1.order_bot_bounded_semilattice_sup_bot);
+     narrow = narrow_resolved_st_q (_A1, _A2)}
     : 'a resolved_st_q narrowing);;
 
-let rec warrowing_resolved_st_q _A =
-  ({narrowing_warrowing = (narrowing_resolved_st_q _A);
-     widening_warrowing = (widening_resolved_st_q _A)}
+let rec warrowing_resolved_st_q (_A1, _A2) =
+  ({narrowing_warrowing = (narrowing_resolved_st_q (_A1, _A2));
+     widening_warrowing = (widening_resolved_st_q (_A1, _A2))}
     : 'a resolved_st_q warrowing);;
 
 let rec semilattice_sup_resolved_st_q _A =
@@ -2985,13 +2951,6 @@ let rec bounded_semilattice_sup_bot_resolved_st_q _A =
      order_bot_bounded_semilattice_sup_bot =
        (order_bot_resolved_st_q _A.order_bot_bounded_semilattice_sup_bot)}
     : 'a resolved_st_q bounded_semilattice_sup_bot);;
-
-let rec bounded_warrowing_resolved_st_q _A =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      (bounded_semilattice_sup_bot_resolved_st_q
-        _A.bounded_semilattice_sup_bot_bounded_warrowing);
-     warrowing_bounded_warrowing = (warrowing_resolved_st_q _A)}
-    : 'a resolved_st_q bounded_warrowing);;
 
 type congruence = Abs_congruence of (int * int) option;;
 
@@ -3103,17 +3062,6 @@ let semilattice_sup_congruence =
      order_semilattice_sup = order_congruence}
     : congruence semilattice_sup);;
 
-let bounded_semilattice_sup_bot_congruence =
-  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_congruence;
-     order_bot_bounded_semilattice_sup_bot = order_bot_congruence}
-    : congruence bounded_semilattice_sup_bot);;
-
-let bounded_warrowing_congruence =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      bounded_semilattice_sup_bot_congruence;
-     warrowing_bounded_warrowing = warrowing_congruence}
-    : congruence bounded_warrowing);;
-
 let rec string_of_congruence
   c = (match rep_congruence c with None -> "<bottom>"
         | Some (r, m) ->
@@ -3132,10 +3080,16 @@ let rec is_bottom_congruence a = equal_congruencea a bot_congruencea;;
 
 let rec is_empty_congruence a = is_bottom_congruence a;;
 
+let bounded_semilattice_sup_bot_congruence =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_congruence;
+     order_bot_bounded_semilattice_sup_bot = order_bot_congruence}
+    : congruence bounded_semilattice_sup_bot);;
+
 let executable_domain_congruence =
   ({bounded_semilattice_sup_bot_executable_domain =
       bounded_semilattice_sup_bot_congruence;
      order_top_executable_domain = order_top_congruence;
+     warrowing_executable_domain = warrowing_congruence;
      is_empty = is_empty_congruence; to_string = to_string_congruence}
     : congruence executable_domain);;
 
@@ -3308,19 +3262,6 @@ let rec semilattice_sup_int_dom_ext _A =
      order_semilattice_sup = (order_int_dom_ext _A)}
     : 'a int_dom_ext semilattice_sup);;
 
-let rec bounded_semilattice_sup_bot_int_dom_ext _A =
-  ({semilattice_sup_bounded_semilattice_sup_bot =
-      (semilattice_sup_int_dom_ext _A);
-     order_bot_bounded_semilattice_sup_bot = (order_bot_int_dom_ext _A)}
-    : 'a int_dom_ext bounded_semilattice_sup_bot);;
-
-let rec bounded_warrowing_int_dom_ext _A =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      (bounded_semilattice_sup_bot_int_dom_ext
-        _A.int_dom_record_lattice_int_dom_record_warrowing);
-     warrowing_bounded_warrowing = (warrowing_int_dom_ext _A)}
-    : 'a int_dom_ext bounded_warrowing);;
-
 let rec parity_accepts
   x0 n = match x0, n with PBot, n -> false
     | PEven, n ->
@@ -3452,10 +3393,20 @@ let rec to_string_int_dom_ext _A d = string_of_int_dom d;;
 
 let rec is_empty_int_dom_ext _A d = is_bottom_int_dom d;;
 
+let rec bounded_semilattice_sup_bot_int_dom_ext _A =
+  ({semilattice_sup_bounded_semilattice_sup_bot =
+      (semilattice_sup_int_dom_ext _A);
+     order_bot_bounded_semilattice_sup_bot = (order_bot_int_dom_ext _A)}
+    : 'a int_dom_ext bounded_semilattice_sup_bot);;
+
 let rec executable_domain_int_dom_ext _A =
   ({bounded_semilattice_sup_bot_executable_domain =
-      (bounded_semilattice_sup_bot_int_dom_ext _A);
-     order_top_executable_domain = (order_top_int_dom_ext _A);
+      (bounded_semilattice_sup_bot_int_dom_ext
+        _A.int_dom_record_lattice_int_dom_record_warrowing);
+     order_top_executable_domain =
+       (order_top_int_dom_ext
+         _A.int_dom_record_lattice_int_dom_record_warrowing);
+     warrowing_executable_domain = (warrowing_int_dom_ext _A);
      is_empty = is_empty_int_dom_ext _A; to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
 
@@ -4356,7 +4307,7 @@ let rec refine_round x = apply_reduction_steps refinement_steps x;;
 
 let rec canonical_refine_step
   d = (let da = refine_round d in
-        (if is_empty_int_dom_ext int_dom_record_lattice_unit da
+        (if is_empty_int_dom_ext int_dom_record_warrowing_unit da
           then bot_int_dom_exta int_dom_record_lattice_unit else da));;
 
 let rec while_option b c s = (if b s then while_option b c (c s) else Some s);;
@@ -4378,7 +4329,7 @@ let rec refine
 let rec intersect_int_dom_mode mode a b = refine mode (intersect_int_dom a b);;
 
 let rec int_eq_false
-  a b = is_empty_int_dom_ext int_dom_record_lattice_unit
+  a b = is_empty_int_dom_ext int_dom_record_warrowing_unit
           (intersect_int_dom_mode Refine_Fixpoint a b);;
 
 let rec inv_less_congruence result a b = (a, b);;
@@ -4494,9 +4445,9 @@ let rec inv_less_int_dom
       (refine mode r1, refine mode r2));;
 
 let rec int_less_false
-  a b = is_empty_int_dom_ext int_dom_record_lattice_unit
+  a b = is_empty_int_dom_ext int_dom_record_warrowing_unit
           (fst (inv_less_int_dom Refine_Fixpoint true a b)) ||
-          is_empty_int_dom_ext int_dom_record_lattice_unit
+          is_empty_int_dom_ext int_dom_record_warrowing_unit
             (snd (inv_less_int_dom Refine_Fixpoint true a b));;
 
 let rec int_eq_true a b = int_less_false a b && int_less_false b a;;
@@ -4736,9 +4687,9 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return locals);;
 
 let rec int_less_true
-  a b = is_empty_int_dom_ext int_dom_record_lattice_unit
+  a b = is_empty_int_dom_ext int_dom_record_warrowing_unit
           (fst (inv_less_int_dom Refine_Fixpoint false a b)) ||
-          is_empty_int_dom_ext int_dom_record_lattice_unit
+          is_empty_int_dom_ext int_dom_record_warrowing_unit
             (snd (inv_less_int_dom Refine_Fixpoint false a b));;
 
 let rec int_less
@@ -5702,7 +5653,7 @@ let rec prog_procs
 let rec string_of_abstract_value
   = function SignValue s -> to_string_sign s
     | IntervalValue i -> to_string_ivl i
-    | IntDomValue d -> to_string_int_dom_ext int_dom_record_lattice_unit d
+    | IntDomValue d -> to_string_int_dom_ext int_dom_record_warrowing_unit d
     | ParityValue v -> to_string_parity v
     | CongruenceValue v -> to_string_congruence v;;
 
@@ -7965,62 +7916,62 @@ let rec aval_int_dom
     | mode, Less (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (int_dom_lt a b)))
     | mode, LessEq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (map_option not (int_dom_lt b a))))
     | mode, Greater (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (int_dom_lt b a)))
     | mode, GreaterEq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (map_option not (int_dom_lt a b))))
     | mode, NotEq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (map_option not (int_dom_eqb a b))))
     | mode, Eq (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (int_dom_eqb a b)))
     | mode, Not e, sigma ->
         (let a = aval_int_dom mode e sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int (map_option not (int_dom_tobool a))))
     | mode, And (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int
@@ -8028,8 +7979,8 @@ let rec aval_int_dom
     | mode, Or (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
-          (if is_empty_int_dom_ext int_dom_record_lattice_unit a ||
-                is_empty_int_dom_ext int_dom_record_lattice_unit b
+          (if is_empty_int_dom_ext int_dom_record_warrowing_unit a ||
+                is_empty_int_dom_ext int_dom_record_warrowing_unit b
             then bot_int_dom_exta int_dom_record_lattice_unit
             else of_bool_option (sup_int_dom_ext int_dom_record_lattice_unit)
                    int_dom_of_int
@@ -8038,7 +7989,7 @@ let rec aval_int_dom
 let rec branch_int_dom_fixpoint_st
   g e pol s =
     (if feasible_with
-          (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+          (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
           (Backward_exec_ops_ext
             (aval_int_dom Refine_Fixpoint, int_dom_tobool,
               inv_less_int_dom Refine_Fixpoint, inv_eq_int_dom Refine_Fixpoint,
@@ -8052,7 +8003,7 @@ let rec branch_int_dom_fixpoint_st
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
-               (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+               (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
                (Backward_exec_ops_ext
                  (aval_int_dom Refine_Fixpoint, int_dom_tobool,
                    inv_less_int_dom Refine_Fixpoint,
@@ -8132,7 +8083,7 @@ let rec int_dom_enter_fixpoint_st_for
 let rec branch_int_dom_never_st
   g e pol s =
     (if feasible_with
-          (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+          (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
           (Backward_exec_ops_ext
             (aval_int_dom Refine_Never, int_dom_tobool,
               inv_less_int_dom Refine_Never, inv_eq_int_dom Refine_Never,
@@ -8145,7 +8096,7 @@ let rec branch_int_dom_never_st
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
-               (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+               (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
                (Backward_exec_ops_ext
                  (aval_int_dom Refine_Never, int_dom_tobool,
                    inv_less_int_dom Refine_Never, inv_eq_int_dom Refine_Never,
@@ -8169,7 +8120,7 @@ let rec int_dom_enter_never_st_for
 let rec branch_int_dom_once_st
   g e pol s =
     (if feasible_with
-          (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+          (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
           (Backward_exec_ops_ext
             (aval_int_dom Refine_Once, int_dom_tobool,
               inv_less_int_dom Refine_Once, inv_eq_int_dom Refine_Once,
@@ -8182,7 +8133,7 @@ let rec branch_int_dom_once_st
       then collapse_lift
              (bot_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit))
              (bfilter_st_lift_with
-               (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+               (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
                (Backward_exec_ops_ext
                  (aval_int_dom Refine_Once, int_dom_tobool,
                    inv_less_int_dom Refine_Once, inv_eq_int_dom Refine_Once,
@@ -8731,23 +8682,35 @@ let rec analysis_result
                (equal_lifted
                  (equal_resolved_st_q
                    (equal_sign,
-                     bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                (equal_lifted
                  (equal_resolved_st_q
                    (equal_sign,
-                     bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))),
               (bounded_semilattice_sup_bot_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q
-                    bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing),
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_resolved_st_q
+                    bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_resolved_st_q
+                    bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)),
               (warrowing_dg_state
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
-                (bounded_warrowing_lifted
-                  (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_resolved_st_q
+                     bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign),
+                      (warrowing_resolved_st_q
+                        (bounded_semilattice_sup_bot_sign, warrowing_sign)))))
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_resolved_st_q
+                     bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign),
+                      (warrowing_resolved_st_q
+                        (bounded_semilattice_sup_bot_sign, warrowing_sign)))))))
             r)
           (declared_global p) p)
         p
@@ -8766,23 +8729,36 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_sign,
-                       bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_sign,
-                       bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_sign),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_sign, warrowing_sign)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_sign),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_sign,
+                            warrowing_sign)))))))
               r)
             (declared_global p) p)
           p
@@ -8800,23 +8776,36 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_sign,
-                       bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_sign,
-                       bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_sign),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_sign, warrowing_sign)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_sign),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_sign,
+                            warrowing_sign)))))))
               r)
             (declared_global p) p)
           k p
@@ -8836,23 +8825,35 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))))
               r)
             (declared_global p) p)
           p
@@ -8873,23 +8874,35 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))))
               r)
             (declared_global p) p)
           p
@@ -8908,33 +8921,45 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_ivl,
-                       bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_ivl),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_ivl, warrowing_ivl)))))))
               r)
             (declared_global p) p)
           k p
     | Int_Analysis, r, Ctx_None, p ->
         unit_run_result
-          (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+          (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
+            ((executable_domain_int_dom_ext int_dom_record_warrowing_unit),
               (equal_int_dom_ext equal_unit))
             (equal_routed_gk equal_unit equal_unit)
             (int_tf_st_for Refine_Fixpoint)
@@ -8950,42 +8975,60 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      ((equal_int_dom_ext equal_unit),
-                       (bounded_warrowing_int_dom_ext
-                         int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      ((equal_int_dom_ext equal_unit),
-                       (bounded_warrowing_int_dom_ext
-                         int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      (bounded_semilattice_sup_bot_int_dom_ext
+                        int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      (bounded_semilattice_sup_bot_int_dom_ext
+                        int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit)))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                        (warrowing_resolved_st_q
+                          ((bounded_semilattice_sup_bot_int_dom_ext
+                             int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                            (warrowing_int_dom_ext
+                              int_dom_record_warrowing_unit))))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                        (warrowing_resolved_st_q
+                          ((bounded_semilattice_sup_bot_int_dom_ext
+                             int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                            (warrowing_int_dom_ext
+                              int_dom_record_warrowing_unit))))))))
               r)
             (declared_global p) p)
           p
     | Int_Analysis, r, Ctx_EntryState, p ->
         entry_state_run_result
-          ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
+          ((executable_domain_int_dom_ext int_dom_record_warrowing_unit),
             (equal_int_dom_ext equal_unit))
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
+            ((executable_domain_int_dom_ext int_dom_record_warrowing_unit),
               (equal_int_dom_ext equal_unit))
             (equal_routed_gk equal_unit
               (equal_list (equal_int_dom_ext equal_unit)))
@@ -9005,41 +9048,59 @@ let rec analysis_result
                     (equal_lifted
                       (equal_resolved_st_q
                         ((equal_int_dom_ext equal_unit),
-                          (bounded_warrowing_int_dom_ext
-                            int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                          (bounded_semilattice_sup_bot_int_dom_ext
+                            int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))
                     (equal_lifted
                       (equal_resolved_st_q
                         ((equal_int_dom_ext equal_unit),
-                          (bounded_warrowing_int_dom_ext
-                            int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                          (bounded_semilattice_sup_bot_int_dom_ext
+                            int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))),
                    (bounded_semilattice_sup_bot_dg_state
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         (bounded_warrowing_int_dom_ext
-                           int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         (bounded_warrowing_int_dom_ext
-                           int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)),
                    (warrowing_dg_state
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         (bounded_warrowing_int_dom_ext
-                           int_dom_record_warrowing_unit)))
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         (bounded_warrowing_int_dom_ext
-                           int_dom_record_warrowing_unit)))))
+                     ((bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_int_dom_ext
+                            int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                       (warrowing_lifted
+                         ((bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                           (warrowing_resolved_st_q
+                             ((bounded_semilattice_sup_bot_int_dom_ext
+                                int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                               (warrowing_int_dom_ext
+                                 int_dom_record_warrowing_unit))))))
+                     ((bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_int_dom_ext
+                            int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                       (warrowing_lifted
+                         ((bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                           (warrowing_resolved_st_q
+                             ((bounded_semilattice_sup_bot_int_dom_ext
+                                int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                               (warrowing_int_dom_ext
+                                 int_dom_record_warrowing_unit))))))))
                  r)
             (declared_global p) p)
           p
     | Int_Analysis, r, Ctx_CallString k, p ->
         call_string_run_result
-          (executable_domain_int_dom_ext int_dom_record_lattice_unit)
+          (executable_domain_int_dom_ext int_dom_record_warrowing_unit)
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext int_dom_record_lattice_unit),
+            ((executable_domain_int_dom_ext int_dom_record_warrowing_unit),
               (equal_int_dom_ext equal_unit))
             equal_call_string_gk (int_tf_st_for Refine_Fixpoint)
             (int_dom_enter_st_for Refine_Fixpoint)
@@ -9054,31 +9115,49 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      ((equal_int_dom_ext equal_unit),
-                       (bounded_warrowing_int_dom_ext
-                         int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      ((equal_int_dom_ext equal_unit),
-                       (bounded_warrowing_int_dom_ext
-                         int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing).order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      (bounded_semilattice_sup_bot_int_dom_ext
+                        int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      (bounded_semilattice_sup_bot_int_dom_ext
+                        int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit)))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      (bounded_warrowing_int_dom_ext
-                        int_dom_record_warrowing_unit)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                        (warrowing_resolved_st_q
+                          ((bounded_semilattice_sup_bot_int_dom_ext
+                             int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                            (warrowing_int_dom_ext
+                              int_dom_record_warrowing_unit))))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_int_dom_ext
+                         int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_int_dom_ext
+                           int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing)),
+                        (warrowing_resolved_st_q
+                          ((bounded_semilattice_sup_bot_int_dom_ext
+                             int_dom_record_warrowing_unit.int_dom_record_lattice_int_dom_record_warrowing),
+                            (warrowing_int_dom_ext
+                              int_dom_record_warrowing_unit))))))))
               r)
             (declared_global p) p)
           k p
@@ -9096,24 +9175,37 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_parity,
-                       bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_parity,
-                       bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_parity))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_parity,
+                            warrowing_parity)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_parity,
+                            warrowing_parity)))))))
               r)
             (declared_global p) p)
           p
@@ -9132,25 +9224,37 @@ let rec analysis_result
                     (equal_lifted
                       (equal_resolved_st_q
                         (equal_parity,
-                          bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                          bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                     (equal_lifted
                       (equal_resolved_st_q
                         (equal_parity,
-                          bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                          bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))),
                    (bounded_semilattice_sup_bot_dg_state
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing),
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)),
                    (warrowing_dg_state
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         bounded_warrowing_parity))
-                     (bounded_warrowing_lifted
-                       (bounded_warrowing_resolved_st_q
-                         bounded_warrowing_parity))))
+                     ((bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_resolved_st_q
+                          bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                       (warrowing_lifted
+                         ((bounded_semilattice_sup_bot_resolved_st_q
+                            bounded_semilattice_sup_bot_parity),
+                           (warrowing_resolved_st_q
+                             (bounded_semilattice_sup_bot_parity,
+                               warrowing_parity)))))
+                     ((bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_resolved_st_q
+                          bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                       (warrowing_lifted
+                         ((bounded_semilattice_sup_bot_resolved_st_q
+                            bounded_semilattice_sup_bot_parity),
+                           (warrowing_resolved_st_q
+                             (bounded_semilattice_sup_bot_parity,
+                               warrowing_parity)))))))
                  r)
             (declared_global p) p)
           p
@@ -9168,24 +9272,37 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_parity,
-                       bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_parity,
-                       bounded_warrowing_parity.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q bounded_warrowing_parity))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_parity))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_parity,
+                            warrowing_parity)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_parity),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_parity,
+                            warrowing_parity)))))))
               r)
             (declared_global p) p)
           k p
@@ -9206,25 +9323,37 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))))
               r)
             (declared_global p) p)
           p
@@ -9246,25 +9375,37 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))))
               r)
             (declared_global p) p)
           p
@@ -9284,25 +9425,37 @@ let rec analysis_result
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                  (equal_lifted
                    (equal_resolved_st_q
                      (equal_congruence,
-                       bounded_warrowing_congruence.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))),
                 (bounded_semilattice_sup_bot_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence)).bounded_semilattice_sup_bot_bounded_warrowing),
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
+                  (bounded_semilattice_sup_bot_lifted
+                    (bounded_semilattice_sup_bot_resolved_st_q
+                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)),
                 (warrowing_dg_state
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))
-                  (bounded_warrowing_lifted
-                    (bounded_warrowing_resolved_st_q
-                      bounded_warrowing_congruence))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))
+                  ((bounded_semilattice_sup_bot_lifted
+                     (bounded_semilattice_sup_bot_resolved_st_q
+                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
+                    (warrowing_lifted
+                      ((bounded_semilattice_sup_bot_resolved_st_q
+                         bounded_semilattice_sup_bot_congruence),
+                        (warrowing_resolved_st_q
+                          (bounded_semilattice_sup_bot_congruence,
+                            warrowing_congruence)))))))
               r)
             (declared_global p) p)
           k p;;
