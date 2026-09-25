@@ -3191,5 +3191,15 @@ DG_Constraint_Trees
 Routed_Call_Trees
 
 # --- Renamed to the concept names the thesis uses (2026-09-25) ---
-# sound_domain became numeric_domain.
+# sound_domain became numeric_domain; sound_dg_spec_core became
+# analysis_contract, and the facts named after it followed.
 sound_domain
+sound_dg_spec_core
+sound_dg_spec_core_st
+sound_dg_spec_core_mf
+sound_dg_spec_core_ov_spec
+sound_dg_spec_core_sign_dg_spec_env_join
+local_spec_core_sound
+local_state_dg_spec_for_core_sound
+local_state_dg_spec_for_lifted_core_sound
+ownership_split_lift_core_sound

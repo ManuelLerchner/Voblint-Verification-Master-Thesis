@@ -22,7 +22,7 @@ text \<open>
   to \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against that global.
 \<close>
 
-locale dg_ctx_activation_base = sound_dg_spec_core S \<gamma>\<^sub>D\<^sub>G \<G>
+locale dg_ctx_activation_base = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"

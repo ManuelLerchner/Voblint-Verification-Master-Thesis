@@ -1,5 +1,5 @@
 (* src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy *)
-locale sound_dg_spec_core =
+locale analysis_contract =
   fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
                 'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"

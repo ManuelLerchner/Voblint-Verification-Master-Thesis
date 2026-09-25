@@ -400,7 +400,7 @@ text \<open>
       @{theory Voblint_Framework.DG_Constraint_Programs}.
     \<^item> @{theory Voblint_Framework.DG_Spec_Sound} --- native
       heterogeneous soundness over opaque carriers
-      (\<^verbatim>\<open>sound_dg_spec_core\<close>). The routed context locales in
+      (\<^verbatim>\<open>analysis_contract\<close>). The routed context locales in
       @{theory Voblint_Framework.Routed_Context} feed those obligations into
       \<^const>\<open>activation_collect\<close>. The unit-context instance reaches
       \<^const>\<open>ltr_collect\<close> through
@@ -424,7 +424,7 @@ text \<open>
       \<^verbatim>\<open>(node, context)\<close>.
     \<^item> @{theory Voblint_Framework.DG_Ctx_Activation} --- discharges
       those five obligations from a
-      \<^verbatim>\<open>sound_dg_spec_core\<close> post-solution, so a computed D/G
+      \<^verbatim>\<open>analysis_contract\<close> post-solution, so a computed D/G
       solution certifies the activation collecting semantics.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
@@ -658,7 +658,7 @@ text \<open>
       application, bounding \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
-  interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec_core\<close>; every domain is one of its
+  interface, the carrier-opaque \<^verbatim>\<open>analysis_contract\<close>; every domain is one of its
   instances, and context slicing is factored through
   the relational activation spine and its per-context admitted slots --- the unit
   and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), while

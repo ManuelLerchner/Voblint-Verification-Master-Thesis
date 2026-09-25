@@ -599,8 +599,8 @@ text \<open>
   soundness, so the routed statement below never re-derives it.
 \<close>
 
-interpretation dg_base: sound_dg_spec_core "analysis_spec pgs p" dom.gamma_exec pgs
-  unfolding analysis_spec_def by (rule dom.sound_dg_spec_core_st[OF tf_sound])
+interpretation dg_base: analysis_contract "analysis_spec pgs p" dom.gamma_exec pgs
+  unfolding analysis_spec_def by (rule dom.analysis_contract_st[OF tf_sound])
 
 lemma routed_analysis_sound_of_live:
   fixes R :: "'c call_context_rel"

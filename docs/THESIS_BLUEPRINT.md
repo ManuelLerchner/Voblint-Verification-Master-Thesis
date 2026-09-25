@@ -222,7 +222,7 @@ rules.
 **`Voblint_Framework`.** The D/G analysis framework, domain-free and
 compiler-free. `dg_state` (opaque `D`/`G`), the manager (`man_local`,
 `man_global`, `man_sideg`), `dg_spec` with one field per Goblint `Spec` method,
-`sound_dg_spec_core` as the soundness contract, the keyed equation generator
+`analysis_contract` as the soundness contract, the keyed equation generator
 `routed_node_rhs` (and its buffered production variant), `Activation_Backbone`
 (the `ltr_coverage` obligations in global shape), `DG_Ctx_Activation` (EDGE and
 COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
@@ -361,9 +361,9 @@ L3  THE SOUNDNESS CONTRACT  ← the pivot of the thesis
              v
 L4  WHAT AN ANALYSIS SUPPLIES
     dg_spec (Spec analogue), man_local/global/sideg    DG_Spec, DG_Manager
-    sound_dg_spec_core: gammaDG_mono, step_sound,
+    analysis_contract: gammaDG_mono, step_sound,
                         combine_sound                  DG_Spec_Sound
-    sound_transfer_for → local_state_dg_spec_for_core_sound   DG_Local_State_Spec
+    sound_transfer_for → local_state_dg_spec_for_contract   DG_Local_State_Spec
     nonrelational_transfer (one interpretation per domain)    Nonrelational_Transfer
              │
              v
@@ -1020,7 +1020,7 @@ thesis's climax is that nothing is left, not that a long proof finally runs.
 
 The remaining six steps keep the expected order, with one refinement: abstract
 domains (Ch. 5) come after traces and before the analysis interface, because
-`sound_dg_spec_core` needs a concretization `gammaDG` in its statement, so
+`analysis_contract` needs a concretization `gammaDG` in its statement, so
 `numeric_domain` and `gamma_state` must already exist.
 
 ---
@@ -1089,7 +1089,7 @@ PART III — THE ANALYZER
   6.2 D and G: separating flow-sensitive from shared facts
   6.3 The manager: capabilities, not keys
   6.4 dg_spec, field by field
-  6.5 sound_dg_spec_core: the contract, stated over compiled trees
+  6.5 analysis_contract: the contract, stated over compiled trees
   6.6 The whole-state shortcut: eight operations and one interpretation
   6.7 The ownership-split lifter as a Spec2Spec functor
   6.8 What the interface deliberately does not have (sync, query, startstate)
@@ -1223,7 +1223,7 @@ numeric-query derivation details; state the interface and one soundness lemma.
 **Ch. 6.** Prerequisite: Ch. 2.4, Ch. 5. Open with Goblint's `Spec` signature
 verbatim, then the correspondence table. `dg_spec`'s record is worth showing in
 full — ten fields is readable, and the `#` notation makes the correspondence
-visual. `sound_dg_spec_core` is worth showing; its statement over compiled
+visual. `analysis_contract` is worth showing; its statement over compiled
 trees rather than a reconstructed pair is a design point. *Omit* `DG_Manager`'s
 five type parameters from the main text; put the parameter table in Appendix B.
 
@@ -1326,7 +1326,7 @@ thesis section → theories → central definitions → central theorems.
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Abstract_Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `abstract_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
-| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `sound_dg_spec_core`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_core_sound`, `combine_sound_program` |
+| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_contract`, `combine_sound_program` |
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Keyed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `routed_gk` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
@@ -1345,7 +1345,7 @@ thesis section → theories → central definitions → central theorems.
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |
 | 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence`, `inv_plus_congruence` | `congruence_lt_sound` |
 | 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_transfer_for` |
-| 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `sound_dg_spec_core` instance |
+| 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |
 | 12.3 | `Voblint_Examples_Sign.Example_Sign_DG_CallString_K1/K2`, `Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision`, `Voblint_Examples_CLI.*` | — | `sign_k2_strictly_more_precise_than_k1_at_g` |
 | 12.x | `Voblint_Examples.Example_End_To_End_Certificate` | `certificate_demo_prog` | `certificate_demo_full_certificate` |
@@ -1764,7 +1764,7 @@ Verified defects in the current gallery, all in figure payloads:
 | `fig:modules` | six theory names that do not exist: `Constraint_System`, `DG_Framework`, `Ivl_Exec`, `Analyse_Dispatch`, `State_Report_GraphViz`; caption cites `code_identifier` | zero occurrences in `src/`; the export uses one `module_name Generated` block and no `code_identifier` at all |
 | `fig:pipeline` | edge labelled `dg_gen_of` | zero occurrences; the generator is `routed_node_rhs` / `compiled_routed_eqs_for` |
 | `fig:correspondence` | shows `locale dg_spec = fixes tf, route, read, publish` | `dg_spec` is a **record** with ten fields; `route` is a parameter of `routed_context_base_hetero`, not of `dg_spec`; reads/publishes go through `man_global`/`man_sideg` |
-| `tab:instantiation` | Congruence marked ✗ for `dg_spec` / `sound_dg_spec_core`, captioned “not selectable on its own” | **false**: `Congruence_Analysis` is one of the five `analysis_domain` constructors and `Congruence_Analyses.thy` registers it at all three context policies |
+| `tab:instantiation` | Congruence marked ✗ for `dg_spec` / `analysis_contract`, captioned “not selectable on its own” | **false**: `Congruence_Analysis` is one of the five `analysis_domain` constructors and `Congruence_Analyses.thy` registers it at all three context policies |
 | `fig:cfg-source`, `fig:ast` | `proc fac(n) { … }` | VIMP's keyword is `fun` (`manifests/vimp-grammar.yaml`, `keywords: fun: FUN`) |
 | `fig:validltr` | constructors `Called`, `Resumed` | `Call`, `Resume`; the step rule appends through `extend` |
 | `tab:oracles` | a `sorry` column with ✓ marks, reading as “has a sorry”; `source_sound` attributed to `Voblint_CLI` | no `sorry` anywhere in `src/`; `source_sound` is `unit_dg_analysis.source_sound` in `Voblint_Result` |
@@ -1968,7 +1968,7 @@ admitted subgoal, and one line to regenerate.
 fragments it yields 17 nodes and 10 edges, and the edges are the proof spine:
 
 ```text
-sound_dg_spec_core -> dg_ctx_activation_base -> routed_context_base_hetero
+analysis_contract -> dg_ctx_activation_base -> routed_context_base_hetero
   -> dg_analysis_adapter -> routed_analysis_sound
 routed_dg_pipeline -> routed_dg_analysis -> unit_dg_analysis
 ```

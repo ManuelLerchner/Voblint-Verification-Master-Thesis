@@ -70,12 +70,12 @@ action is planned.
 
 ## Domain composition
 
-No generic reduced-product constructor is planned. `sound_dg_spec_core`'s carriers
+No generic reduced-product constructor is planned. `analysis_contract`'s carriers
 are already opaque, and `Rel_Order_Domain.thy` demonstrates a non-`abs_state`
 instance against the unmodified framework; see
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
 architecture. New heterogeneous or relational analyses are added directly
-against `sound_dg_spec_core`, not through a shared product/reduction layer.
+against `analysis_contract`, not through a shared product/reduction layer.
 
 ## Cross-analysis query composition
 

@@ -319,9 +319,9 @@ interpretation dom: routed_dg_domain_exec "declared_global p"
       rule enter_commute[unfolded fun_of_exec_dg_st_for_def],
       rule empty_pred_exact)
 
-interpretation dg_base: sound_dg_spec_core "analysis_spec (declared_global p) p" dom.gamma_exec
+interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p" dom.gamma_exec
     "declared_global p"
-  unfolding analysis_spec_def by (rule dom.sound_dg_spec_core_st[OF tf_sound])
+  unfolding analysis_spec_def by (rule dom.analysis_contract_st[OF tf_sound])
 
 text \<open>
   The routed soundness at the live keys, for any relation admitting call contexts.

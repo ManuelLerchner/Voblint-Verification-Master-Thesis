@@ -18,7 +18,7 @@ Executable witnesses live under
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
 | `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
-| `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `sound_dg_spec_core` — no context, no solver |
+| `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
 | `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule` of the shared `unit_dg_analysis`, and `interval_es_rule` and `interval_cs_rule` of `routed_dg_analysis` at the entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 

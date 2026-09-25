@@ -2,7 +2,7 @@
 
 > **Status:** DELIVERED. Grounded in Goblint master source (`analyses.ml`,
 > `base.ml`, `constraints.ml`). **Recommendation: leave the DG interface
-> unchanged.** The local-only context routing in `sound_dg_spec_core` faithfully models
+> unchanged.** The local-only context routing in `analysis_contract` faithfully models
 > Goblint; no minimal interface change is required.
 
 ## Primary-source evidence
@@ -89,7 +89,7 @@ flow-insensitive channel read on demand (E2), not in the context.
 may side-effect globals. There is no separate effectful-analysis type. This is the
 thesis of Goblint's side-effecting constraint systems.
 
-**5. Does `sound_dg_spec_core` faithfully model this?** **Yes.**
+**5. Does `analysis_contract` faithfully model this?** **Yes.**
 
 - D/G separation with a joint `gammaDG d g` matches E1/E2.
 - Side-effects are built into the interface, not bolted on: a transfer is a
@@ -113,7 +113,7 @@ avoids (E3), enlarging surface for no faithfulness gain.
 
 | Component | Goblint counterpart | Verdict |
 | --- | --- | --- |
-| `sound_dg_spec_core` (D, G, `gammaDG`, edge and combine soundness) | `Spec` (D, G, `sideg`) | **Faithful.** Built-in `Side` = E2/E4. Unchanged. |
+| `analysis_contract` (D, G, `gammaDG`, edge and combine soundness) | `Spec` (D, G, `sideg`) | **Faithful.** Built-in `Side` = E2/E4. Unchanged. |
 | `routed_call_alternative_program` (`route cc ctx entry ca`) | `context man f v` at the call | **Faithful.** Routing reads the entered local value = E3/E4. |
 | `local_state_dg_spec_for_lifted` (whole state in D, G inert) | a `Spec` instance that keeps globals in `D` | Faithful specialization. |
 
@@ -127,7 +127,7 @@ Contexts are now `routed_dg_analysis` registrations over the routed call trees.
 
 ## Recommendation
 
-**Leave the DG interface unchanged.** `sound_dg_spec_core` faithfully models Goblint's
+**Leave the DG interface unchanged.** `analysis_contract` faithfully models Goblint's
 `Spec`: separate D/G lattices, context computed from local state with globals
 excluded, and side-effects as an ordinary (built-in) capability. No minimal interface
 change is warranted by the evidence.

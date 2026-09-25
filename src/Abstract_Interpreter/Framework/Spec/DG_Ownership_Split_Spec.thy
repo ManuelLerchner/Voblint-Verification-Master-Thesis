@@ -467,8 +467,8 @@ text \<open>
   side condition arises.
 \<close>
 
-theorem (in sound_transfer_for) ownership_split_lift_core_sound:
-  "sound_dg_spec_core
+theorem (in sound_transfer_for) ownership_split_lift_contract:
+  "analysis_contract
      (ownership_split_lift \<G> (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev))
      (gamma_ownership_split \<G>) \<G>"
 proof (unfold_locales, goal_cases)

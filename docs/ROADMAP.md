@@ -81,7 +81,7 @@ more precise shared-state communication. Keep routing generic over the `D` and
 The hook-tree layer (`sound_dg_hooks`) and the owner-sensitive placement
 examples built on it were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` ("D/G
 reconstruction and publication timing") records why. Every analysis interprets
-`sound_dg_spec_core` through `dg_ctx_activation_base` and
+`analysis_contract` through `dg_ctx_activation_base` and
 `routed_context_base_hetero`. An analysis-specific sharing policy belongs in that
 analysis's own semantics over the keyed manager, not in a generic placement
 layer.
@@ -91,7 +91,7 @@ layer.
 `int_dom` is one concrete reduced product, and `Rel_Order_Domain.thy`
 demonstrates a non-pointwise carrier.
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) settled this: no
-shared product/reduction layer is planned. `sound_dg_spec_core`'s carriers are
+shared product/reduction layer is planned. `analysis_contract`'s carriers are
 already opaque, so new heterogeneous or relational analyses (e.g.
 `Rel_Order_Domain.thy`) are added directly against it.
 

@@ -147,14 +147,14 @@ next
         local_combine_transfer_def)
 qed
 
-text \<open>Entry is absent from \<^locale>\<open>sound_dg_spec_core\<close>, so the override inherits the
-  stock core soundness outright.\<close>
+text \<open>Entry is absent from \<^locale>\<open>analysis_contract\<close>, so the override inherits the
+  stock specification's contract outright.\<close>
 
-lemma sound_dg_spec_core_ov_spec:
+lemma analysis_contract_ov_spec:
   assumes exact: "\<And>s. ep s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
-  shows "sound_dg_spec_core (ov_spec \<G> ep) (sign_conf_gamma \<G>) \<G>"
+  shows "analysis_contract (ov_spec \<G> ep) (sign_conf_gamma \<G>) \<G>"
 proof -
-  interpret stock: sound_dg_spec_core "sign_conf_spec \<G> ep" "sign_conf_gamma \<G>" \<G>
+  interpret stock: analysis_contract "sign_conf_spec \<G> ep" "sign_conf_gamma \<G>" \<G>
     by (rule sign_conf_sound_exec[OF exact])
   show ?thesis
   proof (unfold_locales, goal_cases)
@@ -859,8 +859,8 @@ next
     by (rule routed_entry_seed_programs_local_only)
 qed (rule ov_pp_st[unfolded ov_eqs_def])
 
-interpretation ov_core: sound_dg_spec_core "ov_spec ov_gs ov_ep" "sign_conf_gamma ov_gs" ov_gs
-  by (rule sound_dg_spec_core_ov_spec[OF ov_exact])
+interpretation ov_core: analysis_contract "ov_spec ov_gs ov_ep" "sign_conf_gamma ov_gs" ov_gs
+  by (rule analysis_contract_ov_spec[OF ov_exact])
 
 text \<open>The routed context locale, fully interpreted: every alternative's continuation is a
   sound description of the caller (\<open>EnterTotal\<close>), the routed table reflects whichever
@@ -875,7 +875,7 @@ interpretation ov_routed: routed_context_base_hetero
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
   "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for ov_gs) m\<rbrakk>\<^sub>\<bottom>" ov_R
 proof (rule routed_context_base_hetero.intro
-    [OF dg_ctx_activation_base.intro[OF sound_dg_spec_core_ov_spec[OF ov_exact]]],
+    [OF dg_ctx_activation_base.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])

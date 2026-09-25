@@ -70,7 +70,7 @@ layer without embedding line numbers that drift.
 | `D` | Analysis-chosen flow-sensitive fact associated with a local unknown. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
-| `sound_dg_spec_core` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
+| `analysis_contract` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | resume value (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume value. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
 
