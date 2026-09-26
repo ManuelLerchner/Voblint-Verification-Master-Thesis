@@ -139,16 +139,17 @@ section \<open>Every existing local specification is a component\<close>
 
 text \<open>
   A specification that never asks is a component whose transfers ignore the
-  oracle and whose handler answers \<open>\<top>\<close> to every query, the counterpart of an
-  analysis inheriting Goblint's \<open>DefaultSpec.query\<close>.
+  oracle. It may still answer queries: any sound handler for its own states
+  turns it into a component. With the handler that answers \<open>\<top>\<close> to every query
+  it is the counterpart of an analysis inheriting Goblint's \<open>DefaultSpec.query\<close>.
 \<close>
 
-lemma (in sound_local_dg_spec) oracle_component_default:
-  assumes "query_algebra answer_holds"
+lemma (in sound_local_dg_spec) oracle_component_of_handler:
+  assumes "sound_query_handler answer_holds qry gammaD"
   shows "oracle_component answer_holds (\<lambda>_. sk) (\<lambda>_. asn) (\<lambda>_. sp) (\<lambda>_. br) (\<lambda>_. bd)
-           (\<lambda>_. rt) en (\<lambda>_. ev) ce ca gammaD \<G> (\<lambda>_ _. \<top>)"
+           (\<lambda>_. rt) en (\<lambda>_. ev) ce ca gammaD \<G> qry"
 proof -
-  interpret query_algebra answer_holds by (fact assms)
+  interpret sound_query_handler answer_holds qry gammaD by (fact assms)
   show ?thesis
   proof (unfold_locales, goal_cases)
     case (1 d d')
@@ -162,10 +163,17 @@ proof -
   next
     case (4 s dc t de ci)
     then show ?case by (rule combine_sound_local)
-  next
-    case (5 s d q)
-    show ?case by (rule top_sound)
   qed
+qed
+
+lemma (in sound_local_dg_spec) oracle_component_default:
+  assumes "query_algebra answer_holds"
+  shows "oracle_component answer_holds (\<lambda>_. sk) (\<lambda>_. asn) (\<lambda>_. sp) (\<lambda>_. br) (\<lambda>_. bd)
+           (\<lambda>_. rt) en (\<lambda>_. ev) ce ca gammaD \<G> (\<lambda>_ _. \<top>)"
+proof -
+  interpret query_algebra answer_holds by (fact assms)
+  show ?thesis
+    by (rule oracle_component_of_handler) (unfold_locales, rule top_sound)
 qed
 
 end

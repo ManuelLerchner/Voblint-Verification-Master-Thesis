@@ -46,6 +46,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Analysis_Query
     Oracle_Local_Spec
     Local_Spec_Product
+    Oracle_Wrappers
     Call_String_Context
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)
