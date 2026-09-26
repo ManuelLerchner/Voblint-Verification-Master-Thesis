@@ -546,6 +546,7 @@ let run_result_json r =
     ]
 
 let analysis_answer_json = function
+  | C.Invalid_Activation -> tagged "Invalid_Activation" []
   | C.Malformed_Program -> tagged "Malformed_Program" []
   | C.Analysed r -> tagged "Analysed" [ run_result_json r ]
 

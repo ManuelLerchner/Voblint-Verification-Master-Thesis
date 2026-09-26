@@ -259,12 +259,16 @@ text \<open>
   place the contribution of a single edge can be read. It is the component's own
   step, run with the answers its handler gives on that state, as the edge
   transfer runs it.
+
+  The fifth is \<^const>\<open>live_succ\<close> read off the same solve, so a caller listing where
+  every call leads does not solve the system again for each call.
 \<close>
 
 definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> ('c, 'v) analysis_result \<times> 'v lifted
          \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'v lifted)
-         \<times> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted)" where
+         \<times> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted)
+         \<times> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)" where
   "result_with_globals \<G> p =
      (let sol = solution \<G> p;
           c = comp \<G> p;
@@ -273,10 +277,18 @@ definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_
           read (globs (snd sol (Inr gk0))),
           (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
           (\<lambda>v ctx a. read (let d = locals (snd sol (Inl (v, ctx)))
-                            in mc_step c (local_answers (mc_qry c) (mc_qs c a d) d) a d))))"
+                            in mc_step c (local_answers (mc_qry c) (mc_qs c a d) d) a d)),
+          (\<lambda>u ctx ca q.
+             let d = entry_of \<G> p (call_info_of ca q) (locals (snd sol (Inl (u, ctx))))
+             in if d = Bot then None else Some (route \<G> u ctx d ca))))"
 
 lemma fst_result_with_globals [simp]: "fst (result_with_globals \<G> p) = result \<G> p"
   by (simp add: result_with_globals_def result_def Let_def)
+
+lemma live_succ_result_with_globals:
+  "snd (snd (snd (snd (result_with_globals \<G> p)))) = live_succ \<G> p"
+  by (simp add: result_with_globals_def live_succ_def ctx_succ_def sol_env_def Let_def
+      fun_eq_iff)
 text \<open>
   The contextual publication surface: one verdict per context at a check, and
   the aggregate a caller prints. Both are \<^const>\<open>classify_checks_ctx\<close> and

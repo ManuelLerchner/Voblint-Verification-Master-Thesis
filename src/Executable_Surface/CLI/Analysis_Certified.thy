@@ -63,11 +63,13 @@ lemma run_result_sound:
       and "sound_table p r classify gm"
       and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "table_covers gm r v s
-         \<and> checks_sound_at (case solved of (t, shared, seed_at, step_at) \<Rightarrow>
-             run_result_of render ctx_key ctx_view targets classify t shared seed_at step_at p)
+         \<and> checks_sound_at (case solved of (t, shared, seed_at, step_at, succ) \<Rightarrow>
+             run_result_of render ctx_key ctx_view (targets succ) classify t shared seed_at
+               step_at p)
              v s
-         \<and> diagnostics_sound_at (case solved of (t, shared, seed_at, step_at) \<Rightarrow>
-             run_result_of render ctx_key ctx_view targets classify t shared seed_at step_at p)
+         \<and> diagnostics_sound_at (case solved of (t, shared, seed_at, step_at, succ) \<Rightarrow>
+             run_result_of render ctx_key ctx_view (targets succ) classify t shared seed_at
+               step_at p)
              p v s"
   unfolding prod.case_eq_if assms(1)
   by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) simp_all

@@ -115,7 +115,7 @@ let run analysis_js globals_js context_js context_depth source_js =
           let analysis_start = now_ms () in
           let answer =
             Value_symbols.decode_answer
-              (C.run_voblint analysis globals context program)
+              (C.run_voblint [ analysis ] globals context program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
@@ -123,6 +123,8 @@ let run analysis_js globals_js context_js context_depth source_js =
               program answer
           in
           match answer with
+          | C.Invalid_Activation ->
+              Render_json.error_json ~raw "Invalid activation list"
           | C.Malformed_Program ->
               let message =
                 match Wf_explain.explain program with

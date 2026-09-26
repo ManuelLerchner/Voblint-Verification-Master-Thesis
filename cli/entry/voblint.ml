@@ -5,9 +5,9 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domain globals context
+       -> Voblint_CLI.Generated.run_voblint [domain] globals context
           (Isabelle-generated). One call checks the program is well-formed and
-          runs the one analysis the domain, global update rule and context name;
+          runs the analyses the activation list, global update rule and context name;
           every combination is answered. What comes back is data -- states per point and
           context, the routes calls take, the check column, diagnostics -- with
           every abstract value already rendered by its own domain. Every
@@ -553,8 +553,9 @@ let () =
   end;
   let result_for k =
     match
-      Value_symbols.decode_answer (C.run_voblint k !globals context prog)
+      Value_symbols.decode_answer (C.run_voblint [ k ] !globals context prog)
     with
+    | C.Invalid_Activation -> invalid_arg "voblint: invalid activation list"
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.Analysed result ->
         if !html || !dot || !graph_snapshot then
