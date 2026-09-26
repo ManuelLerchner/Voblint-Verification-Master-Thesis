@@ -1,5 +1,5 @@
 theory MCP_Spec
-  imports "Voblint_Framework.DG_Spec_Sound"
+  imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Domain.Reachability_Lift"
 begin
 
 section \<open>Many cooperating analyses over one state\<close>
@@ -619,4 +619,49 @@ proof -
     using sound enter unfolding mcp_component_sound_def
     by (simp add: map_component_def keep)
 qed
+
+section \<open>One field of a reachability-lifted record\<close>
+
+text \<open>
+  The combined state is a record of reachability-lifted fields under one more
+  reachability lift, whose \<^const>\<open>Bot\<close> is the state no analysis can reach. A
+  field's lens reads \<^const>\<open>Bot\<close> there, and writing a reachable value into it
+  starts from the record whose fields are all \<^const>\<open>Bot\<close>. Writing \<^const>\<open>Bot\<close>
+  into the unreachable state leaves it unreachable, so writing back what was
+  read changes nothing.
+\<close>
+
+definition lift_get :: "('r \<Rightarrow> 'c lifted) \<Rightarrow> 'r lifted \<Rightarrow> 'c lifted" where
+  "lift_get f x = (case x of Bot \<Rightarrow> Bot | Lifted r \<Rightarrow> f r)"
+
+definition lift_put :: "('r \<Rightarrow> 'c lifted \<Rightarrow> 'r) \<Rightarrow> 'r::bot lifted \<Rightarrow> 'c lifted \<Rightarrow> 'r lifted" where
+  "lift_put u x v =
+     (case x of
+        Bot \<Rightarrow> (case v of Bot \<Rightarrow> Bot | Lifted _ \<Rightarrow> Lifted (u \<bottom> v))
+      | Lifted r \<Rightarrow> Lifted (u r v))"
+
+lemma lift_get_simps [simp]:
+  "lift_get f Bot = Bot" "lift_get f (Lifted r) = f r"
+  by (simp_all add: lift_get_def)
+
+lemma lift_get_put:
+  assumes "\<And>r v. f (u r v) = v" and "f \<bottom> = Bot"
+  shows "lift_get f (lift_put u x v) = v"
+  using assms by (cases x; cases v) (simp_all add: lift_put_def)
+
+lemma lift_put_get:
+  assumes "\<And>r. u r (f r) = r"
+  shows "lift_put u x (lift_get f x) = x"
+  using assms by (cases x) (simp_all add: lift_put_def)
+
+lemma lift_get_mono:
+  fixes f :: "'r::semilattice_sup \<Rightarrow> 'c::semilattice_sup lifted"
+  assumes "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
+  shows "x \<le> y \<Longrightarrow> lift_get f x \<le> lift_get f y"
+  using assms by (cases x; cases y) simp_all
+
+lemma lift_get_put_other:
+  assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = Bot"
+  shows "lift_get f2 (lift_put u1 x v) = lift_get f2 x"
+  using assms by (cases x; cases v) (simp_all add: lift_put_def)
 end
