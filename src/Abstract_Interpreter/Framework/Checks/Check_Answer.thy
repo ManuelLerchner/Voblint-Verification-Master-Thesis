@@ -74,12 +74,12 @@ proof (cases q)
   qed (simp add: EvalInt)
 qed
 
-lemma check_query_check_exp: "check_query (check_exp c) d = check_query c d"
-  by (cases c) (simp_all add: check_exp_def truthy_query_def)
+lemma check_query_check_truth_exp: "check_query (check_truth_exp c) d = check_query c d"
+  by (cases c) (simp_all add: check_truth_exp_def truthy_query_def)
 
 theorem classify_eval_answer:
   "classify_answer (eval_answer d (check_query_of c)) = Decided (classify_check c d)"
-  by (simp add: check_query_check_exp classify_bool_answer classify_check_def
+  by (simp add: check_query_check_truth_exp classify_bool_answer classify_check_def
       split: option.splits bool.splits)
 
 end

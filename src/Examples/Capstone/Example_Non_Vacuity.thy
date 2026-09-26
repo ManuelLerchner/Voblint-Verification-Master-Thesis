@@ -39,7 +39,7 @@ definition nv_prog :: imp_prog where
    }"
 
 lemma nv_report:
-  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog of
+  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
           = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
@@ -48,11 +48,11 @@ lemma nv_report:
 
 lemma nv_analysed:
   obtains res where
-    "run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog = Analysed res"
+    "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
   using nv_report
-  by (cases "run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog") auto
+  by (cases "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog") auto
 
 subsection \<open>The premises, discharged\<close>
 
@@ -132,19 +132,19 @@ qed
 
 lemma nv_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Warrow
-     (interval_es_rule.equations (declared_global nv_prog) nv_prog)
-     (interval_es_rule.root_query nv_prog) \<noteq> None"
-  unfolding interval_es_rule.root_query_def by eval
+     (mcp_es_rule.equations [Interval_Analysis] (declared_global nv_prog) nv_prog)
+     (mcp_es_rule.root_query nv_prog) \<noteq> None"
+  unfolding mcp_es_rule.root_query_def by eval
 
 lemma nv_terminates:
-  "config_terminates Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog"
-  by (simp add: interval_es_rule.terminates_of_solve_c [OF nv_solve_c])
+  "config_terminates [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog"
+  by (simp add: mcp_es_rule.terminates_of_solve_c [OF nv_solve_c])
 
 subsection \<open>The endpoints, instantiated\<close>
 
 theorem nv_source_certified:
   "\<exists>res v stk.
-     run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog
+     run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
        = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved),
@@ -158,10 +158,10 @@ theorem nv_source_certified:
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                    cinit_stores (declared_global nv_prog)\<^esub> v
    \<and> analysis_result_covers
-       Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog v nv_final
+       [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog v nv_final
    \<and> checks_sound_at res v nv_final"
 proof -
-  obtain res where ans: "run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog
+  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
@@ -176,14 +176,14 @@ text \<open>
 \<close>
 
 theorem nv_check_proved_sound:
-  "\<exists>res. run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog = Analysed res
+  "\<exists>res. run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog = Analysed res
      \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
           \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                           cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
 proof -
-  obtain res where ans: "run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState nv_prog
+  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
@@ -217,7 +217,7 @@ definition nv_dead_prog :: imp_prog where
    }"
 
 lemma nv_dead_report:
-  "(case run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog of
+  "(case run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
           = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
@@ -227,23 +227,23 @@ lemma nv_dead_report:
 
 lemma nv_dead_analysed:
   obtains res where
-    "run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog = Analysed res"
+    "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
        = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
           (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
   using nv_dead_report
-  by (cases "run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog") auto
+  by (cases "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog") auto
 
 lemma nv_dead_terminates:
-  "config_terminates Interval_Analysis Globals_Join Ctx_None nv_dead_prog"
-  by (simp, rule interval_rule.terminates_of_solve_c)
-     (simp only: interval_rule.root_query_def, eval)
+  "config_terminates [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog"
+  by (simp, rule mcp_rule.terminates_of_solve_c)
+     (simp only: mcp_rule.root_query_def, eval)
 
 theorem nv_dead_unreached:
   "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
      cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
 proof -
-  obtain res where ans: "run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog
+  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
                    = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
@@ -311,7 +311,7 @@ proof -
 qed
 
 theorem proved_everywhere_unsound:
-  assumes "run_voblint Interval_Analysis Globals_Join Ctx_None nv_dead_prog = Analysed res"
+  assumes "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog = Analysed res"
   shows "\<not> checks_sound_at (answer_all (Decided Check_Proved) res) (Statement 1)
                            ((\<lambda>_. 0)(STR ''x'' := 1))"
 proof -
