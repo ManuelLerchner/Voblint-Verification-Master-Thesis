@@ -1,173 +1,8 @@
 theory Parity_Domain
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
-    "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Parity_Warrowing "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
-section \<open>Parity domain: finite even/odd abstraction\<close>
-
-text \<open>
-  parity abstracts integers by their parity:
-    Bot   -- empty (unreachable)
-    Even  -- {n | even n}
-    Odd   -- {n | odd n}
-    Top   -- all integers
-
-  Four-element lattice (\<open>Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top\<close>). Finite; widen = sup.
-  This analysis does not implement backward guard refinement. Its branch transfer
-  therefore preserves parity information from the incoming state.
-\<close>
-
-subsection \<open>Datatype and concretization\<close>
-
-datatype parity = PBot | PEven | POdd | PTop
-
-fun gamma_parity :: "parity => int set" where
-    "gamma_parity PBot  = {}"
-  | "gamma_parity PEven = {n. even n}"
-  | "gamma_parity POdd  = {n. odd n}"
-  | "gamma_parity PTop  = UNIV"
-
-subsection \<open>Partial order\<close>
-
-fun parity_le :: "parity => parity => bool" where
-    "parity_le PBot  _     = True"
-  | "parity_le _     PTop  = True"
-  | "parity_le PEven PEven = True"
-  | "parity_le POdd  POdd  = True"
-  | "parity_le _     _     = False"
-
-lemma parity_le_refl: "parity_le s s" by (cases s) simp_all
-
-lemma parity_le_antisym: "parity_le s t \<Longrightarrow> parity_le t s \<Longrightarrow> s = t"
-  by (cases s; cases t; simp)
-
-lemma parity_le_trans: "parity_le s t \<Longrightarrow> parity_le t u \<Longrightarrow> parity_le s u"
-  by (cases s; cases t; cases u; simp)
-
-lemma gamma_parity_mono: "parity_le s t \<Longrightarrow> gamma_parity s \<subseteq> gamma_parity t"
-  by (cases s; cases t; auto)
-
-instantiation parity :: ord begin
-definition less_eq_parity :: "parity => parity => bool" where "(a::parity) \<le> b = parity_le a b"
-definition less_parity    :: "parity => parity => bool" where
-  "(a::parity) <  b = (parity_le a b \<and> \<not> parity_le b a)"
-instance ..
-end
-
-instance parity :: preorder
-proof
-  fix x y z :: parity
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding less_parity_def less_eq_parity_def by simp
-  show "x \<le> x" by (simp add: less_eq_parity_def parity_le_refl)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" unfolding less_eq_parity_def by (rule parity_le_trans)
-qed
-
-instantiation parity :: bot begin
-definition "bot_parity = PBot"
-instance ..
-end
-
-text \<open>
-  \<open>PBot\<close> is the only value with empty concretization, so a direct equality test
-  decides emptiness exactly. Finiteness of the carrier is not what settles this ---
-  a finite domain may perfectly well have two empty values. What settles it is the
-  four concretizations themselves: the other three are each inhabited.
-\<close>
-
-definition is_bottom_parity :: "parity \<Rightarrow> bool" where
-  "is_bottom_parity p = (p = PBot)"
-
-lemma is_bottom_parity_correct: "is_bottom_parity p \<longleftrightarrow> gamma_parity p = {}"
-  unfolding is_bottom_parity_def
-  by (cases p) (auto intro: exI[of _ "0"] exI[of _ "1"])
-
-subsection \<open>Join\<close>
-
-fun join_parity :: "parity => parity => parity" where
-    "join_parity PBot  b     = b"
-  | "join_parity a     PBot  = a"
-  | "join_parity PTop  _     = PTop"
-  | "join_parity _     PTop  = PTop"
-  | "join_parity PEven PEven = PEven"
-  | "join_parity POdd  POdd  = POdd"
-  | "join_parity _     _     = PTop"
-
-lemma join_parity_ub1: "parity_le a (join_parity a b)" by (cases a; cases b; simp)
-lemma join_parity_ub2: "parity_le b (join_parity a b)" by (cases a; cases b; simp)
-lemma join_parity_least: "parity_le a c \<Longrightarrow> parity_le b c \<Longrightarrow> parity_le (join_parity a b) c"
-  by (cases a; cases b; cases c; simp)
-
-subsection \<open>Order / lattice instances\<close>
-
-instantiation parity :: order begin
-instance proof
-  fix x y :: parity
-  assume "x \<le> y" "y \<le> x"
-  then show "x = y" unfolding less_eq_parity_def by (blast intro: parity_le_antisym)
-qed
-end
-
-instantiation parity :: order_bot begin
-instance proof
-  fix x :: parity
-  show "bot \<le> x" unfolding less_eq_parity_def bot_parity_def by simp
-qed
-end
-
-instantiation parity :: top begin
-definition "top_parity = PTop"
-instance ..
-end
-
-instantiation parity :: order_top begin
-instance proof intro_classes
-  fix x :: parity
-  show "x \<le> top"
-    unfolding less_eq_parity_def top_parity_def by (cases x) simp_all
-qed
-end
-
-text \<open>\<open>PTop\<close> is the unique top of a finite enumeration, the same reasoning as Sign's \<open>is_top_sign\<close>.\<close>
-
-definition is_top_parity :: "parity \<Rightarrow> bool" where
-  "is_top_parity p = (p = PTop)"
-
-lemma gamma_parity_top: "gamma_parity top = UNIV"
-  unfolding top_parity_def by simp
- 
-lemma is_top_parity_correct_gamma: "is_top_parity p \<longleftrightarrow> gamma_parity p = UNIV"
-  by(cases p) (auto simp: is_top_parity_def set_eq_iff; presburger)+
-
-instantiation parity :: sup begin
-definition sup_parity :: "parity => parity => parity" where "sup_parity = join_parity"
-instance ..
-end
-
-instance parity :: semilattice_sup
-proof
-  fix x y z :: parity
-  show "x \<le> x \<squnion> y" unfolding sup_parity_def less_eq_parity_def by (rule join_parity_ub1)
-  show "y \<le> x \<squnion> y" unfolding sup_parity_def less_eq_parity_def by (rule join_parity_ub2)
-  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x"
-    unfolding sup_parity_def less_eq_parity_def by (rule join_parity_least)
-qed
-
-instance parity :: bounded_semilattice_sup_bot ..
-
-subsection \<open>Warrowing for the TD solver (widen = join, narrow = fst)\<close>
-
-instantiation parity :: warrowing begin
-  definition "widen (a :: parity) b = join_parity a b"
-  definition "narrow (a :: parity) b = a"
-instance proof
-  fix a b :: parity
-  show "a \<le> widen a b" unfolding less_eq_parity_def widen_parity_def by (rule join_parity_ub1)
-  show "b \<le> widen a b" unfolding less_eq_parity_def widen_parity_def by (rule join_parity_ub2)
-  show "b \<le> a \<Longrightarrow> b \<le> narrow a b" unfolding narrow_parity_def by simp
-  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
-    unfolding narrow_parity_def by (simp add: less_eq_parity_def)
-qed
-end
+section \<open>Parity arithmetic and expression evaluation\<close>
 
 subsection \<open>Abstract arithmetic\<close>
 
@@ -206,11 +41,6 @@ fun times_parity :: "parity => parity => parity" where
 instance ..
 end
 
-fun parity_of_int :: "int => parity" where
-  "parity_of_int n = (if even n then PEven else POdd)"
-
-lemma parity_of_int_gamma: "n \<in> gamma_parity (parity_of_int n)" by auto
-
 lemma parity_plus_sound:
   "i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> i + j \<in> gamma_parity (a + b)"
   by (cases a; cases b; auto)
@@ -246,58 +76,6 @@ lemma parity_minus_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<L
 
 lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::parity)"
   by (meson order.trans parity_times_mono1 parity_times_mono2)
-
-
-
-
-subsection \<open>Sound-domain instance\<close>
-
-text \<open>
-  Goblint has no parity domain. A parity is the congruence class modulo 2, so it
-  prints in Goblint's congruence notation: \<open>2\<int>\<close>, \<open>1+2\<int>\<close>, and \<open>\<int>\<close> for a
-  product component's top. A standalone parity prints its top as \<open>\<top>\<close>.
-\<close>
-
-fun string_of_parity :: "parity \<Rightarrow> String.literal" where
-    "string_of_parity PBot  = sym_bottom"
-  | "string_of_parity PEven = STR ''2'' + sym_int"
-  | "string_of_parity POdd  = STR ''1+2'' + sym_int"
-  | "string_of_parity PTop  = sym_int"
-
-lemma string_of_parity_regression:
-  "string_of_parity PBot = STR ''<bottom>''"
-  "string_of_parity PEven = STR ''2<int>''"
-  "string_of_parity POdd = STR ''1+2<int>''"
-  "string_of_parity PTop = STR ''<int>''"
-  by eval+
-
-instantiation parity :: numeric_domain begin
-definition gamma_abs_parity [simp]: "\<gamma> (a :: parity) = gamma_parity a"
-definition is_empty_parity [simp]: "is_empty (a :: parity) = is_bottom_parity a"
-definition to_string_parity [simp]:
-  "to_string (a :: parity) = (if is_top_parity a then sym_top else string_of_parity a)"
-instance proof
-  show "\<gamma> (bot :: parity) = {}" unfolding bot_parity_def by simp
-next
-  show "\<gamma> (top :: parity) = UNIV" by (simp add: gamma_parity_top)
-next
-  fix a b :: parity
-  assume H: "a \<le> b"
-  have "gamma_parity a \<subseteq> gamma_parity b"
-    using H unfolding less_eq_parity_def by (rule gamma_parity_mono)
-  then show "\<gamma> a \<subseteq> \<gamma> b" by simp
-next
-  fix a :: parity
-  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
-    by (simp add: is_bottom_parity_correct)
-qed
-end
-
-lemma to_string_parity_regression:
-  "to_string PTop = STR ''<top>''"
-  "to_string POdd = STR ''1+2<int>''"
-  by eval+
-
 
 subsection \<open>Comparison and truthiness queries\<close>
 
@@ -375,6 +153,7 @@ lemma parity_mod_mono:
   "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> parity_mod a1 b1 \<le> parity_mod a2 b2"
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: parity_mod_def less_eq_parity_def)
+
 
 subsection \<open>Abstract expression evaluation\<close>
 

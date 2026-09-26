@@ -715,7 +715,7 @@ type_synonym 'd oct = "(svar \<times> svar) \<Rightarrow> eint"
 ```
 
 reusing the extended-integer type already in this codebase
-(`Interval_Bounds.thy:9`: `datatype eint = MinInf | Fin int | PlusInf`).
+(`Interval_Lattice.thy`: `datatype eint = MinInf | Fin int | PlusInf`).
 Entry `d ((x, sx), (y, sy))` is the tightest known bound `c` in
 `sx*x + sy*y <= c` (`Fin c`), or `PlusInf` (no constraint known) /
 `MinInf` (impossible — empty concretization for that constraint alone).
@@ -784,7 +784,7 @@ already come from HOL's pointwise `fun` instance
 `Abstract_Domain.thy:33`), so the whole-state lemma is just the per-index
 lemma pushed through `\<forall>`. The identical move works for `'d oct`, **once
 one small prerequisite is discharged**: `eint` currently has only a
-`linorder` instance (`Interval_Bounds.thy:36-44`), not
+`linorder` instance (`Interval_Lattice.thy`), not
 `bounded_semilattice_sup_bot` — that instantiation
 (`sup = max`, `bot = MinInf`, `top = PlusInf`, all immediate from `linorder`)
 doesn't exist yet and needs writing, but it's standard and small (a handful
@@ -919,7 +919,7 @@ during actual development, not fixed here.
 
 ```isabelle
 type_synonym svar = "vname \<times> bool"        (* (x, True) ~ +x, (x, False) ~ -x *)
-(* eint reused as-is from Interval_Bounds.thy *)
+(* eint reused as-is from Interval_Lattice.thy *)
 
 type_synonym oct = "(svar \<times> svar) \<Rightarrow> eint"  (* abstract carrier, non-executable *)
 

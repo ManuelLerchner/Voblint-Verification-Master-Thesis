@@ -4,18 +4,27 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
   description "Abstract value domains, pointwise states, and reachability constructions"
   sessions
     TD
+    "HOL-Computational_Algebra"
+  directories
+    "Lattice"
+    "State"
+    "Eval"
+    "Int"
   theories
     Abstract_Domain
     Reachability_Lift
+    Three_Valued
     Nonrelational_State
     Nonrelational_Reachability
     Forward_Domain
     Backward_Domain
     Backward_Domain_Mono
-    Three_Valued
-    (* The integer domain query answers are expressed in, as Goblint's queries
-       are in IntDomain. *)
-    Interval_Bounds
-    Interval_Lattice
     Numeric_Queries
     Backward_Numeric_Queries
+    (* The integer value domains query answers are expressed in, as Goblint's
+       queries are in IntDomain: each component carrier and their product. *)
+    Interval_Lattice
+    Sign_Lattice
+    Parity_Lattice
+    Congruence_Lattice
+    Int_Lattice

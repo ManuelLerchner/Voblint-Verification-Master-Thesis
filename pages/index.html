@@ -928,7 +928,7 @@
           component reaches it alone: Interval on its own stops at <code>[−5, 5]</code>, because
           it never learns <code>x ≡ 5 (mod 6)</code>, while Congruence keeps that class and
           nothing about magnitude, so the sign guard tells it nothing. Run this under
-          <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Analysis_Parity/Parity_Domain.html#Parity_Domain.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Analysis_Sign/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a>
+          <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Domain/Parity_Lattice.html#Parity_Lattice.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Domain/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a>
           and both arms come back UNKNOWN. Together the class and the bounds leave
           <code>{−1, 5}</code>, which the guard splits into one value per arm.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/45-remainder_sign_split.vimp&amp;analysis=int&amp;context=none">Run it in the playground ↗</a>
@@ -5326,7 +5326,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                 <p>
                   Every rung above is an <code>&#8712; &#947;</code> claim, and this is where
                   &#947; stops being a symbol. An interval is two
-                  <a href="Voblint/Voblint_Domain/Interval_Bounds.html#Interval_Bounds.eint%7Ctype"><code>eint</code></a>
+                  <a href="Voblint/Voblint_Domain/Interval_Lattice.html#Interval_Lattice.eint%7Ctype"><code>eint</code></a>
                   bounds &#8212; <code>MinInf</code>, <code>Fin</code> of an integer, or
                   <code>PlusInf</code> &#8212; so <code>[0, 4]</code> is
                   <code>Ivl (Fin 0) (Fin 4)</code>, and the set it stands for is the
@@ -5599,7 +5599,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">IntDomTuple</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Analysis_Int/Int_Domain.html#Int_Domain.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
+            <a class="align-voblint" href="Voblint/Voblint_Domain/Int_Lattice.html#Int_Lattice.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
             <span class="align-note">Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked.</span>
           </li>
           <li class="align-row absent">

@@ -92,13 +92,13 @@ lemma (in sound_intersection) intersect_shared_not_empty:
   using intersect_sound is_empty_correct by blast
 
 lemma sign_interface_regression:
-  "meet_sign SNonNeg SNonPos = SZero"
-  "is_empty (meet_sign SPos SNeg)"
+  "SNonNeg \<sqinter> SNonPos = SZero"
+  "is_empty (SPos \<sqinter> SNeg)"
   "inv_less_sign True STop SZero = (SNeg, SZero)"
   by eval+
 
 lemma sign_meet_zero_not_empty:
-  "\<not> is_empty (meet_sign SNonNeg SNonPos)"
+  "\<not> is_empty (SNonNeg \<sqinter> SNonPos)"
   by (rule sign_backward_domain.intersect_shared_not_empty[of 0]) simp_all
 
 end

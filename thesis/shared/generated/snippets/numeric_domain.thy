@@ -1,4 +1,4 @@
-(* src/Abstract_Interpreter/Domain/Abstract_Domain.thy *)
+(* src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy *)
 class numeric_domain = executable_domain +
   fixes gamma :: "'a::{bounded_semilattice_sup_bot, order_top} \<Rightarrow> int set" ("\<gamma>")
   assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"

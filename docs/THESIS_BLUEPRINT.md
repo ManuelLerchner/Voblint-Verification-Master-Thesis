@@ -745,7 +745,7 @@ non-fixpoint modes are monotone. The development additionally records a
 violating the solver's `narrow_ge` law, because reduction may push a result
 strictly below the narrowing argument.
 
-**Evidence.** `Int_Domain.thy`, `Int_Refinement.thy` (1 430 lines),
+**Evidence.** `Int_Lattice.thy`, `Int_Refinement.thy` (1 430 lines),
 `Int_Refinement_Control.thy` (`refine_reductive`, `refine_nonfixpoint_mono`),
 `Int_Warrowing.thy` (the argument against refining narrowing),
 `Int_Backward.thy`; the CLI-visible witness
@@ -1343,7 +1343,7 @@ thesis section → theories → central definitions → central theorems.
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.source_sound` |
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.source_sound` |
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |
-| 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence`, `inv_plus_congruence` | `congruence_lt_sound` |
+| 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence_rep`, `inv_plus_congruence` | `congruence_lt_sound` |
 | 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_transfer_for` |
 | 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |

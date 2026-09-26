@@ -1,9 +1,8 @@
-theory Int_Domain
-  imports "Voblint_Analysis_Sign.Sign_Lattice" "Voblint_Domain.Interval_Lattice"
-    "Voblint_Analysis_Parity.Parity_Domain" "Voblint_Analysis_Congruence.Congruence_Lattice"
+theory Int_Lattice
+  imports Sign_Lattice Interval_Lattice Parity_Lattice Congruence_Lattice
 begin
 
-section \<open>Composite integer domain\<close>
+section \<open>Integer product lattice\<close>
 
 text \<open>
   The carrier keeps the four scalar abstractions independently. Its
@@ -12,11 +11,15 @@ text \<open>
   this carrier definition.
 \<close>
 
+subsection \<open>Carrier\<close>
+
 record int_dom =
   int_sign :: sign
   int_ivl :: ivl
   int_parity :: parity
   int_congruence :: congruence
+
+subsection \<open>Order and join\<close>
 
 class int_dom_record_lattice = bounded_semilattice_sup_bot + order_top
 
@@ -181,7 +184,7 @@ lemma gamma_intersect_ivl_exact:
         intersect_ivl_gamma
   by blast
 
-subsection \<open>Exact executable emptiness\<close>
+subsection \<open>Executable interface\<close>
 
 lemma inter_nonempty_iff:
   "A \<inter> B \<noteq> {} \<longleftrightarrow> (\<exists>x. x \<in> A \<and> x \<in> B)"
@@ -732,7 +735,7 @@ proof -
     unfolding gamma_int_dom_def using S I P C by auto
 qed
 
-subsection \<open>Sound-domain instance\<close>
+subsection \<open>Constants and printing\<close>
 
 text \<open>
   Goblint's integer-domain tuple prints a value one of its components pins to a

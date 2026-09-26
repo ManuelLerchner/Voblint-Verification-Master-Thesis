@@ -36,7 +36,7 @@ for `queries.ml`.
 | globals as a variant, `ask` at combine, events, spawn | `mCP.ml` | not modelled |
 
 The query layer depends on the interval lattice, as Goblint's query layer
-depends on `IntDomain`. `Interval_Bounds` and `Interval_Lattice` therefore live
+depends on `IntDomain`. The value lattices therefore live under `Int/`
 in `Voblint_Domain`, below the framework.
 
 ## Query semantics (`Analysis_Query.thy`)
@@ -47,7 +47,7 @@ of two holding answers holds. `oracle_holds A s` says every answer of `A` holds
 at `s`.
 
 The one interpretation is `eval_holds (EvalInt e) i s ⟷ ⟦e⟧ s ∈ γ i` over
-`ivl`. The full interval claims nothing; the meet is `meet_ivl`, sound by
+`ivl`. The full interval claims nothing; the meet is the lattice `⊓` on `ivl`, sound by
 `meet_ivl_gamma`. An empty answer admits no value, so a sound handler returns
 it only for a state that represents no store. `ivl_const` reads `[n,n]` back as
 `Some n`, and `eval_holds_constD` turns that into `⟦e⟧ s = n`. Tests on answers

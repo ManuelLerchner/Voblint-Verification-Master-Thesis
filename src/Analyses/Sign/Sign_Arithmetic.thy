@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Sign_Warrowing "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
 section \<open>What arithmetic does to a known sign\<close>

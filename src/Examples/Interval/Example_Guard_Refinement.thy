@@ -114,12 +114,12 @@ lemma intersect_ivl_disjoint_bot:
   by eval
 
 lemma meet_ivl_disjoint_keeps_reversed_bounds:
-  "meet_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9)) = Ivl (Fin 5) (Fin 3)"
+  "Ivl (Fin 0) (Fin 3) \<sqinter> Ivl (Fin 5) (Fin 9) = Ivl (Fin 5) (Fin 3)"
   by eval
 
 lemma disjoint_intersection_and_meet_agree_semantically:
   "gamma_ivl (intersect_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9))) = {}"
-  "gamma_ivl (meet_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9))) = {}"
+  "gamma_ivl (Ivl (Fin 0) (Fin 3) \<sqinter> Ivl (Fin 5) (Fin 9)) = {}"
   by (simp_all add: is_bottom_ivl_correct[symmetric] is_bottom_ivl_def bot_ivl_def)
 
 subsection \<open>Forward feasibility decides guards backward narrowing keeps\<close>

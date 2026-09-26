@@ -19,7 +19,8 @@ It also says things the other domains cannot. `y := x * 2` is even whatever `x` 
 ## The layer chain
 
 ```text
-Parity_Domain      the lattice, order, and its concretization
+Parity_Warrowing   widening, narrowing, numeric_domain instance (lattice: Voblint_Domain.Parity_Lattice)
+Parity_Domain      arithmetic, comparisons, and the expression evaluator
   -> Parity_Special / Parity_Transfer   special calls; the transfer functions
   -> Parity_Exec                        executable transfer, on the finite-map carrier
   -> Parity_Sound                       what the initial abstract state describes

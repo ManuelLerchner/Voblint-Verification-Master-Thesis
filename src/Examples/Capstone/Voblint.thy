@@ -352,7 +352,7 @@ text \<open>
       \<^const>\<open>checks_proven\<close>.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Classify} --- the Sign instance: derived
       numeric queries (read off \<^const>\<open>inv_less_sign\<close>/\<^const>\<open>inv_eq_sign\<close>/
-      \<^const>\<open>meet_sign\<close>), no hand-built comparison tables.
+      \<^const>\<open>inf\<close>), no hand-built comparison tables.
     \<^item> @{theory Voblint_Analysis_Interval.Interval_Classify} --- the Interval instance:
       specialized bound-comparison queries (\<^const>\<open>interval_less_true\<close> and
       siblings, \<open>Interval_Numeric_Queries\<close>). The backward-domain default derives
@@ -378,10 +378,10 @@ text \<open>
       Finite like Sign, and expressive about values neither Sign nor Interval
       constrains: \<^verbatim>\<open>y := x * 2\<close> is even for every
       \<^verbatim>\<open>x\<close>.
-    \<^item> @{theory Voblint_Analysis_Congruence.Congruence_Domain} ---
+    \<^item> @{theory Voblint_Domain.Congruence_Lattice} ---
       normalized residue classes. Congruence is selectable on its own and is
       also the fourth component of \<^verbatim>\<open>int_dom\<close>.
-    \<^item> @{theory Voblint_Analysis_Int.Int_Domain} /
+    \<^item> @{theory Voblint_Domain.Int_Lattice} /
       @{theory Voblint_Analysis_Int.Int_Refinement} ---
       \<^verbatim>\<open>int_dom\<close>, the reduced product of the four scalar
       domains, with exact reduction steps and three refinement modes.

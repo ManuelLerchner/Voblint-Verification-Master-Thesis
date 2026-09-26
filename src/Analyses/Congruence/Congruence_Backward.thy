@@ -5,231 +5,6 @@ theory Congruence_Backward
     "HOL-Computational_Algebra.Euclidean_Algorithm"
 begin
 
-section \<open>Exact congruence intersection\<close>
-
-text \<open>
-  Intersecting two non-singleton congruence classes is the executable Chinese
-  remainder construction. The Bezout coefficient computes one shared residue;
-  the least common multiple is the period of every shared solution.
-\<close>
-
-fun intersect_congruence_rep ::
-    "congruence_rep => congruence_rep => congruence_rep"
-where
-  "intersect_congruence_rep None y = None"
-| "intersect_congruence_rep x None = None"
-| "intersect_congruence_rep (Some (c1, m1)) (Some (c2, m2)) =
-     normalize_congruence_rep
-       (if m1 = 0 then
-          if m2 dvd c1 - c2 then Some (c1, 0) else None
-        else if m2 = 0 then
-          if m1 dvd c2 - c1 then Some (c2, 0) else None
-        else
-          let g = gcd m1 m2
-          in if g dvd c2 - c1 then
-               let s = fst (bezout_coefficients m1 m2);
-                   q = (c2 - c1) div g
-               in Some (c1 + m1 * (q * s), lcm m1 m2)
-             else None)"
-
-lemma normalized_intersect_congruence_rep [simp]:
-  "normalized_congruence_rep (intersect_congruence_rep x y)"
-  by (cases x; cases y)
-     (auto simp: split_def split: if_splits prod.splits)
-
-lift_definition intersect_congruence ::
-    "congruence => congruence => congruence"
-  is intersect_congruence_rep
-  by simp
-
-lemma bezout_shared_residue:
-  assumes compatible: "gcd m1 m2 dvd c2 - c1"
-  defines
-    "q == (c2 - c1) div gcd m1 m2"
-  shows
-    "m1 dvd
-       (c1 + m1 * (q * fst (bezout_coefficients m1 m2))) - c1 \<and>
-     m2 dvd
-       (c1 + m1 * (q * fst (bezout_coefficients m1 m2))) - c2"
-proof (intro conjI)
-  show
-    "m1 dvd
-      c1 + m1 * (q * fst (bezout_coefficients m1 m2)) - c1"
-    by simp
-  have bezout:
-    "fst (bezout_coefficients m1 m2) * m1 +
-     snd (bezout_coefficients m1 m2) * m2 =
-     gcd m1 m2"
-    by (rule bezout_coefficients_fst_snd)
-  have quotient:
-    "q * gcd m1 m2 = c2 - c1"
-    unfolding q_def
-    using dvd_mult_div_cancel[OF compatible]
-    by (simp add: mult.commute)
-  have scaled0:
-    "q * (fst (bezout_coefficients m1 m2) * m1 +
-       snd (bezout_coefficients m1 m2) * m2) =
-     q * gcd m1 m2"
-    by (rule arg_cong[OF bezout])
-  have scaled:
-    "m1 * (q * fst (bezout_coefficients m1 m2)) +
-     m2 * (q * snd (bezout_coefficients m1 m2)) =
-     q * gcd m1 m2"
-    using scaled0 by (simp add: algebra_simps)
-  show
-    "m2 dvd
-      c1 + m1 * (q * fst (bezout_coefficients m1 m2)) - c2"
-    unfolding dvd_def
-  proof (rule exI[of _ "- q * snd (bezout_coefficients m1 m2)"])
-    show
-      "c1 + m1 * (q * fst (bezout_coefficients m1 m2)) - c2 =
-       m2 * (- q * snd (bezout_coefficients m1 m2))"
-      using scaled quotient by (simp add: algebra_simps)
-  qed
-qed
-
-
-lemma gamma_intersect_congruence_rep:
-  assumes normalized_x: "normalized_congruence_rep x"
-      and normalized_y: "normalized_congruence_rep y"
-  shows
-    "gamma_congruence_rep (intersect_congruence_rep x y) =
-     gamma_congruence_rep x \<inter> gamma_congruence_rep y"
-proof (cases x)
-  case None
-  then show ?thesis by simp
-next
-  case (Some cm1)
-  note x_some = Some
-  obtain c1 m1 where cm1: "cm1 = (c1, m1)"
-    by (cases cm1)
-  show ?thesis
-  proof (cases y)
-    case None
-    with x_some show ?thesis by simp
-  next
-    case (Some cm2)
-    note y_some = Some
-    obtain c2 m2 where cm2: "cm2 = (c2, m2)"
-      by (cases cm2)
-    show ?thesis
-    proof (cases "m1 = 0")
-      case True
-      with x_some y_some cm1 cm2 show ?thesis
-        by auto
-    next
-      case m1_nonzero: False
-      show ?thesis
-      proof (cases "m2 = 0")
-        case True
-        with x_some y_some cm1 cm2 show ?thesis
-          by auto
-      next
-        case m2_nonzero: False
-        let ?g = "gcd m1 m2"
-        let ?q = "(c2 - c1) div ?g"
-        let ?s = "fst (bezout_coefficients m1 m2)"
-        let ?z = "c1 + m1 * (?q * ?s)"
-        show ?thesis
-        proof (cases "?g dvd c2 - c1")
-          case incompatible: False
-          have empty:
-            "{n. m1 dvd n - c1} \<inter>
-             {n. m2 dvd n - c2} = {}"
-          proof (rule ccontr)
-            assume
-              "{n. m1 dvd n - c1} \<inter>
-               {n. m2 dvd n - c2} ~= {}"
-            then obtain n where
-              n1: "m1 dvd n - c1" and
-              n2: "m2 dvd n - c2"
-              by blast
-            have g1: "?g dvd n - c1"
-              using gcd_dvd1 n1 by (rule dvd_trans)
-            have g2: "?g dvd n - c2"
-              using gcd_dvd2 n2 by (rule dvd_trans)
-            have "?g dvd (n - c1) - (n - c2)"
-              by (rule dvd_diff[OF g1 g2])
-            then have "?g dvd c2 - c1"
-              by simp
-            with incompatible show False by contradiction
-          qed
-          with x_some y_some cm1 cm2 m1_nonzero m2_nonzero
-            incompatible
-          show ?thesis by simp
-        next
-          case compatible: True
-          have shared:
-            "m1 dvd ?z - c1 \<and> m2 dvd ?z - c2"
-            by (rule bezout_shared_residue[OF compatible])
-          have classes:
-            "{n. lcm m1 m2 dvd n - ?z} =
-             {n. m1 dvd n - c1} \<inter>
-             {n. m2 dvd n - c2}"
-          proof -
-            have "m1 dvd n - ?z \<longleftrightarrow> m1 dvd n - c1" "m2 dvd n - ?z \<longleftrightarrow> m2 dvd n - c2" for n
-              using shared dvd_add_left_iff[of m1 "?z - c1" "n - ?z"]
-                dvd_add_left_iff[of m2 "?z - c2" "n - ?z"]
-              by simp_all
-            then show ?thesis by auto
-          qed
-          have normalized_gamma:
-            "gamma_congruence_rep
-               (normalize_congruence_rep
-                 (Some (?z, lcm m1 m2))) =
-             {n. lcm m1 m2 dvd n - ?z}"
-            by (simp only: gamma_normalize_congruence_rep
-                gamma_congruence_rep.simps)
-          from x_some y_some cm1 cm2 m1_nonzero m2_nonzero
-            compatible normalized_gamma classes
-          show ?thesis
-            by (simp only: intersect_congruence_rep.simps if_False
-                if_True Let_def gamma_congruence_rep.simps)
-        qed
-      qed
-    qed
-  qed
-qed
-
-lemma gamma_intersect_congruence [simp]:
-  "gamma_congruence (intersect_congruence a b) =
-   gamma_congruence a \<inter> gamma_congruence b"
-proof -
-  have norm_a: "normalized_congruence_rep (Rep_congruence a)"
-    by simp
-  have norm_b: "normalized_congruence_rep (Rep_congruence b)"
-    by simp
-  show ?thesis
-    using gamma_intersect_congruence_rep[OF norm_a norm_b]
-    by (simp add: gamma_congruence_def intersect_congruence.rep_eq)
-qed
-
-lemma intersect_congruence_sound:
-  assumes "n : gamma_congruence a"
-      and "n : gamma_congruence b"
-  shows "n : gamma_congruence (intersect_congruence a b)"
-  using assms by simp
-
-lemma intersect_congruence_le1:
-  "intersect_congruence a b <= a"
-  unfolding less_eq_congruence_iff_gamma
-  by simp
-
-lemma intersect_congruence_le2:
-  "intersect_congruence a b <= b"
-  unfolding less_eq_congruence_iff_gamma
-  by simp
-
-lemma intersect_congruence_mono:
-  assumes "a1 <= a2" and "b1 <= b2"
-  shows
-    "intersect_congruence a1 b1 <=
-     intersect_congruence a2 b2"
-  using assms
-  unfolding less_eq_congruence_iff_gamma
-  by auto
-
-
 section \<open>Multiplication preimages\<close>
 
 text \<open>
@@ -730,7 +505,7 @@ fun inv_eq_congruence ::
     "bool => congruence => congruence => congruence * congruence"
 where
   "inv_eq_congruence True a b =
-     (intersect_congruence a b, intersect_congruence a b)"
+     (a \<sqinter> b, a \<sqinter> b)"
 | "inv_eq_congruence False a b = (a, b)"
 
 definition inv_plus_congruence ::
@@ -738,24 +513,24 @@ definition inv_plus_congruence ::
      congruence * congruence"
 where
   "inv_plus_congruence r a b =
-     (intersect_congruence a (r - b),
-      intersect_congruence b (r - a))"
+     (a \<sqinter> (r - b),
+      b \<sqinter> (r - a))"
 
 definition inv_minus_congruence ::
     "congruence => congruence => congruence =>
      congruence * congruence"
 where
   "inv_minus_congruence r a b =
-     (intersect_congruence a (r + b),
-      intersect_congruence b (a - r))"
+     (a \<sqinter> (r + b),
+      b \<sqinter> (a - r))"
 
 definition inv_times_congruence ::
     "congruence => congruence => congruence =>
      congruence * congruence"
 where
   "inv_times_congruence r a b =
-     (intersect_congruence a (inverse_times_candidate r b),
-      intersect_congruence b (inverse_times_candidate r a))"
+     (a \<sqinter> inverse_times_candidate r b,
+      b \<sqinter> inverse_times_candidate r a)"
 
 lemma inv_less_congruence_sound:
   assumes "x : gamma_congruence a"
@@ -871,7 +646,7 @@ lemma inv_eq_congruence_mono:
     "le_pair
       (inv_eq_congruence result a1 b1)
       (inv_eq_congruence result a2 b2)"
-  using assms intersect_congruence_mono
+  using assms inf_mono
   by (cases result) auto
 
 lemma inv_plus_congruence_mono:
@@ -880,8 +655,8 @@ lemma inv_plus_congruence_mono:
     "le_pair
       (inv_plus_congruence r1 a1 b1)
       (inv_plus_congruence r2 a2 b2)"
-  using assms congruence_minus_mono intersect_congruence_mono
-  by (auto simp: inv_plus_congruence_def)
+  using assms congruence_minus_mono
+  by (auto simp: inv_plus_congruence_def intro: le_infI1 le_infI2)
 
 lemma inv_minus_congruence_mono:
   assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
@@ -890,8 +665,7 @@ lemma inv_minus_congruence_mono:
       (inv_minus_congruence r1 a1 b1)
       (inv_minus_congruence r2 a2 b2)"
   using assms congruence_plus_mono congruence_minus_mono
-    intersect_congruence_mono
-  by (auto simp: inv_minus_congruence_def)
+  by (auto simp: inv_minus_congruence_def intro: le_infI1 le_infI2)
 
 lemma inv_times_congruence_mono:
   assumes "r1 <= r2" and "a1 <= a2" and "b1 <= b2"
@@ -899,13 +673,13 @@ lemma inv_times_congruence_mono:
     "le_pair
       (inv_times_congruence r1 a1 b1)
       (inv_times_congruence r2 a2 b2)"
-  using assms inverse_times_candidate_mono intersect_congruence_mono
-  by (auto simp: inv_times_congruence_def)
+  using assms inverse_times_candidate_mono
+  by (auto simp: inv_times_congruence_def intro: le_infI1 le_infI2)
 
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
-    backward_domain_mono intersect_congruence aval_congruence congruence_tobool
+    backward_domain_mono inf aval_congruence congruence_tobool
       inv_less_congruence inv_eq_congruence
       inv_plus_congruence inv_minus_congruence inv_times_congruence
   defines
@@ -918,12 +692,12 @@ global_interpretation congruence_backward_domain:
     and bfilter_congruence_st = congruence_backward_domain.bfilter_st
     and branch_congruence_st = congruence_backward_domain.branch_st
 proof unfold_locales
-qed (simp_all add: intersect_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
+qed (simp_all add: inf_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
        inv_plus_congruence_sound inv_minus_congruence_sound inv_times_congruence_sound
-       congruence_tobool_sound intersect_congruence_mono congruence_arith.aval_dom_mono
+       congruence_tobool_sound inf_mono congruence_arith.aval_dom_mono
        inv_less_congruence_mono inv_eq_congruence_mono inv_plus_congruence_mono
        inv_minus_congruence_mono inv_times_congruence_mono
-       intersect_congruence_le1 intersect_congruence_le2 congruence_tobool_mono)
+       le_infI1 le_infI2 congruence_tobool_mono)
 
 lemmas afilter_congruence_st_commute =
   congruence_backward_domain.afilter_st_commute

@@ -2347,20 +2347,6 @@ let equal_query = ({equal = equal_querya} : query equal);;
 
 type eint = MinInf | Fin of int | PlusInf;;
 
-let rec eint_le x0 uu = match x0, uu with MinInf, uu -> true
-                  | Fin v, PlusInf -> true
-                  | PlusInf, PlusInf -> true
-                  | Fin n, Fin m -> less_eq_int n m
-                  | Fin v, MinInf -> false
-                  | PlusInf, MinInf -> false
-                  | PlusInf, Fin v -> false;;
-
-let rec less_eq_eint x = eint_le x;;
-
-let rec less_eint a b = eint_le a b && not (eint_le b a);;
-
-let ord_eint = ({less_eq = less_eq_eint; less = less_eint} : eint ord);;
-
 let rec equal_eint x0 x1 = match x0, x1 with Fin x2, PlusInf -> false
                      | PlusInf, Fin x2 -> false
                      | MinInf, PlusInf -> false
@@ -2377,6 +2363,16 @@ let rec equal_ivla
   (Ivl (x1, x2)) (Ivl (y1, y2)) = equal_eint x1 y1 && equal_eint x2 y2;;
 
 let equal_ivl = ({equal = equal_ivla} : ivl equal);;
+
+let rec eint_le x0 uu = match x0, uu with MinInf, uu -> true
+                  | Fin v, PlusInf -> true
+                  | PlusInf, PlusInf -> true
+                  | Fin n, Fin m -> less_eq_int n m
+                  | Fin v, MinInf -> false
+                  | PlusInf, MinInf -> false
+                  | PlusInf, Fin v -> false;;
+
+let rec less_eq_eint x = eint_le x;;
 
 let rec join_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -2514,6 +2510,20 @@ let executable_domain_ivl =
      to_string = to_string_ivl}
     : ivl executable_domain);;
 
+type location = Local_Location of string | Global_Location of string;;
+
+let rec equal_locationa
+  x0 x1 = match x0, x1 with Local_Location x1, Global_Location x2 -> false
+    | Global_Location x2, Local_Location x1 -> false
+    | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
+    | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
+
+let equal_location = ({equal = equal_locationa} : location equal);;
+
+let rec less_eint a b = eint_le a b && not (eint_le b a);;
+
+let ord_eint = ({less_eq = less_eq_eint; less = less_eint} : eint ord);;
+
 type parity = PBot | PEven | POdd | PTop;;
 
 let rec equal_paritya x0 x1 = match x0, x1 with POdd, PTop -> false
@@ -2639,16 +2649,6 @@ let executable_domain_parity =
      warrowing_executable_domain = warrowing_parity; is_empty = is_empty_parity;
      to_string = to_string_parity}
     : parity executable_domain);;
-
-type location = Local_Location of string | Global_Location of string;;
-
-let rec equal_locationa
-  x0 x1 = match x0, x1 with Local_Location x1, Global_Location x2 -> false
-    | Global_Location x2, Local_Location x1 -> false
-    | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
-    | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
-
-let equal_location = ({equal = equal_locationa} : location equal);;
 
 type 'a lifted = Bot | Lifted of 'a;;
 
@@ -3099,6 +3099,20 @@ let executable_domain_congruence =
      is_empty = is_empty_congruence; to_string = to_string_congruence}
     : congruence executable_domain);;
 
+type ('a, 'b) routed_gk = Analysis_Global of 'a |
+  Activation_Seed of cfg_node * 'b;;
+
+let rec equal_routed_gka _A _B
+  x0 x1 = match x0, x1 with
+    Analysis_Global x1, Activation_Seed (x21, x22) -> false
+    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
+    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
+        equal_cfg_nodea x21 y21 && eq _B x22 y22
+    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
+
+let rec equal_routed_gk _A _B =
+  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
+
 type 'a int_dom_ext = Int_dom_ext of sign * ivl * parity * congruence * 'a;;
 
 let rec equal_int_dom_exta _A
@@ -3338,18 +3352,18 @@ let rec interval_fact_of_sign
     | SPos -> Ivl (Fin one_inta, PlusInf)
     | STop -> top_ivla;;
 
+let rec inf_ivl
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
+          (if less_eq_eint u1 u2 then u1 else u2));;
+
 let rec normalize_ivl
   v = (let Ivl (l, u) = v in
         (if less_eq_eint l u &&
               (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
           then v else bot_ivla));;
 
-let rec meet_ivl
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
-          (if less_eq_eint u1 u2 then u1 else u2));;
-
-let rec intersect_ivl a b = normalize_ivl (meet_ivl a b);;
+let rec intersect_ivl a b = normalize_ivl (inf_ivl a b);;
 
 let rec is_bottom_int_dom
   d = not (ivl_congruence_nonempty
@@ -3415,20 +3429,6 @@ let rec executable_domain_int_dom_ext _A =
      warrowing_executable_domain = (warrowing_int_dom_ext _A);
      is_empty = is_empty_int_dom_ext _A; to_string = to_string_int_dom_ext _A}
     : 'a int_dom_ext executable_domain);;
-
-type ('a, 'b) routed_gk = Analysis_Global of 'a |
-  Activation_Seed of cfg_node * 'b;;
-
-let rec equal_routed_gka _A _B
-  x0 x1 = match x0, x1 with
-    Analysis_Global x1, Activation_Seed (x21, x22) -> false
-    | Activation_Seed (x21, x22), Analysis_Global x1 -> false
-    | Activation_Seed (x21, x22), Activation_Seed (y21, y22) ->
-        equal_cfg_nodea x21 y21 && eq _B x22 y22
-    | Analysis_Global x1, Analysis_Global y1 -> eq _A x1 y1;;
-
-let rec equal_routed_gk _A _B =
-  ({equal = equal_routed_gka _A _B} : ('a, 'b) routed_gk equal);;
 
 type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
   Seq of com * com | If of exp * com * com | While of exp * com |
@@ -4205,49 +4205,77 @@ let rec intersect_congruence_rep
   lcm_inta m1 m2))
                             else None))));;
 
-let rec intersect_congruence
+let rec inf_congruence
   xb xc =
     Abs_congruence
       (intersect_congruence_rep (rep_congruence xb) (rep_congruence xc));;
 
-let rec intersect_parity
-  x0 b = match x0, b with PBot, b -> PBot
-    | PEven, b ->
-        (match b with PBot -> PBot | PEven -> PEven | POdd -> PBot
-          | PTop -> PEven)
-    | POdd, b ->
-        (match b with PBot -> PBot | PEven -> PBot | POdd -> POdd
-          | PTop -> POdd)
-    | PTop, b -> b;;
+let rec inf_parity
+  x0 b = match x0, b with PTop, b -> b
+    | PBot, PTop -> PBot
+    | PEven, PTop -> PEven
+    | POdd, PTop -> POdd
+    | PBot, PBot -> (if equal_paritya PBot PBot then PBot else PBot)
+    | PBot, PEven -> (if equal_paritya PBot PEven then PBot else PBot)
+    | PBot, POdd -> (if equal_paritya PBot POdd then PBot else PBot)
+    | PEven, PBot -> (if equal_paritya PEven PBot then PEven else PBot)
+    | PEven, PEven -> (if equal_paritya PEven PEven then PEven else PBot)
+    | PEven, POdd -> (if equal_paritya PEven POdd then PEven else PBot)
+    | POdd, PBot -> (if equal_paritya POdd PBot then POdd else PBot)
+    | POdd, PEven -> (if equal_paritya POdd PEven then POdd else PBot)
+    | POdd, POdd -> (if equal_paritya POdd POdd then POdd else PBot);;
 
-let rec intersect_sign
-  x0 b = match x0, b with SBot, b -> SBot
-    | SNeg, b ->
-        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNeg
-          | SZero -> SBot | SNonNeg -> SBot | SPos -> SBot | STop -> SNeg)
-    | SNonPos, b ->
-        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNonPos
-          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SNonPos)
-    | SZero, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
-          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SZero)
-    | SNonNeg, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
-          | SZero -> SZero | SNonNeg -> SNonNeg | SPos -> SPos
-          | STop -> SNonNeg)
-    | SPos, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SBot
-          | SZero -> SBot | SNonNeg -> SPos | SPos -> SPos | STop -> SPos)
-    | STop, b -> b;;
+let rec inf_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | STop, SNeg -> SNeg
+                   | STop, SNonPos -> SNonPos
+                   | STop, SZero -> SZero
+                   | STop, SNonNeg -> SNonNeg
+                   | STop, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, STop -> SNeg
+                   | SNonPos, STop -> SNonPos
+                   | SZero, STop -> SZero
+                   | SNonNeg, STop -> SNonNeg
+                   | SPos, STop -> SPos
+                   | SNeg, SNeg -> SNeg
+                   | SNeg, SNonPos -> SNeg
+                   | SNonPos, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SNonPos, SZero -> SZero
+                   | SZero, SNonPos -> SZero
+                   | SNonPos, SNonNeg -> SZero
+                   | SNonNeg, SNonPos -> SZero
+                   | SZero, SZero -> SZero
+                   | SZero, SNonNeg -> SZero
+                   | SNonNeg, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SNonNeg, SPos -> SPos
+                   | SPos, SNonNeg -> SPos
+                   | SPos, SPos -> SPos
+                   | SNeg, SZero -> SBot
+                   | SNeg, SNonNeg -> SBot
+                   | SNeg, SPos -> SBot
+                   | SNonPos, SPos -> SBot
+                   | SZero, SNeg -> SBot
+                   | SZero, SPos -> SBot
+                   | SNonNeg, SNeg -> SBot
+                   | SPos, SNeg -> SBot
+                   | SPos, SNonPos -> SBot
+                   | SPos, SZero -> SBot;;
 
 let rec intersect_int_dom
   d1 d2 =
     int_congruence_update
-      (fun _ -> intersect_congruence (int_congruence d1) (int_congruence d2))
-      (int_parity_update
-        (fun _ -> intersect_parity (int_parity d1) (int_parity d2))
+      (fun _ -> inf_congruence (int_congruence d1) (int_congruence d2))
+      (int_parity_update (fun _ -> inf_parity (int_parity d1) (int_parity d2))
         (int_ivl_update (fun _ -> intersect_ivl (int_ivl d1) (int_ivl d2))
-          (int_sign_update (fun _ -> intersect_sign (int_sign d1) (int_sign d2))
+          (int_sign_update (fun _ -> inf_sign (int_sign d1) (int_sign d2))
             d1)));;
 
 let rec apply_reduction_steps
@@ -4271,7 +4299,7 @@ let rec parity_fact_of_congruence
   fct = parity_fact_of_congruence_rep (rep_congruence fct);;
 
 let rec refine_parity_with_congruence
-  fct p = intersect_parity (parity_fact_of_congruence fct) p;;
+  fct p = inf_parity (parity_fact_of_congruence fct) p;;
 
 let rec congruence_upper_bound
   c m x2 = match c, m, x2 with c, m, MinInf -> MinInf
@@ -4325,7 +4353,7 @@ let rec interval_parity_fact
                | Ivl (Fin _, PlusInf) -> PTop | Ivl (PlusInf, _) -> PTop));;
 
 let rec refine_parity_with_interval
-  fct p = intersect_parity (interval_parity_fact fct) p;;
+  fct p = inf_parity (interval_parity_fact fct) p;;
 
 let rec interval_sign_fact
   i = (if is_bottom_ivl i then SBot
@@ -4338,8 +4366,7 @@ let rec interval_sign_fact
                                else (if equal_eint l (Fin zero_inta)
                                       then SNonNeg else STop))))));;
 
-let rec refine_sign_with_interval
-  fct s = intersect_sign (interval_sign_fact fct) s;;
+let rec refine_sign_with_interval fct s = inf_sign (interval_sign_fact fct) s;;
 
 let rec refine_ivl_with_interval fct i = intersect_ivl fct i;;
 
@@ -4413,8 +4440,6 @@ let rec plus_eint
     | PlusInf, Fin ux -> PlusInf
     | PlusInf, PlusInf -> PlusInf;;
 
-let rec inf_ivl x = meet_ivl x;;
-
 let rec inv_less_ivl
   x0 x1 x2 = match x0, x1, x2 with
     true, Ivl (l1, u1), Ivl (l2, u2) ->
@@ -4424,64 +4449,20 @@ let rec inv_less_ivl
         (inf_ivl (Ivl (l1, u1)) (Ivl (l2, PlusInf)),
           inf_ivl (Ivl (l2, u2)) (Ivl (MinInf, u1)));;
 
-let rec meet_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                    | SNeg, SBot -> SBot
-                    | SNonPos, SBot -> SBot
-                    | SZero, SBot -> SBot
-                    | SNonNeg, SBot -> SBot
-                    | SPos, SBot -> SBot
-                    | STop, SBot -> SBot
-                    | STop, SNeg -> SNeg
-                    | STop, SNonPos -> SNonPos
-                    | STop, SZero -> SZero
-                    | STop, SNonNeg -> SNonNeg
-                    | STop, SPos -> SPos
-                    | STop, STop -> STop
-                    | SNeg, STop -> SNeg
-                    | SNonPos, STop -> SNonPos
-                    | SZero, STop -> SZero
-                    | SNonNeg, STop -> SNonNeg
-                    | SPos, STop -> SPos
-                    | SNeg, SNeg -> SNeg
-                    | SNeg, SNonPos -> SNeg
-                    | SNonPos, SNeg -> SNeg
-                    | SNonPos, SNonPos -> SNonPos
-                    | SNonPos, SZero -> SZero
-                    | SZero, SNonPos -> SZero
-                    | SNonPos, SNonNeg -> SZero
-                    | SNonNeg, SNonPos -> SZero
-                    | SZero, SZero -> SZero
-                    | SZero, SNonNeg -> SZero
-                    | SNonNeg, SZero -> SZero
-                    | SNonNeg, SNonNeg -> SNonNeg
-                    | SNonNeg, SPos -> SPos
-                    | SPos, SNonNeg -> SPos
-                    | SPos, SPos -> SPos
-                    | SNeg, SZero -> SBot
-                    | SNeg, SNonNeg -> SBot
-                    | SNeg, SPos -> SBot
-                    | SNonPos, SPos -> SBot
-                    | SZero, SNeg -> SBot
-                    | SZero, SPos -> SBot
-                    | SNonNeg, SNeg -> SBot
-                    | SPos, SNeg -> SBot
-                    | SPos, SNonPos -> SBot
-                    | SPos, SZero -> SBot;;
-
 let rec inv_less_sign
   x0 a1 a2 = match x0, a1, a2 with
     true, a1, a2 ->
-      (let a1a = (if sign_le a2 SNonPos then meet_sign a1 SNeg else a1) in
-       let a = (if sign_le a1 SNonNeg then meet_sign a2 SPos else a2) in
+      (let a1a = (if sign_le a2 SNonPos then inf_sign a1 SNeg else a1) in
+       let a = (if sign_le a1 SNonNeg then inf_sign a2 SPos else a2) in
         (a1a, a))
     | false, a1, a2 ->
         (let a1a =
-           (if sign_le a2 SPos then meet_sign a1 SPos
-             else (if sign_le a2 SNonNeg then meet_sign a1 SNonNeg else a1))
+           (if sign_le a2 SPos then inf_sign a1 SPos
+             else (if sign_le a2 SNonNeg then inf_sign a1 SNonNeg else a1))
            in
          let a =
-           (if sign_le a1 SNeg then meet_sign a2 SNeg
-             else (if sign_le a1 SNonPos then meet_sign a2 SNonPos else a2))
+           (if sign_le a1 SNeg then inf_sign a2 SNeg
+             else (if sign_le a1 SNonPos then inf_sign a2 SNonPos else a2))
            in
           (a1a, a));;
 
@@ -5276,21 +5257,21 @@ let rec sign_tobool
 
 let rec inv_eq_sign
   x0 a1 a2 = match x0, a1, a2 with
-    true, a1, a2 -> (meet_sign a1 a2, meet_sign a1 a2)
+    true, a1, a2 -> (inf_sign a1 a2, inf_sign a1 a2)
     | false, a1, a2 ->
         (let a1a =
            (if sign_le a1 SZero && sign_le a2 SZero then SBot
              else (if sign_le a2 SZero && sign_le a1 SNonNeg
-                    then meet_sign a1 SPos
+                    then inf_sign a1 SPos
                     else (if sign_le a2 SZero && sign_le a1 SNonPos
-                           then meet_sign a1 SNeg else a1)))
+                           then inf_sign a1 SNeg else a1)))
            in
          let a =
            (if sign_le a1 SZero && sign_le a2 SZero then SBot
              else (if sign_le a1 SZero && sign_le a2 SNonNeg
-                    then meet_sign a2 SPos
+                    then inf_sign a2 SPos
                     else (if sign_le a1 SZero && sign_le a2 SNonPos
-                           then meet_sign a2 SNeg else a2)))
+                           then inf_sign a2 SNeg else a2)))
            in
           (a1a, a));;
 
@@ -5532,7 +5513,7 @@ let rec branch_sign_st
     (if feasible_with executable_domain_sign
           (Backward_exec_ops_ext
             (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
-              inv_conservative, inv_conservative, inv_conservative, meet_sign,
+              inv_conservative, inv_conservative, inv_conservative, inf_sign,
               ()))
           e pol (fun_of_resolved_st_q_for bot_sign g s)
       then collapse_lift (bot_resolved_st_q bot_sign)
@@ -5540,7 +5521,7 @@ let rec branch_sign_st
                (Backward_exec_ops_ext
                  (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
                    inv_conservative, inv_conservative, inv_conservative,
-                   meet_sign, ()))
+                   inf_sign, ()))
                g e pol (Lifted s))
       else bot_resolved_st_qa bot_sign);;
 
@@ -7270,22 +7251,22 @@ let rec inverse_times_candidate
 
 let rec inv_times_congruence
   r a b =
-    (intersect_congruence a (inverse_times_candidate r b),
-      intersect_congruence b (inverse_times_candidate r a));;
+    (inf_congruence a (inverse_times_candidate r b),
+      inf_congruence b (inverse_times_candidate r a));;
 
 let rec inv_minus_congruence
   r a b =
-    (intersect_congruence a (plus_congruence r b),
-      intersect_congruence b (minus_congruence a r));;
+    (inf_congruence a (plus_congruence r b),
+      inf_congruence b (minus_congruence a r));;
 
 let rec inv_plus_congruence
   r a b =
-    (intersect_congruence a (minus_congruence r b),
-      intersect_congruence b (minus_congruence r a));;
+    (inf_congruence a (minus_congruence r b),
+      inf_congruence b (minus_congruence r a));;
 
 let rec inv_eq_congruence
   x0 a b = match x0, a, b with
-    true, a, b -> (intersect_congruence a b, intersect_congruence a b)
+    true, a, b -> (inf_congruence a b, inf_congruence a b)
     | false, a, b -> (a, b);;
 
 let rec branch_congruence_st
@@ -7294,14 +7275,14 @@ let rec branch_congruence_st
           (Backward_exec_ops_ext
             (aval_congruence, congruence_tobool, inv_less_congruence,
               inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
-              inv_times_congruence, intersect_congruence, ()))
+              inv_times_congruence, inf_congruence, ()))
           e pol (fun_of_resolved_st_q_for bot_congruence g s)
       then collapse_lift (bot_resolved_st_q bot_congruence)
              (bfilter_st_lift_with executable_domain_congruence
                (Backward_exec_ops_ext
                  (aval_congruence, congruence_tobool, inv_less_congruence,
                    inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
-                   inv_times_congruence, intersect_congruence, ()))
+                   inv_times_congruence, inf_congruence, ()))
                g e pol (Lifted s))
       else bot_resolved_st_qa bot_congruence);;
 
@@ -7635,14 +7616,14 @@ let rec plus_parity x0 uu = match x0, uu with PBot, uu -> PBot
                       | PTop, POdd -> PTop
                       | PTop, PTop -> PTop;;
 
+let rec parity_of_int
+  n = (if dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2)) n
+        then PEven else POdd);;
+
 let rec parity_tobool = function POdd -> Some true
                         | PBot -> None
                         | PEven -> None
                         | PTop -> None;;
-
-let rec parity_of_int
-  n = (if dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2)) n
-        then PEven else POdd);;
 
 let rec parity_mod
   a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
@@ -7898,7 +7879,7 @@ let rec int_dom_tobool
 
 let rec inv_eq_ivl
   x0 a1 a2 = match x0, a1, a2 with
-    true, a1, a2 -> (meet_ivl a1 a2, meet_ivl a1 a2)
+    true, a1, a2 -> (inf_ivl a1 a2, inf_ivl a1 a2)
     | false, a1, a2 -> (a1, a2);;
 
 let rec inv_eq_int_dom_raw
@@ -8595,7 +8576,7 @@ let rec call_string_run_result _A
         (entered_targets _A enter (fun u ctx _ _ -> take k (u :: ctx)) p)
         classify r shared seed_at step_at p);;
 
-let rec sign_eq_false_of_intersection a b = is_empty_sign (meet_sign a b);;
+let rec sign_eq_false_of_intersection a b = is_empty_sign (inf_sign a b);;
 
 let rec sign_eq_false x = sign_eq_false_of_intersection x;;
 

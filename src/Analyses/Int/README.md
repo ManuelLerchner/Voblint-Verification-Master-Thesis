@@ -21,7 +21,7 @@ is the one analysis session that sees more than its own domain, by construction.
 ## The layer chain
 
 ```text
-Int_Domain              the four-component record and its concretization
+Int_Lattice             (Voblint_Domain) the four-component record and its concretization
 Int_Warrowing           componentwise widen/narrow and the numeric_domain instance
 Int_Refinement          exactness of reduction steps; one refinement round
 Int_Refinement_Control  the three refine modes

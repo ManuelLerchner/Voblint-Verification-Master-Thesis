@@ -39,8 +39,8 @@ subsection \<open>Narrowing is exactly componentwise\<close>
 
 text \<open>
   Sign, Parity, and Congruence all choose the conservative \<open>narrow a b = a\<close>
-  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Lattice\<close>,
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>,
+  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Warrowing\<close>,
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Warrowing\<close>,
   \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Warrowing\<close>):
   once widened, they never narrow back, which trivially satisfies
   \<open>narrow_ge\<close>/\<open>narrow_le\<close> without needing anything about their own

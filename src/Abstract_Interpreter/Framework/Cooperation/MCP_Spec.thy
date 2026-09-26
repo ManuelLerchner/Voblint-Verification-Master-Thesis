@@ -263,7 +263,7 @@ proof (induction cs arbitrary: r)
   with Cons.prems(3) have "eval_holds q (r \<sqinter> mc_qry c x q) s"
     by (rule eval_query.inf_sound)
   then show ?case
-    using Cons.IH[of "r \<sqinter> mc_qry c x q"] Cons.prems(1,2) by (simp del: inf_ivl_def)
+    using Cons.IH[of "r \<sqinter> mc_qry c x q"] Cons.prems(1,2) by simp
 qed simp
 
 theorem mcp_local_spec:

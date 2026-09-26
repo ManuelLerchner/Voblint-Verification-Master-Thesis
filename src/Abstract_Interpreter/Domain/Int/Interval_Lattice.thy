@@ -1,5 +1,5 @@
 theory Interval_Lattice
-  imports "Voblint_Domain.Abstract_Domain" Interval_Bounds "Voblint_VIMP.VIMP_Proc"
+  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Proc"
 begin
 
 section \<open>Interval lattice\<close>
@@ -10,7 +10,122 @@ text \<open>
   Empty (e.g. @{text "[+inf, -inf]"}) is @{text bot}; @{text "[-inf, +inf]"} is @{text top}.
 \<close>
 
-subsection \<open>Interval type and order\<close>
+subsection \<open>Extended integer bounds\<close>
+
+text \<open>
+  An interval needs endpoints that can say "no lower limit" and "no upper
+  limit", so \<open>eint\<close> adds \<open>MinInf\<close> and \<open>PlusInf\<close> to the integers. Ordering
+  puts \<open>MinInf\<close> below and \<open>PlusInf\<close> above everything, which makes \<open>eint\<close> a
+  linear order; addition and subtraction extend the integer operations, with
+  the mixed-infinity cases (\<open>PlusInf + MinInf\<close> and its mirror) pinned to a
+  fixed choice rather than left undefined, since a total function is what
+\<close>
+
+datatype eint = MinInf | Fin (eint_val: int) | PlusInf
+
+fun eint_le :: "eint => eint => bool" where
+    "eint_le MinInf  _       = True"
+  | "eint_le _       PlusInf = True"
+  | "eint_le (Fin n) (Fin m) = (n <= m)"
+  | "eint_le _       MinInf  = False"
+  | "eint_le PlusInf _       = False"
+
+lemma eint_le_refl [simp]: "eint_le x x"
+  by (cases x) simp_all
+
+lemma eint_le_antisym: "eint_le x y \<Longrightarrow> eint_le y x \<Longrightarrow> x = y"
+  by (cases x; cases y) simp_all
+
+lemma eint_le_trans: "eint_le x y \<Longrightarrow> eint_le y z \<Longrightarrow> eint_le x z"
+  by (cases x; cases y; cases z) simp_all
+
+lemma eint_le_PlusInf [simp]: "eint_le x PlusInf"
+  by (cases x) simp_all
+
+lemma eint_le_MinInf_left [simp]: "eint_le MinInf x"
+  by simp
+
+lemma eint_le_linear: "eint_le x y \<or> eint_le y x"
+  by (cases x; cases y) auto
+
+instantiation eint :: ord begin
+definition less_eq_eint :: "eint => eint => bool" where "less_eq_eint = eint_le"
+definition less_eint    :: "eint => eint => bool" where
+  "(a :: eint) < b = (eint_le a b \<and> \<not> eint_le b a)"
+instance ..
+end
+
+declare less_eq_eint_def [simp]
+
+instance eint :: linorder
+proof intro_classes
+  fix x y z :: eint
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding less_eint_def less_eq_eint_def by simp
+  show "x \<le> x"                           unfolding less_eq_eint_def by (rule eint_le_refl)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"    unfolding less_eq_eint_def by (rule eint_le_trans)
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"    unfolding less_eq_eint_def by (rule eint_le_antisym)
+  show "x \<le> y \<or> y \<le> x"                  unfolding less_eq_eint_def by (rule eint_le_linear)
+qed
+
+
+instantiation eint :: plus begin
+fun plus_eint :: "eint => eint => eint" where
+    "plus_eint (Fin n)   (Fin m)   = Fin (n + m)"
+  | "plus_eint (Fin _)   MinInf    = MinInf"
+  | "plus_eint (Fin _)   PlusInf   = PlusInf"
+  | "plus_eint MinInf    MinInf    = MinInf"
+  | "plus_eint MinInf    (Fin _)   = MinInf"
+  | "plus_eint MinInf    PlusInf   = MinInf"
+  | "plus_eint PlusInf   MinInf    = PlusInf"
+  | "plus_eint PlusInf   (Fin _)   = PlusInf"
+  | "plus_eint PlusInf   PlusInf   = PlusInf"
+instance ..
+end
+
+instantiation eint :: minus begin
+fun minus_eint :: "eint => eint => eint" where
+    "minus_eint (Fin n)   (Fin m)   = Fin (n - m)"
+  | "minus_eint (Fin _)   MinInf    = PlusInf"
+  | "minus_eint (Fin _)   PlusInf   = MinInf"
+  | "minus_eint MinInf    MinInf    = MinInf"
+  | "minus_eint MinInf    (Fin _)   = MinInf"
+  | "minus_eint MinInf    PlusInf   = MinInf"
+  | "minus_eint PlusInf   MinInf    = PlusInf"
+  | "minus_eint PlusInf   (Fin _)   = PlusInf"
+  | "minus_eint PlusInf   PlusInf   = PlusInf"
+instance ..
+end
+
+lemma eint_le_PlusInf_iff: "eint_le PlusInf z \<longleftrightarrow> z = PlusInf"
+  by (cases z) auto
+lemma eint_le_MinInf_iff: "eint_le z MinInf \<longleftrightarrow> z = MinInf"
+  by (cases z) auto
+
+lemma eint_plus_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (a1 + b1) (a2 + b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto)
+
+lemma eint_minus_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (a1 - b1) (a2 - b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto)
+
+text \<open>\<open>Fin\<close> embeds \<open>int\<close> into \<open>eint\<close> as an order isomorphism onto the finite
+  bounds, so it commutes with \<open>min\<close>/\<open>max\<close>.\<close>
+lemma Fin_min: "Fin (min i j) = min (Fin i) (Fin j)"
+  by (simp add: min_def)
+
+lemma Fin_max: "Fin (max i j) = max (Fin i) (Fin j)"
+  by (simp add: max_def)
+
+lemma eint_min_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (min a1 b1) (min a2 b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto simp: min_def)
+
+lemma eint_max_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (max a1 b1) (max a2 b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto simp: max_def)
+
+subsection \<open>Carrier and concretization\<close>
 
 datatype ivl = Ivl (ivl_lower: eint) (ivl_upper: eint)   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
@@ -23,6 +138,16 @@ text \<open>
 lemma ivl_exhaustE:
   obtains l u where "x = Ivl l u"
   by (cases x) auto
+
+
+fun gamma_ivl :: "ivl => int set" where
+    "gamma_ivl (Ivl l u) = {n. l \<le> Fin n \<and> Fin n \<le> u}"
+
+definition ivl_of_int :: "int \<Rightarrow> ivl" where
+  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
+
+
+subsection \<open>Order\<close>
 
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
@@ -76,64 +201,11 @@ instance proof intro_classes
 qed
 end
 
-subsection \<open>Concretization\<close>
-
-fun gamma_ivl :: "ivl => int set" where
-    "gamma_ivl (Ivl l u) = {n. l \<le> Fin n \<and> Fin n \<le> u}"
-
-definition ivl_of_int :: "int \<Rightarrow> ivl" where
-  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
-
 lemma gamma_ivl_bot: "gamma_ivl bot = {}"
   unfolding bot_ivl_def by auto
 
 lemma gamma_ivl_top: "gamma_ivl ivl_top = UNIV"
   unfolding ivl_top_def by auto
-
-text \<open>
-  Unlike \<open>bot\<close>, \<open>top\<close> has no other representation: \<^term>\<open>gamma_ivl (Ivl l u)
-  = UNIV\<close> forces \<open>l \<le> Fin n\<close> and \<open>Fin n \<le> u\<close> for every \<open>n\<close>, which pins
-  \<open>l = MinInf\<close> and \<open>u = PlusInf\<close> exactly --- so a direct equality test
-  against \<^const>\<open>ivl_top\<close> is already exact, no bound comparison needed.
-\<close>
-
-definition is_top_ivl :: "ivl \<Rightarrow> bool" where
-  "is_top_ivl i = (i = ivl_top)"
-
-lemma is_top_ivl_correct_gamma: "is_top_ivl i \<longleftrightarrow> gamma_ivl i = UNIV"
-  by (cases i; case_tac x1; case_tac x2)
-     (auto simp add: is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
-
-text \<open>
-  \<open>bot\<close> is one fixed empty interval (\<^term>\<open>Ivl PlusInf MinInf\<close>), but the
-  \<open>\<le>\<close> instance's bound comparison makes \<open>x \<le> bot\<close> true only for that exact
-  representation: any other inverted bound pair (e.g. a guard refinement
-  narrowing a variable against its own infeasible range,
-  \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>) is just as empty by @{const gamma_ivl},
-  yet not \<open>\<le> bot\<close> --- the instance never normalizes. \<open>is_bottom_ivl\<close> tests
-  emptiness directly against the bounds instead of against one particular
-  representative.
-
-  Bound comparison alone is not quite enough, though: \<^term>\<open>Ivl MinInf
-  MinInf\<close> has \<open>l \<le> u\<close> (reflexively), yet no integer is "at" \<open>MinInf\<close>
-  itself, so its @{const gamma_ivl} is still empty (symmetrically for
-  \<^term>\<open>Ivl PlusInf PlusInf\<close>). \<open>l = PlusInf\<close> and \<open>u = MinInf\<close> are exactly
-  the two cases where \<^const>\<open>eint_le\<close> can hold reflexively without any
-  integer ever satisfying it, so both are called out explicitly alongside
-  the general inverted-bounds case.
-\<close>
-
-definition is_bottom_ivl :: "ivl \<Rightarrow> bool" where
-  "is_bottom_ivl i =
-     (case i of Ivl l u \<Rightarrow> l = PlusInf \<or> u = MinInf \<or> \<not> l \<le> u)"
-
-lemma is_bottom_ivl_correct: "is_bottom_ivl i \<longleftrightarrow> gamma_ivl i = {}"
-proof (cases i)
-  case (Ivl l u)
-  show ?thesis
-    unfolding Ivl is_bottom_ivl_def
-    by (cases l; cases u) auto
-qed
 
 lemma gamma_ivl_mono:
   "a \<le> b \<Longrightarrow> gamma_ivl a \<subseteq> gamma_ivl b"
@@ -147,7 +219,10 @@ proof (cases a; cases b)
     using le by (auto intro: eint_le_trans)
 qed
 
-subsection \<open>Join (least upper bound)\<close>
+lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
+  by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
+
+subsection \<open>Join\<close>
 
 fun join_ivl :: "ivl => ivl => ivl" where
     "join_ivl (Ivl l1 u1) (Ivl l2 u2) =
@@ -201,22 +276,19 @@ qed
 
 instance ivl :: bounded_semilattice_sup_bot ..
 
-subsection \<open>Meet (greatest lower bound)\<close>
+subsection \<open>Meet\<close>
 
 text \<open>
   Interval intersection.  Used by @{text bfilter_ivl} to refine a variable's
   interval on a guard (@{text "x < n"} narrows the upper bound).
 \<close>
-fun meet_ivl :: "ivl => ivl => ivl" where
-    "meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
+instantiation ivl :: inf begin
+fun inf_ivl :: "ivl => ivl => ivl" where
+    "inf_ivl (Ivl l1 u1) (Ivl l2 u2) =
        Ivl (if l2 \<le> l1 then l1 else l2)
            (if u1 \<le> u2 then u1 else u2)"
-
-instantiation ivl :: inf begin
-definition inf_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "inf_ivl = meet_ivl"
 instance ..
 end
-declare inf_ivl_def [simp]
 
 lemma meet_ivl_gamma:
   "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (a \<sqinter> b)"
@@ -259,7 +331,52 @@ qed
 instance ivl :: lattice ..
 instance ivl :: bounded_lattice_bot ..
 
-subsection \<open>Abstract domain instantiation\<close>
+subsection \<open>Executable interface\<close>
+
+text \<open>
+  Unlike \<open>bot\<close>, \<open>top\<close> has no other representation: \<^term>\<open>gamma_ivl (Ivl l u)
+  = UNIV\<close> forces \<open>l \<le> Fin n\<close> and \<open>Fin n \<le> u\<close> for every \<open>n\<close>, which pins
+  \<open>l = MinInf\<close> and \<open>u = PlusInf\<close> exactly --- so a direct equality test
+  against \<^const>\<open>ivl_top\<close> is already exact, no bound comparison needed.
+\<close>
+
+definition is_top_ivl :: "ivl \<Rightarrow> bool" where
+  "is_top_ivl i = (i = ivl_top)"
+
+lemma is_top_ivl_correct_gamma: "is_top_ivl i \<longleftrightarrow> gamma_ivl i = UNIV"
+  by (cases i; case_tac x1; case_tac x2)
+     (auto simp add: is_top_ivl_def ivl_top_def set_eq_iff; presburger)+
+
+text \<open>
+  \<open>bot\<close> is one fixed empty interval (\<^term>\<open>Ivl PlusInf MinInf\<close>), but the
+  \<open>\<le>\<close> instance's bound comparison makes \<open>x \<le> bot\<close> true only for that exact
+  representation: any other inverted bound pair (e.g. a guard refinement
+  narrowing a variable against its own infeasible range,
+  \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>) is just as empty by @{const gamma_ivl},
+  yet not \<open>\<le> bot\<close> --- the instance never normalizes. \<open>is_bottom_ivl\<close> tests
+  emptiness directly against the bounds instead of against one particular
+  representative.
+
+  Bound comparison alone is not quite enough, though: \<^term>\<open>Ivl MinInf
+  MinInf\<close> has \<open>l \<le> u\<close> (reflexively), yet no integer is "at" \<open>MinInf\<close>
+  itself, so its @{const gamma_ivl} is still empty (symmetrically for
+  \<^term>\<open>Ivl PlusInf PlusInf\<close>). \<open>l = PlusInf\<close> and \<open>u = MinInf\<close> are exactly
+  the two cases where \<^const>\<open>eint_le\<close> can hold reflexively without any
+  integer ever satisfying it, so both are called out explicitly alongside
+  the general inverted-bounds case.
+\<close>
+
+definition is_bottom_ivl :: "ivl \<Rightarrow> bool" where
+  "is_bottom_ivl i =
+     (case i of Ivl l u \<Rightarrow> l = PlusInf \<or> u = MinInf \<or> \<not> l \<le> u)"
+
+lemma is_bottom_ivl_correct: "is_bottom_ivl i \<longleftrightarrow> gamma_ivl i = {}"
+proof (cases i)
+  case (Ivl l u)
+  show ?thesis
+    unfolding Ivl is_bottom_ivl_def
+    by (cases l; cases u) auto
+qed
 
 text \<open>
   Goblint shows an interval as \<open>[l,u]\<close>, an unconstrained end as the machine
@@ -287,6 +404,8 @@ lemma string_of_ivl_regression:
   "string_of_ivl (Ivl PlusInf PlusInf) = STR ''<bottom>''"
   by eval+
 
+
+subsection \<open>Canonical representatives\<close>
 
 text \<open>
   \<^bold>\<open>Canonical empty interval.\<close>  The raw \<^typ>\<open>ivl\<close> lattice has infinitely many empty
@@ -333,8 +452,6 @@ lemma gamma_ivl_nonempty: "i \<in> gamma_ivl v \<Longrightarrow> ivl_nonempty v"
 lemma ivl_nonempty_mono: "ivl_nonempty a \<Longrightarrow> a \<le> b \<Longrightarrow> ivl_nonempty b"
   by (cases a; cases b; auto simp: less_eq_ivl_def intro: eint_le_trans
         elim: eint_le.elims)
-
-subsection \<open>Canonical representatives\<close>
 
 text \<open>
   \<^const>\<open>normalize_ivl\<close> picks one representative per abstract value: non-empty
@@ -428,7 +545,7 @@ lemma meet_ivl_normalized_breaks_greatest:
 subsection \<open>Semantic intersection\<close>
 
 definition intersect_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  [simp]: "intersect_ivl a b = normalize_ivl (meet_ivl a b)"
+  [simp]: "intersect_ivl a b = normalize_ivl (a \<sqinter> b)"
 
 text \<open>
   \<^const>\<open>inf\<close> is the greatest lower bound of the representation order; the
@@ -448,7 +565,7 @@ text \<open>
 \<close>
 
 lemma gamma_intersect_ivl [simp]:
-  "gamma_ivl (intersect_ivl a b) = gamma_ivl (meet_ivl a b)"
+  "gamma_ivl (intersect_ivl a b) = gamma_ivl (a \<sqinter> b)"
   by (simp add: normalize_ivl_gamma)
 
 lemma intersect_ivl_gamma:
@@ -457,15 +574,15 @@ lemma intersect_ivl_gamma:
 
 lemma intersect_ivl_le1: "intersect_ivl a b \<le> a"
 proof -
-  have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
-  also have "meet_ivl a b \<le> a" using meet_ivl_le_lb1[of a b] by simp
+  have "normalize_ivl (a \<sqinter> b) \<le> a \<sqinter> b" by (rule normalize_ivl_le)
+  also have "a \<sqinter> b \<le> a" using meet_ivl_le_lb1[of a b] by simp
   finally show ?thesis by simp
 qed
 
 lemma intersect_ivl_le2: "intersect_ivl a b \<le> b"
 proof -
-  have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
-  also have "meet_ivl a b \<le> b" using meet_ivl_le_lb2[of a b] by simp
+  have "normalize_ivl (a \<sqinter> b) \<le> a \<sqinter> b" by (rule normalize_ivl_le)
+  also have "a \<sqinter> b \<le> b" using meet_ivl_le_lb2[of a b] by simp
   finally show ?thesis by simp
 qed
 
@@ -473,15 +590,12 @@ lemma intersect_ivl_mono:
   assumes "a1 \<le> a2" and "b1 \<le> b2"
   shows "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2"
 proof -
-  have "meet_ivl a1 b1 \<le> meet_ivl a2 b2" using inf_mono[OF assms] by simp
+  have "a1 \<sqinter> b1 \<le> a2 \<sqinter> b2" using inf_mono[OF assms] by simp
   then show ?thesis by (simp add: normalize_ivl_mono)
 qed
 
 lemma normalize_ivl_intersect_ivl [simp]:
   "normalize_ivl (intersect_ivl a b) = intersect_ivl a b"
   by simp
-
-lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
-  by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
 
 end

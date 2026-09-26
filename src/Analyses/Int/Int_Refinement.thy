@@ -88,122 +88,13 @@ next
     unfolding int_reduction_step_def mono_def by simp
 qed
 
-subsection \<open>Refinement facts and semantic intersections\<close>
+subsection \<open>Refinement facts\<close>
 
 type_synonym interval_fact = ivl
 type_synonym congruence_fact = congruence
 
 definition interval_fact_of_ivl :: "ivl => interval_fact" where
   "interval_fact_of_ivl i = i"
-
-fun intersect_sign :: "sign => sign => sign" where
-  "intersect_sign SBot b = SBot"
-| "intersect_sign SNeg b =
-     (case b of
-        SBot => SBot
-      | SNeg => SNeg
-      | SNonPos => SNeg
-      | SZero => SBot
-      | SNonNeg => SBot
-      | SPos => SBot
-      | STop => SNeg)"
-| "intersect_sign SNonPos b =
-     (case b of
-        SBot => SBot
-      | SNeg => SNeg
-      | SNonPos => SNonPos
-      | SZero => SZero
-      | SNonNeg => SZero
-      | SPos => SBot
-      | STop => SNonPos)"
-| "intersect_sign SZero b =
-     (case b of
-        SBot => SBot
-      | SNeg => SBot
-      | SNonPos => SZero
-      | SZero => SZero
-      | SNonNeg => SZero
-      | SPos => SBot
-      | STop => SZero)"
-| "intersect_sign SNonNeg b =
-     (case b of
-        SBot => SBot
-      | SNeg => SBot
-      | SNonPos => SZero
-      | SZero => SZero
-      | SNonNeg => SNonNeg
-      | SPos => SPos
-      | STop => SNonNeg)"
-| "intersect_sign SPos b =
-     (case b of
-        SBot => SBot
-      | SNeg => SBot
-      | SNonPos => SBot
-      | SZero => SBot
-      | SNonNeg => SPos
-      | SPos => SPos
-      | STop => SPos)"
-| "intersect_sign STop b = b"
-
-lemma gamma_intersect_sign [simp]:
-  "gamma_sign (intersect_sign a b) =
-   gamma_sign a \<inter> gamma_sign b"
-  by (cases a; cases b) auto
-
-lemma intersect_sign_le1:
-  "intersect_sign a b \<le> a"
-  by (cases a; cases b)
-     (simp_all add: less_eq_sign_def)
-
-lemma intersect_sign_le2:
-  "intersect_sign a b \<le> b"
-  by (cases a; cases b)
-     (simp_all add: less_eq_sign_def)
-
-lemma intersect_sign_mono:
-  assumes "a1 \<le> a2" and "b1 \<le> b2"
-  shows "intersect_sign a1 b1 \<le> intersect_sign a2 b2"
-  using assms
-  by (cases a1; cases a2; cases b1; cases b2)
-     (simp_all add: less_eq_sign_def)
-
-fun intersect_parity :: "parity => parity => parity" where
-  "intersect_parity PBot b = PBot"
-| "intersect_parity PEven b =
-     (case b of
-        PBot => PBot
-      | PEven => PEven
-      | POdd => PBot
-      | PTop => PEven)"
-| "intersect_parity POdd b =
-     (case b of
-        PBot => PBot
-      | PEven => PBot
-      | POdd => POdd
-      | PTop => POdd)"
-| "intersect_parity PTop b = b"
-
-lemma gamma_intersect_parity [simp]:
-  "gamma_parity (intersect_parity a b) =
-   gamma_parity a \<inter> gamma_parity b"
-  by (cases a; cases b) auto
-
-lemma intersect_parity_le1:
-  "intersect_parity a b \<le> a"
-  by (cases a; cases b)
-     (simp_all add: less_eq_parity_def)
-
-lemma intersect_parity_le2:
-  "intersect_parity a b \<le> b"
-  by (cases a; cases b)
-     (simp_all add: less_eq_parity_def)
-
-lemma intersect_parity_mono:
-  assumes "a1 \<le> a2" and "b1 \<le> b2"
-  shows "intersect_parity a1 b1 \<le> intersect_parity a2 b2"
-  using assms
-  by (cases a1; cases a2; cases b1; cases b2)
-     (simp_all add: less_eq_parity_def)
 
 definition interval_sign_fact :: "interval_fact => sign" where
   "interval_sign_fact i =
@@ -311,7 +202,7 @@ subsection \<open>Interval-fact fan-out\<close>
 definition refine_sign_with_interval ::
   "interval_fact => sign => sign" where
   "refine_sign_with_interval fct s =
-     intersect_sign (interval_sign_fact fct) s"
+     interval_sign_fact fct \<sqinter> s"
 
 definition refine_ivl_with_interval ::
   "interval_fact => ivl => ivl" where
@@ -320,7 +211,7 @@ definition refine_ivl_with_interval ::
 definition refine_parity_with_interval ::
   "interval_fact => parity => parity" where
   "refine_parity_with_interval fct p =
-     intersect_parity (interval_parity_fact fct) p"
+     interval_parity_fact fct \<sqinter> p"
 
 definition interval_fact_of_int_dom :: "int_dom => interval_fact" where
   "interval_fact_of_int_dom d =
@@ -355,7 +246,7 @@ lemma gamma_refine_parity_with_interval [simp]:
 lemma refine_sign_with_interval_le:
   "refine_sign_with_interval fct s \<le> s"
   unfolding refine_sign_with_interval_def
-  by (rule intersect_sign_le2)
+  by (rule inf_le2)
 
 lemma refine_ivl_with_interval_le:
   "refine_ivl_with_interval fct i \<le> i"
@@ -365,7 +256,7 @@ lemma refine_ivl_with_interval_le:
 lemma refine_parity_with_interval_le:
   "refine_parity_with_interval fct p \<le> p"
   unfolding refine_parity_with_interval_def
-  by (rule intersect_parity_le2)
+  by (rule inf_le2)
 
 lemma refine_sign_with_interval_mono:
   assumes "fct1 \<le> fct2" and "s1 \<le> s2"
@@ -373,7 +264,7 @@ lemma refine_sign_with_interval_mono:
     "refine_sign_with_interval fct1 s1 \<le>
      refine_sign_with_interval fct2 s2"
   unfolding refine_sign_with_interval_def
-  by (rule intersect_sign_mono;
+  by (rule inf_mono;
       use assms interval_sign_fact_mono in blast)
 
 lemma refine_ivl_with_interval_mono:
@@ -390,7 +281,7 @@ lemma refine_parity_with_interval_mono:
     "refine_parity_with_interval fct1 p1 \<le>
      refine_parity_with_interval fct2 p2"
   unfolding refine_parity_with_interval_def
-  by (rule intersect_parity_mono;
+  by (rule inf_mono;
       use assms interval_parity_fact_mono in blast)
 
 lemma gamma_interval_fact_of_int_dom:
@@ -532,7 +423,7 @@ definition parity_fact_of_congruence ::
 definition refine_parity_with_congruence ::
   "congruence_fact => parity => parity" where
   "refine_parity_with_congruence fct p =
-     intersect_parity (parity_fact_of_congruence fct) p"
+     parity_fact_of_congruence fct \<sqinter> p"
 
 definition refine_congruence_with_congruence ::
   "congruence_fact => congruence => congruence" where
@@ -1294,7 +1185,7 @@ lemma gamma_refine_parity_with_congruence [simp]:
 lemma refine_parity_with_congruence_le:
   "refine_parity_with_congruence fct p <= p"
   unfolding refine_parity_with_congruence_def
-  by (rule intersect_parity_le2)
+  by (rule inf_le2)
 
 lemma refine_parity_with_congruence_mono:
   assumes "fct1 <= fct2" "p1 <= p2"
@@ -1302,7 +1193,7 @@ lemma refine_parity_with_congruence_mono:
     "refine_parity_with_congruence fct1 p1 <=
      refine_parity_with_congruence fct2 p2"
   unfolding refine_parity_with_congruence_def
-  by (rule intersect_parity_mono)
+  by (rule inf_mono)
      (use assms parity_fact_of_congruence_mono in auto)
 
 lemma refine_congruence_with_congruence_le:

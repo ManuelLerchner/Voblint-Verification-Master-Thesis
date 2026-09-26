@@ -13,6 +13,7 @@ session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
   directories
     "generated"
   theories
+    Parity_Warrowing
     Parity_Domain
     Parity_Special
     Parity_Transfer

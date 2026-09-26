@@ -56,8 +56,7 @@ and terminates without acceleration.
 
 | File | What |
 | --- | --- |
-| `Congruence_Domain.thy` | the type and its concretization |
-| `Congruence_Lattice.thy` | normalization, order, join and meet |
+| `Congruence_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): carrier, normalization, order, join and meet |
 | `Congruence_Warrowing.thy` | the `warrowing` instance the TD solver's sort requires (widening is join, narrowing keeps the left argument), then the `numeric_domain` instance, which needs it |
 | `Congruence_Arithmetic.thy` | modular `+`, `-`, `*` on residue classes |
 | `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand |

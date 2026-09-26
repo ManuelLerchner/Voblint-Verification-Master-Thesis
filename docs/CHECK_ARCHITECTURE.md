@@ -138,7 +138,7 @@ They differ only in **which four query functions they feed in**:
 | | Sign (`Sign_Classify.thy`) | Interval (`Interval_Classify.thy`) |
 | --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
-| `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
+| `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`⊓` on `sign`) | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |
 
 ### Solver frontends: the unit-context assembly

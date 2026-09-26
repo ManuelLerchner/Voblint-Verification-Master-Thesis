@@ -1,6 +1,8 @@
 theory Int_Warrowing
   imports
-    Int_Domain
+    "Voblint_Domain.Int_Lattice"
+    "Voblint_Analysis_Sign.Sign_Warrowing"
+    "Voblint_Analysis_Parity.Parity_Warrowing"
     "Voblint_Analysis_Interval.Interval_Warrowing"
     "Voblint_Analysis_Congruence.Congruence_Warrowing"
     "TD.Update_rules"
@@ -46,7 +48,7 @@ text \<open>
 \<close>
 
 text \<open>
-  The composite carrier's lattice instance (\<open>Int_Domain\<close>) is
+  The composite carrier's lattice instance (\<open>Int_Lattice\<close>) is
   registered on the extensible record scheme \<open>'a int_dom_scheme\<close>, not the
   closed \<open>int_dom\<close> type alias, so \<open>widen\<close>/\<open>narrow\<close> follow the same route:
   \<open>int_dom_record_lattice\<close> alone has no \<open>widen\<close>/\<open>narrow\<close> for the scheme's
