@@ -14,7 +14,7 @@ text \<open>
   tables (\<open>parity_less_true\<close>/\<open>parity_less_false\<close>/\<open>parity_eq_true\<close>/
   \<open>parity_eq_false\<close>) and their
   \<^theory>\<open>Voblint_Analysis_Parity.Parity_Numeric_Queries\<close> interpretation of
-  \<open>abstract_numeric_queries\<close> live in that theory. The Parity expression
+  \<open>sound_numeric_queries\<close> live in that theory. The Parity expression
   evaluator \<open>aval_parity\<close> lives in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>. The
   Boolean recursion over \<^typ>\<open>exp\<close>, the three-way classification, and the
   node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting

@@ -13,5 +13,5 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     Backward_Domain
     Backward_Domain_Mono
     Three_Valued
-    Abstract_Numeric_Queries
+    Numeric_Queries
     Backward_Numeric_Queries

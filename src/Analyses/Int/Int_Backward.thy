@@ -404,9 +404,10 @@ lemma int_dom_backward_domain_reductive:
   "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_reductive.intro backward_domain.intro semantic_intersection.intro
+proof (intro backward_domain_reductive.intro backward_domain.intro sound_intersection.intro
     int_dom_sound_evaluator mono_truth_test.axioms(1)[OF int_dom_truth_test]
-    backward_domain_axioms.intro reductive_intersection.intro reductive_intersection_axioms.intro)
+    backward_ops.intro backward_ops_axioms.intro
+    reductive_intersection.intro reductive_intersection_axioms.intro)
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound
        inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound
@@ -421,7 +422,7 @@ lemma int_dom_backward_domain_mono:
 proof (intro backward_domain_mono.intro int_dom_backward_domain_reductive
     int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_mono_axioms.intro
     mono_intersection.intro mono_intersection_axioms.intro
-    semantic_intersection.intro)
+    sound_intersection.intro)
 qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_dom_mode_mono
        refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono

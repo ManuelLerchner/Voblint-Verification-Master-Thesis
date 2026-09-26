@@ -54,7 +54,7 @@ text \<open>
   bundle.
 \<close>
 
-definition parity_ops :: "parity numeric_ops" where
+definition parity_ops :: "parity nonrelational_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_special = parity_special_ops,
                   n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
 

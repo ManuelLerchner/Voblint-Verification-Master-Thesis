@@ -86,6 +86,16 @@ composite `int_dom` only reduces internally among its own scalar components.
 Design investigation tracked in #70; alignment inventory and staging (Phase 3)
 in #141.
 
+## Soundness and monotonicity in `nonrelational_transfer`
+
+`nonrelational_transfer` assumes `br_mono` and extends `mono_special_ops`, so
+Sign, Interval, Parity and Congruence prove monotonicity to reach the
+soundness path, which does not use it; Int stays outside the builder because
+its fixpoint mode has no monotonicity proof. Splitting the locale into a sound
+layer and a monotone one is deferred until the cooperating-analyses work
+(`COOPERATING_ANALYSES_DESIGN.md`) shows a client for the weaker layer, since
+that work may reshape the non-relational transfer boundary itself.
+
 ## Numeric precision
 
 Improve interval guards, loop invariants, and widening policies through concrete
@@ -101,7 +111,7 @@ branch. Sign has a real, monotone instance (`inv_eq_sign`,
 `Sign_Backward.thy`); Interval keeps a sound identity fallback with the
 precision gap documented in-theory (`Interval_Backward.thy`). This is
 separate from the boolean `eq_true`/`eq_false` query interface used for check
-classification (`Abstract_Numeric_Queries.thy`).
+classification (`Numeric_Queries.thy`).
 
 ## Per-domain configuration duplication (done)
 

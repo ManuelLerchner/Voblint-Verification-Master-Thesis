@@ -33,7 +33,7 @@ text \<open>
   second name for the same function.
 \<close>
 
-definition sign_ops :: "sign numeric_ops" where
+definition sign_ops :: "sign nonrelational_ops" where
   "sign_ops = \<lparr> n_aval = aval_sign, n_special = sign_special_ops,
                 n_bfilter = branch_sign_st, n_top = STop \<rparr>"
 

@@ -22,7 +22,7 @@ the floor under it.
 
 | Term | Meaning |
 | --- | --- |
-| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `nonrelational_transfer` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Numeric_Ops` is the `numeric_ops` bundle they read. |
+| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `nonrelational_transfer` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle they read. |
 | non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
 | routing policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
 | context space | the candidate contexts a routing policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
@@ -32,7 +32,7 @@ the floor under it.
 
 Sign interprets `Nonrelational/Abstract_Arithmetic` at its own lattice and gets
 the shared expression evaluator and soundness induction;
-`Nonrelational/Numeric_Ops` packages that evaluator, backward filter, and top
+`Nonrelational/Nonrelational_Ops` packages that evaluator, backward filter, and top
 value into generic executable procedure entry. Sign's numeric check queries
 remain in `Sign_Numeric_Queries`;
 `Routing/Compiled_Routed_Equations` assembles the common executable equation
@@ -86,7 +86,7 @@ the layout.
 
 All five theories in `Nonrelational/` fix a pointwise store --- `ev :: exp =>
 (vname => 'a) => 'a` in `Abstract_Arithmetic` and `Special_Ops`, `n_aval` in
-`Numeric_Ops`, `'a abs_state` throughout `Nonrelational_Transfer`, an explicit
+`Nonrelational_Ops`, `'a abs_state` throughout `Nonrelational_Transfer`, an explicit
 `gs :: vname => bool` classifier throughout `Exec_Backward`. `Rel_Order_Domain`
 exists to show that nothing below the domain layer assumes that structure, and
 it makes the claim by running an order carrier that is not an `abs_state`
@@ -115,7 +115,7 @@ Two different reasons, and only the first is a hard constraint.
 `Voblint_Framework` is `Voblint_CFG` plus `Domain` and `Solver`. It sees neither
 the compiler nor the executable carrier. `Routing/` and `Analysis_Surface` need
 `Voblint_Compile` because a routing policy is about a *compiled* program;
-`Numeric_Ops`, `Exec_Backward` and `DG_Result_Construction` need `Voblint_Exec`.
+`Nonrelational_Ops`, `Exec_Backward` and `DG_Result_Construction` need `Voblint_Exec`.
 None of them could move down even if we wanted it.
 
 `Abstract_Arithmetic` (needs only `Domain` and `VIMP`) and `Special_Ops` (only

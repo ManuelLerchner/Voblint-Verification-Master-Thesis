@@ -81,13 +81,13 @@ lemma sign_division_remainder_regression:
 section \<open>The domain interface at work\<close>
 
 text \<open>
-  The laws of @{locale semantic_intersection} give facts for every domain at once:
+  The laws of @{locale sound_intersection} give facts for every domain at once:
   a value both operands admit keeps the intersection non-empty.  Sign inherits the
   fact through its interpretation, and evaluation shows the same behaviour on
   concrete inputs.
 \<close>
 
-lemma (in semantic_intersection) intersect_shared_not_empty:
+lemma (in sound_intersection) intersect_shared_not_empty:
   "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> \<not> is_empty (intersect a b)"
   using intersect_sound is_empty_correct by blast
 

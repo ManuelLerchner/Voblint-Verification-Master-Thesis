@@ -1,7 +1,7 @@
 theory Interval_Exec
   imports
     "Voblint_Exec.Exec_St_Restriction_Refinement"
-    "Voblint_Nonrelational.Numeric_Ops"
+    "Voblint_Nonrelational.Nonrelational_Ops"
     Interval_Domain
 begin
 
@@ -30,7 +30,7 @@ text \<open>
   \<open>ivl_ops\<close>, Interval's primitive bundle, is defined beside the abstract transfer
   in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Transfer\<close>, so both layers read one
   value. The three constants below are the generic constructions of
-  \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close> instantiated at it, not independent
+  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not independent
   definitions.
 \<close>
 

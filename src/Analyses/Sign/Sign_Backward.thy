@@ -337,7 +337,7 @@ lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
 text \<open>
   \<open>sign_eq_true_of_less\<close> is \<open>sign_backward_domain.eq_true\<close>, defined in
   \<^locale>\<open>backward_domain\<close>'s own context off \<open>less_false\<close> in both directions
-  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>). The automatic
+  (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>). The automatic
   code-equation chain the \<open>defines\<close> clause above sets up does not unfold that
   definition, so this restates it explicitly in terms of the already-executable
   \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.

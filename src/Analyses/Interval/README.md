@@ -16,7 +16,7 @@ Executable witnesses live under
 | `Interval_Domain.thy` | aggregate import façade and small domain demonstrations |
 | `Interval_Exec.thy` | executable transfer mirror + commutation |
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
-| `Interval_Numeric_Queries.thy` | Interval's instance of `abstract_numeric_queries` |
+| `Interval_Numeric_Queries.thy` | Interval's instance of `sound_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |

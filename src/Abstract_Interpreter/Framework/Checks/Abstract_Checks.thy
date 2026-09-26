@@ -1,5 +1,5 @@
 theory Abstract_Checks
-  imports Check_Result Checks "Voblint_Domain.Abstract_Numeric_Queries"
+  imports Check_Result Checks "Voblint_Domain.Numeric_Queries"
     "Voblint_Domain.Forward_Domain" "Voblint_Domain.Three_Valued"
 begin
 
@@ -9,13 +9,13 @@ text \<open>
   A check needs two capabilities every domain with an \<open>exp\<close> evaluator already
   has: \<open>aval_abs_sound\<close>-shaped soundness (\<^locale>\<open>sound_evaluator\<close>, the same
   reuse point the \<open>backward_domain\<close> locale takes for its own \<open>aval_abs\<close>) and the
-  relational queries of \<^locale>\<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>). Extending
-  \<open>abstract_numeric_queries\<close> directly, rather than fixing four raw
+  relational queries of \<^locale>\<open>sound_numeric_queries\<close>
+  (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>). Extending
+  \<open>sound_numeric_queries\<close> directly, rather than fixing four raw
   entailment/refutation predicates here, means there is exactly one relational
   query interface in this codebase -- \<open>less\<close>/\<open>eq\<close> -- and every check-discharge
   consumer of it inherits whatever a domain already proved for
-  \<^locale>\<open>abstract_numeric_queries\<close> instead of restating it.
+  \<^locale>\<open>sound_numeric_queries\<close> instead of restating it.
 
   The per-domain guard machinery (the \<open>backward_domain\<close> locale's
   \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False \<sigma>\<close>
@@ -34,7 +34,7 @@ text \<open>
 \<close>
 
 locale abstract_check_domain =
-  abstract_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
+  sound_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
@@ -46,7 +46,7 @@ subsection \<open>A single three-valued decision procedure over \<^typ>\<open>ex
 text \<open>
   \<open>check_query\<close> replaces a mutually recursive true/false judgment pair with
   one function into \<^typ>\<open>bool option\<close>, matching the shape
-  \<^locale>\<open>abstract_numeric_queries\<close> already gives its two atomic queries:
+  \<^locale>\<open>sound_numeric_queries\<close> already gives its two atomic queries:
   \<open>Some True\<close> means definitely true, \<open>Some False\<close> definitely false, \<open>None\<close>
   undecided. \<open>Not\<close> negates through @{const map_option}; \<open>And\<close>/\<open>Or\<close> combine
   through @{const and_opt}/@{const or_opt}; \<open>Less\<close>/\<open>Eq\<close> read \<open>less\<close>/\<open>eq\<close>

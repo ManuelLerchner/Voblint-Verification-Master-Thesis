@@ -1,11 +1,11 @@
 theory Sign_Numeric_Queries
-  imports Sign_Arithmetic Sign_Backward "Voblint_Domain.Abstract_Numeric_Queries"
+  imports Sign_Arithmetic Sign_Backward "Voblint_Domain.Numeric_Queries"
 begin
 
 section \<open>Sign interpretation of the generic numeric-query interface\<close>
 
 text \<open>
-  \<open>abstract_numeric_queries\<close> (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>) is
+  \<open>sound_numeric_queries\<close> (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>) is
   the reusable interface; this theory supplies its Sign instance. None of the
   four query functions is a hand-built table any more: all four are Sign's
   instance of generic derivations defined directly in \<open>backward_domain\<close>'s own

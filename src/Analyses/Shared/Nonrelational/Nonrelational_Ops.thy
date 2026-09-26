@@ -1,4 +1,4 @@
-theory Numeric_Ops
+theory Nonrelational_Ops
   imports
     Special_Ops
     "Voblint_Framework.DG_Local_State_Spec"
@@ -11,7 +11,7 @@ text \<open>
   Say what an expression evaluates to, what the whole-value element is, how the
   two special calls combine two values, and how a guard filters the executable
   store the solver actually holds --- and every edge of a compiled graph is
-  already determined up to the guard. \<open>numeric_ops\<close> is that bundle, written
+  already determined up to the guard. \<open>nonrelational_ops\<close> is that bundle, written
   once per domain and read by both layers: the abstract transfer in
   \<open>Nonrelational_Transfer\<close>, which fixes one such bundle, and the executable
   mirror below.
@@ -55,7 +55,7 @@ text \<open>
   has no reason to need \<open>gamma\<close> at all.
 \<close>
 
-record 'a::bot numeric_ops =
+record 'a::bot nonrelational_ops =
   n_aval    :: "exp => (vname => 'a) => 'a"
   n_special :: "'a special_ops"
   n_bfilter :: "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
@@ -64,7 +64,7 @@ record 'a::bot numeric_ops =
 subsection \<open>Procedure entry\<close>
 
 definition generic_enter_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => call_info =>
+    "'a::bot nonrelational_ops => (vname => bool) => call_info =>
        'a resolved_st_q => 'a resolved_st_q" where
   "generic_enter_st_for ops \<G> ci s =
      bind_formals_resolved_q \<G> (ci_formals ci)
@@ -74,7 +74,7 @@ definition generic_enter_st_for ::
 subsection \<open>The per-edge step, on both stores\<close>
 
 fun generic_tf_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => edge_action =>
+    "'a::bot nonrelational_ops => (vname => bool) => edge_action =>
        'a resolved_st_q => 'a resolved_st_q" where
     "generic_tf_st_for ops \<G> EA_Nop s = s"
   | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
@@ -100,7 +100,7 @@ fun generic_tf_st_for ::
   | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
-    "'a::bot numeric_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
+    "'a::bot nonrelational_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
        edge_action => 'a abs_state => 'a abs_state" where
   "generic_tf_abs ops br =
      local_spec_step
@@ -138,7 +138,7 @@ text \<open>
 \<close>
 
 theorem generic_tf_st_for_commute:
-  fixes ops :: "'a::bot numeric_ops"
+  fixes ops :: "'a::bot nonrelational_ops"
   assumes branch:
     "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
                br b pol (fun_of_resolved_st_q_for \<G> s)"

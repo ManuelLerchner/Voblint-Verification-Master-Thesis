@@ -3714,13 +3714,6 @@ type 'a imp_prog_ext =
 type ('a, 'b) special_ops_ext =
   Special_ops_ext of ('a -> 'a -> 'a) * ('a -> 'a -> 'a) * 'b;;
 
-type ('a, 'b) numeric_ops_ext =
-  Numeric_ops_ext of
-    (exp -> (string -> 'a) -> 'a) * ('a, unit) special_ops_ext *
-      ((string -> bool) ->
-        exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
-      'a * 'b;;
-
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext)))
@@ -3739,6 +3732,13 @@ type ('a, 'b) backward_exec_ops_ext =
       (bool -> 'a -> 'a -> 'a * 'a) * (bool -> 'a -> 'a -> 'a * 'a) *
       ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a -> 'a * 'a) *
       ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a) * 'b;;
+
+type ('a, 'b) nonrelational_ops_ext =
+  Nonrelational_ops_ext of
+    (exp -> (string -> 'a) -> 'a) * ('a, unit) special_ops_ext *
+      ((string -> bool) ->
+        exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
+      'a * 'b;;
 
 let rec id x = (fun xa -> xa) x;;
 
@@ -5489,8 +5489,9 @@ let rec branch_sign_st
                g e pol (Lifted s))
       else bot_resolved_st_qa bot_sign);;
 
-let sign_ops : (sign, unit) numeric_ops_ext
-  = Numeric_ops_ext (aval_sign, sign_special_ops, branch_sign_st, STop, ());;
+let sign_ops : (sign, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
+      (aval_sign, sign_special_ops, branch_sign_st, STop, ());;
 
 let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
 
@@ -7086,6 +7087,42 @@ let rec interval_classify_check
 let rec enter_congruence_for
   g = enter_binding g top_congruencea aval_congruence;;
 
+let rec n_aval _A
+  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_aval;;
+
+let rec n_top _A
+  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_top;;
+
+let rec enter_frame_D_resolved _A
+  top_val s =
+    (let (_, (dg, ps)) = s in
+      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
+
+let rec enter_frame_D_resolved_q _A
+  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
+
+let rec bind_formals_resolved _A
+  g xs avs s =
+    fold (fun (x, a) t -> update_resolved_st _A t (location_of g x) a)
+      (zip xs avs) s;;
+
+let rec bind_formals_resolved_q _A
+  xc xb xa (Abs_resolved_st x) =
+    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
+
+let rec ci_formals
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
+
+let rec ci_args
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
+
+let rec generic_enter_st_for _A
+  ops g ci s =
+    bind_formals_resolved_q _A g (ci_formals ci)
+      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A g s))
+        (ci_args ci))
+      (enter_frame_D_resolved_q _A (n_top _A ops) s);;
+
 let rec congruence_min a b = sup_congruencea a b;;
 
 let rec congruence_max a b = sup_congruencea a b;;
@@ -7162,46 +7199,10 @@ let rec branch_congruence_st
                g e pol (Lifted s))
       else bot_resolved_st_qa bot_congruence);;
 
-let congruence_ops : (congruence, unit) numeric_ops_ext
-  = Numeric_ops_ext
+let congruence_ops : (congruence, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
       (aval_congruence, congruence_special_ops, branch_congruence_st,
         top_congruencea, ());;
-
-let rec enter_frame_D_resolved _A
-  top_val s =
-    (let (_, (dg, ps)) = s in
-      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec enter_frame_D_resolved_q _A
-  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
-
-let rec bind_formals_resolved _A
-  g xs avs s =
-    fold (fun (x, a) t -> update_resolved_st _A t (location_of g x) a)
-      (zip xs avs) s;;
-
-let rec bind_formals_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
-
-let rec n_aval _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_aval;;
-
-let rec n_top _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_top;;
-
-let rec ci_formals
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
-
-let rec ci_args
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
-
-let rec generic_enter_st_for _A
-  ops g ci s =
-    bind_formals_resolved_q _A g (ci_formals ci)
-      (map (fun e -> n_aval _A ops e (fun_of_resolved_st_q_for _A g s))
-        (ci_args ci))
-      (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
 let rec congruence_enter_st_for
   x = generic_enter_st_for bot_congruence congruence_ops x;;
@@ -7665,17 +7666,19 @@ let rec parity_classify_check
   c d = (match parity_check_query c d with None -> Check_Unknown
           | Some true -> Check_Proved | Some false -> Check_Refuted);;
 
+let rec n_special _A
+  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) =
+    n_special;;
+
+let rec n_bfilter _A
+  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) =
+    n_bfilter;;
+
 let rec special_min
   (Special_ops_ext (special_min, special_max, more)) = special_min;;
 
 let rec special_max
   (Special_ops_ext (special_min, special_max, more)) = special_max;;
-
-let rec n_special _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_special;;
-
-let rec n_bfilter _A
-  (Numeric_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_bfilter;;
 
 let rec generic_tf_st_for _A
   ops g x2 s = match ops, g, x2, s with ops, g, EA_Nop, s -> s
@@ -8070,8 +8073,8 @@ let rec int_dom_max mode a b = refine mode (int_dom_max_raw a b);;
 let rec int_dom_special_ops
   mode = Special_ops_ext (int_dom_min mode, int_dom_max mode, ());;
 
-let int_dom_ops_fixpoint : (unit int_dom_ext, unit) numeric_ops_ext
-  = Numeric_ops_ext
+let int_dom_ops_fixpoint : (unit int_dom_ext, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
       (aval_int_dom Refine_Fixpoint, int_dom_special_ops Refine_Fixpoint,
         branch_int_dom_fixpoint_st,
         top_int_dom_exta int_dom_record_lattice_unit, ());;
@@ -8107,8 +8110,8 @@ let rec branch_int_dom_never_st
                g e pol (Lifted s))
       else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
-let int_dom_ops_never : (unit int_dom_ext, unit) numeric_ops_ext
-  = Numeric_ops_ext
+let int_dom_ops_never : (unit int_dom_ext, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
       (aval_int_dom Refine_Never, int_dom_special_ops Refine_Never,
         branch_int_dom_never_st, top_int_dom_exta int_dom_record_lattice_unit,
         ());;
@@ -8143,8 +8146,8 @@ let rec branch_int_dom_once_st
                g e pol (Lifted s))
       else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
-let int_dom_ops_once : (unit int_dom_ext, unit) numeric_ops_ext
-  = Numeric_ops_ext
+let int_dom_ops_once : (unit int_dom_ext, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
       (aval_int_dom Refine_Once, int_dom_special_ops Refine_Once,
         branch_int_dom_once_st, top_int_dom_exta int_dom_record_lattice_unit,
         ());;
@@ -8548,8 +8551,8 @@ let rec enter_parity_for g = enter_binding g PTop aval_parity;;
 let parity_special_ops : (parity, unit) special_ops_ext
   = Special_ops_ext (parity_min, parity_max, ());;
 
-let parity_ops : (parity, unit) numeric_ops_ext
-  = Numeric_ops_ext
+let parity_ops : (parity, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
       (aval_parity, parity_special_ops, (fun _ _ _ s -> s), PTop, ());;
 
 let rec parity_enter_st_for x = generic_enter_st_for bot_parity parity_ops x;;
@@ -8620,8 +8623,9 @@ let rec branch_ivl_st
                g e pol (Lifted s))
       else bot_resolved_st_qa bot_ivl);;
 
-let ivl_ops : (ivl, unit) numeric_ops_ext
-  = Numeric_ops_ext (aval_ivl, ivl_special_ops, branch_ivl_st, ivl_top, ());;
+let ivl_ops : (ivl, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
+      (aval_ivl, ivl_special_ops, branch_ivl_st, ivl_top, ());;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
 

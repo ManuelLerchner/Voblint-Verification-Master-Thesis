@@ -1,7 +1,7 @@
 theory Abstract_Arithmetic
   imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
     "Voblint_Domain.Three_Valued" "Voblint_Domain.Forward_Domain"
-    "Voblint_Domain.Abstract_Numeric_Queries"
+    "Voblint_Domain.Numeric_Queries"
     "Voblint_Domain.Nonrelational_State"
 begin
 
@@ -56,7 +56,7 @@ fun of_bool_option :: "(int \<Rightarrow> 'a::sup) \<Rightarrow> bool option \<R
 | "of_bool_option lit None = lit 0 \<squnion> lit 1"
 
 locale expression_domain_sound =
-  sound_truth_test tobool + abstract_numeric_queries lt eqb
+  sound_truth_test tobool + sound_numeric_queries lt eqb
   for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::numeric_domain) \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
     and pls :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"

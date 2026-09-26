@@ -13,7 +13,7 @@ theory Voblint
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Framework.Transfer_Algebra"
-    "Voblint_Domain.Abstract_Numeric_Queries"
+    "Voblint_Domain.Numeric_Queries"
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Check_Report"
@@ -339,8 +339,8 @@ text \<open>
     against the computed abstract solver environment at each check's own
     node --- no store is forwarded between check nodes or to the procedure
     exit.
-    \<^item> @{theory Voblint_Domain.Abstract_Numeric_Queries} --- the generic
-      \<^locale>\<open>abstract_numeric_queries\<close> interface (entailment/refutation of
+    \<^item> @{theory Voblint_Domain.Numeric_Queries} --- the generic
+      \<^locale>\<open>sound_numeric_queries\<close> interface (entailment/refutation of
       \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation, defined
       directly in any \<^locale>\<open>backward_domain\<close> instance's own context, from
       that instance's own narrowing operators --- a sound default a concrete

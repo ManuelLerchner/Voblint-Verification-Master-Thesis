@@ -13,7 +13,7 @@ text \<open>
   Only composition lives here, mirroring \<open>Sign_Classify\<close>: the Interval bound
   tables (\<open>interval_less_true\<close>/\<open>interval_less_false\<close>/\<open>interval_eq_true\<close>/
   \<open>interval_eq_false\<close>) and their \<open>Interval_Numeric_Queries\<close> interpretation of
-  \<open>abstract_numeric_queries\<close> live in that theory. The Interval expression
+  \<open>sound_numeric_queries\<close> live in that theory. The Interval expression
   evaluator \<open>aval_ivl\<close> lives in \<open>Interval_Backward\<close>. The Boolean recursion over
   \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way classification, and the
   node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
