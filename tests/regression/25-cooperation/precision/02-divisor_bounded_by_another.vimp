@@ -1,0 +1,14 @@
+// PARAM: --analysis interval,parity
+// EXPECT-ARITHMETIC
+// Concretely the divisor is the literal 2, so x % 2 never divides by zero.
+//
+// Parity alone represents 2 as Even, which also contains 0, so
+// --analysis parity warns about a possible remainder by zero here
+// (23-arithmetic-diagnostics/known-imprecision/01-parity_zero.vimp is the same
+// limit for a literal 0). Interval evaluates the divisor to [2,2]. Run
+// together, the divisor's value is the met answer of both, which excludes 0,
+// so no diagnostic is reported.
+fun main() {
+  x = __voblint_nondet_int();
+  r = x % 2; // ARITH: NONE
+}

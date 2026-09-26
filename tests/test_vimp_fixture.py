@@ -46,6 +46,6 @@ def test_every_fixture_becomes_an_example_with_its_settings():
     fixtures = [f for group in corpus["groups"] for f in group["fixtures"]]
     assert len(fixtures) == len(list(pages_examples.CORPUS.rglob("*.vimp")))
     for fixture in fixtures:
-        assert fixture["settings"]["analysis"] == fixture["analyses"][0]
+        assert fixture["settings"]["analysis"] == ",".join(fixture["analyses"])
         assert not fixture["source"].startswith("// PARAM:")
         assert vimp_fixture.GRAPH_BEGIN not in fixture["source"]

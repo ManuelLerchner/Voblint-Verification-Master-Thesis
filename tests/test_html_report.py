@@ -576,9 +576,10 @@ def test_the_uncalled_entry_is_named_root_context(tmp_path):
         assert not k.endswith("@"), f"row key ends in a bare separator: {k!r}"
 
 
-def test_several_domains_land_in_one_node_document(tmp_path):
-    """<analysis> is the element Goblint uses for exactly this, so several
-    domains stack in one document rather than needing several reports."""
+def test_several_domains_run_as_one_analysis(tmp_path):
+    """A comma list is one solve over the combined state, so each node carries
+    one block, named by the list, and a check any active domain decides is
+    decided."""
     if not VOBLINT.exists():
         pytest.skip("cli/voblint not built -- run `pixi run cli-build`")
     out = tmp_path / "multi"
@@ -599,18 +600,16 @@ def test_several_domains_land_in_one_node_document(tmp_path):
         text=True,
         check=True,
     )
-    # Every node carries one block per domain, in the order asked for. status
-    # is separate and only present where there is a finding to report.
     for doc in (out / "nodes").glob("main_*.xml"):
         names = [
             a.get("name")
             for a in ET.parse(doc).getroot().findall("./call/path/analysis")
             if a.get("name") != "status"
         ]
-        assert names == ["int", "interval", "sign"], (doc.name, names)
+        assert names == ["int,interval,sign"], (doc.name, names)
 
-    # The verdicts differ between domains on this program -- int proves what
-    # the others cannot, which is the whole reason to show them together.
+    # Interval and Sign alone leave this check UNKNOWN; Int proves it, and the
+    # met answer keeps Int's verdict.
     reported = [
         " ".join(v.text for v in status.iter("value") if v.text)
         for status in (
@@ -619,9 +618,7 @@ def test_several_domains_land_in_one_node_document(tmp_path):
         )
         if status is not None
     ]
-    joined = " ".join(reported)
-    assert "int: PROVED" in joined, joined
-    assert "interval: UNKNOWN" in joined, joined
+    assert reported == ["check y == 2 PROVED"], reported
 
 
 def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):

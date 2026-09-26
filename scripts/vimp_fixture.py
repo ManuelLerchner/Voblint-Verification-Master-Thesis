@@ -46,7 +46,7 @@ def param_args(path: Path) -> list[str] | None:
 def analysis_settings(args: list[str]) -> dict[str, object]:
     """The analysis a header selects, keyed by setting; absent flags are absent keys.
 
-    `--analysis` may list several domains, comma-separated, in report order. An
+    `--analysis` may list several domains, comma-separated, to run together. An
     unknown flag is an error rather than skipped, so a new voblint option cannot
     silently mean nothing to a consumer that maps these settings elsewhere.
     """

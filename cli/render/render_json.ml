@@ -595,13 +595,13 @@ let program_json p =
       );
     ]
 
-let run_voblint_json ~kind ~globals ~ctx program answer =
+let run_voblint_json ~domains ~globals ~ctx program answer =
   json_object
     [
       ( "input",
         json_object
           [
-            ("kind", domain_json kind);
+            ("as", json_list domain_json domains);
             ("rule", globals_rule_json globals);
             ("ctx", context_mode_json ctx);
             ("p", program_json program);

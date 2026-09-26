@@ -1,0 +1,23 @@
+// PARAM: --analysis interval,congruence
+// Concretely the loop leaves x == 10: it starts at 4 and steps by 2 while
+// x < 10. So 10 <= x holds and the branch on x == 11 is never taken.
+//
+// Neither analysis alone gets both. Interval bounds x to [10,11] after the
+// loop, which proves 10 <= x but admits 11, so --analysis interval enters the
+// branch and reports its check REFUTED. Congruence keeps x even, so the guard
+// x == 11 leaves it no value and --analysis congruence reports the check DEAD,
+// but it has no bounds and leaves 10 <= x UNKNOWN.
+//
+// Run together, each check is decided by the met answer, so Interval's proves
+// the first; and the combined state is unreachable as soon as one active
+// analysis's part is, so Congruence's dead branch is dead for both.
+fun main() {
+  x = 4;
+  while (x < 10) {
+    x = x + 2;
+  }
+  __voblint_check(10 <= x); // PROVED
+  if (x == 11) {
+    __voblint_check(x == 12); // NOWARN
+  }
+}
