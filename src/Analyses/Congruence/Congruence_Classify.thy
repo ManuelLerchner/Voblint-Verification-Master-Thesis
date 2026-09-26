@@ -1,5 +1,5 @@
 theory Congruence_Classify
-  imports Congruence_Numeric_Queries "Voblint_Framework.Abstract_Checks"
+  imports Congruence_Numeric_Queries "Voblint_Framework.Check_Answer"
     "Voblint_Framework.Analysis_Result" Congruence_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
@@ -25,9 +25,12 @@ global_interpretation congruence_check_domain:
     congruence_truthy_query = congruence_check_domain.truthy_query
     and congruence_check_query = congruence_check_domain.check_query
     and congruence_classify_check = congruence_check_domain.classify_check
+    and congruence_eval_answer = congruence_check_domain.eval_answer
     and congruence_checks_proven = congruence_check_domain.abstract_checks_proven
   by unfold_locales (rule congruence_arith.aval_abs_sound)
 
+lemmas congruence_eval_answer_sound = congruence_check_domain.eval_answer_sound
+lemmas congruence_answer_check = congruence_check_domain.answer_check_eval_answer
 lemmas congruence_classify_check_proved = congruence_check_domain.classify_check_proved
 lemmas congruence_classify_check_refuted = congruence_check_domain.classify_check_refuted
 lemmas congruence_checks_provenI = congruence_check_domain.abstract_checks_provenI

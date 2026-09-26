@@ -1,5 +1,5 @@
 theory Interval_Classify
-  imports Interval_Numeric_Queries Interval_Backward "Voblint_Framework.Abstract_Checks"
+  imports Interval_Numeric_Queries Interval_Backward "Voblint_Framework.Check_Answer"
     "Voblint_Framework.Analysis_Result" Interval_Exec "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_Result.DG_Result_Construction"
@@ -33,6 +33,7 @@ global_interpretation interval_check_domain:
     interval_truthy_query = interval_check_domain.truthy_query
     and interval_check_query = interval_check_domain.check_query
     and interval_classify_check = interval_check_domain.classify_check
+    and interval_eval_answer = interval_check_domain.eval_answer
     and interval_checks_proven = interval_check_domain.abstract_checks_proven
   by unfold_locales (rule ivl_arith.aval_abs_sound)
 
@@ -45,6 +46,8 @@ text \<open>
   instead of a dedicated alias here.
 \<close>
 
+lemmas interval_eval_answer_sound = interval_check_domain.eval_answer_sound
+lemmas interval_answer_check = interval_check_domain.answer_check_eval_answer
 lemmas interval_classify_check_proved = interval_check_domain.classify_check_proved
 lemmas interval_classify_check_refuted = interval_check_domain.classify_check_refuted
 lemmas interval_checks_provenI = interval_check_domain.abstract_checks_provenI

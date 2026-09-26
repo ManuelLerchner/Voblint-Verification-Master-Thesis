@@ -61,6 +61,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Abstract_Checks
     Check_Report
     Contextual_Check_Report
+    Check_Answer
     DG_Analysis_Adapter
     (* Composition of a solved routed system with a context policy, once:
        the (domain, context-policy) product is instantiated, not duplicated. *)

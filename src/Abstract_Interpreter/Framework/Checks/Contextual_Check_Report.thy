@@ -75,15 +75,45 @@ where
 subsection \<open>Classifying by query\<close>
 
 text \<open>
-  A check \<open>c\<close> is decided by one question, \<open>EvalInt (c != 0)\<close>, which every
-  analysis in a product answers and whose combined answer is the meet. An
-  exact \<open>1\<close> proves the check and an exact \<open>0\<close> refutes it. \<open>QBot\<close> holds at no
-  store, so a sound combined answer is \<open>QBot\<close> only where the state represents
-  no store: the point is dead. Anything else decides nothing.
+  A check \<open>c\<close> is decided by one question, the value of its truth as an
+  integer, which every analysis in a product answers and whose combined answer
+  is the meet. Goblint's \<open>assert\<close> analysis asks \<open>EvalInt (c != 0)\<close> through
+  \<open>Queries.eval_bool\<close>; a comparison or logical operator already evaluates to
+  \<open>0\<close> or \<open>1\<close>, so for those Voblint asks about \<open>c\<close> itself and an analysis sees
+  the comparison rather than its test against zero. An exact \<open>1\<close> proves the
+  check and an exact \<open>0\<close> refutes it. \<open>QBot\<close> holds at no store, so a sound
+  combined answer is \<open>QBot\<close> only where the state represents no store: the
+  point is dead. Anything else decides nothing.
 \<close>
 
+fun bool_valued :: "exp \<Rightarrow> bool" where
+  "bool_valued (Not _) = True"
+| "bool_valued (And _ _) = True"
+| "bool_valued (Or _ _) = True"
+| "bool_valued (Less _ _) = True"
+| "bool_valued (LessEq _ _) = True"
+| "bool_valued (Greater _ _) = True"
+| "bool_valued (GreaterEq _ _) = True"
+| "bool_valued (Eq _ _) = True"
+| "bool_valued (NotEq _ _) = True"
+| "bool_valued _ = False"
+
+lemma aval_bool_valued:
+  "bool_valued e \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) then 1 else 0)"
+  by (cases e) auto
+
+definition check_exp :: "exp \<Rightarrow> exp" where
+  "check_exp c = (if bool_valued c then c else NotEq c (N 0))"
+
+lemma bool_valued_check_exp [simp]: "bool_valued (check_exp c)"
+  by (simp add: check_exp_def)
+
+lemma aval_check_exp:
+  "\<lbrakk>check_exp c\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>c\<rbrakk>\<^sub>e s) then 1 else 0)"
+  by (auto simp: check_exp_def dest: aval_bool_valued[of c s])
+
 abbreviation check_query_of :: "exp \<Rightarrow> query" where
-  "check_query_of c \<equiv> EvalInt (NotEq c (N 0))"
+  "check_query_of c \<equiv> EvalInt (check_exp c)"
 
 fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
   "classify_answer QBot = Dead"
@@ -101,7 +131,7 @@ proof -
     using assms(1) by (cases a rule: classify_answer.cases)
       (auto split: option.splits if_splits simp del: answer_const.simps)
   from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp split: if_splits)
+    by (simp add: aval_check_exp split: if_splits)
 qed
 
 lemma classify_answer_refuted:
@@ -113,7 +143,7 @@ proof -
     using assms(1) by (cases a rule: classify_answer.cases)
       (auto split: option.splits if_splits simp del: answer_const.simps)
   from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp split: if_splits)
+    by (simp add: aval_check_exp split: if_splits)
 qed
 
 lemma classify_answer_dead:
