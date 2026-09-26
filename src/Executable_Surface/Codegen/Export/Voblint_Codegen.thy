@@ -127,6 +127,7 @@ export_code
 
   \<comment> \<open>Ask: domain, global update rule, context\<close>
   Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis
+  Order_Analysis
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin
   Ctx_None Ctx_EntryState Ctx_CallString
 

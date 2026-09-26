@@ -31,6 +31,9 @@ DOMAINS = {
     "Parity_Analysis": ("Parity", "parity"),
     "Congruence_Analysis": ("Congruence", "congruence"),
 }
+# Analyses that run only as a field of the combined state, with no pointwise
+# registration of their own.
+FIELD_ONLY = {"Order_Analysis"}
 MCP_ROUTES = [
     ("mcp_rule", "routed_dg_analysis", "as r"),
     ("mcp_es_rule", "routed_dg_analysis", "as r"),
@@ -88,7 +91,7 @@ def test_every_domain_is_a_field_of_the_combined_state(generated):
     """The analyses a caller may activate are exactly the registered domains."""
     body = generated["MCP_Carrier"].split("datatype analysis_domain =")[1]
     body = body.split("\n\n")[0]
-    assert sorted(re.findall(r"\w+_Analysis", body)) == sorted(DOMAINS)
+    assert sorted(re.findall(r"\w+_Analysis", body)) == sorted([*DOMAINS, *FIELD_ONLY])
 
 
 def test_run_surface_passes_the_rule_through():

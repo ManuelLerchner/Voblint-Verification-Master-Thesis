@@ -219,7 +219,15 @@ policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for `as k r`.
 are all parameters, so no combination and no discipline has an instance of its
 own.
 
-Inactive fields start at `Bot` and stay there. A step whose result makes any
+A transfer asks the combined state through the query channel, and every active
+analysis answers from its own field; the answers are met. The pointwise analyses
+ask for the value of an assignment's right-hand side and answer nothing, and the
+order analysis answers comparisons, so `interval,order` proves checks neither
+proves alone (`coop_demo_needs_both`). Where no active analysis answers, every
+answer is `⊤` and the asking assignment steps as before (`mcp_comp_silent`,
+`ask_assign_top`).
+
+Inactive fields start at their bottom and stay there. A step whose result makes any
 active field `Bot` makes the whole state `Bot`, so one analysis proving a point
 unreachable makes it unreachable for all of them. A check reads the met answer
 of every active analysis to the query `EvalInt` of the check's expression, and

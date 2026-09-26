@@ -91,6 +91,16 @@ keyed by. The lemmas `mcp_component_of_sound`, `mcp_init_sound` and
 `val_answer_sound` are proved by case analysis over the domain, citing only
 facts the domains already export.
 
+Each of these lines comes from a field role, a term template in the generator's
+`FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
+field runs `ask_assign (exec_component ...)`, which asks for the value of an
+assignment's right-hand side and assigns the literal when the answer is exact. A
+domain with `contexts: []` has no registration of its own and gives every role in
+the manifest's `field` entry. Order does so: its field is a `relc`, it runs
+`order_component` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
+keys no context. The generator also emits `mcp_component_of_silent`: every
+pointwise field answers every query with `\<top>`.
+
 What does not depend on the domain list is handwritten: `MCP_Field.thy` (one
 field's lens laws) and `MCP_Analyses.thy` (normalization to `Bot`, the met
 answer, `mcp_classify`, and the three registrations `mcp_rule`, `mcp_es_rule`

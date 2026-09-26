@@ -32,6 +32,7 @@ import difflib
 import re
 import sys
 from pathlib import Path
+from string import Template
 
 import yaml
 
@@ -91,6 +92,32 @@ FACT_ROLES = {
     "init_gamma",
     "classifier",
 }
+
+# How an analysis runs as one field of the combined state. Each role is a term
+# template; its placeholders are $G (the globals predicate), $p (the program),
+# $gs (the declared globals as a list), $f (the field of a state), $v (the field
+# of a published value), $q (a query), $x (a variable) and $c (the field of a
+# context). The three *_type roles are types, and the last four name facts.
+FIELD_ROLES = [
+    "state_type",
+    "published_type",
+    "context_type",
+    "component",
+    "gamma",
+    "empty",
+    "read",
+    "published_gamma",
+    "published_empty",
+    "answer",
+    "display",
+    "init",
+    "route",
+    "context_values",
+    "component_sound",
+    "single_entry",
+    "init_sound",
+    "answer_sound",
+]
 
 # What distinguishes the three contexts: the global and seed keys, the route on
 # the executable and on the abstract carrier, and obligation 4, which says the
@@ -163,6 +190,7 @@ class Domain:
         self.prefix = self.name.lower()
         self.constructor = f"{self.name}_Analysis"
         self.value_constructor = entry.get("value_constructor", f"{self.name}Value")
+        self.field_overrides = entry.get("field", {})
         self.path = f"src/Analyses/{self.name}/generated/{self.name}_Analyses.thy"
 
     def roles(self):
@@ -189,6 +217,49 @@ class Domain:
         }
         roles.update(self.overrides)
         return roles
+
+    def field(self):
+        """How the analysis runs as a field of the combined state, as term
+        templates over the placeholders of FIELD_ROLES. The defaults are those of
+        a pointwise domain registered at the unit context."""
+        r, vt, vc, p = (
+            self.roles(),
+            self.value_type,
+            self.value_constructor,
+            self.prefix,
+        )
+        roles = {
+            "state_type": f"{vt} exec_dg_st lifted",
+            "published_type": f"{vt} abs_state lifted",
+            "context_type": f"{vt} list",
+            "component": "ask_assign (exec_component $G"
+            " (resolved_st_q_is_bot_for (declared_global_vars $p))"
+            f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
+            "gamma": "gamma_point (map_lift (fun_of_resolved_st_q_for $G) $f)",
+            "empty": "(case $f of Bot \\<Rightarrow> True"
+            " | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for $gs st)",
+            "read": "map_lift (fun_of_resolved_st_q_for $G) $f",
+            "published_gamma": "gamma_point $v",
+            "published_empty": "(case $v of Bot \\<Rightarrow> True"
+            " | Lifted st \\<Rightarrow> is_empty_state st)",
+            "answer": "(case $v of Bot \\<Rightarrow> \\<top>"
+            f" | Lifted st \\<Rightarrow> {p}_eval_answer st $q)",
+            "display": f"{vc} (case $v of Bot \\<Rightarrow> \\<bottom>"
+            " | Lifted st \\<Rightarrow> st $x)",
+            "init": f"Lifted {bare(r['init_st'])}",
+            "route": "exec_formals_route $G u [] $f ca",
+            "context_values": f"map {vc} $c",
+            "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
+            "single_entry": "single_entry_ask_assign[OF single_entry_exec_component]",
+            "init_sound": f"{p}_rule.init_sound",
+            "answer_sound": f"{p}_eval_answer_sound",
+        }
+        roles.update(self.field_overrides)
+        return roles
+
+    def term(self, role, **values):
+        """A field role with its placeholders filled in."""
+        return Template(self.field()[role]).substitute(values)
 
 
 def role_term(role):
@@ -483,12 +554,12 @@ def render_mcp(doms):
         f"set_slot{k}_def" for k in range(1, n + 1)
     ]
     out += wrap_term("lemmas slot_defs [simp] = " + " ".join(names), 0) + [""]
-    for name, fmt in [
-        ("mcp_st", "{vt} exec_dg_st lifted"),
-        ("mcp_val", "{vt} abs_state lifted"),
-        ("mcp_ctx", "{vt} list"),
+    for name, role in [
+        ("mcp_st", "state_type"),
+        ("mcp_val", "published_type"),
+        ("mcp_ctx", "context_type"),
     ]:
-        ty = nest_type([fmt.format(vt=d.value_type) for d in doms])
+        ty = nest_type([d.field()[role] for d in doms])
         out += [f"type_synonym {name} ="] + wrap_term(f'"{ty}"', 2) + [""]
 
     out += ["subsection \\<open>Each analysis on its own field\\<close>", ""]
@@ -499,14 +570,14 @@ def render_mcp(doms):
     out += fun_block(
         [
             "fun mcp_component_of ::",
-            '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain \\<Rightarrow> mcp_st lifted mcp_component" where',
+            '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain'
+            ' \\<Rightarrow> mcp_st lifted mcp_component" where',
         ],
         per(
             lambda k, d: (
                 f"mcp_component_of {G} p {d.constructor}",
-                f"lens_of (lift_get slot{k}) (lift_put set_slot{k}) (exec_component {G}"
-                f" (resolved_st_q_is_bot_for (declared_global_vars p))"
-                f" {applied(d.roles()['tf_st'], G)} {applied(d.roles()['enter_st'], G)})",
+                f"lens_of (lift_get slot{k}) (lift_put set_slot{k})"
+                f" {arg(d.term('component', G=G, p='p'))}",
             )
         ),
     )
@@ -518,7 +589,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"part_gamma {G} {d.constructor}",
-                f"(\\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for {G}) (lift_get slot{k} x)))",
+                f"(\\<lambda>x. {d.term('gamma', G=G, f=f'(lift_get slot{k} x)')})",
             )
         ),
     )
@@ -528,7 +599,10 @@ def render_mcp(doms):
             'fun part_live :: "analysis_domain \\<Rightarrow> mcp_st \\<Rightarrow> bool" where'
         ],
         per(
-            lambda k, d: (f"part_live {d.constructor} r", f"(slot{k} r \\<noteq> Bot)")
+            lambda k, d: (
+                f"part_live {d.constructor} r",
+                f"(slot{k} r \\<noteq> \\<bottom>)",
+            )
         ),
     )
     out += [""]
@@ -539,7 +613,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"part_empty gs {d.constructor} r",
-                f"(case slot{k} r of Bot \\<Rightarrow> True | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for gs st)",
+                d.term("empty", gs="gs", f=f"(slot{k} r)"),
             )
         ),
     )
@@ -549,18 +623,18 @@ def render_mcp(doms):
     out += [
         'definition mcp_rd :: "(vname \\<Rightarrow> bool) \\<Rightarrow> mcp_st \\<Rightarrow> mcp_val" where'
     ]
-    rd = nest(
-        [
-            f"map_lift (fun_of_resolved_st_q_for {G}) (slot{k} r)"
-            for k in range(1, n + 1)
-        ]
-    )
+    rd = nest(per(lambda k, d: d.term("read", G=G, f=f"(slot{k} r)")))
     out += wrap_term(f'"mcp_rd {G} r = {rd}"', 2) + [""]
     out += fun_block(
         [
             'fun val_gamma :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> store set" where'
         ],
-        per(lambda k, d: (f"val_gamma {d.constructor} v", f"gamma_point (slot{k} v)")),
+        per(
+            lambda k, d: (
+                f"val_gamma {d.constructor} v",
+                d.term("published_gamma", v=f"(slot{k} v)"),
+            )
+        ),
     )
     out += [""]
     out += [
@@ -575,7 +649,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"val_empty {d.constructor} v",
-                f"(case slot{k} v of Bot \\<Rightarrow> True | Lifted st \\<Rightarrow> is_empty_state st)",
+                d.term("published_empty", v=f"(slot{k} v)"),
             )
         ),
     )
@@ -587,7 +661,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"val_answer {d.constructor} v q",
-                f"(case slot{k} v of Bot \\<Rightarrow> \\<top> | Lifted st \\<Rightarrow> {d.prefix}_eval_answer st q)",
+                d.term("answer", v=f"(slot{k} v)", q="q"),
             )
         ),
     )
@@ -599,7 +673,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"value_of {d.constructor} v x",
-                f"{d.value_constructor} (case slot{k} v of Bot \\<Rightarrow> \\<bottom> | Lifted st \\<Rightarrow> st x)",
+                d.term("display", v=f"(slot{k} v)", x="x"),
             )
         ),
     )
@@ -612,19 +686,21 @@ def render_mcp(doms):
     out += text_block(
         wrap_prose(
             "The entry state starts every active field at its analysis's own entry state and"
-            " every other field unreachable. A field no active analysis runs is never read,"
-            " and keeping it at \\<^const>\\<open>Bot\\<close> makes the solver's joins, widenings and"
+            " every other field at its bottom. A field no active analysis runs is never read,"
+            " and keeping it at bottom makes the solver's joins, widenings and"
             " comparisons on it constant-time. Under the entry-state policy a callee is keyed"
-            " by the formals of the active fields; a field no active analysis runs keys"
+            " by what the active fields key it by; a field no active analysis runs keys"
             " nothing."
         )
     ) + [""]
     out += ['definition mcp_init :: "analysis_domain list \\<Rightarrow> mcp_st" where']
     init = nest(
-        [
-            f"(if {d.constructor} \\<in> set as then Lifted {bare(d.roles()['init_st'])} else Bot)"
-            for d in doms
-        ]
+        per(
+            lambda k, d: (
+                f"(if {d.constructor} \\<in> set as then {arg(d.term('init'))}"
+                " else \\<bottom>)"
+            )
+        )
     )
     out += wrap_term(f'"mcp_init as = {init}"', 2) + [""]
     out += [
@@ -633,10 +709,12 @@ def render_mcp(doms):
         '     \\<Rightarrow> call_action \\<Rightarrow> mcp_ctx" where',
     ]
     route = nest(
-        [
-            f"(if {d.constructor} \\<in> set as then exec_formals_route {G} u [] (lift_get slot{k} d) ca else [])"
-            for k, d in enumerate(doms, 1)
-        ]
+        per(
+            lambda k, d: (
+                f"(if {d.constructor} \\<in> set as then"
+                f" {d.term('route', G=G, f=f'(lift_get slot{k} d)')} else [])"
+            )
+        )
     )
     out += wrap_term(f'"mcp_formals_route as {G} u ctx d ca = {route}"', 2) + [""]
     out += ["definition mcp_root_ctx :: mcp_ctx where"]
@@ -648,7 +726,7 @@ def render_mcp(doms):
         per(
             lambda k, d: (
                 f"ctx_values {d.constructor} ctx",
-                f"map {d.value_constructor} (slot{k} ctx)",
+                d.term("context_values", c=f"(slot{k} ctx)"),
             )
         ),
     )
@@ -659,7 +737,7 @@ def render_mcp(doms):
         "",
     ]
     comps = " ".join(
-        f"field_component_sound[OF {d.prefix}_rule.comp_sound]" for d in doms
+        f"field_component_sound[OF {d.field()['component_sound']}]" for d in doms
     )
     out += [
         "lemma mcp_component_of_sound:",
@@ -669,7 +747,24 @@ def render_mcp(doms):
     ]
     out += wrap_term("rule " + comps + ";", 6)
     out += ["      auto simp: less_eq_analysis_product_def)", ""]
-    inits = " ".join(f"{d.prefix}_rule.init_sound" for d in doms)
+    singles = " ".join(dict.fromkeys(d.field()["single_entry"] for d in doms))
+    out += [
+        'lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \\<G> p a)"'
+    ]
+    out += wrap_term(
+        f"by (cases a) (auto intro!: single_entry_lens_of lift_put_get {singles})", 2
+    )
+    out += [""]
+    silent = [d.constructor for d in doms if "component" not in d.field_overrides]
+    out += [
+        "lemma mcp_component_of_silent:",
+        f'  "a \\<in> {{{", ".join(silent)}}}',
+        f'     \\<Longrightarrow> mc_qry (mcp_component_of {G} p a) x q = \\<top>"',
+        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def"
+        " lens_component_def)",
+        "",
+    ]
+    inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])
     out += [
         "lemma mcp_init_sound:",
         '  "cinit_stores (declared_global p)',
@@ -687,7 +782,7 @@ def render_mcp(doms):
         7,
     )
     out += ["  then show ?thesis by (auto simp: mcp_gamma_v_def)", "qed", ""]
-    answers = " ".join(f"{d.prefix}_eval_answer_sound" for d in doms)
+    answers = " ".join(d.field()["answer_sound"] for d in doms)
     out += [
         'lemma val_answer_sound: "s \\<in> val_gamma a v \\<Longrightarrow> eval_holds q (val_answer a v q) s"',
         "  by (cases a)",
@@ -708,8 +803,16 @@ def validate(doms):
             problems.append(f"duplicate {what}")
     for d in doms:
         known = [c["key"] for c in CONTEXTS]
-        if "unit" not in d.contexts:
-            problems.append(f"{d.name}: the unit registration is required")
+        if d.contexts and "unit" not in d.contexts:
+            problems.append(f"{d.name}: a registration starts at the unit context")
+        # The pointwise defaults cite the domain's own unit registration.
+        if not d.contexts and set(d.field_overrides) != set(FIELD_ROLES):
+            problems.append(
+                f"{d.name}: without a registration every field role is given"
+            )
+        for role in d.field_overrides:
+            if role not in FIELD_ROLES:
+                problems.append(f"{d.name}: unknown field role {role}")
         for c in d.contexts:
             if c not in known:
                 problems.append(f"{d.name}: unknown context {c}")
@@ -755,7 +858,8 @@ def main():
     validate(doms)
 
     stale = []
-    outputs = [(dom.path, render(dom)) for dom in doms] + [(MCP_PATH, render_mcp(doms))]
+    outputs = [(dom.path, render(dom)) for dom in doms if dom.contexts]
+    outputs += [(MCP_PATH, render_mcp(doms))]
     for path, text in outputs:
         for i, line in enumerate(text.split("\n"), 1):
             if symbol_len(line) > MAX_LINE:

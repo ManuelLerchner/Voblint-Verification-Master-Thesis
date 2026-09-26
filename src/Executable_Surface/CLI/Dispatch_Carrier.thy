@@ -5,6 +5,7 @@ theory Dispatch_Carrier
     Voblint_Analysis_Int.Int_Analyses
     Voblint_Analysis_Parity.Parity_Analyses
     Voblint_Analysis_Congruence.Congruence_Analyses
+    Voblint_Analysis_Relational.Rel_Order_Local
 begin
 
 section \<open>One value type wide enough for every domain's result\<close>
@@ -25,6 +26,7 @@ datatype abstract_value =
   | IntDomValue int_dom
   | ParityValue parity
   | CongruenceValue congruence
+  | OrderValue "(vname \<times> vname) list option"
   | ProductValue "abstract_value list"
 
 text \<open>
@@ -34,6 +36,18 @@ text \<open>
   their values side by side, in activation order. The rendering changes no verdict, no
   point and no context identity, so no soundness claim reads it.
 \<close>
+
+text \<open>
+  A relational value has no value per variable. A report shows, at each variable, the
+  orders that mention it, listed so that a key can tell values apart, or
+  \<^const>\<open>None\<close> where the state is unreachable.
+\<close>
+
+definition order_view :: "vname \<Rightarrow> relc \<Rightarrow> (vname \<times> vname) list option" where
+  "order_view x d =
+     (case d of
+        RelBot \<Rightarrow> None
+      | RelC ps \<Rightarrow> Some (sorted_list_of_set (Set.filter (\<lambda>(a, b). a = x \<or> b = x) ps)))"
 
 fun join_literals :: "String.literal list \<Rightarrow> String.literal" where
   "join_literals [] = STR ''''"
@@ -46,6 +60,8 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" wh
 | "string_of_abstract_value (IntDomValue d) = to_string d"
 | "string_of_abstract_value (ParityValue v) = to_string v"
 | "string_of_abstract_value (CongruenceValue v) = to_string v"
+| "string_of_abstract_value (OrderValue v) =
+     to_string (case v of None \<Rightarrow> RelBot | Some ps \<Rightarrow> RelC (set ps))"
 | "string_of_abstract_value (ProductValue vs) =
      join_literals (map string_of_abstract_value vs)"
 
@@ -100,6 +116,15 @@ definition int_dom_key :: "int_dom \<Rightarrow> order_key" where
      Key_List [sign_key (int_sign d), ivl_key (int_ivl d),
                parity_key (int_parity d), congruence_key (int_congruence d)]"
 
+definition literal_key :: "String.literal \<Rightarrow> order_key" where
+  "literal_key s = Key_List (map (\<lambda>c. Key_Int (of_char c)) (String.explode s))"
+
+definition order_view_key :: "(vname \<times> vname) list option \<Rightarrow> order_key" where
+  "order_view_key v =
+     (case v of
+        None \<Rightarrow> Key_List []
+      | Some ps \<Rightarrow> Key_List [Key_List (map (\<lambda>(a, b). Key_List [literal_key a, literal_key b]) ps)])"
+
 fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
   "abstract_value_key (SignValue v) = Key_List [Key_Int 0, sign_key v]"
 | "abstract_value_key (IntervalValue v) = Key_List [Key_Int 1, ivl_key v]"
@@ -107,6 +132,7 @@ fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
 | "abstract_value_key (ParityValue v) = Key_List [Key_Int 3, parity_key v]"
 | "abstract_value_key (CongruenceValue v) = Key_List [Key_Int 4, congruence_key v]"
 | "abstract_value_key (ProductValue vs) = Key_List (Key_Int 5 # map abstract_value_key vs)"
+| "abstract_value_key (OrderValue v) = Key_List [Key_Int 6, order_view_key v]"
 
 lemma sign_key_inject [simp]: "sign_key a = sign_key b \<longleftrightarrow> a = b"
   by (cases a; cases b) simp_all
@@ -126,6 +152,22 @@ lemma congruence_key_inject [simp]: "congruence_key a = congruence_key b \<longl
 
 lemma int_dom_key_inject [simp]: "int_dom_key a = int_dom_key b \<longleftrightarrow> a = b"
   unfolding int_dom_key_def by (cases a; cases b) simp
+
+lemma literal_key_inject [simp]: "literal_key a = literal_key b \<longleftrightarrow> a = b"
+proof
+  assume "literal_key a = literal_key b"
+  then have "String.explode a = String.explode b"
+    unfolding literal_key_def by (auto dest: list.inj_map_strong[rotated])
+  then show "a = b" by (simp add: String.explode_inject)
+qed simp
+
+lemma order_view_key_inject [simp]: "order_view_key a = order_view_key b \<longleftrightarrow> a = b"
+proof
+  assume "order_view_key a = order_view_key b"
+  then show "a = b"
+    unfolding order_view_key_def
+    by (auto split: option.splits dest!: list.inj_map_strong[rotated])
+qed simp
 
 lemma abstract_value_key_inject [simp]:
   "abstract_value_key a = abstract_value_key b \<longleftrightarrow> a = b"

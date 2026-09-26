@@ -2,7 +2,9 @@ theory MCP_Field
   imports
     "Voblint_Framework.Local_Spec_Product"
     "Voblint_Framework.MCP_Spec"
+    "Voblint_Framework.Oracle_Wrappers"
     "Voblint_Framework.Analysis_Result"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
 begin
 
 section \<open>One analysis on one field of the combined state\<close>
@@ -25,19 +27,26 @@ lemma pleft_pright_mono:
   by (simp_all add: less_eq_analysis_product_def)
 
 lemma field_component_sound:
-  fixes f :: "'r::{semilattice_sup, order_bot} \<Rightarrow> 'c::semilattice_sup lifted"
-  assumes sound: "mcp_component_sound \<G> (\<lambda>d. gamma_point (map_lift R d)) cmp"
-    and get_put: "\<And>r v. f (u r v) = v" and get_bot: "f \<bottom> = Bot"
+  fixes f :: "'r::{semilattice_sup, order_bot} \<Rightarrow> 'c::order_bot"
+  assumes sound: "mcp_component_sound \<G> g cmp"
+    and get_put: "\<And>r v. f (u r v) = v" and get_bot: "f \<bottom> = \<bottom>"
     and mono: "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
-  shows "mcp_component_sound \<G> (\<lambda>x. gamma_point (map_lift R (lift_get f x)))
-           (lens_of (lift_get f) (lift_put u) cmp)"
+  shows "mcp_component_sound \<G> (\<lambda>x. g (lift_get f x)) (lens_of (lift_get f) (lift_put u) cmp)"
   by (rule lens_of_sound[OF sound, where get = "lift_get f"])
      (simp_all add: lift_get_put[OF get_put get_bot] lift_get_mono[OF mono])
 
+text \<open>
+  A field's concretization that no write to another field changes is left alone
+  by that field's component.
+\<close>
+
 lemma field_frame:
-  assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = Bot"
-  shows "mcp_frame (lens_of (lift_get f1) (lift_put u1) cmp)
-           (\<lambda>x. gamma_point (map_lift R (lift_get f2 x)))"
-  unfolding mcp_frame_def lens_of_def by (auto simp: lift_get_put_other[OF assms])
+  assumes "\<And>x v. g (lift_put u x v) = g x"
+  shows "mcp_frame (lens_of get (lift_put u) cmp) g"
+  unfolding mcp_frame_def lens_of_def by (auto simp: assms)
+
+lemma single_entry_exec_component:
+  "single_entry (exec_component \<G> empty_pred tf_st enter_st)"
+  by (simp add: single_entry_def exec_component_def lens_component_def)
 
 end

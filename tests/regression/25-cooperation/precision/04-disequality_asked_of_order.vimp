@@ -1,0 +1,16 @@
+// PARAM: --analysis interval,order
+// Concretely z == 0 at the check: both guards hold, so x == y and x != y is 0.
+//
+// Interval alone leaves z = [0,1] (known-imprecision/02-disequality_from_two_guards).
+// Run together, the order analysis answers Interval's EvalInt (x != y) with the
+// exact integer 0, so Interval assigns [0,0] and proves the check.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= y) {
+    if (y <= x) {
+      z = (x != y);
+      __voblint_check(z == 0); // PROVED
+    }
+  }
+}

@@ -182,6 +182,42 @@ lemma dead_step_branch_steps_nowhere:
   by eval
 
 
+subsection \<open>One analysis asks another\<close>
+
+text \<open>
+  Both guards hold only where \<open>x = y\<close>, so \<open>z = 1\<close> at the check. Interval alone
+  keeps \<open>x\<close> and \<open>y\<close> unbounded and assigns \<open>z\<close> the interval \<open>[0, 1]\<close>. The order
+  analysis alone records \<open>x \<le> y\<close> and \<open>y \<le> x\<close> but tracks no values, so it cannot
+  answer \<open>z == 1\<close>. Run together, Interval's assignment asks the combined state for
+  the value of \<open>x == y\<close>, the order analysis answers the exact integer \<open>1\<close>, and
+  Interval assigns \<open>[1, 1]\<close>.
+\<close>
+
+definition coop_demo_prog :: imp_prog where
+  "coop_demo_prog =
+     program {
+       fun main() {
+         if (x <= y) {
+           if (y <= x) {
+             z = (x == y);
+             __voblint_check(z == 1);
+           }
+         }
+       }
+     }"
+
+definition coop_demo_verdicts where
+  "coop_demo_verdicts as =
+     (case run_voblint as Globals_Warrow Ctx_None coop_demo_prog of
+        Analysed res \<Rightarrow> Some (map check_verdict (res_checks res))
+      | _ \<Rightarrow> None)"
+
+lemma coop_demo_needs_both:
+  "coop_demo_verdicts [Interval_Analysis] = Some [Decided Check_Unknown]"
+  "coop_demo_verdicts [Order_Analysis] = Some [Decided Check_Unknown]"
+  "coop_demo_verdicts [Interval_Analysis, Order_Analysis] = Some [Decided Check_Proved]"
+  by eval+
+
 subsection \<open>A check's row carries its label\<close>
 
 text \<open>

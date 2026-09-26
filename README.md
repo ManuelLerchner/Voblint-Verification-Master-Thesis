@@ -167,7 +167,8 @@ theorem run_voblint_certified_source_sound:
 | `analysis_result_covers ... v s` | The abstract state filed for `v`, in an admitted context, contains `s`. |
 | `checks_sound_at res v s` | No check at `v` is `DEAD`, and every `PROVED` or `REFUTED` verdict there holds for `s`. |
 
-`D` ranges over Sign, Interval, Parity, Congruence and Int; `rule` over the four
+`as` ranges over nonempty lists of distinct analyses among Sign, Interval, Parity,
+Congruence, Int and Order, run together; `rule` over the four
 globals rules; `ctx` over no contexts, entry states, and call strings of any
 length.
 

@@ -46,3 +46,9 @@ mentions a graph, an equation, or a solver run.
 | `Parity_Lattice.thy` | The parity lattice and its exact meet |
 | `Congruence_Lattice.thy` | Normalized residue classes `congruence`, their order, and the exact meet (the Chinese remainder intersection) |
 | `Int_Lattice.thy` | The product `int_dom` of the four, with the reductions between components |
+
+## `Relational/`
+
+| File | Role |
+| --- | --- |
+| `Order_Lattice.thy` | The order carrier `relc`, a set of known `x <= y` pairs: its lattice, concretization to stores, `forget_relc`, and its `executable_domain` instance. It is not a `numeric_domain`: it describes stores, not integers |

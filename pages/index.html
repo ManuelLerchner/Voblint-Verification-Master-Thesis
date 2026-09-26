@@ -5612,7 +5612,7 @@ qed</code></pre>
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
             <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Manager.html#DG_Manager.man.man_ask%7Cconst" title="Definition in the formalization">man_ask</a>
-            <span class="align-note">A transfer may ask through its manager; every active analysis answers and the answers are met. A check is decided by the met answer to <code>EvalInt</code> of its condition. An analysis answers from its own state, without asking further queries, and the shipped transfers ask none.</span>
+            <span class="align-note">A transfer asks through its manager; every active analysis answers and the answers are met. Each pointwise analysis asks for the value of an assignment's right-hand side, and the order analysis answers comparisons, so run together it can hand Interval an exact result. A check is decided by the met answer to <code>EvalInt</code> of its condition. An analysis answers from its own state, without asking further queries.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L199" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sync</a>
@@ -5624,7 +5624,7 @@ qed</code></pre>
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">MCP, the analysis combinator</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
             <a class="align-voblint" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_component%7Ctype" title="Definition in the formalization">mcp_component</a>
-            <span class="align-note">The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is. Since the shipped transfers ask no queries, the analyses share information only through unreachability and check answers. Activation has no dependency order.</span>
+            <span class="align-note">The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is, and a transfer uses what the others answer. Activation has no dependency order.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads</a>

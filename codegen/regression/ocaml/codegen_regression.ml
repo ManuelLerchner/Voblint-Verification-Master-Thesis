@@ -37,6 +37,7 @@ let domain_label = function
   | Int_Analysis -> "Int_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
+  | Order_Analysis -> "Order_Analysis"
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)

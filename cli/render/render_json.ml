@@ -557,7 +557,8 @@ let domain_json d =
     | C.Interval_Analysis -> "Interval_Analysis"
     | C.Int_Analysis -> "Int_Analysis"
     | C.Parity_Analysis -> "Parity_Analysis"
-    | C.Congruence_Analysis -> "Congruence_Analysis")
+    | C.Congruence_Analysis -> "Congruence_Analysis"
+    | C.Order_Analysis -> "Order_Analysis")
     []
 
 let globals_rule_json r =

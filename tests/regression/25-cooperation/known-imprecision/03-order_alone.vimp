@@ -1,0 +1,17 @@
+// PARAM: --analysis order
+// Concretely z == 1 at the check: both guards hold, so x == y.
+//
+// The order analysis records (x, y) and (y, x) from the two guards, so it would
+// answer x == y with 1, but it tracks no values: after z = (x == y) it relates z to
+// nothing and answers z == 1 with top. Interval, run beside it, turns that answer
+// into z = [1,1] (precision/03-equality_asked_of_order).
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      __voblint_check(z == 1); // UNKNOWN
+    }
+  }
+}

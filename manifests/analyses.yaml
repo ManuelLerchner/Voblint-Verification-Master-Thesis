@@ -6,15 +6,18 @@
 #
 # `impl` is the prefix of the domain's own constants and facts (default: the
 # lowercased name). `contexts` lists the context policies the domain registers
-# on its own (default: `[unit]`); the CLI runs every domain at every policy as a
-# field of the combined state generated into
+# on its own (default: `[unit]`; `[]` for none); the CLI runs every domain at
+# every policy as a field of the combined state generated into
 # src/Executable_Surface/CLI/generated/MCP_Carrier.thy, so a domain registers the
 # entry-state or call-string policy only where a theory states facts about it.
 # `value_constructor` is its `abstract_value` constructor (default: `<name>Value`).
 # `roles` overrides a role whose spelling does not follow that prefix; a role may
 # be an application `{const, args}` for an operation that takes a configuration
 # argument. `imports` names the domain's own theories the
-# registrations cite. Domain rationale belongs in the domain's README.
+# registrations cite. `field` overrides how the domain runs as a field of the
+# combined state (FIELD_ROLES in the generator); the defaults are a pointwise
+# domain's, and a domain with no registration of its own gives every field role.
+# Domain rationale belongs in the domain's README.
 
 domains:
   - name: Sign
@@ -59,3 +62,29 @@ domains:
   - name: Congruence
     value_type: congruence
     imports: [Congruence_Sound, Congruence_Classify, Congruence_Transfer, Congruence_Exec]
+
+  # A relational carrier: no pointwise state and no registration of its own. It
+  # answers comparisons from the orders it records and asks at assignments.
+  - name: Order
+    value_type: relc
+    contexts: []
+    imports: []
+    field:
+      state_type: relc
+      published_type: relc
+      context_type: unit list
+      component: order_component (program_vars $p)
+      gamma: gamma_rel $f
+      empty: ($f = RelBot)
+      read: $f
+      published_gamma: gamma_rel $v
+      published_empty: ($v = RelBot)
+      answer: rel_qry $v $q
+      display: OrderValue (order_view $x $v)
+      init: top_relc
+      route: "[]"
+      context_values: "[]"
+      component_sound: order_component_sound
+      single_entry: single_entry_order_component
+      init_sound: ""
+      answer_sound: rel_qry_sound

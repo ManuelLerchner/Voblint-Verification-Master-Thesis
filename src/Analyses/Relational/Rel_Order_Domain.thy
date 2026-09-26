@@ -1,173 +1,27 @@
 theory Rel_Order_Domain
   imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Framework.DG_Keyed_Generator"
-    "Voblint_Framework.State_Restriction"
+    "Voblint_Framework.State_Restriction" "Voblint_Domain.Order_Lattice"
 begin
 
-section \<open>A minimal relational carrier for \<^const>\<open>analysis_contract\<close>\<close>
+section \<open>A minimal relational analysis for \<^const>\<open>analysis_contract\<close>\<close>
 
 text \<open>
-  \<open>relc\<close> tracks a finite set of known pairwise-ordered variables, \<open>(x, y)\<close>
-  meaning \<open>x \<le> y\<close> at every store the value describes.  No closure: two known
-  facts \<open>x \<le> y\<close> and \<open>y \<le> z\<close> do not automatically yield \<open>x \<le> z\<close> in this
-  carrier.  This is deliberately the least amount of relational structure that
-  is still relational (a pair of variables, not one) and not \<open>abs_state\<close>
-  (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier).
-
-  The purpose of this file is not a useful analysis.  It demonstrates that a
-  non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>analysis_contract\<close> with zero
-  changes to the DG framework.
-  Every transfer below is deliberately the most imprecise sound choice
-  (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
-  \<open>assume_not\<close> pair, which is enough to make the carrier genuinely
-  relational.
+  The analysis over \<^typ>\<open>relc\<close>, the order lattice of
+  \<^theory>\<open>Voblint_Domain.Order_Lattice\<close>. The purpose of this file is not a useful
+  analysis. It demonstrates that a non-\<open>abs_state\<close> carrier discharges
+  \<^locale>\<open>analysis_contract\<close> with zero changes to the DG framework. Every transfer
+  below is deliberately the most imprecise sound choice (forget on assign, havoc on
+  call) except for a precise \<open>assume\<close>/\<open>assume_not\<close> pair, which is enough to make
+  the carrier genuinely relational.
 \<close>
 
-subsection \<open>The carrier and its lattice\<close>
-
-datatype relc = Bot | RelC (relc_pairs: "(vname \<times> vname) set")
-
-text \<open>Order is reverse inclusion on the constraint set: more known pairs is
-  more information, hence lower (more precise) in the abstract-interpretation
-  order.  \<open>sup\<close> keeps only the pairs both sides agree on.
-
-  \<open>bot\<close> is a separate explicit constructor rather than \<open>RelC UNIV\<close> (the
-  most-constrained set, "every pair known ordered"): representing \<open>UNIV\<close>
-  forces the code generator to use the \<open>Coset\<close> branch of HOL's executable-set
-  representation, and the stock library does not give every set operation
-  (subset test among them) a code equation for every \<open>Set\<close>/\<open>Coset\<close>
-  combination over an infinite element type such as \<open>vname\<close> -- confirmed
-  directly: \<open>RelC UNIV\<close> batch-checked and even unit-tested via \<open>value\<close>
-  cleanly, but running it through the solver raised \<open>exception Match\<close> in
-  the generated code the first time a genuine \<open>Coset\<close>/\<open>Coset\<close> combination
-  arose. Keeping \<open>RelC\<close>'s field always finite avoids the gap entirely: no
-  value this file ever constructs is a \<open>Coset\<close>.\<close>
-
-instantiation relc :: bounded_semilattice_sup_bot
-begin
-
-fun less_eq_relc :: "relc \<Rightarrow> relc \<Rightarrow> bool" where
-  "less_eq_relc Bot _ = True"
-| "less_eq_relc (RelC _) Bot = False"
-| "less_eq_relc (RelC a) (RelC b) = (b \<subseteq> a)"
-
-definition less_relc :: "relc \<Rightarrow> relc \<Rightarrow> bool" where
-  "less_relc a b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> a"
-
-fun sup_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
-  "sup_relc Bot b = b"
-| "sup_relc a Bot = a"
-| "sup_relc (RelC a) (RelC b) = RelC (a \<inter> b)"
-
-definition bot_relc :: relc where
-  "bot_relc = Bot"
-
-instance
-proof intro_classes
-  fix x y z :: relc
-  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" by (simp add: less_relc_def)
-  show "x \<le> x" by (cases x) simp_all
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by (cases x; cases y; cases z) auto
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" by (cases x; cases y) auto
-  show "x \<le> x \<squnion> y" by (cases x; cases y) auto
-  show "y \<le> x \<squnion> y" by (cases x; cases y) auto
-  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" by (cases x; cases y; cases z) auto
-  show "bot \<le> x" by (cases x) (simp_all add: bot_relc_def)
-qed
-
-end
-
-text \<open>The vendored TD solver's \<open>TD_side_upd_rule\<close> locale fixes its equation
-  value type at sort \<open>{bounded_semilattice_sup_bot, warrowing}\<close> uniformly --
-  every update rule in the solver menu needs it, not only the \<open>warrow\<close>
-  entry, even on a loop-free equation system where widening is never
-  actually invoked.  \<open>widen = sup\<close> reuses the join laws already proved
-  above; \<open>narrow a b = b\<close> is the simplest sound choice ("accept the
-  incoming value, refine nothing") -- consistent with this file's own
-  no-closure, no-normalization scope.\<close>
-
-instantiation relc :: warrowing
-begin
-
-definition widen_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
-  "widen_relc a b = a \<squnion> b"
-
-definition narrow_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where
-  "narrow_relc a b = b"
-
-instance
-proof intro_classes
-  fix a b :: relc
-  show "a \<le> a \<nabla> b" by (simp add: widen_relc_def)
-  show "b \<le> a \<nabla> b" by (simp add: widen_relc_def)
-  show "b \<le> a \<Longrightarrow> b \<le> a \<Delta> b" by (simp add: narrow_relc_def)
-  show "b \<le> a \<Longrightarrow> a \<Delta> b \<le> a" by (simp add: narrow_relc_def)
-qed
-
-end
-
-text \<open>\<open>top_relc\<close> is the empty-relation-set top element: vacuously true of
-  every pair, so its concretization is \<open>UNIV\<close> (\<open>gamma_rel_top\<close>).\<close>
-definition top_relc :: relc where
-  "top_relc = RelC {}"
-
-subsection \<open>Concretization\<close>
-
-fun gamma_rel :: "relc \<Rightarrow> store set" where
-  "gamma_rel Bot = {}"
-| "gamma_rel (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
-
-text \<open>
-  Executable membership reader for downstream examples. \<open>Bot\<close> answers
-  \<open>True\<close> for every pair: its concretization is empty, so every fact holds
-  of it vacuously, and it never needs to materialize \<open>UNIV\<close>.
-\<close>
-fun relc_has :: "vname \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> bool" where
-  "relc_has x y Bot = True"
-| "relc_has x y (RelC ps) = ((x, y) \<in> ps)"
-
-text \<open>Pretty-printer, the \<open>relc\<close> analogue of Interval's \<open>string_of_ivl\<close> for
-  GraphViz/console display.  \<open>vname \<times> vname\<close> is \<open>linorder\<close> (via
-  \<open>HOL-Library.Product_Lexorder\<close>, already imported transitively by every
-  file in this session that touches \<^typ>\<open>cfg\<close>), so \<^const>\<open>sorted_list_of_set\<close>
-  gives a deterministic, executable enumeration -- the same device this
-  project already relies on for CFG edge sets. The notation follows Goblint's
-  two-variable equality domain, which prints a conjunction \<open>{x=y \<and> z=y}\<close> and its
-  extremes as \<open>\<bottom>\<close> and \<open>\<top>\<close>; here each conjunct is an ordering \<open>x\<le>y\<close>.\<close>
-
-fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> String.literal" where
-  "string_of_pairs [] = STR ''''"
-| "string_of_pairs [(x, y)] = x + sym_le + y"
-| "string_of_pairs ((x, y) # p # ps) =
-      x + sym_le + y + STR '' '' + sym_and + STR '' '' + string_of_pairs (p # ps)"
-
-definition string_of_relc :: "relc \<Rightarrow> String.literal" where
-  "string_of_relc d =
-     (case d of
-        Bot \<Rightarrow> sym_bottom
-      | RelC ps \<Rightarrow>
-          (if ps = {} then sym_top
-           else STR ''{'' + string_of_pairs (sorted_list_of_set ps) + STR ''}''))"
-
-lemma string_of_relc_regression:
-  "string_of_relc Bot = STR ''<bottom>''"
-  "string_of_relc (RelC {}) = STR ''<top>''"
-  "string_of_relc (RelC {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
-     STR ''{x<le>y <and> y<le>z}''"
-  by eval+
+subsection \<open>Local and global state together\<close>
 
 definition gammaDG_rel :: "relc \<Rightarrow> relc \<Rightarrow> store set" where
   "gammaDG_rel d g = gamma_rel d \<inter> gamma_rel g"
 
-lemma gamma_rel_top [simp]: "gamma_rel top_relc = UNIV"
-  unfolding top_relc_def by simp
-
 lemma gammaDG_rel_top [simp]: "gammaDG_rel top_relc top_relc = UNIV"
   unfolding gammaDG_rel_def by simp
-
-lemma gamma_rel_mono:
-  assumes "d \<le> d'"
-  shows "gamma_rel d \<subseteq> gamma_rel d'"
-  using assms by (cases d; cases d') auto
 
 lemma gammaDG_rel_mono:
   assumes "d \<le> d'" "g \<le> g'"
@@ -175,23 +29,12 @@ lemma gammaDG_rel_mono:
   using gamma_rel_mono[OF assms(1)] gamma_rel_mono[OF assms(2)]
   unfolding gammaDG_rel_def by blast
 
-subsection \<open>Forgetting a variable -- the one lemma every imprecise fallback reuses\<close>
-
-fun forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
-  "forget_relc x Bot = Bot"
-| "forget_relc x (RelC ps) = RelC {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
-
-lemma forget_relc_sound[intro]:
-  assumes "s \<in> gamma_rel d"
-  shows "s(x := v) \<in> gamma_rel (forget_relc x d)"
-  using assms by (cases d) auto
-
 subsection \<open>Refining bare-variable comparisons\<close>
 
 definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
      (case d of
-        Bot \<Rightarrow> Bot
+        RelBot \<Rightarrow> RelBot
       | RelC ps \<Rightarrow>
           (case b of
              Less (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
@@ -214,7 +57,7 @@ text \<open>The false branch records the reversed order.  Equality records both
 definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_not_step b d =
      (case d of
-        Bot \<Rightarrow> Bot
+        RelBot \<Rightarrow> RelBot
       | RelC ps \<Rightarrow>
           (case b of
              Less (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)

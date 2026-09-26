@@ -18,6 +18,11 @@ text \<open>
   halves. A single analysis is a component too, and runs as the specification
   \<open>component_spec\<close> builds from it.
 
+  A component answers queries from its own state alone: \<open>mc_qry\<close> is a
+  function of the record, as in a local specification. Unlike a handler of
+  \<^const>\<open>dgs_query\<close>, it cannot ask a further query or read a global while
+  answering, so the combined state covers analyses whose answers are local.
+
   A component holds only what runs. What its states describe, a set of stores,
   is not executable and is supplied beside it wherever soundness is stated,
   as \<^class>\<open>numeric_domain\<close> keeps \<open>gamma\<close> out of \<^class>\<open>executable_domain\<close>.
@@ -89,9 +94,12 @@ fun mcp_independent :: "'s certified_component list \<Rightarrow> bool" where
 section \<open>The combined operations\<close>
 
 text \<open>
-  The combined operations run the active components in turn. Each reads only
-  its own field, which no other component writes, so the order does not
-  matter; the fold is merely one way to write ``all of them''. The answers are
+  The combined operations run the active components in turn. Soundness needs
+  only \<^const>\<open>mcp_frame\<close>: a component keeps what the other components'
+  states describe, not their representation, so the soundness proof says
+  nothing about the order of the fold. A component that updates only its own
+  field of a product does leave the other fields unchanged, and for those the
+  order does not matter. The answers are
   fixed once per edge, from the predecessor state, and every component gets
   the same answers, as every Goblint component gets the same \<open>man.ask\<close>.
 \<close>
@@ -381,6 +389,15 @@ fun mcp_combine :: "'s mcp_component list \<Rightarrow> 's mcp_component" where
      mc_en = mcp_en_from cs,
      mc_comb_env = (\<lambda>ci dc de. dc),
      mc_comb_assign = mcp_comb cs \<rparr>"
+
+text \<open>Components that answer nothing combine to a state that answers nothing.\<close>
+
+lemma mcp_qry_top: "(\<And>c. c \<in> set cs \<Longrightarrow> mc_qry c x q = \<top>) \<Longrightarrow> mcp_qry cs x q = \<top>"
+  unfolding mcp_qry_def by (induction cs) auto
+
+lemma mcp_combine_qry_top:
+  "(\<And>c. c \<in> set cs \<Longrightarrow> mc_qry c x q = \<top>) \<Longrightarrow> mc_qry (mcp_combine cs) x q = \<top>"
+  by (cases cs rule: mcp_combine.cases) (auto intro!: mcp_qry_top)
 
 definition mcp_spec :: "'s mcp_component list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
   "mcp_spec cs = component_spec (mcp_combine cs)"
@@ -689,31 +706,33 @@ qed
 section \<open>One field of a reachability-lifted record\<close>
 
 text \<open>
-  The combined state is a record of reachability-lifted fields under one more
-  reachability lift, whose \<^const>\<open>Bot\<close> is the state no analysis can reach. A
-  field's lens reads \<^const>\<open>Bot\<close> there, and writing a reachable value into it
-  starts from the record whose fields are all \<^const>\<open>Bot\<close>. Writing \<^const>\<open>Bot\<close>
-  into the unreachable state leaves it unreachable, so writing back what was
-  read changes nothing.
+  The combined state is a record of fields under one reachability lift, whose
+  \<^const>\<open>Bot\<close> is the state no analysis can reach. Each field has a bottom of
+  its own: a reachability-lifted field's is \<^const>\<open>Bot\<close>, and a carrier with an
+  unreachable element of its own uses that. A field's lens reads the field's
+  bottom from the unreachable state, and writing any other value into it starts
+  from the record whose fields are all at bottom. Writing bottom into the
+  unreachable state leaves it unreachable, so writing back what was read
+  changes nothing.
 \<close>
 
-definition lift_get :: "('r \<Rightarrow> 'c lifted) \<Rightarrow> 'r lifted \<Rightarrow> 'c lifted" where
-  "lift_get f x = (case x of Bot \<Rightarrow> Bot | Lifted r \<Rightarrow> f r)"
+definition lift_get :: "('r \<Rightarrow> 'c::bot) \<Rightarrow> 'r lifted \<Rightarrow> 'c" where
+  "lift_get f x = (case x of Bot \<Rightarrow> \<bottom> | Lifted r \<Rightarrow> f r)"
 
-definition lift_put :: "('r \<Rightarrow> 'c lifted \<Rightarrow> 'r) \<Rightarrow> 'r::bot lifted \<Rightarrow> 'c lifted \<Rightarrow> 'r lifted" where
+definition lift_put :: "('r \<Rightarrow> 'c::bot \<Rightarrow> 'r) \<Rightarrow> 'r::bot lifted \<Rightarrow> 'c \<Rightarrow> 'r lifted" where
   "lift_put u x v =
      (case x of
-        Bot \<Rightarrow> (case v of Bot \<Rightarrow> Bot | Lifted _ \<Rightarrow> Lifted (u \<bottom> v))
+        Bot \<Rightarrow> (if v = \<bottom> then Bot else Lifted (u \<bottom> v))
       | Lifted r \<Rightarrow> Lifted (u r v))"
 
 lemma lift_get_simps [simp]:
-  "lift_get f Bot = Bot" "lift_get f (Lifted r) = f r"
+  "lift_get f Bot = \<bottom>" "lift_get f (Lifted r) = f r"
   by (simp_all add: lift_get_def)
 
 lemma lift_get_put:
-  assumes "\<And>r v. f (u r v) = v" and "f \<bottom> = Bot"
+  assumes "\<And>r v. f (u r v) = v" and "f \<bottom> = \<bottom>"
   shows "lift_get f (lift_put u x v) = v"
-  using assms by (cases x; cases v) (simp_all add: lift_put_def)
+  using assms by (cases x) (simp_all add: lift_put_def)
 
 lemma lift_put_get:
   assumes "\<And>r. u r (f r) = r"
@@ -721,15 +740,15 @@ lemma lift_put_get:
   using assms by (cases x) (simp_all add: lift_put_def)
 
 lemma lift_get_mono:
-  fixes f :: "'r::semilattice_sup \<Rightarrow> 'c::semilattice_sup lifted"
+  fixes f :: "'r::semilattice_sup \<Rightarrow> 'c::order_bot"
   assumes "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
   shows "x \<le> y \<Longrightarrow> lift_get f x \<le> lift_get f y"
   using assms by (cases x; cases y) simp_all
 
 lemma lift_get_put_other:
-  assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = Bot"
+  assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = \<bottom>"
   shows "lift_get f2 (lift_put u1 x v) = lift_get f2 x"
-  using assms by (cases x; cases v) (simp_all add: lift_put_def)
+  using assms by (cases x) (simp_all add: lift_put_def)
 
 text \<open>
   Components that each own a distinct field are independent: a list of

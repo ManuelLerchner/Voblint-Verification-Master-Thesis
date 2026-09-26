@@ -72,4 +72,11 @@ lemma set_scope_vnames_list [simp]:
   "set (scope_vnames_list p owner) = scope_vnames p owner"
   unfolding scope_vnames_list_def by simp
 
+text \<open>Every variable some procedure of the program declares: a program-wide
+  superset of any one activation's scope.\<close>
+
+definition program_vars :: "imp_prog \<Rightarrow> vname list" where
+  "program_vars p =
+     remdups (concat (map (scope_vnames_list p) (prog_main_name # prog_procs p)))"
+
 end

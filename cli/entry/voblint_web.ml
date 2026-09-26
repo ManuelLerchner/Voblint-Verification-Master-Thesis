@@ -59,6 +59,7 @@ let domain_of_string = function
   | "int" -> Some C.Int_Analysis
   | "parity" -> Some C.Parity_Analysis
   | "congruence" -> Some C.Congruence_Analysis
+  | "order" -> Some C.Order_Analysis
   | _ -> None
 
 let globals_of_string = function

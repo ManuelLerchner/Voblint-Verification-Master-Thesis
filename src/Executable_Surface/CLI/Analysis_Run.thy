@@ -158,14 +158,9 @@ definition context_indices :: "(nat \<times> 'c) list \<Rightarrow> 'c \<Rightar
   "context_indices indexed ctx = map fst (filter (\<lambda>(i, ctx'). ctx' = ctx) indexed)"
 
 text \<open>
-  A state lists every variable some procedure of the program declares: a program-wide
-  superset of any one activation's scope, so no point's state misses a name its own
-  procedure reads.
+  A state lists every variable of \<^const>\<open>program_vars\<close>, so no point's state misses
+  a name its own procedure reads.
 \<close>
-
-definition program_vars :: "imp_prog \<Rightarrow> vname list" where
-  "program_vars p =
-     remdups (concat (map (scope_vnames_list p) (prog_main_name # prog_procs p)))"
 
 text \<open>
   Contexts are listed in the order of an injective key, which picks each context back

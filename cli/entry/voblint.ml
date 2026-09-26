@@ -26,13 +26,13 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int|parity|congruence [--context \
+  "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin] [--dot] [--timeout SECONDS] \
    FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval|int|parity|congruence[,...]\n\
+  \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
@@ -46,6 +46,10 @@ let usage =
   \                             pins a single integer and m = 1 constrains\n\
   \                             nothing. It decides no orderings and decides\n\
   \                             equalities only between singletons.\n\
+  \                             order is relational: it records which\n\
+  \                             variables are ordered by <= and answers\n\
+  \                             comparisons between them to the other\n\
+  \                             analyses of a comma list.\n\
   \                             A comma list (e.g. interval,parity) runs the\n\
   \                             named domains together in one solve: a value\n\
   \                             shows each domain's part in list order, a\n\
@@ -137,6 +141,7 @@ let analysis_label = function
   | Voblint_CLI.Generated.Int_Analysis -> "int"
   | Voblint_CLI.Generated.Parity_Analysis -> "parity"
   | Voblint_CLI.Generated.Congruence_Analysis -> "congruence"
+  | Voblint_CLI.Generated.Order_Analysis -> "order"
 
 let rec mkdir_p dir =
   if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
@@ -398,6 +403,7 @@ let () =
           | "int" -> Voblint_CLI.Generated.Int_Analysis
           | "parity" -> Voblint_CLI.Generated.Parity_Analysis
           | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
+          | "order" -> Voblint_CLI.Generated.Order_Analysis
           | _ ->
               prerr_endline ("unknown --analysis value: " ^ name);
               exit 1
@@ -514,7 +520,8 @@ let () =
     match !analyses with
     | Some ds -> ds
     | None ->
-        prerr_endline "missing --analysis sign|interval|int|parity|congruence";
+        prerr_endline
+          "missing --analysis sign|interval|int|parity|congruence|order";
         prerr_endline usage;
         exit 1
   in

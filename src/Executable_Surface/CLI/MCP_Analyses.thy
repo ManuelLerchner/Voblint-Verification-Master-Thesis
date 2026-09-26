@@ -18,14 +18,7 @@ subsection \<open>Each analysis on its own field\<close>
 lemma mcp_component_of_frame:
   "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_component_of \<G> p a) (part_gamma \<G> b)"
   by (cases a; cases b; simp only: part_gamma.simps mcp_component_of.simps;
-      simp; rule field_frame; simp)
-
-lemma single_entry_exec_component:
-  "single_entry (exec_component \<G> empty_pred tf_st enter_st)"
-  by (simp add: single_entry_def exec_component_def lens_component_def)
-
-lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \<G> p a)"
-  by (cases a) (auto intro!: single_entry_lens_of single_entry_exec_component lift_put_get)
+      rule field_frame; simp add: lift_get_put_other)
 
 subsection \<open>The active analyses, run as one\<close>
 
@@ -72,6 +65,19 @@ proof -
     unfolding mcp_comp_def
     by (intro map_component_sound) (simp_all add: comp_def mcp_gamma_norm)
 qed
+
+text \<open>
+  Where no active analysis answers queries, the combined state answers every query
+  with \<^term>\<open>\<top>\<close>. A field that asks at its assignments then steps exactly as its
+  analysis alone (\<open>ask_assign_top\<close>): asking changes a run only once an analysis
+  that answers is active.
+\<close>
+
+theorem mcp_comp_silent:
+  assumes "\<And>a. a \<in> set as \<Longrightarrow> mc_qry (mcp_component_of \<G> p a) x q = \<top>"
+  shows "mc_qry (mcp_comp as \<G> p) x q = \<top>"
+  unfolding mcp_comp_def map_component_def
+  using assms by (auto intro!: mcp_combine_qry_top)
 
 lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp_comp as \<G> p)"
   unfolding mcp_comp_def

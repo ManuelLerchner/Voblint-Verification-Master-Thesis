@@ -11,6 +11,7 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "Voblint_Analysis_Interval"
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
+    "Voblint_Analysis_Relational"
     "HOL-Library"
   directories
     "generated"

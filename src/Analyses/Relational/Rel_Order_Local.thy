@@ -1,5 +1,5 @@
 theory Rel_Order_Local
-  imports Rel_Order_Domain
+  imports Rel_Order_Domain "Voblint_Framework.MCP_Spec"
 begin
 
 section \<open>The order carrier as a component that asks\<close>
@@ -80,7 +80,7 @@ text \<open>
 definition rel_learn :: "answers \<Rightarrow> vname list \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> relc \<Rightarrow> relc" where
   "rel_learn ask ys x e d =
      (case d of
-        Bot \<Rightarrow> Bot
+        RelBot \<Rightarrow> RelBot
       | RelC ps \<Rightarrow> RelC (ps
           \<union> set (map (\<lambda>y. (x, y))
                 (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq e (V y)))) = Some 1) ys))
@@ -102,7 +102,7 @@ lemma rel_learn_sound:
     and "eval_query.oracle_holds ask s"
   shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gamma_rel (rel_learn ask ys x e d)"
 proof (cases d)
-  case Bot
+  case RelBot
   with assms(1) show ?thesis by simp
 next
   case (RelC ps)
@@ -161,5 +161,26 @@ next
   case (5 s d q)
   then show ?case by (rule rel_qry_sound)
 qed
+
+subsection \<open>The component on the combined state\<close>
+
+text \<open>
+  The same operations as a component of the combined state, over the variables
+  \<open>ys\<close> it relates. It asks at assignments and answers comparisons; its entry
+  answers one alternative.
+\<close>
+
+definition order_component :: "vname list \<Rightarrow> relc mcp_component" where
+  "order_component ys = local_component (rel_qs ys) rel_qry
+     (\<lambda>A d. d) (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
+     (\<lambda>A sc x d. forget_relc x d) (\<lambda>A b pol d. branch_step_rel b pol d)
+     (\<lambda>A p d. d) (\<lambda>A eo p d. rel_ret eo d) (\<lambda>ci d. [(d, top_relc)])
+     (\<lambda>A ev d. d) (\<lambda>ci dc de. dc) (\<lambda>ci d de. top_relc)"
+
+theorem order_component_sound: "mcp_component_sound \<G> gamma_rel (order_component ys)"
+  unfolding order_component_def by (rule local_component_sound[OF rel_local_component])
+
+lemma single_entry_order_component: "single_entry (order_component ys)"
+  by (simp add: single_entry_def order_component_def lens_component_def)
 
 end
