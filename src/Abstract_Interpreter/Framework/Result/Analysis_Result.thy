@@ -56,19 +56,20 @@ fun is_reachable_point :: "'a lifted \<Rightarrow> bool" where
 lemma is_reachable_point_iff: "is_reachable_point p \<longleftrightarrow> p \<noteq> Bot"
   by (cases p) simp_all
 
-definition gamma_point :: "'a::numeric_domain abs_state lifted \<Rightarrow> store set" where
-  "gamma_point p = (case p of Bot \<Rightarrow> {} | Lifted st \<Rightarrow> \<lbrakk>st\<rbrakk>)"
+text \<open>
+  A point of an abstract-store table concretizes through the reachability
+  lift: \<^const>\<open>Bot\<close> to nothing, a \<^const>\<open>Lifted\<close> store to its concretization.
+  It is the lift at \<^const>\<open>gamma_state\<close>, so a result generic in its published
+  value reads back to exactly this at an abstract-store instance.
+\<close>
 
-lemma gamma_point_Bot [simp]: "gamma_point Bot = {}"
-  unfolding gamma_point_def by simp
-
-lemma gamma_point_Lifted [simp]: "gamma_point (Lifted st) = \<lbrakk>st\<rbrakk>"
-  unfolding gamma_point_def by simp
+abbreviation gamma_point :: "'a::numeric_domain abs_state lifted \<Rightarrow> store set" where
+  "gamma_point \<equiv> gamma_lift gamma_state"
 
 text \<open>
   The shape every migrated report's per-node environment reads a
   \<^typ>\<open>'a lifted\<close> point through (\<open>Bot \<Rightarrow> bot\<close>, \<open>Lifted st \<Rightarrow> st\<close>)
-  concretizes to exactly \<^const>\<open>gamma_point\<close>, so a soundness proof against
+  concretizes to exactly \<open>gamma_point\<close>, so a soundness proof against
   that environment never needs to re-case-split the point state by hand.
 \<close>
 
@@ -233,16 +234,11 @@ lemma result_node_is_bottom_iff_keys:
   unfolding result_node_is_bottom_def
   by (auto simp: lookup_context_result_eq_Covered_iff)
 
-lemma gamma_point_eq_gamma_lift:
-  "gamma_point p = gamma_lift (\<lambda>st. \<lbrakk>st\<rbrakk>) p"
-  unfolding gamma_point_def gamma_lift_def ..
-
 lemma reported_covered_unreachable_empty_point:
   assumes lookup: "lookup_context_result r v ctx = Covered Bot"
     and sound: "C \<subseteq> gamma_point (lookup_context r v ctx)"
   shows "C = {}"
-  using sound unfolding gamma_point_eq_gamma_lift
-  by (rule reported_covered_unreachable_empty[OF lookup])
+  using sound by (rule reported_covered_unreachable_empty[OF lookup])
 
 text \<open>
   What the report's own flag is worth: with coverage in hand it identifies
