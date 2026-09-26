@@ -128,41 +128,45 @@ const rawMounts = {
  */
 const initialProgram = `// Move the cursor, hover the badges, click the graph.
 // Then try: globals "Warrow per origin", call-string depth k=2, context None.
-global hits;
 
-fun record(amount) {
-  hits = hits + amount;
-}
-
-fun scale(v) {
-  return v * 2;
-}
-
-fun wrap(w) {
-  r = scale(w);
-  return r;
+fun smaller(a, b) {
+  if (a <= b) {
+    lo = a;
+  } else {
+    lo = b;
+  }
+  return lo;
 }
 
 fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+
+  q = 100 / x;
+
+  n = smaller(3, 7);
+  smaller(9, 4);
+
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      w = x;
+      __voblint_check(z == 1); // PROVED
+      __voblint_check(w == y); // PROVED
+    }
+  }
+
   i = 0;
-  while (i < 5) {
+  while (i < 3) {
     i = i + 1;
   }
-  __voblint_check(i == 5);
-  __voblint_check(i < 5);
 
-  record(i);
-  record(3);
-  __voblint_check(hits == 8);
+  __voblint_check(i == 3); // PROVED
+  __voblint_check(n == 7); // REFUTED
 
-  if (hits > 10) {
-    record(100);
+  if (i > 5) {
+    __voblint_check(i == 0); // NOWARN
   }
-
-  a = wrap(1);
-  b = wrap(4);
-  __voblint_check(a == 2);
-  share = 10 / (a - 2);
 }`;
 
 /* -------------------------------------------------------------------------- */
