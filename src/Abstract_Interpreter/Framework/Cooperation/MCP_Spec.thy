@@ -526,4 +526,97 @@ proof -
   then show ?thesis by simp
 qed
 
+section \<open>A component on one field of a larger state\<close>
+
+text \<open>
+  A component over its own carrier \<open>'c\<close> runs on one field of the combined
+  state through a lens: every operation reads the field, and writes back only
+  the field. This is \<^const>\<open>lens_component\<close> for a component that already
+  exists rather than for the operations of a local specification.
+\<close>
+
+definition lens_of :: "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> 'c mcp_component \<Rightarrow> 's mcp_component"
+where
+  "lens_of get put c = \<lparr>
+     mc_qry = (\<lambda>x. mc_qry c (get x)),
+     mc_qs = (\<lambda>a x. mc_qs c a (get x)),
+     mc_step = (\<lambda>A a x. put x (mc_step c A a (get x))),
+     mc_en = (\<lambda>ci p. map (\<lambda>(q, e). (put (fst p) q, put (snd p) e))
+                        (mc_en c ci (get (fst p), get (snd p)))),
+     mc_comb_env = (\<lambda>ci x de. put x (mc_comb_env c ci (get x) (get de))),
+     mc_comb_assign = (\<lambda>ci x de. put x (mc_comb_assign c ci (get x) (get de))) \<rparr>"
+
+lemma get_mc_comb_lens_of:
+  assumes "\<And>x v. get (put x v) = v"
+  shows "get (mc_comb (lens_of get put c) ci x de) = mc_comb c ci (get x) (get de)"
+  by (simp add: lens_of_def assms)
+
+theorem lens_of_sound:
+  assumes sound: "mcp_component_sound \<G> g c"
+    and get_put: "\<And>x v. get (put x v) = v"
+    and get_mono: "\<And>x y. x \<le> y \<Longrightarrow> get x \<le> get y"
+  shows "mcp_component_sound \<G> (\<lambda>x. g (get x)) (lens_of get put c)"
+proof -
+  have enter: "\<exists>q \<in> set (mc_en (lens_of get put c) ci p).
+                 s \<in> g (get (fst q))
+                 \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+                     \<in> g (get (snd q))"
+    if s_in: "s \<in> g (get (fst p))" for s ci p
+  proof -
+    have "s \<in> g (fst (get (fst p), get (snd p)))" using s_in by simp
+    then obtain q where "q \<in> set (mc_en c ci (get (fst p), get (snd p)))" "s \<in> g (fst q)"
+        "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+      using sound unfolding mcp_component_sound_def by metis  
+    then show ?thesis
+      by (intro bexI[of _ "(put (fst p) (fst q), put (snd p) (snd q))"])
+         (auto simp: lens_of_def get_put)
+  qed
+  show ?thesis
+    using sound get_mono enter
+    unfolding mcp_component_sound_def get_mc_comb_lens_of[of get put, OF get_put]
+    by (simp add: lens_of_def get_put)
+qed
+
+theorem lens_of_frame:
+  assumes "\<And>x v. get2 (put1 x v) = get2 x"
+  shows "mcp_frame (lens_of get1 put1 c) (\<lambda>x. g2 (get2 x))"
+  unfolding mcp_frame_def lens_of_def by (auto simp: assms)
+
+section \<open>Normalizing what a component produces\<close>
+
+text \<open>
+  A normalization \<open>k\<close> that keeps a state's concretization may be applied to
+  everything a component produces: each step, both halves of each entry, and
+  the return after its second stage. The first stage of a return is left
+  alone, because the component's soundness speaks only about the composite.
+  The combined state of several analyses uses this to become unreachable as
+  soon as one active analysis is, as Goblint's \<open>MCP\<close> raises \<open>Deadcode\<close>.
+\<close>
+
+definition map_component :: "('s \<Rightarrow> 's) \<Rightarrow> 's mcp_component \<Rightarrow> 's mcp_component" where
+  "map_component k c = c\<lparr>
+     mc_step := (\<lambda>A a x. k (mc_step c A a x)),
+     mc_en := (\<lambda>ci p. map (\<lambda>(q, e). (k q, k e)) (mc_en c ci p)),
+     mc_comb_assign := (\<lambda>ci x de. k (mc_comb_assign c ci x de)) \<rparr>"
+
+theorem map_component_sound:
+  assumes sound: "mcp_component_sound \<G> g c"
+    and keep: "\<And>x. g (k x) = g x"
+  shows "mcp_component_sound \<G> g (map_component k c)"
+proof -
+  have enter: "\<exists>q \<in> set (mc_en (map_component k c) ci p).
+                 s \<in> g (fst q)
+                 \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+    if s_in: "s \<in> g (fst p)" for s ci p
+  proof -
+    obtain q where "q \<in> set (mc_en c ci p)" "s \<in> g (fst q)"
+        "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
+      using sound s_in unfolding mcp_component_sound_def by metis
+    then show ?thesis
+      by (intro bexI[of _ "(k (fst q), k (snd q))"]) (auto simp: map_component_def keep)
+  qed
+  show ?thesis
+    using sound enter unfolding mcp_component_sound_def
+    by (simp add: map_component_def keep)
+qed
 end
