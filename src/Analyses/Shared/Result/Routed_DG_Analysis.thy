@@ -632,9 +632,9 @@ lemma routed_analysis_sound_of_live:
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
   shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) classify"
+     seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) gamma_state is_empty_state classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd EmptyExact
     ClProved ClRefuted VarsFin)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
 next
@@ -696,6 +696,8 @@ next
 next
   case (GammaRd d g') show ?case by (simp add: dom.gamma_exec_def)
 next
+  case (EmptyExact v) show ?case by (rule is_empty_state_iff_gamma_state_empty)
+next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next
   case (ClRefuted c d s) then show ?case by (rule classify_refuted)
@@ -730,7 +732,7 @@ lemma routed_analysis_sound_of:
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
   shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) classify"
+     seed (\<lambda>d. d = Bot) R (map_lift (fun_of_resolved_st_q_for pgs)) gamma_state is_empty_state classify"
   by (rule routed_analysis_sound_of_live [where R = R, OF solves _ comb_fwd_ok _ total_R])
      (blast intro: fwd_ok dest: cover_R)+
 
@@ -780,7 +782,7 @@ proof -
   interpret adapter: routed_analysis_sound "analysis_spec pgs p" dom.gamma_exec pgs
       "prog_cfg p" gk0 "route pgs" Bot "Lifted init_st" Bot
       "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot" R
-      "map_lift (fun_of_resolved_st_q_for pgs)" classify
+      "map_lift (fun_of_resolved_st_q_for pgs)" gamma_state is_empty_state classify
     by (rule routed_analysis_sound_of
           [where R = R, OF solves fwd_ok comb_fwd_ok cover_R total_R])
   show ?thesis
@@ -870,7 +872,7 @@ lemma entry_state_routed_analysis_sound:
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
   shows "routed_analysis_sound (analysis_spec pgs p) dom.gamma_exec pgs (prog_cfg p) gk0
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) entry_context_rel (map_lift (fun_of_resolved_st_q_for pgs)) classify"
+     seed (\<lambda>d. d = Bot) entry_context_rel (map_lift (fun_of_resolved_st_q_for pgs)) gamma_state is_empty_state classify"
 proof (rule routed_analysis_sound_of
     [where R = entry_context_rel, OF solves fwd_ok comb_fwd_ok])
   fix u ctx dst pars args q cont and s :: store and ctx'
@@ -932,7 +934,7 @@ begin
 interpretation entry: routed_analysis_sound "analysis_spec pgs p" dom.gamma_exec pgs
     "prog_cfg p" gk0 "route pgs" Bot "Lifted init_st" Bot
     "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot"
-    entry_context_rel "map_lift (fun_of_resolved_st_q_for pgs)" classify
+    entry_context_rel "map_lift (fun_of_resolved_st_q_for pgs)" gamma_state is_empty_state classify
   by (rule entry_state_routed_analysis_sound
         [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
 

@@ -17,22 +17,23 @@ text \<open>
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a
   context instance (an interpretation of \<^locale>\<open>routed_context_base_hetero\<close>),
-  and the carrier the solved table is stored at (a readback \<open>rd\<close> into the abstract
-  state, the identity when the table already holds abstract states),
+  and the published value (a readback \<open>rd\<close> from the solver's carrier into a
+  value type \<open>'v\<close> with its own concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness
+  test \<open>empty\<^sub>V\<close>; a non-relational analysis publishes its abstract store),
   leaving solver choice orthogonal: which concrete solver produced
   \<open>sigma\<close>/\<open>sg\<close> is an interpretation-site argument, never a locale parameter,
   matching how Interval's own Warrow/join/per-origin solver choice is already
   orthogonal to its context.
 
   It is not generic over the D/G split, and \<open>gammaDG_rd\<close> is where that shows:
-  requiring \<open>\<gamma>\<^sub>D\<^sub>G d g' = \<lbrakk>rd d\<rbrakk>\<^sub>\<bottom>\<close> for every \<open>g'\<close> says the
+  requiring \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d)\<close> for every \<open>g'\<close> says the
   concretization ignores the global component entirely, so the published table
   can be read off the local unknown alone. That holds of every analysis
   currently routed through here, and it is what makes \<open>analyse_result\<close> a
   function of \<open>sigma\<close> at \<open>Inl\<close> keys only. A concretization that genuinely
   reads both components --- an ownership split, say --- does not interpret this
   locale as it stands; admitting one means widening \<open>rd\<close> to
-  \<^typ>\<open>'D \<Rightarrow> 'G \<Rightarrow> 'a abs_state lifted\<close> and reading the global unknown at
+  \<^typ>\<open>'D \<Rightarrow> 'G \<Rightarrow> 'v lifted\<close> and reading the global unknown at
   \<open>Inr gk0\<close> alongside the local one, which every present instance would
   instantiate at a constant function.
 \<close>
@@ -55,13 +56,16 @@ locale dg_analysis_adapter =
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and R :: "'c call_context_rel" +
-  fixes rd :: "'D \<Rightarrow> 'a::numeric_domain abs_state lifted"
-    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
-  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = \<lbrakk>rd d\<rbrakk>\<^sub>\<bottom>"
+  fixes rd :: "'D \<Rightarrow> 'v lifted"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
+    and empty\<^sub>V :: "'v \<Rightarrow> bool"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d)"
+    and empty_exact: "\<And>v. empty\<^sub>V v \<longleftrightarrow> \<gamma>\<^sub>V v = {}"
     and classify_proved:
-    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and classify_refuted:
-    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and vars_finite: "finite vars"
 begin
 
@@ -72,25 +76,22 @@ text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>dg_result_for\<close> builds an
   \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
-  The solved local unknown is read back into \<^typ>\<open>'a abs_state lifted\<close> by \<open>rd\<close> ---
-  the identity when the framework was instantiated at that carrier, the executable
-  readback when it was instantiated at the solver's own --- and the one
-  collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
-  \<^const>\<open>is_empty_state\<close>, so a witness-bottom \<^const>\<open>Lifted\<close> payload --- a solved
-  value that is pointwise \<^const>\<open>bot\<close> without the solver's own \<^const>\<open>Bot\<close> tag
-  --- reads as \<^const>\<open>Bot\<close> here, matching \<^const>\<open>classify_point\<close>'s
+  The solved local unknown is read back into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
+  one collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
+  \<open>empty\<^sub>V\<close>, so a \<^const>\<open>Lifted\<close> payload that denotes no store without
+  the solver's own \<^const>\<open>Bot\<close> tag reads as \<^const>\<open>Bot\<close> here, matching \<^const>\<open>classify_point\<close>'s
   documented discipline of never fabricating a vacuous \<^const>\<open>Check_Proved\<close>
   off an empty state.
 \<close>
 
-definition analyse_result :: "('c, 'a abs_state) analysis_result" where
+definition analyse_result :: "('c, 'v) analysis_result" where
   "analyse_result = Analysis_Result vars
-     (\<lambda>v ctx. canonicalize_lift is_empty_state (rd (locals (sigma (Inl (v, ctx))))))"
+     (\<lambda>v ctx. canonicalize_lift empty\<^sub>V (rd (locals (sigma (Inl (v, ctx))))))"
 
 lemma lookup_context_analyse_result:
   "lookup_context analyse_result v ctx =
      (if (v, ctx) \<in> vars
-      then canonicalize_lift is_empty_state (rd (locals (sigma (Inl (v, ctx)))))
+      then canonicalize_lift empty\<^sub>V (rd (locals (sigma (Inl (v, ctx)))))
       else Bot)"
   unfolding lookup_context_def analyse_result_def by simp
 
@@ -111,13 +112,13 @@ text \<open>Canonicality holds unconditionally here: \<^const>\<open>canonicaliz
   unbounded.\<close>
 
 lemma analyse_result_canonical:
-  assumes "lookup_context analyse_result v ctx = Lifted st"  shows "\<not> is_empty_state st"
+  assumes "lookup_context analyse_result v ctx = Lifted st"  shows "\<not> empty\<^sub>V st"
   using assms
   unfolding lookup_context_analyse_result
   by (cases "rd (locals (sigma (Inl (v, ctx))))")
      (auto simp: normalize_lift_def split: if_splits)
 
-theorem wf_analyse_result: "wf_analysis_result is_empty_state analyse_result"
+theorem wf_analyse_result: "wf_analysis_result empty\<^sub>V analyse_result"
   unfolding wf_analysis_result_def finite_analysis_result_def
   using vars_finite analyse_result_canonical by (simp add: analyse_result_def)
 
@@ -125,28 +126,29 @@ text \<open>
   The soundness bridge \<open>\<gamma>\<^sub>M (sg (Inl (v, ctx)))\<close> steps need: a covered
   point's guarded reading agrees exactly with \<open>analyse_result\<close>'s own
   \<^const>\<open>lookup_context\<close> answer at the same key, \<^const>\<open>Bot\<close>
-  concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<^const>\<open>gamma_state\<close> of
-  its payload. This is the un-projected special case of the general
-  executable-carrier bridge that composes the same \<^const>\<open>canonicalize_lift\<close>
-  collapse with a reader projection over a report backed by \<open>resolved_st_q\<close>,
-  while this locale's \<open>sigma\<close> is already at the abstract carrier, so no
-  projection is threaded here.
+  concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<open>\<gamma>\<^sub>V\<close> of its
+  payload.
 \<close>
+
+text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<close> does not change
+  what the value denotes.\<close>
+
+lemma gamma_lift_canonicalize [simp]:
+  "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x"
+  by (cases x) (simp_all add: normalize_lift_def empty_exact)
 
 lemma gammaM_sg_eq_lookup_context:
   assumes cov: "(v, ctx) \<in> vars"
-  shows "\<gamma>\<^sub>M (sg (Inl (v, ctx))) =
-           (case lookup_context analyse_result v ctx of
-              Bot \<Rightarrow> {} | Lifted st \<Rightarrow> \<lbrakk>st\<rbrakk>)"
+  shows "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
 proof -
   have "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, ctx))))
           (globs (sigma (Inr gk0)))"
     using cov by simp
-  also have "\<dots> = \<lbrakk>rd (locals (sigma (Inl (v, ctx))))\<rbrakk>\<^sub>\<bottom>"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (rd (locals (sigma (Inl (v, ctx)))))"
     by (rule gammaDG_rd)
-  also have "\<dots> = \<lbrakk>lookup_context analyse_result v ctx\<rbrakk>\<^sub>\<bottom>"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
     using cov unfolding lookup_context_analyse_result by simp
-  finally show ?thesis by (simp split: lifted.splits)
+  finally show ?thesis .
 qed
 
 
@@ -168,17 +170,15 @@ lemma analyse_result_node_sound:
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
   shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
-           \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of
-                             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
 proof -
   have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
-  also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
   proof (cases "(v, ctx) \<in> vars")
     case True
-    show ?thesis
-      unfolding gamma_point_def by (rule gammaM_sg_eq_lookup_context[OF True])
+    show ?thesis by (rule gammaM_sg_eq_lookup_context[OF True])
   next
     case False
     hence "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = {}" by simp
@@ -210,8 +210,8 @@ lemma analyse_result_lookup_sound:
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
   shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
-           \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
-  using analyse_result_node_sound[OF entry_cov s0_sound] by simp
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+  by (rule analyse_result_node_sound[OF entry_cov s0_sound])
 
 lemma analyse_result_covered_unreachable:
   fixes S0 :: "store set" and startcontext :: 'c
@@ -219,7 +219,7 @@ lemma analyse_result_covered_unreachable:
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and dead: "lookup_context_result analyse_result v ctx = Covered Bot"
   shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx = {}"
-  by (rule reported_covered_unreachable_empty_point
+  by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
 
 lemma result_keys_analyse_result [simp]: "result_keys analyse_result = vars"
@@ -261,7 +261,7 @@ proof -
       then show ?thesis unfolding lookup_context_analyse_result by simp
     qed
     have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
-            \<subseteq> gamma_point (lookup_context analyse_result v ctx)"
+            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
       by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
     then show ?thesis unfolding bot by simp
   qed
@@ -304,13 +304,13 @@ lemma analyse_report_ctx_decided:
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
     and known: "r \<noteq> Check_Unknown"
-  obtains st where "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = r"
+  obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
   have node_sound: "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
-      \<subseteq> \<lbrakk>case lookup_context analyse_result v ctx of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
+      \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
-    and sst: "s \<in> \<lbrakk>st\<rbrakk>"
+    and sst: "s \<in> \<gamma>\<^sub>V st"
     using smem node_sound by (cases "lookup_context analyse_result v ctx") auto
   have "classify c st = r"
     using classify_checks_ctx_decided_sound[OF finE
@@ -328,7 +328,7 @@ theorem analyse_report_ctx_proved_sound:
 proof -
   fix ctx s
   assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
-  obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Proved"
+  obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
 qed
@@ -343,7 +343,7 @@ theorem analyse_report_ctx_refuted_sound:
 proof -
   fix ctx s
   assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
-  obtain st where sst: "s \<in> \<lbrakk>st\<rbrakk>" and "classify c st = Check_Refuted"
+  obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast
 qed

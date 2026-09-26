@@ -352,9 +352,9 @@ lemma routed_analysis_sound_live_keys:
   shows "routed_analysis_sound (analysis_spec (declared_global p) p) dom.gamma_exec
      (declared_global p) (prog_cfg p) gk0 (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_keys p) (root_query p) seed (\<lambda>d. d = Bot) R
-     (map_lift (fun_of_resolved_st_q_for (declared_global p))) classify"
+     (map_lift (fun_of_resolved_st_q_for (declared_global p))) gamma_state is_empty_state classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd EmptyExact
     ClProved ClRefuted VarsFin)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
 next
@@ -422,6 +422,8 @@ next
 next
   case (GammaRd d g') show ?case by (simp add: dom.gamma_exec_def)
 next
+  case (EmptyExact v) show ?case by (rule is_empty_state_iff_gamma_state_empty)
+next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next
   case (ClRefuted c d s) then show ?case by (rule classify_refuted)
@@ -473,7 +475,7 @@ proof -
   interpret live: routed_analysis_sound "analysis_spec (declared_global p) p" dom.gamma_exec
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_keys p" "root_query p" seed "\<lambda>d. d = Bot" R
-      "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
+      "map_lift (fun_of_resolved_st_q_for (declared_global p))" gamma_state is_empty_state classify
     by (rule routed_analysis_sound_live_keys[where R = R, OF wf solves cover_R total_R])
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for (declared_global p))
@@ -525,7 +527,7 @@ lemma entry_state_routed_analysis_sound_live_keys:
      (declared_global p) (prog_cfg p) gk0 (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_keys p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
-     (map_lift (fun_of_resolved_st_q_for (declared_global p))) classify"
+     (map_lift (fun_of_resolved_st_q_for (declared_global p))) gamma_state is_empty_state classify"
 proof (rule routed_analysis_sound_live_keys[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_keys p"
@@ -569,7 +571,7 @@ proof -
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_keys p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
+      "map_lift (fun_of_resolved_st_q_for (declared_global p))" gamma_state is_empty_state classify
     by (rule entry_state_routed_analysis_sound_live_keys[OF wf solves])
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
@@ -598,7 +600,7 @@ proof (rule ltr_collect_eq_Union_activation_of_has_context)
       "declared_global p" "prog_cfg p" gk0 "route (declared_global p)" Bot "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_keys p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "map_lift (fun_of_resolved_st_q_for (declared_global p))" classify
+      "map_lift (fun_of_resolved_st_q_for (declared_global p))" gamma_state is_empty_state classify
     by (rule entry_state_routed_analysis_sound_live_keys[OF wf solves])
   fix t
   assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"

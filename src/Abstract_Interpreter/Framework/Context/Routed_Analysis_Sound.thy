@@ -64,8 +64,8 @@ text \<open>
 
 locale routed_analysis_sound =
   dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g gk0 route bot0 s0d s0g sigma vars x0
-    "solved_local_reader vars sigma" seed_key is_bot "\<lambda>d. \<lbrakk>rd d\<rbrakk>\<^sub>\<bottom>"
-    R rd classify
+    "solved_local_reader vars sigma" seed_key is_bot "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d)"
+    R rd \<gamma>\<^sub>V empty\<^sub>V classify
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -79,8 +79,10 @@ locale routed_analysis_sound =
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and R :: "'c call_context_rel"
-    and rd :: "'D \<Rightarrow> 'a::numeric_domain abs_state lifted"
-    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+    and rd :: "'D \<Rightarrow> 'v lifted"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
+    and empty\<^sub>V :: "'v \<Rightarrow> bool"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
 begin
 
 text \<open>The activation-collecting endpoint, named without mentioning the
