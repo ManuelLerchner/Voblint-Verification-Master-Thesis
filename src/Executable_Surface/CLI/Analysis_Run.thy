@@ -3,11 +3,7 @@ theory Analysis_Run
     Analysis_Config
     Dispatch_Carrier
     Arithmetic_Diagnostics
-    Voblint_Analysis_Sign.Sign_Analyses
-    Voblint_Analysis_Interval.Interval_Analyses
-    Voblint_Analysis_Int.Int_Analyses
-    Voblint_Analysis_Parity.Parity_Analyses
-    Voblint_Analysis_Congruence.Congruence_Analyses
+    MCP_Analyses
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
@@ -233,16 +229,16 @@ text \<open>
 \<close>
 
 definition run_result_of ::
-    "('a \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
-       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'c list)
-       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> ('c, 'a abs_state) analysis_result
-       \<Rightarrow> 'a abs_state lifted \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted)
-       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
+    "('v \<Rightarrow> vname \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
+       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list)
+       \<Rightarrow> (exp \<Rightarrow> 'v \<Rightarrow> check_result) \<Rightarrow> ('c, 'v) analysis_result
+       \<Rightarrow> 'v lifted \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> 'v lifted)
+       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted)
        \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p =
+  "run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p =
      (let g = prog_cfg p;
           vars = program_vars p;
-          view = map_lift (\<lambda>st. map (\<lambda>x. (x, into (st x))) vars);
+          view = map_lift (\<lambda>st. map (\<lambda>x. (x, render st x)) vars);
           ctxs = ordered_by_key ctx_key (snd ` result_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g;
@@ -270,9 +266,9 @@ definition run_result_of ::
               route_targets =
                 (case lookup_context r u ctx of
                    Bot \<Rightarrow> []
-                 | Lifted st \<Rightarrow>
+                 | Lifted _ \<Rightarrow>
                      remdups (concat (map (context_indices indexed)
-                       (targets u ctx ca (callee_of_entry ce) st)))) \<rparr>);
+                       (targets u ctx ca (callee_of_entry ce))))) \<rparr>);
           seeds_of = (\<lambda>f.
             (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> result_keys r) indexed of
                [] \<Rightarrow> [\<lparr> global_key = Global_Seed f None, global_state = Bot \<rparr>]
@@ -299,148 +295,107 @@ definition run_result_of ::
            res_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
 
 
-subsection \<open>The three context policies, as builder parameters\<close>
+subsection \<open>What the active analyses publish, as data\<close>
 
 text \<open>
-  Which callee contexts a call enters from one caller state. The entry transfer runs
-  on the caller state; if a formal comes out empty the entered frame is bottom and
-  the call enters nothing, which is exactly when the solver's call tree skips the seed
-  publication; otherwise the policy routes the entered frame to one context. Every
-  policy shares this, and differs only in \<open>route\<close>.
+  A variable reads as the value its one active analysis gives it, or, with several
+  active, as their values side by side in activation order. A context reads as the
+  formal values the active analyses key it by, in the same order.
 \<close>
 
-definition entered_targets ::
-    "((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> imp_prog
-       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> ('a::executable_domain) abs_state \<Rightarrow> 'c list"
-where
-  "entered_targets enter pick_ctx p u ctx ca callee st =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        (let entered = enter (declared_global p) pars args st
-         in if list_ex (\<lambda>x. is_empty (entered x)) pars then []
-            else [pick_ctx u ctx entered ca]))"
+fun value_of :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
+  "value_of Sign_Analysis v x = SignValue (case slot1 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
+| "value_of Interval_Analysis v x =
+     IntervalValue (case slot2 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
+| "value_of Int_Analysis v x = IntDomValue (case slot3 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
+| "value_of Parity_Analysis v x = ParityValue (case slot4 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
+| "value_of Congruence_Analysis v x =
+     CongruenceValue (case slot5 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
 
-definition unit_run_result ::
-    "('a \<Rightarrow> abstract_value)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
-       \<Rightarrow> (unit, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
-            \<times> (pname \<Rightarrow> unit \<Rightarrow> 'a abs_state lifted)
-            \<times> (pp \<Rightarrow> unit \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
-       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "unit_run_result into enter classify solved p =
-     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
-        run_result_of into (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
-          (entered_targets enter (\<lambda>_ _ _ _. ()) p) classify r shared seed_at step_at p)"
+definition mcp_render :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
+  "mcp_render as v x =
+     (case as of [a] \<Rightarrow> value_of a v x | _ \<Rightarrow> ProductValue (map (\<lambda>a. value_of a v x) as))"
 
-definition entry_state_run_result ::
-    "('a \<Rightarrow> abstract_value)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
-       \<Rightarrow> ('a list, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
-            \<times> (pname \<Rightarrow> 'a list \<Rightarrow> 'a abs_state lifted)
-            \<times> (pp \<Rightarrow> 'a list \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
-       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "entry_state_run_result into enter classify solved p =
-     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
-        run_result_of into (\<lambda>ctx. Key_List (map (abstract_value_key \<circ> into) ctx))
-          (\<lambda>ctx. Context_Entry (map into ctx))
-          (entered_targets enter
-             (\<lambda>_ _ entered ca.
-                case ca of CallEdge dst pars args \<Rightarrow> formals_context pars entered) p)
-          classify r shared seed_at step_at p)"
+fun ctx_values :: "analysis_domain \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
+  "ctx_values Sign_Analysis ctx = map SignValue (slot1 ctx)"
+| "ctx_values Interval_Analysis ctx = map IntervalValue (slot2 ctx)"
+| "ctx_values Int_Analysis ctx = map IntDomValue (slot3 ctx)"
+| "ctx_values Parity_Analysis ctx = map ParityValue (slot4 ctx)"
+| "ctx_values Congruence_Analysis ctx = map CongruenceValue (slot5 ctx)"
 
-definition call_string_run_result ::
-    "('a \<Rightarrow> abstract_value)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-       \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result)
-       \<Rightarrow> (call_string, ('a::executable_domain) abs_state) analysis_result \<times> 'a abs_state lifted
-            \<times> (pname \<Rightarrow> call_string \<Rightarrow> 'a abs_state lifted)
-            \<times> (pp \<Rightarrow> call_string \<Rightarrow> edge_action \<Rightarrow> 'a abs_state lifted)
-       \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "call_string_run_result into enter classify solved k p =
-     (case solved of (r, shared, seed_at, step_at) \<Rightarrow>
-        run_result_of into (\<lambda>ctx. Key_List (map Key_Node ctx)) Context_Call_String
-          (entered_targets enter (\<lambda>u ctx _ _. take k (u # ctx)) p)
-          classify r shared seed_at step_at p)"
+definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
+  "mcp_ctx_values as ctx = concat (map (\<lambda>a. ctx_values a ctx) as)"
+
+text \<open>
+  Which callee contexts a call enters from a caller context: the one the solve itself
+  routed it to, or none when the entered state is unreachable, which is exactly when
+  the solver's call tree skips the seed publication.
+\<close>
+
+definition live_targets ::
+    "(pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
+       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list" where
+  "live_targets succ u ctx ca q = (case succ u ctx ca q of None \<Rightarrow> [] | Some ctx' \<Rightarrow> [ctx'])"
 
 subsection \<open>One configuration, one typed result\<close>
 
 text \<open>
-  Each branch names the one solve its domain and context policy run under the
-  chosen global update rule, and hands its table and global unknowns to the builder
-  of that context policy together with the domain's tag and entry transfer. Every
-  combination has a solve.
+  Each context policy names the one solve the active analyses run under the chosen
+  global update rule, and hands its table and global unknowns to the builder together
+  with how that policy's contexts read.
 \<close>
 
 fun analysis_result ::
-    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
+    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
        \<Rightarrow> abstract_value run_result" where
-  "analysis_result Sign_Analysis r Ctx_None p =
-     unit_run_result SignValue enter_sign_for sign_classify_check
-       (sign_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Sign_Analysis r Ctx_EntryState p =
-     entry_state_run_result SignValue enter_sign_for sign_classify_check
-       (sign_es_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Sign_Analysis r (Ctx_CallString k) p =
-     call_string_run_result SignValue enter_sign_for sign_classify_check
-       (sign_cs_rule.result_with_globals k r (declared_global p) p) k p"
-| "analysis_result Interval_Analysis r Ctx_None p =
-     unit_run_result IntervalValue enter_ivl_for interval_classify_check
-       (interval_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Interval_Analysis r Ctx_EntryState p =
-     entry_state_run_result IntervalValue enter_ivl_for interval_classify_check
-       (interval_es_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Interval_Analysis r (Ctx_CallString k) p =
-     call_string_run_result IntervalValue enter_ivl_for interval_classify_check
-       (interval_cs_rule.result_with_globals k r (declared_global p) p) k p"
-| "analysis_result Int_Analysis r Ctx_None p =
-     unit_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-       (int_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Int_Analysis r Ctx_EntryState p =
-     entry_state_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-       (int_es_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Int_Analysis r (Ctx_CallString k) p =
-     call_string_run_result IntDomValue (enter_int_dom_for Refine_Fixpoint) int_classify_check
-       (int_cs_rule.result_with_globals k r (declared_global p) p) k p"
-| "analysis_result Parity_Analysis r Ctx_None p =
-     unit_run_result ParityValue enter_parity_for parity_classify_check
-       (parity_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Parity_Analysis r Ctx_EntryState p =
-     entry_state_run_result ParityValue enter_parity_for parity_classify_check
-       (parity_es_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Parity_Analysis r (Ctx_CallString k) p =
-     call_string_run_result ParityValue enter_parity_for parity_classify_check
-       (parity_cs_rule.result_with_globals k r (declared_global p) p) k p"
-| "analysis_result Congruence_Analysis r Ctx_None p =
-     unit_run_result CongruenceValue enter_congruence_for congruence_classify_check
-       (congruence_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Congruence_Analysis r Ctx_EntryState p =
-     entry_state_run_result CongruenceValue enter_congruence_for congruence_classify_check
-       (congruence_es_rule.result_with_globals r (declared_global p) p) p"
-| "analysis_result Congruence_Analysis r (Ctx_CallString k) p =
-     call_string_run_result CongruenceValue enter_congruence_for congruence_classify_check
-       (congruence_cs_rule.result_with_globals k r (declared_global p) p) k p"
+  "analysis_result as r Ctx_None p =
+     (case mcp_rule.result_with_globals as r (declared_global p) p of
+        (t, shared, seed_at, step_at) \<Rightarrow>
+          run_result_of (mcp_render (activation as)) (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
+            (live_targets (mcp_rule.live_succ as r (declared_global p) p))
+            (mcp_classify (activation as)) t shared seed_at step_at p)"
+| "analysis_result as r Ctx_EntryState p =
+     (case mcp_es_rule.result_with_globals as r (declared_global p) p of
+        (t, shared, seed_at, step_at) \<Rightarrow>
+          run_result_of (mcp_render (activation as))
+            (\<lambda>ctx. Key_List (map abstract_value_key (mcp_ctx_values (activation as) ctx)))
+            (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
+            (live_targets (mcp_es_rule.live_succ as r (declared_global p) p))
+            (mcp_classify (activation as)) t shared seed_at step_at p)"
+| "analysis_result as r (Ctx_CallString k) p =
+     (case mcp_cs_rule.result_with_globals as k r (declared_global p) p of
+        (t, shared, seed_at, step_at) \<Rightarrow>
+          run_result_of (mcp_render (activation as)) (\<lambda>ctx. Key_List (map Key_Node ctx))
+            Context_Call_String
+            (live_targets (mcp_cs_rule.live_succ as k r (declared_global p) p))
+            (mcp_classify (activation as)) t shared seed_at step_at p)"
 
 subsection \<open>The public operation\<close>
 
 text \<open>
-  Two answers: a malformed program was never analysed, and every well-formed one is.
+  Three answers: an activation that is empty or names an analysis twice asks for no
+  run, a malformed program was never analysed, and every well-formed one is.
 \<close>
 
 datatype 'v analysis_answer =
-    Malformed_Program
+    Invalid_Activation
+  | Malformed_Program
   | Analysed "'v run_result"
 
+definition valid_activation :: "analysis_domain list \<Rightarrow> bool" where
+  "valid_activation as \<longleftrightarrow> as \<noteq> [] \<and> distinct as"
+
 definition analyse_program ::
-    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
+    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
        \<Rightarrow> abstract_value analysis_answer" where
-  "analyse_program kind rule ctx p =
-     (if wf_program_compile_input_exec p then Analysed (analysis_result kind rule ctx p)
+  "analyse_program as rule ctx p =
+     (if \<not> valid_activation as then Invalid_Activation
+      else if wf_program_compile_input_exec p then Analysed (analysis_result as rule ctx p)
       else Malformed_Program)"
 
 fun map_analysis_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_answer \<Rightarrow> 'w analysis_answer" where
-  "map_analysis_answer f Malformed_Program = Malformed_Program"
+  "map_analysis_answer f Invalid_Activation = Invalid_Activation"
+| "map_analysis_answer f Malformed_Program = Malformed_Program"
 | "map_analysis_answer f (Analysed res) = Analysed (map_run_result f res)"
 
 text \<open>
@@ -449,11 +404,10 @@ text \<open>
 \<close>
 
 definition run_voblint ::
-    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
+    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
        \<Rightarrow> String.literal analysis_answer" where
-  "run_voblint kind rule ctx p =
-     map_analysis_answer string_of_abstract_value
-       (analyse_program kind rule ctx p)"
+  "run_voblint as rule ctx p =
+     map_analysis_answer string_of_abstract_value (analyse_program as rule ctx p)"
 
 end
 

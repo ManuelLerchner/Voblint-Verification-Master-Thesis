@@ -25,13 +25,20 @@ datatype abstract_value =
   | IntDomValue int_dom
   | ParityValue parity
   | CongruenceValue congruence
+  | ProductValue "abstract_value list"
 
 text \<open>
   How a value reads is its domain's business: each domain's \<^class>\<open>executable_domain\<close>
   instance carries its own \<^const>\<open>to_string\<close>, and this dispatch is the only rendering a
-  run result receives before it leaves Isabelle. It changes no verdict, no point and no
-  context identity, so no soundness claim reads it.
+  run result receives before it leaves Isabelle. Several analyses run together read as
+  their values side by side, in activation order. The rendering changes no verdict, no
+  point and no context identity, so no soundness claim reads it.
 \<close>
+
+fun join_literals :: "String.literal list \<Rightarrow> String.literal" where
+  "join_literals [] = STR ''''"
+| "join_literals [s] = s"
+| "join_literals (s # ss) = s + STR '' & '' + join_literals ss"
 
 fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
   "string_of_abstract_value (SignValue s) = to_string s"
@@ -39,6 +46,8 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" wh
 | "string_of_abstract_value (IntDomValue d) = to_string d"
 | "string_of_abstract_value (ParityValue v) = to_string v"
 | "string_of_abstract_value (CongruenceValue v) = to_string v"
+| "string_of_abstract_value (ProductValue vs) =
+     join_literals (map string_of_abstract_value vs)"
 
 section \<open>Listing a set of contexts without reading its values' order\<close>
 
@@ -97,6 +106,7 @@ fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
 | "abstract_value_key (IntDomValue v) = Key_List [Key_Int 2, int_dom_key v]"
 | "abstract_value_key (ParityValue v) = Key_List [Key_Int 3, parity_key v]"
 | "abstract_value_key (CongruenceValue v) = Key_List [Key_Int 4, congruence_key v]"
+| "abstract_value_key (ProductValue vs) = Key_List (Key_Int 5 # map abstract_value_key vs)"
 
 lemma sign_key_inject [simp]: "sign_key a = sign_key b \<longleftrightarrow> a = b"
   by (cases a; cases b) simp_all
@@ -119,7 +129,14 @@ lemma int_dom_key_inject [simp]: "int_dom_key a = int_dom_key b \<longleftrighta
 
 lemma abstract_value_key_inject [simp]:
   "abstract_value_key a = abstract_value_key b \<longleftrightarrow> a = b"
-  by (cases a; cases b) simp_all
+proof
+  show "abstract_value_key a = abstract_value_key b \<Longrightarrow> a = b"
+  proof (induction a arbitrary: b)
+    case (ProductValue vs)
+    then show ?case
+      by (cases b) (simp_all, metis list.inj_map_strong)
+  qed (case_tac b; simp)+
+qed simp
 
 lemma inj_abstract_value_key: "inj abstract_value_key"
   by (rule injI) simp

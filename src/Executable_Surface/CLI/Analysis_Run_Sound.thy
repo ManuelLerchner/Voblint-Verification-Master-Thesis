@@ -42,17 +42,14 @@ lemma check_in_result_checks_of:
   using assms unfolding result_checks_of_verdicts [symmetric] by force
 
 lemma run_result_of_columns [simp]:
-  "res_cfg (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
+  "res_cfg (run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p)
      = prog_cfg p"
-  "res_checks (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
+  "res_checks (run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p)
      = result_checks_of (prog_cfg p) r classify"
   "res_diagnostics
-       (run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p)
+       (run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p)
      = arithmetic_diagnostics (prog_cfg p) r classify"
   by (simp_all add: run_result_of_def Let_def)
-
-lemmas run_result_builder_defs =
-  unit_run_result_def entry_state_run_result_def call_string_run_result_def
 
 text \<open>
   Where a result has checks: one per compiled \<^const>\<open>EA_Check\<close> edge, at that edge's
@@ -99,11 +96,11 @@ text \<open>
 \<close>
 
 definition table_covers ::
-    "('c, 'a::numeric_domain abs_state) analysis_result \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
-  "table_covers r v s \<longleftrightarrow> (\<exists>c st. lookup_context r v c = Lifted st \<and> s \<in> \<lbrakk>st\<rbrakk>)"
+    "('v \<Rightarrow> store set) \<Rightarrow> ('c, 'v) analysis_result \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
+  "table_covers gm r v s \<longleftrightarrow> (\<exists>ctx st. lookup_context r v ctx = Lifted st \<and> s \<in> gm st)"
 
 lemma table_coversI [intro]:
-  "lookup_context r v ctx = Lifted st \<Longrightarrow> s \<in> \<lbrakk>st\<rbrakk> \<Longrightarrow> table_covers r v s"
+  "lookup_context r v ctx = Lifted st \<Longrightarrow> s \<in> gm st \<Longrightarrow> table_covers gm r v s"
   unfolding table_covers_def by blast
 
 lemma classify_checks_verdicts_Dead_lookup_Bot:
@@ -134,13 +131,13 @@ text \<open>
 \<close>
 
 lemma ctx_checks_sound_at:
-  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
-    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+  fixes r :: "('c, 'v) analysis_result"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
   assumes fin: "finite (contexts_at r v)"
-      and look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
-      and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
-      and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
-                        \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
+      and look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> gm st"
+      and proved: "\<And>e d t. classify e d = Check_Proved \<Longrightarrow> t \<in> gm d \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
+      and refuted: "\<And>e d t. classify e d = Check_Refuted \<Longrightarrow> t \<in> gm d
+                        \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
       and checks: "res_checks res
                      = result_checks_of (prog_cfg p) r classify"
   shows "checks_sound_at res v s"
@@ -201,16 +198,16 @@ text \<open>
 \<close>
 
 lemma lookup_context_covers_of_activation:
-  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
+  fixes r :: "('c, 'v) analysis_result"
   assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v c)"
       and sound: "\<And>ctx. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx
-                    \<subseteq> gamma_point (lookup_context r v ctx)"
+                    \<subseteq> gamma_lift gm (lookup_context r v ctx)"
       and mem: "s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"
   obtains ctx st where "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx"
-    and "lookup_context r v ctx = Lifted st" and "s \<in> \<lbrakk>st\<rbrakk>"
+    and "lookup_context r v ctx = Lifted st" and "s \<in> gm st"
 proof -
   from mem union obtain ctx where a: "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx" by blast
-  with sound have g: "s \<in> gamma_point (lookup_context r v ctx)" by blast
+  with sound have g: "s \<in> gamma_lift gm (lookup_context r v ctx)" by blast
   show ?thesis
   proof (cases "lookup_context r v ctx")
     case Bot
@@ -249,14 +246,15 @@ lemma map_run_result_sound_at [simp]:
 
 locale sound_table =
   fixes p :: imp_prog
-    and r :: "('c, 'a::numeric_domain abs_state) analysis_result"
-    and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+    and r :: "('c, 'v) analysis_result"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+    and gm :: "'v \<Rightarrow> store set"
   assumes finite_contexts: "\<And>v. finite (contexts_at r v)"
       and covers: "\<And>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-                      \<Longrightarrow> table_covers r v s"
-      and proved: "\<And>cnd d t. classify cnd d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
+                      \<Longrightarrow> table_covers gm r v s"
+      and proved: "\<And>cnd d t. classify cnd d = Check_Proved \<Longrightarrow> t \<in> gm d
                       \<Longrightarrow> truthy (\<lbrakk>cnd\<rbrakk>\<^sub>e t)"
-      and refuted: "\<And>cnd d t. classify cnd d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
+      and refuted: "\<And>cnd d t. classify cnd d = Check_Refuted \<Longrightarrow> t \<in> gm d
                       \<Longrightarrow> \<not> truthy (\<lbrakk>cnd\<rbrakk>\<^sub>e t)"
 begin
 
@@ -270,13 +268,13 @@ lemma sound_at:
   assumes checks: "res_checks res
                      = result_checks_of (prog_cfg p) r classify"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s \<and> checks_sound_at res v s"
+  shows "table_covers gm r v s \<and> checks_sound_at res v s"
 proof -
   from covers [OF mem] obtain ctx st
-    where look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
+    where look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> gm st"
     unfolding table_covers_def by blast
   have "checks_sound_at res v s"
-    by (rule ctx_checks_sound_at [OF finite_contexts look gst proved refuted checks])
+    by (rule ctx_checks_sound_at [where gm = gm, OF finite_contexts look gst proved refuted checks])
   with covers [OF mem] show ?thesis ..
 qed
 
@@ -287,7 +285,7 @@ lemma arithmetic_safe:
   shows "arithmetic_safe_at (prog_cfg p) v s"
 proof -
   from covers[OF mem] obtain ctx st where
-    look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> \<lbrakk>st\<rbrakk>"
+    look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> gm st"
     unfolding table_covers_def by blast
   have safe: "\<And>es e divisor. (v, es) \<in> set (arithmetic_expression_sites (prog_cfg p)) \<Longrightarrow>
       e \<in> set es \<Longrightarrow> divisor \<in> expression_divisors e \<Longrightarrow> \<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0"
@@ -316,7 +314,7 @@ lemma result_sound_at:
   assumes checks: "res_checks res = result_checks_of (prog_cfg p) r classify"
     and diagnostics: "res_diagnostics res = arithmetic_diagnostics (prog_cfg p) r classify"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
+  shows "table_covers gm r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
   using sound_at[OF checks mem] arithmetic_safe[OF _ mem]
   unfolding diagnostics_sound_at_def diagnostics by blast
 
@@ -338,7 +336,7 @@ theorem source_sound:
                      = result_checks_of (prog_cfg p) r classify"
   shows "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-               \<and> table_covers r v s \<and> checks_sound_at res v s"
+               \<and> table_covers gm r v s \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
   from source_reaches_ltr_collect [OF wf s0 run]
@@ -382,101 +380,61 @@ qed
 end
 
 text \<open>
-  The two shapes a published soundness result arrives in. A contextual route
-  bounds each activation bucket by its own entry and exhausts the point with the
-  buckets; a unit route bounds the point by its one entry directly.
+  The shape every registration publishes its soundness in: each activation bucket
+  is bounded by the entry filed under its context, and the buckets exhaust the point.
 \<close>
 
 lemma sound_table_of_activation:
-  fixes r :: "('c, 'a::numeric_domain abs_state) analysis_result"
+  fixes r :: "('c, 'v) analysis_result"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
                     \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
                                 cinit_stores (declared_global p)\<^esub> u c)"
       and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
                               cinit_stores (declared_global p)\<^esub> u ctx
-                    \<subseteq> gamma_point (lookup_context r u ctx)"
+                    \<subseteq> gamma_lift gm (lookup_context r u ctx)"
       and fin: "finite_analysis_result r"
-      and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
-      and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
-                        \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
-  shows "sound_table p r classify"
+      and proved: "\<And>e d t. classify e d = Check_Proved \<Longrightarrow> t \<in> gm d \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
+      and refuted: "\<And>e d t. classify e d = Check_Refuted \<Longrightarrow> t \<in> gm d
+                        \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
+  shows "sound_table p r classify gm"
 proof (rule sound_table.intro)
   show "finite (contexts_at r v)" for v by (rule finite_contexts_at [OF fin])
-  show "table_covers r v s"
+  show "table_covers gm r v s"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     for v s
     by (meson lookup_context_covers_of_activation [OF union sound that] table_coversI)
 qed (fact proved, fact refuted)
 
-lemma sound_table_of_unit:
-  fixes r :: "(unit, 'a::numeric_domain abs_state) analysis_result"
-  assumes node: "\<And>v. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-                    \<subseteq> gamma_point (lookup_context r v ())"
-      and proved: "\<And>c d t. classify c d = Check_Proved \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
-      and refuted: "\<And>c d t. classify c d = Check_Refuted \<Longrightarrow> t \<in> \<lbrakk>d\<rbrakk>
-                        \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e t)"
-  shows "sound_table p r classify"
-proof (rule sound_table.intro)
-  show "finite (contexts_at r v)" for v by simp
-  show "table_covers r v s"
-    if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-    for v s
-  proof (cases "lookup_context r v ()")
-    case Bot
-    from subsetD [OF node [of v] that] Bot show ?thesis by simp
-  next
-    case (Lifted st)
-    from subsetD [OF node [of v] that] Lifted have "s \<in> \<lbrakk>st\<rbrakk>" by simp
-    then show ?thesis by (rule table_coversI [OF Lifted])
-  qed
-qed (fact proved, fact refuted)
-
-subsection \<open>The context-free configurations\<close>
+subsection \<open>The context-free configuration\<close>
 
 text \<open>
-  Each domain's registration at any global update rule is a
-  \<^verbatim>\<open>global_interpretation\<close> of \<open>unit_dg_analysis\<close>, whose
-  \<open>result_node_sound_of_terminates\<close> bounds a point once the program is well-formed and
-  the solve terminated, so each table below asks for those two facts and nothing else.
+  The unit registration keys every activation at the one context \<open>()\<close>, a
+  function of the call site and the caller's context, so the buckets exhaust a point
+  outright and each is bounded by its entry.
 \<close>
 
-lemma sign_rule_table:
-  assumes "wf_program_compile_input p" and "sign_rule.terminates r (declared_global p) p"
-  shows "sound_table p (sign_rule.result r (declared_global p) p) sign_classify_check"
-  by (rule sound_table_of_unit [OF _ sign_classify_check_proved sign_classify_check_refuted])
-     (auto dest: sign_rule.result_node_sound_of_terminates [OF assms, THEN subsetD]
-        simp: sign_rule.state_at_unfold)
-
-lemma interval_rule_table:
-  assumes "wf_program_compile_input p" and "interval_rule.terminates r (declared_global p) p"
-  shows "sound_table p (interval_rule.result r (declared_global p) p) interval_classify_check"
-  by (rule sound_table_of_unit
-        [OF _ interval_classify_check_proved interval_classify_check_refuted])
-     (auto dest: interval_rule.result_node_sound_of_terminates [OF assms, THEN subsetD]
-        simp: interval_rule.state_at_unfold)
-
-lemma int_rule_table:
-  assumes "wf_program_compile_input p" and "int_rule.terminates r (declared_global p) p"
-  shows "sound_table p (int_rule.result r (declared_global p) p) int_classify_check"
-  by (rule sound_table_of_unit [OF _ int_classify_check_proved int_classify_check_refuted])
-     (auto dest: int_rule.result_node_sound_of_terminates [OF assms, THEN subsetD]
-        simp: int_rule.state_at_unfold)
-
-lemma parity_rule_table:
-  assumes "wf_program_compile_input p" and "parity_rule.terminates r (declared_global p) p"
-  shows "sound_table p (parity_rule.result r (declared_global p) p) parity_classify_check"
-  by (rule sound_table_of_unit [OF _ parity_classify_check_proved parity_classify_check_refuted])
-     (auto dest: parity_rule.result_node_sound_of_terminates [OF assms, THEN subsetD]
-        simp: parity_rule.state_at_unfold)
-
-lemma congruence_rule_table:
-  assumes "wf_program_compile_input p" and "congruence_rule.terminates r (declared_global p) p"
-  shows "sound_table p (congruence_rule.result r (declared_global p) p)
-           congruence_classify_check"
-  by (rule sound_table_of_unit
-        [OF _ congruence_classify_check_proved congruence_classify_check_refuted])
-     (auto dest: congruence_rule.result_node_sound_of_terminates [OF assms, THEN subsetD]
-        simp: congruence_rule.state_at_unfold)
+lemma mcp_rule_table:
+  assumes wf: "wf_program_compile_input p"
+    and cov: "mcp_rule.terminates as r (declared_global p) p"
+  shows "sound_table p (mcp_rule.result as r (declared_global p) p)
+           (mcp_classify (activation as)) (mcp_gamma_v (activation as))"
+proof (rule sound_table_of_activation
+    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()",
+     OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
+  case (1 u)
+  show ?case
+    by (rule equalityD1 [OF mcp_rule.fun_route_ltr_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
+next
+  case (2 u ctx)
+  show ?case
+    using mcp_rule.fun_route_activation_collect_sound_of_terminates [OF _ wf cov]
+    unfolding mcp_rule.gamma_reader_eq_lookup by (simp add: route_unit_def)
+next
+  case 3
+  show ?case
+    using mcp_rule.vars_finite_of_terminates [OF cov]
+    by (simp add: finite_analysis_result_def routed_dg_pipeline.result_def
+        routed_dg_pipeline.sol_vars_def)
+qed
 
 end
-
