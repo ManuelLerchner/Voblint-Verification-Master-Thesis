@@ -331,7 +331,8 @@ text \<open>
 
 lemma certificate_demo_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Join
-     (routed_dg_pipeline.equations (mcp_comp (activation [Int_Analysis])) mcp_init
+     (routed_dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
+        (mcp_init (activation [Int_Analysis]))
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
         (declared_global certificate_demo_prog) certificate_demo_prog)
      (routed_dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"

@@ -362,20 +362,32 @@ lemma mcp_classify_refuted:
    \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
   unfolding mcp_classify_def by (erule answer_check_refuted) (rule mcp_answer_sound)
 
-definition mcp_init :: mcp_st where
-  "mcp_init =
-     Product (Lifted cinit_sign_st) (Product (Lifted cinit_ivl_st)
-       (Product (Lifted cinit_int_dom_st)
-         (Product (Lifted cinit_parity_st) (Lifted cinit_congruence_st))))"
+text \<open>
+  The entry state starts every active field at its analysis's own entry state and
+  every other field unreachable. A field no active analysis runs is never read, and
+  keeping it at \<^const>\<open>Bot\<close> makes the solver's joins, widenings and comparisons on
+  it constant-time.
+\<close>
+
+definition mcp_init :: "analysis_domain list \<Rightarrow> mcp_st" where
+  "mcp_init as =
+     Product (if Sign_Analysis \<in> set as then Lifted cinit_sign_st else Bot)
+       (Product (if Interval_Analysis \<in> set as then Lifted cinit_ivl_st else Bot)
+         (Product (if Int_Analysis \<in> set as then Lifted cinit_int_dom_st else Bot)
+           (Product (if Parity_Analysis \<in> set as then Lifted cinit_parity_st else Bot)
+             (if Congruence_Analysis \<in> set as then Lifted cinit_congruence_st else Bot))))"
 
 lemma mcp_init_sound:
-  "cinit_stores (declared_global p) \<subseteq> mcp_gamma_v as (mcp_rd (declared_global p) mcp_init)"
+  "cinit_stores (declared_global p)
+     \<subseteq> mcp_gamma_v as (mcp_rd (declared_global p) (mcp_init as))"
 proof -
-  have "cinit_stores (declared_global p) \<subseteq> val_gamma a (mcp_rd (declared_global p) mcp_init)"
-    for a
-    using sign_rule.init_sound interval_rule.init_sound int_rule.init_sound
-      parity_rule.init_sound congruence_rule.init_sound
-    by (cases a) (simp_all add: mcp_init_def mcp_rd_def)
+  have "cinit_stores (declared_global p)
+          \<subseteq> val_gamma a (mcp_rd (declared_global p) (mcp_init as))"
+    if "a \<in> set as" for a
+    by (cases a)
+       (use that sign_rule.init_sound interval_rule.init_sound int_rule.init_sound
+          parity_rule.init_sound congruence_rule.init_sound
+        in \<open>simp_all add: mcp_init_def mcp_rd_def\<close>)
   then show ?thesis by (auto simp: mcp_gamma_v_def)
 qed
 
@@ -411,8 +423,8 @@ text \<open>
 lemma mcp_routed_dg_analysis:
   fixes gk0 :: 'k
   assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
-  shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd mcp_init
-    gk0 seed (TD_side_rule_Interp_solve r)
+  shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
+    (mcp_init (activation as)) gk0 seed (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)"
@@ -455,7 +467,7 @@ qed
 subsection \<open>At the unit context\<close>
 
 global_interpretation mcp_rule: routed_dg_analysis
-    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
@@ -499,7 +511,7 @@ definition mcp_root_ctx :: mcp_ctx where
   "mcp_root_ctx = Product [] (Product [] (Product [] (Product [] [])))"
 
 global_interpretation mcp_es_rule: routed_dg_analysis
-    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, mcp_ctx) routed_gk)
@@ -512,7 +524,7 @@ global_interpretation mcp_es_rule: routed_dg_analysis
 subsection \<open>At the call-string context\<close>
 
 global_interpretation mcp_cs_rule: routed_dg_analysis
-    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
