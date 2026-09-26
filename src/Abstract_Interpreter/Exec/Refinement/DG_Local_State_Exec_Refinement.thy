@@ -3,6 +3,7 @@ theory DG_Local_State_Exec_Refinement
     DG_Local_State_Exec
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_Framework.DG_Reader_Transport"
+    "Voblint_Framework.MCP_Spec"
 begin
 
 section \<open>Reading an executable D/G run back as the mathematical one\<close>
@@ -408,4 +409,66 @@ lemma entry_exec_route_gen_commute:
   by (simp add: formals_route_lifted_gen_def entry_exec_route_gen_def entry_exec_route_commute)
 
 end
+
+section \<open>The executable analysis as one component\<close>
+
+text \<open>
+  An executable analysis is the component its local specification is: the
+  specification's own operations through the identity lens. Its specification
+  as a component is exactly \<^const>\<open>local_state_dg_spec_st_for_lifted\<close>, so a
+  pipeline that runs components generates the same equations for it as before.
+\<close>
+
+definition exec_component ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> 'a exec_dg_st lifted mcp_component" where
+  "exec_component \<G> empty_pred tf_st enter_st = local_component
+     (\<lambda>_ _. []) (\<lambda>_ _. \<top>)
+     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
+     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
+     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
+     (\<lambda>_ b pol. transfer_lift empty_pred
+        (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
+     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
+     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
+     (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
+     (\<lambda>_ ev. transfer_lift empty_pred
+        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
+     (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
+        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
+     (\<lambda>ci dcM de. transfer_lift2 empty_pred
+        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+        dcM de)"
+
+lemma component_spec_exec_component [code_unfold]:
+  "component_spec (exec_component \<G> empty_pred tf_st enter_st)
+   = local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st"
+  unfolding exec_component_def component_spec_local_component
+  by (simp add: local_state_dg_spec_st_for_lifted_def)
+
+lemma mc_en_exec_component [simp]:
+  "mc_en (exec_component \<G> empty_pred tf_st enter_st) ci (d, d)
+   = [(d, transfer_lift empty_pred (enter_st ci) d)]"
+  by (simp add: exec_component_def lens_component_def)
+
+lemma mc_step_exec_component [simp]:
+  "mc_step (exec_component \<G> empty_pred tf_st enter_st) A a d
+   = transfer_lift empty_pred (tf_st a) d"
+  by (simp add: exec_component_def lens_component_def local_spec_step_transfer_lift_tf_st)
+
+context routed_dg_domain_exec
+begin
+
+theorem exec_component_sound:
+  assumes "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+  shows "mcp_component_sound \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)
+           (exec_component \<G> empty_pred tf_st enter_st)"
+  unfolding exec_component_def
+  by (rule local_component_sound[OF sound_local_spec_st[OF assms]])
+
+end
+
 end
