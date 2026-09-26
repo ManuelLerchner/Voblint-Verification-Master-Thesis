@@ -746,7 +746,7 @@
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">Five domains, five kinds of description</h3>
+      <h3 class="setting-title">Five numeric domains, five kinds of description</h3>
       <div class="domain-grid">
         <article class="domain-card">
           <svg viewBox="0 0 200 124" role="img"
@@ -4402,7 +4402,7 @@ fun main() {
           <span data-stat="isabelle.lines">—</span> in <code>src/</code>, with
           <code>pstep</code>'s <span data-stat="semantics.pstep_rules">—</span> rules among
           them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
-          the equation generator, the solver, the five domains and the result table, the kernel
+          the equation generator, the solver, the six analyses and the result table, the kernel
           has already checked against them. Review is bounded by the size of the semantics, not by
           the size of the analyzer.
         </p>
@@ -5660,15 +5660,21 @@ qed</code></pre>
 
       <div class="prose-block">
         <p>
-          One row above understates itself. Every shipped domain keeps a pointwise state, one
+          One row above understates itself. Five of the six analyses keep a pointwise state, one
           abstract value per variable, so it is fair to ask whether the framework only works for
-          that shape. It does not, and there is a witness:
+          that shape. The sixth, the order analysis, answers that it does not. Its carrier is a
+          set of known pairs <code>x &#8804; y</code>, with no <code>vname &#8658; 'a</code>
+          anywhere in it.
           <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Domain.html"><code>Rel_Order_Domain</code></a>
-          carries a set of known pairs <code>x &#8804; y</code> instead &#8212; no
-          <code>vname &#8658; 'a</code> anywhere in the carrier &#8212; and interprets
+          interprets
           <a href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale"><code>analysis_contract</code></a>
-          with no change to the framework. It is a deliberately useless analysis, precise only on
-          a guard and forgetful everywhere else. Its job is to be relational and still fit.
+          with it and no change to the framework, and
+          <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html"><code>Rel_Order_Local</code></a>
+          runs the same carrier inside the combined state next to the other analyses. There it
+          answers comparisons from the pairs it records and, at an assignment, asks the others how
+          the new value compares with each variable. It stays small on purpose: no transitive
+          closure, and calls enter and return with no facts. Run with Interval, it proves checks
+          neither analysis proves alone.
         </p>
       </div>
     </section>

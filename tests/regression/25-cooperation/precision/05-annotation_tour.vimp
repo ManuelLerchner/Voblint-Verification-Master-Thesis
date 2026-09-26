@@ -1,4 +1,5 @@
 // PARAM: --analysis interval,order --context entry-state
+// EXPECT-ARITHMETIC
 // A tour of what the analyzer shows inline, with Interval and the order analysis
 // run together and every callee keyed by its entry state.
 //
@@ -14,7 +15,8 @@
 //   w == y  the order analysis alone, from the pairs it learned at w = x;
 //   i == 3  Interval alone, by widening the loop and narrowing it back;
 //   n == 7  Interval refutes it: the context entered with (3, 7) returns 3;
-// and Interval proves the last branch unreachable.
+// Interval proves the last branch unreachable, and it warns at 100 / x because
+// nothing bounds x away from 0.
 fun smaller(a, b) {
   if (a <= b) {
     lo = a;
@@ -27,6 +29,7 @@ fun smaller(a, b) {
 fun main() {
   x = __voblint_nondet_int();
   y = __voblint_nondet_int();
+  q = 100 / x; // ARITH: WARN division-by-zero
   n = smaller(3, 7);
   smaller(9, 4);
   if (x <= y) {
