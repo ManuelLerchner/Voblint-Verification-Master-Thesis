@@ -586,8 +586,9 @@ section \<open>Normalizing what a component produces\<close>
 
 text \<open>
   A normalization \<open>k\<close> that keeps a state's concretization may be applied to
-  everything a component produces: each step, both halves of each entry, and
-  the return after its second stage. The first stage of a return is left
+  what a component produces: each step, the entered half of each entry, and
+  the return after its second stage. The caller half of an entry is the
+  caller's state and stays as it is. The first stage of a return is left
   alone, because the component's soundness speaks only about the composite.
   The combined state of several analyses uses this to become unreachable as
   soon as one active analysis is, as Goblint's \<open>MCP\<close> raises \<open>Deadcode\<close>.
@@ -596,7 +597,7 @@ text \<open>
 definition map_component :: "('s \<Rightarrow> 's) \<Rightarrow> 's mcp_component \<Rightarrow> 's mcp_component" where
   "map_component k c = c\<lparr>
      mc_step := (\<lambda>A a x. k (mc_step c A a x)),
-     mc_en := (\<lambda>ci p. map (\<lambda>(q, e). (k q, k e)) (mc_en c ci p)),
+     mc_en := (\<lambda>ci p. map (\<lambda>(q, e). (q, k e)) (mc_en c ci p)),
      mc_comb_assign := (\<lambda>ci x de. k (mc_comb_assign c ci x de)) \<rparr>"
 
 theorem map_component_sound:
@@ -613,11 +614,76 @@ proof -
         "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
       using sound s_in unfolding mcp_component_sound_def by metis
     then show ?thesis
-      by (intro bexI[of _ "(k (fst q), k (snd q))"]) (auto simp: map_component_def keep)
+      by (intro bexI[of _ "(fst q, k (snd q))"]) (auto simp: map_component_def keep)
   qed
   show ?thesis
     using sound enter unfolding mcp_component_sound_def
     by (simp add: map_component_def keep)
+qed
+
+section \<open>Components whose entry answers once\<close>
+
+text \<open>
+  An entry that answers a single alternative, paired with the caller's own
+  state, is what the routed pipeline consumes. Lenses, combination and
+  normalization keep that shape.
+\<close>
+
+definition single_entry :: "'s mcp_component \<Rightarrow> bool" where
+  "single_entry c \<longleftrightarrow> (\<forall>ci p. \<exists>e. mc_en c ci p = [(fst p, e)])"
+
+lemma single_entryD:
+  "single_entry c \<Longrightarrow> mc_en c ci p = [(fst p, snd (hd (mc_en c ci p)))]"
+  unfolding single_entry_def by (metis list.sel(1) snd_conv)
+
+lemma single_entry_lens_of:
+  assumes single: "single_entry c" and put_get: "\<And>x. put x (get x) = x"
+  shows "single_entry (lens_of get put c)"
+  unfolding single_entry_def
+proof (intro allI)
+  fix ci p
+  obtain e where "mc_en c ci (get (fst p), get (snd p)) = [(get (fst p), e)]"
+    using single unfolding single_entry_def by (metis fst_conv)
+  then show "\<exists>e. mc_en (lens_of get put c) ci p = [(fst p, e)]"
+    by (simp add: lens_of_def put_get)
+qed
+
+lemma single_entry_map_component:
+  assumes "single_entry c"
+  shows "single_entry (map_component k c)"
+  unfolding single_entry_def
+proof (intro allI)
+  fix ci p
+  obtain e where "mc_en c ci p = [(fst p, e)]"
+    using assms unfolding single_entry_def by blast
+  then show "\<exists>e. mc_en (map_component k c) ci p = [(fst p, e)]"
+    by (simp add: map_component_def)
+qed
+
+lemma single_entry_mcp_en_fold:
+  assumes "\<forall>c \<in> set cs. single_entry c"
+  shows "\<exists>e. fold (\<lambda>c ps. concat (map (mc_en c ci) ps)) cs [(d, e0)] = [(d, e)]"
+  using assms
+proof (induction cs arbitrary: e0)
+  case (Cons c cs)
+  obtain e1 where "mc_en c ci (d, e0) = [(d, e1)]"
+    using Cons.prems unfolding single_entry_def by (metis fst_conv list.set_intros(1))
+  then show ?case using Cons.IH[of e1] Cons.prems by simp
+qed simp
+
+lemma single_entry_mcp_combine:
+  assumes single: "\<forall>c \<in> set cs. single_entry c" and ne: "cs \<noteq> []"
+  shows "single_entry (mcp_combine cs)"
+proof (cases "\<exists>c. cs = [c]")
+  case True
+  then show ?thesis using single by auto
+next
+  case False
+  then have "mc_en (mcp_combine cs) = mcp_en_from cs"
+    using ne by (cases cs rule: mcp_combine.cases) auto
+  then show ?thesis
+    unfolding single_entry_def mcp_en_from_def
+    using single_entry_mcp_en_fold[OF single] by (metis prod.collapse)
 qed
 
 section \<open>One field of a reachability-lifted record\<close>
@@ -664,4 +730,17 @@ lemma lift_get_put_other:
   assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = Bot"
   shows "lift_get f2 (lift_put u1 x v) = lift_get f2 x"
   using assms by (cases x; cases v) (simp_all add: lift_put_def)
+
+text \<open>
+  Components that each own a distinct field are independent: a list of
+  distinct analyses, each run on its own field, satisfies
+  \<^const>\<open>mcp_independent\<close> as soon as every one leaves every other field alone.
+\<close>
+
+lemma mcp_independent_map:
+  assumes "distinct as"
+    and "\<And>a b. a \<in> set as \<Longrightarrow> b \<in> set as \<Longrightarrow> a \<noteq> b \<Longrightarrow> mcp_frame (c a) (g b)"
+  shows "mcp_independent (map (\<lambda>a. (g a, c a)) as)"
+  using assms by (induction as) auto
+
 end
