@@ -1,5 +1,5 @@
 theory Contextual_Check_Report
-  imports Check_Report Analysis_Result
+  imports Check_Report Analysis_Result Analysis_Query
 begin
 
 section \<open>Contextual check verdicts over a solved result table\<close>
@@ -71,6 +71,55 @@ fun classify_point ::
 where
   "classify_point classify c Bot = Dead"
 | "classify_point classify c (Lifted st) = Decided (classify c st)"
+
+subsection \<open>Classifying by query\<close>
+
+text \<open>
+  A check \<open>c\<close> is decided by one question, \<open>EvalInt (c != 0)\<close>, which every
+  analysis in a product answers and whose combined answer is the meet. An
+  exact \<open>1\<close> proves the check and an exact \<open>0\<close> refutes it. \<open>QBot\<close> holds at no
+  store, so a sound combined answer is \<open>QBot\<close> only where the state represents
+  no store: the point is dead. Anything else decides nothing.
+\<close>
+
+abbreviation check_query_of :: "exp \<Rightarrow> query" where
+  "check_query_of c \<equiv> EvalInt (NotEq c (N 0))"
+
+fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
+  "classify_answer QBot = Dead"
+| "classify_answer a =
+     (if answer_const a = Some 1 then Decided Check_Proved
+      else if answer_const a = Some 0 then Decided Check_Refuted
+      else Decided Check_Unknown)"
+
+lemma classify_answer_proved:
+  assumes "classify_answer a = Decided Check_Proved"
+    and "eval_holds (check_query_of c) a s"
+  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+proof -
+  have "answer_const a = Some 1"
+    using assms(1) by (cases a rule: classify_answer.cases)
+      (auto split: option.splits if_splits simp del: answer_const.simps)
+  from eval_holds_constD[OF assms(2) this] show ?thesis
+    by (simp split: if_splits)
+qed
+
+lemma classify_answer_refuted:
+  assumes "classify_answer a = Decided Check_Refuted"
+    and "eval_holds (check_query_of c) a s"
+  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+proof -
+  have "answer_const a = Some 0"
+    using assms(1) by (cases a rule: classify_answer.cases)
+      (auto split: option.splits if_splits simp del: answer_const.simps)
+  from eval_holds_constD[OF assms(2) this] show ?thesis
+    by (simp split: if_splits)
+qed
+
+lemma classify_answer_dead:
+  assumes "classify_answer a = Dead"
+  shows "\<not> eval_holds (EvalInt e) a s"
+  using assms by (cases a) (auto split: if_splits)
 
 subsection \<open>Aggregating the contexts observed at one check\<close>
 
