@@ -81,6 +81,9 @@ subsection \<open>Concretization\<close>
 fun gamma_ivl :: "ivl => int set" where
     "gamma_ivl (Ivl l u) = {n. l \<le> Fin n \<and> Fin n \<le> u}"
 
+definition ivl_of_int :: "int \<Rightarrow> ivl" where
+  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
+
 lemma gamma_ivl_bot: "gamma_ivl bot = {}"
   unfolding bot_ivl_def by auto
 

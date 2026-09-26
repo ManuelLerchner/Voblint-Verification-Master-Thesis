@@ -1,5 +1,5 @@
 theory Int_Domain
-  imports "Voblint_Analysis_Sign.Sign_Lattice" "Voblint_Analysis_Interval.Interval_Lattice"
+  imports "Voblint_Analysis_Sign.Sign_Lattice" "Voblint_Domain.Interval_Lattice"
     "Voblint_Analysis_Parity.Parity_Domain" "Voblint_Analysis_Congruence.Congruence_Lattice"
 begin
 
