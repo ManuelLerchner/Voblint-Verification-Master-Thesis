@@ -259,20 +259,45 @@ proof -
        (simp_all add: sin entered)
 qed
 
-theorem analysis_contract_st:
+text \<open>
+  The executable carrier as a local-only specification, read back through
+  \<open>reader\<close>. Stated on its own so that constructions over local specifications,
+  such as a product of cooperating analyses, can take the executable carrier as
+  a component; the contract below is its one-line consequence.
+\<close>
+
+theorem sound_local_spec_st:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
-  shows "analysis_contract spec_st gamma_exec \<G>"
+  shows "sound_local_dg_spec
+     (\<lambda>_ _. \<top>)
+     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
+     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
+     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
+     (\<lambda>_ b pol. transfer_lift empty_pred
+        (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
+     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
+     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
+     (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
+     (\<lambda>_ ev. transfer_lift empty_pred
+        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
+     (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
+        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
+     (\<lambda>ci dcM de. transfer_lift2 empty_pred
+        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+        dcM de)
+     (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) \<G>"
 proof -
-  have geq: "gamma_exec = (\<lambda>d g. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)"
-    by (simp add: fun_eq_iff gamma_exec_def)
   show ?thesis
-    unfolding local_state_dg_spec_st_for_lifted_def geq
-  proof (rule sound_local_dg_spec.local_spec_contract, unfold_locales, goal_cases)
+  proof (unfold_locales, goal_cases)
     case 1
     then show ?case
       by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
   next
-    case (2 a d)
+    case 5
+    show ?case by simp
+  next
+    case (2 a d A)
     have step: "edge_collect a (\<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)
                   \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     proof (cases "normalized_lift empty_pred d")
@@ -295,7 +320,8 @@ proof -
         by (simp)
     qed
     then show ?case
-      by (simp add: local_spec_step_transfer_lift_tf_st)
+      using edge_collect_mono[OF Int_lower1]
+      by (fastforce simp: local_spec_step_transfer_lift_tf_st)
   next
     case (3 s d ci)
     have entered: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
@@ -330,6 +356,17 @@ proof -
       show "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" by (rule 4(2))
     qed
   qed
+qed
+
+theorem analysis_contract_st:
+  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+  shows "analysis_contract spec_st gamma_exec \<G>"
+proof -
+  have geq: "gamma_exec = (\<lambda>d g. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)"
+    by (simp add: fun_eq_iff gamma_exec_def)
+  show ?thesis
+    unfolding local_state_dg_spec_st_for_lifted_def geq
+    by (rule sound_local_dg_spec.local_spec_contract[OF sound_local_spec_st[OF tf_sound]])
 qed
 
 subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>

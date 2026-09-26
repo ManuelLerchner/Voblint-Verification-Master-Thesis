@@ -144,9 +144,6 @@ qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
-definition ivl_of_int :: "int \<Rightarrow> ivl" where
-  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
-
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
     "aval_ivl (N n)        \<sigma> = ivl_of_int n"
   | "aval_ivl (V x)        \<sigma> = \<sigma> x"

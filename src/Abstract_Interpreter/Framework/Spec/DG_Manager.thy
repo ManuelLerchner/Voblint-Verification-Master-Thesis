@@ -1,20 +1,26 @@
 theory DG_Manager
-  imports DG_State "Voblint_Solver.Strategy_Tree_Program"
+  imports DG_State "Voblint_Solver.Strategy_Tree_Program" Analysis_Query
 begin
 
 section \<open>A manager capability interface for the D/G packed carrier\<close>
 
 text \<open>
-  \<open>man\<close> is the local/global capability fragment of Goblint's own manager
-  record, and only that fragment: \<open>man_local\<close> is the current local value, and
-  \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a transfer runs to read or
-  publish shared state, without naming which solver key that state lives at.
-  Goblint's manager carries more -- a query channel, an event emitter, the
-  current node and edge, spawn and split -- and none of that is modelled here,
-  because no transfer in this development asks for it. Every \<open>Spec\<close> transfer
-  takes a manager, including ones whose global component is trivial --
-  Goblint's default \<open>Spec\<close> sets \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its
-  transfers still take the manager and mostly return \<open>man.local\<close>.
+  \<open>man\<close> is a capability fragment of Goblint's own manager record: \<open>man_local\<close>
+  is the current local value, \<open>man_global\<close>/\<open>man_sideg\<close> are \<^emph>\<open>capabilities\<close> a
+  transfer runs to read or publish shared state, without naming which solver
+  key that state lives at, and \<open>man_ask\<close> is the query channel, Goblint's
+  \<open>man.ask\<close>. Goblint's manager carries more -- an event emitter, the current
+  node and edge, spawn and split -- and none of that is modelled here, because
+  no transfer in this development asks for it. Every \<open>Spec\<close> transfer takes a
+  manager, including ones whose global component is trivial -- Goblint's
+  default \<open>Spec\<close> sets \<open>G = Lattice.Unit\<close>, \<open>V = EmptyV\<close>, and its transfers still
+  take the manager and mostly return \<open>man.local\<close>.
+
+  \<open>man_ask\<close> answers a query about the stores the transfer's predecessor state
+  describes. Like \<open>man_global\<close> it is a program, so a query handler may read
+  shared state and the dependency shows up in the compiled equations. A
+  handler may also ask in turn; the specification layer (\<open>DG_Spec\<close>) bounds the
+  recursion and answers \<open>\<top>\<close> on a cycle, as Goblint's \<open>MCP\<close> does.
 
   Five type parameters run through this theory and every one built on it:
 
@@ -53,6 +59,7 @@ record ('x,'k,'v,'dl,'dg) man =
   man_local :: 'dl
   man_global :: "'v \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
   man_sideg :: "'v \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
+  man_ask :: "query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
 
 subsection \<open>Packed-carrier primitives\<close>
 
@@ -170,13 +177,20 @@ text \<open>
   manager (instrumented, differently routed, or backed by distinct global
   unknowns) is a second interpretation of the same fields rather than a change
   to any transfer.
+
+  A built manager answers every query with \<open>\<top>\<close>, the claim that holds of
+  every store. Whoever runs a specification installs a real query channel on
+  top: the equation generator installs the specification's own query
+  (\<open>dg_spec_edge_program\<close>), and a product of specifications installs the
+  meet of its components' answers.
 \<close>
 
 definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
   "mk_dg_man d key = \<lparr>
      man_local = d,
      man_global = (\<lambda>v. dg_read_global (key v)),
-     man_sideg = (\<lambda>v. dg_sideg (key v)) \<rparr>"
+     man_sideg = (\<lambda>v. dg_sideg (key v)),
+     man_ask = (\<lambda>_. sp_return \<top>) \<rparr>"
 
 text \<open>
   What a built manager answers, and the one way it is rebuilt: a second transfer
@@ -198,14 +212,24 @@ lemma mk_dg_man_simps [simp]:
   "man_local (mk_dg_man d key) = d"
   "man_global (mk_dg_man d key) = (\<lambda>v. dg_read_global (key v))"
   "man_sideg (mk_dg_man d key) = (\<lambda>v. dg_sideg (key v))"
+  "man_ask (mk_dg_man d key) = (\<lambda>_. sp_return \<top>)"
   by (simp_all add: mk_dg_man_def)
 
 lemma mk_dg_man_local_update [simp]:
   "mk_dg_man d key\<lparr>man_local := e\<rparr> = mk_dg_man e key"
-  by (simp add: mk_dg_man_def)
+  "mk_dg_man d key\<lparr>man_ask := A, man_local := e\<rparr> = mk_dg_man e key\<lparr>man_ask := A\<rparr>"
+  by (simp_all add: mk_dg_man_def)
 
 type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
   "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+
+text \<open>
+  A query handler takes the same manager and answers the set of truth values
+  it admits, Goblint's \<open>Spec.query man q\<close>.
+\<close>
+
+type_synonym ('x,'k,'v,'dl,'dg) man_query =
+  "('x,'k,'v,'dl,'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit

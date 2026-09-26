@@ -13,8 +13,6 @@ session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
   directories
     "generated"
   theories
-    Interval_Bounds
-    Interval_Lattice
     Interval_Warrowing
     Interval_Arithmetic
     Interval_Backward

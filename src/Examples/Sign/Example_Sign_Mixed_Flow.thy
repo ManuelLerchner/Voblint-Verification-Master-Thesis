@@ -46,11 +46,13 @@ next
 qed
 
 lemma dg_spec_wf_mf_spec [intro, simp]: "dg_spec_wf (mf_spec \<G>)"
-proof (unfold dg_spec_wf_def, intro conjI allI)
-  fix a d key
-  show "sp_wf (dg_spec_step (mf_spec \<G>) a (mk_dg_man d key))"
+proof (unfold dg_spec_wf_def, intro conjI allI impI)
+  show "sp_wf (dg_spec_step (mf_spec \<G>) a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))" for a d key A
     unfolding dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def
     by (auto simp: ownership_split_transfer_gen_def local_transfer_def intro!: sp_wf_bind)
+next
+  show "sp_wf (dgs_query (mf_spec \<G>) ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)" for d key A q
+    by (simp add: ownership_split_dg_spec_st_for_def)
 next
   fix ci d key
   show "sp_wf (enter\<^sup># (mf_spec \<G>) ci (mk_dg_man d key))"

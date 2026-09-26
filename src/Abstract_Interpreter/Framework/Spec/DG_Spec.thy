@@ -66,6 +66,14 @@ record ('x,'k,'v,'dl,'dg) dg_spec =
   dgs_event      :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("event\<^sup>#")
   dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_env\<^sup>#")
   dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_assign\<^sup>#")
+  dgs_query      :: "('x,'k,'v,'dl,'dg) man_query"
+
+text \<open>
+  \<open>dgs_query\<close> is Goblint's \<open>Spec.query\<close>: it answers a query from the manager
+  it is given, and may read globals or ask further queries through it. What an
+  answer claims is fixed by \<^const>\<open>eval_holds\<close>; answering \<open>\<top>\<close> claims
+  nothing.
+\<close>
 
 text \<open>
   Every field carries the Goblint \<open>Spec\<close> method name it answers to, marked
@@ -154,11 +162,57 @@ definition transfer_program ::
 where
   "transfer_program T src key = sp_map (\<lambda>d. DG d bot) (transfer_program_at T src key)"
 
+text \<open>
+  Before the specification's edge transfer runs, its query channel is set to
+  the specification's own answers about the state the edge starts from, as
+  Goblint's \<open>MCP\<close> builds \<open>outer_man\<close> around the predecessor. Every transfer on
+  the edge sees the same channel, and nothing it computes changes it.
+
+  A handler may ask in turn, through a manager whose channel is the same
+  construction one level down. As in Goblint's \<open>MCP.query'\<close>, a query already
+  being asked answers \<open>\<top>\<close> instead of recursing, the result lattice's top on
+  a cycle. The depth bound has no counterpart in Goblint: queries range over
+  an infinite type, so cycle detection alone does not make the recursion
+  total. Exhausting it aborts the generated program, so a bound that is too
+  small shows up as a failed run and never as a silent loss of precision.
+  Logically \<^const>\<open>Code.abort\<close> is its fallback, here \<open>\<top>\<close>, which holds of
+  every store, so the bound plays no part in soundness.
+
+  The channel depends on the specification only through its handler, so a
+  specification derived by overriding other fields keeps the same channel.
+\<close>
+
+definition query_depth :: nat where
+  "query_depth = 1024"
+
+fun ask_with ::
+  "('x,'k,'v,'dl,'dg) man_query \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> ('x,'k,'v,'dl,'dg) man
+   \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
+where
+  "ask_with Q 0 asked m q =
+     Code.abort (STR ''query recursion exceeded query_depth'') (\<lambda>_. sp_return \<top>)"
+| "ask_with Q (Suc n) asked m q =
+     (if q \<in> asked then sp_return \<top>
+      else Q (m\<lparr>man_ask := ask_with Q n (insert q asked) m\<rparr>) q)"
+
+definition outer_man ::
+  "('x,'k,'v,'dl,'dg) man_query \<Rightarrow> ('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,'v,'dl,'dg) man"
+where
+  "outer_man Q m = m\<lparr>man_ask := ask_with Q query_depth {} m\<rparr>"
+
+lemma outer_man_simps [simp]:
+  "man_local (outer_man Q m) = man_local m"
+  "man_global (outer_man Q m) = man_global m"
+  "man_sideg (outer_man Q m) = man_sideg m"
+  "man_ask (outer_man Q m) = ask_with Q query_depth {} m"
+  by (simp_all add: outer_man_def)
+
 definition dg_spec_edge_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "dg_spec_edge_program S a src key = transfer_program (dg_spec_step S a) src key"
+  "dg_spec_edge_program S a src key =
+     transfer_program (\<lambda>m. dg_spec_step S a (outer_man (dgs_query S) m)) src key"
 
 text \<open>
   What compilation costs an observation: exactly the source read, and then the
@@ -198,25 +252,50 @@ text \<open>
   contribution publishes is only well posed for a transfer that runs its
   continuation once.
 
-  \<open>dg_spec_wf\<close> asks it of the three ways a specification is run --- an edge
-  step, the entry alternatives, and the two-stage combine --- and only at the
-  managers that actually occur, the ones \<^const>\<open>mk_dg_man\<close> builds. That
-  restriction is not a weakening: a transfer never meets any other manager,
-  and an arbitrary one has opaque capability fields about which nothing could
-  be said. A specification written with the manager's own primitives satisfies
-  all three by \<open>simp\<close>, since every primitive and every combinator carries a
-  closure lemma.
+  \<open>dg_spec_wf\<close> asks it of the four ways a specification is run --- an edge
+  step, a query, the entry alternatives, and the two-stage combine --- and only
+  at the managers that actually occur, the ones \<^const>\<open>mk_dg_man\<close> builds. An
+  edge step and a query handler run under a query channel installed around that
+  manager, so they are asked for every channel that is itself well formed; a
+  wrapper that reruns a step at a rebuilt manager needs exactly that
+  generality. That restriction is not a
+  weakening: a transfer never meets any other manager, and an arbitrary one has
+  opaque capability fields about which nothing could be said. A specification
+  written with the manager's own primitives satisfies all four by \<open>simp\<close>,
+  since every primitive and every combinator carries a closure lemma.
 \<close>
 
 definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" where
   "dg_spec_wf S \<longleftrightarrow>
-     (\<forall>a d key. sp_wf (dg_spec_step S a (mk_dg_man d key)))
+     (\<forall>a d key A. (\<forall>q. sp_wf (A q))
+          \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>)))
+     \<and> (\<forall>d key A q. (\<forall>q'. sp_wf (A q'))
+          \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q))
      \<and> (\<forall>ci d key. sp_wf (enter\<^sup># S ci (mk_dg_man d key)))
      \<and> (\<forall>ci d key ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d key) ex))"
 
-lemma dg_spec_wf_step:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_step S a (mk_dg_man d key))"
+lemma dg_spec_wf_step_ask:
+  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
+   \<Longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
   by (simp add: dg_spec_wf_def)
+
+lemma dg_spec_wf_query:
+  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
+   \<Longrightarrow> sp_wf (dgs_query S ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+  by (simp add: dg_spec_wf_def)
+
+lemma sp_wf_ask_with:
+  assumes "dg_spec_wf S"
+  shows "sp_wf (ask_with (dgs_query S) n asked (mk_dg_man d key) q)"
+proof (induction n arbitrary: asked q)
+  case (Suc n)
+  then show ?case
+    using assms by (simp add: dg_spec_wf_def)
+qed simp
+
+lemma dg_spec_wf_step:
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_step S a (outer_man (dgs_query S) (mk_dg_man d key)))"
+  unfolding outer_man_def by (intro dg_spec_wf_step_ask sp_wf_ask_with)
 
 lemma dg_spec_wf_enter:
   "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup># S ci (mk_dg_man d key))"
@@ -275,6 +354,91 @@ text \<open>
 
 definition local_transfer :: "('dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" where
   "local_transfer f m = sp_return (f (man_local m))"
+
+lemma local_transfer_outer_man [simp]:
+  "local_transfer f (outer_man Q m) = local_transfer f m"
+  by (simp add: local_transfer_def)
+
+subsection \<open>Local transfers that ask\<close>
+
+text \<open>
+  A local transfer may consult the query channel before it computes. It names
+  its questions up front, as a list depending on the value it starts from, and
+  then runs a pure function of the collected answers. A question it did not
+  name is answered \<open>\<top>\<close>, which claims nothing. Naming the questions first is
+  what keeps the transfer pure: the answers arrive as an ordinary function
+  argument, and a proof about the transfer quantifies over them.
+\<close>
+
+type_synonym answers = "query \<Rightarrow> ivl"
+
+fun ask_all ::
+  "query list \<Rightarrow> ('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answers) strategy_program"
+where
+  "ask_all [] m = sp_return (\<lambda>_. \<top>)"
+| "ask_all (q # qs) m = man_ask m q \<bind> (\<lambda>r. ask_all qs m \<bind> (\<lambda>A. sp_return (A(q := r))))"
+
+definition asking_transfer ::
+  "('dl \<Rightarrow> query list) \<Rightarrow> (answers \<Rightarrow> 'dl \<Rightarrow> 'dl) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
+where
+  "asking_transfer qs f m = ask_all (qs (man_local m)) m \<bind> (\<lambda>A. local_transfer (f A) m)"
+
+lemma asking_transfer_no_queries [simp]:
+  "asking_transfer (\<lambda>_. []) (\<lambda>_. f) = local_transfer f"
+  by (intro ext) (simp add: asking_transfer_def)
+
+lemma sp_wf_ask_all [intro]:
+  "(\<And>q. sp_wf (man_ask m q)) \<Longrightarrow> sp_wf (ask_all qs m)"
+  by (induction qs) (auto intro!: sp_wf_bind)
+
+lemma sp_wf_asking_transfer [intro]:
+  "(\<And>q. sp_wf (man_ask m q)) \<Longrightarrow> sp_wf (asking_transfer qs f m)"
+  unfolding asking_transfer_def local_transfer_def by (auto intro!: sp_wf_bind)
+
+text \<open>
+  The local query handler: answers are a pure function of the local value. A
+  local specification's handler never asks in turn, so the recursive channel
+  the generator installs around it reduces to the handler itself, and what a
+  transfer receives is the handler's answer to each question it named.
+\<close>
+
+definition local_query :: "('dl \<Rightarrow> answers) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_query" where
+  "local_query h m q = sp_return (h (man_local m) q)"
+
+definition local_answers :: "('dl \<Rightarrow> answers) \<Rightarrow> query list \<Rightarrow> 'dl \<Rightarrow> answers" where
+  "local_answers h qs d q = (if q \<in> set qs then h d q else \<top>)"
+
+lemma local_answers_Nil [simp]: "local_answers h [] d = (\<lambda>_. \<top>)"
+  by (simp add: local_answers_def fun_eq_iff)
+
+lemma local_query_update [simp]:
+  "local_query h (m\<lparr>man_ask := A\<rparr>) = local_query h m"
+  by (simp add: local_query_def fun_eq_iff)
+
+lemma ask_with_local_query:
+  "ask_with (local_query h) n asked m q
+     = sp_return (if n = 0 \<or> q \<in> asked then \<top> else h (man_local m) q)"
+  by (cases n) (simp_all add: local_query_def)
+
+lemma outer_man_local_query [simp]:
+  "outer_man (local_query h) m = m\<lparr>man_ask := local_query h m\<rparr>"
+  unfolding outer_man_def
+  by (simp add: ask_with_local_query query_depth_def local_query_def fun_eq_iff)
+
+lemma ask_all_local_query:
+  "man_ask m = local_query h m
+   \<Longrightarrow> ask_all qs m = sp_return (local_answers h qs (man_local m))"
+proof (induction qs)
+  case (Cons q qs)
+  then show ?case
+    by (simp add: local_query_def)
+       (rule arg_cong[where f = sp_return], auto simp: local_answers_def fun_eq_iff)
+qed (simp add: local_answers_def fun_eq_iff)
+
+lemma asking_transfer_local_query [simp]:
+  "asking_transfer qs f (m\<lparr>man_ask := local_query h m\<rparr>)
+     = local_transfer (\<lambda>d. f (local_answers h (qs d) d) d) m"
+  by (simp add: asking_transfer_def ask_all_local_query local_transfer_def)
 
 text \<open>
   The entry counterpart: the alternatives are a pure function of the caller
@@ -402,7 +566,8 @@ definition local_dg_spec_template :: "('x,'k,'v,'D,'G) dg_spec" where
      dgs_enter = (\<lambda>ci. local_enter_transfer (\<lambda>d. [(d, d)])),
      dgs_event = (\<lambda>ev. local_transfer id),
      dgs_combine_env = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)),
-     dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)) \<rparr>"
+     dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)),
+     dgs_query = (\<lambda>m q. sp_return \<top>) \<rparr>"
 
 lemma local_dg_spec_template_simps [simp]:
   "skip\<^sup># local_dg_spec_template = local_transfer id"
@@ -415,6 +580,7 @@ lemma local_dg_spec_template_simps [simp]:
   "event\<^sup># local_dg_spec_template ev = local_transfer id"
   "combine_env\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
   "combine_assign\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
+  "dgs_query local_dg_spec_template m q = sp_return \<top>"
   by (simp_all add: local_dg_spec_template_def)
 
 subsection \<open>Overriding every field at once\<close>
@@ -422,8 +588,14 @@ subsection \<open>Overriding every field at once\<close>
 text \<open>
   \<open>local_spec_step\<close> is the pure counterpart of \<^const>\<open>dg_spec_step\<close>'s
   dispatch, and \<open>local_dg_spec\<close> overrides every field of the default from
-  ten pure functions -- the shape a whole-state domain takes, where naming the
+  pure functions -- the shape a whole-state domain takes, where naming the
   functions positionally is shorter than ten record updates.
+
+  The intraprocedural transfers take the answers to the questions \<open>qs\<close> names
+  for their edge, and \<open>qry\<close> answers questions about the local value. Entry and
+  combine take no answers. A specification that never asks instantiates \<open>qs\<close>
+  with \<open>\<lambda>_ _. []\<close> and ignores the answers, and every field then reduces to the
+  pure \<^const>\<open>local_transfer\<close>.
 \<close>
 
 fun local_spec_step ::
@@ -441,26 +613,33 @@ where
 | "local_spec_step sk asn sp br bd rt ev (EA_Ret e p) = rt e p"
 | "local_spec_step sk asn sp br bd rt ev (EA_Check l cnd) = ev (Check_Event l cnd)"
 
+fun event_action :: "analysis_event \<Rightarrow> edge_action" where
+  "event_action (Check_Event l cnd) = EA_Check l cnd"
+
 definition local_dg_spec ::
-  "('D \<Rightarrow> 'D) \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (pname \<Rightarrow> 'D \<Rightarrow> 'D)
-   \<Rightarrow> (exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
+  "(edge_action \<Rightarrow> 'D \<Rightarrow> query list) \<Rightarrow> ('D \<Rightarrow> answers)
+   \<Rightarrow> (answers \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (answers \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list)
-   \<Rightarrow> (analysis_event \<Rightarrow> 'D \<Rightarrow> 'D)
+   \<Rightarrow> (answers \<Rightarrow> analysis_event \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> (call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D)
    \<Rightarrow> ('x,'k,'v,'D,'G) dg_spec"
 where
-  "local_dg_spec sk asn sp br bd rt en ev ce ca = local_dg_spec_template\<lparr>
-     dgs_skip := local_transfer sk,
-     dgs_assign := (\<lambda>x e. local_transfer (asn x e)),
-     dgs_special := (\<lambda>sc x. local_transfer (sp sc x)),
-     dgs_branch := (\<lambda>b pol. local_transfer (br b pol)),
-     dgs_body := (\<lambda>p. local_transfer (bd p)),
-     dgs_return := (\<lambda>e p. local_transfer (rt e p)),
+  "local_dg_spec qs qry sk asn sp br bd rt en ev ce ca = local_dg_spec_template\<lparr>
+     dgs_skip := asking_transfer (qs EA_Nop) sk,
+     dgs_assign := (\<lambda>x e. asking_transfer (qs (EA_Assign x e)) (\<lambda>A. asn A x e)),
+     dgs_special := (\<lambda>sc x. asking_transfer (qs (EA_Special sc x)) (\<lambda>A. sp A sc x)),
+     dgs_branch := (\<lambda>b pol. asking_transfer (qs (if pol then EA_Assume b else EA_AssumeNot b))
+                       (\<lambda>A. br A b pol)),
+     dgs_body := (\<lambda>p. asking_transfer (qs (EA_Body p)) (\<lambda>A. bd A p)),
+     dgs_return := (\<lambda>e p. asking_transfer (qs (EA_Ret e p)) (\<lambda>A. rt A e p)),
      dgs_enter := (\<lambda>ci. local_enter_transfer (en ci)),
-     dgs_event := (\<lambda>ev'. local_transfer (ev ev')),
+     dgs_event := (\<lambda>ev'. asking_transfer (qs (event_action ev')) (\<lambda>A. ev A ev')),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer (ce ci)),
-     dgs_combine_assign := (\<lambda>ci. local_combine_transfer (ca ci)) \<rparr>"
+     dgs_combine_assign := (\<lambda>ci. local_combine_transfer (ca ci)),
+     dgs_query := local_query qry \<rparr>"
 
 subsection \<open>Specifications are consumed, not exported\<close>
 
@@ -496,21 +675,26 @@ text \<open>
 \<close>
 
 lemma local_dg_spec_simps [simp]:
-  "skip\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) = local_transfer sk"
-  "assign\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) x e = local_transfer (asn x e)"
-  "special\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) sc x
-     = local_transfer (sp sc x)"
-  "branch\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) b pol
-     = local_transfer (br b pol)"
-  "body\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) p = local_transfer (bd p)"
-  "return\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) eo p
-     = local_transfer (rt eo p)"
-  "enter\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci = local_enter_transfer (en ci)"
-  "event\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ev' = local_transfer (ev ev')"
-  "combine_env\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+  "skip\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) = asking_transfer (qs EA_Nop) sk"
+  "assign\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) x e
+     = asking_transfer (qs (EA_Assign x e)) (\<lambda>A. asn A x e)"
+  "special\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) sc x
+     = asking_transfer (qs (EA_Special sc x)) (\<lambda>A. sp A sc x)"
+  "branch\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) b pol
+     = asking_transfer (qs (if pol then EA_Assume b else EA_AssumeNot b)) (\<lambda>A. br A b pol)"
+  "body\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) p
+     = asking_transfer (qs (EA_Body p)) (\<lambda>A. bd A p)"
+  "return\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) eo p
+     = asking_transfer (qs (EA_Ret eo p)) (\<lambda>A. rt A eo p)"
+  "enter\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) ci
+     = local_enter_transfer (en ci)"
+  "event\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) ev'
+     = asking_transfer (qs (event_action ev')) (\<lambda>A. ev A ev')"
+  "combine_env\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ce ci)"
-  "combine_assign\<^sup># (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+  "combine_assign\<^sup># (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (ca ci)"
+  "dgs_query (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) = local_query qry"
   by (simp_all add: local_dg_spec_def)
 
 text \<open>Both directions of the local construction reduce to the pure operation
@@ -518,19 +702,20 @@ text \<open>Both directions of the local construction reduce to the pure operati
   rather than being cited per proof.\<close>
 
 lemma dg_spec_step_local_dg_spec [simp]:
-  "dg_spec_step (local_dg_spec sk asn sp br bd rt en ev ce ca) a
-     = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
+  "dg_spec_step (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) a
+     = asking_transfer (qs a)
+         (\<lambda>A. local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A) a)"
   by (cases a) simp_all
 
 lemma dg_spec_combine_transfer_local_dg_spec [simp]:
-  "dg_spec_combine_transfer (local_dg_spec sk asn sp br bd rt en ev ce ca) ci
+  "dg_spec_combine_transfer (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) ci
      = local_combine_transfer (\<lambda>dc de. ca ci (ce ci dc de) de)"
   by (intro ext)
      (simp add: dg_spec_combine_transfer_local local_combine_transfer_def)
 
 lemma dg_spec_wf_local_dg_spec [intro, simp]:
-  "dg_spec_wf (local_dg_spec sk asn sp br bd rt en ev ce ca)"
-  by (simp add: dg_spec_wf_def local_transfer_def local_enter_transfer_def
+  "dg_spec_wf (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca)"
+  by (auto simp: dg_spec_wf_def local_query_def local_enter_transfer_def
       local_combine_transfer_def)
 
 end

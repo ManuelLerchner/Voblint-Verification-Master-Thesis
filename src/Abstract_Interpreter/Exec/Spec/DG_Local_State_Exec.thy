@@ -31,15 +31,16 @@ definition local_state_dg_spec_st_for_lifted ::
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st = local_dg_spec
-     (transfer_lift empty_pred (tf_st EA_Nop))
-     (\<lambda>x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
-     (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
-     (\<lambda>b pol. transfer_lift empty_pred
+     (\<lambda>_ _. []) (\<lambda>_ _. \<top>)
+     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
+     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
+     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
+     (\<lambda>_ b pol. transfer_lift empty_pred
         (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
-     (\<lambda>p. transfer_lift empty_pred (tf_st (EA_Body p)))
-     (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
+     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
+     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
-     (\<lambda>ev. transfer_lift empty_pred
+     (\<lambda>_ ev. transfer_lift empty_pred
         (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
      (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
