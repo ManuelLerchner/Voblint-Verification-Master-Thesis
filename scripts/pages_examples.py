@@ -35,6 +35,12 @@ CORPUS = REPO_ROOT / "tests" / "regression"
 # that no longer names a fixture fails the build rather than dropping a card.
 SHOWCASE = [
     (
+        "25-cooperation/precision/05-annotation_tour.vimp",
+        "Two analyses, one run",
+        "Interval asks the order analysis at an assignment and proves a check "
+        "neither proves alone; every kind of inline annotation appears once.",
+    ),
+    (
         "20-nested-loops/precision/02-nested2_narrowing_recovers_j.vimp",
         "Widening, then narrowing",
         "Nested loops: the inner head widens j to [0,+inf] and narrows it back, "

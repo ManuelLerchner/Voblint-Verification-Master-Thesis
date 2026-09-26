@@ -1,0 +1,49 @@
+// PARAM: --analysis interval,order --context entry-state
+// A tour of what the analyzer shows inline, with Interval and the order analysis
+// run together and every callee keyed by its entry state.
+//
+// smaller is entered twice, with (3, 7) and (9, 4), so its header and its return
+// show one value per context. The call that discards its result still shows what
+// the callee returned. The two guards on x and y are where the order analysis
+// records x <= y and then y <= x; the assignment w = x is where it learns w's
+// place in that order, by answering its own questions about x.
+//
+// Each check needs a different part of the run:
+//   z == 1  neither alone: Interval asks the order analysis for x == y at
+//           z = (x == y), gets 1, and assigns [1,1];
+//   w == y  the order analysis alone, from the pairs it learned at w = x;
+//   i == 3  Interval alone, by widening the loop and narrowing it back;
+//   n == 7  Interval refutes it: the context entered with (3, 7) returns 3;
+// and Interval proves the last branch unreachable.
+fun smaller(a, b) {
+  if (a <= b) {
+    lo = a;
+  } else {
+    lo = b;
+  }
+  return lo;
+}
+
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  n = smaller(3, 7);
+  smaller(9, 4);
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      w = x;
+      __voblint_check(z == 1); // PROVED
+      __voblint_check(w == y); // PROVED
+    }
+  }
+  i = 0;
+  while (i < 3) {
+    i = i + 1;
+  }
+  __voblint_check(i == 3); // PROVED
+  __voblint_check(n == 7); // REFUTED
+  if (i > 5) {
+    __voblint_check(i == 0); // NOWARN
+  }
+}
