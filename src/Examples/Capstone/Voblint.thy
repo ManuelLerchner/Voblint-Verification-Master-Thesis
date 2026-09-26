@@ -13,7 +13,7 @@ theory Voblint
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Framework.Transfer_Algebra"
-    "Voblint_Domain.Abstract_Numeric_Queries"
+    "Voblint_Domain.Numeric_Queries"
     "Voblint_Framework.Check_Result"
     "Voblint_Framework.Abstract_Checks"
     "Voblint_Framework.Check_Report"
@@ -339,14 +339,13 @@ text \<open>
     against the computed abstract solver environment at each check's own
     node --- no store is forwarded between check nodes or to the procedure
     exit.
-    \<^item> @{theory Voblint_Domain.Abstract_Numeric_Queries} --- the generic
-      \<^locale>\<open>abstract_numeric_queries\<close> interface (entailment/refutation of
+    \<^item> @{theory Voblint_Domain.Numeric_Queries} --- the generic
+      \<^locale>\<open>sound_numeric_queries\<close> interface (entailment/refutation of
       \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation, defined
       directly in any \<^locale>\<open>backward_domain\<close> instance's own context, from
       that instance's own narrowing operators --- a sound default a concrete
       domain may override with sharper, hand-tuned predicates.
-    \<^item> @{theory Voblint_Framework.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
-      and \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
+    \<^item> @{theory Voblint_Framework.Abstract_Checks} --- \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
       procedure into \<^typ>\<open>bool option\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to

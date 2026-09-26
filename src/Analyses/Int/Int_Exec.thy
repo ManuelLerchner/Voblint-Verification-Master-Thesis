@@ -1,5 +1,5 @@
 theory Int_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops"
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Nonrelational_Ops"
     Int_Transfer
 begin
 
@@ -31,9 +31,9 @@ subsection \<open>The primitive bundle, per refinement mode\<close>
 
 text \<open>
   \<open>Refine_Never\<close>, \<open>Refine_Once\<close> and \<open>Refine_Fixpoint\<close> differ only in the mode
-  their operations carry, so each gets its own \<^type>\<open>numeric_ops\<close> bundle and the
+  their operations carry, so each gets its own \<^type>\<open>nonrelational_ops\<close> bundle and the
   three executable constants per mode are
-  \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>'s generic constructions instantiated
+  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close>'s generic constructions instantiated
   at it --- the same constructions Sign, Interval, Parity and Congruence use.
   Only the bundles and the per-mode corollaries are written three times; the
   transfer itself is written once, elsewhere.
@@ -56,7 +56,7 @@ lemma int_dom_special_ops_simps [simp]:
 
 subsection \<open>No cross-component refinement\<close>
 
-definition int_dom_ops_never :: "int_dom numeric_ops" where
+definition int_dom_ops_never :: "int_dom nonrelational_ops" where
   "int_dom_ops_never = \<lparr> n_aval = aval_int_dom Refine_Never,
                          n_special = int_dom_special_ops Refine_Never,
                          n_bfilter = branch_int_dom_never_st,
@@ -122,7 +122,7 @@ lemma int_dom_enter_never_st_for_commute:
 
 subsection \<open>One refinement round\<close>
 
-definition int_dom_ops_once :: "int_dom numeric_ops" where
+definition int_dom_ops_once :: "int_dom nonrelational_ops" where
   "int_dom_ops_once = \<lparr> n_aval = aval_int_dom Refine_Once,
                         n_special = int_dom_special_ops Refine_Once,
                         n_bfilter = branch_int_dom_once_st,
@@ -188,7 +188,7 @@ lemma int_dom_enter_once_st_for_commute:
 
 subsection \<open>Refinement to a fixpoint\<close>
 
-definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
+definition int_dom_ops_fixpoint :: "int_dom nonrelational_ops" where
   "int_dom_ops_fixpoint = \<lparr> n_aval = aval_int_dom Refine_Fixpoint,
                             n_special = int_dom_special_ops Refine_Fixpoint,
                             n_bfilter = branch_int_dom_fixpoint_st,

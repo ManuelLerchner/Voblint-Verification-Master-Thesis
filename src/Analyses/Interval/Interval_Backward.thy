@@ -373,7 +373,7 @@ subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
   One interpretation discharges soundness, monotonicity, and reductiveness
-  together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
+  together against @{locale backward_domain_mono} -- each \<open>inv_*\<close>'s
   mono/reductive obligation is one @{const le_pair} fact, built from the
   componentwise per-operator lemmas above.
 
@@ -388,7 +388,7 @@ text \<open>
 \<close>
 
 global_interpretation ivl_backward_domain:
-    backward_domain_refined intersect_ivl aval_ivl interval_tobool
+    backward_domain_mono intersect_ivl aval_ivl interval_tobool
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter

@@ -1,5 +1,5 @@
 theory Congruence_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Numeric_Ops"
+  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Nonrelational_Ops"
     Congruence_Transfer Congruence_Warrowing
 begin
 
@@ -27,7 +27,7 @@ text \<open>
   \<open>congruence_ops\<close>, Congruence's primitive bundle, is defined beside the abstract
   transfer in \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Transfer\<close>, so both
   layers read one value. The two constants below are the generic constructions
-  of \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close> instantiated at it, not
+  of \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not
   independent definitions. The guard transfer needs no third:
   \<^const>\<open>generic_tf_st_for\<close> reads \<open>n_bfilter\<close> off the bundle directly, so naming
   that projection separately would only rename \<^const>\<open>branch_congruence_st\<close>.

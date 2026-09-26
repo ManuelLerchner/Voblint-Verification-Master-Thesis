@@ -905,7 +905,7 @@ lemma inv_times_congruence_mono:
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
-    backward_domain_refined intersect_congruence aval_congruence congruence_tobool
+    backward_domain_mono intersect_congruence aval_congruence congruence_tobool
       inv_less_congruence inv_eq_congruence
       inv_plus_congruence inv_minus_congruence inv_times_congruence
   defines

@@ -12,7 +12,7 @@ text \<open>
   Only composition lives here: the Sign lattice comparison tables
   (\<open>sign_less_true\<close>/\<open>sign_less_false\<close>/\<open>sign_eq_true\<close>/\<open>sign_eq_false\<close>) and their
   \<^theory>\<open>Voblint_Analysis_Sign.Sign_Numeric_Queries\<close> interpretation of
-  \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
+  \<open>sound_numeric_queries\<close> live in that theory. The Sign expression
   evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis_Sign.Sign_Arithmetic\<close>. The
   Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come

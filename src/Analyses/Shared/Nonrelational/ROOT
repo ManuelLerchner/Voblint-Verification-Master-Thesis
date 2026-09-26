@@ -22,5 +22,5 @@ session Voblint_Nonrelational in "." = "Voblint_Result" +
     Abstract_Arithmetic
     Special_Ops
     Nonrelational_Transfer
-    Numeric_Ops
+    Nonrelational_Ops
     Exec_Backward

@@ -62,7 +62,7 @@ global location per name and the conversion reads one. That is why
 Every executable operation commutes with its abstract counterpart through that
 conversion. `afilter_st`, `bfilter_st` and `branch_st` with `branch_st_commute`
 are proved once for every `backward_domain` (`Exec_Backward.thy`). The per-edge
-transfer is `generic_tf_st_for_commute` (`Numeric_Ops.thy`), instantiated per
+transfer is `generic_tf_st_for_commute` (`Nonrelational_Ops.thy`), instantiated per
 domain (`sign_tf_st_for_commute` in `Sign_Exec.thy`,
 `congruence_tf_st_for_commute` in `Congruence_Exec.thy`, `int_dom`'s three
 refinement modes as `int_tf_st_never_for_commute`/`_once_`/`_fixpoint_`, ...).

@@ -1,4 +1,4 @@
-theory Backward_Domain_Refined
+theory Backward_Domain_Mono
   imports Backward_Domain
 begin
 
@@ -7,9 +7,9 @@ section \<open>Monotone and reductive backward filtering\<close>
 text \<open>
   Split out of @{theory Voblint_Domain.Backward_Domain}: the base
   \<open>backward_domain\<close> locale states filtering and its soundness alone, with no
-  monotonicity or reductiveness content; this theory adds the strengthened
-  \<open>backward_domain_refined\<close> locale a concrete domain interprets once it can
-  supply monotone, reductive inverse operators.
+  monotonicity or reductiveness content; this theory adds the two strengthened
+  locales, \<open>backward_domain_reductive\<close> for a reductive intersection and
+  \<open>backward_domain_mono\<close> for monotone operations on top of it.
 \<close>
 
 subsection \<open>Pairwise order for reductive/monotone inverse operators\<close>
@@ -223,7 +223,7 @@ text \<open>The monotonicity half of the strengthening.  Each inverse operator i
   induction.  \<open>tobool_mono\<close> is the one assumption that does not read that way: a definite
   truth value found at the coarser value must survive at the sharper one, and only a
   non-empty sharper value can be asked -- an empty one decides everything vacuously.\<close>
-locale backward_domain_refined =
+locale backward_domain_mono =
   backward_domain_reductive + mono_intersection intersect
     + mono_evaluator gamma_state aval_abs + mono_truth_test tobool +
   assumes inv_less_mono:

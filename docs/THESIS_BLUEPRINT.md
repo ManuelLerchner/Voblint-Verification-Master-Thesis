@@ -245,7 +245,7 @@ finite-context-space arguments. `Voblint_Result` is the publication surface:
 (the context-insensitive endpoints), `Source_Activation_Sound`.
 `Voblint_Nonrelational` is what a pointwise domain reuses — the shared
 expression-soundness induction, special-call dispatch, the generic transfer
-locale `nonrelational_transfer`, the primitive bundle `numeric_ops`, and the
+locale `nonrelational_transfer`, the primitive bundle `nonrelational_ops`, and the
 executable backward filter.
 
 **`src/Analyses/<Domain>/`.** Each domain supplies a lattice, arithmetic,
@@ -394,7 +394,7 @@ L7  SOLVER
              v
 L8  EXECUTABLE ↔ MATHEMATICAL
     resolved_st_q (quotient), fun_of_resolved_st_q_for   Exec_St_Base, Exec_St_Transfer
-    generic_tf_st_for_commute, branch_st_commute        Numeric_Ops, Exec_Backward
+    generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
     routed_dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
     readback_result_value, canonicalize_lift            Exec_Result_Readback
              │
@@ -775,7 +775,7 @@ on the discarded side.
 
 **Evidence.** `Exec_St_Base.thy` (with an explicit argument against Nipkow's
 single-default `Abs_State`), `Exec_St_Transfer.thy`, `Exec_St_Reachability.thy`,
-`Exec_Backward.thy`, `Numeric_Ops.thy` (`generic_tf_st_for_commute`).
+`Exec_Backward.thy`, `Nonrelational_Ops.thy` (`generic_tf_st_for_commute`).
 
 **Must compare.** Nipkow's `Abs_State`/`Abs_Int1` refinement in
 `Abs_Int_ITP2012` — this is the direct antecedent and the theory header already
@@ -1217,7 +1217,7 @@ discharged without machinery.
 
 **Ch. 5.** Short. Prerequisite: Ch. 2.1–2.3. The lift deserves a figure
 (`Bot` vs `Lifted bot` are different, and the reason is the whole point).
-*Omit* the refined backward locale (`backward_domain_refined`) and the
+*Omit* the monotone backward locale (`backward_domain_mono`) and the
 numeric-query derivation details; state the interface and one soundness lemma.
 
 **Ch. 6.** Prerequisite: Ch. 2.4, Ch. 5. Open with Goblint's `Spec` signature
@@ -1324,7 +1324,7 @@ thesis section → theories → central definitions → central theorems.
 | 4.7–4.8 | `Voblint_CFG.LTR_Abstract`, `Voblint_Framework.Activation_Backbone` | locale `ltr_coverage`, `trace_covered` | `valid_ltr_covered_at`, `ltr_collect_semantic_postfix`, `ltr_collect_eq_Union_activation_collect`, `activation_collect_sound` |
 | 4.10 | `Voblint_Compile.Source_To_Trace` | `stack_repr` | `source_run_has_ltr`, `source_reaches_ltr_collect` |
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
-| 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Abstract_Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `abstract_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
+| 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `sound_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
 | 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_contract`, `combine_sound_program` |
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
@@ -1339,7 +1339,7 @@ thesis section → theories → central definitions → central theorems.
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Unit_DG_Analysis`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `unit_dg_analysis`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `unit_dg_analysis.source_sound`, `result_node_sound` |
 | 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
-| 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Numeric_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locale `nonrelational_transfer`, `numeric_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
+| 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locale `nonrelational_transfer`, `nonrelational_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.source_sound` |
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.source_sound` |
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |

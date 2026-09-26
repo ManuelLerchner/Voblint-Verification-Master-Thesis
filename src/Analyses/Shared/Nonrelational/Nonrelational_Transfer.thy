@@ -1,6 +1,6 @@
 theory Nonrelational_Transfer
   imports
-    Numeric_Ops
+    Nonrelational_Ops
     "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_VIMP.VIMP_Globals"
 begin
@@ -22,8 +22,8 @@ text \<open>
   for. A domain interprets \<open>nonrelational_transfer\<close> at the primitives its own
   theories already own and names the results; it proves nothing here again.
 
-  The first four primitives travel as one \<^type>\<open>numeric_ops\<close> bundle, the same
-  value the executable mirror in \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close>
+  The first four primitives travel as one \<^type>\<open>nonrelational_ops\<close> bundle, the same
+  value the executable mirror in \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close>
   reads, so a domain states its evaluator and its whole-value element once
   rather than once per layer. \<open>br\<close> stays a separate parameter: it is where a
   domain's backward reasoning enters, and it is the one primitive the bundle
@@ -37,7 +37,7 @@ text \<open>
 \<close>
 
 locale nonrelational_transfer = mono_special_ops "n_special ops" "n_aval ops"
-  for ops :: "'a::numeric_domain numeric_ops" +
+  for ops :: "'a::numeric_domain nonrelational_ops" +
   fixes br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes top_eq: "n_top ops = top"
     and br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"

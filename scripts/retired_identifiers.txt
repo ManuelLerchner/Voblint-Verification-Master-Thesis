@@ -3208,3 +3208,21 @@ ownership_split_lift_core_sound
 # Solver-state types that need only the solver's pair spell it as the sort
 # {bounded_semilattice_sup_bot, warrowing}.
 bounded_warrowing
+
+# --- Domain hierarchy simplified (2026-09-26) ---
+# executable_numeric_queries folded into its only child, and
+# abstract_expression_domain into abstract_check_domain: neither had a client of
+# its own. backward_domain_refined and its theory became backward_domain_mono,
+# the property the locale adds. The query and intersection contracts took the
+# sound_ prefix of their siblings, and the non-relational transfer bundle is
+# named for what it builds.
+executable_numeric_queries
+abstract_expression_domain
+backward_domain_refined
+int_dom_backward_domain_refined
+Backward_Domain_Refined
+abstract_numeric_queries
+semantic_intersection
+numeric_ops
+Abstract_Numeric_Queries
+Numeric_Ops

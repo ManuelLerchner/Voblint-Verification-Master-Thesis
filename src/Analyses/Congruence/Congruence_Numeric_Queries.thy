@@ -1,5 +1,5 @@
 theory Congruence_Numeric_Queries
-  imports Congruence_Arithmetic "Voblint_Domain.Abstract_Numeric_Queries"
+  imports Congruence_Arithmetic "Voblint_Domain.Numeric_Queries"
 begin
 
 section \<open>What a residue class can decide about order and equality\<close>
@@ -19,7 +19,7 @@ text \<open>
 \<close>
 
 global_interpretation congruence_numeric_queries:
-  abstract_numeric_queries congruence_lt congruence_eqb
-  by (rule congruence_arith.abstract_numeric_queries_axioms)
+  sound_numeric_queries congruence_lt congruence_eqb
+  by (rule congruence_arith.sound_numeric_queries_axioms)
 
 end

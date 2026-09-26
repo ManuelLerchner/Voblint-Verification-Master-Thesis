@@ -10,7 +10,7 @@ section \<open>Deciding a check from a map of residue classes\<close>
 
 text \<open>
   Only composition lives here. The comparison tables \<^const>\<open>congruence_lt\<close> and
-  \<^const>\<open>congruence_eqb\<close> and their interpretation of \<open>abstract_numeric_queries\<close>
+  \<^const>\<open>congruence_eqb\<close> and their interpretation of \<open>sound_numeric_queries\<close>
   live in \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Numeric_Queries\<close>; the
   expression evaluator \<^const>\<open>aval_congruence\<close> lives in
   \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Arithmetic\<close>. The Boolean recursion

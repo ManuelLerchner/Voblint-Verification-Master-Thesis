@@ -3,7 +3,7 @@
 > **Status:** partly stale. "Pipeline" (above the rendering branch), "Layer
 > responsibilities" and "Why no automatic sublocale" name retired pieces:
 > `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
-> `numeric_query_judgments` (`Abstract_Numeric_Queries.thy`), interpreted for
+> `numeric_query_judgments` (`Numeric_Queries.thy`), interpreted for
 > every `backward_domain` in `Backward_Numeric_Queries.thy`; `backward_domain`
 > lives in `Backward_Domain.thy`; `abstract_domain` and `backward_domain_mono`
 > no longer exist. The current inventory is the
@@ -36,7 +36,7 @@ node-indexed analysis_result       -- <d>_rule.result r
                                    ::   (vname => bool) -> imp_prog
                                      -> (unit, 'a abs_state) analysis_result
     |
-    | domain-specific abstract_numeric_queries instance
+    | domain-specific sound_numeric_queries instance
     v
 abstract_check_domain (Abstract_Checks.thy)
     |
@@ -64,7 +64,7 @@ abstract_check_domain (Abstract_Checks.thy)
 
 The check-classification and discharge layers above the node-indexed
 solver state are domain-generic; each domain supplies its own solver
-frontend and `abstract_numeric_queries` instance below that line.
+frontend and `sound_numeric_queries` instance below that line.
 `Sign_Classify.thy`, `Interval_Classify.thy`, `Parity_Classify.thy`,
 `Congruence_Classify.thy` and `Int_Classify.thy` are thin instantiations of the
 generic layers, not separate implementations of the pipeline. The per-node state
@@ -77,14 +77,14 @@ they classify is the registration's `analysis_result` table, which
 ### `Abstract_Domain.thy` — lattice and backward refinement
 
 Owns `numeric_domain`/`abstract_domain` (the type-class every domain value
-type instantiates), `semantic_intersection`, `backward_domain` (guard narrowing: `inv_less`,
+type instantiates), `sound_intersection`, `backward_domain` (guard narrowing: `inv_less`,
 `inv_eq`, `afilter`/`bfilter`), and `backward_domain_mono`. Nothing here
 knows about checks. `derived_less_queries`/`derived_eq_true_from_less`/
 `derived_eq_false_from_intersection` do **not** live here — see the next layer.
 
-### `Abstract_Numeric_Queries.thy` — atomic-value entailment/refutation
+### `Numeric_Queries.thy` — atomic-value entailment/refutation
 
-Owns the `abstract_numeric_queries` locale (`less_true`, `less_false`,
+Owns the `sound_numeric_queries` locale (`less_true`, `less_false`,
 `eq_true`, `eq_false` over one abstract value + four soundness
 assumptions) and its generic derivation from any `backward_domain`
 instance's own narrowing operators. The derivation locales are registered
@@ -100,19 +100,19 @@ directly under `backward_domain`; `derived_eq_false_from_intersection`
 sublocales under `backward_domain` directly, reusing its own
 `intersect_sound` premise.)
 A concrete `backward_domain` interpretation inherits all four query
-functions with no extra proof obligation *once `Abstract_Numeric_Queries.thy`
+functions with no extra proof obligation *once `Numeric_Queries.thy`
 is in scope at the point that interpretation is processed* — `Sign_Backward.thy`
 needed an explicit import added for exactly this reason (see below).
 
 The derivation is a **sound default, not a mandatory implementation**.
-`sublocale backward_domain \<subseteq> abstract_numeric_queries` was deliberately
+`sublocale backward_domain \<subseteq> sound_numeric_queries` was deliberately
 never added — see "Why no automatic sublocale" below.
 
 ### `Abstract_Checks.thy` — expression/check evaluation
 
-Owns `abstract_expression_domain` (adds `gamma_state`/`aval_abs` on top of
-the numeric queries) and `abstract_check_domain` (mutually recursive
-`check_true`/`check_false` over `bexp`, the three-way `classify_check`,
+Owns `abstract_check_domain` (the numeric queries plus a sound
+`aval_abs` over a state concretization `γS`), the three-valued
+`check_query` over `exp`, the three-way `classify_check`,
 and `abstract_checks_proven`, the node-indexed bridge to
 `Checks.thy`'s domain-independent `checks_proven`).
 
@@ -198,7 +198,7 @@ unrelated procedure-exit node.
 ## Why no automatic sublocale
 
 The natural-looking generalization —
-`sublocale backward_domain \<subseteq> abstract_numeric_queries` — was tried and
+`sublocale backward_domain \<subseteq> sound_numeric_queries` — was tried and
 reverted (`docs/history/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
 It answers two different questions, both against it:
 
@@ -215,13 +215,13 @@ It answers two different questions, both against it:
    processed *after* Sign's own `backward_domain` interpretation, so
    Isabelle's sublocale-to-existing-interpretation composition never
    reached back into it. Even with correct theory placement (the
-   `Abstract_Numeric_Queries.thy` split now gives every future domain the
+   `Numeric_Queries.thy` split now gives every future domain the
    option to import it *before* interpreting `backward_domain`), an
    unconditional sublocale would still be the wrong canonical
    architecture for reason 1 — reason 2 was a placement bug in one
    experiment, not the standing argument against the design.
 
-Each domain instead interprets `abstract_numeric_queries` explicitly and
+Each domain instead interprets `sound_numeric_queries` explicitly and
 chooses its own source for the four functions: Sign takes the generic
 derivation because it is exact there; Interval keeps its specialized
 tables because the generic derivation would be a real precision loss.

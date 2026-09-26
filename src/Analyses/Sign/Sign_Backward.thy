@@ -291,14 +291,14 @@ subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
   One interpretation discharges soundness, monotonicity, and reductiveness
-  together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
+  together against @{locale backward_domain_mono} -- each \<open>inv_*\<close>'s
   mono/reductive obligation is one @{const le_pair} fact, transparent notation for
   the componentwise \<open>\<and>\<close> the per-operator lemmas above already prove, so no
   bridging step is needed at any of these call sites.
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_refined meet_sign aval_sign sign_tobool
+    backward_domain_mono meet_sign aval_sign sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
@@ -337,7 +337,7 @@ lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
 text \<open>
   \<open>sign_eq_true_of_less\<close> is \<open>sign_backward_domain.eq_true\<close>, defined in
   \<^locale>\<open>backward_domain\<close>'s own context off \<open>less_false\<close> in both directions
-  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>). The automatic
+  (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>). The automatic
   code-equation chain the \<open>defines\<close> clause above sets up does not unfold that
   definition, so this restates it explicitly in terms of the already-executable
   \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.

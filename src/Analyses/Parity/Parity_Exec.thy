@@ -2,7 +2,7 @@ theory Parity_Exec
   imports
     "Voblint_Exec.Exec_St_Reachability"
     "Voblint_Exec.Exec_St_Restriction_Refinement"
-    "Voblint_Nonrelational.Numeric_Ops"
+    "Voblint_Nonrelational.Nonrelational_Ops"
     Parity_Transfer
 begin
 
@@ -33,7 +33,7 @@ text \<open>The executable mirror of \<open>parity_tf_abs\<close>/\<open>enter_p
   \<open>parity_ops\<close>, Parity's primitive bundle, is defined beside the abstract transfer
   in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Transfer\<close>, so both layers read one
   value. The two constants below are the generic constructions of
-  \<^theory>\<open>Voblint_Nonrelational.Numeric_Ops\<close> instantiated at it. Parity's branch
+  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it. Parity's branch
   transfer is the identity, so unlike Sign and Interval there is no
   \<open>branch_parity_st_for\<close> at all --- \<open>n_bfilter\<close>'s value here is the identity
   function, and nothing needs to name it separately.\<close>

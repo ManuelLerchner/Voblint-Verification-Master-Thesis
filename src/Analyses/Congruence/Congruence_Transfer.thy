@@ -56,7 +56,7 @@ text \<open>
   branch is the one primitive a bundle cannot carry through code generation.
 \<close>
 
-definition congruence_ops :: "congruence numeric_ops" where
+definition congruence_ops :: "congruence nonrelational_ops" where
   "congruence_ops = \<lparr> n_aval = aval_congruence, n_special = congruence_special_ops,
                       n_bfilter = branch_congruence_st, n_top = top \<rparr>"
 

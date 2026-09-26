@@ -61,7 +61,7 @@ text \<open>
   primitive a bundle cannot carry through code generation.
 \<close>
 
-definition ivl_ops :: "ivl numeric_ops" where
+definition ivl_ops :: "ivl nonrelational_ops" where
   "ivl_ops = \<lparr> n_aval = aval_ivl, n_special = ivl_special_ops,
                n_bfilter = branch_ivl_st, n_top = ivl_top \<rparr>"
 

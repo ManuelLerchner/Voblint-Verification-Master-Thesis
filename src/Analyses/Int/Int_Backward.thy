@@ -396,7 +396,7 @@ text \<open>
   \<open>mode \<noteq> Refine_Fixpoint\<close>: \<open>refine_fix\<close>'s total wrapper has no monotonicity
   theorem (\<open>Int_Refinement\<close>), a faithful transliteration of Goblint's
   \<open>fixpoint\<close> loop. So \<open>Refine_Never\<close> and \<open>Refine_Once\<close> interpret the full
-  @{locale backward_domain_refined}, and \<open>Refine_Fixpoint\<close> stays out of reach of
+  @{locale backward_domain_mono}, and \<open>Refine_Fixpoint\<close> stays out of reach of
   \<open>branch_mono\<close> and the rest of the monotonicity layer.
 \<close>
 
@@ -404,24 +404,25 @@ lemma int_dom_backward_domain_reductive:
   "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_reductive.intro backward_domain.intro semantic_intersection.intro
+proof (intro backward_domain_reductive.intro backward_domain.intro sound_intersection.intro
     int_dom_sound_evaluator mono_truth_test.axioms(1)[OF int_dom_truth_test]
-    backward_domain_axioms.intro reductive_intersection.intro reductive_intersection_axioms.intro)
+    backward_ops.intro backward_ops_axioms.intro
+    reductive_intersection.intro reductive_intersection_axioms.intro)
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound
        inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound
        intersect_int_dom_mode_reductive1 intersect_int_dom_mode_reductive2)
 
-lemma int_dom_backward_domain_refined:
+lemma int_dom_backward_domain_mono:
   assumes "mode \<noteq> Refine_Fixpoint"
   shows
-    "backward_domain_refined (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
+    "backward_domain_mono (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
        (inv_less_int_dom mode) (inv_eq_int_dom mode)
        (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_refined.intro int_dom_backward_domain_reductive
-    int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_refined_axioms.intro
+proof (intro backward_domain_mono.intro int_dom_backward_domain_reductive
+    int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_mono_axioms.intro
     mono_intersection.intro mono_intersection_axioms.intro
-    semantic_intersection.intro)
+    sound_intersection.intro)
 qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_dom_mode_mono
        refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
@@ -462,7 +463,7 @@ where
   "inv_times_int_dom_never == inv_times_int_dom Refine_Never"
 
 global_interpretation int_dom_backward_never:
-    backward_domain_refined
+    backward_domain_mono
       intersect_int_dom_never aval_int_dom_never tobool_int_dom_never
       inv_less_int_dom_never inv_eq_int_dom_never
       inv_plus_int_dom_never inv_minus_int_dom_never inv_times_int_dom_never
@@ -475,7 +476,7 @@ global_interpretation int_dom_backward_never:
     and afilter_int_dom_never_st = int_dom_backward_never.afilter_st
     and bfilter_int_dom_never_st = int_dom_backward_never.bfilter_st
     and branch_int_dom_never_st = int_dom_backward_never.branch_st
-  by (rule int_dom_backward_domain_refined) simp
+  by (rule int_dom_backward_domain_mono) simp
 
 abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_once == intersect_int_dom_mode Refine_Once"
@@ -512,7 +513,7 @@ where
   "inv_times_int_dom_once == inv_times_int_dom Refine_Once"
 
 global_interpretation int_dom_backward_once:
-    backward_domain_refined
+    backward_domain_mono
       intersect_int_dom_once aval_int_dom_once tobool_int_dom_once
       inv_less_int_dom_once inv_eq_int_dom_once
       inv_plus_int_dom_once inv_minus_int_dom_once inv_times_int_dom_once
@@ -525,7 +526,7 @@ global_interpretation int_dom_backward_once:
     and afilter_int_dom_once_st = int_dom_backward_once.afilter_st
     and bfilter_int_dom_once_st = int_dom_backward_once.bfilter_st
     and branch_int_dom_once_st = int_dom_backward_once.branch_st
-  by (rule int_dom_backward_domain_refined) simp
+  by (rule int_dom_backward_domain_mono) simp
 
 abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_fixpoint == intersect_int_dom_mode Refine_Fixpoint"

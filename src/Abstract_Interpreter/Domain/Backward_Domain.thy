@@ -12,8 +12,9 @@ text \<open>
   \<open>inv_plus\<close>, ...), each sound in the sense that every concrete pair the operator
   admits before the operation is still admitted after narrowing, from which \<open>afilter\<close>
   and \<open>bfilter\<close> -- the expression- and boolean-level filters -- are derived once with
-  their soundness and monotonicity. \<open>backward_domain_refined\<close> adds the reductive
-  and monotone inverse operators a domain with a conservative inverse can provide.
+  their soundness and monotonicity. \<open>backward_domain_reductive\<close> and
+  \<open>backward_domain_mono\<close> add the reductive and monotone inverse operators a
+  domain with a conservative inverse can provide.
   This abstracts the backward-refinement operations Goblint's \<open>BaseInvariant\<close> implements
   concretely for its Base analysis; Goblint has no generic module signature this locale
   is a formalization of.
@@ -26,12 +27,12 @@ text \<open>
   operands. It need not be the lattice infimum: a domain may normalize an
   empty result while its representation order still distinguishes several
   empty elements. This locale records the preservation obligation;
-  \<open>backward_domain_refined\<close> adds the reductiveness and monotonicity needed
-  by solver-facing filters.
+  \<open>reductive_intersection\<close> and \<open>mono_intersection\<close> add reductiveness and
+  monotonicity as separate strengthenings.
 \<close>
 
 
-locale semantic_intersection =
+locale sound_intersection =
   fixes intersect :: "'a::numeric_domain => 'a => 'a"
   assumes intersect_sound[intro]:
     "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (intersect a b)"
@@ -43,30 +44,24 @@ text \<open>
   refinement step; a monotone one keeps the filters monotone.
 \<close>
 
-locale reductive_intersection = semantic_intersection +
+locale reductive_intersection = sound_intersection +
   assumes intersect_reductive1[intro]: "intersect a b \<le> a"
     and intersect_reductive2[intro]: "intersect a b \<le> b"
 
-locale mono_intersection = semantic_intersection +
+locale mono_intersection = sound_intersection +
   assumes intersect_mono[intro]:
     "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
 
 text \<open>
-  Extends @{class numeric_domain} with the infrastructure for backward
-  (inverse) evaluation of guards and arithmetic expressions. Per-domain:
-  provide a @{locale semantic_intersection} instance, the forward operations of
-  @{locale sound_evaluator} and @{locale sound_truth_test}, and \<open>inv_*\<close>
-  operators; the generic afilter / bfilter and their soundness theorems
-  follow by induction.  A domain that already interpreted the forward locales
-  (through its expression domain) is not asked for their laws again.
+  The inverse operators work on abstract values alone: given the result an
+  operation must have produced, each narrows its operands to values that still
+  admit every concrete pair producing it. \<open>backward_ops\<close> states them and their
+  soundness with no state in sight, which is all the derived numeric queries
+  (\<open>Backward_Numeric_Queries\<close>) read.
 \<close>
 
-locale backward_domain =
-  semantic_intersection intersect + sound_evaluator gamma_state aval_abs
-    + sound_truth_test tobool
-    for intersect :: "'a::numeric_domain => 'a => 'a"
-    and aval_abs :: "exp => 'a abs_state => 'a"
-    and tobool :: "'a => bool option" +
+locale backward_ops = sound_intersection intersect
+  for intersect :: "'a::numeric_domain => 'a => 'a" +
   fixes
     inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
@@ -115,6 +110,30 @@ lemmas inv_minus_sound_snd [intro] = inv_minus_sound[THEN conjunct2]
 
 lemmas inv_times_sound_fst [intro] = inv_times_sound[THEN conjunct1]
 lemmas inv_times_sound_snd [intro] = inv_times_sound[THEN conjunct2]
+
+end
+
+text \<open>
+  \<open>backward_domain\<close> takes the inverse operators to pointwise states. With the
+  forward operations of @{locale sound_evaluator} and @{locale sound_truth_test}
+  it derives the guard filters \<open>afilter\<close> and \<open>bfilter\<close>, whose soundness
+  follows by induction. A domain that already interpreted the forward locales
+  (through its expression domain) is not asked for their laws again.
+\<close>
+
+locale backward_domain =
+  sound_intersection intersect + sound_evaluator gamma_state aval_abs
+    + sound_truth_test tobool
+    + backward_ops intersect inv_less inv_eq inv_plus inv_minus inv_times
+    for intersect :: "'a::numeric_domain => 'a => 'a"
+    and aval_abs :: "exp => 'a abs_state => 'a"
+    and tobool :: "'a => bool option"
+    and inv_less  :: "bool => 'a => 'a => 'a * 'a"
+    and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
+    and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
+    and inv_minus :: "'a => 'a => 'a => 'a * 'a"
+    and inv_times :: "'a => 'a => 'a => 'a * 'a"
+begin
 
 fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
     "afilter (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"

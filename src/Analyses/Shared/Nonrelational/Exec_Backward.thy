@@ -1,5 +1,5 @@
 theory Exec_Backward
-    imports "Voblint_Exec.Exec_St_Reachability" "Voblint_Domain.Backward_Domain_Refined"
+    imports "Voblint_Exec.Exec_St_Reachability" "Voblint_Domain.Backward_Domain_Mono"
 begin
 
 section \<open>Generic executable mirror of backward filtering\<close>
