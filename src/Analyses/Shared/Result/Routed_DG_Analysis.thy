@@ -1185,4 +1185,17 @@ next
   case (DomC eqs x) then show ?case by (rule exec_dom_of_solve_c)
 qed
 
+text \<open>
+  The state a call enters its callee with, at the executable component: the entry
+  transfer, lifted over reachability.
+\<close>
+
+lemma (in routed_dg_analysis_exec) entry_of_exec:
+  "routed_dg_pipeline.entry_of
+     (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+        (tf_st \<G>) (enter_st \<G>))
+     \<G> p ci d
+   = transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
+  by (simp add: routed_dg_pipeline.entry_of_def)
+
 end
