@@ -12,10 +12,11 @@ text \<open>
   The activation list chooses which components run; the fields of inactive
   analyses are never read.
 
-  A component's operations are those of a local specification, with two
-  changes that let components be chained over one record. Its entry transfer
+  A component's operations are those of a local specification, with one
+  change that lets components be chained over one record: its entry transfer
   takes the pair of records built so far and sets its own field in both
-  halves. Its return is one function, the composite of the two combine stages.
+  halves. A single analysis is a component too, and runs as the specification
+  \<open>component_spec\<close> builds from it.
 \<close>
 
 record 's mcp_component =
@@ -24,7 +25,16 @@ record 's mcp_component =
   mc_qs :: "edge_action \<Rightarrow> 's \<Rightarrow> query list"
   mc_step :: "answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's"
   mc_en :: "call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
-  mc_comb :: "call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  mc_comb_env :: "call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  mc_comb_assign :: "call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+
+text \<open>
+  The return runs in the two stages of Goblint's \<open>combine_env\<close> and
+  \<open>combine_assign\<close>. Soundness and independence speak about their composite.
+\<close>
+
+abbreviation mc_comb :: "'s mcp_component \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "mc_comb c ci x de \<equiv> mc_comb_assign c ci (mc_comb_env c ci x de) de"
 
 text \<open>
   A component is sound when each operation covers the concrete behaviour for
@@ -92,19 +102,6 @@ definition mcp_qs :: "'s mcp_component list \<Rightarrow> edge_action \<Rightarr
 
 definition mcp_gamma :: "'s mcp_component list \<Rightarrow> 's \<Rightarrow> store set" where
   "mcp_gamma cs x = (\<Inter>c \<in> set cs. mc_gamma c x)"
-
-definition mcp_spec :: "'s mcp_component list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
-  "mcp_spec cs = local_dg_spec (mcp_qs cs) (mcp_qry cs)
-     (\<lambda>A. mcp_step cs A EA_Nop)
-     (\<lambda>A x e. mcp_step cs A (EA_Assign x e))
-     (\<lambda>A sc x. mcp_step cs A (EA_Special sc x))
-     (\<lambda>A b pol. mcp_step cs A (if pol then EA_Assume b else EA_AssumeNot b))
-     (\<lambda>A p. mcp_step cs A (EA_Body p))
-     (\<lambda>A e p. mcp_step cs A (EA_Ret e p))
-     (mcp_en cs)
-     (\<lambda>A ev. mcp_step cs A (event_action ev))
-     (\<lambda>ci dc de. dc)
-     (mcp_comb cs)"
 
 lemma local_spec_step_mcp:
   "local_spec_step (mcp_step cs A EA_Nop) (\<lambda>x e. mcp_step cs A (EA_Assign x e))
@@ -266,57 +263,138 @@ proof (induction cs arbitrary: r)
     using Cons.IH[of "r \<sqinter> mc_qry c x q"] Cons.prems(1,2) by simp
 qed simp
 
-theorem mcp_local_spec:
-  assumes sound: "\<forall>c \<in> set cs. mcp_component_sound \<G> c" and indep: "mcp_independent cs"
-  shows "sound_local_dg_spec (mcp_qry cs)
-     (\<lambda>A. mcp_step cs A EA_Nop)
-     (\<lambda>A x e. mcp_step cs A (EA_Assign x e))
-     (\<lambda>A sc x. mcp_step cs A (EA_Special sc x))
-     (\<lambda>A b pol. mcp_step cs A (if pol then EA_Assume b else EA_AssumeNot b))
-     (\<lambda>A p. mcp_step cs A (EA_Body p))
-     (\<lambda>A e p. mcp_step cs A (EA_Ret e p))
-     (mcp_en cs)
-     (\<lambda>A ev. mcp_step cs A (event_action ev))
-     (\<lambda>ci dc de. dc)
-     (mcp_comb cs)
-     (mcp_gamma cs) \<G>"
+section \<open>A component as a specification\<close>
+
+text \<open>
+  A component runs as the local specification whose fields are its own
+  operations. Entry starts both halves at the caller's record.
+\<close>
+
+definition component_spec :: "'s mcp_component \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
+  "component_spec c = local_dg_spec (mc_qs c) (mc_qry c)
+     (\<lambda>A. mc_step c A EA_Nop)
+     (\<lambda>A x e. mc_step c A (EA_Assign x e))
+     (\<lambda>A sc x. mc_step c A (EA_Special sc x))
+     (\<lambda>A b pol. mc_step c A (if pol then EA_Assume b else EA_AssumeNot b))
+     (\<lambda>A p. mc_step c A (EA_Body p))
+     (\<lambda>A e p. mc_step c A (EA_Ret e p))
+     (\<lambda>ci d. mc_en c ci (d, d))
+     (\<lambda>A ev. mc_step c A (event_action ev))
+     (mc_comb_env c)
+     (mc_comb_assign c)"
+
+lemma local_spec_step_component:
+  "local_spec_step (mc_step c A EA_Nop) (\<lambda>x e. mc_step c A (EA_Assign x e))
+     (\<lambda>sc x. mc_step c A (EA_Special sc x))
+     (\<lambda>b pol. mc_step c A (if pol then EA_Assume b else EA_AssumeNot b))
+     (\<lambda>p. mc_step c A (EA_Body p)) (\<lambda>e p. mc_step c A (EA_Ret e p))
+     (\<lambda>ev. mc_step c A (event_action ev)) a
+   = mc_step c A a"
+  by (cases a) simp_all
+
+theorem component_local_spec:
+  assumes sound: "mcp_component_sound \<G> c"
+  shows "sound_local_dg_spec (mc_qry c)
+     (\<lambda>A. mc_step c A EA_Nop)
+     (\<lambda>A x e. mc_step c A (EA_Assign x e))
+     (\<lambda>A sc x. mc_step c A (EA_Special sc x))
+     (\<lambda>A b pol. mc_step c A (if pol then EA_Assume b else EA_AssumeNot b))
+     (\<lambda>A p. mc_step c A (EA_Body p))
+     (\<lambda>A e p. mc_step c A (EA_Ret e p))
+     (\<lambda>ci d. mc_en c ci (d, d))
+     (\<lambda>A ev. mc_step c A (event_action ev))
+     (mc_comb_env c)
+     (mc_comb_assign c)
+     (mc_gamma c) \<G>"
 proof (unfold_locales, goal_cases)
   case (1 d d')
-  then show ?case
-    using sound unfolding mcp_gamma_def mcp_component_sound_def by fastforce
+  then show ?case using sound unfolding mcp_component_sound_def by blast
 next
   case (2 a d A)
   show ?case
-    unfolding local_spec_step_mcp by (rule mcp_step_sound[OF sound indep])
+    unfolding local_spec_step_component using sound unfolding mcp_component_sound_def by blast
 next
   case (3 s d ci)
-  have "\<exists>p \<in> set (mcp_en cs ci d).
-          s \<in> mcp_gamma cs (fst p) \<and> s \<in> mcp_gamma [] (fst p)
-          \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-              \<in> mcp_gamma cs (snd p)
-          \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-              \<in> mcp_gamma [] (snd p)"
-    unfolding mcp_en_def
-    by (rule mcp_en_fold_sound[OF sound indep]) (use 3 in simp_all)
-  then obtain p where "p \<in> set (mcp_en cs ci d)" "s \<in> mcp_gamma cs (fst p)"
-      "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> mcp_gamma cs (snd p)"
-    by blast
+  then obtain q where "q \<in> set (mc_en c ci (d, d))" "s \<in> mc_gamma c (fst q)"
+      "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> mc_gamma c (snd q)"
+    using sound unfolding mcp_component_sound_def by (metis fst_conv)
   then show ?case
-    by (intro entry_pairs_coverI[of "fst p" "snd p"]) simp_all
+    by (intro entry_pairs_coverI[of "fst q" "snd q"]) simp_all
 next
   case (4 s dc t de ci)
-  then show ?case by (rule mcp_comb_sound[OF sound indep])
+  then show ?case using sound unfolding mcp_component_sound_def by blast
 next
   case (5 s d q)
-  then show ?case
-    unfolding mcp_qry_def by (rule mcp_qry_fold_sound[OF _ sound]) simp
+  then show ?case using sound unfolding mcp_component_sound_def by blast
+qed
+
+theorem component_contract:
+  assumes "mcp_component_sound \<G> c"
+  shows "analysis_contract (component_spec c) (\<lambda>d g. mc_gamma c d) \<G>"
+  unfolding component_spec_def
+  by (rule sound_local_dg_spec.local_spec_contract[OF component_local_spec[OF assms]])
+
+section \<open>Several components as one\<close>
+
+text \<open>
+  The combination of several components is itself a component. One
+  component is its own combination, so a single analysis and an \<open>MCP\<close> of one
+  analysis are the same specification. Several components run their returns
+  one after the other, each through both of its stages: the combination's env
+  stage keeps the caller's record, and its assign stage runs every component's
+  composite. Running every env stage before every assign stage would need the
+  stages of different components to commute, which independence of their
+  concretizations does not give.
+\<close>
+
+fun mcp_combine :: "'s mcp_component list \<Rightarrow> 's mcp_component" where
+  "mcp_combine [c] = c"
+| "mcp_combine cs = \<lparr>
+     mc_gamma = mcp_gamma cs,
+     mc_qry = mcp_qry cs,
+     mc_qs = mcp_qs cs,
+     mc_step = mcp_step cs,
+     mc_en = (\<lambda>ci p. fold (\<lambda>c ps. concat (map (mc_en c ci) ps)) cs [p]),
+     mc_comb_env = (\<lambda>ci dc de. dc),
+     mc_comb_assign = mcp_comb cs \<rparr>"
+
+definition mcp_spec :: "'s mcp_component list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
+  "mcp_spec cs = component_spec (mcp_combine cs)"
+
+theorem mcp_combine_sound:
+  assumes sound: "\<forall>c \<in> set cs. mcp_component_sound \<G> c" and indep: "mcp_independent cs"
+    and ne: "cs \<noteq> []"
+  shows "mcp_component_sound \<G> (mcp_combine cs)"
+proof (cases "\<exists>c. cs = [c]")
+  case True
+  then show ?thesis using sound by auto
+next
+  case False
+  have comb: "mcp_combine cs = \<lparr>
+     mc_gamma = mcp_gamma cs, mc_qry = mcp_qry cs, mc_qs = mcp_qs cs, mc_step = mcp_step cs,
+     mc_en = (\<lambda>ci p. fold (\<lambda>c ps. concat (map (mc_en c ci) ps)) cs [p]),
+     mc_comb_env = (\<lambda>ci dc de. dc), mc_comb_assign = mcp_comb cs \<rparr>"
+    using False ne by (cases cs rule: mcp_combine.cases) auto
+  have enter: "\<exists>q \<in> set (fold (\<lambda>c ps. concat (map (mc_en c ci) ps)) cs [p]).
+                 s \<in> mcp_gamma cs (fst q)
+                 \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+                     \<in> mcp_gamma cs (snd q)"
+    if "s \<in> mcp_gamma cs (fst p)" for s ci p
+    using mcp_en_fold_sound[OF sound indep, of "[]" "[p]" s _ ci] that by auto
+  have mono: "\<forall>x y. x \<le> y \<longrightarrow> mcp_gamma cs x \<subseteq> mcp_gamma cs y"
+    using sound by (fastforce simp: mcp_gamma_def mcp_component_sound_def)
+  have qry: "\<forall>s x q. s \<in> mcp_gamma cs x \<longrightarrow> eval_holds q (mcp_qry cs x q) s"
+    unfolding mcp_qry_def using mcp_qry_fold_sound[OF _ sound] by simp
+  show ?thesis
+    unfolding comb mcp_component_sound_def
+    using mono mcp_step_sound[OF sound indep] mcp_comb_sound[OF sound indep] enter qry
+    by simp
 qed
 
 theorem mcp_contract:
-  assumes "\<forall>c \<in> set cs. mcp_component_sound \<G> c" and "mcp_independent cs"
-  shows "analysis_contract (mcp_spec cs) (\<lambda>d g. mcp_gamma cs d) \<G>"
-  unfolding mcp_spec_def
-  by (rule sound_local_dg_spec.local_spec_contract[OF mcp_local_spec[OF assms]])
+  assumes "\<forall>c \<in> set cs. mcp_component_sound \<G> c" and "mcp_independent cs" and "cs \<noteq> []"
+  shows "analysis_contract (mcp_spec cs) (\<lambda>d g. mc_gamma (mcp_combine cs) d) \<G>"
+  unfolding mcp_spec_def by (rule component_contract[OF mcp_combine_sound[OF assms]])
 
 section \<open>A local specification as a component\<close>
 
@@ -346,7 +424,8 @@ where
      mc_step = (\<lambda>A a x. put x (local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A)
                                  a (get x))),
      mc_en = (\<lambda>ci p. map (\<lambda>(c, e). (put (fst p) c, put (snd p) e)) (en ci (get (fst p)))),
-     mc_comb = (\<lambda>ci x de. put x (ca ci (ce ci (get x) (get de)) (get de))) \<rparr>"
+     mc_comb_env = (\<lambda>ci x de. put x (ce ci (get x) (get de))),
+     mc_comb_assign = (\<lambda>ci x de. put x (ca ci (get x) (get de))) \<rparr>"
 
 theorem lens_component_sound:
   assumes spec: "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
@@ -379,5 +458,39 @@ theorem lens_frame:
   shows "mcp_frame (lens_component get1 put1 qs1 qry1 sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1)
                    (lens_component get2 put2 qs2 qry2 sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2)"
   unfolding mcp_frame_def lens_component_def by (auto simp: assms)
+
+subsection \<open>A local specification over the whole state\<close>
+
+text \<open>
+  Through the identity lens a local specification is a component over its own
+  carrier, and that component runs as exactly the specification it came from:
+  a single analysis passes through \<^const>\<open>component_spec\<close> unchanged.
+\<close>
+
+abbreviation local_component where
+  "local_component \<equiv> lens_component id (\<lambda>_ v. v)"
+
+lemma local_spec_step_event_action [simp]:
+  "local_spec_step sk asn sp br bd rt ev (event_action e) = ev e"
+  by (cases e) simp
+
+theorem component_spec_local_component:
+  "component_spec (local_component qs qry sk asn sp br bd rt en ev ce ca gammaD)
+   = local_dg_spec qs qry sk asn sp br bd rt en ev ce ca"
+proof -
+  have en: "(\<lambda>ci d. map (\<lambda>(c, e). (c, e)) (en ci d)) = en"
+    by (simp add: fun_eq_iff case_prod_beta)
+  have br: "(\<lambda>A b pol. local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A)
+               (if pol then EA_Assume b else EA_AssumeNot b)) = br"
+    by (simp add: fun_eq_iff)
+  show ?thesis
+    unfolding component_spec_def lens_component_def
+    by (simp add: en br)
+qed
+
+theorem local_component_sound:
+  assumes "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
+  shows "mcp_component_sound \<G> (local_component qs qry sk asn sp br bd rt en ev ce ca gammaD)"
+  by (rule lens_component_sound[OF assms]) simp_all
 
 end
