@@ -107,8 +107,8 @@ text \<open>
   generation actually exports, not at an internal solved system.
   @{thm [source] run_voblint_certified_source_sound}, in
   \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, says: run the source program, stop
-  wherever you like, and ask any configuration --- a domain, a global update rule and a
-  context policy --- for a result. There is a graph node and frame stack for where you
+  wherever you like, and ask any configuration --- a list of active analyses, a global
+  update rule and a context policy --- for a result. There is a graph node and frame stack for where you
   stopped, the abstract state filed for that node contains your store, and every check
   listed there holds of that store, with none there marked unreachable.
 
@@ -118,12 +118,12 @@ text \<open>
   under entry-state routing; quantifying over every covered context would be false,
   since another activation's entry need not describe this store.
 
-  What a caller owes is \<open>config_terminates D rule ctx p\<close>: the solve completed.
+  What a caller owes is \<open>config_terminates as rule ctx p\<close>: the solve completed.
   Neither coverage nor well-formedness is a premise, because a terminating solve is
   closed along its live dependencies and a malformed program answers
   \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
-  \<open>analysis_result_covers\<close> rather than in the statement, because an abstract state's
-  type is the domain's own carrier.
+  \<open>analysis_result_covers\<close> rather than in the statement, because each context policy
+  keys its table by its own context type.
 
   \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> is that theorem
   with nothing left to assume.  It fixes one program at the product domain, a
@@ -606,26 +606,25 @@ text \<open>
       reimplementation shaped to fit.
 
   \<^bold>\<open>9. The CLI: configuration and code generation.\<close>
-    One public operation over every domain, update rule and context policy, applying
-    the registrations of \<open>4\<close>/\<open>5\<close> above rather than a parallel pipeline, and
-    exported to OCaml.
+    One public operation over every activation list, update rule and context policy,
+    running the active analyses as one component of the shared pipeline, and exported
+    to OCaml.
     \<^item> @{theory Voblint_Solver.Globals_Rule} --- the rule that merges contributions to a
       side-effected global, as a value: one solver interpretation serves all four, and
       every domain registers each context policy once over it.
     \<^item> @{theory Voblint_CLI.Analysis_Run} --- \<^const>\<open>run_voblint\<close>, the one operation
-      code generation exports: a domain, a global update rule and a context policy, all
-      plain values, and a program. Every combination is analysed; the answer is the
+      code generation exports: a list of analyses, a global update rule and a context
+      policy, all plain values, and a program. Every combination is analysed; the answer is the
       solved result as data, and every rendering of it is built outside this
       development. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> pins one program's answer
       \<^verbatim>\<open>by eval\<close>, and a hand-written OCaml driver under \<open>codegen/regression/\<close>
       checks the generated module against the same values.
     \<^item> @{theory Voblint_CLI.Analysis_Run_Sound} and
-      @{theory Voblint_CLI.Analysis_Run_Ctx_Sound} --- one soundness table per domain
-      and context policy (@{thm [source] sign_rule_table},
-      @{thm [source] interval_es_rule_table}, @{thm [source] int_cs_rule_table}, and
-      their siblings), each stated for an arbitrary update rule.  The unit tables are
-      built from the registration's own \<^verbatim>\<open>result_node_sound_of_terminates\<close>
-      (\<^theory>\<open>Voblint_Result.Unit_DG_Analysis\<close>).
+      @{theory Voblint_CLI.Analysis_Run_Ctx_Sound} --- one soundness table per context
+      policy (@{thm [source] mcp_rule_table}, @{thm [source] mcp_es_rule_table},
+      @{thm [source] mcp_cs_rule_table}), each stated for an arbitrary activation list
+      and update rule, over the registrations of
+      \<^theory>\<open>Voblint_CLI.MCP_Analyses\<close>.
       @{theory Voblint_CLI.Analysis_Certified} dispatches over the tables to state
       @{thm [source] run_voblint_certified_source_sound} and
       @{thm [source] run_voblint_check_sound} once for every configuration.
