@@ -14,6 +14,7 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "HOL-Library"
   theories
     Analysis_Config
+    MCP_Analyses
     Dispatch_Carrier
     Analysis_Run
     Analysis_Run_Sound
