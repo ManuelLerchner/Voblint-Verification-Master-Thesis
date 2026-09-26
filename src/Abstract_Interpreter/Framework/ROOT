@@ -14,6 +14,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     "State"
     "Result"
     "Checks"
+    "Cooperation"
   theories
     (* Elaborated here, not imported: the two solver theories that reach
        TD_side_upd_rule first appear at the Analysis_* layer, where five
@@ -41,6 +42,10 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Routed_Context
     Routed_Context_Unit
     DG_Local_State_Spec
+    (* Analyses composed as a product, answering each other's queries. *)
+    Analysis_Query
+    Oracle_Local_Spec
+    Local_Spec_Product
     Call_String_Context
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)

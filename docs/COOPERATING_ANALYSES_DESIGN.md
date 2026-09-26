@@ -34,7 +34,7 @@ register uses):
 | --- | --- | --- |
 | activated analyses chosen at run time, state as `(int * Obj.t) list` | `mCP.ml` `spec_list` | two components in `analysis_product D₁ D₂`; nesting gives n-ary |
 | `Queries.t`, a GADT whose constructor fixes the result lattice | `queries.ml` | `datatype query = EvalBool exp`, one flat Boolean answer lattice |
-| `Spec.query`; `DefaultSpec.query` returns `Result.top` | `analyses.ml:369` | `qry :: D ⇒ query ⇒ answer`; the default answers `Unknown` |
+| `Spec.query`; `DefaultSpec.query` returns `Result.top` | `analyses.ml:369` | `qry :: D ⇒ query ⇒ answer`; the default answers `⊤` |
 | `query'` folds `Result.meet` from `Result.top` over all analyses | `mCP.ml:290–293, 331` | the handler of `A ⊗ B` meets the component answers; `close` turns it into the oracle |
 | component transfers get a manager built from the predecessor product | `mCP.ml:395–397` (`outer_man`/`inner_man`) | `close` computes the oracle once per edge from the whole predecessor state |
 | `enter` takes the Cartesian product of the component alternatives | `mCP.ml:539` | same |
@@ -98,33 +98,29 @@ call and global behaviour.
 
 Version 1 has one query kind, the truth of an expression, because it covers
 both demo directions and already has a proved-sound numeric answerer. It is a
-constructor, not a bare `exp`, so later kinds extend the datatype. Answers
-form a four-element lattice ordered by the truth values they admit; `Unknown`
-is Goblint's `Result.top` and `Inconsistent` its bottom:
+constructor, not a bare `exp`, so later kinds extend the datatype. An answer is
+the set of truth values it admits, a `bool set` with HOL's own lattice: `UNIV`
+is Goblint's `Result.top`, `{}` its bottom, and the meet is intersection.
 
 ```text
-            Unknown                 admits {True, False}
-           /       \
-        True       False            admits {True} / {False}
-           \       /
-          Inconsistent              admits {}
-
 datatype query = EvalBool exp
-answer_holds (EvalBool e) a s  ⟷  truthy (⟦e⟧ s) ∈ admits a
+truth_holds (EvalBool e) A s  ⟷  truthy (⟦e⟧ s) ∈ A
 ```
 
 A handler `qry :: 'D ⇒ query ⇒ answer` is sound when
 `s ∈ gammaD d ⟹ answer_holds q (qry d q) s`. For a pointwise numeric state
-`check_query` answers with `bool option`, mapped as `None ↦ Unknown` and
-`Some b ↦ b`. Its soundness is exactly `check_query_sound`
+`check_query` answers with `bool option`, embedded by `admitted` as
+`None ↦ UNIV` and `Some b ↦ {b}`. Its soundness is exactly `check_query_sound`
 (`Abstract_Checks.thy`), so the numeric side answers at no new proof cost. `relc` holds pairs
 `(x, y)` meaning `s x ≤ s y` (`gamma_rel`, `Rel_Order_Domain.thy:115`), so it
 answers `x <= y` true when `(x, y)` is present, `y < x` false for the same
 pair, and `x == y` true when both `(x, y)` and `(y, x)` are present.
 
-**Combining answers.** The product meets the two answers. The meet admits
-the intersection of what the operands admit, so `True ⊓ False = Inconsistent`
-and `Unknown ⊓ True = True`. Because it is associative and commutative,
+**Combining answers.** The product meets the two answers, so
+`{True} ⊓ {False} = {}` and `UNIV ⊓ {True} = {True}`. `bool option` could not
+serve: it has no meet of `Some True` and `Some False`. The connectives of
+`Three_Valued` are a different operation, combining the truth of two
+expressions rather than two answers about one. Because it is associative and commutative,
 query aggregation does not depend on the order or nesting of components. It
 is Goblint's `Queries.Result.meet` restricted to this one query. Soundness of
 the meet is one lemma: if a store satisfies both answers, it satisfies their
@@ -145,7 +141,7 @@ The answers form a meet-semilattice with top, so "no information" is `⊤` and
 combining is `⊓`, as in Goblint, and associativity, commutativity and
 idempotence come from the class rather than from separate assumptions.
 
-Version 1 interprets it once, at `EvalBool` and the four-element lattice. A
+Version 1 interprets it once, at `EvalBool` and `bool set`. A
 later vocabulary reuses the theorem wherever it fits that interface. Queries with different answer
 types (Goblint's `EvalInt` answers an integer abstraction, `MayPointTo` an
 address set) need an encoding such as a tagged universal answer type; that
@@ -176,7 +172,7 @@ s ∈ gammaD d ⟹ oracle_holds ask s ⟹ successor s ∈ gammaD (asn ask x e d)
 
 The oracle is quantified in the obligation, never fixed, so a component proof
 cannot depend on who answers. An existing `sound_local_dg_spec` becomes a
-component by ignoring `ask` and answering `Unknown` to every query, the
+component by ignoring `ask` and answering `⊤` to every query, the
 analogue of inheriting `DefaultSpec.query`.
 
 **Predecessor-state invariant.** Following MCP's manager model, the oracle is
@@ -251,13 +247,12 @@ inside Isabelle and registered as a thesis claim.
 
 - **Numeric consumes relational.** An oracle wrapper around any local
   specification: at `z = e` with `e` Boolean-valued, if `ask (EvalBool e)` is
-  `True` or
-  `False`, assign the literal `1` or `0`; otherwise fall back to the
-  component's own assignment. An answer fixes only the truthiness of `e`, so
+  `{True}` or `{False}`, assign the literal `1` or `0`; otherwise fall back to
+  the component's own assignment. An answer fixes only the truthiness of `e`, so
   the wrapper is restricted to the comparisons and logical operators, which
   evaluate to `0` or `1` (`VIMP_Expr.thy:122–130`); for `z = x` with `x = 5`,
-  `True` would wrongly give `z = 1`. Its soundness follows from that lemma, the
-  fallback's soundness and `oracle_holds`. On `Inconsistent` the state is
+  `{True}` would wrongly give `z = 1`. Its soundness follows from that lemma, the
+  fallback's soundness and `oracle_holds`. On `{}` the state is
   unreachable and any result is sound; the wrapper falls back.
   `relc` forgets every assigned variable and learns only at branches, so the
   program builds the equality from two guards:
@@ -275,9 +270,10 @@ Generalizing the pattern into an oracle-aware evaluator is later work.
 
 ## Isabelle work items
 
-1. `Query.thy` (`Voblint_Framework`): `query_algebra`, the `query` datatype,
-   the four-element answer lattice, `answer_holds`, `oracle_holds`, and the
-   `query_algebra` interpretation.
+1. `Analysis_Query.thy` (`Voblint_Framework`): `query_algebra`,
+   `oracle_holds`, the `query` datatype, `truth_holds` over `bool set`
+   answers, its `query_algebra` interpretation, and the embedding `admitted`
+   of `bool option`.
 2. `Oracle_Local_Spec.thy`: the component locale, the lift of a plain
    `sound_local_dg_spec` (ignore `ask`, answer `⊤`), `close`, and
    `close_component`.
