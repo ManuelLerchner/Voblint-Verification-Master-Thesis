@@ -112,7 +112,6 @@ def collected() -> dict[str, set[str]]:
 
 PLAYGROUND_KEYS = {"fixture", "analysis", "globals", "context", "k"}
 PLAYGROUND_SELECTS = {
-    "analysis": "analysis-select",
     "globals": "globals-select",
     "context": "context-select",
 }
@@ -135,6 +134,14 @@ def playground_vocabulary() -> dict[str, object]:
             if block
             else set()
         )
+    choices = re.search(
+        r'<fieldset id="analysis-choices"[^>]*>(.*?)</fieldset>', html, re.S
+    )
+    options["analysis"] = (
+        set(re.findall(r'<input type="checkbox" value="([^"]+)"', choices.group(1)))
+        if choices
+        else set()
+    )
     depth = re.search(r"^const MAX_CONTEXT_DEPTH = (\d+);", script, re.M)
     return {
         "options": options,
@@ -158,7 +165,9 @@ def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> li
 
     for key, allowed in vocabulary["options"].items():
         for value in query.get(key, []):
-            if value not in allowed:
+            # The analysis is a comma list, one checkbox per name.
+            names = value.split(",") if key == "analysis" else [value]
+            if not all(name in allowed for name in names):
                 problems.append(f"{key}={value} is not a playground option")
 
     for value in query.get("k", []):

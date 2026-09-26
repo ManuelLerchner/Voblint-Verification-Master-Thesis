@@ -163,7 +163,7 @@
         "name": "Voblint Playground",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any (runs in the browser)",
-        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick a domain, a globals rule and a context sensitivity, then inspect every abstract state.",
+        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick one or more domains, a globals rule and a context sensitivity, then inspect every abstract state.",
         "author": {
           "@type": "Person",
           "name": "Manuel Lerchner"
@@ -4958,11 +4958,11 @@ fun main() {
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+      and "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
-           ∧ analysis_result_covers D rule ctx p v s
+           ∧ analysis_result_covers as rule ctx p v s
            ∧ checks_sound_at res v s"</pre>
             </details>
           </article>
@@ -4989,8 +4989,8 @@ fun main() {
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "next_check residual = Some (l, e)"
-      and "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+      and "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
   shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
@@ -5017,8 +5017,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_dead_check_unreached:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "chk ∈ set (res_checks res)"
       and "check_verdict chk = Dead"
   shows "𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point chk) = {}"</pre>
@@ -5043,8 +5043,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_arithmetic_safe:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v"
       and "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"</pre>
@@ -5067,7 +5067,7 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_check_sites:
-  assumes "run_voblint D rule ctx p = Analysed res"
+  assumes "run_voblint as rule ctx p = Analysed res"
   shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
             </details>
@@ -5460,7 +5460,7 @@ qed</code></pre>
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/Unit_DG_Analysis.html#Unit_DG_Analysis.unit_dg_analysis.result_node_sound_of_terminates%7Cfact" data-name="result_node_sound_of_terminates" data-theory="Voblint_Result.Unit_DG_Analysis" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates. This is the no-context route; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">result_node_sound_of_terminates</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every domain, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
               <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_certified_source_sound</text></a>
@@ -5608,11 +5608,11 @@ qed</code></pre>
             <span class="align-voblint">Mathematical integers</span>
             <span class="align-note">No soundness theorem here covers wrap-around arithmetic.</span>
           </li>
-          <li class="align-row absent">
+          <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
-            <span class="align-link" aria-label="absent"><span>absent</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Domain/Numeric_Queries.html#Numeric_Queries.sound_numeric_queries%7Clocale" title="Definition in the formalization">Two numeric queries in the check layer</a>
-            <span class="align-note">A transfer function cannot ask a query at all.</span>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Manager.html#DG_Manager.man.man_ask%7Cconst" title="Definition in the formalization">man_ask</a>
+            <span class="align-note">A transfer may ask through its manager; every active analysis answers and the answers are met. A check is decided by the met answer to <code>EvalInt</code> of its condition. An analysis answers from its own state, without asking further queries, and the shipped transfers ask none.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L199" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sync</a>
@@ -5620,11 +5620,17 @@ qed</code></pre>
             <span class="align-voblint">none</span>
             <span class="align-note">The analysis record has no sync hook; publication happens only in an edge transfer's result.</span>
           </li>
+          <li class="align-row simplified">
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">MCP, the analysis combinator</a>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_component%7Ctype" title="Definition in the formalization">mcp_component</a>
+            <span class="align-note">The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is. Since the shipped transfers ask no queries, the analyses share information only through unreachability and check answers. Activation has no dependency order.</span>
+          </li>
           <li class="align-row absent">
-            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads and the analysis manager</a>
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <span class="align-voblint">none</span>
-            <span class="align-note">Goblint composes many analyses through its manager and handles thread creation and privatization. None of it is modeled here.</span>
+            <span class="align-note">Thread creation and privatization are not modeled.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Solver termination</a>

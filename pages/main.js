@@ -41,7 +41,34 @@ let pendingAnalysis = null;
 
 const editorMount = query("#program-editor");
 
-const analysisSelect = query("#analysis-select");
+/*
+ * The activation list, one checkbox per analysis. It reads and writes as the comma
+ * list the CLI takes, in the order the boxes are listed; run_voblint alone decides
+ * whether a list is a valid activation.
+ */
+const analysisChoices = [...document.querySelectorAll("#analysis-choices input")];
+const activationControl = {
+  get value() {
+    return analysisChoices
+      .filter((box) => box.checked)
+      .map((box) => box.value)
+      .join(",");
+  },
+  set value(list) {
+    const names = list.split(",");
+
+    for (const box of analysisChoices) {
+      box.checked = names.includes(box.value);
+    }
+  },
+  get label() {
+    const labels = analysisChoices
+      .filter((box) => box.checked)
+      .map((box) => box.parentElement.textContent.trim());
+
+    return labels.length > 0 ? labels.join(" + ") : "no analysis";
+  },
+};
 const globalsSelect = query("#globals-select");
 const contextSelect = query("#context-select");
 
@@ -300,7 +327,7 @@ function renderRawCall(raw) {
 
   if (!input) {
     parts.push(
-      callPart(" kind rule ctx p", "arg"),
+      callPart(" as rule ctx p", "arg"),
       callPart(" \u27f9 ", "arrow"),
       callPart("?", "arg"),
     );
@@ -311,7 +338,7 @@ function renderRawCall(raw) {
 
   parts.push(
     callPart(
-      ` ${constructorTerm(input.kind)} ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+      ` [${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
       "arg",
     ),
     callPart("p", "program"),
@@ -2636,7 +2663,11 @@ function saveGraphImage() {
     maxHeight: 8000,
     bg: cssToken("--surface-muted"),
   });
-  const settings = [analysisSelect.value, globalsSelect.value, contextSelect.value];
+  const settings = [
+    activationControl.value.replaceAll(",", "+"),
+    globalsSelect.value,
+    contextSelect.value,
+  ];
 
   if (contextSelect.value === "call-string") {
     settings.push(`k${contextDepthInput.value}`);
@@ -2906,7 +2937,7 @@ function parseContextDepth(text) {
 }
 
 function readConfiguration() {
-  const analysis = analysisSelect.value;
+  const analysis = activationControl.value;
 
   const globals = globalsSelect.value;
 
@@ -2948,7 +2979,7 @@ function selectedLabel(select) {
 
 function configurationLabel(configuration) {
   const parts = [
-    selectedLabel(analysisSelect),
+    activationControl.label,
     selectedLabel(globalsSelect),
     selectedLabel(contextSelect),
   ];
@@ -3377,7 +3408,7 @@ valueHintsToggle.addEventListener("change", syncValueHints);
 
 contextSelect.addEventListener("change", updateContextControls);
 
-for (const control of [analysisSelect, globalsSelect, contextSelect, contextDepthInput]) {
+for (const control of [...analysisChoices, globalsSelect, contextSelect, contextDepthInput]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
 
@@ -3735,7 +3766,12 @@ function openProgram({ source, fileName, settings = {} }) {
   editor.scrollDOM.scrollTo({ top: 0 });
   editorFile.textContent = fileName;
 
-  selectIfOffered(analysisSelect, settings.analysis);
+  if (
+    typeof settings.analysis === "string" &&
+    settings.analysis.split(",").every((name) => analysisChoices.some((box) => box.value === name))
+  ) {
+    activationControl.value = settings.analysis;
+  }
   selectIfOffered(globalsSelect, settings.globals);
   selectIfOffered(contextSelect, settings.context);
 
@@ -3870,7 +3906,7 @@ function linkParam(key, value) {
 async function shareLink() {
   const source = editor.state.doc.toString();
   const parameters = [
-    linkParam("analysis", analysisSelect.value),
+    linkParam("analysis", activationControl.value),
     linkParam("globals", globalsSelect.value),
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),

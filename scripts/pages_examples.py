@@ -135,7 +135,9 @@ def example(path: Path) -> dict[str, object]:
     settings = analysis_settings(args)
     lines = path.read_text().splitlines()
     relative = path.relative_to(CORPUS)
-    playground = {"analysis": settings["analyses"][0]} if "analyses" in settings else {}
+    playground = (
+        {"analysis": ",".join(settings["analyses"])} if "analyses" in settings else {}
+    )
     playground |= {
         name: settings[key] for key, name in PLAYGROUND_KEYS.items() if key in settings
     }

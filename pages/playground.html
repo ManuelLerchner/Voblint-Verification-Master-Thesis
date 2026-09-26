@@ -6,7 +6,7 @@
 
   <meta
     name="description"
-    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser: pick a domain, a globals rule and a context sensitivity, then inspect every state."
+    content="Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in your browser: pick one or more domains, a globals rule and a context sensitivity, then inspect every state."
   >
   <meta property="og:title" content="Voblint Playground">
   <meta
@@ -132,16 +132,14 @@
         <div class="analyzer-workspace">
           <div class="analyzer-sidebar">
             <div class="analyzer-controls" role="group" aria-label="Analyzer configuration">
-              <div class="control-group">
-                <label for="analysis-select">Analysis domain</label>
-                <select id="analysis-select">
-                  <option value="interval" selected>Interval</option>
-                  <option value="sign">Sign</option>
-                  <option value="int">Int product</option>
-                  <option value="parity">Parity</option>
-                  <option value="congruence">Congruence</option>
-                </select>
-              </div>
+              <fieldset id="analysis-choices" class="control-group analysis-choices">
+                <legend>Analyses</legend>
+                <label><input type="checkbox" value="interval" checked> Interval</label>
+                <label><input type="checkbox" value="sign"> Sign</label>
+                <label><input type="checkbox" value="int"> Int product</label>
+                <label><input type="checkbox" value="parity"> Parity</label>
+                <label><input type="checkbox" value="congruence"> Congruence</label>
+              </fieldset>
 
               <div class="control-group">
                 <label for="globals-select">Globals</label>

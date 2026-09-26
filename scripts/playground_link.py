@@ -99,7 +99,7 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
 
     return link(
         vimp_fixture.shown_source(program.read_text()),
-        settings["analyses"][0],
+        ",".join(settings["analyses"]),
         settings.get("globals", "warrow"),
         settings.get("context", "none"),
         settings.get("context_depth"),
