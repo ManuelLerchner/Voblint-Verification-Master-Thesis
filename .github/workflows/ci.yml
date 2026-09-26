@@ -751,7 +751,7 @@ jobs:
         run: pixi run html-report-config-audit
 
   # Unpinned from isabelle-build for the same reason as html, by a different
-  # mechanism: Voblint_Document re-elaborates all 223 theories from HOL (the
+  # mechanism: Voblint_Document re-elaborates all 223 theories from HOL-Library (the
   # session's own 32 min; its document step is 23s of that), so the inherited
   # heaps never shortened it. Measured across runs, this job takes 22-34 min
   # whether isabelle-build rebuilt for 41 min or skipped entirely.
