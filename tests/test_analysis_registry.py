@@ -3,10 +3,11 @@
 Everything else about the registration is derived from manifests/analyses.yaml, so
 a check derived from that manifest too would only prove the generator is
 self-consistent. The expectation below is written out by hand from the support
-policy: every analysis answers every global update rule at every context route, as
-a field of the combined state the CLI runs, with no default and no gap. Each domain
-registers its unit route, whose facts the combined state cites; the combined state
-registers every route once, with the activation list and the rule as parameters.
+policy: the CLI runs every analysis as a field of the combined state, which
+registers every context route once, with the activation list and the rule as
+parameters, so every activation answers every global update rule at every route,
+with no default and no gap. Each domain registers its unit route, whose facts the
+combined state cites.
 What can still go wrong is a route losing its parametric registration, a domain
 missing from the combined state, or the run surface pinning a rule instead of
 passing it through.

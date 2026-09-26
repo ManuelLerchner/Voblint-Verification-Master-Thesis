@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Generates each analysis domain's registration theory from manifests/analyses.yaml.
+"""Generates the analysis registrations and the combined state from manifests/analyses.yaml.
 
-One output per domain:
+One output per domain, plus one for the combined state:
 
   src/Analyses/<Domain>/generated/<Domain>_Analyses.thy
+  src/Executable_Surface/CLI/generated/MCP_Carrier.thy
 
-It registers the domain three times -- at the unit context, at the entry-state
-context and at the call-string context -- each registration taking the global
-update rule as a parameter, so one registration serves every solver discipline.
-The unit registration interprets `unit_dg_analysis`, the other two its parent
-`routed_dg_analysis_exec`.
+A domain is registered once per context it lists (`contexts`, default `[unit]`),
+each registration taking the global update rule as a parameter, so one
+registration serves every solver discipline. The unit registration interprets
+`unit_dg_analysis`, the entry-state and call-string ones its parent
+`routed_dg_analysis_exec`. The combined state has one lifted field per domain,
+in manifest order, and the per-domain cases the handwritten `MCP_Analyses`
+registers over.
 
 What is generated is registration, never mathematics. Every obligation is
 discharged by citing a fact the manifest only names: the domain's own, or the

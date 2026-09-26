@@ -18,14 +18,27 @@ new domain would touch OCaml.
 All names below are defined in `src/Executable_Surface/CLI/Analysis_Run.thy`.
 
 ```text
-analyse_program : analysis_domain => globals_rule => context_mode => imp_prog
+analyse_program : analysis_domain list => globals_rule => context_mode => imp_prog
                => abstract_value analysis_answer            (typed, verified)
 
 run_voblint     = map_analysis_answer string_of_abstract_value o analyse_program
                                                              (exported, display only)
 
-datatype 'v analysis_answer = Malformed_Program | Analysed "'v run_result"
+datatype 'v analysis_answer =
+  Invalid_Activation | Malformed_Program | Analysed "'v run_result"
+
+valid_activation as <-> as ~= [] /\ distinct as
 ```
+
+The first argument is the activation list: the analyses that run together, in the
+order their values are displayed. `analyse_program` checks it before anything
+else. An empty list or one that names an analysis twice answers
+`Invalid_Activation`; a consumer passes the list it was given and lets this
+answer reject it, so no second notion of a valid configuration exists outside
+Isabelle. A valid list runs one solve over the combined state (see
+[One dispatcher](#one-dispatcher)). A variable with one active analysis displays
+as that analysis's value; with several, as a `ProductValue` of their values in
+activation order.
 
 `map_run_result` is an explicit definition rather than a derived BNF map (plain
 `record`s are not BNFs), so the boundary itself spells out what presentation may
@@ -101,19 +114,19 @@ definition diagnostics_sound_at :: "'v run_result => imp_prog => pp => store => 
        --> arithmetic_safe_at (prog_cfg p) v s)
 
 lemma run_voblint_sound_at:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "s : ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v"
-  shows "analysis_result_covers D rule ctx p v s
+  shows "analysis_result_covers as rule ctx p v s
          /\ checks_sound_at res v s /\ diagnostics_sound_at res p v s"
 ```
 
 `analysis_result_covers` is `table_covers` of the table the configuration's
 registration solved: the store lies in the entry filed at `v` under some context.
-Each configuration discharges the `sound_table` locale (finitely many contexts
+Each context policy discharges the `sound_table` locale (finitely many contexts
 per point, coverage, classifier soundness in both directions) through its
-`<d>_rule_table`, `<d>_es_rule_table` or `<d>_cs_rule_table` lemma, and
-`analysis_result_sound` does the case split once. Well-formedness is not a
+`mcp_rule_table`, `mcp_es_rule_table` or `mcp_cs_rule_table` lemma, for every
+activation list, and `analysis_result_sound` does the case split once. Well-formedness is not a
 premise: `run_voblint` answers `Analysed` only for a program that passes
 `wf_program_compile_input_exec`.
 
@@ -195,12 +208,24 @@ cover:
 
 ## One dispatcher
 
-`analyse_program` is the only dispatcher. Its `analysis_result` reads one
-rule-parametric registration per domain and context policy, which
-`scripts/gen_analysis_assembly.py` emits from `manifests/analyses.yaml`:
-`<d>_rule` and `<d>_es_rule` for `r`, `<d>_cs_rule` for `k r`, each read through
-its `result_with_globals`. These are the only registrations a domain carries:
-the rule is a parameter, so no discipline has an instance of its own.
+`analyse_program` is the only dispatcher, and it no longer branches on the
+domain. `scripts/gen_analysis_assembly.py` emits one combined state from
+`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with
+one lifted field per listed analysis, each field carrying that analysis's
+per-domain state. `MCP_Analyses.thy` registers this state once per context
+policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for `as k r`.
+`analysis_result` reads the one registration its policy names through
+`result_with_globals`. The activation list, the rule and the call-string bound
+are all parameters, so no combination and no discipline has an instance of its
+own.
+
+Inactive fields start at `Bot` and stay there. A step whose result makes any
+active field `Bot` makes the whole state `Bot`, so one analysis proving a point
+unreachable makes it unreachable for all of them. A check reads the met answer
+of every active analysis to the query `EvalInt` of the check's expression, and
+`answer_check` classifies that one answer (`Check_Answer.thy`); no analysis
+classifies checks on its own. Singleton lists reproduce the verdicts of the
+former per-domain path on every CLI regression case.
 
 ## Steps
 

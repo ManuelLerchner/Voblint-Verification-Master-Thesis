@@ -48,3 +48,4 @@ codegen/regression/ocaml/regression-ml
 # Its own generator calls it "a gitignored, regenerable index -- not a source
 # of truth (the .thy files are)".
 docs/generated/DEFINITIONS_OVERVIEW.md
+cli/.voblint.*

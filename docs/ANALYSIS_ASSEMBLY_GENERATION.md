@@ -4,18 +4,23 @@
 verified implementation is this domain? Each entry names the domain (`name`),
 its abstract value type (`value_type`), the prefix its own constants and facts
 share (`impl`, defaulting to the lowercased name), the domain theories the
-registrations cite (`imports`), and, optionally, `roles` overrides for an
-operation or fact whose spelling does not follow that prefix.
+registrations cite (`imports`), and, optionally, the context policies it
+registers at (`contexts`, default `[unit]`), the constructor that wraps its
+values for display (`value_constructor`), and `roles` overrides for an operation
+or fact whose spelling does not follow that prefix.
 
 ```text
 manifests/analyses.yaml
        |
        +-- scripts/gen_analysis_assembly.py
              +-> src/Analyses/<Domain>/generated/<Domain>_Analyses.thy
+             +-> src/Executable_Surface/CLI/generated/MCP_Carrier.thy
 ```
 
-Every domain gets the same theory. It holds three `global_interpretation`s, all
-over the single rule-parametric solver interpretation `TD_side_rule_Interp`:
+Every domain gets the same theory. It holds one `global_interpretation` per
+listed context policy, all over the single rule-parametric solver
+interpretation `TD_side_rule_Interp`. Every domain lists `unit`; Interval also
+lists `entry-state` and `call-string`, which its examples read:
 
 | Registration | Locale | Context policy | Parameters |
 | --- | --- | --- | --- |
@@ -35,8 +40,8 @@ README.
 
 ## What is generated, and what is not
 
-Generated: the three interpretations and the twelve obligation discharges of
-each. Between the three contexts only the context terms differ -- global and
+Generated: the interpretations and the twelve obligation discharges of
+each. Between the contexts only the context terms differ -- global and
 seed keys, the executable and abstract route -- together with obligation 4, the
 routing agreement.
 
@@ -70,14 +75,39 @@ two entry transfers, assignment, special calls, branch and return. The renderer 
 application, so the interpretation still receives one argument. A fact takes no
 arguments, so an applied fact role is a registry error.
 
+## The combined state
+
+`MCP_Carrier.thy` is generated from the same registry, in registry order. It
+holds the `analysis_domain` datatype, one constructor per domain, and the
+combined state `mcp_st`: a nested product with one lifted field per domain,
+each field carrying that domain's `exec_dg_st`. Beside it comes the per-domain
+dispatch the combined state needs, one equation per domain each:
+`mcp_component_of` (a field's transfer, lensed into the product), the field
+concretization and liveness readers, `val_answer` (a field's answer to a
+query), `value_of` (a field's value for display, wrapped in the domain's
+`value_constructor`), `mcp_init` (active fields start at the domain's initial
+state, inactive ones at `Bot`) and the readers for the formals a context is
+keyed by. The lemmas `mcp_component_of_sound`, `mcp_init_sound` and
+`val_answer_sound` are proved by case analysis over the domain, citing only
+facts the domains already export.
+
+What does not depend on the domain list is handwritten: `MCP_Field.thy` (one
+field's lens laws) and `MCP_Analyses.thy` (normalization to `Bot`, the met
+answer, `mcp_classify`, and the three registrations `mcp_rule`, `mcp_es_rule`
+and `mcp_cs_rule` over the activation list `as`).
+
+The registry is not yet the only place a new domain is named. The display
+union `abstract_value` in `Dispatch_Carrier.thy`, with its imports, rendering
+and ordering key, is handwritten, and so is the domain list in
+`tests/test_analysis_registry.py`. Adding a domain means a manifest entry plus a
+constructor and its cases there.
+
 ## How the CLI reads them
 
-`analysis_result` in `Analysis_Run` is handwritten and reads only these: fifteen
-equations, one per domain and context policy, none naming a rule. A gap between
-a domain and a rule cannot be expressed, so there is no support table to
-generate, and no default: the CLI picks the rule in OCaml. `abstract_value`,
-which names each domain's abstract value type, is handwritten in
-`Dispatch_Carrier`.
+`analysis_result` in `Analysis_Run` is handwritten and reads only the combined
+registrations: three equations, one per context policy, none naming a domain or
+a rule. The activation list, the rule and the call-string bound are arguments,
+so there is no support table to generate and no default.
 
 A call-string bound needs no guard. `cs_route k u ctx d ca = take k (u # ctx)`,
 so `k = 0` routes every activation to `[]` -- as well-defined as any other bound,
@@ -87,9 +117,10 @@ that solves a flat system and publishes at `unit`.
 
 ## What this costs
 
-The tooling is about 480 lines -- a 53-line registry, a 331-line generator and
-98 lines of hand-written expectations -- plus this document. It produces about
-860 lines of theory across five domains, roughly 170 each.
+The tooling is about 970 lines -- a 61-line registry, a 784-line generator and
+127 lines of hand-written expectations -- plus this document. It produces about
+490 lines of per-domain theory (about 80 per unit-only domain, 172 for Interval)
+and the 276-line combined state.
 
 Two different things are at work and they are worth keeping apart. The
 *assembly* -- `routed_dg_analysis` and its unit instance `unit_dg_analysis` --
@@ -110,7 +141,8 @@ renames an argument; it never changes a proof step.
 ## Validation
 
 The generator refuses a registry that is not valid policy: a duplicated domain
-name or value type; a `roles` override naming an unknown role; an applied role
+name or value type; a domain without the `unit` context, or with an unknown
+one; a `roles` override naming an unknown role; an applied role
 that is not exactly `const` plus a non-empty `args` of constant names; an
 applied fact role. Rendering also refuses a generated line over 100 symbols or
 with non-ASCII content.
@@ -118,13 +150,13 @@ with non-ASCII content.
 ## Independent expectations
 
 `tests/test_analysis_registry.py` is deliberately not derived from the registry.
-It writes the support policy out by hand -- every domain answers every global
-update rule at every context policy -- and checks the emitted theory text
-against it: each of the fifteen (domain, context) pairs has exactly one
-rule-parametric registration with the expected locale and `for` parameters, and
-`analysis_result` has one equation per domain and context policy, none naming a
-`Globals_*` constructor. A registry change that drops a registration or pins a
-rule fails them.
+It writes the support policy out by hand and checks the emitted theory text
+against it: every domain has its unit registration, the combined state has
+`mcp_rule` and `mcp_es_rule` for `as r` and `mcp_cs_rule` for `as k r`, every
+domain is a field of the combined state, and `run_voblint` passes the rule
+through without naming a `Globals_*` constructor. A registry change that drops a
+registration, drops a domain from the combined state or pins a rule fails
+them.
 
 ## Drift
 
