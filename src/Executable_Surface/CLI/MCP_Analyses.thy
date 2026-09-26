@@ -238,4 +238,219 @@ lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp
   by (intro single_entry_map_component single_entry_mcp_combine)
      (auto simp: single_entry_mcp_component_of)
 
+subsection \<open>What the combined state publishes\<close>
+
+text \<open>
+  A solved combined state is published field by field, each through its
+  analysis's own readback. Its concretization is the intersection over the
+  active fields, and a check is decided from the meet of the active analyses'
+  answers.
+\<close>
+
+definition mcp_rd :: "(vname \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightarrow> mcp_val" where
+  "mcp_rd \<G> r =
+     Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot1 r))
+       (Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot2 r))
+         (Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot3 r))
+           (Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot4 r))
+             (map_lift (fun_of_resolved_st_q_for \<G>) (slot5 r)))))"
+
+fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set" where
+  "val_gamma Sign_Analysis v = gamma_point (slot1 v)"
+| "val_gamma Interval_Analysis v = gamma_point (slot2 v)"
+| "val_gamma Int_Analysis v = gamma_point (slot3 v)"
+| "val_gamma Parity_Analysis v = gamma_point (slot4 v)"
+| "val_gamma Congruence_Analysis v = gamma_point (slot5 v)"
+
+definition mcp_gamma_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> store set" where
+  "mcp_gamma_v as v = (\<Inter>a \<in> set as. val_gamma a v)"
+
+lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
+  by (cases a; cases x) (simp_all add: mcp_rd_def)
+
+lemma mcp_gamma_rd:
+  "as \<noteq> [] \<Longrightarrow> mcp_gamma (map (part_gamma \<G>) as) x
+                  = gamma_lift (mcp_gamma_v as) (map_lift (mcp_rd \<G>) x)"
+  by (cases x) (auto simp: mcp_gamma_def mcp_gamma_v_def part_gamma_rd)
+
+lemma mcp_gamma_v_bot: "as \<noteq> [] \<Longrightarrow> mcp_gamma_v as \<bottom> = {}"
+proof -
+  have "val_gamma a \<bottom> = {}" for a by (cases a) simp_all
+  then show "as \<noteq> [] \<Longrightarrow> ?thesis" by (auto simp: mcp_gamma_v_def)
+qed
+
+fun part_empty :: "vname list \<Rightarrow> analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
+  "part_empty gs Sign_Analysis r =
+     (case slot1 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+| "part_empty gs Interval_Analysis r =
+     (case slot2 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+| "part_empty gs Int_Analysis r =
+     (case slot3 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+| "part_empty gs Parity_Analysis r =
+     (case slot4 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+| "part_empty gs Congruence_Analysis r =
+     (case slot5 r of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+
+definition mcp_emp :: "analysis_domain list \<Rightarrow> imp_prog \<Rightarrow> mcp_st \<Rightarrow> bool" where
+  "mcp_emp as p r = list_ex (\<lambda>a. part_empty (declared_global_vars p) a r) as"
+
+fun val_empty :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> bool" where
+  "val_empty Sign_Analysis v = (case slot1 v of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
+| "val_empty Interval_Analysis v =
+     (case slot2 v of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
+| "val_empty Int_Analysis v = (case slot3 v of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
+| "val_empty Parity_Analysis v = (case slot4 v of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
+| "val_empty Congruence_Analysis v =
+     (case slot5 v of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
+
+definition mcp_empty_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> bool" where
+  "mcp_empty_v as v = list_ex (\<lambda>a. val_empty a v) as"
+
+lemma part_empty_rd:
+  "part_empty (declared_global_vars p) a r = val_empty a (mcp_rd (declared_global p) r)"
+  by (cases a)
+     (simp_all add: mcp_rd_def
+        resolved_st_q_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
+        split: lifted.split)
+
+lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"
+  by (simp add: mcp_emp_def mcp_empty_v_def part_empty_rd)
+
+lemma val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
+  by (cases a) (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
+
+lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = {}"
+  by (auto simp: mcp_empty_v_def mcp_gamma_v_def list_ex_iff dest: val_empty_gamma)
+
+fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
+  "val_answer Sign_Analysis v q =
+     (case slot1 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> sign_eval_answer st q)"
+| "val_answer Interval_Analysis v q =
+     (case slot2 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> interval_eval_answer st q)"
+| "val_answer Int_Analysis v q =
+     (case slot3 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer st q)"
+| "val_answer Parity_Analysis v q =
+     (case slot4 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> parity_eval_answer st q)"
+| "val_answer Congruence_Analysis v q =
+     (case slot5 v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)"
+
+definition mcp_answer :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
+  "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> val_answer a v q) as \<top>"
+
+lemma val_answer_sound: "s \<in> val_gamma a v \<Longrightarrow> eval_holds q (val_answer a v q) s"
+  by (cases a)
+     (auto split: lifted.splits intro: sign_eval_answer_sound interval_eval_answer_sound
+        int_eval_answer_sound parity_eval_answer_sound congruence_eval_answer_sound)
+
+lemma mcp_answer_fold_sound:
+  "\<forall>a \<in> set as. s \<in> val_gamma a v \<Longrightarrow> eval_holds q r s
+   \<Longrightarrow> eval_holds q (fold (\<lambda>a r. r \<sqinter> val_answer a v q) as r) s"
+  by (induction as arbitrary: r) (auto intro: eval_query.inf_sound val_answer_sound)
+
+lemma mcp_answer_sound: "s \<in> mcp_gamma_v as v \<Longrightarrow> eval_holds q (mcp_answer as v q) s"
+  unfolding mcp_answer_def mcp_gamma_v_def by (rule mcp_answer_fold_sound) auto
+
+definition mcp_classify :: "analysis_domain list \<Rightarrow> exp \<Rightarrow> mcp_val \<Rightarrow> check_result" where
+  "mcp_classify as = answer_check (mcp_answer as)"
+
+lemma mcp_classify_proved:
+  "mcp_classify as e v = Check_Proved \<Longrightarrow> s \<in> mcp_gamma_v as v \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+  unfolding mcp_classify_def by (erule answer_check_proved) (rule mcp_answer_sound)
+
+lemma mcp_classify_refuted:
+  "mcp_classify as e v = Check_Refuted \<Longrightarrow> s \<in> mcp_gamma_v as v
+   \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+  unfolding mcp_classify_def by (erule answer_check_refuted) (rule mcp_answer_sound)
+
+definition mcp_init :: mcp_st where
+  "mcp_init =
+     Product (Lifted cinit_sign_st) (Product (Lifted cinit_ivl_st)
+       (Product (Lifted cinit_int_dom_st)
+         (Product (Lifted cinit_parity_st) (Lifted cinit_congruence_st))))"
+
+lemma mcp_init_sound:
+  "cinit_stores (declared_global p) \<subseteq> mcp_gamma_v as (mcp_rd (declared_global p) mcp_init)"
+proof -
+  have "cinit_stores (declared_global p) \<subseteq> val_gamma a (mcp_rd (declared_global p) mcp_init)"
+    for a
+    using sign_rule.init_sound interval_rule.init_sound int_rule.init_sound
+      parity_rule.init_sound congruence_rule.init_sound
+    by (cases a) (simp_all add: mcp_init_def mcp_rd_def)
+  then show ?thesis by (auto simp: mcp_gamma_v_def)
+qed
+
+text \<open>
+  A caller activates a distinct, nonempty list of analyses. The registrations
+  below take any list and run it as \<open>activation\<close> normalizes it, so they hold
+  unconditionally; \<open>activation\<close> is the identity on every list a caller may
+  pass.
+\<close>
+
+definition activation :: "analysis_domain list \<Rightarrow> analysis_domain list" where
+  "activation as = (if as = [] then [Int_Analysis] else remdups as)"
+
+lemma activation_ne [simp]: "activation as \<noteq> []"
+  by (simp add: activation_def)
+
+lemma distinct_activation [simp]: "distinct (activation as)"
+  by (simp add: activation_def)
+
+lemma activation_id: "distinct as \<Longrightarrow> as \<noteq> [] \<Longrightarrow> activation as = as"
+  by (simp add: activation_def)
+
+section \<open>Registering the active analyses\<close>
+
+text \<open>
+  The active analyses run through the shared pipeline once per context
+  policy, as one registered analysis does. Each registration leaves the
+  activation list and the global update rule as parameters.
+\<close>
+
+subsection \<open>At the unit context\<close>
+
+global_interpretation mcp_rule: routed_dg_analysis
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
+    \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
+    "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
+  for as r
+proof (unfold_locales, goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe
+    SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
+  case (CompSound p)
+  have eq: "mcp_gamma (map (part_gamma (declared_global p)) (activation as))
+      = (\<lambda>d. gamma_lift (mcp_gamma_v (activation as)) (map_lift (mcp_rd (declared_global p)) d))"
+    by (rule ext) (rule mcp_gamma_rd[OF activation_ne])
+  show ?case using mcp_comp_sound[of "activation as" p] unfolding eq by simp
+next
+  case (EnterSingle p ci d)
+  show ?case
+    using single_entryD[OF single_entry_mcp_comp[OF activation_ne],
+        of as "declared_global p" p ci "(d, d)"]
+    by (simp add: routed_dg_pipeline.entry_of_def)
+next
+  case (EmptyRd p s) show ?case by (rule mcp_emp_rd)
+next
+  case (EmptyVSound v) then show ?case by (rule mcp_empty_v_gamma)
+next
+  case (SeedNe v ctx) show ?case by simp
+next
+  case (SolvePP eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (SolveFin eqs x) then show ?case by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (ClProved e d s) then show ?case by (rule mcp_classify_proved)
+next
+  case (ClRefuted e d s) then show ?case by (rule mcp_classify_refuted)
+next
+  case BotState show ?case by (rule mcp_gamma_v_bot[OF activation_ne])
+next
+  case (Init p) show ?case by (rule mcp_init_sound)
+next
+  case (DomC eqs x) then show ?case by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
+
 end
