@@ -332,6 +332,13 @@ text \<open>
   the solver's call tree skips the seed publication.
 \<close>
 
+text \<open>
+  \<^const>\<open>routed_dg_pipeline.live_succ\<close> is passed on as a function here, which the
+  pipeline's unfolding declaration does not reach, so it gets its code equation.
+\<close>
+
+declare routed_dg_pipeline.live_succ_def [code] routed_dg_pipeline.ctx_succ_def [code]
+
 definition live_targets ::
     "(pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
        \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list" where
@@ -352,7 +359,8 @@ fun analysis_result ::
      (case mcp_rule.result_with_globals as r (declared_global p) p of
         (t, shared, seed_at, step_at) \<Rightarrow>
           run_result_of (mcp_render (activation as)) (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
-            (live_targets (mcp_rule.live_succ as r (declared_global p) p))
+            (live_targets (\<lambda>u ctx ca q.
+              mcp_rule.live_succ as r (declared_global p) p u ctx ca q))
             (mcp_classify (activation as)) t shared seed_at step_at p)"
 | "analysis_result as r Ctx_EntryState p =
      (case mcp_es_rule.result_with_globals as r (declared_global p) p of
@@ -360,14 +368,16 @@ fun analysis_result ::
           run_result_of (mcp_render (activation as))
             (\<lambda>ctx. Key_List (map abstract_value_key (mcp_ctx_values (activation as) ctx)))
             (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
-            (live_targets (mcp_es_rule.live_succ as r (declared_global p) p))
+            (live_targets (\<lambda>u ctx ca q.
+              mcp_es_rule.live_succ as r (declared_global p) p u ctx ca q))
             (mcp_classify (activation as)) t shared seed_at step_at p)"
 | "analysis_result as r (Ctx_CallString k) p =
      (case mcp_cs_rule.result_with_globals as k r (declared_global p) p of
         (t, shared, seed_at, step_at) \<Rightarrow>
           run_result_of (mcp_render (activation as)) (\<lambda>ctx. Key_List (map Key_Node ctx))
             Context_Call_String
-            (live_targets (mcp_cs_rule.live_succ as k r (declared_global p) p))
+            (live_targets (\<lambda>u ctx ca q.
+              mcp_cs_rule.live_succ as k r (declared_global p) p u ctx ca q))
             (mcp_classify (activation as)) t shared seed_at step_at p)"
 
 subsection \<open>The public operation\<close>

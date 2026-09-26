@@ -39,9 +39,9 @@ text \<open>
   handwritten re-export layer in between that could reinterpret a constructor or a
   conversion.
 
-  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks
-  well-formedness and runs the requested domain, update rule and context policy. Every
-  combination is answered, so the CLI never decides legality.
+  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the
+  activation list and well-formedness and runs the requested analyses, update rule and
+  context policy. Every combination is answered, so the CLI never decides legality.
 
   The last group of roots is there for signature visibility rather than for dispatch.
   A constant the serializer does not consider public is emitted but left out of the
@@ -112,7 +112,7 @@ export_code
   run_voblint
 
   \<comment> \<open>Result: answers, contexts, states, routes, checks, globals, diagnostics\<close>
-  Malformed_Program Analysed map_analysis_answer
+  Invalid_Activation Malformed_Program Analysed map_analysis_answer
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics state_steps

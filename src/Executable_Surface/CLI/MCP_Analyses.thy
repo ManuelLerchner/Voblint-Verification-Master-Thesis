@@ -409,10 +409,11 @@ text \<open>
 \<close>
 
 lemma mcp_routed_dg_analysis:
+  fixes gk0 :: 'k
   assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
   shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd mcp_init
     gk0 seed (TD_side_rule_Interp_solve r)
-    (TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r))
+    (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)"
 proof (unfold_locales, goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe
@@ -457,7 +458,8 @@ global_interpretation mcp_rule: routed_dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
   for as r
@@ -500,7 +502,8 @@ global_interpretation mcp_es_rule: routed_dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
     "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
-    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, mcp_ctx) routed_gk)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
   for as r
@@ -512,7 +515,8 @@ global_interpretation mcp_cs_rule: routed_dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
-    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
   for as k r
