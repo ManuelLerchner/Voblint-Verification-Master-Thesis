@@ -82,8 +82,9 @@ text \<open>
   \<open>0\<close> or \<open>1\<close>, so for those Voblint asks about \<open>c\<close> itself and an analysis sees
   the comparison rather than its test against zero. An exact \<open>1\<close> proves the
   check and an exact \<open>0\<close> refutes it. \<open>QBot\<close> holds at no store, so a sound
-  combined answer is \<open>QBot\<close> only where the state represents no store: the
-  point is dead. Anything else decides nothing.
+  combined answer is \<open>QBot\<close> only where the state represents no store, and
+  \<open>classify_answer\<close> reads it as \<open>Dead\<close>. Anything else decides
+  nothing.
 \<close>
 
 fun bool_valued :: "exp \<Rightarrow> bool" where

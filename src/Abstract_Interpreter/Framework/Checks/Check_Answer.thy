@@ -89,8 +89,10 @@ section \<open>Deciding a check from an answer\<close>
 text \<open>
   The one check consumer: ask the state's handler the check's question and read
   the verdict off the answer, as Goblint's \<open>assert\<close> analysis reads
-  \<open>Queries.eval_bool\<close>. An answer that admits no value is not a verdict about
-  the check, so it decides nothing.
+  \<open>Queries.eval_bool\<close>. \<^const>\<open>classify_answer\<close> reads an answer that
+  admits no value as \<^const>\<open>Dead\<close>, but the consumer reports it as
+  \<^const>\<open>Check_Unknown\<close>: a check is reported dead only where the state
+  itself is \<^const>\<open>Bot\<close>, never from the answer to its query.
 \<close>
 
 definition answer_check :: "('v \<Rightarrow> query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'v \<Rightarrow> check_result" where
