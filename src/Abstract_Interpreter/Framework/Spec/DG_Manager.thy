@@ -59,7 +59,7 @@ record ('x,'k,'v,'dl,'dg) man =
   man_local :: 'dl
   man_global :: "'v \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
   man_sideg :: "'v \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
-  man_ask :: "query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
+  man_ask :: "query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
 
 subsection \<open>Packed-carrier primitives\<close>
 
@@ -224,12 +224,12 @@ type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
   "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 
 text \<open>
-  A query handler takes the same manager and answers the set of truth values
-  it admits, Goblint's \<open>Spec.query man q\<close>.
+  A query handler takes the same manager and answers the query in the answer
+  lattice, Goblint's \<open>Spec.query man q\<close>.
 \<close>
 
 type_synonym ('x,'k,'v,'dl,'dg) man_query =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
+  "('x,'k,'v,'dl,'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit

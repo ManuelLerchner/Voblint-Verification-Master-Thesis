@@ -19,12 +19,7 @@ record int_dom =
   int_parity :: parity
   int_congruence :: congruence
 
-subsection \<open>Order and join\<close>
-
-class int_dom_record_lattice = bounded_semilattice_sup_bot + order_top
-
-instance unit :: int_dom_record_lattice
-  by intro_classes
+subsection \<open>Order, join and meet\<close>
 
 text \<open>
   The record package represents a closed record through an extensible scheme.
@@ -35,7 +30,7 @@ text \<open>
   in its lattice, concretization, and exact bottom decision.
 \<close>
 
-instantiation int_dom_ext :: (int_dom_record_lattice) int_dom_record_lattice
+instantiation int_dom_ext :: (bounded_lattice) bounded_lattice
 begin
 
 definition less_eq_int_dom_ext ::
@@ -61,6 +56,16 @@ definition sup_int_dom_ext ::
        (sup (int_congruence a) (int_congruence b))
        (sup (more a) (more b))"
 
+definition inf_int_dom_ext ::
+  "'a int_dom_scheme => 'a int_dom_scheme => 'a int_dom_scheme" where
+  "inf_int_dom_ext a b =
+     int_dom_ext
+       (inf (int_sign a) (int_sign b))
+       (inf (int_ivl a) (int_ivl b))
+       (inf (int_parity a) (int_parity b))
+       (inf (int_congruence a) (int_congruence b))
+       (inf (more a) (more b))"
+
 definition bot_int_dom_ext :: "'a int_dom_scheme" where
   "bot_int_dom_ext = int_dom_ext bot bot bot bot bot"
 
@@ -85,6 +90,12 @@ proof intro_classes
     by (simp add: less_eq_int_dom_ext_def sup_int_dom_ext_def)
   show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> sup y z \<le> x"
     by (auto simp: less_eq_int_dom_ext_def sup_int_dom_ext_def)
+  show "inf x y \<le> x"
+    by (simp add: less_eq_int_dom_ext_def inf_int_dom_ext_def)
+  show "inf x y \<le> y"
+    by (simp add: less_eq_int_dom_ext_def inf_int_dom_ext_def)
+  show "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> inf y z"
+    by (auto simp: less_eq_int_dom_ext_def inf_int_dom_ext_def)
   show "bot \<le> x"
     by (simp add: less_eq_int_dom_ext_def bot_int_dom_ext_def)
   show "x \<le> top"
@@ -120,6 +131,16 @@ definition gamma_int_dom :: "'a int_dom_scheme => int set" where
      gamma_ivl (int_ivl d) \<inter>
      gamma_parity (int_parity d) \<inter>
      gamma_congruence (int_congruence d)"
+
+text \<open>
+  Every component meet is exact, so the product meet is too: it concretizes to
+  the intersection of its operands. Query answers from several analyses are
+  combined by \<open>\<sqinter>\<close>, which therefore neither loses nor invents values.
+\<close>
+
+lemma gamma_inf_int_dom [simp]:
+  "gamma_int_dom (a \<sqinter> b) = gamma_int_dom a \<inter> gamma_int_dom b"
+  by (auto simp: gamma_int_dom_def inf_int_dom_ext_def)
 
 lemma gamma_int_dom_update_sign [simp]:
   "gamma_int_dom (d\<lparr>int_sign := s\<rparr>) =
@@ -737,6 +758,21 @@ qed
 
 subsection \<open>Constants and printing\<close>
 
+definition int_dom_of_int :: "int => int_dom" where
+  "int_dom_of_int n =
+     (top :: int_dom)\<lparr>
+       int_sign := sign_of_int n,
+       int_ivl := Ivl (Fin n) (Fin n),
+       int_parity := parity_of_int n,
+       int_congruence := congruence_of_int n
+     \<rparr>"
+
+lemma gamma_int_dom_of_int [simp]:
+  "gamma_int_dom (int_dom_of_int n) = {n}"
+  by (auto simp: int_dom_of_int_def gamma_int_dom_def
+        sign_of_int_gamma parity_of_int_gamma)
+
+
 text \<open>
   Goblint's integer-domain tuple prints a value one of its components pins to a
   single integer as that integer, a value no component constrains as \<open>\<top>\<close>,
@@ -774,15 +810,19 @@ lemma gamma_congruence_constant:
 text \<open>Printing a live product as the integer \<^const>\<open>int_dom_constant\<close> names
   loses nothing: that integer is all the product denotes.\<close>
 
+lemma gamma_int_dom_constant_subset:
+  "int_dom_constant d = Some n \<Longrightarrow> gamma_int_dom d \<subseteq> {n}"
+  using gamma_ivl_constant gamma_congruence_constant
+  unfolding int_dom_constant_def gamma_int_dom_def
+  by (auto split: if_splits option.splits)
+
 lemma gamma_int_dom_constant:
   assumes "int_dom_constant d = Some n"
     and "\<not> is_bottom_int_dom d"
   shows "gamma_int_dom d = {n}"
 proof -
   have "gamma_int_dom d \<subseteq> {n}"
-    using assms(1) gamma_ivl_constant gamma_congruence_constant
-    unfolding int_dom_constant_def gamma_int_dom_def
-    by (auto split: if_splits option.splits)
+    using gamma_int_dom_constant_subset[OF assms(1)] .
   moreover have "gamma_int_dom d \<noteq> {}"
     using assms(2) is_bottom_int_dom_correct by blast
   ultimately show ?thesis

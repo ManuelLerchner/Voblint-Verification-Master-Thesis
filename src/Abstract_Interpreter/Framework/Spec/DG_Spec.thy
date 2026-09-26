@@ -187,7 +187,7 @@ definition query_depth :: nat where
 
 fun ask_with ::
   "('x,'k,'v,'dl,'dg) man_query \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> ('x,'k,'v,'dl,'dg) man
-   \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,ivl) strategy_program"
+   \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
 where
   "ask_with Q 0 asked m q =
      Code.abort (STR ''query recursion exceeded query_depth'') (\<lambda>_. sp_return \<top>)"
@@ -370,7 +370,7 @@ text \<open>
   argument, and a proof about the transfer quantifies over them.
 \<close>
 
-type_synonym answers = "query \<Rightarrow> ivl"
+type_synonym answers = "query \<Rightarrow> answer"
 
 fun ask_all ::
   "query list \<Rightarrow> ('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answers) strategy_program"

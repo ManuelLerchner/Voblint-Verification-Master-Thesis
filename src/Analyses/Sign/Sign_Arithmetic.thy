@@ -121,12 +121,6 @@ lemma sign_mod_mono:
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: sign_mod_def sup_sign_def less_eq_sign_def)
 
-fun sign_of_int :: "int => sign" where
-  "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
-
-lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
-  by (auto split: if_splits)
-
 subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>

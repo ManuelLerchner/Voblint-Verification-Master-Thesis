@@ -20,7 +20,7 @@ text \<open>
   product's answer at an assignment (\<^const>\<open>assign_ask\<close>); the order
   analysis answers comparisons from its relation (\<^const>\<open>rel_qry\<close>). On the
   program below, \<open>x <= y\<close> and \<open>y <= x\<close> leave both intervals unbounded, but the
-  order analysis records both pairs, so it answers \<open>x == y\<close> with \<open>[1,1]\<close>.
+  order analysis records both pairs, so it answers \<open>x == y\<close> with the exact integer \<open>1\<close>.
   Interval, asking the product at \<open>z = (x == y)\<close>, assigns \<open>1\<close>. Interval alone
   only knows \<open>z \<in> [0,1]\<close> there, and the order analysis tracks no values.
 \<close>
@@ -65,7 +65,7 @@ text \<open>Interval answers \<open>EvalInt e\<close> by evaluating \<open>e\<cl
 
 fun ivl_qry :: "ivl exec_dg_st lifted \<Rightarrow> answers" where
   "ivl_qry lifted.Bot q = \<bottom>"
-| "ivl_qry (Lifted st) (EvalInt e) = aval_ivl e (fun_of_resolved_st_q_for coop_gs st)"
+| "ivl_qry (Lifted st) (EvalInt e) = answer_of_ivl (aval_ivl e (fun_of_resolved_st_q_for coop_gs st))"
 
 lemma ivl_qry_sound:
   assumes "s \<in> \<lbrakk>coop_ivl.reader d\<rbrakk>\<^sub>\<bottom>"
@@ -146,7 +146,7 @@ subsection \<open>What the run establishes\<close>
 text \<open>
   \<open>Statement 3\<close> is the point right after \<open>z = (x == y)\<close> and before the check
   \<open>z == 1\<close>. There the order analysis holds both \<open>(x, y)\<close> and \<open>(y, x)\<close>, and
-  Interval, having received the answer \<open>[1,1]\<close> for \<open>x == y\<close>, holds \<open>z = [1,1]\<close>.
+  Interval, having received the exact answer \<open>1\<close> for \<open>x == y\<close>, holds \<open>z = [1,1]\<close>.
 \<close>
 
 abbreviation coop_z :: "(ivl exec_dg_st lifted, relc) analysis_product \<Rightarrow> ivl option" where

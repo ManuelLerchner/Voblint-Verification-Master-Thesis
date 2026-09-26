@@ -25,18 +25,18 @@ for `queries.ml`.
 
 | Goblint | Where | Voblint |
 | --- | --- | --- |
-| `man.ask` on every transfer's manager | `analyses.ml` | `man_ask :: query ⇒ (…, ivl) strategy_program` in `DG_Manager` |
+| `man.ask` on every transfer's manager | `analyses.ml` | `man_ask :: query ⇒ (…, answer) strategy_program` in `DG_Manager` |
 | `Spec.query`; `DefaultSpec.query` returns `Result.top` | `analyses.ml:369` | field `dgs_query`; the template answers `⊤` |
-| `EvalInt : exp -> ID.t` | `queries.ml:108` | `datatype query = EvalInt exp`, answers in `ivl` |
-| former `MustBeEqual`, `MayBeLess` derived from `EvalInt` | `queries.ml:528–539` | comparisons answered by `[1,1]` or `[0,0]` |
+| `EvalInt : exp -> ID.t`, `ID = Lattice.Lift(IntDomTuple)` | `queries.ml:108`, `valueDomainQueries.ml:9–12` | `datatype query = EvalInt exp`, answers in `answer = int_dom query_lift` |
+| former `MustBeEqual`, `MayBeLess` derived from `EvalInt` | `queries.ml:528–539` | comparisons answered by the exact integers `1` or `0` |
 | `query'` meets the answers of all analyses from `Result.top` | `mCP.ml:290–293, 331` | `qry_prod` meets the component handlers |
 | manager built around the predecessor product state | `mCP.ml:395–397` (`outer_man`) | `outer_man` installs the spec's handler before the edge runs |
 | queries may ask; a cycle answers `Result.top` | `mCP.ml:264–275` | `ask_with`: an already-asked query answers `⊤`; depth bound `query_depth = 1024` aborts generated code when exceeded |
 | `enter` takes the Cartesian product of alternatives | `mCP.ml:539` | `prod_enter` |
 | globals as a variant, `ask` at combine, events, spawn | `mCP.ml` | not modelled |
 
-The query layer depends on the interval lattice, as Goblint's query layer
-depends on `IntDomain`. The value lattices therefore live under `Int/`
+The query layer depends on the integer product lattice, as Goblint's query
+layer depends on `IntDomain`. The value lattices therefore live under `Int/`
 in `Voblint_Domain`, below the framework.
 
 ## Query semantics (`Analysis_Query.thy`)
@@ -46,12 +46,16 @@ in `Voblint_Domain`, below the framework.
 of two holding answers holds. `oracle_holds A s` says every answer of `A` holds
 at `s`.
 
-The one interpretation is `eval_holds (EvalInt e) i s ⟷ ⟦e⟧ s ∈ γ i` over
-`ivl`. The full interval claims nothing; the meet is the lattice `⊓` on `ivl`, sound by
-`meet_ivl_gamma`. An empty answer admits no value, so a sound handler returns
-it only for a state that represents no store. `ivl_const` reads `[n,n]` back as
-`Some n`, and `eval_holds_constD` turns that into `⟦e⟧ s = n`. Tests on answers
-are datatype equality on `ivl`, which is executable.
+The one interpretation is `eval_holds (EvalInt e) a s ⟷ ⟦e⟧ s ∈ γ a` over
+`answer = int_dom query_lift`, Goblint's `Lattice.Lift(IntDomTuple)`
+(`Query_Lift.thy`). `QTop` claims nothing and is how an analysis declines a
+query; `QBot` admits no value, so a sound handler returns it only for a state
+that represents no store. The meet lifts the `int_dom` meet, which is exact
+(`gamma_inf_int_dom`), so combining answers loses nothing.
+`answer_of_int` is the exact answer for a known integer and `answer_const`
+reads one back (Goblint's `of_int` and `to_int`); `eval_holds_constD` turns
+`answer_const a = Some n` into `⟦e⟧ s = n`. An interval-only handler answers
+`answer_of_ivl`, the interval with every other component at top.
 
 ## Manager and specification (`DG_Manager.thy`, `DG_Spec.thy`)
 
@@ -112,14 +116,14 @@ the whole product rather than inside a component.
 ## Components and wrappers
 
 - `assign_ask` (`Oracle_Wrappers.thy`): at `x = e`, if the answer to `EvalInt e`
-  is `[n,n]`, assign `N n`; otherwise the component's own assignment.
+  is an exact integer `n`, assign `N n`; otherwise the component's own assignment.
   `sound_local_assign_ask` preserves `sound_local_dg_spec`; `assign_ask_qs`
   adds the question.
 - `rel_local_component` (`Rel_Order_Local.thy`): the order carrier `relc` as a
   local spec. Its handler `rel_qry` answers comparisons between variables it
-  has ordered with `[1,1]` or `[0,0]`, everything else `⊤`. At `x = e` it asks
+  has ordered with the exact integers `1` or `0`, everything else `⊤`. At `x = e` it asks
   `e <= y` and `y <= e` for each candidate `y` (`rel_qs`) and records a pair on
-  `[1,1]`. At calls it enters with the empty relation and combines to it,
+  the exact answer `1`. At calls it enters with the empty relation and combines to it,
   which is sound and imprecise by design; `Rel_Order_Domain` remains the
   example of relational call and global behaviour.
 
@@ -127,7 +131,7 @@ the whole product rather than inside a component.
 
 Program: `if (x <= y) { if (y <= x) { z = (x == y); __voblint_check(z == 1); } }`.
 The product is the executable Interval spec with `assign_ask` and the handler
-`aval_ivl`, times `rel_local_component` over `x`, `y`, `z`.
+`answer_of_ivl ∘ aval_ivl`, times `rel_local_component` over `x`, `y`, `z`.
 
 - `coop_after_assignment` (by evaluation): right after the assignment the
   order component holds `(x, y)` and `(y, x)`, and Interval holds `z = [1,1]`.

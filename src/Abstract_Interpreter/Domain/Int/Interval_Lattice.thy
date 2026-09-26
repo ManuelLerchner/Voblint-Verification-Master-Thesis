@@ -294,6 +294,11 @@ lemma meet_ivl_gamma:
   "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (a \<sqinter> b)"
   by (cases a; cases b; auto split: if_splits intro: eint_le_trans)
 
+lemma gamma_inf_ivl [simp]:
+  "gamma_ivl (a \<sqinter> b) = gamma_ivl a \<inter> gamma_ivl b"
+  apply (cases a; cases b; simp split: if_splits )
+  using eint_le_linear eint_le_trans by blast+
+
 lemma meet_ivl_le_lb1: "(a :: ivl) \<sqinter> b \<le> a"
 proof (cases a; cases b)
   fix l1 u1 l2 u2 :: eint

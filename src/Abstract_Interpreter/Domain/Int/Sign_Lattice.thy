@@ -31,6 +31,12 @@ fun gamma_sign :: "sign => int set" where
   | "gamma_sign SPos    = {n. n > 0}"
   | "gamma_sign STop    = UNIV"
 
+fun sign_of_int :: "int => sign" where
+  "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
+
+lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
+  by (auto split: if_splits)
+
 subsection \<open>Order\<close>
 
 fun sign_le :: "sign => sign => bool" where

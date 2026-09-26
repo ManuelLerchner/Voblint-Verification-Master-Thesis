@@ -41,23 +41,18 @@ text \<open>
   instance, not merely imprecise.
 
   Composite widening and narrowing therefore run no refinement at all,
-  matching every other component's own choice (\<open>Sign_Lattice\<close>,
-  \<open>Interval_Warrowing\<close>, \<open>Parity_Domain\<close>, \<open>Congruence_Warrowing\<close>):
+  matching every other component's own choice (\<open>Sign_Warrowing\<close>,
+  \<open>Interval_Warrowing\<close>, \<open>Parity_Warrowing\<close>, \<open>Congruence_Warrowing\<close>):
   each component widens/narrows on its own terms, and the composite record
   update runs no cross-component step afterward.
 \<close>
 
 text \<open>
-  The composite carrier's lattice instance (\<open>Int_Lattice\<close>) is
-  registered on the extensible record scheme \<open>'a int_dom_scheme\<close>, not the
-  closed \<open>int_dom\<close> type alias, so \<open>widen\<close>/\<open>narrow\<close> follow the same route:
-  \<open>int_dom_record_lattice\<close> alone has no \<open>widen\<close>/\<open>narrow\<close> for the scheme's
-  \<open>more\<close> field, so this bundles \<open>warrowing\<close> into the sort the record
-  update needs and discharges it trivially for \<open>unit\<close>, matching that
-  file's own \<open>instance unit :: int_dom_record_lattice\<close>.
+  The lattice instance in \<open>Int_Lattice\<close> sits on the record scheme
+  \<open>'a int_dom_scheme\<close>, so \<open>widen\<close>/\<open>narrow\<close> follow the same route and need
+  \<open>warrowing\<close> on the scheme's \<open>more\<close> field too. \<open>unit\<close>, the \<open>more\<close> type of
+  the closed \<open>int_dom\<close>, gets the trivial instance.
 \<close>
-
-class int_dom_record_warrowing = int_dom_record_lattice + warrowing
 
 instantiation unit :: warrowing
 begin
@@ -66,9 +61,7 @@ definition narrow_unit :: "unit => unit => unit" where "narrow a b = ()"
 instance by intro_classes simp_all
 end
 
-instance unit :: int_dom_record_warrowing ..
-
-instantiation int_dom_ext :: (int_dom_record_warrowing) warrowing
+instantiation int_dom_ext :: ("{bounded_lattice, warrowing}") warrowing
 begin
 
 definition widen_int_dom_ext :: "'a int_dom_scheme => 'a int_dom_scheme => 'a int_dom_scheme" where
@@ -180,11 +173,11 @@ end
 section \<open>Numeric domain instance\<close>
 
 text \<open>\<open>numeric_domain\<close> extends \<open>executable_domain\<close>, which includes the solver's
-  \<open>warrowing\<close>, so the composite instance needs the record sort
-  \<open>int_dom_record_warrowing\<close> and follows the widening and narrowing above.\<close>
+  \<open>warrowing\<close>, so the composite instance asks the same of the \<open>more\<close> field
+  as the widening and narrowing above.\<close>
 
 instantiation int_dom_ext ::
-  (int_dom_record_warrowing) numeric_domain
+  ("{bounded_lattice, warrowing}") numeric_domain
 begin
 
 definition gamma_abs_int_dom_ext [simp]:

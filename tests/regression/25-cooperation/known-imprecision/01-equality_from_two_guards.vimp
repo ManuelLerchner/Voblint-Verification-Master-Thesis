@@ -9,7 +9,7 @@
 //
 // The cooperating product of Interval and the order analysis recovers the
 // check: the order analysis records (x, y) and (y, x) from the two guards and
-// answers EvalInt (x == y) with [1,1], and Interval, asking at the assignment,
+// answers EvalInt (x == y) with the exact integer 1, and Interval, asking at the assignment,
 // assigns 1. Established for this program in
 // src/Examples/Relational/Example_Cooperating_Demo.thy (coop_after_assignment,
 // by evaluation; coop_ivl_alone_after_assignment gives the [0,1] baseline).

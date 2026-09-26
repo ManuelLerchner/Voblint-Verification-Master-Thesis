@@ -16,7 +16,7 @@ text \<open>
 definition assign_ask ::
   "(answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D) \<Rightarrow> answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D" where
   "assign_ask asn A x e d =
-     (case ivl_const (A (EvalInt e)) of
+     (case answer_const (A (EvalInt e)) of
         Some n \<Rightarrow> asn A x (N n) d
       | None \<Rightarrow> asn A x e d)"
 
@@ -43,7 +43,7 @@ proof -
     have base: "s(x := \<lbrakk>e'\<rbrakk>\<^sub>e s) \<in> gammaD (asn A x e' d)" for e'
       using C.step_sound_local[of "EA_Assign x e'" d A] s o by auto
     show ?thesis
-    proof (cases "ivl_const (A (EvalInt e))")
+    proof (cases "answer_const (A (EvalInt e))")
       case None
       then show ?thesis using base[of e] by (simp add: assign_ask_def)
     next

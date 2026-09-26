@@ -21,7 +21,7 @@ text \<open>
   A pair \<open>(x, y)\<close> means \<open>s x \<le> s y\<close>. It therefore decides \<open>x <= y\<close> and
   \<open>y >= x\<close> as true, \<open>y < x\<close> and \<open>x > y\<close> as false, and with the reverse pair
   also \<open>x == y\<close> as true and \<open>x != y\<close> as false. A comparison evaluates to \<open>1\<close>
-  when true and \<open>0\<close> when false, so the answers are \<open>[1,1]\<close> and \<open>[0,0]\<close>. Every
+  when true and \<open>0\<close> when false, so the answers are the exact integers \<open>1\<close> and \<open>0\<close>. Every
   other query is answered with \<open>\<top>\<close>, the claim that holds of every store.
 \<close>
 
@@ -35,15 +35,15 @@ definition rel_le :: "relc \<Rightarrow> exp \<Rightarrow> exp \<Rightarrow> boo
   "rel_le d a b =
      (case (var_of a, var_of b) of (Some x, Some y) \<Rightarrow> relc_has x y d | _ \<Rightarrow> False)"
 
-definition rel_eval :: "relc \<Rightarrow> exp \<Rightarrow> ivl" where
+definition rel_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
   "rel_eval d e =
      (case e of
-        LessEq a b \<Rightarrow> if rel_le d a b then ivl_of_int 1 else \<top>
-      | GreaterEq a b \<Rightarrow> if rel_le d b a then ivl_of_int 1 else \<top>
-      | Less a b \<Rightarrow> if rel_le d b a then ivl_of_int 0 else \<top>
-      | Greater a b \<Rightarrow> if rel_le d a b then ivl_of_int 0 else \<top>
-      | exp.Eq a b \<Rightarrow> if rel_le d a b \<and> rel_le d b a then ivl_of_int 1 else \<top>
-      | NotEq a b \<Rightarrow> if rel_le d a b \<and> rel_le d b a then ivl_of_int 0 else \<top>
+        LessEq a b \<Rightarrow> if rel_le d a b then answer_of_int 1 else \<top>
+      | GreaterEq a b \<Rightarrow> if rel_le d b a then answer_of_int 1 else \<top>
+      | Less a b \<Rightarrow> if rel_le d b a then answer_of_int 0 else \<top>
+      | Greater a b \<Rightarrow> if rel_le d a b then answer_of_int 0 else \<top>
+      | exp.Eq a b \<Rightarrow> if rel_le d a b \<and> rel_le d b a then answer_of_int 1 else \<top>
+      | NotEq a b \<Rightarrow> if rel_le d a b \<and> rel_le d b a then answer_of_int 0 else \<top>
       | _ \<Rightarrow> \<top>)"
 
 fun rel_qry :: "relc \<Rightarrow> answers" where
@@ -59,8 +59,9 @@ lemma rel_le_sound: "s \<in> gamma_rel d \<Longrightarrow> rel_le d a b \<Longri
   by (auto simp: rel_le_def split: option.splits dest!: var_of_SomeD
       dest: relc_has_sound)
 
-lemma rel_eval_sound: "s \<in> gamma_rel d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_ivl (rel_eval d e)"
-  by (cases e) (auto simp: rel_eval_def top_ivl_def gamma_ivl_top
+lemma rel_eval_sound:
+  "s \<in> gamma_rel d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (rel_eval d e)"
+  by (cases e) (auto simp: rel_eval_def
       dest: rel_le_sound intro: order_antisym)
 
 lemma rel_qry_sound: "s \<in> gamma_rel d \<Longrightarrow> eval_holds q (rel_qry d q) s"
@@ -71,7 +72,7 @@ subsection \<open>Learning orders from the oracle\<close>
 text \<open>
   At \<open>x = e\<close> the question is asked about the state before the assignment, where
   \<open>e\<close> evaluates to the new value of \<open>x\<close> and every other variable keeps its
-  value. An answer \<open>[1,1]\<close> to \<open>e <= y\<close> therefore makes \<open>(x, y)\<close> true
+  value. The exact answer \<open>1\<close> to \<open>e <= y\<close> therefore makes \<open>(x, y)\<close> true
   afterwards, and \<open>y <= e\<close> makes \<open>(y, x)\<close> true. The candidate partners are the
   variables in \<open>ys\<close>, a parameter so that the construction stays executable.
 \<close>
@@ -82,9 +83,9 @@ definition rel_learn :: "answers \<Rightarrow> vname list \<Rightarrow> vname \<
         Bot \<Rightarrow> Bot
       | RelC ps \<Rightarrow> RelC (ps
           \<union> set (map (\<lambda>y. (x, y))
-                (filter (\<lambda>y. y \<noteq> x \<and> ivl_const (ask (EvalInt (LessEq e (V y)))) = Some 1) ys))
+                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq e (V y)))) = Some 1) ys))
           \<union> set (map (\<lambda>y. (y, x))
-                (filter (\<lambda>y. y \<noteq> x \<and> ivl_const (ask (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
+                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
 
 text \<open>The questions \<open>rel_learn\<close> consults at \<open>x = e\<close>, and nothing elsewhere.\<close>
 
@@ -105,10 +106,10 @@ proof (cases d)
   with assms(1) show ?thesis by simp
 next
   case (RelC ps)
-  have up: "\<lbrakk>e\<rbrakk>\<^sub>e s \<le> s y" if "ivl_const (ask (EvalInt (LessEq e (V y)))) = Some 1" for y
+  have up: "\<lbrakk>e\<rbrakk>\<^sub>e s \<le> s y" if "answer_const (ask (EvalInt (LessEq e (V y)))) = Some 1" for y
     using eval_holds_constD[OF eval_query.oracle_holdsD[OF assms(2)] that]
     by (simp split: if_splits)
-  have down: "s y \<le> \<lbrakk>e\<rbrakk>\<^sub>e s" if "ivl_const (ask (EvalInt (LessEq (V y) e))) = Some 1" for y
+  have down: "s y \<le> \<lbrakk>e\<rbrakk>\<^sub>e s" if "answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1" for y
     using eval_holds_constD[OF eval_query.oracle_holdsD[OF assms(2)] that]
     by (simp split: if_splits)
   show ?thesis
