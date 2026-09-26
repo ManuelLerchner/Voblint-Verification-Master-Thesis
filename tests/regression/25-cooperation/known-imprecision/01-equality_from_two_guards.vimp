@@ -1,0 +1,26 @@
+// PARAM: --analysis interval
+// Concretely z == 1 at the check: both guards hold, so x == y and the
+// comparison evaluates to 1.
+//
+// Mechanism: x and y are unconstrained, so each guard narrows one unbounded
+// interval against another unbounded bound and learns nothing. Interval then
+// evaluates x == y from two full intervals and only knows the comparison
+// yields 0 or 1, so z = [0,1].
+//
+// The cooperating product of Interval and the order analysis recovers the
+// check: the order analysis records (x, y) and (y, x) from the two guards and
+// answers EvalInt (x == y) with [1,1], and Interval, asking at the assignment,
+// assigns 1. Established for this program in
+// src/Examples/Relational/Example_Cooperating_Demo.thy (coop_after_assignment,
+// by evaluation; coop_ivl_alone_after_assignment gives the [0,1] baseline).
+// The product is not reachable from the CLI, so this case pins the baseline.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      __voblint_check(z == 1); // UNKNOWN
+    }
+  }
+}

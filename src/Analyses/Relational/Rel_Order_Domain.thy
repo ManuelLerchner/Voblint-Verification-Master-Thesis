@@ -366,6 +366,13 @@ lemma sides_rel_transfer [simp]:
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
+text \<open>The order analysis never asks, so the query channel the generator installs
+  leaves its transfers unchanged.\<close>
+
+lemma rel_transfer_outer_man [simp]:
+  "rel_transfer f (outer_man Q m) = rel_transfer f m"
+  by (simp add: rel_transfer_def)
+
 definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
   "rel_order_spec = local_dg_spec_template\<lparr>
      dgs_skip := rel_transfer dgs_skip_rel,
@@ -389,10 +396,14 @@ text \<open>Every field reads the shared slot, publishes once and answers, so th
   specification runs its continuation once wherever the generator runs it.\<close>
 
 lemma dg_spec_wf_rel_order_spec [intro, simp]: "dg_spec_wf rel_order_spec"
-proof (unfold dg_spec_wf_def, intro conjI allI)
-  fix a :: edge_action and d :: relc and key :: "unit \<Rightarrow> 'b"
-  show "sp_wf (dg_spec_step rel_order_spec a (mk_dg_man d key))"
-    by (cases a) (auto simp: rel_order_spec_def rel_transfer_def Let_def)
+proof (unfold dg_spec_wf_def, intro conjI allI impI)
+  fix a :: edge_action and d :: relc and key :: "unit \<Rightarrow> 'b" and A
+  show "sp_wf (dg_spec_step rel_order_spec a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
+    by (cases a) (auto simp: rel_order_spec_def rel_transfer_def Let_def mk_dg_man_def)
+next
+  fix d :: relc and key :: "unit \<Rightarrow> 'b" and A q
+  show "sp_wf (dgs_query rel_order_spec ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+    by (simp add: rel_order_spec_def)
 next
   fix ci and d :: relc and key :: "unit \<Rightarrow> 'b"
   show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d key))"

@@ -104,14 +104,19 @@ text \<open>The contract is exactly \<^locale>\<open>sound_local_dg_spec\<close>
   re-deriving it.\<close>
 
 sublocale sound_transfer_for \<subseteq> base: sound_local_dg_spec
-  sk asn sp br bd rt "\<lambda>ci d. [(d, en ci d)]" ev "\<lambda>ci dc de. dc"
+  "\<lambda>_ _. \<top>" "\<lambda>_. sk" "\<lambda>_. asn" "\<lambda>_. sp" "\<lambda>_. br" "\<lambda>_. bd" "\<lambda>_. rt"
+  "\<lambda>ci d. [(d, en ci d)]" "\<lambda>_. ev" "\<lambda>ci dc de. dc"
   "\<lambda>ci. combine\<^sup># \<G> (ci_dst ci)" gamma_state \<G>
 proof (unfold_locales, goal_cases)
   case 1
   then show ?case by (rule gamma_state_mono)
 next
-  case 2
-  then show ?case by (rule step_sound_for)
+  case (2 a d A)
+  show ?case
+    using step_sound_for[of a d] edge_collect_mono[OF Int_lower1] by blast
+next
+  case 5
+  show ?case by simp
 next
   case (3 s d ci)
   then show ?case
@@ -140,7 +145,8 @@ definition local_state_dg_spec_for ::
    \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "local_state_dg_spec_for \<G> sk asn sp br bd rt en ev = local_dg_spec
-     sk asn sp br bd rt (\<lambda>ci d. [(d, en ci d)]) ev
+     (\<lambda>_ _. []) (\<lambda>_ _. \<top>) (\<lambda>_. sk) (\<lambda>_. asn) (\<lambda>_. sp) (\<lambda>_. br) (\<lambda>_. bd) (\<lambda>_. rt)
+     (\<lambda>ci d. [(d, en ci d)]) (\<lambda>_. ev)
      (\<lambda>ci dc de. dc) (\<lambda>ci. combine\<^sup># \<G> (ci_dst ci))"
 
 declare local_state_dg_spec_for_def [code_unfold]
@@ -181,14 +187,15 @@ definition local_state_dg_spec_for_lifted ::
    \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev = local_dg_spec
-     (transfer_lift empty_pred sk)
-     (\<lambda>x e. transfer_lift empty_pred (asn x e))
-     (\<lambda>sc x. transfer_lift empty_pred (sp sc x))
-     (\<lambda>b pol. transfer_lift empty_pred (br b pol))
-     (\<lambda>p. transfer_lift empty_pred (bd p))
-     (\<lambda>e p. transfer_lift empty_pred (rt e p))
+     (\<lambda>_ _. []) (\<lambda>_ _. \<top>)
+     (\<lambda>_. transfer_lift empty_pred sk)
+     (\<lambda>_ x e. transfer_lift empty_pred (asn x e))
+     (\<lambda>_ sc x. transfer_lift empty_pred (sp sc x))
+     (\<lambda>_ b pol. transfer_lift empty_pred (br b pol))
+     (\<lambda>_ p. transfer_lift empty_pred (bd p))
+     (\<lambda>_ e p. transfer_lift empty_pred (rt e p))
      (\<lambda>ci d. [(d, transfer_lift empty_pred (en ci) d)])
-     (\<lambda>evt. transfer_lift empty_pred (ev evt))
+     (\<lambda>_ evt. transfer_lift empty_pred (ev evt))
      (\<lambda>ci dc de. dc)
      (\<lambda>ci dcM de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dcM de)"
 
@@ -261,11 +268,16 @@ proof -
     case 1
     then show ?case by (meson gamma_lift_mono gamma_state_mono)
   next
-    case (2 a d)
-    show ?case
-      by (simp add: local_spec_step_transfer_lift)
-         (rule transfer_lift_sound_collect
+    case (2 a d A)
+    have "edge_collect a \<lbrakk>d\<rbrakk>\<^sub>\<bottom>
+            \<subseteq> \<lbrakk>transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a) d\<rbrakk>\<^sub>\<bottom>"
+      by (rule transfer_lift_sound_collect
             [OF step_sound_for edge_collect_empty_set empty_pred_sound])
+    then show ?case
+      using edge_collect_mono[OF Int_lower1] by (fastforce simp: local_spec_step_transfer_lift)
+  next
+    case 5
+    show ?case by simp
   next
     case (3 s d ci)
     have "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s

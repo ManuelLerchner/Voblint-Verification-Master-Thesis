@@ -1,5 +1,5 @@
 theory Local_Spec_Product
-  imports Oracle_Local_Spec
+  imports "Voblint_Framework.DG_Spec_Sound"
 begin
 
 section \<open>The product carrier\<close>
@@ -98,10 +98,10 @@ section \<open>Composing two components\<close>
 
 text \<open>
   Every operation of the product applies the two components' operations side by
-  side. The transfers stay open in the oracle: \<open>A \<otimes> B\<close> hands whatever oracle it
-  is given to both components and builds none itself, so a later closure can
-  give every component the answers of every other. The concretization is the
-  intersection, and the handler meets the two answers.
+  side. Both components receive the same answers: the product asks the questions
+  of both and hands the collected answers to each, so each component sees what
+  the other knows. The concretization is the intersection, and the handler meets
+  the two answers, as Goblint's \<open>MCP.query\<close> meets the answers of all analyses.
 \<close>
 
 definition pmap :: "('a \<Rightarrow> 'a) \<Rightarrow> ('b \<Rightarrow> 'b) \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product"
@@ -133,9 +133,15 @@ where
   "gamma_prod g1 g2 p = g1 (pleft p) \<inter> g2 (pright p)"
 
 definition qry_prod ::
-  "('a \<Rightarrow> 'q \<Rightarrow> 'r::inf) \<Rightarrow> ('b \<Rightarrow> 'q \<Rightarrow> 'r) \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> 'q \<Rightarrow> 'r"
+  "('a \<Rightarrow> answers) \<Rightarrow> ('b \<Rightarrow> answers) \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> answers"
 where
   "qry_prod q1 q2 p q = q1 (pleft p) q \<sqinter> q2 (pright p) q"
+
+definition qs_prod ::
+  "(edge_action \<Rightarrow> 'a \<Rightarrow> query list) \<Rightarrow> (edge_action \<Rightarrow> 'b \<Rightarrow> query list)
+   \<Rightarrow> edge_action \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> query list"
+where
+  "qs_prod qs1 qs2 a p = qs1 a (pleft p) @ qs2 a (pright p)"
 
 lemma local_spec_step_pmap:
   "local_spec_step (pmap sk1 sk2) (\<lambda>x e. pmap (asn1 x e) (asn2 x e))
@@ -146,36 +152,24 @@ lemma local_spec_step_pmap:
        (local_spec_step sk2 asn2 sp2 br2 bd2 rt2 ev2 a)"
   by (cases a) simp_all
 
-lemma product_query_sound:
-  assumes "sound_query_handler answer_holds q1 g1"
-    and "sound_query_handler answer_holds q2 g2"
-  shows "sound_query_handler answer_holds (qry_prod q1 q2) (gamma_prod g1 g2)"
-proof -
-  interpret A: sound_query_handler answer_holds q1 g1 by (fact assms(1))
-  interpret B: sound_query_handler answer_holds q2 g2 by (fact assms(2))
-  show ?thesis
-    by unfold_locales
-      (auto simp: qry_prod_def gamma_prod_def intro: A.inf_sound A.qry_sound B.qry_sound)
-qed
-
-lemma product_local_spec:
-  assumes "oracle_local_spec answer_holds sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>"
-    and "oracle_local_spec answer_holds sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G>"
-  shows "oracle_local_spec answer_holds
-           (\<lambda>ask. pmap (sk1 ask) (sk2 ask))
-           (\<lambda>ask x e. pmap (asn1 ask x e) (asn2 ask x e))
-           (\<lambda>ask c x. pmap (sp1 ask c x) (sp2 ask c x))
-           (\<lambda>ask b pol. pmap (br1 ask b pol) (br2 ask b pol))
-           (\<lambda>ask p. pmap (bd1 ask p) (bd2 ask p))
-           (\<lambda>ask e p. pmap (rt1 ask e p) (rt2 ask e p))
+theorem product_local_spec:
+  assumes "sound_local_dg_spec q1 sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>"
+    and "sound_local_dg_spec q2 sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G>"
+  shows "sound_local_dg_spec (qry_prod q1 q2)
+           (\<lambda>A. pmap (sk1 A) (sk2 A))
+           (\<lambda>A x e. pmap (asn1 A x e) (asn2 A x e))
+           (\<lambda>A c x. pmap (sp1 A c x) (sp2 A c x))
+           (\<lambda>A b pol. pmap (br1 A b pol) (br2 A b pol))
+           (\<lambda>A p. pmap (bd1 A p) (bd2 A p))
+           (\<lambda>A e p. pmap (rt1 A e p) (rt2 A e p))
            (\<lambda>ci. prod_enter (en1 ci) (en2 ci))
-           (\<lambda>ask v. pmap (ev1 ask v) (ev2 ask v))
+           (\<lambda>A v. pmap (ev1 A v) (ev2 A v))
            (\<lambda>ci. pmap2 (ce1 ci) (ce2 ci)) (\<lambda>ci. pmap2 (ca1 ci) (ca2 ci))
            (gamma_prod g1 g2) \<G>"
 proof -
-  interpret A: oracle_local_spec answer_holds sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>
+  interpret A: sound_local_dg_spec q1 sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>
     by (fact assms(1))
-  interpret B: oracle_local_spec answer_holds sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G>
+  interpret B: sound_local_dg_spec q2 sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G>
     by (fact assms(2))
   show ?thesis
   proof (unfold_locales, goal_cases)
@@ -184,19 +178,17 @@ proof -
       by (auto simp: gamma_prod_def less_eq_analysis_product_def
           dest: A.gammaD_mono B.gammaD_mono)
   next
-    case (2 a d ask)
-    have "edge_collect a (gamma_prod g1 g2 d \<inter> Collect (A.oracle_holds ask))
-            \<subseteq> edge_collect a (g1 (pleft d) \<inter> Collect (A.oracle_holds ask))
-              \<inter> edge_collect a (g2 (pright d) \<inter> Collect (A.oracle_holds ask))"
-      apply(auto)
-      apply (metis Int_mono edge_collect_mono gamma_prod_def inf.cobounded1 subset_eq)
-      by (metis Int_mono edge_collect_mono gamma_prod_def in_mono inf.cobounded2 subset_refl)
+    case (2 a d Ans)
+    let ?O = "Collect (eval_query.oracle_holds Ans)"
+    have "edge_collect a (gamma_prod g1 g2 d \<inter> ?O)
+            \<subseteq> edge_collect a (g1 (pleft d) \<inter> ?O) \<inter> edge_collect a (g2 (pright d) \<inter> ?O)"
+      by (intro Int_greatest edge_collect_mono) (auto simp: gamma_prod_def)
     also have "\<dots> \<subseteq> gamma_prod g1 g2
-                  (pmap (local_spec_step (sk1 ask) (asn1 ask) (sp1 ask) (br1 ask) (bd1 ask)
-                           (rt1 ask) (ev1 ask) a)
-                        (local_spec_step (sk2 ask) (asn2 ask) (sp2 ask) (br2 ask) (bd2 ask)
-                           (rt2 ask) (ev2 ask) a) d)"
-      using A.step_sound_oracle[of a "pleft d" ask] B.step_sound_oracle[of a "pright d" ask]
+                  (pmap (local_spec_step (sk1 Ans) (asn1 Ans) (sp1 Ans) (br1 Ans) (bd1 Ans)
+                           (rt1 Ans) (ev1 Ans) a)
+                        (local_spec_step (sk2 Ans) (asn2 Ans) (sp2 Ans) (br2 Ans) (bd2 Ans)
+                           (rt2 Ans) (ev2 Ans) a) d)"
+      using A.step_sound_local[of a "pleft d" Ans] B.step_sound_local[of a "pright d" Ans]
       by (auto simp: gamma_prod_def pmap_def)
     finally show ?case by (simp only: local_spec_step_pmap)
   next
@@ -216,53 +208,41 @@ proof -
     case (4 s dc t de ci)
     then show ?case
       by (auto simp: gamma_prod_def pmap2_def intro: A.combine_sound_local B.combine_sound_local)
+  next
+    case (5 s d q)
+    then have "eval_holds q (q1 (pleft d) q) s" "eval_holds q (q2 (pright d) q) s"
+      using A.qry_sound B.qry_sound by (auto simp: gamma_prod_def)
+    then show ?case
+      unfolding qry_prod_def by (rule eval_query.inf_sound)
   qed
 qed
-
-theorem product_component:
-  assumes "oracle_component answer_holds sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G> q1"
-    and "oracle_component answer_holds sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G> q2"
-  shows "oracle_component answer_holds
-           (\<lambda>ask. pmap (sk1 ask) (sk2 ask))
-           (\<lambda>ask x e. pmap (asn1 ask x e) (asn2 ask x e))
-           (\<lambda>ask c x. pmap (sp1 ask c x) (sp2 ask c x))
-           (\<lambda>ask b pol. pmap (br1 ask b pol) (br2 ask b pol))
-           (\<lambda>ask p. pmap (bd1 ask p) (bd2 ask p))
-           (\<lambda>ask e p. pmap (rt1 ask e p) (rt2 ask e p))
-           (\<lambda>ci. prod_enter (en1 ci) (en2 ci))
-           (\<lambda>ask v. pmap (ev1 ask v) (ev2 ask v))
-           (\<lambda>ci. pmap2 (ce1 ci) (ce2 ci)) (\<lambda>ci. pmap2 (ca1 ci) (ca2 ci))
-           (gamma_prod g1 g2) \<G> (qry_prod q1 q2)"
-  using assms product_local_spec[of answer_holds sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>
-      sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2]
-    product_query_sound[of answer_holds q1 g1 q2 g2]
-  by (simp add: oracle_component_def)
 
 section \<open>Two cooperating analyses are sound\<close>
 
 text \<open>
-  The headline result: two components, each proved against an arbitrary sound
-  oracle and each with a sound handler, form a product whose closure is an
-  ordinary specification satisfying \<open>analysis_contract\<close>. Every transfer of the
-  closed product receives the meet of both handlers' answers on the state the
-  edge starts from. Nothing about either partner enters the other's proof.
+  The headline result: two components, each proved against arbitrary sound
+  answers and each with a sound handler, form a product whose specification
+  satisfies \<open>analysis_contract\<close>. In the generated system every transfer of the
+  product receives, for each question either component names, the meet of both
+  handlers' answers on the state the edge starts from. Nothing about either
+  partner enters the other's proof.
 \<close>
 
 theorem product_contract:
-  assumes "oracle_component answer_holds sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G> q1"
-    and "oracle_component answer_holds sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G> q2"
+  assumes "sound_local_dg_spec q1 sk1 asn1 sp1 br1 bd1 rt1 en1 ev1 ce1 ca1 g1 \<G>"
+    and "sound_local_dg_spec q2 sk2 asn2 sp2 br2 bd2 rt2 en2 ev2 ce2 ca2 g2 \<G>"
   shows "analysis_contract
-           (closed_local_spec (qry_prod q1 q2)
-              (\<lambda>ask. pmap (sk1 ask) (sk2 ask))
-              (\<lambda>ask x e. pmap (asn1 ask x e) (asn2 ask x e))
-              (\<lambda>ask c x. pmap (sp1 ask c x) (sp2 ask c x))
-              (\<lambda>ask b pol. pmap (br1 ask b pol) (br2 ask b pol))
-              (\<lambda>ask p. pmap (bd1 ask p) (bd2 ask p))
-              (\<lambda>ask e p. pmap (rt1 ask e p) (rt2 ask e p))
+           (local_dg_spec (qs_prod qs1 qs2) (qry_prod q1 q2)
+              (\<lambda>A. pmap (sk1 A) (sk2 A))
+              (\<lambda>A x e. pmap (asn1 A x e) (asn2 A x e))
+              (\<lambda>A c x. pmap (sp1 A c x) (sp2 A c x))
+              (\<lambda>A b pol. pmap (br1 A b pol) (br2 A b pol))
+              (\<lambda>A p. pmap (bd1 A p) (bd2 A p))
+              (\<lambda>A e p. pmap (rt1 A e p) (rt2 A e p))
               (\<lambda>ci. prod_enter (en1 ci) (en2 ci))
-              (\<lambda>ask v. pmap (ev1 ask v) (ev2 ask v))
+              (\<lambda>A v. pmap (ev1 A v) (ev2 A v))
               (\<lambda>ci. pmap2 (ce1 ci) (ce2 ci)) (\<lambda>ci. pmap2 (ca1 ci) (ca2 ci)))
            (\<lambda>d g. gamma_prod g1 g2 d) \<G>"
-  by (rule oracle_component.closed_contract[OF product_component[OF assms]])
+  by (rule sound_local_dg_spec.local_spec_contract[OF product_local_spec[OF assms]])
 
 end

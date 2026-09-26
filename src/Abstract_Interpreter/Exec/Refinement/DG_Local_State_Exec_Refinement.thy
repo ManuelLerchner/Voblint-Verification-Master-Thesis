@@ -269,15 +269,16 @@ text \<open>
 theorem sound_local_spec_st:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
   shows "sound_local_dg_spec
-     (transfer_lift empty_pred (tf_st EA_Nop))
-     (\<lambda>x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
-     (\<lambda>sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
-     (\<lambda>b pol. transfer_lift empty_pred
+     (\<lambda>_ _. \<top>)
+     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
+     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
+     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
+     (\<lambda>_ b pol. transfer_lift empty_pred
         (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
-     (\<lambda>p. transfer_lift empty_pred (tf_st (EA_Body p)))
-     (\<lambda>e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
+     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
+     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
      (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
-     (\<lambda>ev. transfer_lift empty_pred
+     (\<lambda>_ ev. transfer_lift empty_pred
         (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
      (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
         (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
@@ -293,7 +294,10 @@ proof -
     then show ?case
       by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
   next
-    case (2 a d)
+    case 5
+    show ?case by simp
+  next
+    case (2 a d A)
     have step: "edge_collect a (\<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)
                   \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     proof (cases "normalized_lift empty_pred d")
@@ -316,7 +320,8 @@ proof -
         by (simp)
     qed
     then show ?case
-      by (simp add: local_spec_step_transfer_lift_tf_st)
+      using edge_collect_mono[OF Int_lower1]
+      by (fastforce simp: local_spec_step_transfer_lift_tf_st)
   next
     case (3 s d ci)
     have entered: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s

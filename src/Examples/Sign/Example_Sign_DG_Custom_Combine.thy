@@ -174,17 +174,27 @@ lemma dgs_enter_sign_dg_spec_env_join [simp]:
      = enter\<^sup># (ownership_split_lift \<G> (sign_base_spec \<G>))"
   by (simp add: sign_dg_spec_env_join_def)
 
+lemma dgs_query_sign_dg_spec_env_join [simp]:
+  "dgs_query (sign_dg_spec_env_join \<G>)
+     = dgs_query (ownership_split_lift \<G> (sign_base_spec \<G>))"
+  by (simp add: sign_dg_spec_env_join_def)
+
 lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
   "dg_spec_wf (ownership_split_lift \<G> (sign_base_spec \<G>))"
   by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
 
 lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
   "dg_spec_wf (sign_dg_spec_env_join \<G>)"
-proof (unfold dg_spec_wf_def, intro conjI allI)
-  fix a d key
-  show "sp_wf (dg_spec_step (sign_dg_spec_env_join \<G>) a (mk_dg_man d key))"
+proof (unfold dg_spec_wf_def, intro conjI allI impI)
+  show "sp_wf (dg_spec_step (sign_dg_spec_env_join \<G>) a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
+    if "\<forall>q. sp_wf (A q)" for a d key A
     unfolding dg_spec_step_sign_dg_spec_env_join
-    by (rule dg_spec_wf_step[OF dg_spec_wf_ownership_split_lift_sign_base])
+    by (rule dg_spec_wf_step_ask[OF dg_spec_wf_ownership_split_lift_sign_base])
+       (use that in blast)
+next
+  show "sp_wf (dgs_query (sign_dg_spec_env_join \<G>) ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+    for d key A q
+    by simp
 next
   fix ci d key
   show "sp_wf (enter\<^sup># (sign_dg_spec_env_join \<G>) ci (mk_dg_man d key))"

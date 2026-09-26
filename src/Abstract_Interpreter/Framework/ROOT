@@ -44,7 +44,6 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     DG_Local_State_Spec
     (* Analyses composed as a product, answering each other's queries. *)
     Analysis_Query
-    Oracle_Local_Spec
     Local_Spec_Product
     Oracle_Wrappers
     Call_String_Context

@@ -53,8 +53,9 @@ match the tree.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.
-- [Cooperating analyses](COOPERATING_ANALYSES_DESIGN.md) — proposed product of
-  analyses that answer each other's queries, and its composition theorem.
+- [Cooperating analyses](COOPERATING_ANALYSES_DESIGN.md) — product of analyses
+  that answer each other's `EvalInt` queries, its composition theorem, and the
+  Interval × order demo.
 - [Proof verification gates](PROOF_PHASES.md) — checks required for each proof
   layer and for the repository.
 - [Goblint-alignment tracks](GOBLINT_ALIGNMENT_TRACKS.md) — the remaining M2

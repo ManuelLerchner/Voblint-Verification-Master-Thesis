@@ -127,14 +127,22 @@ lemma dgs_enter_ov_spec [simp]:
   "enter\<^sup># (ov_spec \<G> ep) ci = local_enter_transfer (ov_enter \<G> ep ci)"
   by (simp add: ov_spec_def)
 
+lemma dgs_query_ov_spec [simp]:
+  "dgs_query (ov_spec \<G> ep) = dgs_query (sign_conf_spec \<G> ep)"
+  by (simp add: ov_spec_def)
+
 text \<open>The override runs its continuation once wherever the stock specification
   does: only the entry changed, and it answers its alternatives outright.\<close>
 
 lemma dg_spec_wf_ov_spec [intro, simp]: "dg_spec_wf (ov_spec \<G> ep)"
-proof (unfold dg_spec_wf_def, intro conjI allI)
-  fix a d key
-  show "sp_wf (dg_spec_step (ov_spec \<G> ep) a (mk_dg_man d key))"
-    by (simp add: dg_spec_wf_step[OF dg_spec_wf_sign_conf_spec])
+proof (unfold dg_spec_wf_def, intro conjI allI impI)
+  show "sp_wf (dg_spec_step (ov_spec \<G> ep) a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
+    if "\<forall>q. sp_wf (A q)" for a d key A
+    using that by (simp add: dg_spec_wf_step_ask[OF dg_spec_wf_sign_conf_spec])
+next
+  show "sp_wf (dgs_query (ov_spec \<G> ep) ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+    if "\<forall>q. sp_wf (A q)" for d key A q
+    using that by (simp add: dg_spec_wf_query[OF dg_spec_wf_sign_conf_spec])
 next
   fix ci d key
   show "sp_wf (enter\<^sup># (ov_spec \<G> ep) ci (mk_dg_man d key))"

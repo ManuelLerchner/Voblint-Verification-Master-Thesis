@@ -1,5 +1,5 @@
 theory Analysis_Query
-  imports "Voblint_VIMP.VIMP_Expr"
+  imports "Voblint_VIMP.VIMP_Expr" "Voblint_Domain.Interval_Lattice"
 begin
 
 unbundle lattice_syntax
@@ -44,51 +44,61 @@ lemma oracle_holds_inf [intro]:
 
 end
 
-section \<open>The truth of an expression\<close>
+section \<open>The value of an expression\<close>
 
 text \<open>
-  Version 1 has one query kind, whether an expression is true. It is a
-  constructor rather than a bare \<^typ>\<open>exp\<close> so that a later kind extends the
-  datatype.
+  Version 1 has one query kind, Goblint's \<open>EvalInt\<close>: which integers an
+  expression may evaluate to. The answer is an interval, as Goblint answers
+  \<open>EvalInt\<close> in its integer domain (\<open>queries.ml\<close> line 108 at \<open>0dc12d355\<close>). A
+  comparison or logical operator evaluates to \<open>0\<close> or \<open>1\<close>, so its truth is the
+  answer \<open>[1,1]\<close> or \<open>[0,0]\<close>; Goblint derives its former \<open>MustBeEqual\<close> and
+  \<open>MayBeLess\<close> queries from \<open>EvalInt\<close> the same way (lines 528 to 539). The query
+  is a constructor rather than a bare \<^typ>\<open>exp\<close> so that a later kind extends
+  the datatype.
 \<close>
 
-datatype query = EvalBool exp
+datatype query = EvalInt exp
 
 text \<open>
-  An answer to \<open>EvalBool e\<close> is the set of truth values it admits for \<open>e\<close>.
-  \<open>UNIV\<close> claims nothing and is the top; \<open>{b}\<close> claims the value \<open>b\<close>; \<open>{}\<close> says
-  no store is described. Order and meet are inclusion and intersection, so two
-  analyses that answer \<open>{True}\<close> and \<open>{False}\<close> combine to \<open>{}\<close>. Unlike
-  \<^typ>\<open>bool option\<close>, the four sets are closed under meet. That is why the
-  answers are sets and not the three-valued type of \<open>Three_Valued\<close>: its
-  connectives combine the truth of two different expressions, whereas the meet
-  combines two answers about one.
+  An answer claims that the expression evaluates into the interval's
+  concretization. The full interval claims nothing and is the top, and the
+  meet combines two answers about one expression. An empty answer admits no
+  value, so a sound handler returns it only for a state that represents no
+  concrete store: two sound analyses whose answers do not overlap describe no
+  store in common.
 \<close>
 
-fun truth_holds :: "query \<Rightarrow> bool set \<Rightarrow> store \<Rightarrow> bool" where
-  "truth_holds (EvalBool e) A s \<longleftrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) \<in> A"
+fun eval_holds :: "query \<Rightarrow> ivl \<Rightarrow> store \<Rightarrow> bool" where
+  "eval_holds (EvalInt e) i s \<longleftrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_ivl i"
 
-interpretation truth_query: query_algebra truth_holds
+interpretation eval_query: query_algebra eval_holds
 proof
-  fix q :: query and A B :: "bool set" and s
-  show "truth_holds q \<top> s" by (cases q) simp
-  show "truth_holds q A s \<Longrightarrow> truth_holds q B s \<Longrightarrow> truth_holds q (A \<sqinter> B) s"
-    by (cases q) simp
+  fix q :: query and a b :: ivl and s
+  show "eval_holds q \<top> s"
+    by (cases q) (simp add: top_ivl_def gamma_ivl_top)
+  show "eval_holds q a s \<Longrightarrow> eval_holds q b s \<Longrightarrow> eval_holds q (a \<sqinter> b) s"
+    by (cases q) (simp only: eval_holds.simps meet_ivl_gamma)
 qed
 
+lemma eval_holds_top [simp]: "eval_holds q \<top> s"
+  by (rule eval_query.top_sound)
+
 text \<open>
-  A domain's check query answers with \<^typ>\<open>bool option\<close>, \<open>None\<close> meaning
-  unknown. Embedding it as the set of admitted values keeps its soundness
-  statement as it is.
+  The answer \<open>[n,n]\<close> fixes the value. \<open>ivl_const\<close> reads that value back, and
+  a consumer that finds one may use \<open>n\<close> for the expression at every store the
+  answer holds at.
 \<close>
 
-fun admitted :: "bool option \<Rightarrow> bool set" where
-  "admitted None = UNIV"
-| "admitted (Some b) = {b}"
+fun ivl_const :: "ivl \<Rightarrow> int option" where
+  "ivl_const (Ivl (Fin l) (Fin u)) = (if l = u then Some l else None)"
+| "ivl_const _ = None"
 
-lemma truth_holds_admitted:
-  assumes "\<And>b. r = Some b \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = b"
-  shows "truth_holds (EvalBool e) (admitted r) s"
-  using assms by (cases r) auto
+lemma ivl_const_SomeD: "ivl_const i = Some n \<Longrightarrow> i = ivl_of_int n"
+  by (cases i rule: ivl_const.cases) (auto split: if_splits)
+
+lemma eval_holds_constD:
+  assumes "eval_holds (EvalInt e) i s" and "ivl_const i = Some n"
+  shows "\<lbrakk>e\<rbrakk>\<^sub>e s = n"
+  using assms ivl_const_SomeD[OF assms(2)] by simp
 
 end
