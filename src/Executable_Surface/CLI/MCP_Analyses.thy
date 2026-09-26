@@ -402,21 +402,19 @@ section \<open>Registering the active analyses\<close>
 
 text \<open>
   The active analyses run through the shared pipeline once per context
-  policy, as one registered analysis does. Each registration leaves the
-  activation list and the global update rule as parameters.
+  policy, as one registered analysis does. What they owe the pipeline does not
+  depend on the policy, beyond its seeds being apart from the analysis-wide
+  global, so it is proved once here. Each registration leaves the activation
+  list and the global update rule as parameters.
 \<close>
 
-subsection \<open>At the unit context\<close>
-
-global_interpretation mcp_rule: routed_dg_analysis
-    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
-    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
-       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
-    \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
-    "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
-  for as r
+lemma mcp_routed_dg_analysis:
+  assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
+  shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd mcp_init
+    gk0 seed (TD_side_rule_Interp_solve r)
+    (TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r))
+    \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
+    (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)"
 proof (unfold_locales, goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe
     SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
   case (CompSound p)
@@ -435,7 +433,7 @@ next
 next
   case (EmptyVSound v) then show ?case by (rule mcp_empty_v_gamma)
 next
-  case (SeedNe v ctx) show ?case by simp
+  case (SeedNe v ctx) show ?case by (rule assms)
 next
   case (SolvePP eqs x) then show ?case
     by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
@@ -452,5 +450,72 @@ next
 next
   case (DomC eqs x) then show ?case by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
 qed
+
+subsection \<open>At the unit context\<close>
+
+global_interpretation mcp_rule: routed_dg_analysis
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
+    "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
+  for as r
+  by (rule mcp_routed_dg_analysis) simp
+
+subsection \<open>At the entry-state context\<close>
+
+text \<open>
+  An activation is keyed by the values the active analyses give its formals
+  on entry. The context has a list per field; a field no active analysis
+  runs keys nothing.
+\<close>
+
+type_synonym mcp_ctx =
+  "(sign list, (ivl list, (int_dom list, (parity list, congruence list) analysis_product)
+     analysis_product) analysis_product) analysis_product"
+
+definition mcp_formals_route ::
+  "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> mcp_ctx \<Rightarrow> mcp_st lifted
+     \<Rightarrow> call_action \<Rightarrow> mcp_ctx" where
+  "mcp_formals_route as \<G> u ctx d ca =
+     Product
+       (if Sign_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get slot1 d) ca else [])
+       (Product
+         (if Interval_Analysis \<in> set as
+          then exec_formals_route \<G> u [] (lift_get slot2 d) ca else [])
+         (Product
+           (if Int_Analysis \<in> set as
+            then exec_formals_route \<G> u [] (lift_get slot3 d) ca else [])
+           (Product
+             (if Parity_Analysis \<in> set as
+              then exec_formals_route \<G> u [] (lift_get slot4 d) ca else [])
+             (if Congruence_Analysis \<in> set as
+              then exec_formals_route \<G> u [] (lift_get slot5 d) ca else []))))"
+
+definition mcp_root_ctx :: mcp_ctx where
+  "mcp_root_ctx = Product [] (Product [] (Product [] (Product [] [])))"
+
+global_interpretation mcp_es_rule: routed_dg_analysis
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
+    "TD_side_rule_Interp_solve r"
+    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
+    "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
+  for as r
+  by (rule mcp_routed_dg_analysis) simp
+
+subsection \<open>At the call-string context\<close>
+
+global_interpretation mcp_cs_rule: routed_dg_analysis
+    "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd mcp_init
+    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_upd_rule.solve_dom init_basic_ug_state (update_global_of r)"
+    \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
+    "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
+  for as k r
+  by (rule mcp_routed_dg_analysis) simp
 
 end
