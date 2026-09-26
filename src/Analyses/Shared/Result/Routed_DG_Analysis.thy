@@ -386,8 +386,8 @@ locale routed_dg_analysis =
     and enter_single:
       "\<And>p ci d. mc_en (comp (declared_global p) p) ci (d, d)
                   = [(d, entry_of (declared_global p) p ci d)]"
-    and empty_exact: "\<And>p s. emp p s \<longleftrightarrow> gamma\<^sub>V (rd (declared_global p) s) = {}"
-    and empty\<^sub>V_exact: "\<And>v. empty\<^sub>V v \<longleftrightarrow> gamma\<^sub>V v = {}"
+    and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
+    and empty\<^sub>V_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> gamma\<^sub>V v = {}"
     and seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
     and solve_pp:
       "\<And>eqs x. solve_dom eqs x
@@ -460,7 +460,7 @@ abbreviation entered :: "call_info \<Rightarrow> 's lifted \<Rightarrow> 's lift
   "entered ci d \<equiv> entry_of pgs p ci d"
 
 lemma empty_rd_exact: "emp p s = empty\<^sub>V (rd pgs s)"
-  by (simp add: empty_exact empty\<^sub>V_exact)
+  by (simp add: empty_rd)
 
 text \<open>
   The published table and the solved reader describe the same stores at every
@@ -476,7 +476,7 @@ lemma gamma_reader_eq_lookup:
      = gamma_lift gamma\<^sub>V (lookup_context (result pgs p) v ctx)"
 proof -
   have gc: "gamma_lift gamma\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift gamma\<^sub>V x" for x
-    by (rule gamma_lift_canonicalize_lift) (simp add: empty\<^sub>V_exact)
+    by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_sound)
   show ?thesis
   proof (cases "(v, ctx) \<in> sol_vars pgs p")
     case True
@@ -658,7 +658,7 @@ next
 next
   case (GammaRd d g') show ?case by simp
 next
-  case (EmptyExact v) show ?case by (rule empty\<^sub>V_exact)
+  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_sound)
 next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next
@@ -1150,11 +1150,9 @@ next
   then show ?case by (simp add: routed_dg_pipeline.entry_of_def)
 next
   case (EmptyExact p s)
-  then show ?case
-    by (subst resolved_st_q_is_bot_for_iff[OF declared_global_iff])
-       (rule is_empty_state_iff_gamma_state_empty)
+  then show ?case by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
 next
-  case (EmptyVExact v) then show ?case by (rule is_empty_state_iff_gamma_state_empty)
+  case (EmptyVExact v) then show ?case by (rule is_empty_state_gamma_state_empty)
 next
   case (SeedNe v ctx) then show ?case by (rule exec_seed_ne_gk0)
 next

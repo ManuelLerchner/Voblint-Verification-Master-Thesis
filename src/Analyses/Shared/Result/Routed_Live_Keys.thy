@@ -407,7 +407,7 @@ next
 next
   case (GammaRd d g') show ?case by simp
 next
-  case (EmptyExact v) show ?case by (rule empty\<^sub>V_exact)
+  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_sound)
 next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next

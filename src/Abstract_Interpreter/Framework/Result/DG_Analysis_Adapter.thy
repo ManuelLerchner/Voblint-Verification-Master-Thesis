@@ -61,7 +61,7 @@ locale dg_analysis_adapter =
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
   assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d)"
-    and empty_exact: "\<And>v. empty\<^sub>V v \<longleftrightarrow> \<gamma>\<^sub>V v = {}"
+    and empty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
     and classify_proved:
     "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and classify_refuted:
@@ -135,7 +135,7 @@ text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<cl
 
 lemma gamma_lift_canonicalize [simp]:
   "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x"
-  by (cases x) (simp_all add: normalize_lift_def empty_exact)
+  by (cases x) (simp_all add: normalize_lift_def empty_sound)
 
 lemma gammaM_sg_eq_lookup_context:
   assumes cov: "(v, ctx) \<in> vars"
