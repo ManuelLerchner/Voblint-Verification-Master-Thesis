@@ -66,7 +66,7 @@ and terminates without acceleration.
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `unit_dg_analysis`, and `congruence_es_rule` and `congruence_cs_rule` for the entry-state and call-string configurations, all at any global update rule; see below |
+| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `unit_dg_analysis` at the unit context, at any global update rule; see below |
 
 ## Worked example
 
@@ -79,26 +79,31 @@ see `Example_Int_Backward` for the composite version, and
 `Example_Congruence_Arithmetic` / `Example_Congruence_Backward` for this component on
 its own.
 
-## The two contextual configurations
+## Congruence in the entry-state and call-string runs
 
 `generated/Congruence_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 
-Neither contextual policy has a pipeline of its own. Both are interpretations
-of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+Congruence's own generated file registers only the context-insensitive run,
+`congruence_rule`. The entry-state and call-string runs are the CLI's combined
+registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
+which run every active analysis as fields of one state; Congruence is one of
+those fields whenever `Congruence_Analysis` is in the activation list. Neither
+policy has a pipeline of its own. Both are interpretations of
+`routed_dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
-activation-indexed soundness endpoint — for every domain at every policy. Congruence
-supplies its own implementation and facts; the generator adds the routing
-functions and the solver. Nothing else.
+activation-indexed soundness endpoint — for every active combination at every
+policy.
 
 A call string is the last `k` call sites on the stack, so a procedure entered
 from two places is analysed twice rather than once at the join. `cs_route`
 never reads the state it is handed, which is what makes
 `fun_route_activation_collect_sound` — the endpoint for a route that is a
 function of the call site and the caller's context alone — the applicable one.
-`k` is runtime data, so the registration leaves it free beside the rule
-(`for k r`), and a caller applies the locale's constants to both.
+`k` is runtime data, so the registration leaves it free beside the activation
+and the rule (`for as k r`), and a caller applies the locale's constants to
+all three.
 
 The entry-state run keys a callee on the abstract values its formals hold on
 entry. Here `exec_formals_route` does read the state it is handed — the callee

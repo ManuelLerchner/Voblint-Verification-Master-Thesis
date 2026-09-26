@@ -33,15 +33,18 @@ Parity_Domain      arithmetic, comparisons, and the expression evaluator
 `generated/Parity_Analyses` is written by `scripts/gen_analysis_assembly.py`
 from `manifests/analyses.yaml`.
 
-`Parity_Analyses` holds three `global_interpretation`s, each with the global
-update rule `r` as a parameter: `parity_rule` of `unit_dg_analysis`
-(`Shared/Result/Unit_DG_Analysis.thy`), and `parity_es_rule` and `parity_cs_rule`
-of `routed_dg_analysis` for the two policies that route calls to more than one
-context. Each discharges the same twelve obligations from Parity's transfer
-contract, two commutation laws, the solver contract, the classifier contract and
-the initial-state contract, and gets back the equation system, the solve, the
-reader, the result table, the report and every soundness endpoint. Nothing in
-this session builds a second copy of that pipeline.
+`Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
+global update rule `r` as a parameter: `unit_dg_analysis`
+(`Shared/Result/Unit_DG_Analysis.thy`) at the unit context. It discharges the
+same twelve obligations from Parity's transfer contract, two commutation laws,
+the solver contract, the classifier contract and the initial-state contract,
+and gets back the equation system, the solve, the reader, the result table,
+the report and the context-free soundness endpoints. The entry-state and
+call-string runs are the CLI's combined registrations, `mcp_es_rule` and
+`mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`), which route calls to more than one
+context for every active analysis at once; Parity's own registration still
+matters there, since the combined state cites `parity_rule.comp_sound` and
+`parity_rule.init_sound`.
 
 Parity currently has no backward-domain interpretation. Branch transfer is the
 conservative identity, so guards do not refine parity facts.
@@ -61,33 +64,38 @@ disjoint parity classes whatever the unconstrained `x` is, so one check is prove
 one refuted. A third, against another unconstrained value, is unknown — Parity has no
 singleton, so it can never prove a positive equality.
 
-## The two contextual configurations
+## Parity in the entry-state and call-string runs
 
 `generated/Parity_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 
-Neither contextual policy has a pipeline of its own. Both are interpretations
-of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+Parity's own generated file registers only the context-insensitive run,
+`parity_rule`. The entry-state and call-string runs are the CLI's combined
+registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
+which run every active analysis as fields of one state; Parity is one of
+those fields whenever `Parity_Analysis` is in the activation list. Neither
+policy has a pipeline of its own. Both are interpretations of
+`routed_dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
-activation-indexed soundness endpoint — for every domain at every policy. Parity
-supplies its own implementation and facts; the generator adds the routing
-functions and the solver. Nothing else.
+activation-indexed soundness endpoint — for every active combination at every
+policy.
 
 Both are selectable from the CLI at every `--globals` rule: `--context entry-state`
-and `--context call-string --context-depth K` for any `K >= 0`. `run_voblint` reads
-`parity_es_rule` and `parity_cs_rule`, which take the global update rule as a
-parameter. The choice matters little here: `parity` is a finite lattice whose `warrowing`
-instance sets `widen = sup`, so a warrowing rule buys no termination the join
-lacks.
+and `--context call-string --context-depth K` for any `K >= 0`, with Parity in
+the activation. `run_voblint` reads `mcp_es_rule` and `mcp_cs_rule`, which take
+the activation list and the global update rule as parameters. The choice
+matters little here: `parity` is a finite lattice whose `warrowing` instance
+sets `widen = sup`, so a warrowing rule buys no termination the join lacks.
 
 A call string is the last `k` call sites on the stack, so a procedure entered
 from two places is analysed twice rather than once at the join. `cs_route`
 never reads the state it is handed, which is what makes
 `fun_route_activation_collect_sound` — the endpoint for a route that is a
 function of the call site and the caller's context alone — the applicable one.
-`k` is runtime data, so the registration leaves it free beside the rule
-(`for k r`), and a caller applies the locale's constants to both.
+`k` is runtime data, so the registration leaves it free beside the activation
+and the rule (`for as k r`), and a caller applies the locale's constants to
+all three.
 
 The entry-state run keys a callee on the abstract values its formals hold on
 entry. Here `exec_formals_route` does read the state it is handed — the callee

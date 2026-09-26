@@ -2,12 +2,18 @@
 #
 # scripts/gen_analysis_assembly.py turns each entry into
 # src/Analyses/<name>/generated/<name>_Analyses.thy, which registers the domain
-# at the unit, entry-state and call-string contexts for every global update rule.
+# at its contexts for every global update rule.
 #
 # `impl` is the prefix of the domain's own constants and facts (default: the
-# lowercased name). `roles` overrides a role whose spelling does not follow that
-# prefix; a role may be an application `{const, args}` for an operation that
-# takes a configuration argument. `imports` names the domain's own theories the
+# lowercased name). `contexts` lists the context policies the domain registers
+# on its own (default: `[unit]`); the CLI runs every domain at every policy as a
+# field of the combined state generated into
+# src/Executable_Surface/CLI/generated/MCP_Carrier.thy, so a domain registers the
+# entry-state or call-string policy only where a theory states facts about it.
+# `value_constructor` is its `abstract_value` constructor (default: `<name>Value`).
+# `roles` overrides a role whose spelling does not follow that prefix; a role may
+# be an application `{const, args}` for an operation that takes a configuration
+# argument. `imports` names the domain's own theories the
 # registrations cite. Domain rationale belongs in the domain's README.
 
 domains:
@@ -18,6 +24,7 @@ domains:
   - name: Interval
     value_type: ivl
     impl: ivl
+    contexts: [unit, entry-state, call-string]
     imports: [Interval_Sound, Interval_Classify, Interval_Transfer, Interval_Exec]
 
   - name: Parity
@@ -29,6 +36,7 @@ domains:
   - name: Int
     value_type: int_dom
     impl: int
+    value_constructor: IntDomValue
     imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
     # Int is registered at its most precise refinement mode.
     roles:

@@ -94,6 +94,7 @@ FACT_ROLES = {
 # route reads only what the abstraction preserves.
 CONTEXTS = [
     {
+        "key": "unit",
         "suffix": "",
         "title": "the unit context",
         "locale": "unit_dg_analysis",
@@ -108,6 +109,7 @@ CONTEXTS = [
         "case4": ["  case (4 \\<G> u ctx d ca) show ?case by simp"],
     },
     {
+        "key": "entry-state",
         "suffix": "_es",
         "title": "the entry-state context",
         "locale": "routed_dg_analysis_exec",
@@ -123,6 +125,7 @@ CONTEXTS = [
         ],
     },
     {
+        "key": "call-string",
         "suffix": "_cs",
         "title": "the call-string context",
         "locale": "routed_dg_analysis_exec",
@@ -153,6 +156,10 @@ class Domain:
         self.impl = entry.get("impl", self.name.lower())
         self.imports = entry["imports"]
         self.overrides = entry.get("roles", {})
+        self.contexts = entry.get("contexts", ["unit"])
+        self.prefix = self.name.lower()
+        self.constructor = f"{self.name}_Analysis"
+        self.value_constructor = entry.get("value_constructor", f"{self.name}Value")
         self.path = f"src/Analyses/{self.name}/generated/{self.name}_Analyses.thy"
 
     def roles(self):
@@ -187,6 +194,18 @@ def role_term(role):
     if isinstance(role, dict):
         return f'"{role["const"]} {" ".join(role["args"])}"'
     return role
+
+
+def wrap_prose(text, width=84):
+    """Fill a paragraph to the width text blocks use."""
+    lines, line = [], ""
+    for word in text.split():
+        if line and len(f"{line} {word}") > width:
+            lines.append(line)
+            line = word
+        else:
+            line = f"{line} {word}" if line else word
+    return "\n".join(lines + [line])
 
 
 def text_block(body):
@@ -290,21 +309,388 @@ def render(dom):
         f"section \\<open>Registering {dom.name} at every context and update rule\\<close>",
         "",
     ]
+    ctxs = [c for c in CONTEXTS if c["key"] in dom.contexts]
+    where = {
+        "unit": "at the unit context",
+        "entry-state": "keyed by the abstract values a callee's formals hold on entry",
+        "call-string": "keyed by a bounded call string",
+    }
+    places = [where[c["key"]] for c in ctxs]
+    listed = (
+        places[0]
+        if len(places) == 1
+        else ", ".join(places[:-1]) + ", and " + places[-1]
+    )
     out += text_block(
-        GENERATED_NOTICE + "\n"
-        f"{dom.name} runs through the shared D/G pipeline three times: at the unit context,\n"
-        "keyed by the abstract values a callee's formals hold on entry, and keyed by a\n"
-        "bounded call string. Each registration leaves the rule that merges a value\n"
-        "side-effected into a global as a parameter \\<open>r\\<close>, and the call-string\n"
-        "one also its bound \\<open>k\\<close>, so one registration serves every discipline and\n"
-        "every bound. The equation system, the solve, the result table and every soundness\n"
-        "endpoint come from the interpreted locale; this theory only names the domain's\n"
-        "own implementation and facts."
+        GENERATED_NOTICE
+        + "\n"
+        + wrap_prose(
+            f"{dom.name} runs through the shared D/G pipeline {listed}. The CLI runs it as"
+            " a field of the combined state of \\<open>MCP_Analyses\\<close>,"
+            " whose component and soundness this unit registration supplies. Each"
+            " registration leaves the rule that merges a value side-effected into a"
+            " global as a parameter \\<open>r\\<close>"
+            + (
+                ", and the call-string one also its bound \\<open>k\\<close>"
+                if any(c["key"] == "call-string" for c in ctxs)
+                else ""
+            )
+            + ". The equation system, the solve, the result table and every soundness"
+            " endpoint come from the interpreted locale; this theory only names the"
+            " domain's own implementation and facts."
+        )
     ) + [""]
-    for ctx in CONTEXTS:
+    for ctx in ctxs:
         out += [f"subsection \\<open>At {ctx['title']}\\<close>", ""]
         out += registration(dom, ctx) + [""]
     out.append("end")
+    return "\n".join(out) + "\n"
+
+
+MCP_PATH = "src/Executable_Surface/CLI/generated/MCP_Carrier.thy"
+
+
+def wrap_term(text, indent, width=PACK_WIDTH):
+    """Break a long term at spaces; Isabelle reads the pieces as one term."""
+    out, line = [], " " * indent
+    for word in text.split(" "):
+        piece = f"{line}{word}" if line.strip() == "" else f"{line} {word}"
+        if symbol_len(piece) > width and line.strip():
+            out.append(line)
+            line = " " * (indent + 2) + word
+        else:
+            line = piece
+    return out + [line]
+
+
+def atomic(term):
+    """Whether a term needs no parentheses as an argument."""
+    if " " not in term:
+        return True
+    if not term.startswith("("):
+        return False
+    depth = 0
+    for i, ch in enumerate(term):
+        depth += ch == "("
+        depth -= ch == ")"
+        if depth == 0:
+            return i == len(term) - 1
+    return False
+
+
+def arg(term):
+    return term if atomic(term) else f"({term})"
+
+
+def nest(items):
+    """The nested analysis products holding one item per registered analysis."""
+    term = items[-1]
+    for item in reversed(items[:-1]):
+        term = f"Product {arg(item)} {arg(term)}"
+    return term
+
+
+def nest_type(types):
+    ty = types[-1]
+    for t in reversed(types[:-1]):
+        ty = f"({t}, {ty}) analysis_product"
+    return ty
+
+
+def pright_n(n, r="r"):
+    term = r
+    for _ in range(n):
+        term = f"pright {arg(term)}"
+    return term
+
+
+def slot_expr(k, n, r="r"):
+    """Field k (1-based) of n."""
+    if k == n:
+        return pright_n(n - 1, r)
+    return f"pleft {arg(pright_n(k - 1, r))}"
+
+
+def applied(role, arg):
+    """A role applied to one more argument, parenthesized."""
+    if isinstance(role, dict):
+        return f"({role['const']} {' '.join(role['args'])} {arg})"
+    return f"({role} {arg})"
+
+
+def bare(role):
+    if isinstance(role, dict):
+        return f"({role['const']} {' '.join(role['args'])})"
+    return role
+
+
+def fun_block(header, cases):
+    out = header
+    for i, (lhs, rhs) in enumerate(cases):
+        lead = '  "' if i == 0 else '| "'
+        first = f"{lead}{lhs} ="
+        body = wrap_term(rhs + '"', 5)
+        out += [first] + body
+    return out
+
+
+def render_mcp(doms):
+    n = len(doms)
+    G = "\\<G>"
+    out = [
+        "theory MCP_Carrier",
+        "  imports",
+        '    "Voblint_CLI.Analysis_Config"',
+        '    "Voblint_CLI.Dispatch_Carrier"',
+        '    "Voblint_CLI.MCP_Field"',
+        "begin",
+        "",
+    ]
+    out += [
+        "section \\<open>The combined state of the registered analyses\\<close>",
+        "",
+    ]
+    out += text_block(
+        GENERATED_NOTICE
+        + "\n"
+        + wrap_prose(
+            "Every registered analysis owns one field of the combined state, in"
+            " manifest order. This theory names the analyses, lays out the fields,"
+            " and states for each analysis how its field runs, what it describes,"
+            " how it reads back and answers queries, and where it starts. Nothing"
+            " here is proved beyond citing each analysis's own registration; the"
+            " combination and its soundness are in"
+            " \\<open>MCP_Analyses\\<close>."
+        )
+    ) + [""]
+    out += ["datatype analysis_domain ="]
+    out += [("    " if i == 0 else "  | ") + d.constructor for i, d in enumerate(doms)]
+    out += [""]
+    out += ["subsection \\<open>Fields\\<close>", ""]
+    for k in range(1, n + 1):
+        out += [f"definition slot{k} where", f'  "slot{k} r = {slot_expr(k, n)}"', ""]
+    for k in range(1, n + 1):
+        items = [slot_expr(j, n) for j in range(1, k)] + ["v"]
+        if k < n:
+            items.append(pright_n(k))
+        out += [f"definition set_slot{k} where"]
+        out += wrap_term(f'"set_slot{k} r v = {nest(items)}"', 2)
+        out += [""]
+    names = [f"slot{k}_def" for k in range(1, n + 1)] + [
+        f"set_slot{k}_def" for k in range(1, n + 1)
+    ]
+    out += wrap_term("lemmas slot_defs [simp] = " + " ".join(names), 0) + [""]
+    for name, fmt in [
+        ("mcp_st", "{vt} exec_dg_st lifted"),
+        ("mcp_val", "{vt} abs_state lifted"),
+        ("mcp_ctx", "{vt} list"),
+    ]:
+        ty = nest_type([fmt.format(vt=d.value_type) for d in doms])
+        out += [f"type_synonym {name} ="] + wrap_term(f'"{ty}"', 2) + [""]
+
+    out += ["subsection \\<open>Each analysis on its own field\\<close>", ""]
+
+    def per(fn):
+        return [fn(k, d) for k, d in enumerate(doms, 1)]
+
+    out += fun_block(
+        [
+            "fun mcp_component_of ::",
+            '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain \\<Rightarrow> mcp_st lifted mcp_component" where',
+        ],
+        per(
+            lambda k, d: (
+                f"mcp_component_of {G} p {d.constructor}",
+                f"lens_of (lift_get slot{k}) (lift_put set_slot{k}) (exec_component {G}"
+                f" (resolved_st_q_is_bot_for (declared_global_vars p))"
+                f" {applied(d.roles()['tf_st'], G)} {applied(d.roles()['enter_st'], G)})",
+            )
+        ),
+    )
+    out += [""]
+    out += fun_block(
+        [
+            'fun part_gamma :: "(vname \\<Rightarrow> bool) \\<Rightarrow> analysis_domain \\<Rightarrow> mcp_st lifted \\<Rightarrow> store set" where'
+        ],
+        per(
+            lambda k, d: (
+                f"part_gamma {G} {d.constructor}",
+                f"(\\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for {G}) (lift_get slot{k} x)))",
+            )
+        ),
+    )
+    out += [""]
+    out += fun_block(
+        [
+            'fun part_live :: "analysis_domain \\<Rightarrow> mcp_st \\<Rightarrow> bool" where'
+        ],
+        per(
+            lambda k, d: (f"part_live {d.constructor} r", f"(slot{k} r \\<noteq> Bot)")
+        ),
+    )
+    out += [""]
+    out += fun_block(
+        [
+            'fun part_empty :: "vname list \\<Rightarrow> analysis_domain \\<Rightarrow> mcp_st \\<Rightarrow> bool" where'
+        ],
+        per(
+            lambda k, d: (
+                f"part_empty gs {d.constructor} r",
+                f"(case slot{k} r of Bot \\<Rightarrow> True | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for gs st)",
+            )
+        ),
+    )
+    out += [""]
+
+    out += ["subsection \\<open>What each field publishes\\<close>", ""]
+    out += [
+        'definition mcp_rd :: "(vname \\<Rightarrow> bool) \\<Rightarrow> mcp_st \\<Rightarrow> mcp_val" where'
+    ]
+    rd = nest(
+        [
+            f"map_lift (fun_of_resolved_st_q_for {G}) (slot{k} r)"
+            for k in range(1, n + 1)
+        ]
+    )
+    out += wrap_term(f'"mcp_rd {G} r = {rd}"', 2) + [""]
+    out += fun_block(
+        [
+            'fun val_gamma :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> store set" where'
+        ],
+        per(lambda k, d: (f"val_gamma {d.constructor} v", f"gamma_point (slot{k} v)")),
+    )
+    out += [""]
+    out += [
+        'definition mcp_gamma_v :: "analysis_domain list \\<Rightarrow> mcp_val \\<Rightarrow> store set" where',
+        '  "mcp_gamma_v as v = (\\<Inter>a \\<in> set as. val_gamma a v)"',
+        "",
+    ]
+    out += fun_block(
+        [
+            'fun val_empty :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> bool" where'
+        ],
+        per(
+            lambda k, d: (
+                f"val_empty {d.constructor} v",
+                f"(case slot{k} v of Bot \\<Rightarrow> True | Lifted st \\<Rightarrow> is_empty_state st)",
+            )
+        ),
+    )
+    out += [""]
+    out += fun_block(
+        [
+            'fun val_answer :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> query \\<Rightarrow> answer" where'
+        ],
+        per(
+            lambda k, d: (
+                f"val_answer {d.constructor} v q",
+                f"(case slot{k} v of Bot \\<Rightarrow> \\<top> | Lifted st \\<Rightarrow> {d.prefix}_eval_answer st q)",
+            )
+        ),
+    )
+    out += [""]
+    out += fun_block(
+        [
+            'fun value_of :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> vname \\<Rightarrow> abstract_value" where'
+        ],
+        per(
+            lambda k, d: (
+                f"value_of {d.constructor} v x",
+                f"{d.value_constructor} (case slot{k} v of Bot \\<Rightarrow> \\<bottom> | Lifted st \\<Rightarrow> st x)",
+            )
+        ),
+    )
+    out += [""]
+
+    out += [
+        "subsection \\<open>Where each field starts, and what it keys a callee by\\<close>",
+        "",
+    ]
+    out += text_block(
+        wrap_prose(
+            "The entry state starts every active field at its analysis's own entry state and"
+            " every other field unreachable. A field no active analysis runs is never read,"
+            " and keeping it at \\<^const>\\<open>Bot\\<close> makes the solver's joins, widenings and"
+            " comparisons on it constant-time. Under the entry-state policy a callee is keyed"
+            " by the formals of the active fields; a field no active analysis runs keys"
+            " nothing."
+        )
+    ) + [""]
+    out += ['definition mcp_init :: "analysis_domain list \\<Rightarrow> mcp_st" where']
+    init = nest(
+        [
+            f"(if {d.constructor} \\<in> set as then Lifted {bare(d.roles()['init_st'])} else Bot)"
+            for d in doms
+        ]
+    )
+    out += wrap_term(f'"mcp_init as = {init}"', 2) + [""]
+    out += [
+        "definition mcp_formals_route ::",
+        '  "analysis_domain list \\<Rightarrow> (vname \\<Rightarrow> bool) \\<Rightarrow> pp \\<Rightarrow> mcp_ctx \\<Rightarrow> mcp_st lifted',
+        '     \\<Rightarrow> call_action \\<Rightarrow> mcp_ctx" where',
+    ]
+    route = nest(
+        [
+            f"(if {d.constructor} \\<in> set as then exec_formals_route {G} u [] (lift_get slot{k} d) ca else [])"
+            for k, d in enumerate(doms, 1)
+        ]
+    )
+    out += wrap_term(f'"mcp_formals_route as {G} u ctx d ca = {route}"', 2) + [""]
+    out += ["definition mcp_root_ctx :: mcp_ctx where"]
+    out += wrap_term(f'"mcp_root_ctx = {nest(["[]"] * n)}"', 2) + [""]
+    out += fun_block(
+        [
+            'fun ctx_values :: "analysis_domain \\<Rightarrow> mcp_ctx \\<Rightarrow> abstract_value list" where'
+        ],
+        per(
+            lambda k, d: (
+                f"ctx_values {d.constructor} ctx",
+                f"map {d.value_constructor} (slot{k} ctx)",
+            )
+        ),
+    )
+    out += [""]
+
+    out += [
+        "subsection \\<open>What each analysis's registration supplies\\<close>",
+        "",
+    ]
+    comps = " ".join(
+        f"field_component_sound[OF {d.prefix}_rule.comp_sound]" for d in doms
+    )
+    out += [
+        "lemma mcp_component_of_sound:",
+        '  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)',
+        '     (mcp_component_of (declared_global p) p a)"',
+        "  by (cases a; simp only: part_gamma.simps mcp_component_of.simps;",
+    ]
+    out += wrap_term("rule " + comps + ";", 6)
+    out += ["      auto simp: less_eq_analysis_product_def)", ""]
+    inits = " ".join(f"{d.prefix}_rule.init_sound" for d in doms)
+    out += [
+        "lemma mcp_init_sound:",
+        '  "cinit_stores (declared_global p)',
+        '     \\<subseteq> mcp_gamma_v as (mcp_rd (declared_global p) (mcp_init as))"',
+        "proof -",
+        '  have "cinit_stores (declared_global p)',
+        '          \\<subseteq> val_gamma a (mcp_rd (declared_global p) (mcp_init as))"',
+        '    if "a \\<in> set as" for a',
+        "    by (cases a)",
+    ]
+    out += wrap_term(
+        "(use that "
+        + inits
+        + " in \\<open>simp_all add: mcp_init_def mcp_rd_def\\<close>)",
+        7,
+    )
+    out += ["  then show ?thesis by (auto simp: mcp_gamma_v_def)", "qed", ""]
+    answers = " ".join(f"{d.prefix}_eval_answer_sound" for d in doms)
+    out += [
+        'lemma val_answer_sound: "s \\<in> val_gamma a v \\<Longrightarrow> eval_holds q (val_answer a v q) s"',
+        "  by (cases a)",
+    ]
+    out += wrap_term("(auto split: lifted.splits intro: " + answers + ")", 5)
+    out += ["", "end"]
     return "\n".join(out) + "\n"
 
 
@@ -318,6 +704,12 @@ def validate(doms):
         if len(values) != len(set(values)):
             problems.append(f"duplicate {what}")
     for d in doms:
+        known = [c["key"] for c in CONTEXTS]
+        if "unit" not in d.contexts:
+            problems.append(f"{d.name}: the unit registration is required")
+        for c in d.contexts:
+            if c not in known:
+                problems.append(f"{d.name}: unknown context {c}")
         for role, value in d.overrides.items():
             if role not in ROLES:
                 problems.append(f"{d.name}: unknown role {role}")
@@ -360,24 +752,24 @@ def main():
     validate(doms)
 
     stale = []
-    for dom in doms:
-        text = render(dom)
+    outputs = [(dom.path, render(dom)) for dom in doms] + [(MCP_PATH, render_mcp(doms))]
+    for path, text in outputs:
         for i, line in enumerate(text.split("\n"), 1):
             if symbol_len(line) > MAX_LINE:
-                sys.exit(f"{dom.path}:{i}: generated line over {MAX_LINE} symbols")
+                sys.exit(f"{path}:{i}: generated line over {MAX_LINE} symbols")
             if not line.isascii():
-                sys.exit(f"{dom.path}:{i}: generated line is not ASCII")
-        target = Path(args.out) / Path(dom.path).name if args.out else root / dom.path
+                sys.exit(f"{path}:{i}: generated line is not ASCII")
+        target = Path(args.out) / Path(path).name if args.out else root / path
         if args.check:
             current = target.read_text() if target.exists() else ""
             if current != text:
-                stale.append(dom.path)
+                stale.append(path)
                 sys.stderr.writelines(
                     difflib.unified_diff(
                         current.splitlines(keepends=True),
                         text.splitlines(keepends=True),
-                        fromfile=f"{dom.path} (on disk)",
-                        tofile=f"{dom.path} (regenerated)",
+                        fromfile=f"{path} (on disk)",
+                        tofile=f"{path} (regenerated)",
                     )
                 )
         else:

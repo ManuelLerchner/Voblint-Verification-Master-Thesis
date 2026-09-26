@@ -22,14 +22,13 @@ text \<open>
   rather than hand-editing; a drift check compares regenerated output against
   this file.
 
-  Int runs through the shared D/G pipeline three times: at the unit context,
-  keyed by the abstract values a callee's formals hold on entry, and keyed by a
-  bounded call string. Each registration leaves the rule that merges a value
-  side-effected into a global as a parameter \<open>r\<close>, and the call-string
-  one also its bound \<open>k\<close>, so one registration serves every discipline and
-  every bound. The equation system, the solve, the result table and every soundness
-  endpoint come from the interpreted locale; this theory only names the domain's
-  own implementation and facts.
+  Int runs through the shared D/G pipeline at the unit context. The CLI runs it as a
+  field of the combined state of \<open>MCP_Analyses\<close>, whose component and
+  soundness this unit registration supplies. Each registration leaves the rule that
+  merges a value side-effected into a global as a parameter \<open>r\<close>. The
+  equation system, the solve, the result table and every soundness endpoint come from
+  the interpreted locale; this theory only names the domain's own implementation and
+  facts.
 \<close>
 
 subsection \<open>At the unit context\<close>
@@ -56,100 +55,6 @@ next
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
 next
   case (4 \<G> u ctx d ca) show ?case by simp
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule int_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule int_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
-qed
-
-subsection \<open>At the entry-state context\<close>
-
-global_interpretation int_es_rule: routed_dg_analysis_exec
-    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
-    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, int_dom list) routed_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
-    bot int_classify_check
-    skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
-    "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
-    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. formals_route_lifted_gen"
-    "TD_side_rule_Interp_solve_c r"
-  for r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
-next
-  case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
-next
-  case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule exec_formals_route_commute[symmetric])
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule int_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule int_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
-qed
-
-subsection \<open>At the call-string context\<close>
-
-global_interpretation int_cs_rule: routed_dg_analysis_exec
-    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
-    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
-    bot int_classify_check
-    skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
-    "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
-    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. cs_route k"
-    "TD_side_rule_Interp_solve_c r"
-  for k r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
-next
-  case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
-next
-  case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)
 next
   case (5 v ctx) show ?case by simp
 next

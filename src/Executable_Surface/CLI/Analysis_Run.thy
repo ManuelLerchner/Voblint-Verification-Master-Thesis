@@ -303,25 +303,9 @@ text \<open>
   formal values the active analyses key it by, in the same order.
 \<close>
 
-fun value_of :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
-  "value_of Sign_Analysis v x = SignValue (case slot1 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Interval_Analysis v x =
-     IntervalValue (case slot2 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Int_Analysis v x = IntDomValue (case slot3 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Parity_Analysis v x = ParityValue (case slot4 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Congruence_Analysis v x =
-     CongruenceValue (case slot5 v of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-
 definition mcp_render :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
   "mcp_render as v x =
      (case as of [a] \<Rightarrow> value_of a v x | _ \<Rightarrow> ProductValue (map (\<lambda>a. value_of a v x) as))"
-
-fun ctx_values :: "analysis_domain \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
-  "ctx_values Sign_Analysis ctx = map SignValue (slot1 ctx)"
-| "ctx_values Interval_Analysis ctx = map IntervalValue (slot2 ctx)"
-| "ctx_values Int_Analysis ctx = map IntDomValue (slot3 ctx)"
-| "ctx_values Parity_Analysis ctx = map ParityValue (slot4 ctx)"
-| "ctx_values Congruence_Analysis ctx = map CongruenceValue (slot5 ctx)"
 
 definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
   "mcp_ctx_values as ctx = concat (map (\<lambda>a. ctx_values a ctx) as)"

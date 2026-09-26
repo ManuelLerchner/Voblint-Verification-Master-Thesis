@@ -362,11 +362,12 @@ text \<open>
   \<^bold>\<open>4. Concrete domains.\<close> One analysis session per domain, all over the shared
     \<^verbatim>\<open>Analyses/Shared/\<close> chain, all reaching the same spine.  Each pairs a lattice theory
     (order, transfers, soundness, monotonicity) with one generated \<^verbatim>\<open>_Analyses\<close> theory
-    that registers it at the routed D/G spine three times: at the unit context, keyed by
-    entry state, and keyed by a bounded call string --- for Sign, \<^verbatim>\<open>sign_rule\<close>,
-    \<^verbatim>\<open>sign_es_rule\<close> and \<^verbatim>\<open>sign_cs_rule\<close>.  Every registration takes the global
-    update rule \<open>r\<close> as a parameter, and the call-string one also its bound \<open>k\<close>, so
-    one registration per context policy serves every rule and every bound.
+    that registers it at the routed D/G spine at the unit context, for Sign
+    \<^verbatim>\<open>sign_rule\<close>; Interval also registers keyed by entry state and by a bounded call
+    string.  The CLI's combined state registers once per context policy:
+    \<^verbatim>\<open>mcp_rule\<close>, \<^verbatim>\<open>mcp_es_rule\<close> and \<^verbatim>\<open>mcp_cs_rule\<close>.  Every registration takes
+    the global update rule \<open>r\<close> as a parameter, and the call-string one also its bound
+    \<open>k\<close>, so one registration per context policy serves every rule and every bound.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Transfer} /
       @{theory Voblint_Analysis_Sign.Sign_Analyses} --- the seven-element Sign
       lattice. It is finite, so the plain-join solver needs no widening.

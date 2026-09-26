@@ -41,14 +41,17 @@ system from the chosen keys, route, specification, graph, and initial state.
 and `Result/Analysis_Surface` is what `unit_dg_analysis` reads it back through.
 
 Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what the
-generated `Sign_Analyses` actually interprets, twice: `sign_cs_rule` at the
-call-string routing pair and `sign_es_rule` at the entry-state one. That locale
-owns the equation system, the solve, the covered keys, the reader, the result
-table, the contextual report and the activation-indexed soundness endpoints, so
-a policy costs Sign an interpretation rather than a pipeline. The
-context-insensitive route is the same shape one layer over: `sign_rule` is a
-`global_interpretation` of `Result/Unit_DG_Analysis`'s `unit_dg_analysis` in the
-same theory. All three take the global update rule as a parameter. Sign
+CLI's combined registrations interpret at the routed policies: `mcp_cs_rule`
+at the call-string routing pair and `mcp_es_rule` at the entry-state one
+(`Voblint_CLI.MCP_Analyses`), each with Sign among the active analyses. That
+locale owns the equation system, the solve, the covered keys, the reader, the
+result table, the contextual report and the activation-indexed soundness
+endpoints, so a policy costs an interpretation rather than a pipeline. The
+context-insensitive route stays local to a domain and is the same shape one
+layer over: `sign_rule` is a `global_interpretation` of
+`Result/Unit_DG_Analysis`'s `unit_dg_analysis` in Sign's own generated theory,
+`Sign_Analyses`. Every registration takes the global update rule as a
+parameter, and the combined ones take the activation list besides. Sign
 contributes the lattice and the transfer functions. Every other piece of those
 sentences is from here.
 

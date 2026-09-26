@@ -22,14 +22,15 @@ text \<open>
   rather than hand-editing; a drift check compares regenerated output against
   this file.
 
-  Interval runs through the shared D/G pipeline three times: at the unit context,
-  keyed by the abstract values a callee's formals hold on entry, and keyed by a
-  bounded call string. Each registration leaves the rule that merges a value
-  side-effected into a global as a parameter \<open>r\<close>, and the call-string
-  one also its bound \<open>k\<close>, so one registration serves every discipline and
-  every bound. The equation system, the solve, the result table and every soundness
-  endpoint come from the interpreted locale; this theory only names the domain's
-  own implementation and facts.
+  Interval runs through the shared D/G pipeline at the unit context, keyed by the
+  abstract values a callee's formals hold on entry, and keyed by a bounded call
+  string. The CLI runs it as a field of the combined state of
+  \<open>MCP_Analyses\<close>, whose component and soundness this unit registration
+  supplies. Each registration leaves the rule that merges a value side-effected into a
+  global as a parameter \<open>r\<close>, and the call-string one also its bound
+  \<open>k\<close>. The equation system, the solve, the result table and every
+  soundness endpoint come from the interpreted locale; this theory only names the
+  domain's own implementation and facts.
 \<close>
 
 subsection \<open>At the unit context\<close>

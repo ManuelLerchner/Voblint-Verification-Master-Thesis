@@ -59,22 +59,22 @@ lemma dispatch_demo_rule_invariant:
 
 text \<open>
   The call-string plan reads the table its rule names, not whichever one its domain
-  publishes first. Int is where that is observable: its call-string registration
-  \<open>int_cs_rule\<close> solves an always-join table and a warrowing one, and the two rows
-  below are the two solves.
+  publishes first. Int is where that is observable: the call-string registration
+  \<open>mcp_cs_rule\<close> of the active analyses solves an always-join table and a warrowing
+  one, and the two rows below are the two solves.
 \<close>
 
 lemma dispatch_demo_call_string_reads_the_named_rule:
   "(case run_voblint [Int_Analysis] Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = int_cs_rule.verdict_report 1 Globals_Warrow
+          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Warrow
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   "(case run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = int_cs_rule.verdict_report 1 Globals_Join
+          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Join
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   by eval+

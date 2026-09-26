@@ -182,8 +182,9 @@ qed
 
 subsection \<open>The routed equation system, solved\<close>
 
-text \<open>\<^const>\<open>sign_es_rule.equations\<close>'s construction at the overriding specification: same
-  generator, same route, same buffered seed protocol, same plain-join solver.\<close>
+text \<open>The entry-state registration's construction of \<^const>\<open>routed_dg_pipeline.equations\<close>
+  at the overriding specification: same generator, same route, same buffered seed
+  protocol, same plain-join solver.\<close>
 
 definition ov_eqs ::
   "(pp \<times> sign list, (unit, sign list) routed_gk,
