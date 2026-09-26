@@ -45,6 +45,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     (* Analyses composed as a product, answering each other's queries. *)
     Analysis_Query
     Local_Spec_Product
+    MCP_Spec
     Oracle_Wrappers
     Call_String_Context
     (* Domain-generic solved-result table: per-point reachability and the
