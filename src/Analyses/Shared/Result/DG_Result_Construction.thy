@@ -13,17 +13,16 @@ begin
 section \<open>What a solved D/G system publishes\<close>
 
 text \<open>
-  Every domain, at every context policy and every solver discipline, turns the
+  Every analysis, at every context policy and every solver discipline, turns the
   solver's answer -- a covered key set and a map from unknowns to \<open>dg_state\<close>s over
-  the executable carrier -- into an \<^type>\<open>analysis_result\<close> table of the locals.
-  This theory states that construction once, over an arbitrary solved pair, so a
-  domain's result table is one application rather than a rewritten body.
+  its carrier -- into an \<^type>\<open>analysis_result\<close> table of the locals. This
+  theory states that construction once, over an arbitrary solved pair, so an
+  analysis's result table is one application rather than a rewritten body.
 
-  Reading a local unknown back means two normalizations in sequence.
-  \<^const>\<open>canonicalize_lift\<close> collapses a stored \<^const>\<open>Lifted\<close> payload that is
-  bottom in every declared slot to \<^const>\<open>Bot\<close>, so a dead point reads as dead;
-  \<^const>\<open>readback_result_value\<close> then projects the association-list carrier to
-  the function-valued state the soundness theorems are stated over. Coverage is
+  Reading a local unknown back means two steps in sequence.
+  \<^const>\<open>canonicalize_lift\<close> collapses a stored \<^const>\<open>Lifted\<close> payload that
+  describes no store to \<^const>\<open>Bot\<close>, so a dead point reads as dead; the readback
+  \<open>rd\<close> then turns the carrier into the value the table publishes. Coverage is
   separate from deadness: a key the solver never visited is absent from the
   table, and \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for it without any
   claim about the program.
@@ -32,24 +31,20 @@ text \<open>
 text \<open>
   \<open>sol\<close> is the already-solved pair, not the solve function. Passing the pair keeps
   one solve per table in generated code -- the argument is evaluated once and the
-  per-point closure captures it -- which is why no domain needs a separate
-  \<open>[code]\<close> equation with an explicit \<open>let\<close> any more.
+  per-point closure captures it -- which is why no analysis needs a separate
+  \<open>[code]\<close> equation with an explicit \<open>let\<close>.
 \<close>
 
 definition dg_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname list
-     \<Rightarrow> (pp \<times> 'c) set
-          \<times> (pp \<times> 'c + 'k
-               \<Rightarrow> ('a::executable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
-     \<Rightarrow> ('c, 'a abs_state) analysis_result" where
-  "dg_result_for \<G> gl sol =
+    "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool)
+     \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 'g) dg_state)
+     \<Rightarrow> ('c, 'v) analysis_result" where
+  "dg_result_for rd emp sol =
      Analysis_Result (fst sol)
-       (\<lambda>v ctx. readback_result_value \<G>
-                  (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                    (locals (snd sol (Inl (v, ctx))))))"
+       (\<lambda>v ctx. map_lift rd (canonicalize_lift emp (locals (snd sol (Inl (v, ctx))))))"
 
 lemma result_keys_dg_result_for [simp]:
-  "result_keys (dg_result_for \<G> gl sol) = fst sol"
+  "result_keys (dg_result_for rd emp sol) = fst sol"
   unfolding dg_result_for_def by simp
 
 text \<open>
@@ -58,75 +53,38 @@ text \<open>
 \<close>
 
 lemma lookup_context_dg_result_for [simp]:
-  "lookup_context (dg_result_for \<G> gl sol) v ctx
+  "lookup_context (dg_result_for rd emp sol) v ctx
      = (if (v, ctx) \<in> fst sol
-        then readback_result_value \<G>
-               (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                 (locals (snd sol (Inl (v, ctx)))))
+        then map_lift rd (canonicalize_lift emp (locals (snd sol (Inl (v, ctx)))))
         else Bot)"
   unfolding dg_result_for_def lookup_context_def by simp
 
 text \<open>
-  Soundness bridges normalize after projecting to the function-valued state. The
-  following commutation fact keeps that representation argument in one place; each
-  adapter interpretation still supplies the assumptions that connect its result
-  table to collecting semantics.
+  Normalizing before the readback agrees with normalizing after it whenever the
+  two emptiness tests agree, so a soundness bridge stated after the readback
+  applies to the table built before it.
 \<close>
 
-lemma readback_canonicalize_lift_eq:
-  assumes "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
-  shows "readback_result_value \<G> (canonicalize_lift empty_pred d)
-       = canonicalize_lift is_empty_state (map_lift (fun_of_resolved_st_q_for \<G>) d)"
+lemma map_lift_canonicalize_lift:
+  assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
+  shows "map_lift rd (canonicalize_lift emp d) = canonicalize_lift empty\<^sub>V (map_lift rd d)"
   by (cases d) (simp_all add: assms normalize_lift_def)
 
 lemma lookup_context_dg_result_for_projected:
-  fixes sol :: "(pp \<times> 'c) set
-    \<times> (pp \<times> 'c + 'k \<Rightarrow>
-      ('a::executable_domain exec_dg_st lifted,
-       'a exec_dg_st lifted) dg_state)"
-  assumes exact:
-    "\<And>s :: 'a::executable_domain exec_dg_st.
-      resolved_st_q_is_bot_for gl s =
-      is_empty_state (fun_of_resolved_st_q_for \<G> s)"
-  shows "lookup_context (dg_result_for \<G> gl sol) v ctx =
+  assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
+  shows "lookup_context (dg_result_for rd emp sol) v ctx =
     (if (v, ctx) \<in> fst sol
-     then canonicalize_lift is_empty_state
-       (map_lift (fun_of_resolved_st_q_for \<G>)
-         (locals (snd sol (Inl (v, ctx)))))
+     then canonicalize_lift empty\<^sub>V (map_lift rd (locals (snd sol (Inl (v, ctx)))))
      else Bot)"
-proof -
-  have commute:
-    "readback_result_value \<G>
-        (canonicalize_lift (resolved_st_q_is_bot_for gl) d) =
-      canonicalize_lift is_empty_state
-        (map_lift (fun_of_resolved_st_q_for \<G>) d)"
-    for d :: "'a exec_dg_st lifted"
-    by (rule readback_canonicalize_lift_eq[OF exact])
-  show ?thesis
-  proof (cases "(v, ctx) \<in> fst sol")
-    case False
-    then show ?thesis unfolding lookup_context_dg_result_for by simp
-  next
-    case True
-    have commute_at:
-      "readback_result_value \<G>
-          (canonicalize_lift (resolved_st_q_is_bot_for gl)
-            (locals (snd sol (Inl (v, ctx))))) =
-        canonicalize_lift is_empty_state
-          (map_lift (fun_of_resolved_st_q_for \<G>)
-            (locals (snd sol (Inl (v, ctx)))))"
-    proof (cases "locals (snd sol (Inl (v, ctx)))")
-      case Bot
-      then show ?thesis by simp
-    next
-      case (Lifted s)
-      have eq: "resolved_st_q_is_bot_for gl s =
-          is_empty_state (fun_of_resolved_st_q_for \<G> s)"
-        by (rule exact[of s])
-      show ?thesis unfolding Lifted using eq by (simp add: normalize_lift_def)
-    qed
-    with True show ?thesis unfolding lookup_context_dg_result_for by simp
-  qed
-qed
+  using map_lift_canonicalize_lift[of emp "empty\<^sub>V" rd] assms by simp
+
+text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<close> does not change
+  what the value denotes.\<close>
+
+lemma gamma_lift_canonicalize_lift:
+  assumes "\<And>v. empty\<^sub>V v \<Longrightarrow> gm v = {}"
+  shows "gamma_lift gm (canonicalize_lift empty\<^sub>V x) = gamma_lift gm x"
+  by (cases x) (simp_all add: normalize_lift_def assms)
 
 end
+

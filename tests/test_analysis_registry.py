@@ -30,8 +30,8 @@ DOMAINS = {
 }
 ROUTES = [
     ("rule", "unit_dg_analysis", "r"),
-    ("es_rule", "routed_dg_analysis", "r"),
-    ("cs_rule", "routed_dg_analysis", "k r"),
+    ("es_rule", "routed_dg_analysis_exec", "r"),
+    ("cs_rule", "routed_dg_analysis_exec", "k r"),
 ]
 
 

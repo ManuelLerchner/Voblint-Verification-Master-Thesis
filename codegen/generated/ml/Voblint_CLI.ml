@@ -3767,6 +3767,15 @@ type 'a imp_prog_ext =
 type ('a, 'b) special_ops_ext =
   Special_ops_ext of ('a -> 'a -> 'a) * ('a -> 'a -> 'a) * 'b;;
 
+type ('a, 'b) mcp_component_ext =
+  Mcp_component_ext of
+    ('a -> query -> unit int_dom_ext query_lift) *
+      (edge_action -> 'a -> query list) *
+      ((query -> unit int_dom_ext query_lift) -> edge_action -> 'a -> 'a) *
+      (unit call_info_ext -> 'a * 'a -> ('a * 'a) list) *
+      (unit call_info_ext -> 'a -> 'a -> 'a) *
+      (unit call_info_ext -> 'a -> 'a -> 'a) * 'b;;
+
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext)))
@@ -4665,6 +4674,8 @@ let rec dg_spec_step
     | s, EA_Ret (e, p) -> dgs_return s e p
     | s, EA_Check (l, cnd) -> dgs_event s (Check_Event (l, cnd));;
 
+let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
+
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec and_opt
@@ -4791,6 +4802,11 @@ let rec sp_read_at = function Inl x -> sp_read_local x
                      | Inr g -> sp_read_global g;;
 
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return locals);;
+
+let rec local_answers
+  h qs d q =
+    (if membera equal_query qs q then h d q
+      else top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
 let rec int_less_true
   a b = is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
@@ -5718,6 +5734,247 @@ let rec asking_transfer
   qs f m =
     sp_bind (ask_all (qs (man_local m)) m) (fun a -> local_transfer (f a) m);;
 
+let rec local_spec_step
+  sk asn sp br bd rt ev x7 = match sk, asn, sp, br, bd, rt, ev, x7 with
+    sk, asn, sp, br, bd, rt, ev, EA_Nop -> sk
+    | sk, asn, sp, br, bd, rt, ev, EA_Assign (x, e) -> asn x e
+    | sk, asn, sp, br, bd, rt, ev, EA_Special (sc, x) -> sp sc x
+    | sk, asn, sp, br, bd, rt, ev, EA_Assume b -> br b true
+    | sk, asn, sp, br, bd, rt, ev, EA_AssumeNot b -> br b false
+    | sk, asn, sp, br, bd, rt, ev, EA_Body p -> bd p
+    | sk, asn, sp, br, bd, rt, ev, EA_Ret (e, p) -> rt e p
+    | sk, asn, sp, br, bd, rt, ev, EA_Check (l, cnd) ->
+        ev (Check_Event (l, cnd));;
+
+let rec dgs_combine_assign_update
+  dgs_combine_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_combine_env_update
+  dgs_combine_enva
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_enva dgs_combine_env,
+          dgs_combine_assign, dgs_query, more);;
+
+let rec mc_comb_assign
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_comb_assign;;
+
+let rec mc_comb_env
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_comb_env;;
+
+let rec dgs_special_update
+  dgs_speciala
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_speciala dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_return_update
+  dgs_returna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_branch_update
+  dgs_brancha
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_assign_update
+  dgs_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_query_update
+  dgs_querya
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_querya dgs_query, more);;
+
+let rec dgs_event_update
+  dgs_eventa
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_eventa dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_enter_update
+  dgs_entera
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_entera dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_skip_update
+  dgs_skipa
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skipa dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_body_update
+  dgs_bodya
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_bodya dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec mc_step
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_step;;
+
+let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
+
+let rec mc_qry
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_qry;;
+
+let rec mc_qs
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_qs;;
+
+let rec mc_en
+  (Mcp_component_ext
+    (mc_qry, mc_qs, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_en;;
+
+let rec local_enter_transfer f m = sp_return (f (man_local m));;
+
+let rec component_spec _A
+  c = dgs_query_update (fun _ -> local_query (mc_qry c))
+        (dgs_combine_assign_update
+          (fun _ ci -> local_combine_transfer (mc_comb_assign c ci))
+          (dgs_combine_env_update
+            (fun _ ci -> local_combine_transfer (mc_comb_env c ci))
+            (dgs_event_update
+              (fun _ ev ->
+                asking_transfer (mc_qs c (event_action ev))
+                  (fun a -> mc_step c a (event_action ev)))
+              (dgs_enter_update
+                (fun _ ci -> local_enter_transfer (fun d -> mc_en c ci (d, d)))
+                (dgs_return_update
+                  (fun _ e p ->
+                    asking_transfer (mc_qs c (EA_Ret (e, p)))
+                      (fun a -> mc_step c a (EA_Ret (e, p))))
+                  (dgs_body_update
+                    (fun _ p ->
+                      asking_transfer (mc_qs c (EA_Body p))
+                        (fun a -> mc_step c a (EA_Body p)))
+                    (dgs_branch_update
+                      (fun _ b pol ->
+                        asking_transfer
+                          (mc_qs c
+                            (if pol then EA_Assume b else EA_AssumeNot b))
+                          (fun a ->
+                            mc_step c a
+                              (if pol then EA_Assume b else EA_AssumeNot b)))
+                      (dgs_special_update
+                        (fun _ sc x ->
+                          asking_transfer (mc_qs c (EA_Special (sc, x)))
+                            (fun a -> mc_step c a (EA_Special (sc, x))))
+                        (dgs_assign_update
+                          (fun _ x e ->
+                            asking_transfer (mc_qs c (EA_Assign (x, e)))
+                              (fun a -> mc_step c a (EA_Assign (x, e))))
+                          (dgs_skip_update
+                            (fun _ ->
+                              asking_transfer (mc_qs c EA_Nop)
+                                (fun a -> mc_step c a EA_Nop))
+                            (Dg_spec_ext
+                              (local_transfer id,
+                                (fun _ _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ ->
+                                  local_enter_transfer (fun d -> [(d, d)])),
+                                (fun _ -> local_transfer id),
+                                (fun _ ->
+                                  local_combine_transfer (fun d _ -> d)),
+                                (fun _ ->
+                                  local_combine_transfer (fun d _ -> d)),
+                                (fun _ _ ->
+                                  sp_return
+                                    (top_query_lift
+                                      (order_int_dom_ext
+bounded_lattice_unit))),
+                                ()))))))))))));;
+
+let rec lens_component
+  get put qs qry sk asn sp br bd rt en ev ce ca =
+    Mcp_component_ext
+      ((fun x -> qry (get x)), (fun a x -> qs a (get x)),
+        (fun a aa x ->
+          put x (local_spec_step (sk a) (asn a) (sp a) (br a) (bd a) (rt a)
+                  (ev a) aa (get x))),
+        (fun ci p ->
+          map (fun (c, e) -> (put (fst p) c, put (snd p) e))
+            (en ci (get (fst p)))),
+        (fun ci x de -> put x (ce ci (get x) (get de))),
+        (fun ci x de -> put x (ca ci (get x) (get de))), ());;
+
 let rec min _A a b = (if less_eq _A a b then a else b);;
 
 let rec parity_lt uu uv = None;;
@@ -6170,200 +6427,6 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
         (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
         initial_global);;
 
-let rec location_vname = function Local_Location x1 -> x1
-                         | Global_Location x2 -> x2;;
-
-let rec canonical_location
-  g loc = equal_locationa (location_of g (location_vname loc)) loc;;
-
-let rec resolved_st_is_bot _A
-  g s = (let (dl, (_, ps)) = s in
-          is_empty _A dl ||
-            list_ex
-              (fun loc ->
-                is_empty _A
-                  (lookup_resolved_st
-                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    s loc) &&
-                  canonical_location g loc)
-              (map fst ps));;
-
-let rec resolved_st_is_bot_for _A
-  globals g s =
-    list_ex
-      (fun x ->
-        is_empty _A
-          (lookup_resolved_st
-            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            s (location_of g x)))
-      globals ||
-      resolved_st_is_bot _A g s;;
-
-let rec resolved_st_q_is_bot_for _A
-  xb (Abs_resolved_st xa) =
-    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
-
-let rec combine_assign_resolved _A
-  g dst v s =
-    (match dst with None -> s
-      | Some x -> update_resolved_st _A s (location_of g x) v);;
-
-let rec combine_assign_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (combine_assign_resolved _A xc xb xa x);;
-
-let rec dgs_combine_assign_update
-  dgs_combine_assigna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
-
-let rec location_is_global = function Local_Location x -> false
-                             | Global_Location x -> true;;
-
-let rec location_is_local = function Local_Location x -> true
-                            | Global_Location x -> false;;
-
-let rec combine_resolved_st _A
-  sc se =
-    (let (dlc, (_, psc)) = sc in
-     let (_, (dge, pse)) = se in
-      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
-                    filtera (fun p -> location_is_global (fst p)) pse)));;
-
-let rec combine_resolved_st_q _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_resolved_st _A xa x);;
-
-let rec dgs_combine_env_update
-  dgs_combine_enva
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_enva dgs_combine_env,
-          dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_special_update
-  dgs_speciala
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_speciala dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_return_update
-  dgs_returna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_branch_update
-  dgs_brancha
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_assign_update
-  dgs_assigna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec normalize_lift empty_pred a = (if empty_pred a then Bot else Lifted a);;
-
-let rec transfer_lift2
-  empty_pred f x y =
-    bind_lift x
-      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
-
-let rec dgs_query_update
-  dgs_querya
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_querya dgs_query, more);;
-
-let rec dgs_event_update
-  dgs_eventa
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_eventa dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_enter_update
-  dgs_entera
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_entera dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec transfer_lift
-  empty_pred f x = bind_lift x (fun a -> normalize_lift empty_pred (f a));;
-
-let rec dgs_skip_update
-  dgs_skipa
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skipa dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_body_update
-  dgs_bodya
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_bodya dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
-
-let rec local_enter_transfer f m = sp_return (f (man_local m));;
-
 let rec ea_check_cond (EA_Check (x81, x82)) = x82;;
 
 let rec is_EA_Check = function EA_Nop -> false
@@ -6606,183 +6669,151 @@ let rec compile_prog
 
 let rec prog_cfg p = compile_prog (prog_table p) (prog_procs p);;
 
-let rec ci_dst
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
-
 let rec equations (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route g p =
+  comp init_st gk0 seed route g p =
     compiled_routed_eqs_for _B
-      ((equal_lifted
-         (equal_resolved_st_q
-           (_A2, _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot))),
-        (bounded_semilattice_sup_bot_lifted
-          (semilattice_sup_resolved_st_q
-            _A1.bounded_semilattice_sup_bot_executable_domain)))
-      (bounded_semilattice_sup_bot_lifted
-        (semilattice_sup_resolved_st_q
-          _A1.bounded_semilattice_sup_bot_executable_domain))
-      gk0 seed (route g)
-      (dgs_query_update
-        (fun _ ->
-          local_query
-            (fun _ _ ->
-              top_query_lift (order_int_dom_ext bounded_lattice_unit)))
-        (dgs_combine_assign_update
-          (fun _ ci ->
-            local_combine_transfer
-              (transfer_lift2
-                (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                (fun env0 de0 ->
-                  combine_assign_resolved_q
-                    _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    g (ci_dst ci)
-                    (lookup_resolved_st_q
-                      _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                      de0 (location_of g ret_var))
-                    env0)))
-          (dgs_combine_env_update
-            (fun _ _ ->
-              local_combine_transfer
-                (fun dc de ->
-                  (match dc with Bot -> Bot
-                    | Lifted x ->
-                      (match de with Bot -> Bot
-                        | Lifted y ->
-                          Lifted
-                            (combine_resolved_st_q
-                              _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                              x y)))))
-            (dgs_event_update
-              (fun _ ev ->
-                asking_transfer (fun _ -> [])
-                  (fun _ ->
-                    transfer_lift
-                      (resolved_st_q_is_bot_for _A1 (declared_global_vars p))
-                      (tf_st g
-                        (let Check_Event (a, b) = ev in EA_Check (a, b)))))
-              (dgs_enter_update
-                (fun _ ci ->
-                  local_enter_transfer
-                    (fun d ->
-                      [(d, transfer_lift
-                             (resolved_st_q_is_bot_for _A1
-                               (declared_global_vars p))
-                             (enter_st g ci) d)]))
-                (dgs_return_update
-                  (fun _ e pa ->
-                    asking_transfer (fun _ -> [])
-                      (fun _ ->
-                        transfer_lift
-                          (resolved_st_q_is_bot_for _A1
-                            (declared_global_vars p))
-                          (tf_st g (EA_Ret (e, pa)))))
-                  (dgs_body_update
-                    (fun _ pa ->
-                      asking_transfer (fun _ -> [])
-                        (fun _ ->
-                          transfer_lift
-                            (resolved_st_q_is_bot_for _A1
-                              (declared_global_vars p))
-                            (tf_st g (EA_Body pa))))
-                    (dgs_branch_update
-                      (fun _ b pol ->
-                        asking_transfer (fun _ -> [])
-                          (fun _ ->
-                            transfer_lift
-                              (resolved_st_q_is_bot_for _A1
-                                (declared_global_vars p))
-                              (tf_st g
-                                (if pol then EA_Assume b else EA_AssumeNot b))))
-                      (dgs_special_update
-                        (fun _ sc x ->
-                          asking_transfer (fun _ -> [])
-                            (fun _ ->
-                              transfer_lift
-                                (resolved_st_q_is_bot_for _A1
-                                  (declared_global_vars p))
-                                (tf_st g (EA_Special (sc, x)))))
-                        (dgs_assign_update
-                          (fun _ x e ->
-                            asking_transfer (fun _ -> [])
-                              (fun _ ->
-                                transfer_lift
-                                  (resolved_st_q_is_bot_for _A1
-                                    (declared_global_vars p))
-                                  (tf_st g (EA_Assign (x, e)))))
-                          (dgs_skip_update
-                            (fun _ ->
-                              asking_transfer (fun _ -> [])
-                                (fun _ ->
-                                  transfer_lift
-                                    (resolved_st_q_is_bot_for _A1
-                                      (declared_global_vars p))
-                                    (tf_st g EA_Nop)))
-                            (Dg_spec_ext
-                              (local_transfer id,
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ ->
-                                  local_enter_transfer (fun d -> [(d, d)])),
-                                (fun _ -> local_transfer id),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ _ ->
-                                  sp_return
-                                    (top_query_lift
-                                      (order_int_dom_ext
-bounded_lattice_unit))),
-                                ())))))))))))))
-      (prog_cfg p) (Lifted init_st)
-      (bot_lifteda
-        (semilattice_sup_resolved_st_q
-          _A1.bounded_semilattice_sup_bot_executable_domain));;
+      ((equal_lifted _A1), (bounded_semilattice_sup_bot_lifted _A2))
+      (bounded_semilattice_sup_bot_lifted _A2) gk0 seed (route g)
+      (component_spec (bot_lifted _A2) (comp g p)) (prog_cfg p) (Lifted init_st)
+      (bot_lifteda _A2);;
 
 let rec solution (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route root_ctx solve g p =
-    solve (equations (_A1, _A2) _B tf_st enter_st init_st gk0 seed route g p)
+  comp init_st gk0 seed route root_ctx solve g p =
+    solve (equations (_A1, _A2) _B comp init_st gk0 seed route g p)
       (cfg_exit (prog_cfg p), root_ctx);;
 
-let rec readback_result_value _A
-  g x1 = match g, x1 with g, Bot -> Bot
-    | g, Lifted s -> Lifted (fun_of_resolved_st_q_for _A g s);;
+let rec normalize_lift empty_pred a = (if empty_pred a then Bot else Lifted a);;
+
+let rec transfer_lift
+  empty_pred f x = bind_lift x (fun a -> normalize_lift empty_pred (f a));;
 
 let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
 
-let rec dg_result_for _C
-  g gl sol =
+let rec dg_result_for
+  rd emp sol =
     Analysis_Result
       (fst sol,
         (fun v ctx ->
-          readback_result_value
-            _C.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            g (canonicalize_lift (resolved_st_q_is_bot_for _C gl)
-                (locals (snd sol (Inl (v, ctx)))))));;
+          map_lift rd
+            (canonicalize_lift emp (locals (snd sol (Inl (v, ctx)))))));;
 
-let rec result_with_globals (_A1, _A2) _B
-  tf_st enter_st init_st gk0 seed route root_ctx solve g p =
+let rec result_with_globals (_A1, _A2) _C
+  comp emp rd init_st gk0 seed route root_ctx solve g p =
     (let sol =
-       solution (_A1, _A2) _B tf_st enter_st init_st gk0 seed route root_ctx
-         solve g p
-       in
-     let gl = declared_global_vars p in
-     let read =
-       (fun d ->
-         readback_result_value
-           _A1.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-           g (canonicalize_lift (resolved_st_q_is_bot_for _A1 gl) d))
-       in
-      (dg_result_for _A1 g gl sol,
+       solution (_A1, _A2) _C comp init_st gk0 seed route root_ctx solve g p in
+     let c = comp g p in
+     let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
+      (dg_result_for (rd g) (emp p) sol,
         (read (globs (snd sol (Inr gk0))),
           ((fun f ctx ->
              read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
             (fun v ctx a ->
-              read (transfer_lift (resolved_st_q_is_bot_for _A1 gl) (tf_st g a)
-                     (locals (snd sol (Inl (v, ctx))))))))));;
+              read (let d = locals (snd sol (Inl (v, ctx))) in
+                     mc_step c (local_answers (mc_qry c) (mc_qs c a d) d) a
+                       d))))));;
+
+let rec location_vname = function Local_Location x1 -> x1
+                         | Global_Location x2 -> x2;;
+
+let rec canonical_location
+  g loc = equal_locationa (location_of g (location_vname loc)) loc;;
+
+let rec resolved_st_is_bot _A
+  g s = (let (dl, (_, ps)) = s in
+          is_empty _A dl ||
+            list_ex
+              (fun loc ->
+                is_empty _A
+                  (lookup_resolved_st
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    s loc) &&
+                  canonical_location g loc)
+              (map fst ps));;
+
+let rec resolved_st_is_bot_for _A
+  globals g s =
+    list_ex
+      (fun x ->
+        is_empty _A
+          (lookup_resolved_st
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            s (location_of g x)))
+      globals ||
+      resolved_st_is_bot _A g s;;
+
+let rec resolved_st_q_is_bot_for _A
+  xb (Abs_resolved_st xa) =
+    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
+
+let rec combine_assign_resolved _A
+  g dst v s =
+    (match dst with None -> s
+      | Some x -> update_resolved_st _A s (location_of g x) v);;
+
+let rec combine_assign_resolved_q _A
+  xc xb xa (Abs_resolved_st x) =
+    Abs_resolved_st (combine_assign_resolved _A xc xb xa x);;
+
+let rec location_is_global = function Local_Location x -> false
+                             | Global_Location x -> true;;
+
+let rec location_is_local = function Local_Location x -> true
+                            | Global_Location x -> false;;
+
+let rec combine_resolved_st _A
+  sc se =
+    (let (dlc, (_, psc)) = sc in
+     let (_, (dge, pse)) = se in
+      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
+                    filtera (fun p -> location_is_global (fst p)) pse)));;
+
+let rec combine_resolved_st_q _A
+  (Abs_resolved_st xa) (Abs_resolved_st x) =
+    Abs_resolved_st (combine_resolved_st _A xa x);;
+
+let rec transfer_lift2
+  empty_pred f x y =
+    bind_lift x
+      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
+
+let rec ci_dst
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+
+let rec exec_component _A
+  g empty_pred tf_st enter_st =
+    lens_component id (fun _ v -> v) (fun _ _ -> [])
+      (fun _ _ -> top_query_lift (order_int_dom_ext bounded_lattice_unit))
+      (fun _ -> transfer_lift empty_pred (tf_st EA_Nop))
+      (fun _ x e -> transfer_lift empty_pred (tf_st (EA_Assign (x, e))))
+      (fun _ sc x -> transfer_lift empty_pred (tf_st (EA_Special (sc, x))))
+      (fun _ b pol ->
+        transfer_lift empty_pred
+          (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
+      (fun _ p -> transfer_lift empty_pred (tf_st (EA_Body p)))
+      (fun _ e p -> transfer_lift empty_pred (tf_st (EA_Ret (e, p))))
+      (fun ci d -> [(d, transfer_lift empty_pred (enter_st ci) d)])
+      (fun _ ev ->
+        transfer_lift empty_pred
+          (tf_st (let Check_Event (a, b) = ev in EA_Check (a, b))))
+      (fun _ dc de ->
+        (match dc with Bot -> Bot
+          | Lifted x ->
+            (match de with Bot -> Bot
+              | Lifted y ->
+                Lifted
+                  (combine_resolved_st_q
+                    _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot x
+                    y))))
+      (fun ci ->
+        transfer_lift2 empty_pred
+          (fun env0 de0 ->
+            combine_assign_resolved_q
+              _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot g
+              (ci_dst ci)
+              (lookup_resolved_st_q
+                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de0
+                (location_of g ret_var))
+              env0));;
 
 let rec times_congruence_rep
   x0 uu = match x0, uu with None, uu -> None
@@ -8820,11 +8851,23 @@ let rec analysis_result
     Sign_Analysis, r, Ctx_None, p ->
       unit_run_result executable_domain_sign (fun a -> SignValue a)
         enter_sign_for sign_classify_check
-        (result_with_globals (executable_domain_sign, equal_sign)
-          (equal_routed_gk equal_unit equal_unit) sign_tf_st_for
-          sign_enter_st_for (initial_resolved_st_q bot_sign STop SZero)
-          (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-          (fun _ -> route_unit) ()
+        (result_with_globals
+          ((equal_resolved_st_q
+             (equal_sign,
+               bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)),
+            (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+          (equal_routed_gk equal_unit equal_unit)
+          (fun g pa ->
+            exec_component bounded_semilattice_sup_bot_sign g
+              (resolved_st_q_is_bot_for executable_domain_sign
+                (declared_global_vars pa))
+              (sign_tf_st_for g) (sign_enter_st_for g))
+          (fun pa ->
+            resolved_st_q_is_bot_for executable_domain_sign
+              (declared_global_vars pa))
+          (fun_of_resolved_st_q_for bot_sign)
+          (initial_resolved_st_q bot_sign STop SZero) (Analysis_Global ())
+          (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
           (tD_side_rule_Interp_solve (equal_prod equal_cfg_node equal_unit)
             (equal_routed_gk equal_unit equal_unit)
             ((equal_dg_state
@@ -8866,11 +8909,23 @@ let rec analysis_result
     | Sign_Analysis, r, Ctx_EntryState, p ->
         entry_state_run_result (executable_domain_sign, equal_sign)
           (fun a -> SignValue a) enter_sign_for sign_classify_check
-          (result_with_globals (executable_domain_sign, equal_sign)
-            (equal_routed_gk equal_unit (equal_list equal_sign)) sign_tf_st_for
-            sign_enter_st_for (initial_resolved_st_q bot_sign STop SZero)
-            (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-            (exec_formals_route bot_sign) []
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_sign,
+                 bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+            (equal_routed_gk equal_unit (equal_list equal_sign))
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_sign g
+                (resolved_st_q_is_bot_for executable_domain_sign
+                  (declared_global_vars pa))
+                (sign_tf_st_for g) (sign_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_sign
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_sign)
+            (initial_resolved_st_q bot_sign STop SZero) (Analysis_Global ())
+            (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_sign) []
             (tD_side_rule_Interp_solve
               (equal_prod equal_cfg_node (equal_list equal_sign))
               (equal_routed_gk equal_unit (equal_list equal_sign))
@@ -8914,8 +8969,21 @@ let rec analysis_result
     | Sign_Analysis, r, Ctx_CallString k, p ->
         call_string_run_result executable_domain_sign (fun a -> SignValue a)
           enter_sign_for sign_classify_check
-          (result_with_globals (executable_domain_sign, equal_sign)
-            equal_call_string_gk sign_tf_st_for sign_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_sign,
+                 bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+            equal_call_string_gk
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_sign g
+                (resolved_st_q_is_bot_for executable_domain_sign
+                  (declared_global_vars pa))
+                (sign_tf_st_for g) (sign_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_sign
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_sign)
             (initial_resolved_st_q bot_sign STop SZero) Global
             (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
             (tD_side_rule_Interp_solve
@@ -8961,9 +9029,21 @@ let rec analysis_result
     | Interval_Analysis, r, Ctx_None, p ->
         unit_run_result executable_domain_ivl (fun a -> IntervalValue a)
           enter_ivl_for interval_classify_check
-          (result_with_globals (executable_domain_ivl, equal_ivl)
-            (equal_routed_gk equal_unit equal_unit) ivl_tf_st_for
-            ivl_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_ivl,
+                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+            (equal_routed_gk equal_unit equal_unit)
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_ivl g
+                (resolved_st_q_is_bot_for executable_domain_ivl
+                  (declared_global_vars pa))
+                (ivl_tf_st_for g) (ivl_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_ivl
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_ivl)
             (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
               (Ivl (Fin zero_inta, Fin zero_inta)))
             (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
@@ -9009,9 +9089,21 @@ let rec analysis_result
     | Interval_Analysis, r, Ctx_EntryState, p ->
         entry_state_run_result (executable_domain_ivl, equal_ivl)
           (fun a -> IntervalValue a) enter_ivl_for interval_classify_check
-          (result_with_globals (executable_domain_ivl, equal_ivl)
-            (equal_routed_gk equal_unit (equal_list equal_ivl)) ivl_tf_st_for
-            ivl_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_ivl,
+                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+            (equal_routed_gk equal_unit (equal_list equal_ivl))
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_ivl g
+                (resolved_st_q_is_bot_for executable_domain_ivl
+                  (declared_global_vars pa))
+                (ivl_tf_st_for g) (ivl_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_ivl
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_ivl)
             (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
               (Ivl (Fin zero_inta, Fin zero_inta)))
             (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
@@ -9058,8 +9150,21 @@ let rec analysis_result
     | Interval_Analysis, r, Ctx_CallString k, p ->
         call_string_run_result executable_domain_ivl (fun a -> IntervalValue a)
           enter_ivl_for interval_classify_check
-          (result_with_globals (executable_domain_ivl, equal_ivl)
-            equal_call_string_gk ivl_tf_st_for ivl_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_ivl,
+                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+            equal_call_string_gk
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_ivl g
+                (resolved_st_q_is_bot_for executable_domain_ivl
+                  (declared_global_vars pa))
+                (ivl_tf_st_for g) (ivl_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_ivl
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_ivl)
             (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
               (Ivl (Fin zero_inta, Fin zero_inta)))
             Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
@@ -9108,12 +9213,28 @@ let rec analysis_result
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext
-               (bounded_lattice_unit, warrowing_unit)),
-              (equal_int_dom_ext equal_unit))
+            ((equal_resolved_st_q
+               ((equal_int_dom_ext equal_unit),
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
             (equal_routed_gk equal_unit equal_unit)
-            (int_tf_st_for Refine_Fixpoint)
-            (int_dom_enter_st_for Refine_Fixpoint)
+            (fun g pa ->
+              exec_component
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
+                (resolved_st_q_is_bot_for
+                  (executable_domain_int_dom_ext
+                    (bounded_lattice_unit, warrowing_unit))
+                  (declared_global_vars pa))
+                (int_tf_st_for Refine_Fixpoint g)
+                (int_dom_enter_st_for Refine_Fixpoint g))
+            (fun pa ->
+              resolved_st_q_is_bot_for
+                (executable_domain_int_dom_ext
+                  (bounded_lattice_unit, warrowing_unit))
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit))
             (initial_resolved_st_q (bot_int_dom_ext bounded_lattice_unit)
               (top_int_dom_exta bounded_lattice_unit)
               (int_dom_of_int zero_inta))
@@ -9179,13 +9300,29 @@ let rec analysis_result
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext
-               (bounded_lattice_unit, warrowing_unit)),
-              (equal_int_dom_ext equal_unit))
+            ((equal_resolved_st_q
+               ((equal_int_dom_ext equal_unit),
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
             (equal_routed_gk equal_unit
               (equal_list (equal_int_dom_ext equal_unit)))
-            (int_tf_st_for Refine_Fixpoint)
-            (int_dom_enter_st_for Refine_Fixpoint)
+            (fun g pa ->
+              exec_component
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
+                (resolved_st_q_is_bot_for
+                  (executable_domain_int_dom_ext
+                    (bounded_lattice_unit, warrowing_unit))
+                  (declared_global_vars pa))
+                (int_tf_st_for Refine_Fixpoint g)
+                (int_dom_enter_st_for Refine_Fixpoint g))
+            (fun pa ->
+              resolved_st_q_is_bot_for
+                (executable_domain_int_dom_ext
+                  (bounded_lattice_unit, warrowing_unit))
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit))
             (initial_resolved_st_q (bot_int_dom_ext bounded_lattice_unit)
               (top_int_dom_exta bounded_lattice_unit)
               (int_dom_of_int zero_inta))
@@ -9252,11 +9389,28 @@ let rec analysis_result
           (fun a -> IntDomValue a) (enter_int_dom_for Refine_Fixpoint)
           int_classify_check
           (result_with_globals
-            ((executable_domain_int_dom_ext
-               (bounded_lattice_unit, warrowing_unit)),
-              (equal_int_dom_ext equal_unit))
-            equal_call_string_gk (int_tf_st_for Refine_Fixpoint)
-            (int_dom_enter_st_for Refine_Fixpoint)
+            ((equal_resolved_st_q
+               ((equal_int_dom_ext equal_unit),
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+            equal_call_string_gk
+            (fun g pa ->
+              exec_component
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
+                (resolved_st_q_is_bot_for
+                  (executable_domain_int_dom_ext
+                    (bounded_lattice_unit, warrowing_unit))
+                  (declared_global_vars pa))
+                (int_tf_st_for Refine_Fixpoint g)
+                (int_dom_enter_st_for Refine_Fixpoint g))
+            (fun pa ->
+              resolved_st_q_is_bot_for
+                (executable_domain_int_dom_ext
+                  (bounded_lattice_unit, warrowing_unit))
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit))
             (initial_resolved_st_q (bot_int_dom_ext bounded_lattice_unit)
               (top_int_dom_exta bounded_lattice_unit)
               (int_dom_of_int zero_inta))
@@ -9317,11 +9471,24 @@ let rec analysis_result
     | Parity_Analysis, r, Ctx_None, p ->
         unit_run_result executable_domain_parity (fun a -> ParityValue a)
           enter_parity_for parity_classify_check
-          (result_with_globals (executable_domain_parity, equal_parity)
-            (equal_routed_gk equal_unit equal_unit) parity_tf_st_for
-            parity_enter_st_for (initial_resolved_st_q bot_parity PTop PEven)
-            (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
-            (fun _ -> route_unit) ()
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_parity,
+                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_parity))
+            (equal_routed_gk equal_unit equal_unit)
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_parity g
+                (resolved_st_q_is_bot_for executable_domain_parity
+                  (declared_global_vars pa))
+                (parity_tf_st_for g) (parity_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_parity
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_parity)
+            (initial_resolved_st_q bot_parity PTop PEven) (Analysis_Global ())
+            (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
             (tD_side_rule_Interp_solve (equal_prod equal_cfg_node equal_unit)
               (equal_routed_gk equal_unit equal_unit)
               ((equal_dg_state
@@ -9365,9 +9532,22 @@ let rec analysis_result
     | Parity_Analysis, r, Ctx_EntryState, p ->
         entry_state_run_result (executable_domain_parity, equal_parity)
           (fun a -> ParityValue a) enter_parity_for parity_classify_check
-          (result_with_globals (executable_domain_parity, equal_parity)
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_parity,
+                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_parity))
             (equal_routed_gk equal_unit (equal_list equal_parity))
-            parity_tf_st_for parity_enter_st_for
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_parity g
+                (resolved_st_q_is_bot_for executable_domain_parity
+                  (declared_global_vars pa))
+                (parity_tf_st_for g) (parity_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_parity
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_parity)
             (initial_resolved_st_q bot_parity PTop PEven) (Analysis_Global ())
             (fun a b -> Activation_Seed (a, b)) (exec_formals_route bot_parity)
             [] (tD_side_rule_Interp_solve
@@ -9414,8 +9594,22 @@ let rec analysis_result
     | Parity_Analysis, r, Ctx_CallString k, p ->
         call_string_run_result executable_domain_parity (fun a -> ParityValue a)
           enter_parity_for parity_classify_check
-          (result_with_globals (executable_domain_parity, equal_parity)
-            equal_call_string_gk parity_tf_st_for parity_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_parity,
+                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_parity))
+            equal_call_string_gk
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_parity g
+                (resolved_st_q_is_bot_for executable_domain_parity
+                  (declared_global_vars pa))
+                (parity_tf_st_for g) (parity_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_parity
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_parity)
             (initial_resolved_st_q bot_parity PTop PEven) Global
             (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []
             (tD_side_rule_Interp_solve
@@ -9463,9 +9657,22 @@ let rec analysis_result
         unit_run_result executable_domain_congruence
           (fun a -> CongruenceValue a) enter_congruence_for
           congruence_classify_check
-          (result_with_globals (executable_domain_congruence, equal_congruence)
-            (equal_routed_gk equal_unit equal_unit) congruence_tf_st_for
-            congruence_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_congruence,
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_congruence))
+            (equal_routed_gk equal_unit equal_unit)
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_congruence g
+                (resolved_st_q_is_bot_for executable_domain_congruence
+                  (declared_global_vars pa))
+                (congruence_tf_st_for g) (congruence_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_congruence
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_congruence)
             (initial_resolved_st_q bot_congruence top_congruencea
               (congruence_of_int zero_inta))
             (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
@@ -9514,9 +9721,22 @@ let rec analysis_result
         entry_state_run_result (executable_domain_congruence, equal_congruence)
           (fun a -> CongruenceValue a) enter_congruence_for
           congruence_classify_check
-          (result_with_globals (executable_domain_congruence, equal_congruence)
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_congruence,
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_congruence))
             (equal_routed_gk equal_unit (equal_list equal_congruence))
-            congruence_tf_st_for congruence_enter_st_for
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_congruence g
+                (resolved_st_q_is_bot_for executable_domain_congruence
+                  (declared_global_vars pa))
+                (congruence_tf_st_for g) (congruence_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_congruence
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_congruence)
             (initial_resolved_st_q bot_congruence top_congruencea
               (congruence_of_int zero_inta))
             (Analysis_Global ()) (fun a b -> Activation_Seed (a, b))
@@ -9566,8 +9786,22 @@ let rec analysis_result
         call_string_run_result executable_domain_congruence
           (fun a -> CongruenceValue a) enter_congruence_for
           congruence_classify_check
-          (result_with_globals (executable_domain_congruence, equal_congruence)
-            equal_call_string_gk congruence_tf_st_for congruence_enter_st_for
+          (result_with_globals
+            ((equal_resolved_st_q
+               (equal_congruence,
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)),
+              (semilattice_sup_resolved_st_q
+                bounded_semilattice_sup_bot_congruence))
+            equal_call_string_gk
+            (fun g pa ->
+              exec_component bounded_semilattice_sup_bot_congruence g
+                (resolved_st_q_is_bot_for executable_domain_congruence
+                  (declared_global_vars pa))
+                (congruence_tf_st_for g) (congruence_enter_st_for g))
+            (fun pa ->
+              resolved_st_q_is_bot_for executable_domain_congruence
+                (declared_global_vars pa))
+            (fun_of_resolved_st_q_for bot_congruence)
             (initial_resolved_st_q bot_congruence top_congruencea
               (congruence_of_int zero_inta))
             Global (fun a b -> Seed (a, b)) (fun _ -> cs_route k) []

@@ -9,7 +9,7 @@ It registers the domain three times -- at the unit context, at the entry-state
 context and at the call-string context -- each registration taking the global
 update rule as a parameter, so one registration serves every solver discipline.
 The unit registration interprets `unit_dg_analysis`, the other two its parent
-`routed_dg_analysis`.
+`routed_dg_analysis_exec`.
 
 What is generated is registration, never mathematics. Every obligation is
 discharged by citing a fact the manifest only names: the domain's own, or the
@@ -98,7 +98,7 @@ CONTEXTS = [
         "title": "the unit context",
         "locale": "unit_dg_analysis",
         "header": [
-            "proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,",
+            "proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,",
             "       goal_cases)",
         ],
         "gk": lambda vt: "(unit, unit) routed_gk",
@@ -110,8 +110,8 @@ CONTEXTS = [
     {
         "suffix": "_es",
         "title": "the entry-state context",
-        "locale": "routed_dg_analysis",
-        "header": ["proof (rule routed_dg_analysis.intro, goal_cases)"],
+        "locale": "routed_dg_analysis_exec",
+        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: f"(unit, {vt} list) routed_gk",
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
@@ -125,8 +125,8 @@ CONTEXTS = [
     {
         "suffix": "_cs",
         "title": "the call-string context",
-        "locale": "routed_dg_analysis",
-        "header": ["proof (rule routed_dg_analysis.intro, goal_cases)"],
+        "locale": "routed_dg_analysis_exec",
+        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: "call_string_gk",
         "keys": (
             "Call_String_Context.Global Call_String_Context.Seed"

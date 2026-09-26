@@ -84,8 +84,8 @@ next
   case 3
   show ?case
     using int_es_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def int_es_rule.result_def
-        int_es_rule.sol_vars_def)
+    by (simp add: finite_analysis_result_def routed_dg_pipeline.result_def
+        routed_dg_pipeline.sol_vars_def)
 qed
 
 lemma parity_es_rule_table:

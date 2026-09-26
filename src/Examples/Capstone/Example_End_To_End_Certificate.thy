@@ -331,8 +331,10 @@ text \<open>
 
 lemma certificate_demo_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Join
-     (routed_dg_pipeline.equations (int_tf_st_for Refine_Fixpoint)
-        (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
+     (routed_dg_pipeline.equations
+        (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+           (int_tf_st_for Refine_Fixpoint \<G>) (int_dom_enter_st_for Refine_Fixpoint \<G>))
+        cinit_int_dom_st
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
         (declared_global certificate_demo_prog) certificate_demo_prog)
      (routed_dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
@@ -351,7 +353,7 @@ text \<open>
 
 lemma certificate_demo_config_terminates:
   "config_terminates Int_Analysis Globals_Join (Ctx_CallString 1) certificate_demo_prog"
-  by (simp del: One_nat_def add: certificate_demo_terminates)
+  using certificate_demo_terminates by (simp del: One_nat_def)
 
 subsection \<open>What the printed verdict means at that node\<close>
 

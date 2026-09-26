@@ -44,7 +44,7 @@ global_interpretation int_rule: unit_dg_analysis
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,
        goal_cases)
   case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
 next
@@ -79,7 +79,7 @@ qed
 
 subsection \<open>At the entry-state context\<close>
 
-global_interpretation int_es_rule: routed_dg_analysis
+global_interpretation int_es_rule: routed_dg_analysis_exec
     "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
@@ -91,7 +91,7 @@ global_interpretation int_es_rule: routed_dg_analysis
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. formals_route_lifted_gen"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule routed_dg_analysis.intro, goal_cases)
+proof (rule routed_dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case
@@ -127,7 +127,7 @@ qed
 
 subsection \<open>At the call-string context\<close>
 
-global_interpretation int_cs_rule: routed_dg_analysis
+global_interpretation int_cs_rule: routed_dg_analysis_exec
     "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
@@ -139,7 +139,7 @@ global_interpretation int_cs_rule: routed_dg_analysis
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. cs_route k"
     "TD_side_rule_Interp_solve_c r"
   for k r
-proof (rule routed_dg_analysis.intro, goal_cases)
+proof (rule routed_dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case
