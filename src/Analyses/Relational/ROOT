@@ -6,3 +6,4 @@ session Voblint_Analysis_Relational in "." = "Voblint_Exec" +
     "Voblint_Framework"
   theories
     Rel_Order_Domain
+    Rel_Order_Local
