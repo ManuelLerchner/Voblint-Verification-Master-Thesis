@@ -577,9 +577,9 @@ def test_the_uncalled_entry_is_named_root_context(tmp_path):
 
 
 def test_several_domains_run_as_one_analysis(tmp_path):
-    """A comma list is one solve over the combined state, so each node carries
-    one block, named by the list, and a check any active domain decides is
-    decided."""
+    """A comma list is one solve over the combined state. Each node shows one
+    <analysis> block per active domain, as Goblint's report shows each component
+    of its combined state, and a check any active domain decides is decided."""
     if not VOBLINT.exists():
         pytest.skip("cli/voblint not built -- run `pixi run cli-build`")
     out = tmp_path / "multi"
@@ -606,7 +606,7 @@ def test_several_domains_run_as_one_analysis(tmp_path):
             for a in ET.parse(doc).getroot().findall("./call/path/analysis")
             if a.get("name") != "status"
         ]
-        assert names == ["int,interval,sign"], (doc.name, names)
+        assert names == ["int", "interval", "sign"], (doc.name, names)
 
     # Interval and Sign alone leave this check UNKNOWN; Int proves it, and the
     # met answer keeps Int's verdict.

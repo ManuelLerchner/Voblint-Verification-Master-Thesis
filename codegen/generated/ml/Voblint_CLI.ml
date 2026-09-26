@@ -109,6 +109,7 @@ module Generated : sig
   type arithmetic_obligation
   type arithmetic_diagnostic
   type result_global_key = Global_Shared | Global_Seed of string * nat option
+  type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a
   type ('a, 'b) result_global_ext
   type ('a, 'b) result_state_ext
   type 'a result_check_ext
@@ -140,7 +141,9 @@ module Generated : sig
   val res_routes : ('a, 'b) run_result_ext -> unit call_route_ext list
   val res_checks : ('a, 'b) run_result_ext -> unit result_check_ext list
   val res_cfg : ('a, 'b) run_result_ext -> unit cfg_ext
-  val global_state : ('a, 'b) result_global_ext -> ((string * 'a) list) lifted
+  val global_state :
+    ('a, 'b) result_global_ext ->
+      ((analysis_domain * 'a field_state) list) lifted
   val global_key : ('a, 'b) result_global_ext -> result_global_key
   val state_diagnostics :
     ('a, 'b) result_state_ext ->
@@ -148,9 +151,12 @@ module Generated : sig
   val state_context : ('a, 'b) result_state_ext -> nat
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
-  val state_value : ('a, 'b) result_state_ext -> ((string * 'a) list) lifted
+  val state_value :
+    ('a, 'b) result_state_ext ->
+      ((analysis_domain * 'a field_state) list) lifted
   val state_steps :
-    ('a, 'b) result_state_ext -> (cfg_node * ((string * 'a) list) lifted) list
+    ('a, 'b) result_state_ext ->
+      (cfg_node * ((analysis_domain * 'a field_state) list) lifted) list
   val state_point : ('a, 'b) result_state_ext -> cfg_node
   val map_analysis_answer :
     ('a -> 'b) -> 'a analysis_answer -> 'b analysis_answer
@@ -4104,15 +4110,18 @@ type arithmetic_diagnostic =
 
 type result_global_key = Global_Shared | Global_Seed of string * nat option;;
 
+type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a;;
+
 type ('a, 'b) result_global_ext =
-  Result_global_ext of result_global_key * ((string * 'a) list) lifted * 'b;;
+  Result_global_ext of
+    result_global_key * ((analysis_domain * 'a field_state) list) lifted * 'b;;
 
 type ('a, 'b) result_state_ext =
   Result_state_ext of
-    cfg_node * nat * ((string * 'a) list) lifted *
+    cfg_node * nat * ((analysis_domain * 'a field_state) list) lifted *
       (exp * check_result lifted) list *
       (arithmetic_obligation * check_result lifted) list *
-      (cfg_node * ((string * 'a) list) lifted) list * 'b;;
+      (cfg_node * ((analysis_domain * 'a field_state) list) lifted) list * 'b;;
 
 type 'a result_check_ext =
   Result_check_ext of cfg_node * (nat * nat) * exp * check_result lifted * 'a;;
@@ -4137,8 +4146,8 @@ type ('a, 'b) analysis_result =
 
 type abstract_value = SignValue of sign | IntervalValue of ivl |
   IntDomValue of unit int_dom_ext | ParityValue of parity |
-  CongruenceValue of congruence | OrderValue of ((string * string) list) option
-  | ProductValue of abstract_value list;;
+  CongruenceValue of congruence |
+  OrderValue of ((string * string) list) option;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -5092,6 +5101,84 @@ let rec part_empty
 let rec mcp_emp
   asa p r = list_ex (fun a -> part_empty (declared_global_vars p) a r) asa;;
 
+let rec size_list xs = length_tailrec xs zero_nat;;
+
+let rec part _B
+  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
+    | f, pivot, x :: xs ->
+        (let (lts, (eqs, gts)) = part _B f pivot xs in
+         let xa = f x in
+          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
+            then (x :: lts, (eqs, gts))
+            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
+                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
+
+let rec sort_key _B
+  f xs =
+    (match xs with [] -> [] | [_] -> xs
+      | [x; y] ->
+        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
+          then xs else [y; x])
+      | _ :: _ :: _ :: _ ->
+        (let (lts, (eqs, gts)) =
+           part _B f
+             (f (nth xs
+                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
+             xs
+           in
+          sort_key _B f lts @ eqs @ sort_key _B f gts));;
+
+let rec sorted_list_of_set (_A1, _A2)
+  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
+
+let rec order_pairs
+  d = (match d with RelBot -> None
+        | RelC ps ->
+          Some (sorted_list_of_set
+                 ((equal_prod equal_literal equal_literal),
+                   (linorder_prod linorder_literal linorder_literal))
+                 ps));;
+
+let rec field_of
+  x0 v vars = match x0, v, vars with
+    Sign_Analysis, v, vars ->
+      Field_Store
+        (map (fun x ->
+               (x, SignValue
+                     (match slot1 v with Bot -> bot_signa | Lifted st -> st x)))
+          vars)
+    | Interval_Analysis, v, vars ->
+        Field_Store
+          (map (fun x ->
+                 (x, IntervalValue
+                       (match slot2 v with Bot -> bot_ivla
+                         | Lifted st -> st x)))
+            vars)
+    | Parity_Analysis, v, vars ->
+        Field_Store
+          (map (fun x ->
+                 (x, ParityValue
+                       (match slot3 v with Bot -> bot_paritya
+                         | Lifted st -> st x)))
+            vars)
+    | Int_Analysis, v, vars ->
+        Field_Store
+          (map (fun x ->
+                 (x, IntDomValue
+                       (match slot4 v
+                         with Bot -> bot_int_dom_exta bounded_lattice_unit
+                         | Lifted st -> st x)))
+            vars)
+    | Congruence_Analysis, v, vars ->
+        Field_Store
+          (map (fun x ->
+                 (x, CongruenceValue
+                       (match slot5 v with Bot -> bot_congruencea
+                         | Lifted st -> st x)))
+            vars)
+    | Order_Analysis, v, vars ->
+        Field_Whole (OrderValue (order_pairs (slot6 v)));;
+
 let rec initial_resolved_st_q _A
   local_value global_value = Abs_resolved_st (local_value, (global_value, []));;
 
@@ -5158,63 +5245,6 @@ let rec mcp_init
                                       bounded_semilattice_sup_bot_congruence)),
                             (if membera equal_analysis_domain asa Order_Analysis
                               then top_relc else bot_relca))))));;
-
-let rec size_list xs = length_tailrec xs zero_nat;;
-
-let rec part _B
-  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
-    | f, pivot, x :: xs ->
-        (let (lts, (eqs, gts)) = part _B f pivot xs in
-         let xa = f x in
-          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
-            then (x :: lts, (eqs, gts))
-            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
-                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
-
-let rec sort_key _B
-  f xs =
-    (match xs with [] -> [] | [_] -> xs
-      | [x; y] ->
-        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
-          then xs else [y; x])
-      | _ :: _ :: _ :: _ ->
-        (let (lts, (eqs, gts)) =
-           part _B f
-             (f (nth xs
-                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
-             xs
-           in
-          sort_key _B f lts @ eqs @ sort_key _B f gts));;
-
-let rec sorted_list_of_set (_A1, _A2)
-  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
-
-let rec order_view
-  x d = (match d with RelBot -> None
-          | RelC ps ->
-            Some (sorted_list_of_set
-                   ((equal_prod equal_literal equal_literal),
-                     (linorder_prod linorder_literal linorder_literal))
-                   (filter
-                     (fun (a, b) -> ((a : string) = x) || ((b : string) = x))
-                     ps)));;
-
-let rec value_of
-  xa0 v x = match xa0, v, x with
-    Sign_Analysis, v, x ->
-      SignValue (match slot1 v with Bot -> bot_signa | Lifted st -> st x)
-    | Interval_Analysis, v, x ->
-        IntervalValue (match slot2 v with Bot -> bot_ivla | Lifted st -> st x)
-    | Parity_Analysis, v, x ->
-        ParityValue (match slot3 v with Bot -> bot_paritya | Lifted st -> st x)
-    | Int_Analysis, v, x ->
-        IntDomValue
-          (match slot4 v with Bot -> bot_int_dom_exta bounded_lattice_unit
-            | Lifted st -> st x)
-    | Congruence_Analysis, v, x ->
-        CongruenceValue
-          (match slot5 v with Bot -> bot_congruencea | Lifted st -> st x)
-    | Order_Analysis, v, x -> OrderValue (order_view x (slot6 v));;
 
 let rec mcp_en_from cs ci p = fold (fun c -> maps (mc_en c ci)) cs [p];;
 
@@ -8689,11 +8719,7 @@ let rec csize
 
 let rec prog_main p = main_body (prog_table p);;
 
-let rec mcp_render
-  asa v x =
-    (match asa with [] -> ProductValue (map (fun a -> value_of a v x) asa)
-      | [a] -> value_of a v x
-      | _ :: _ :: _ -> ProductValue (map (fun a -> value_of a v x) asa));;
+let rec mcp_render asa vars v = map (fun a -> (a, field_of a v vars)) asa;;
 
 let rec asking_transfer
   qs f m =
@@ -8923,11 +8949,6 @@ let rec to_string_relc
                        ps)) ^
                    "}"));;
 
-let rec join_literals
-  = function [] -> ""
-    | [s] -> s
-    | s :: v :: va -> (s ^ " & ") ^ join_literals (v :: va);;
-
 let rec string_of_abstract_value
   = function SignValue s -> to_string_sign s
     | IntervalValue i -> to_string_ivl i
@@ -8936,8 +8957,8 @@ let rec string_of_abstract_value
     | ParityValue v -> to_string_parity v
     | CongruenceValue v -> to_string_congruence v
     | OrderValue v ->
-        to_string_relc (match v with None -> RelBot | Some ps -> RelC (Set ps))
-    | ProductValue vs -> join_literals (map string_of_abstract_value vs);;
+        to_string_relc
+          (match v with None -> RelBot | Some ps -> RelC (Set ps));;
 
 let rec res_diagnostics
   (Run_result_ext
@@ -8992,10 +9013,16 @@ let rec global_state
 let rec global_key
   (Result_global_ext (global_key, global_state, more)) = global_key;;
 
+let rec map_field_state
+  f x1 = match f, x1 with
+    f, Field_Store bs -> Field_Store (map (fun (x, v) -> (x, f v)) bs)
+    | f, Field_Whole v -> Field_Whole (f v);;
+
+let rec map_analysis_view f = map (fun (a, s) -> (a, map_field_state f s));;
+
 let rec map_result_global
   f g = Result_global_ext
-          (global_key g,
-            map_lift (map (fun (x, v) -> (x, f v))) (global_state g), ());;
+          (global_key g, map_lift (map_analysis_view f) (global_state g), ());;
 
 let rec state_diagnostics
   (Result_state_ext
@@ -9037,9 +9064,9 @@ let rec map_result_state
   f st =
     Result_state_ext
       (state_point st, state_context st,
-        map_lift (map (fun (x, v) -> (x, f v))) (state_value st),
-        state_checks st, state_diagnostics st,
-        map (fun (w, s) -> (w, map_lift (map (fun (x, v) -> (x, f v))) s))
+        map_lift (map_analysis_view f) (state_value st), state_checks st,
+        state_diagnostics st,
+        map (fun (w, s) -> (w, map_lift (map_analysis_view f) s))
           (state_steps st),
         ());;
 
@@ -9938,11 +9965,8 @@ let rec abstract_value_key
         Key_List [Key_Int (Int_of_integer (Z.of_int 3)); parity_key v]
     | CongruenceValue v ->
         Key_List [Key_Int (Int_of_integer (Z.of_int 4)); congruence_key v]
-    | ProductValue vs ->
-        Key_List
-          (Key_Int (Int_of_integer (Z.of_int 5)) :: map abstract_value_key vs)
     | OrderValue v ->
-        Key_List [Key_Int (Int_of_integer (Z.of_int 6)); order_view_key v];;
+        Key_List [Key_Int (Int_of_integer (Z.of_int 5)); order_view_key v];;
 
 let rec route_unit u ctx d ca = ();;
 
@@ -10169,7 +10193,7 @@ let rec run_result_of _B
   render ctx_key ctx_view targets classify r shared seed_at step_at p =
     (let g = prog_cfg p in
      let vars = program_vars p in
-     let view = map_lift (fun st -> map (fun x -> (x, render st x)) vars) in
+     let view = map_lift (render vars) in
      let ctxs =
        ordered_by_key _B (equal_order_key, linorder_order_key) ctx_key
          (image snd (result_keys r))

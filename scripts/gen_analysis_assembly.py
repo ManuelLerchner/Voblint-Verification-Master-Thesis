@@ -96,8 +96,8 @@ FACT_ROLES = {
 # How an analysis runs as one field of the combined state. Each role is a term
 # template; its placeholders are $G (the globals predicate), $p (the program),
 # $gs (the declared globals as a list), $f (the field of a state), $v (the field
-# of a published value), $q (a query), $x (a variable) and $c (the field of a
-# context). The three *_type roles are types, and the last four name facts.
+# of a published value), $q (a query), $vars (the program's variables) and $c (the
+# field of a context). The three *_type roles are types, and the last four name facts.
 FIELD_ROLES = [
     "state_type",
     "published_type",
@@ -244,8 +244,8 @@ class Domain:
             " | Lifted st \\<Rightarrow> is_empty_state st)",
             "answer": "(case $v of Bot \\<Rightarrow> \\<top>"
             f" | Lifted st \\<Rightarrow> {p}_eval_answer st $q)",
-            "display": f"{vc} (case $v of Bot \\<Rightarrow> \\<bottom>"
-            " | Lifted st \\<Rightarrow> st $x)",
+            "display": "Field_Store (map (\\<lambda>x. (x,"
+            f" {vc} (case $v of Bot \\<Rightarrow> \\<bottom> | Lifted st \\<Rightarrow> st x))) $vars)",
             "init": f"Lifted {bare(r['init_st'])}",
             "route": "exec_formals_route $G u [] $f ca",
             "context_values": f"map {vc} $c",
@@ -668,12 +668,14 @@ def render_mcp(doms):
     out += [""]
     out += fun_block(
         [
-            'fun value_of :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> vname \\<Rightarrow> abstract_value" where'
+            "fun field_of ::",
+            '  "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> vname list'
+            ' \\<Rightarrow> abstract_value field_state" where',
         ],
         per(
             lambda k, d: (
-                f"value_of {d.constructor} v x",
-                d.term("display", v=f"(slot{k} v)", x="x"),
+                f"field_of {d.constructor} v vars",
+                d.term("display", v=f"(slot{k} v)", vars="vars"),
             )
         ),
     )

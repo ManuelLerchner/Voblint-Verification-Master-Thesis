@@ -22,8 +22,8 @@ voblint --help
   `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
   only by refuting them across differing parities. `congruence` is the residue-class domain, one
   value constrained to `x = r (mod m)`. A comma list runs the named domains
-  together in one solve, under every output and context mode: a value shows
-  each domain's part in list order, a point any of them proves unreachable is
+  together in one solve, under every output and context mode: a state shows
+  each domain's part on its own, in list order, a point any of them proves unreachable is
   unreachable, and a check is decided by the meet of their answers. The list
   reaches `run_voblint` as given, and its `Invalid_Activation` answer rejects a
   domain named twice (exit 1).

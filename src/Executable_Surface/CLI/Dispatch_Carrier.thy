@@ -27,32 +27,19 @@ datatype abstract_value =
   | ParityValue parity
   | CongruenceValue congruence
   | OrderValue "(vname \<times> vname) list option"
-  | ProductValue "abstract_value list"
 
 text \<open>
   How a value reads is its domain's business: each domain's \<^class>\<open>executable_domain\<close>
   instance carries its own \<^const>\<open>to_string\<close>, and this dispatch is the only rendering a
-  run result receives before it leaves Isabelle. Several analyses run together read as
-  their values side by side, in activation order. The rendering changes no verdict, no
+  run result receives before it leaves Isabelle. The rendering changes no verdict, no
   point and no context identity, so no soundness claim reads it.
+
+  An order value is listed as its pairs, or \<^const>\<open>None\<close> where the state is
+  unreachable, so that a key can tell two apart.
 \<close>
 
-text \<open>
-  A relational value has no value per variable. A report shows, at each variable, the
-  orders that mention it, listed so that a key can tell values apart, or
-  \<^const>\<open>None\<close> where the state is unreachable.
-\<close>
-
-definition order_view :: "vname \<Rightarrow> relc \<Rightarrow> (vname \<times> vname) list option" where
-  "order_view x d =
-     (case d of
-        RelBot \<Rightarrow> None
-      | RelC ps \<Rightarrow> Some (sorted_list_of_set (Set.filter (\<lambda>(a, b). a = x \<or> b = x) ps)))"
-
-fun join_literals :: "String.literal list \<Rightarrow> String.literal" where
-  "join_literals [] = STR ''''"
-| "join_literals [s] = s"
-| "join_literals (s # ss) = s + STR '' & '' + join_literals ss"
+definition order_pairs :: "relc \<Rightarrow> (vname \<times> vname) list option" where
+  "order_pairs d = (case d of RelBot \<Rightarrow> None | RelC ps \<Rightarrow> Some (sorted_list_of_set ps))"
 
 fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
   "string_of_abstract_value (SignValue s) = to_string s"
@@ -62,8 +49,18 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" wh
 | "string_of_abstract_value (CongruenceValue v) = to_string v"
 | "string_of_abstract_value (OrderValue v) =
      to_string (case v of None \<Rightarrow> RelBot | Some ps \<Rightarrow> RelC (set ps))"
-| "string_of_abstract_value (ProductValue vs) =
-     join_literals (map string_of_abstract_value vs)"
+
+text \<open>
+  What one analysis shows of a state, as Goblint's report shows each component of its
+  combined state on its own: a pointwise analysis a value per variable, an analysis whose
+  state relates variables one value for the whole state.
+\<close>
+
+datatype 'v field_state = Field_Store "(vname \<times> 'v) list" | Field_Whole 'v
+
+fun map_field_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v field_state \<Rightarrow> 'w field_state" where
+  "map_field_state f (Field_Store bs) = Field_Store (map (\<lambda>(x, v). (x, f v)) bs)"
+| "map_field_state f (Field_Whole v) = Field_Whole (f v)"
 
 section \<open>Listing a set of contexts without reading its values' order\<close>
 
@@ -131,8 +128,7 @@ fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
 | "abstract_value_key (IntDomValue v) = Key_List [Key_Int 2, int_dom_key v]"
 | "abstract_value_key (ParityValue v) = Key_List [Key_Int 3, parity_key v]"
 | "abstract_value_key (CongruenceValue v) = Key_List [Key_Int 4, congruence_key v]"
-| "abstract_value_key (ProductValue vs) = Key_List (Key_Int 5 # map abstract_value_key vs)"
-| "abstract_value_key (OrderValue v) = Key_List [Key_Int 6, order_view_key v]"
+| "abstract_value_key (OrderValue v) = Key_List [Key_Int 5, order_view_key v]"
 
 lemma sign_key_inject [simp]: "sign_key a = sign_key b \<longleftrightarrow> a = b"
   by (cases a; cases b) simp_all
@@ -171,14 +167,7 @@ qed simp
 
 lemma abstract_value_key_inject [simp]:
   "abstract_value_key a = abstract_value_key b \<longleftrightarrow> a = b"
-proof
-  show "abstract_value_key a = abstract_value_key b \<Longrightarrow> a = b"
-  proof (induction a arbitrary: b)
-    case (ProductValue vs)
-    then show ?case
-      by (cases b) (simp_all, metis list.inj_map_strong)
-  qed (case_tac b; simp)+
-qed simp
+  by (cases a; cases b) simp_all
 
 lemma inj_abstract_value_key: "inj abstract_value_key"
   by (rule injI) simp

@@ -31,34 +31,44 @@
 //
 // nodes:
 //   f_exit_f_ctx0: exit_f
-//       p=[3,+∞]
+//       interval:
+//         p=[3,+∞]
 //   main_pp5_ctx0: pp5 [unknown]
-//       x=[6,+∞]
-//       y=[6,+∞]
+//       interval:
+//         x=[6,+∞]
+//         y=[6,+∞]
 //       check y == 20
 //   main_pp6_ctx0: pp6
-//       x=[6,+∞]
-//       y=[6,+∞]
+//       interval:
+//         x=[6,+∞]
+//         y=[6,+∞]
 //   main_exit_main_ctx0: exit_main
-//       x=[6,+∞]
-//       y=[6,+∞]
+//       interval:
+//         x=[6,+∞]
+//         y=[6,+∞]
 //   f_pp0_ctx0: pp0
-//       p=[3,+∞]
+//       interval:
+//         p=[3,+∞]
 //   main_pp2_ctx0: pp2
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //   main_pp3_ctx0: pp3
-//       x=[6,+∞]
-//       y=⊤
+//       interval:
+//         x=[6,+∞]
+//         y=⊤
 //   f_entry_f_ctx0: entry_f
-//       p=[3,+∞]
+//       interval:
+//         p=[3,+∞]
 //   main_pp4_ctx0: pp4 [unknown]
-//       x=[6,+∞]
-//       y=[6,+∞]
+//       interval:
+//         x=[6,+∞]
+//         y=[6,+∞]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return p + p

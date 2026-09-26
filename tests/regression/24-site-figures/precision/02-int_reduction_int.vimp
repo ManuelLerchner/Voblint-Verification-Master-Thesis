@@ -15,30 +15,38 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //   main_pp2_ctx0: pp2
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
 //   main_pp3_ctx0: pp3
-//       n=⊤
-//       x=signs:+; intervals:[1,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//       int:
+//         n=⊤
+//         x=signs:+; intervals:[1,+∞]; parities:1+2ℤ; congruences:1+4ℤ
 //   main_pp4_ctx0: pp4 [proved]
-//       n=⊤
-//       x=signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+4ℤ
+//       int:
+//         n=⊤
+//         x=signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+4ℤ
 //       check x >= 1 && x <= 9
 //   main_pp7_ctx0: pp7
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
 //   main_exit_main_ctx0: exit_main
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
 //   main_pp0_ctx0: pp0
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //   main_entry_main_ctx0: entry_main
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()

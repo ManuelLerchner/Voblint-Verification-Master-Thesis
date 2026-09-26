@@ -38,19 +38,6 @@ let is_ident_char c =
   || (c >= '0' && c <= '9')
   || c = '_' || c = '#' || c = '\''
 
-(* A node's content line is either "<var>=<value>", written by state_line, or
-   a note the annotation added ("unreachable", "check x == 2 [REFUTED]").
-   Only the first shape splits; a note has no '=' before its first
-   non-identifier character. *)
-let split_binding line =
-  match String.index_opt line '=' with
-  | None -> None
-  | Some i ->
-      let name = String.sub line 0 i in
-      if name <> "" && String.for_all is_ident_char name then
-        Some (name, String.sub line (i + 1) (String.length line - i - 1))
-      else None
-
 (* A product domain renders a value it cannot print as one integer, ⊤ or ⊥ as
    its components, "signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ",
    as goblint's IntDomTuple does. Splitting it gives node.xsl a nested <map> to
@@ -106,55 +93,41 @@ let node_line positions (node : G.node) =
    analysis's value, and node.xsl folds a value holding a nested <map>. That
    is goblint's vocabulary, unchanged -- which is why its stylesheets render
    this without adaptation. *)
-let state_map node =
-  let buf = Buffer.create 512 in
-  let bindings, notes =
-    List.partition_map
-      (fun line ->
-        match split_binding line with
-        | Some (k, v) -> Left (k, v)
-        | None -> Right line)
-      (G.lines node)
-  in
-  Buffer.add_string buf "<map>\n";
-  List.iter
-    (fun (var, value) ->
-      Buffer.add_string buf (Printf.sprintf "<key>%s</key>\n" (escape var));
-      match split_components value with
-      | Some comps ->
-          Buffer.add_string buf "<value><map>";
-          List.iter
-            (fun (k, v) ->
-              Buffer.add_string buf
-                (Printf.sprintf "<key>%s</key><value>%s</value>" (escape k)
-                   (escape v)))
-            comps;
-          Buffer.add_string buf "</map></value>\n"
-      | None ->
-          Buffer.add_string buf
-            (Printf.sprintf "<value>%s</value>\n" (escape value)))
-    bindings;
-  Buffer.add_string buf "</map>";
-  let notes =
-    notes @ match node.G.status with Some s -> [ status_note s ] | None -> []
-  in
-  (Buffer.contents buf, List.filter (fun s -> s <> "") notes)
+let value_xml value =
+  match split_components value with
+  | Some comps ->
+      "<map>"
+      ^ String.concat ""
+          (List.map
+             (fun (k, v) ->
+               Printf.sprintf "<key>%s</key><value>%s</value>" (escape k)
+                 (escape v))
+             comps)
+      ^ "</map>"
+  | None -> escape value
 
-(* One <analysis> element per domain in the same node document. That is what
-   the element was for: Goblint runs several analyses at once and each
-   contributes its own block here, which is why its frontend already stacks
-   them. Voblint runs one domain per invocation, so a multi-domain report is
-   several solves feeding one document. *)
-let node_xml ~source_file ~fn ~loc ~blocks =
-  let _, primary = List.hd blocks in
-  let rendered = List.map (fun (name, node) -> (name, state_map node)) blocks in
+(* One <analysis> element per active analysis, as Goblint's MCP gives each of its
+   components one: a pointwise analysis's variables as a <map>, an analysis whose
+   state relates variables as one value. *)
+let section_xml (label, section) =
+  Printf.sprintf "<analysis name=\"%s\"><value>%s</value></analysis>\n"
+    (escape label)
+    (match section with
+    | Result_text.Store bindings ->
+        "<map>"
+        ^ String.concat ""
+            (List.map
+               (fun (var, value) ->
+                 Printf.sprintf "<key>%s</key><value>%s</value>" (escape var)
+                   (value_xml value))
+               bindings)
+        ^ "</map>"
+    | Result_text.Whole v -> value_xml v)
+
+let node_xml ~source_file ~fn ~loc ~(node : G.node) =
   let notes =
-    List.concat_map
-      (fun (name, (_, notes)) ->
-        List.map
-          (fun n -> if List.length blocks > 1 then name ^ ": " ^ n else n)
-          notes)
-      rendered
+    node.findings
+    @ match node.G.status with Some s -> [ status_note s ] | None -> []
   in
   let note_xml =
     if notes = [] then ""
@@ -166,16 +139,7 @@ let node_xml ~source_file ~fn ~loc ~blocks =
               (fun n -> Printf.sprintf "<value>%s</value>" (escape n))
               notes))
   in
-  let node = primary in
-  let analyses =
-    String.concat ""
-      (List.map
-         (fun (name, (body, _)) ->
-           Printf.sprintf
-             "<analysis name=\"%s\"><value>\n%s\n</value></analysis>\n"
-             (escape name) body)
-         rendered)
-  in
+  let analyses = String.concat "" (List.map section_xml node.sections) in
   (* The command's own span, both ends recorded by the parser. order is
      goblint's sequence number within the function, and the Statement index is
      exactly that -- the counter compile allocates in source order. A node with
@@ -219,71 +183,26 @@ let index_xml ~source_file ~fns =
    renders what the equation system holds rather than a source variable's value --
    which lives in the local state here exactly as it does in goblint's CPA.
 
-   Values arrive already rendered, in the same "var=value" form a node document
-   shows, so a product domain's components fold here the way they do there.
+   Each unknown shows each active analysis's part on its own, as a node document
+   does, so a product domain's components fold here the way they do there.
 
    globals.xsl walks globs/glob, taking each glob's <key> as the unknown and its
    <analysis name=> children as the per-analysis values -- one row per unknown, not
    one map per analysis. That is a different shape from the node documents' <map>,
    and a document in the map shape renders as a blank pane rather than as an error. *)
-let globals_xml ~blocks =
-  let state_xml lines =
-    let bindings, notes =
-      List.partition_map
-        (fun line ->
-          match split_binding line with
-          | Some (k, v) -> Left (k, v)
-          | None -> Right line)
-        lines
-    in
-    if bindings = [] then
-      Printf.sprintf "<value>%s</value>"
-        (escape
-           (if notes = [] then "\xe2\x88\x85" else String.concat ", " notes))
-    else
-      "<value><map>"
-      ^ String.concat ""
-          (List.map
-             (fun (var, value) ->
-               Printf.sprintf "<key>%s</key><value>%s</value>" (escape var)
-                 (match split_components value with
-                 | Some comps ->
-                     "<map>"
-                     ^ String.concat ""
-                         (List.map
-                            (fun (k, c) ->
-                              Printf.sprintf "<key>%s</key><value>%s</value>"
-                                (escape k) (escape c))
-                            comps)
-                     ^ "</map>"
-                 | None -> escape value))
-             bindings)
-      ^ "</map></value>"
-  in
-  let keys = match blocks with [] -> [] | (_, gvs) :: _ -> List.map fst gvs in
-  let row key =
-    match
-      List.filter_map
-        (fun (name, gvs) ->
-          Option.map (fun l -> (name, l)) (List.assoc_opt key gvs))
-        blocks
-    with
-    | [] -> ""
-    | per_domain ->
-        Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape key)
-          (String.concat ""
-             (List.map
-                (fun (name, lines) ->
-                  Printf.sprintf "<analysis name=\"%s\">%s</analysis>"
-                    (escape name) (state_xml lines))
-                per_domain))
+let globals_xml ~globals =
+  let row (key, sections) =
+    Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape key)
+      (match sections with
+      | None -> "<analysis name=\"state\"><value>unreachable</value></analysis>"
+      | Some sections -> String.concat "" (List.map section_xml sections))
   in
   Printf.sprintf
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../globals.xsl\"?>\n\
      <globs>\n\
      %s</globs>\n"
-    (String.concat "" (List.map row keys))
+    (String.concat "" (List.map row globals))
 
 (* One check's source-level finding. Positions come from the parser, which
    notes each __voblint_check token as it consumes it; the verdict comes from

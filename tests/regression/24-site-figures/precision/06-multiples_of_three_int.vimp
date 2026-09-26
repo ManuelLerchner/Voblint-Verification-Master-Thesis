@@ -17,35 +17,43 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //   main_pp2_ctx0: pp2
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
 //   main_pp3_ctx0: pp3
-//       n=⊤
-//       x=signs:+; intervals:[3,+∞]; parities:ℤ; congruences:3ℤ
+//       int:
+//         n=⊤
+//         x=signs:+; intervals:[3,+∞]; parities:ℤ; congruences:3ℤ
 //   main_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //       check x == 1 [dead]
 //   main_pp6_ctx0: pp6
-//       n=⊤
-//       x=signs:≤0; intervals:[-∞,0]; parities:ℤ; congruences:3ℤ
+//       int:
+//         n=⊤
+//         x=signs:≤0; intervals:[-∞,0]; parities:ℤ; congruences:3ℤ
 //   main_pp7_ctx0: pp7 [unreachable]
 //       unreachable
 //       check x == 6 [dead]
 //   main_pp9_ctx0: pp9
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
 //   main_exit_main_ctx0: exit_main
-//       n=⊤
-//       x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
+//       int:
+//         n=⊤
+//         x=signs:⊤; intervals:[-∞,+∞]; parities:ℤ; congruences:3ℤ
 //   main_pp0_ctx0: pp0
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //   main_entry_main_ctx0: entry_main
-//       n=⊤
-//       x=⊤
+//       int:
+//         n=⊤
+//         x=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()

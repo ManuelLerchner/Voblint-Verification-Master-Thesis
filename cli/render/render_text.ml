@@ -97,7 +97,9 @@ let render_report path analysis positions result =
         let label, state =
           match C.check_verdict check with
           | C.Bot -> ("DEAD", "")
-          | C.Lifted v -> (verdict_label v, A.state_slice result point cnd)
+          | C.Lifted v ->
+              ( verdict_label v,
+                String.concat "; " (A.state_slice result point cnd) )
         in
         [
           Printf.sprintf "%d:%d" line col;

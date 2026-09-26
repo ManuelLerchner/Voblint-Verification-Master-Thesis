@@ -969,6 +969,24 @@ p.inspector-message {
   overflow-x: auto;
 }
 
+.inspector-analysis {
+  margin: 8px 0 2px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.inspector-analysis:first-child {
+  margin-top: 0;
+}
+
+.seed-lines code.seed-analysis {
+  background: none;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
 .inspector-table table {
   width: 100%;
   border-collapse: collapse;

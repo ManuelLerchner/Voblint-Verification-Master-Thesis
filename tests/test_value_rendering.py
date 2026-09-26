@@ -87,7 +87,9 @@ def test_report_shows_goblint_notation(program, analysis, state):
     """A standalone top is ⊤ and a product component's is ℤ or [-∞,+∞], as
     Goblint's integer-domain lifter and its tuple's components print them; a
     product every component agrees is one integer prints as that integer."""
-    assert _check_state(_voblint("--analysis", analysis, program)) == state
+    assert _check_state(_voblint("--analysis", analysis, program)) == (
+        f"{analysis}: {state}"
+    )
 
 
 @pytest.mark.parametrize(

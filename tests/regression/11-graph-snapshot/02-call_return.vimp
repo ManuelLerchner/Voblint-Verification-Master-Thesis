@@ -19,22 +19,30 @@
 //
 // nodes:
 //   inc_exit_inc_ctx0: exit_inc
-//       n=[5,5]
+//       interval:
+//         n=[5,5]
 //   main_pp4_ctx0: pp4
-//       r=[6,6]
+//       interval:
+//         r=[6,6]
 //   main_exit_main_ctx0: exit_main
-//       r=[6,6]
+//       interval:
+//         r=[6,6]
 //   inc_pp0_ctx0: pp0
-//       n=[5,5]
+//       interval:
+//         n=[5,5]
 //   main_pp2_ctx0: pp2
-//       r=⊤
+//       interval:
+//         r=⊤
 //   inc_entry_inc_ctx0: entry_inc
-//       n=[5,5]
+//       interval:
+//         n=[5,5]
 //   main_pp3_ctx0: pp3 [proved]
-//       r=[6,6]
+//       interval:
+//         r=[6,6]
 //       check 0 < r
 //   main_entry_main_ctx0: entry_main
-//       r=⊤
+//       interval:
+//         r=⊤
 //
 // edges:
 //   inc_pp0_ctx0 -> inc_exit_inc_ctx0: return n + 1

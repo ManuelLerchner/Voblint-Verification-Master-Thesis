@@ -37,6 +37,10 @@ text \<open>
   entry specification may offer several alternatives, and each may land in its own
   context. The empty list is a call the caller context does not take.
 
+  A state is shown one active analysis at a time, in activation order, each as its
+  own \<^typ>\<open>'v field_state\<close>, as Goblint's report shows each component of its
+  combined state.
+
   A state also lists, for every edge leaving its point, that edge's target and what
   the edge's own step makes of the state. Where the target is a join of several
   incoming edges -- a loop head, the point after a branch -- this is the only place
@@ -48,13 +52,15 @@ datatype 'v analysis_context =
   | Context_Entry "'v list"
   | Context_Call_String "pp list"
 
+type_synonym 'v analysis_view = "(analysis_domain \<times> 'v field_state) list"
+
 record 'v result_state =
   state_point :: pp
   state_context :: nat
-  state_value :: "(vname \<times> 'v) list lifted"
+  state_value :: "'v analysis_view lifted"
   state_checks :: "(exp \<times> contextual_verdict) list"
   state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
-  state_steps :: "(pp \<times> (vname \<times> 'v) list lifted) list"
+  state_steps :: "(pp \<times> 'v analysis_view lifted) list"
 
 record call_route =
   route_point :: pp
@@ -80,7 +86,7 @@ datatype result_global_key =
 
 record 'v result_global =
   global_key :: result_global_key
-  global_state :: "(vname \<times> 'v) list lifted"
+  global_state :: "'v analysis_view lifted"
 
 record 'v run_result =
   res_cfg :: cfg
@@ -103,20 +109,22 @@ where
 | "map_analysis_context f (Context_Entry vs) = Context_Entry (map f vs)"
 | "map_analysis_context f (Context_Call_String us) = Context_Call_String us"
 
+definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_view \<Rightarrow> 'w analysis_view" where
+  "map_analysis_view f = map (\<lambda>(a, s). (a, map_field_state f s))"
+
 definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_state \<Rightarrow> 'w result_state" where
   "map_result_state f st =
      \<lparr> state_point = state_point st,
        state_context = state_context st,
-       state_value = map_lift (map (\<lambda>(x, v). (x, f v))) (state_value st),
+       state_value = map_lift (map_analysis_view f) (state_value st),
        state_checks = state_checks st,
        state_diagnostics = state_diagnostics st,
-       state_steps =
-         map (\<lambda>(w, s). (w, map_lift (map (\<lambda>(x, v). (x, f v))) s)) (state_steps st) \<rparr>"
+       state_steps = map (\<lambda>(w, s). (w, map_lift (map_analysis_view f) s)) (state_steps st) \<rparr>"
 
 definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
   "map_result_global f g =
      \<lparr> global_key = global_key g,
-       global_state = map_lift (map (\<lambda>(x, v). (x, f v))) (global_state g) \<rparr>"
+       global_state = map_lift (map_analysis_view f) (global_state g) \<rparr>"
 
 definition map_run_result :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v run_result \<Rightarrow> 'w run_result" where
   "map_run_result f res =
@@ -224,7 +232,8 @@ text \<open>
 \<close>
 
 definition run_result_of ::
-    "('v \<Rightarrow> vname \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
+    "(vname list \<Rightarrow> 'v \<Rightarrow> abstract_value analysis_view) \<Rightarrow> ('c \<Rightarrow> order_key)
+       \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
        \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list)
        \<Rightarrow> (exp \<Rightarrow> 'v \<Rightarrow> check_result) \<Rightarrow> ('c, 'v) analysis_result
        \<Rightarrow> 'v lifted \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> 'v lifted)
@@ -233,7 +242,7 @@ definition run_result_of ::
   "run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p =
      (let g = prog_cfg p;
           vars = program_vars p;
-          view = map_lift (\<lambda>st. map (\<lambda>x. (x, render st x)) vars);
+          view = map_lift (render vars);
           ctxs = ordered_by_key ctx_key (snd ` result_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g;
@@ -293,14 +302,13 @@ definition run_result_of ::
 subsection \<open>What the active analyses publish, as data\<close>
 
 text \<open>
-  A variable reads as the value its one active analysis gives it, or, with several
-  active, as their values side by side in activation order. A context reads as the
-  formal values the active analyses key it by, in the same order.
+  A state reads as each active analysis's own part of it, in activation order. A context
+  reads as the formal values the active analyses key it by, in the same order.
 \<close>
 
-definition mcp_render :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
-  "mcp_render as v x =
-     (case as of [a] \<Rightarrow> value_of a v x | _ \<Rightarrow> ProductValue (map (\<lambda>a. value_of a v x) as))"
+definition mcp_render ::
+    "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> abstract_value analysis_view" where
+  "mcp_render as vars v = map (\<lambda>a. (a, field_of a v vars)) as"
 
 definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
   "mcp_ctx_values as ctx = concat (map (\<lambda>a. ctx_values a ctx) as)"

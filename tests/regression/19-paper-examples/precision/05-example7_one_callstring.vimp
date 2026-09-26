@@ -35,40 +35,53 @@
 //
 // nodes:
 //   main_pp5_ctx0: pp5 [proved]
-//       x=[6,6]
-//       y=[20,20]
+//       interval:
+//         x=[6,6]
+//         y=[20,20]
 //       check y == 20
 //   main_pp6_ctx0: pp6
-//       x=[6,6]
-//       y=[20,20]
+//       interval:
+//         x=[6,6]
+//         y=[20,20]
 //   main_exit_main_ctx0: exit_main
-//       x=[6,6]
-//       y=[20,20]
+//       interval:
+//         x=[6,6]
+//         y=[20,20]
 //   main_pp2_ctx0: pp2
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //   main_pp3_ctx0: pp3
-//       x=[6,6]
-//       y=⊤
+//       interval:
+//         x=[6,6]
+//         y=⊤
 //   main_pp4_ctx0: pp4 [proved]
-//       x=[6,6]
-//       y=[20,20]
+//       interval:
+//         x=[6,6]
+//         y=[20,20]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //   f_exit_f_ctx0: exit_f
-//       p=[3,3]
+//       interval:
+//         p=[3,3]
 //   f_pp0_ctx0: pp0
-//       p=[3,3]
+//       interval:
+//         p=[3,3]
 //   f_entry_f_ctx0: entry_f
-//       p=[3,3]
+//       interval:
+//         p=[3,3]
 //   f_exit_f_ctx1: exit_f
-//       p=[10,10]
+//       interval:
+//         p=[10,10]
 //   f_pp0_ctx1: pp0
-//       p=[10,10]
+//       interval:
+//         p=[10,10]
 //   f_entry_f_ctx1: entry_f
-//       p=[10,10]
+//       interval:
+//         p=[10,10]
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return p + p

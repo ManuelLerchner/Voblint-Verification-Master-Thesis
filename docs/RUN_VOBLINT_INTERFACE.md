@@ -36,9 +36,10 @@ else. An empty list or one that names an analysis twice answers
 `Invalid_Activation`; a consumer passes the list it was given and lets this
 answer reject it, so no second notion of a valid configuration exists outside
 Isabelle. A valid list runs one solve over the combined state (see
-[One dispatcher](#one-dispatcher)). A variable with one active analysis displays
-as that analysis's value; with several, as a `ProductValue` of their values in
-activation order.
+[One dispatcher](#one-dispatcher)). A state shows each active analysis's part on
+its own, in activation order, as Goblint's report shows each component of its
+combined state: a pointwise analysis as its variables' values (`Field_Store`), an
+analysis whose state relates variables as one value (`Field_Whole`).
 
 `map_run_result` is an explicit definition rather than a derived BNF map (plain
 `record`s are not BNFs), so the boundary itself spells out what presentation may
@@ -64,8 +65,11 @@ record 'v run_result =
 datatype 'v analysis_context =
   Context_Unit | Context_Entry "'v list" | Context_Call_String "pp list"
 
+datatype 'v field_state = Field_Store "(vname * 'v) list" | Field_Whole 'v
+type_synonym 'v analysis_view = "(analysis_domain * 'v field_state) list"
+
 record 'v result_state   = state_point :: pp, state_context :: nat,
-                           state_value :: "(vname * 'v) list lifted"   (Bot = unreachable)
+                           state_value :: "'v analysis_view lifted"   (Bot = unreachable)
                            state_checks :: "(exp * contextual_verdict) list"
                            state_diagnostics :: "(arithmetic_obligation * contextual_verdict) list"
 record call_route        = route_point :: pp, route_context :: nat,
@@ -75,7 +79,7 @@ record call_route        = route_point :: pp, route_context :: nat,
 record result_check      = check_point :: pp, check_exp :: exp,
                            check_verdict :: contextual_verdict
 record 'v result_global  = global_key :: result_global_key,
-                           global_state :: "(vname * 'v) list lifted"
+                           global_state :: "'v analysis_view lifted"
 datatype result_global_key = Global_Shared | Global_Seed pname "nat option"
                            (None = a procedure no solved context enters)
 datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)

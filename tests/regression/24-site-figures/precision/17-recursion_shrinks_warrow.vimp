@@ -17,22 +17,32 @@
 //
 // nodes:
 //   f_pp4_ctx0: pp4
-//       a=[-1,9]
+//       interval:
+//         a=[-1,9]
 //   f_exit_f_ctx0: exit_f
-//       a=[-1,9]
+//       interval:
+//         a=[-1,9]
 //   main_exit_main_ctx0: exit_main
+//       interval:
 //   f_pp0_ctx0: pp0
-//       a=[-1,9]
+//       interval:
+//         a=[-1,9]
 //   f_pp1_ctx0: pp1
-//       a=[-1,3]
+//       interval:
+//         a=[-1,3]
 //   f_pp3_ctx0: pp3 [proved]
-//       a=[-1,9]
+//       interval:
+//         a=[-1,9]
 //       check a <= 9
 //   main_pp5_ctx0: pp5
+//       interval:
 //   f_entry_f_ctx0: entry_f
-//       a=[-1,9]
+//       interval:
+//         a=[-1,9]
 //   main_pp6_ctx0: pp6
+//       interval:
 //   main_entry_main_ctx0: entry_main
+//       interval:
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [a < 4]

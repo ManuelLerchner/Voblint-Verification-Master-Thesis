@@ -28,9 +28,10 @@ those is unreadable. The XML report separates graph from state the way Goblint's
 own HTML output does.
 
 `--analysis` takes a comma list, which runs the named domains together in one
-solve. Each node has one `<analysis>` block, named by the list, whose values
-show each domain's part in list order (`[10,11] & 2ℤ`). Comparing domains
-means one report per domain.
+solve. Each node has one `<analysis>` block per active domain, in list order,
+as Goblint's report has one per component of its combined state: a pointwise
+domain's block maps its variables to values, and the order analysis's block is
+one value (`{x≤y ∧ y≤x}`). Comparing domains means one report per domain.
 
 The entry point is `index.xml`, not an `.html` file, and it renders only when
 served, because browsers refuse to apply its stylesheet over `file://`.

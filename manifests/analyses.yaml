@@ -80,7 +80,7 @@ domains:
       published_gamma: gamma_rel $v
       published_empty: ($v = RelBot)
       answer: rel_qry $v $q
-      display: OrderValue (order_view $x $v)
+      display: Field_Whole (OrderValue (order_pairs $v))
       init: top_relc
       route: "[]"
       context_values: "[]"

@@ -26,31 +26,39 @@
 //   main_exit_main_ctx0: exit_main [unreachable]
 //       unreachable
 //   main_pp3_ctx0: pp3
+//       interval:
 //   main_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   main_entry_main_ctx0: entry_main
+//       interval:
 //   f_exit_f_ctx0: exit_f [unreachable]
 //       unreachable
 //   f_pp0_ctx0: pp0 [proved]
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //       check x >= 0
 //   f_pp1_ctx0: pp1
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //   f_entry_f_ctx0: entry_f
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f_exit_f_ctx1: exit_f [unreachable]
 //       unreachable
 //   f_pp0_ctx1: pp0 [proved]
-//       x=[0,0]
+//       interval:
+//         x=[0,0]
 //       check x >= 0
 //   f_pp1_ctx1: pp1
-//       x=[0,0]
+//       interval:
+//         x=[0,0]
 //   f_pp2_ctx1: pp2 [unreachable]
 //       unreachable
 //   f_entry_f_ctx1: entry_f
-//       x=[0,0]
+//       interval:
+//         x=[0,0]
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: check(x >= 0)

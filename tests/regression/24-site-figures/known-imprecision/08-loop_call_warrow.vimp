@@ -19,28 +19,39 @@
 //
 // nodes:
 //   g_pp1_ctx0: pp1
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //   g_exit_g_ctx0: exit_g
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //   main_pp3_ctx0: pp3
-//       x=[0,10]
+//       interval:
+//         x=[0,10]
 //   main_pp6_ctx0: pp6
-//       x=[10,10]
+//       interval:
+//         x=[10,10]
 //   main_exit_main_ctx0: exit_main
-//       x=[10,10]
+//       interval:
+//         x=[10,10]
 //   g_pp0_ctx0: pp0 [unknown]
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //       check x < 10
 //   main_pp2_ctx0: pp2
-//       x=⊤
+//       interval:
+//         x=⊤
 //   main_pp4_ctx0: pp4
-//       x=[0,9]
+//       interval:
+//         x=[0,9]
 //   g_entry_g_ctx0: entry_g
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //   main_pp5_ctx0: pp5
-//       x=[0,9]
+//       interval:
+//         x=[0,9]
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
+//       interval:
+//         x=⊤
 //
 // edges:
 //   g_pp0_ctx0 -> g_pp1_ctx0: check(x < 10)

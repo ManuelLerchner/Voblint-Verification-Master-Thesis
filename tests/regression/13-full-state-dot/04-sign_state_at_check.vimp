@@ -23,24 +23,30 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       x=+
-//       y=⊤
+//       sign:
+//         x=+
+//         y=⊤
 //   main_pp2_ctx0: pp2 [proved]
-//       x=+
-//       y=+
+//       sign:
+//         x=+
+//         y=+
 //       check 0 < x
 //   main_pp3_ctx0: pp3
-//       x=+
-//       y=+
+//       sign:
+//         x=+
+//         y=+
 //   main_exit_main_ctx0: exit_main
-//       x=+
-//       y=+
+//       sign:
+//         x=+
+//         y=+
 //   main_pp0_ctx0: pp0
-//       x=⊤
-//       y=⊤
+//       sign:
+//         x=⊤
+//         y=⊤
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
-//       y=⊤
+//       sign:
+//         x=⊤
+//         y=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5

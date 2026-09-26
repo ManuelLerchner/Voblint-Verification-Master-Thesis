@@ -8,46 +8,24 @@
    Abstract states live in nodes/<id>.xml, never in DOT node labels: a product
    domain's state makes a CFG node unreadably wide when inlined.
 
-   Everything is built from the Context_graph of one run result per domain, so
-   nothing re-derives the CFG or parses a rendering back. *)
+   Everything is built from the Context_graph of the one run result, so nothing
+   re-derives the CFG or parses a rendering back. *)
 
 module G = Context_graph
 module X = Render_xml
 
 type file = { path : string; content : string }
 
-(* graphs is (domain name, graph), the first being the one the CFG is drawn
-   from. Node identifiers are built from the CFG and the context, both of which
-   every listed domain shares, so merging the others' states in by identifier is
-   sound -- and a node one domain does not cover simply contributes no block. *)
-let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
+let emit ~graph ~source_file ~source_text ~fn ~checks ~positions ~globals =
   let seg = X.xmlify source_file in
-  let _, graph = List.hd graphs in
-  let index =
-    List.map
-      (fun (name, g) ->
-        let by_id = Hashtbl.create 64 in
-        List.iter (fun (n : G.node) -> Hashtbl.replace by_id n.id n) g.G.nodes;
-        (name, by_id))
-      graphs
-  in
   let nodes = graph.G.nodes in
   let node_files =
     List.map
       (fun (node : G.node) ->
-        let id = node.id in
-        let blocks =
-          List.filter_map
-            (fun (name, by_id) ->
-              Option.map (fun n -> (name, n)) (Hashtbl.find_opt by_id id))
-            index
-        in
         {
-          path = Printf.sprintf "nodes/%s.xml" id;
+          path = Printf.sprintf "nodes/%s.xml" node.id;
           content =
-            X.node_xml ~source_file ~fn
-              ~loc:(X.node_line positions node)
-              ~blocks;
+            X.node_xml ~source_file ~fn ~loc:(X.node_line positions node) ~node;
         })
       nodes
   in
@@ -83,7 +61,7 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
      not separate CFGs -- so the index names that one entry rather than listing a
      function whose own graph does not exist. *)
   ( { path = "index.xml"; content = X.index_xml ~source_file ~fns:[ fn ] }
-    :: { path = "nodes/globals.xml"; content = X.globals_xml ~blocks:globals }
+    :: { path = "nodes/globals.xml"; content = X.globals_xml ~globals }
     :: {
          path = Printf.sprintf "files/%s.xml" seg;
          content = X.file_xml ~source_text ~checks ~line_nodes ~dead_lines;

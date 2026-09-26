@@ -51,8 +51,8 @@ let usage =
   \                             comparisons between them to the other\n\
   \                             analyses of a comma list.\n\
   \                             A comma list (e.g. interval,parity) runs the\n\
-  \                             named domains together in one solve: a value\n\
-  \                             shows each domain's part in list order, a\n\
+  \                             named domains together in one solve: a state\n\
+  \                             shows each domain's part on its own, a\n\
   \                             point any of them proves unreachable is\n\
   \                             unreachable, and a check is decided by the\n\
   \                             meet of their answers. Naming a domain twice\n\
@@ -132,16 +132,6 @@ let print_diagnostics path analysis positions diagnostics =
         (Result_text.diagnostic_message diagnostic)
         analysis)
     diagnostics
-
-(* Names the analysis in the report's own <analysis name="..."> element, so a
-   node document says which domain produced the state it shows. *)
-let analysis_label = function
-  | Voblint_CLI.Generated.Sign_Analysis -> "sign"
-  | Voblint_CLI.Generated.Interval_Analysis -> "interval"
-  | Voblint_CLI.Generated.Int_Analysis -> "int"
-  | Voblint_CLI.Generated.Parity_Analysis -> "parity"
-  | Voblint_CLI.Generated.Congruence_Analysis -> "congruence"
-  | Voblint_CLI.Generated.Order_Analysis -> "order"
 
 let rec mkdir_p dir =
   if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
@@ -533,7 +523,7 @@ let () =
       "voblint: --html cannot be combined with --dot/--graph-snapshot";
     exit 1
   end;
-  let label = String.concat "," (List.map analysis_label domains) in
+  let label = String.concat "," (List.map A.analysis_label domains) in
   let solve () =
     match
       Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
@@ -560,12 +550,8 @@ let () =
              beside the source and the solved globals all come off the same
              result, under the same view. *)
             let result = solve () in
-            let graphs = [ (label, Context_graph.build prog result) ] in
-            let globals =
-              match A.global_rows result with
-              | [] -> []
-              | gvs -> [ (label, gvs) ]
-            in
+            let graph = Context_graph.build prog result in
+            let globals = A.global_sections result in
             (* The source view's inline annotations need a verdict and a
              position; each check row carries its position as its label.
              Unreachable checks are dropped, matching what the text report's
@@ -607,7 +593,7 @@ let () =
             in
             let checks = checks @ diagnostics in
             let files, nodes, dead =
-              Report_dir.emit ~graphs ~source_file:(Filename.basename path)
+              Report_dir.emit ~graph ~source_file:(Filename.basename path)
                 ~source_text:src ~fn:"main" ~checks ~positions:stmt_positions
                 ~globals
             in

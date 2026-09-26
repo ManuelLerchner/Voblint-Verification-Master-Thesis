@@ -46,11 +46,15 @@
 //   main_exit_main_ctx0: exit_main [unreachable]
 //       unreachable
 //   f_pp0_ctx0: pp0
+//       interval:
 //   f_pp1_ctx0: pp1
+//       interval:
 //   f_pp3_ctx0: pp3 [unreachable]
 //       unreachable
 //   main_pp10_ctx0: pp10
+//       interval:
 //   f_entry_f_ctx0: entry_f
+//       interval:
 //   main_pp11_ctx0: pp11 [unreachable]
 //       unreachable
 //   main_pp12_ctx0: pp12 [unreachable]
@@ -59,6 +63,7 @@
 //       unreachable
 //       check 1 [dead]
 //   main_entry_main_ctx0: entry_main
+//       interval:
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [G < 1]

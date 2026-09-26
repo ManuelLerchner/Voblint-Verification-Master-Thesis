@@ -679,6 +679,7 @@ function buildAnalysisModel(result, doc) {
       ...s,
       from: offsetOf(doc, s.line, s.column),
       to: offsetOf(doc, s.end_line, s.end_column),
+      firstLineEnd: doc.line(clamp(s.line, 1, doc.lines)).to,
       nodes: nodesByPoint.get(s.point) ?? [],
     }));
 
@@ -697,12 +698,45 @@ function buildAnalysisModel(result, doc) {
 /* The compiler's return slot: assigned by `return e`, read back by the caller. */
 const RETURN_SLOT = "#ret";
 
-function slotValue(node, name) {
-  if (name === RETURN_SLOT) {
-    return node.ret ?? undefined;
+/*
+ * What the active analyses give a name in a list of state sections: one analysis's
+ * value as is, several side by side under their names. A section that holds the
+ * whole state rather than a value per variable gives no name a value.
+ */
+function joinValues(pairs) {
+  if (pairs.length === 0) {
+    return undefined;
   }
 
-  return (node.bindings.find(([x]) => x === name) ?? node.globals.find(([x]) => x === name))?.[1];
+  return pairs.length === 1 ? pairs[0][1] : pairs.map(([a, v]) => `${a} ${v}`).join(" \u00b7 ");
+}
+
+function sectionValue(sections, name) {
+  return joinValues(
+    sections.flatMap((section) => {
+      const found = section.bindings?.find(([x]) => x === name);
+
+      return found ? [[section.analysis, found[1]]] : [];
+    }),
+  );
+}
+
+/* A state's sections as text lines, each analysis's under its name. */
+function sectionLines(sections) {
+  return sections.flatMap((section) => [
+    `${section.analysis}:`,
+    ...(section.bindings
+      ? section.bindings.map(([name, value]) => `  ${name}=${value}`)
+      : [`  ${section.whole}`]),
+  ]);
+}
+
+function slotValue(node, name) {
+  if (name === RETURN_SLOT) {
+    return joinValues(node.ret);
+  }
+
+  return sectionValue(node.sections, name) ?? sectionValue(node.globals, name);
 }
 
 /*
@@ -713,7 +747,7 @@ function slotValue(node, name) {
 function valueAfterSteps(node, name) {
   const values = node.next
     .filter((step) => step.writes === name && "state" in step)
-    .map((step) => (step.state ? (step.state.find(([x]) => x === name)?.[1] ?? null) : null));
+    .map((step) => (step.state ? (sectionValue(step.state, name) ?? null) : null));
 
   return values.length > 0 ? values : undefined;
 }
@@ -755,13 +789,16 @@ function formatHint(label, samples) {
  * the value its own step produces, which run_voblint publishes beside the state it
  * starts from -- not the target point's state, which is a join wherever other
  * steps flow in too. A call's result is its continuation's state, the call's
- * combine; that and a callee entry other calls also enter are marked as joins.
+ * combine; that and a callee entry other calls also enter are marked as joins. An
+ * analysis whose state relates variables shows its whole state where a statement
+ * changes it.
  */
 function valueHints(model) {
   const hints = [];
 
   for (const statement of model.statements) {
     const written = new Map();
+    const relations = new Map();
 
     const sample = (label, key, value, merge) => {
       const entry = written.get(label) ?? { samples: [], merge: false };
@@ -802,14 +839,16 @@ function valueHints(model) {
 
         const exit = enter.exit ? model.nodes.get(enter.exit) : null;
 
-        if (!assignsResult && callee?.returns_value && exit && isLive(exit) && exit.ret) {
-          sample("\u21a9 ", node.context_key, exit.ret, enter.join);
+        const returned = exit && isLive(exit) ? joinValues(exit.ret) : undefined;
+
+        if (!assignsResult && callee?.returns_value && returned !== undefined) {
+          sample("\u21a9 ", node.context_key, returned, enter.join);
         }
       }
 
       for (const step of node.next.filter((step) => step.writes)) {
         if ("state" in step) {
-          const value = step.state?.find(([x]) => x === step.writes)?.[1];
+          const value = step.state ? sectionValue(step.state, step.writes) : undefined;
 
           if (value !== undefined) {
             sample(writeLabel(step.writes), node.context_key, value, false);
@@ -825,10 +864,37 @@ function valueHints(model) {
           sample(writeLabel(step.writes), node.context_key, value, step.join);
         }
       }
+
+      /* An analysis whose state relates variables has no value per variable, so it
+         shows its whole state after a step that changes it -- at a guard, only
+         after the edge that takes the branch. */
+      const before = new Map(
+        node.sections
+          .filter((section) => "whole" in section)
+          .map((section) => [section.analysis, section.whole]),
+      );
+
+      for (const step of node.next.filter((step) => step.state && !step.action.startsWith("!["))) {
+        for (const section of step.state.filter((section) => "whole" in section)) {
+          if (section.whole !== before.get(section.analysis)) {
+            const entry = relations.get(section.analysis) ?? [];
+
+            entry.push({ key: node.context_key, value: section.whole });
+            relations.set(section.analysis, entry);
+          }
+        }
+      }
     }
 
     for (const [name, entry] of written) {
       hints.push({ pos: statement.to, text: formatHint(name, entry.samples), merge: entry.merge });
+    }
+
+    /* A guard's effect belongs on the guard's own line, not after its block. */
+    const relationPos = statement.line < statement.end_line ? statement.firstLineEnd : statement.to;
+
+    for (const [analysis, samples] of relations) {
+      hints.push({ pos: relationPos, text: formatHint(`${analysis}: `, samples), merge: false });
     }
   }
 
@@ -1246,7 +1312,7 @@ function variableTooltip(name, statement, rows) {
   title.textContent = name;
   head.append(title);
 
-  if (rows.some(({ node }) => node.globals.some(([x]) => x === name))) {
+  if (rows.some(({ node }) => sectionValue(node.globals, name) !== undefined)) {
     const global = document.createElement("span");
 
     global.className = "cm-variable-tooltip-tag";
@@ -1422,7 +1488,12 @@ function seedLines(seed) {
   for (const line of seed.reachable ? seed.lines : []) {
     const chip = document.createElement("code");
 
-    chip.textContent = line;
+    chip.textContent = line.trim();
+
+    if (line.endsWith(":") && !line.startsWith(" ")) {
+      chip.className = "seed-analysis";
+    }
+
     lines.append(chip);
   }
 
@@ -1531,13 +1602,12 @@ function renderInspectorContext(node) {
 }
 
 /*
- * The state as the statement is reached: locals first, then globals, each in the
- * order the analysis lists them.
+ * The state as the statement is reached, one block per active analysis in activation
+ * order: a pointwise analysis's locals then globals, each in the order the analysis
+ * lists them, or the one value of an analysis whose state relates variables.
  */
 function renderStateTable(node) {
-  const bindings = [...node.bindings, ...node.globals];
-
-  if (bindings.length === 0) {
+  if (node.sections.length === 0) {
     const empty = document.createElement("p");
 
     empty.className = "inspector-message";
@@ -1546,30 +1616,56 @@ function renderStateTable(node) {
     return empty;
   }
 
-  const globals = new Set(node.globals.map(([name]) => name));
-
-  const table = document.createElement("table");
-  const head = table.createTHead().insertRow();
-  const row = table.createTBody().insertRow();
-
-  for (const [name, value] of bindings) {
-    const title = document.createElement("th");
-
-    title.textContent = name;
-
-    if (globals.has(name)) {
-      title.className = "global";
-      title.title = "global variable";
-    }
-
-    head.append(title);
-    row.insertCell().textContent = value;
-  }
-
   const wrapper = document.createElement("div");
 
   wrapper.className = "inspector-table";
-  wrapper.append(table);
+
+  for (const section of node.sections) {
+    const title = document.createElement("p");
+
+    title.className = "inspector-analysis";
+    title.textContent = section.analysis;
+    wrapper.append(title);
+
+    if (!section.bindings) {
+      const whole = document.createElement("code");
+
+      whole.textContent = section.whole;
+      wrapper.append(whole);
+      continue;
+    }
+
+    const globals = node.globals.find((g) => g.analysis === section.analysis)?.bindings ?? [];
+    const bindings = [...section.bindings, ...globals];
+    const globalNames = new Set(globals.map(([name]) => name));
+    const table = document.createElement("table");
+    const head = table.createTHead().insertRow();
+    const row = table.createTBody().insertRow();
+
+    for (const [name, value] of bindings) {
+      const cell = document.createElement("th");
+
+      cell.textContent = name;
+
+      if (globalNames.has(name)) {
+        cell.className = "global";
+        cell.title = "global variable";
+      }
+
+      head.append(cell);
+      row.insertCell().textContent = value;
+    }
+
+    if (bindings.length === 0) {
+      const empty = document.createElement("p");
+
+      empty.className = "inspector-message";
+      empty.textContent = "No variables in scope.";
+      wrapper.append(empty);
+    } else {
+      wrapper.append(table);
+    }
+  }
 
   return wrapper;
 }
@@ -2751,7 +2847,7 @@ function showGraphTooltip(node, event) {
     const title = document.createElement("strong");
     title.textContent = node.point;
 
-    const lines = [...node.bindings.map(([name, value]) => `${name}=${value}`), ...node.findings];
+    const lines = [...sectionLines(node.sections), ...node.findings];
     const body = document.createElement("pre");
     body.textContent = lines.length > 0 ? lines.join("\n") : "no bindings";
 

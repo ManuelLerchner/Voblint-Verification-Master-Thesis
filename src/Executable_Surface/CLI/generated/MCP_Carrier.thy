@@ -213,19 +213,25 @@ fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<R
 | "val_answer Order_Analysis v q =
      rel_qry (slot6 v) q"
 
-fun value_of :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname \<Rightarrow> abstract_value" where
-  "value_of Sign_Analysis v x =
-     SignValue (case (slot1 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Interval_Analysis v x =
-     IntervalValue (case (slot2 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Parity_Analysis v x =
-     ParityValue (case (slot3 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Int_Analysis v x =
-     IntDomValue (case (slot4 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Congruence_Analysis v x =
-     CongruenceValue (case (slot5 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)"
-| "value_of Order_Analysis v x =
-     OrderValue (order_view x (slot6 v))"
+fun field_of ::
+  "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname list \<Rightarrow> abstract_value field_state" where
+  "field_of Sign_Analysis v vars =
+     Field_Store (map (\<lambda>x. (x, SignValue (case (slot1 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st x)))
+       vars)"
+| "field_of Interval_Analysis v vars =
+     Field_Store (map (\<lambda>x. (x, IntervalValue (case (slot2 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
+       x))) vars)"
+| "field_of Parity_Analysis v vars =
+     Field_Store (map (\<lambda>x. (x, ParityValue (case (slot3 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
+       x))) vars)"
+| "field_of Int_Analysis v vars =
+     Field_Store (map (\<lambda>x. (x, IntDomValue (case (slot4 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
+       x))) vars)"
+| "field_of Congruence_Analysis v vars =
+     Field_Store (map (\<lambda>x. (x, CongruenceValue (case (slot5 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
+       x))) vars)"
+| "field_of Order_Analysis v vars =
+     Field_Whole (OrderValue (order_pairs (slot6 v)))"
 
 subsection \<open>Where each field starts, and what it keys a callee by\<close>
 

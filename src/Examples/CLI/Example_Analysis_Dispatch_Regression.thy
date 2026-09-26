@@ -122,11 +122,18 @@ definition step_demo_prog :: imp_prog where
 
 text \<open>One variable's value at a point and after each of the point's steps, under Interval.\<close>
 
+fun field_value :: "vname \<Rightarrow> 'v field_state \<Rightarrow> 'v option" where
+  "field_value x (Field_Store bs) = map_of bs x"
+| "field_value x (Field_Whole _) = None"
+
+definition interval_value :: "vname \<Rightarrow> 'v analysis_view \<Rightarrow> 'v option" where
+  "interval_value x view = Option.bind (map_of view Interval_Analysis) (field_value x)"
+
 definition step_view :: "imp_prog \<Rightarrow> vname \<Rightarrow> pp \<Rightarrow> (abstract_value option lifted
     \<times> (pp \<times> abstract_value option lifted) list) list" where
   "step_view p x v =
-     map (\<lambda>st. (map_lift (\<lambda>bs. map_of bs x) (state_value st),
-                map (\<lambda>(w, s). (w, map_lift (\<lambda>bs. map_of bs x) s)) (state_steps st)))
+     map (\<lambda>st. (map_lift (interval_value x) (state_value st),
+                map (\<lambda>(w, s). (w, map_lift (interval_value x) s)) (state_steps st)))
        (filter (\<lambda>st. state_point st = v)
           (res_states (analysis_result [Interval_Analysis] Globals_Warrow Ctx_None p)))"
 

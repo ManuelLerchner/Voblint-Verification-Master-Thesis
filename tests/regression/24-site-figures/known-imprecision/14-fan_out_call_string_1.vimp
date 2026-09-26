@@ -88,137 +88,204 @@
 //
 // nodes:
 //   main_exit_main_ctx0: exit_main
+//       interval:
 //   main_pp20_ctx0: pp20
+//       interval:
 //   main_pp21_ctx0: pp21
+//       interval:
 //   main_entry_main_ctx0: entry_main
+//       interval:
 //   f0_pp1_ctx0: pp1
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f0_exit_f0_ctx0: exit_f0
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f0_pp0_ctx0: pp0 [unknown]
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //       check x <= 22
 //   f0_entry_f0_ctx0: entry_f0
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f0_pp1_ctx1: pp1
-//       x=[2,+∞]
+//       interval:
+//         x=[2,+∞]
 //   f0_exit_f0_ctx1: exit_f0
-//       x=[2,+∞]
+//       interval:
+//         x=[2,+∞]
 //   f0_pp0_ctx1: pp0 [unknown]
-//       x=[2,+∞]
+//       interval:
+//         x=[2,+∞]
 //       check x <= 22
 //   f0_entry_f0_ctx1: entry_f0
-//       x=[2,+∞]
+//       interval:
+//         x=[2,+∞]
 //   f1_exit_f1_ctx0: exit_f1
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f1_pp2_ctx0: pp2
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f1_pp3_ctx0: pp3
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f1_pp4_ctx0: pp4
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f1_entry_f1_ctx0: entry_f1
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f1_exit_f1_ctx1: exit_f1
-//       x=[3,+∞]
+//       interval:
+//         x=[3,+∞]
 //   f1_pp2_ctx1: pp2
-//       x=[3,+∞]
+//       interval:
+//         x=[3,+∞]
 //   f1_pp3_ctx1: pp3
-//       x=[3,+∞]
+//       interval:
+//         x=[3,+∞]
 //   f1_pp4_ctx1: pp4
-//       x=[3,+∞]
+//       interval:
+//         x=[3,+∞]
 //   f1_entry_f1_ctx1: entry_f1
-//       x=[3,+∞]
+//       interval:
+//         x=[3,+∞]
 //   f2_exit_f2_ctx0: exit_f2
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f2_pp5_ctx0: pp5
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f2_pp6_ctx0: pp6
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f2_pp7_ctx0: pp7
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f2_entry_f2_ctx0: entry_f2
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f2_exit_f2_ctx1: exit_f2
-//       x=[4,+∞]
+//       interval:
+//         x=[4,+∞]
 //   f2_pp5_ctx1: pp5
-//       x=[4,+∞]
+//       interval:
+//         x=[4,+∞]
 //   f2_pp6_ctx1: pp6
-//       x=[4,+∞]
+//       interval:
+//         x=[4,+∞]
 //   f2_pp7_ctx1: pp7
-//       x=[4,+∞]
+//       interval:
+//         x=[4,+∞]
 //   f2_entry_f2_ctx1: entry_f2
-//       x=[4,+∞]
+//       interval:
+//         x=[4,+∞]
 //   f3_exit_f3_ctx0: exit_f3
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f3_pp8_ctx0: pp8
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f3_pp9_ctx0: pp9
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f3_pp10_ctx0: pp10
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f3_entry_f3_ctx0: entry_f3
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f3_exit_f3_ctx1: exit_f3
-//       x=[5,+∞]
+//       interval:
+//         x=[5,+∞]
 //   f3_pp8_ctx1: pp8
-//       x=[5,+∞]
+//       interval:
+//         x=[5,+∞]
 //   f3_pp9_ctx1: pp9
-//       x=[5,+∞]
+//       interval:
+//         x=[5,+∞]
 //   f3_pp10_ctx1: pp10
-//       x=[5,+∞]
+//       interval:
+//         x=[5,+∞]
 //   f3_entry_f3_ctx1: entry_f3
-//       x=[5,+∞]
+//       interval:
+//         x=[5,+∞]
 //   f4_exit_f4_ctx0: exit_f4
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f4_pp11_ctx0: pp11
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f4_pp12_ctx0: pp12
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f4_pp13_ctx0: pp13
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f4_entry_f4_ctx0: entry_f4
-//       x=[1,+∞]
+//       interval:
+//         x=[1,+∞]
 //   f4_exit_f4_ctx1: exit_f4
-//       x=[6,+∞]
+//       interval:
+//         x=[6,+∞]
 //   f4_pp11_ctx1: pp11
-//       x=[6,+∞]
+//       interval:
+//         x=[6,+∞]
 //   f4_pp12_ctx1: pp12
-//       x=[6,+∞]
+//       interval:
+//         x=[6,+∞]
 //   f4_pp13_ctx1: pp13
-//       x=[6,+∞]
+//       interval:
+//         x=[6,+∞]
 //   f4_entry_f4_ctx1: entry_f4
-//       x=[6,+∞]
+//       interval:
+//         x=[6,+∞]
 //   f5_exit_f5_ctx0: exit_f5
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f5_pp14_ctx0: pp14
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f5_pp15_ctx0: pp15
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f5_pp16_ctx0: pp16
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f5_entry_f5_ctx0: entry_f5
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f5_exit_f5_ctx1: exit_f5
-//       x=[7,7]
+//       interval:
+//         x=[7,7]
 //   f5_pp14_ctx1: pp14
-//       x=[7,7]
+//       interval:
+//         x=[7,7]
 //   f5_pp15_ctx1: pp15
-//       x=[7,7]
+//       interval:
+//         x=[7,7]
 //   f5_pp16_ctx1: pp16
-//       x=[7,7]
+//       interval:
+//         x=[7,7]
 //   f5_entry_f5_ctx1: entry_f5
-//       x=[7,7]
+//       interval:
+//         x=[7,7]
 //   f6_exit_f6_ctx0: exit_f6
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f6_pp17_ctx0: pp17
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f6_pp18_ctx0: pp18
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f6_pp19_ctx0: pp19
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   f6_entry_f6_ctx0: entry_f6
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //
 // edges:
 //   f0_pp0_ctx0 -> f0_pp1_ctx0: check(x <= 22)
