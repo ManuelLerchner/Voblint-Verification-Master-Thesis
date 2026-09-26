@@ -440,19 +440,14 @@ text \<open>
   Monotonicity is available for \<open>Never\<close> and \<open>Once\<close>: every operation
   behind them (\<open>assign_int_dom\<close>, \<open>special_int_dom\<close>, \<open>return_int_dom\<close>,
   \<open>enter_int_dom_for\<close>) is monotone once \<open>mode \<noteq> Refine_Fixpoint\<close>, and
-  \<open>Int_Backward\<close>'s \<open>backward_domain_refined\<close> interpretation gives
+  \<open>Int_Backward\<close>'s \<open>backward_domain_mono\<close> interpretation gives
   \<open>bfilter_int_dom_never\<close>/\<open>bfilter_int_dom_once\<close> their own monotonicity
   (\<open>bfilter_mono\<close>). \<open>bfilter_int_dom_fixpoint\<close> has no such theorem --
-  \<open>Int_Backward\<close> interpreted \<open>Refine_Fixpoint\<close> against the weaker
-  \<^locale>\<open>backward_domain\<close> locale precisely because \<open>refine_fix\<close> lacks one --
-  so \<open>Refine_Fixpoint\<close> gets no matching monotonicity lemma here. The same
-  gap means \<open>Never\<close>/\<open>Once\<close> alone get the pollution-fixed, shared \<open>branch\<close>
-  (\<open>branch_int_dom_never\<close>/\<open>_once\<close>, backed by
-  \<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>'s \<open>bfilter_st_lift_correct\<close>, itself
-  only proved for \<^locale>\<open>backward_domain_refined\<close>): \<open>Refine_Fixpoint\<close>
-  instead names its own, explicitly local \<open>branch_int_dom_fixpoint\<close>
-  (\<open>Int_Backward.thy\<close>), since there is no executable correspondence theorem
-  to route the shared one's dispatch through for this mode.
+  \<open>Int_Backward\<close> interprets \<open>Refine_Fixpoint\<close> against the weaker
+  \<^locale>\<open>backward_domain_reductive\<close> precisely because \<open>refine_fix\<close> lacks one --
+  so \<open>Refine_Fixpoint\<close> gets no matching monotonicity lemma here. Its \<open>branch\<close>
+  is still the shared, pollution-fixed one: \<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>'s
+  \<open>bfilter_st_lift_correct\<close> needs only \<^locale>\<open>backward_domain_reductive\<close>.
 \<close>
 
 lemma int_tf_abs_never_mono:

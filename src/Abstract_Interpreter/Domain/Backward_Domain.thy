@@ -12,8 +12,9 @@ text \<open>
   \<open>inv_plus\<close>, ...), each sound in the sense that every concrete pair the operator
   admits before the operation is still admitted after narrowing, from which \<open>afilter\<close>
   and \<open>bfilter\<close> -- the expression- and boolean-level filters -- are derived once with
-  their soundness and monotonicity. \<open>backward_domain_refined\<close> adds the reductive
-  and monotone inverse operators a domain with a conservative inverse can provide.
+  their soundness and monotonicity. \<open>backward_domain_reductive\<close> and
+  \<open>backward_domain_mono\<close> add the reductive and monotone inverse operators a
+  domain with a conservative inverse can provide.
   This abstracts the backward-refinement operations Goblint's \<open>BaseInvariant\<close> implements
   concretely for its Base analysis; Goblint has no generic module signature this locale
   is a formalization of.
@@ -26,8 +27,8 @@ text \<open>
   operands. It need not be the lattice infimum: a domain may normalize an
   empty result while its representation order still distinguishes several
   empty elements. This locale records the preservation obligation;
-  \<open>backward_domain_refined\<close> adds the reductiveness and monotonicity needed
-  by solver-facing filters.
+  \<open>reductive_intersection\<close> and \<open>mono_intersection\<close> add reductiveness and
+  monotonicity as separate strengthenings.
 \<close>
 
 

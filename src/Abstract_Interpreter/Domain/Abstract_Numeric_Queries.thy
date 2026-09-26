@@ -13,11 +13,9 @@ text \<open>
   same three-way shape \<open>tobool\<close> already gives a single abstract value's
   truthiness.
 
-  \<open>executable_numeric_queries\<close> fixes that shape alone: a consumer that only
-  ever calls \<open>less\<close>/\<open>eq\<close>, never proves anything about them, requests
-  \<open>'a::executable_domain\<close> and never drags \<open>gamma\<close> into its type-class
-  dictionary. \<open>abstract_numeric_queries\<close> adds the soundness obligation on
-  top. Kept in a session with no \<open>exp\<close>/\<open>store\<close> concept at all, so a domain
+  \<open>abstract_numeric_queries\<close> fixes that shape together with its soundness
+  obligation, as \<open>sound_truth_test\<close> does for \<open>tobool\<close>. Kept in a session with
+  no \<open>exp\<close>/\<open>store\<close> concept at all, so a domain
   that only has these two operations could still interpret it: the
   \<open>backward_domain\<close> locale refines an
   abstract value under an assumed truth value; \<open>abstract_numeric_queries\<close>
@@ -35,17 +33,13 @@ text \<open>
   narrowing altogether.
 \<close>
 
-locale executable_numeric_queries =
-  fixes less :: "'a::executable_domain \<Rightarrow> 'a \<Rightarrow> bool option"
-    and eq   :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-
 text \<open>The soundness obligation, stated so that a \<open>Some\<close> answer is exact rather than merely
   one-sided: every concrete pair drawn from the two values must relate the way the answer
   says.  \<open>None\<close> carries no obligation at all, which is what lets a domain answer it whenever
   it cannot decide.\<close>
-locale abstract_numeric_queries = executable_numeric_queries less eq
-  for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
-    and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" +
+locale abstract_numeric_queries =
+  fixes less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
+    and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
   assumes less_sound[intro]:
       "less a b = Some r \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> (i < j) = r"
     and eq_sound[intro]:

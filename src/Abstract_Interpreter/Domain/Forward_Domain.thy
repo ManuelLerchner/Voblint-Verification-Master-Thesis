@@ -9,7 +9,7 @@ text \<open>
   evaluator of expressions over an abstract state and a truth test on abstract values.
   Guard refinement (\<open>backward_domain\<close>), the special calls of the transfer
   functions (\<open>sound_special_ops\<close>), the arithmetic of an expression domain
-  (\<open>expression_domain_sound\<close>) and the check layer (\<open>abstract_expression_domain\<close>)
+  (\<open>expression_domain_sound\<close>) and the check layer (\<open>abstract_check_domain\<close>)
   all build on them.  Stating the operations and their laws once lets a domain prove
   them once: the first interpretation registers them, and every later interface over
   the same operations inherits them instead of asking again.

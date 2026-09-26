@@ -1,6 +1,7 @@
 theory Abstract_Arithmetic
   imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
-    "Voblint_Framework.Abstract_Checks" "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Three_Valued" "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Abstract_Numeric_Queries"
     "Voblint_Domain.Nonrelational_State"
 begin
 
@@ -53,23 +54,6 @@ text \<open>
 fun of_bool_option :: "(int \<Rightarrow> 'a::sup) \<Rightarrow> bool option \<Rightarrow> 'a" where
   "of_bool_option lit (Some b) = lit (if b then 1 else 0)"
 | "of_bool_option lit None = lit 0 \<squnion> lit 1"
-
-text \<open>
-  A definite answer survives widening the operands, so the combinators keep every
-  definite answer of their wider inputs.
-\<close>
-
-lemma and_opt_mono:
-  assumes "\<And>b. x2 = Some b \<Longrightarrow> x1 = Some b" and "\<And>b. y2 = Some b \<Longrightarrow> y1 = Some b"
-  shows "and_opt x2 y2 = Some b \<Longrightarrow> and_opt x1 y1 = Some b"
-  using assms(1)[of True] assms(1)[of False] assms(2)[of True] assms(2)[of False]
-  unfolding and_opt_def by (cases b) (auto split: if_splits)
-
-lemma or_opt_mono:
-  assumes "\<And>b. x2 = Some b \<Longrightarrow> x1 = Some b" and "\<And>b. y2 = Some b \<Longrightarrow> y1 = Some b"
-  shows "or_opt x2 y2 = Some b \<Longrightarrow> or_opt x1 y1 = Some b"
-  using assms(1)[of True] assms(1)[of False] assms(2)[of True] assms(2)[of False]
-  unfolding or_opt_def by (cases b) (auto split: if_splits)
 
 locale expression_domain_sound =
   sound_truth_test tobool + abstract_numeric_queries lt eqb

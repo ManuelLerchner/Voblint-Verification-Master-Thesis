@@ -11,6 +11,7 @@ session Voblint_Domain in "." = "Voblint_VIMP" +
     Nonrelational_Reachability
     Forward_Domain
     Backward_Domain
-    Backward_Domain_Refined
+    Backward_Domain_Mono
+    Three_Valued
     Abstract_Numeric_Queries
     Backward_Numeric_Queries

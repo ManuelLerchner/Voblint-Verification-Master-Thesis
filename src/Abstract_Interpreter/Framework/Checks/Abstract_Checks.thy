@@ -1,77 +1,22 @@
 theory Abstract_Checks
   imports Check_Result Checks "Voblint_Domain.Abstract_Numeric_Queries"
-    "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Forward_Domain" "Voblint_Domain.Three_Valued"
 begin
 
-
-section \<open>Three-valued Boolean combinators\<close>
-
-text \<open>
-  \<open>and_opt\<close>/\<open>or_opt\<close> give \<open>bool option\<close> the same short-circuit reading
-  \<^const>\<open>truthy\<close>'s own \<open>\<and>\<close>/\<open>\<or>\<close> already have: a definite \<open>False\<close> operand decides
-  an \<open>and_opt\<close> regardless of the other side (symmetrically, a definite \<open>True\<close>
-  operand decides an \<open>or_opt\<close>), and only two agreeing definite operands decide
-  the other direction. Anything else is \<open>None\<close> -- neither operand alone can be
-  blamed for the unknown.
-\<close>
-
-definition and_opt :: "bool option \<Rightarrow> bool option \<Rightarrow> bool option" where
-  "and_opt x y = (if x = Some False \<or> y = Some False then Some False
-                   else if x = Some True \<and> y = Some True then Some True
-                   else None)"
-
-definition or_opt :: "bool option \<Rightarrow> bool option \<Rightarrow> bool option" where
-  "or_opt x y = (if x = Some True \<or> y = Some True then Some True
-                  else if x = Some False \<and> y = Some False then Some False
-                  else None)"
+section \<open>A domain-generic sound decision procedure for compiled checks\<close>
 
 text \<open>
-  The semantic reading a caller actually wants: given what \<open>x\<close>/\<open>y\<close> mean
-  (\<open>px\<close>/\<open>py\<close>, via the same Horn-clause shape an induction hypothesis already
-  has), \<open>and_opt\<close>/\<open>or_opt\<close>'s answer agrees with plain Boolean \<open>\<and>\<close>/\<open>\<or>\<close> on those
-  meanings. Stated this way, a consumer never has to know \<open>and_opt\<close>/\<open>or_opt\<close>'s
-  own three-way case split.
-\<close>
-
-lemma and_opt_sound:
-  assumes "and_opt x y = Some r"
-    and "\<And>b. x = Some b \<Longrightarrow> px = b"
-    and "\<And>b. y = Some b \<Longrightarrow> py = b"
-  shows "(px \<and> py) = r"
-  using assms unfolding and_opt_def by (cases r) (auto split: if_splits)
-
-lemma or_opt_sound:
-  assumes "or_opt x y = Some r"
-    and "\<And>b. x = Some b \<Longrightarrow> px = b"
-    and "\<And>b. y = Some b \<Longrightarrow> py = b"
-  shows "(px \<or> py) = r"
-  using assms unfolding or_opt_def by (cases r) (auto split: if_splits)
-
-section \<open>Expression abstraction over a state, given numeric queries\<close>
-
-text \<open>
-  Adds the one capability every domain with an \<open>exp\<close> evaluator already has,
-  on top of \<^locale>\<open>abstract_numeric_queries\<close>
-  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>): \<open>aval_abs_sound\<close>-shaped
-  soundness, the same reuse point the \<open>backward_domain\<close> locale
-  (\<open>Voblint_Domain.Backward_Domain\<close>) takes for its own \<open>aval_abs\<close> parameter. Extending
+  A check needs two capabilities every domain with an \<open>exp\<close> evaluator already
+  has: \<open>aval_abs_sound\<close>-shaped soundness (\<^locale>\<open>sound_evaluator\<close>, the same
+  reuse point the \<open>backward_domain\<close> locale takes for its own \<open>aval_abs\<close>) and the
+  relational queries of \<^locale>\<open>abstract_numeric_queries\<close>
+  (\<^theory>\<open>Voblint_Domain.Abstract_Numeric_Queries\<close>). Extending
   \<open>abstract_numeric_queries\<close> directly, rather than fixing four raw
   entailment/refutation predicates here, means there is exactly one relational
   query interface in this codebase -- \<open>less\<close>/\<open>eq\<close> -- and every check-discharge
   consumer of it inherits whatever a domain already proved for
   \<^locale>\<open>abstract_numeric_queries\<close> instead of restating it.
-\<close>
 
-locale abstract_expression_domain =
-  abstract_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
-    for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
-      and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-      and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
-      and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
-
-section \<open>A domain-generic sound decision procedure for compiled checks\<close>
-
-text \<open>
   The per-domain guard machinery (the \<open>backward_domain\<close> locale's
   \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False \<sigma>\<close>
   represents no states, \<open>c\<close> is soundly established on \<open>\<sigma>\<close>, whenever
@@ -89,7 +34,7 @@ text \<open>
 \<close>
 
 locale abstract_check_domain =
-  abstract_expression_domain less eq \<gamma>\<^sub>S aval_abs
+  abstract_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"

@@ -345,8 +345,7 @@ text \<open>
       directly in any \<^locale>\<open>backward_domain\<close> instance's own context, from
       that instance's own narrowing operators --- a sound default a concrete
       domain may override with sharper, hand-tuned predicates.
-    \<^item> @{theory Voblint_Framework.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
-      and \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
+    \<^item> @{theory Voblint_Framework.Abstract_Checks} --- \<^locale>\<open>abstract_check_domain\<close>: the single \<^verbatim>\<open>check_query\<close> decision
       procedure into \<^typ>\<open>bool option\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to

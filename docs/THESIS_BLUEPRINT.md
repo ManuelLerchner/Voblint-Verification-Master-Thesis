@@ -1217,7 +1217,7 @@ discharged without machinery.
 
 **Ch. 5.** Short. Prerequisite: Ch. 2.1–2.3. The lift deserves a figure
 (`Bot` vs `Lifted bot` are different, and the reason is the whole point).
-*Omit* the refined backward locale (`backward_domain_refined`) and the
+*Omit* the monotone backward locale (`backward_domain_mono`) and the
 numeric-query derivation details; state the interface and one soundness lemma.
 
 **Ch. 6.** Prerequisite: Ch. 2.4, Ch. 5. Open with Goblint's `Spec` signature

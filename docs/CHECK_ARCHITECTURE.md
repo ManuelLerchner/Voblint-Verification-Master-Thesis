@@ -110,9 +110,9 @@ never added — see "Why no automatic sublocale" below.
 
 ### `Abstract_Checks.thy` — expression/check evaluation
 
-Owns `abstract_expression_domain` (adds `gamma_state`/`aval_abs` on top of
-the numeric queries) and `abstract_check_domain` (mutually recursive
-`check_true`/`check_false` over `bexp`, the three-way `classify_check`,
+Owns `abstract_check_domain` (the numeric queries plus a sound
+`aval_abs` over a state concretization `γS`), the three-valued
+`check_query` over `exp`, the three-way `classify_check`,
 and `abstract_checks_proven`, the node-indexed bridge to
 `Checks.thy`'s domain-independent `checks_proven`).
 

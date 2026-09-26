@@ -291,14 +291,14 @@ subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
   One interpretation discharges soundness, monotonicity, and reductiveness
-  together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
+  together against @{locale backward_domain_mono} -- each \<open>inv_*\<close>'s
   mono/reductive obligation is one @{const le_pair} fact, transparent notation for
   the componentwise \<open>\<and>\<close> the per-operator lemmas above already prove, so no
   bridging step is needed at any of these call sites.
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_refined meet_sign aval_sign sign_tobool
+    backward_domain_mono meet_sign aval_sign sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter

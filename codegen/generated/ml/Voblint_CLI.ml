@@ -4461,6 +4461,14 @@ let rec length_tailrec x0 n = match x0, n with [], n -> n
 
 let rec stabl (State_ext (c, infl, stabl, sigma, more)) = stabl;;
 
+let rec or_opt
+  x y = (if equal_option equal_bool x (Some true) ||
+              equal_option equal_bool y (Some true)
+          then Some true
+          else (if equal_option equal_bool x (Some false) &&
+                     equal_option equal_bool y (Some false)
+                 then Some false else None));;
+
 let prog_main_name : string = "main";;
 
 let rec body (Proc_decl_ext (formals, body, more)) = body;;
@@ -4566,6 +4574,14 @@ let rec dg_spec_step
     | s, EA_Check (l, cnd) -> dgs_event s (Check_Event (l, cnd));;
 
 let abort_empty_set _ = failwith "List.abort_empty_set";;
+
+let rec and_opt
+  x y = (if equal_option equal_bool x (Some false) ||
+              equal_option equal_bool y (Some false)
+          then Some false
+          else (if equal_option equal_bool x (Some true) &&
+                     equal_option equal_bool y (Some true)
+                 then Some true else None));;
 
 let rec sup_set _A
   x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
@@ -4788,14 +4804,6 @@ let rec sup_fin _A = function Set [] -> abort_empty_set (sup_fin _A)
                      | Set (x :: xs) -> fold (sup _A.sup_semilattice_sup) xs x;;
 
 let rec sup_fset _A s = sup_fin _A (fset s);;
-
-let rec or_opt
-  x y = (if equal_option equal_bool x (Some true) ||
-              equal_option equal_bool y (Some true)
-          then Some true
-          else (if equal_option equal_bool x (Some false) &&
-                     equal_option equal_bool y (Some false)
-                 then Some false else None));;
 
 let rec man_local
   (Man_ext (man_local, man_global, man_sideg, more)) = man_local;;
@@ -5397,14 +5405,6 @@ let rec sign_lt
                  else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
                         else (if sign_le b SNeg && sign_le a SPos
                                then Some false else None))));;
-
-let rec and_opt
-  x y = (if equal_option equal_bool x (Some false) ||
-              equal_option equal_bool y (Some false)
-          then Some false
-          else (if equal_option equal_bool x (Some true) &&
-                     equal_option equal_bool y (Some true)
-                 then Some true else None));;
 
 let rec aval_sign
   x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
