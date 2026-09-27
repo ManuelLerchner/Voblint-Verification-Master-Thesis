@@ -41,6 +41,12 @@ SHOWCASE = [
         "neither proves alone; every kind of inline annotation appears once.",
     ),
     (
+        "25-cooperation/precision/06-order_asks_interval.vimp",
+        "Cooperation the other way",
+        "The order analysis asks Interval how an assigned value compares with x, "
+        "keeps the pair through a join, and proves what Interval loses.",
+    ),
+    (
         "20-nested-loops/precision/02-nested2_narrowing_recovers_j.vimp",
         "Widening, then narrowing",
         "Nested loops: the inner head widens j to [0,+inf] and narrows it back, "

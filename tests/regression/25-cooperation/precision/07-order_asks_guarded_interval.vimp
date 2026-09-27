@@ -1,0 +1,29 @@
+// PARAM: --analysis interval,order
+// Concretely x <= y at the check: every path that keeps x sets y above its bound.
+//
+// The bounds come from guards rather than constants. On the first branch the guard
+// leaves x <= 5, so at y = 10 Interval answers x <= y with the exact 1; on the second
+// x <= 100 and y = 200 give the same answer. The order analysis records the pair on
+// every path, and the join keeps it. Interval alone joins x and y into overlapping
+// intervals, and the order analysis alone cannot compare x with a constant
+// (06-order_asks_interval is the constant-only form).
+fun main() {
+  c = __voblint_nondet_int();
+  x = __voblint_nondet_int();
+  if (0 < c) {
+    if (x <= 5) {
+      y = 10;
+    } else {
+      y = 0;
+      x = 0;
+    }
+  } else {
+    if (x <= 100) {
+      y = 200;
+    } else {
+      y = 0;
+      x = 0;
+    }
+  }
+  __voblint_check(x <= y); // PROVED
+}
