@@ -47,6 +47,7 @@ BUDGET = {
     "HOL-Computational_Algebra": 2,  # hoisted into Voblint_VIMP
     "Deriving": 8,  # 8 tiny theories, ~3s total, one user
     "HOL-IMP": 1,  # one theory, under a second
+    "Root_Balanced_Tree": 1,  # Time_Monad, inside TD itself when TD is rebuilt
 }
 
 DEFAULT_LOG = "build/isabelle-build.log"
