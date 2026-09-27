@@ -113,12 +113,16 @@ def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
             # HOL-Library only redefine or interpret (lfp, mono).
             # A named interpretation (`..._Interp`) copies a locale's facts;
             # the generic locale entity is the definition a citation means.
-            def rank(value: str) -> tuple[bool, bool, bool, bool, int, bool, str]:
+            # The vendored solver's sessions render under Unsorted/, but their
+            # owner pages define what the project cites (widen, narrow).
+            def rank(value: str) -> tuple[bool, bool, bool, bool, bool, int, bool, str]:
                 page, _, entity = value.partition("#")
+                project = page.startswith(("Voblint/", "Unsorted/TD/"))
                 return (
                     not page.startswith("Voblint/"),
-                    not page.startswith(("Voblint/", "HOL/HOL/")),
-                    page.startswith("Unsorted/"),
+                    not project,
+                    not (project or page.startswith("HOL/HOL/")),
+                    page.startswith("Unsorted/") and not project,
                     "_Interp." in entity,
                     entity.count("."),
                     "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
@@ -274,7 +278,13 @@ def resolve(
         if hits:
             # An untyped theorem-header citation may name a project datatype
             # while HOL has an unrelated constant with the same short name.
-            links[key] = min(hits, key=lambda hit: not hit.startswith("Voblint/"))
+            links[key] = min(
+                hits,
+                key=lambda hit: (
+                    not hit.startswith("Voblint/"),
+                    not hit.startswith("Unsorted/TD/"),
+                ),
+            )
         else:
             unresolved.append(
                 f"  {path.relative_to(REPO)}:{line}: {name} has no "
