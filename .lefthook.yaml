@@ -116,10 +116,13 @@ pre-commit:
             stage_fixed: true
 
           # isar-tools: layout only (indentation, trailing whitespace, blank
-          # lines, wrapping at 100 symbols). isar.toml excludes the generated
-          # theories, also when they are staged.
+          # lines, wrapping at 100 symbols). Needs the AFP (scripts/mk/isar.sh).
+          # Generated theories belong to their generators and drift checks.
           - name: isabelle-format
-            glob: "**/*.thy"
+            glob: "src/**/*.thy"
+            exclude:
+              - "src/**/generated/**"
+              - "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy"
             run: pixi run isar-fmt -- {staged_files}
             stage_fixed: true
 
@@ -445,13 +448,12 @@ pre-commit:
               - "scripts/retired_identifiers.txt"
             run: pixi run retired-identifiers-check
 
-          # ROOT entries, sorry/oops and unclosed proofs, lexical errors, theory
-          # names, and formatting of every theory (isar-tools, isar.toml).
+          # ROOT entries, sorry/oops and unclosed proofs, lexical errors, and
+          # formatting of every theory (isar-tools; needs the AFP).
           - name: isar-check
             glob:
               - "**/ROOT"
               - "ROOTS"
-              - "isar.toml"
               - "src/**/*.thy"
             run: pixi run isar-check
 

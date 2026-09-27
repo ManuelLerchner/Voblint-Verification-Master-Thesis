@@ -290,10 +290,14 @@ vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the
 # Source checks and formatting with isar-tools. Both read AFP commands (`derive`,
 # ...) from $AFP, so they need the AFP but not an Isabelle build. `isar-check`
 # runs the project, proofs, and syntax groups: ROOT entries, `sorry`/`oops`
-# and unclosed proofs, and lexical errors. `isar-fmt` formats the given
-# theories (default: src/); layout only, see isar-tools' docs/FORMATTER.md.
-isar-check = { cmd = "bash scripts/mk/isar.sh check .", description = "Check ROOT files, unfinished proofs, and theory syntax with isar-tools." }
-isar-fmt = { cmd = "bash scripts/mk/isar.sh fmt", description = "Format Isabelle theories with isar-tools (default: src/; pass paths to narrow)." }
+# and unclosed proofs, and lexical errors, after `isar-fmt-check`. `isar-fmt`
+# formats the given theories (default: every tracked src/ theory except
+# generated ones); layout only, see isar-tools' docs/FORMATTER.md.
+isar-check = { cmd = "bash scripts/mk/isar.sh check .", depends-on = [
+  "isar-fmt-check",
+], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
+isar-fmt = { cmd = "bash scripts/mk/isar.sh fmt", description = "Format Isabelle theories with isar-tools (default: tracked src/ theories except generated ones; pass paths to narrow)." }
+isar-fmt-check = { cmd = "bash scripts/mk/isar.sh fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
 
 # Isabelle build
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
