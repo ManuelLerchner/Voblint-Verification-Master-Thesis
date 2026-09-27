@@ -455,12 +455,17 @@ jobs:
           path: ${{ runner.temp }}/ci-marker/thesis-facts
           key: ${{ steps.facts-cache.outputs.cache-primary-key }}
 
-      # Both read the vendored solver: pages_stats.py measures it, and a name the
-      # page cites may be declared there. They live in this job because it is the
+      # These read the vendored solver: pages_stats.py measures it, and a name
+      # the page cites may be declared there. They live in this job because it is the
       # one lint job that initialises the submodule; without it pages_stats.py
       # refuses to run rather than publish a wrong solver count.
       - name: Site repository figures are derived and current
         run: pixi run pages-stats
+
+      # Same measurement, for the thesis: the committed stats.json must match
+      # and no repository figure may be typed into the chapters by hand.
+      - name: Thesis repository figures are derived and current
+        run: pixi run thesis-stats
 
       - name: Every Isabelle name the site uses is linked into the theory HTML
         run: pixi run pages-terms
@@ -575,8 +580,8 @@ jobs:
       - name: Verification task surface
         run: pixi run verification-surface-check
 
-      # isar-tools (isar.toml): ROOT entries, sorry/oops and unclosed proofs,
-      # lexical errors, theory names, and formatting. No AFP or Isabelle needed.
+        # isar-tools (isar.toml): ROOT entries, sorry/oops and unclosed proofs,
+        # lexical errors, theory names, and formatting. No AFP or Isabelle needed.
       - name: Theory sources (isar-tools)
         run: pixi run isar-check
 
@@ -655,24 +660,17 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
-      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
-      # resolved against the command that declares it, so a rename in the
-      # theories fails here instead of leaving the thesis describing something
-      # that no longer exists. Reads .thy sources directly -- no Isabelle.
-      - name: Thesis references resolve against the theories (no build needed)
-        run: pixi run thesis-refs
 
-      # Declarations the thesis shows are lifted out of the theories by name.
-      # Text extraction only, so this catches an edited definition without
-      # waiting for Isabelle.
-      - name: Thesis snippets match the theories (no build needed)
-        run: pixi run thesis-snippets
+      # The Goblint comparison appendix is generated from the explainer's
+      # alignment rows; the committed JSON must match the page.
+      - name: Thesis Goblint comparison matches the explainer (no build needed)
+        run: pixi run thesis-alignment
 
       # check_thy_prose_refs resolves a cited name against every .thy under src/
       # AND vendor/, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
       # dangling unless the submodule is present. The checkout above is
-      # submodules: false, so it has to be initialised here -- after the four
+      # submodules: false, so it has to be initialised here -- after the
       # checks that genuinely need nothing, so those still fail fast.
       - name: Trust the checked-out workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -684,6 +682,36 @@ jobs:
           git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
+
+      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
+      # resolved against the command that declares it, so a rename in the
+      # theories fails here instead of leaving the thesis describing something
+      # that no longer exists. Reads .thy sources directly -- no Isabelle; HOL
+      # names resolve through the committed link map. Needs td-verification.
+      - name: Thesis references resolve against the theories (no build needed)
+        run: pixi run thesis-refs
+
+      # Declarations the thesis shows are lifted out of the theories by name.
+      # Text extraction only, so this catches an edited definition without
+      # waiting for Isabelle. HOL snippets are left to the jobs that have it.
+      - name: Thesis snippets match the theories (no build needed)
+        run: pixi run thesis-snippets
+
+      # The notation table is derived from the theories and rendered in the
+      # thesis, the README and the explainer; all three must be current.
+      # Needs td-verification: widen and narrow are declared there.
+      - name: Thesis notation table matches the theories (no build needed)
+        run: pixi run thesis-notation
+
+      # The recorded conda-forge status must describe the OCaml packaging
+      # manifest; refreshing it needs the network and is done by hand.
+      - name: Thesis conda-forge record matches the manifest (no build needed)
+        run: pixi run thesis-conda
+
+      # Asks conda-forge: fails once a recipe is merged and the thesis figure
+      # would show an outdated status. Fix with `pixi run thesis-conda-write`.
+      - name: Thesis conda-forge record is current
+        run: pixi run thesis-conda-live
 
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
@@ -738,6 +766,11 @@ jobs:
       # record of how the analyzer used to behave.
       - name: Thesis claims still match the CLI
         run: pixi run thesis-claims
+
+      # Every VIMP listing opens its own program in the playground, at the
+      # settings of the claim or fixture it shows, as a clickable PDF link.
+      - name: Thesis VIMP listings link their programs
+        run: pixi run thesis-vimp
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: pixi run property-test
