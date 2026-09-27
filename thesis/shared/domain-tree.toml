@@ -8,9 +8,14 @@ roots = [
   "numeric_domain",
   "sound_evaluator",
   "sound_truth_test",
-  "semantic_intersection",
+  "sound_intersection",
   "backward_domain",
+  "sound_numeric_queries",
 ]
+
+# Degrees by which a node's dashed edges to its constraining class bend, where a
+# straight edge would cross another node.
+bends = { sound_numeric_queries = -7, sound_truth_test = -8 }
 
 # One table per row, from the most general declaration down to the most
 # derived; each value is the node's horizontal centre as a fraction of the text
@@ -23,7 +28,8 @@ rows = [
   { semilattice_sup = 0.42, narrowing = 0.68 },
   { bounded_semilattice_sup_bot = 0.11, warrowing = 0.9 },
   { executable_domain = 0.32 },
-  { numeric_domain = 0.23, sound_evaluator = 0.6 },
-  { semantic_intersection = 0.22, sound_truth_test = 0.8 },
-  { backward_domain = 0.5 },
+  { numeric_domain = 0.18, sound_evaluator = 0.55 },
+  { sound_intersection = 0.2, sound_numeric_queries = 0.78 },
+  { backward_ops = 0.26, sound_truth_test = 0.78 },
+  { backward_domain = 0.58 },
 ]

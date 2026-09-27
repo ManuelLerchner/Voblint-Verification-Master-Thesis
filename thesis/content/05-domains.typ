@@ -37,9 +37,10 @@ element: in the state ${x |-> lbot, y |-> ltop}$, variable $x$ has no possible
 value, so the state describes no store. If the analyzer only recognizes the
 bottom element as unreachable, such a state looks reachable, and after the next
 assignment or join the information that the point is dead is gone (@sec:lift).
-This chapter derives the laws a domain must satisfy so that the solver's
-inequalities discharge the obligations, stated so that they mention neither
-contexts nor the solver, and names the laws it omits on purpose.
+This chapter separates the semantic laws that connect abstract operations to
+their concrete meaning from the additional algebraic structure the solver
+requires. Neither depends on calling contexts. It also names the laws it omits
+on purpose.
 
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
 #let _order = 0.7pt + vb.neutral
@@ -99,7 +100,7 @@ contexts nor the solver, and names the laws it omits on purpose.
 
 A domain must supply the operations the analysis computes with and the laws
 that connect them to $conc$. @fig:domain-carrier draws them as one inheritance
-tree with three parts.
+tree with four parts.
 
 // Everything a domain supplies, as a UML inheritance tree. Each node is a
 // class or locale read from its lifted declaration and lists only the members
@@ -268,11 +269,13 @@ tree with three parts.
         }
         for b in d.bounds.filter(b => b in at) {
           (
-            edge(label(d.name), label(b), "-straight", stroke: (
-              paint: vb.muted,
-              thickness: 0.5pt,
-              dash: "dashed",
-            )),
+            edge(
+              label(d.name),
+              label(b),
+              "-straight",
+              stroke: (paint: vb.muted, thickness: 0.5pt, dash: "dashed"),
+              bend: _tree.at("bends", default: (:)).at(d.name, default: 0) * 1deg,
+            ),
           )
         }
       },
@@ -292,28 +295,39 @@ tree with three parts.
   values, and the proof must read each solved value as a set of integers. Isabelle's HOL library supplies the order in
   which the solver's inequalities are stated, the join that merges control
   flow, and the bounds $lbot$ and $ltop$. The solver's own classes supply the
-  widening $widen$ and the narrowing $narrow$ it applies at loop heads.
-  #isalocale("executable_domain") adds an emptiness test, so that the analysis
-  can discard a state no store reaches, and a printer for reporting results.
+  widening $widen$ and the narrowing $narrow$ it applies at its widening points.
+  #isalocale("executable_domain") adds an emptiness test on values, from which
+  the analysis builds the test that discards a state no store reaches
+  (@sec:lift), and a printer for reporting results.
   #isalocale("numeric_domain") adds $conc$ with the laws that turn the solver's
   inequalities into inclusions. A _numeric domain_ is a type of this class.
 - *Forward interface.* Assignments, branches and checks evaluate expressions
   over abstract states, as in the generic abstract interpreter of Nipkow and
   Klein @nipkow14[Sect. 13.5.2]. Their soundness reduces to one statement per
   expression: the abstract result contains every concrete result, which
-  #isalocale("sound_evaluator") requires. #isalocale("sound_truth_test") rules out a branch whose condition is certainly zero or certainly non-zero.
+  #isalocale("sound_evaluator") requires. #isalocale("sound_truth_test") justifies treating a definite truth-test
+  result as ruling out the incompatible branch.
 - *Backward domain.* A guard such as $x < 10$ tells the analysis more about $x$
   on each branch, but forward evaluation only yields the guard's truth value.
   Inverse operators @nipkow14[Sect. 13.7.1] run the other way: they refine the operands of a
   comparison or an arithmetic operation to values that still contain every
   concrete pair producing the required result.
-  #isalocale("semantic_intersection") combines the result with what was known,
-  and #isalocale("backward_domain") adds both to the forward interface.
+  #isalocale("sound_intersection") combines the result with what was known.
+  #isalocale("backward_ops") states the laws of the inverse operators on top
+  of it, and #isalocale("backward_domain") adds both to the forward interface.
+- *Queries.* A check asks whether a condition already holds.
+  #isalocale("sound_numeric_queries") asks for a comparison and an equality
+  test on abstract values whose definite answers hold for every pair of
+  denoted integers (@sec:queries).
+
+Special calls, nondeterministic input and `min`/`max`, are packaged separately
+in #isalocale("sound_special_ops"). They need no principle beyond sound
+abstract evaluation, and @ch:instances instantiates them with the domains.
 
 The interface asks for less than Nipkow and Klein's backward analysis, whose
 carrier must be a lattice with a precise meet,
 $conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$ @nipkow14[Sect. 13.7].
-#isalocale("semantic_intersection") asks only for the inclusion
+#isalocale("sound_intersection") asks only for the inclusion
 $conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2))$ that the
 analysis uses, so the carrier need not have a meet at all. The interface also
 has no abstraction function, since Voblint claims no optimal precision.
@@ -325,11 +339,13 @@ siblings, which soundness does not need.
 The domain laws use the join only through the fact that it lies above both
 operands. The carrier classes demand more: #isalocale("semilattice_sup")
 requires the join to be the _least_ upper bound, and the solver and the
-generic framework are stated over this class. Leastness rules out a domain
-that Goblint uses. Its exclusion-set domain
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`] describes an integer
-either by its exact value, a singleton ${n}$, or by a finite set $F$ of values
-it cannot have, the cofinite set $ZZ without F$.
+generic framework are stated over this class. Leastness rules out a direct
+unbounded analogue of Goblint's exclusion-set domain
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml")[`DefExc`],
+which describes an integer either by its exact value or by a finite set of
+values it cannot have, together with a bit range. To isolate what changes over
+mathematical integers, consider the simplified carrier of singletons ${n}$ and
+cofinite sets $ZZ without F$ for finite $F$.
 
 #figure(
   diagram(
@@ -380,12 +396,14 @@ it cannot have, the cofinite set $ZZ without F$.
 
 Over unbounded integers (@fig:defexc), the singletons ${1}$ and ${2}$ have no least upper
 bound in this carrier. Every $ZZ without {p}$ with $p in.not {1, 2}$ is an
-upper bound, and no two of them are comparable, so no single value lies below
-all of them. A least upper bound would have to denote exactly ${1, 2}$, which
-is neither a singleton nor cofinite. Goblint avoids the problem in two ways. Its exclusion sets carry the bit
-range of the integer kind, so the upper bounds of ${1}$ and ${2}$ are
-finitely many. Its join is also not least: joining two different values
-excludes only $0$. Voblint could keep this carrier only by bounding its
+upper bound. A least upper bound $u$ would lie below each of them, so by
+monotonicity of $conc$
+$ {1, 2} subset.eq conc(u) subset.eq inter.big_(p in.not {1, 2}) (ZZ without {p}) = {1, 2}. $
+It would therefore denote exactly ${1, 2}$, which is neither a singleton nor
+cofinite. Goblint avoids the problem in two ways. Its exclusion sets carry a bit
+range, so the upper bounds of ${1}$ and ${2}$ are finitely many. Its join is
+also not least: joining two distinct non-zero values excludes only $0$, and
+if one of them is $0$, the result excludes nothing. Voblint could keep this carrier only by bounding its
 integers, or by weakening #isalocale("semilattice_sup") to an upper-bound
 law, which the vendored solver's own definitions rule out. A carrier that also
 holds finite sets has no such problem. Finite and cofinite sets are closed
@@ -404,7 +422,14 @@ function #isaconst("gamma_state") gives it a meaning, the set of stores whose
 every variable lies in the concretization of its abstract value:
 $ sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x))). $
 Order and join work variable by variable (@fig:pointwise), so the
-construction forgets every relation between variables.
+construction forgets every relation between variables. A state denotes no store
+exactly when one of its variables has an empty value:
+$ sem(sigma) = emptyset <==> exists x. isai("is_empty") (sigma(x)), $
+which #isathm("is_empty_state_iff_gamma_state_empty") proves for the predicate
+#isaconst("is_empty_state"). The numeric analyses use this pointwise
+representation. The generic framework does not require it, and
+@sec:relational instantiates the same soundness interface with a relational
+carrier.
 
 #let _pw-vals = ($bot$, "0", $top$)
 #figure(
@@ -438,7 +463,7 @@ construction forgets every relation between variables.
     },
   ),
   kind: image,
-  placement: none,
+  placement: auto,
   caption: [Pointwise states over two variables, each pair giving
     $(sigma(x), sigma(y))$ with values from the fragment
     $signval(bot) lle signval("0") lle signval(top)$ of Sign, ordered
@@ -495,16 +520,23 @@ function that finds its path unreachable raises the `Deadcode` exception, and
 the path contributes no further states. Voblint keeps the same separation, but
 inside the lattice. The datatype #isatype("lifted") adds a constructor
 #ctor("Bot") for "unreachable" below every #ctor("Lifted") state, with
-$conc(ctor("Bot")) = emptyset$ (@fig:lifted-hasse). The analyzer normalizes
-after every transfer: the lifted transfer #isaconst("transfer_lift") replaces
-each result that the executable emptiness test #isaconst("is_empty") of
-#isalocale("executable_domain") finds empty by #ctor("Bot"). Once a value is
+$conc(ctor("Bot")) = emptyset$ (@fig:lifted-hasse). The construction is
+parameterized by an emptiness predicate on whole payloads. For pointwise states
+it is #isaconst("is_empty_state"), which quantifies over all variable names and
+is therefore not executable. The finite executable state of @sec:readback
+supplies #isaconst("resolved_st_q_is_bot_for") instead, proved equivalent to
+#isaconst("is_empty_state") after readback. The lifted transfer
+#isaconst("transfer_lift") applies the underlying transfer and passes its
+result to #isaconst("normalize_lift"), which replaces it by #ctor("Bot") when
+the predicate finds it empty. Once a value is
 #ctor("Bot"), the analysis short-circuits: transfers pass it on without
 computing on a payload, and joins ignore it. Joins also keep the normal form,
 so a normalized state denotes no store exactly when it is #ctor("Bot"), and
-dead code stays dead. The normalization only gains precision. It never changes
-the denoted set (#isathm("gamma_state_normalize_lift")), so soundness does not
-depend on it.
+dead code stays dead. Normalization preserves the denoted store set
+(#isathm("gamma_state_normalize_lift")) but makes reachability explicit in the
+representation, so soundness does not depend on it. The published result
+normalizes every entry once more (#isaconst("canonicalize_lift")), so no proof
+needs an invariant that every solved value stays normalized.
 
 #let _lnode(pos, name, body, empty: false) = node(
   pos,
@@ -582,8 +614,8 @@ evaluation only, `0 < x` is unknown for $x = signval(top)$, both arms keep
 $x = signval(top)$, $y$ becomes #signval($top$), and the check is `UNKNOWN`.
 Backward refinement instead runs the condition in reverse, as in the backward
 analysis of Nipkow and Klein @nipkow14[Sect. 13.7.2]. Given the truth value the
-branch requires, the inverse operators of #isalocale("backward_domain") shrink
-the operands to values that can still produce it. Sign refines $x$ to
+branch requires, the inverse operators of #isalocale("backward_domain") refine
+the operands so that they retain every concrete pair that can produce it. Sign refines $x$ to
 #signval("+") on the true arm and to #signval("≤0") on the false arm. Both arms
 then give $y$ a non-negative value, the join yields $y = signval("≥0")$, and the
 analyzer reports #raw(_g.verdict) with #raw(_g.state).
@@ -643,9 +675,8 @@ refines each alternative separately, drops one that the forward test
 become empty only during refinement, as both do in
 @fig:domain-reachability. #isaconst("bfilter_lifted") therefore normalizes
 each alternative to #ctor("Bot") before the join, which keeps that branch dead.
-The guard refinement of $h$ by $[-infinity, 4]$ in the example of
-@sec:constraints, written there with the interval meet, stands for this
-filter.
+For the interval example of @sec:constraints, the meet notation used
+there for the guard on $h$ denotes this refinement.
 
 == Answering queries <sec:queries>
 
@@ -657,13 +688,13 @@ condition held. Voblint therefore asks the domain directly.
 
 #definition(name: [Query], isa: "check_query", cmd: "fun")[
   A query asks whether a condition $c$ holds in the stores an abstract state
-  $d$ describes. Its answer is _true_ if $c$ holds in every such store,
-  _false_ if it holds in none, and _unknown_ otherwise.
+  $d$ describes. The answer _true_ certifies that $c$ holds in every such
+  store, _false_ that it holds in none, and _unknown_ makes no claim.
 ]
 
 The framework answers queries generically, so that a domain only has to
 answer two small ones. A domain supplies a comparison $a < b$ and an equality
-$a = b$ on abstract values (@fig:numeric-queries). A definite answer must hold
+$a = b$ on abstract values (@fig:domain-carrier). A definite answer must hold
 for every pair of integers the two values denote, and _unknown_, written
 #isai("None"), is always allowed. From these two, #isaconst("check_query")
 answers any condition: it evaluates the operands of a comparison with the
@@ -671,20 +702,10 @@ forward evaluator of @sec:domain-contract and asks the domain, combines the
 answers for `!`, `&&` and `||` in three-valued logic, and compares any other
 expression with $0$. One proof covers every domain: when
 #isaconst("check_query") answers true or false, the condition has that truth
-value in every store the state describes (#isathm("check_query_sound")). The
-answer becomes the verdict of the assertion, `PROVED` for true, `REFUTED` for
-false and `UNKNOWN` otherwise.
-
-#figure(
-  {
-    show raw.where(block: true): set text(size: 6.2pt)
-    thy("abstract_numeric_queries")
-  },
-  kind: image,
-  placement: auto,
-  caption: [The two queries a domain answers, lifted from the theory. A
-    definite answer must hold for every pair of integers the operands denote.],
-) <fig:numeric-queries>
+value in every store the state describes (#isathm("check_query_sound")). #isaconst("classify_check") maps the answers true, false and unknown to
+`PROVED`, `REFUTED` and `UNKNOWN`. @sec:verdicts combines this classification
+with reachability to obtain the published verdict, which is `DEAD` at an
+unreachable check.
 
 Because _unknown_ carries no obligation, queries may be incomplete, and a
 domain can answer _unknown_ whenever it cannot decide. Congruence
@@ -702,15 +723,16 @@ stays #raw(_c.verdict).
     table.hline(),
     [*requirement*], [*what the proofs use it for*],
     table.hline(stroke: 0.5pt),
-    [#isaconst("is_empty") $a ==> conc(a) = emptyset$], [discarding an empty state (@sec:lift)],
-    [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$], [normalization, readback (@sec:readback)],
+    [#isaconst("is_empty") $a ==> conc(a) = emptyset$], [sound state-emptiness test (@sec:lift)],
+    [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$],
+    [exact state-emptiness test, readback (@sec:readback)],
     [least upper bounds], [the solver's order class],
     [#isalocale("warrowing")], [the solver's update rule],
     [sound inverse operators, if any], [#isathm("bfilter_sound") (@sec:branches)],
     [sound comparison queries], [check verdicts (@sec:verdicts)],
     table.hline(stroke: 0.5pt),
     [_not required:_ abstraction function], [no optimality claim],
-    [_not required:_ lattice meet], [#isalocale("semantic_intersection") suffices],
+    [_not required:_ lattice meet], [#isalocale("sound_intersection") suffices],
     [_not required:_ monotone transfers], [imposed only by some instances],
     [_not required:_ stabilizing widening], [termination is a premise],
     table.hline(),
@@ -722,9 +744,10 @@ stays #raw(_c.verdict).
 ) <tab:domain-contract>
 
 A domain contributes to the composition by proving the laws of
-#isalocale("numeric_domain") and the requirements of @tab:domain-contract. None
-of them mentions a context, an equation or a solver, so a domain proves them
-once per domain instance (and, where applicable, refinement mode) and reuses them across context policies
-and solver configurations. @ch:analysis-interface turns these per-value laws
+#isalocale("numeric_domain") and the requirements of @tab:domain-contract. These
+requirements are independent of the context policy and of the generated
+equation system. A domain proves them once per domain instance (and, where
+applicable, refinement mode), and the later assembly reuses them across context
+policies and solver configurations. @ch:analysis-interface turns these per-value laws
 into the per-edge form of #oblig("INTRA") and asks what else an analysis must
 supply at calls.
