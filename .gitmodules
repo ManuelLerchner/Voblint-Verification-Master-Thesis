@@ -1,7 +1,3 @@
-[submodule "td-verification"]
-	path = vendor/td-verification
-	url = https://github.com/ManuelLerchner/td-verification
-	ignore = dirty
 [submodule "g2html"]
 	path = vendor/g2html
 	url = https://github.com/goblint/g2html.git
