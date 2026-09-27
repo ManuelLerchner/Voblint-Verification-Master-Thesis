@@ -156,6 +156,16 @@ fun main() {
     }
   }
 
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    u = 0;
+    v = 10;
+  } else {
+    u = 20;
+    v = 30;
+  }
+  __voblint_check(u <= v); // PROVED
+
   i = 0;
   while (i < 3) {
     i = i + 1;

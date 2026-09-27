@@ -13,6 +13,9 @@
 //   z == 1  neither alone: Interval asks the order analysis for x == y at
 //           z = (x == y), gets 1, and assigns [1,1];
 //   w == y  the order analysis alone, from the pairs it learned at w = x;
+//   u <= v  neither alone, the other way round: at v = 10 and v = 30 the order
+//           analysis asks Interval how v compares with u, records u <= v on
+//           both branches, and keeps it through the join Interval loses it in;
 //   i == 3  Interval alone, by widening the loop and narrowing it back;
 //   n == 7  Interval refutes it: the context entered with (3, 7) returns 3;
 // Interval proves the last branch unreachable, and it warns at 100 / x because
@@ -40,6 +43,15 @@ fun main() {
       __voblint_check(w == y); // PROVED
     }
   }
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    u = 0;
+    v = 10;
+  } else {
+    u = 20;
+    v = 30;
+  }
+  __voblint_check(u <= v); // PROVED
   i = 0;
   while (i < 3) {
     i = i + 1;
