@@ -482,8 +482,8 @@
           "pretty_printed": true,
           "theory": "Update_rules",
           "file": "vendor/td-verification/Update_rules.thy",
-          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.widening_class.widen%7Cconst",
-          "session": "Voblint_Domain"
+          "href": "Unsorted/TD/Update_rules.html#Update_rules.widening_class.widen%7Cconst",
+          "session": "TD"
         },
         {
           "const": "narrow",
@@ -498,8 +498,8 @@
           "pretty_printed": true,
           "theory": "Update_rules",
           "file": "vendor/td-verification/Update_rules.thy",
-          "href": "Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst",
-          "session": "Voblint_Domain"
+          "href": "Unsorted/TD/Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst",
+          "session": "TD"
         }
       ],
       "local": null
