@@ -293,7 +293,10 @@ vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the
 # and unclosed proofs, and lexical errors, after `isar-fmt-check`. `isar-fmt`
 # formats the given theories (default: every tracked src/ theory except
 # generated ones); layout only, see isar-tools' docs/FORMATTER.md.
-isar-check = { cmd = "bash scripts/mk/isar.sh check .", depends-on = [
+# `src`, not `.`: isar-tools 0.1.0 would also check the theories of the AFP
+# and td-verification checkouts that CI places inside the repository. Switch
+# back to `.` (which also reads ROOTS) with isar-tools 0.1.1 (isar-tools#19).
+isar-check = { cmd = "bash scripts/mk/isar.sh check src", depends-on = [
   "isar-fmt-check",
 ], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
 isar-fmt = { cmd = "bash scripts/mk/isar.sh fmt", description = "Format Isabelle theories with isar-tools (default: tracked src/ theories except generated ones; pass paths to narrow)." }
