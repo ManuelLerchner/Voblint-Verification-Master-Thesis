@@ -19,7 +19,7 @@ python = ">=3.11"
 # `isar project extract|names`). Pure Python, no Isabelle needed; tasks that
 # must recognise AFP commands pass the AFP with -d (scripts/mk/isar.sh).
 [pypi-dependencies]
-isar-tools = ">=0.1.0,<0.2"
+isar-tools = ">=0.2.0,<0.3"
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
