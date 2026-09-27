@@ -8,7 +8,6 @@ theory Int_Exec_Sound
     "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Program"
-    "TD.TD_side_upd_rule"
     "Voblint_Solver.TD_Solver_Bridge"
 begin
 

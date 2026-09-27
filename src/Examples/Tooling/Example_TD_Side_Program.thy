@@ -1,7 +1,7 @@
 theory Example_TD_Side_Program
   imports
     "Voblint_Solver.Strategy_Tree_Program"
-    "TD.TD_side_upd_rule"
+    "TD.TD_side_Interface"
 begin
 
 section \<open>Lock-set analysis compiled from a typed strategy program\<close>

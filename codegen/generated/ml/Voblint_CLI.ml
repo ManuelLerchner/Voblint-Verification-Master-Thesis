@@ -101,7 +101,6 @@ module Generated : sig
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
-  type phase = W | Na
   type 'a cfg_ext
   type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
     Globals_Warrow_Per_Origin
@@ -1409,11 +1408,6 @@ let rec preorder_dg_state _A _B =
 let rec order_dg_state _A _B =
   ({preorder_order = (preorder_dg_state _A _B)} : ('a, 'b) dg_state order);;
 
-let rec order_bot_dg_state _A _B =
-  ({bot_order_bot = (bot_dg_state _A _B);
-     order_order_bot = (order_dg_state _A.order_order_bot _B.order_order_bot)}
-    : ('a, 'b) dg_state order_bot);;
-
 type 'a widening = {order_widening : 'a order; widen : 'a -> 'a -> 'a};;
 let widen _A = _A.widen;;
 
@@ -1437,6 +1431,11 @@ let rec widening_dg_state (_A1, _A2) (_B1, _B2) =
         _B1.order_bot_bounded_semilattice_sup_bot.order_order_bot);
      widen = widen_dg_state (_A1, _A2) (_B1, _B2)}
     : ('a, 'b) dg_state widening);;
+
+let rec order_bot_dg_state _A _B =
+  ({bot_order_bot = (bot_dg_state _A _B);
+     order_order_bot = (order_dg_state _A.order_order_bot _B.order_order_bot)}
+    : ('a, 'b) dg_state order_bot);;
 
 let rec narrow_dg_state (_A1, _A2) (_B1, _B2)
   a b = DG (narrow _A2.narrowing_warrowing (locals a) (locals b),
@@ -1550,6 +1549,11 @@ let lattice_unit =
      semilattice_sup_lattice = semilattice_sup_unit}
     : unit lattice);;
 
+let rec widen_unit a b = ();;
+
+let widening_unit =
+  ({order_widening = order_unit; widen = widen_unit} : unit widening);;
+
 let order_bot_unit =
   ({bot_order_bot = bot_unit; order_order_bot = order_unit} : unit order_bot);;
 
@@ -1557,11 +1561,6 @@ type 'a order_top = {order_order_top : 'a order; top_order_top : 'a top};;
 
 let order_top_unit =
   ({order_order_top = order_unit; top_order_top = top_unit} : unit order_top);;
-
-let rec widen_unit a b = ();;
-
-let widening_unit =
-  ({order_widening = order_unit; widen = widen_unit} : unit widening);;
 
 let rec narrow_unit a b = ();;
 
@@ -1781,16 +1780,16 @@ let preorder_sign = ({ord_preorder = ord_sign} : sign preorder);;
 
 let order_sign = ({preorder_order = preorder_sign} : sign order);;
 
+let rec widen_sign a b = join_sign a b;;
+
+let widening_sign =
+  ({order_widening = order_sign; widen = widen_sign} : sign widening);;
+
 let order_bot_sign =
   ({bot_order_bot = bot_sign; order_order_bot = order_sign} : sign order_bot);;
 
 let order_top_sign =
   ({order_order_top = order_sign; top_order_top = top_sign} : sign order_top);;
-
-let rec widen_sign a b = join_sign a b;;
-
-let widening_sign =
-  ({order_widening = order_sign; widen = widen_sign} : sign widening);;
 
 let rec narrow_sign_td a b = a;;
 
@@ -1915,13 +1914,13 @@ let preorder_relc = ({ord_preorder = ord_relc} : relc preorder);;
 
 let order_relc = ({preorder_order = preorder_relc} : relc order);;
 
-let order_bot_relc =
-  ({bot_order_bot = bot_relc; order_order_bot = order_relc} : relc order_bot);;
-
 let rec widen_relc a b = sup_relca a b;;
 
 let widening_relc =
   ({order_widening = order_relc; widen = widen_relc} : relc widening);;
+
+let order_bot_relc =
+  ({bot_order_bot = bot_relc; order_order_bot = order_relc} : relc order_bot);;
 
 let rec narrow_relc a b = b;;
 
@@ -2552,12 +2551,6 @@ let preorder_ivl = ({ord_preorder = ord_ivl} : ivl preorder);;
 
 let order_ivl = ({preorder_order = preorder_ivl} : ivl order);;
 
-let order_bot_ivl =
-  ({bot_order_bot = bot_ivl; order_order_bot = order_ivl} : ivl order_bot);;
-
-let order_top_ivl =
-  ({order_order_top = order_ivl; top_order_top = top_ivl} : ivl order_top);;
-
 let rec widen_ivl_core
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     Ivl ((if less_eq_eint l1 l2 then l1 else MinInf),
@@ -2569,6 +2562,12 @@ let rec widen_ivl
 
 let widening_ivl =
   ({order_widening = order_ivl; widen = widen_ivl} : ivl widening);;
+
+let order_bot_ivl =
+  ({bot_order_bot = bot_ivl; order_order_bot = order_ivl} : ivl order_bot);;
+
+let order_top_ivl =
+  ({order_order_top = order_ivl; top_order_top = top_ivl} : ivl order_top);;
 
 let rec narrow_ivl_td
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -2742,6 +2741,11 @@ let preorder_parity = ({ord_preorder = ord_parity} : parity preorder);;
 
 let order_parity = ({preorder_order = preorder_parity} : parity order);;
 
+let rec widen_parity a b = join_parity a b;;
+
+let widening_parity =
+  ({order_widening = order_parity; widen = widen_parity} : parity widening);;
+
 let order_bot_parity =
   ({bot_order_bot = bot_parity; order_order_bot = order_parity} :
     parity order_bot);;
@@ -2749,11 +2753,6 @@ let order_bot_parity =
 let order_top_parity =
   ({order_order_top = order_parity; top_order_top = top_parity} :
     parity order_top);;
-
-let rec widen_parity a b = join_parity a b;;
-
-let widening_parity =
-  ({order_widening = order_parity; widen = widen_parity} : parity widening);;
 
 let rec narrow_parity a b = a;;
 
@@ -2835,10 +2834,6 @@ let rec preorder_lifted _A =
 let rec order_lifted _A =
   ({preorder_order = (preorder_lifted _A)} : 'a lifted order);;
 
-let rec order_bot_lifted _A =
-  ({bot_order_bot = (bot_lifted _A); order_order_bot = (order_lifted _A)} :
-    'a lifted order_bot);;
-
 let rec widen_lifted (_A1, _A2)
   x0 y = match x0, y with Bot, y -> y
     | Lifted v, Bot -> Lifted v
@@ -2847,6 +2842,10 @@ let rec widen_lifted (_A1, _A2)
 let rec widening_lifted (_A1, _A2) =
   ({order_widening = (order_lifted _A1); widen = widen_lifted (_A1, _A2)} :
     'a lifted widening);;
+
+let rec order_bot_lifted _A =
+  ({bot_order_bot = (bot_lifted _A); order_order_bot = (order_lifted _A)} :
+    'a lifted order_bot);;
 
 let rec narrow_lifted (_A1, _A2)
   x0 y = match x0, y with Bot, y -> Bot
@@ -3042,11 +3041,6 @@ let rec preorder_resolved_st_q _A =
 let rec order_resolved_st_q _A =
   ({preorder_order = (preorder_resolved_st_q _A)} : 'a resolved_st_q order);;
 
-let rec order_bot_resolved_st_q _A =
-  ({bot_order_bot = (bot_resolved_st_q _A.bot_order_bot);
-     order_order_bot = (order_resolved_st_q _A)}
-    : 'a resolved_st_q order_bot);;
-
 let rec widen_resolved_st (_A1, _A2)
   s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
           (widen _A2.widening_warrowing) s t;;
@@ -3063,6 +3057,11 @@ let rec widening_resolved_st_q (_A1, _A2) =
       (order_resolved_st_q _A1.order_bot_bounded_semilattice_sup_bot);
      widen = widen_resolved_st_q (_A1, _A2)}
     : 'a resolved_st_q widening);;
+
+let rec order_bot_resolved_st_q _A =
+  ({bot_order_bot = (bot_resolved_st_q _A.bot_order_bot);
+     order_order_bot = (order_resolved_st_q _A)}
+    : 'a resolved_st_q order_bot);;
 
 let rec narrow_resolved_st (_A1, _A2)
   s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
@@ -3221,6 +3220,12 @@ let preorder_congruence =
 let order_congruence =
   ({preorder_order = preorder_congruence} : congruence order);;
 
+let rec widen_congruence a b = join_congruence a b;;
+
+let widening_congruence =
+  ({order_widening = order_congruence; widen = widen_congruence} :
+    congruence widening);;
+
 let order_bot_congruence =
   ({bot_order_bot = bot_congruence; order_order_bot = order_congruence} :
     congruence order_bot);;
@@ -3228,12 +3233,6 @@ let order_bot_congruence =
 let order_top_congruence =
   ({order_order_top = order_congruence; top_order_top = top_congruence} :
     congruence order_top);;
-
-let rec widen_congruence a b = join_congruence a b;;
-
-let widening_congruence =
-  ({order_widening = order_congruence; widen = widen_congruence} :
-    congruence widening);;
 
 let rec narrow_congruence_td a b = a;;
 
@@ -3533,16 +3532,6 @@ let rec preorder_int_dom_ext _A =
 let rec order_int_dom_ext _A =
   ({preorder_order = (preorder_int_dom_ext _A)} : 'a int_dom_ext order);;
 
-let rec order_bot_int_dom_ext _A =
-  ({bot_order_bot = (bot_int_dom_ext _A);
-     order_order_bot = (order_int_dom_ext _A)}
-    : 'a int_dom_ext order_bot);;
-
-let rec order_top_int_dom_ext _A =
-  ({order_order_top = (order_int_dom_ext _A);
-     top_order_top = (top_int_dom_ext _A)}
-    : 'a int_dom_ext order_top);;
-
 let rec int_congruence_update
   int_congruencea
     (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
@@ -3587,6 +3576,16 @@ let rec widening_int_dom_ext (_A1, _A2) =
   ({order_widening = (order_int_dom_ext _A1);
      widen = widen_int_dom_ext (_A1, _A2)}
     : 'a int_dom_ext widening);;
+
+let rec order_bot_int_dom_ext _A =
+  ({bot_order_bot = (bot_int_dom_ext _A);
+     order_order_bot = (order_int_dom_ext _A)}
+    : 'a int_dom_ext order_bot);;
+
+let rec order_top_int_dom_ext _A =
+  ({order_order_top = (order_int_dom_ext _A);
+     top_order_top = (top_int_dom_ext _A)}
+    : 'a int_dom_ext order_top);;
 
 let rec narrow_int_dom_ext (_A1, _A2)
   a b = extend
@@ -3939,12 +3938,6 @@ let rec order_analysis_product _A _B =
   ({preorder_order = (preorder_analysis_product _A _B)} :
     ('a, 'b) analysis_product order);;
 
-let rec order_bot_analysis_product _A _B =
-  ({bot_order_bot = (bot_analysis_product _A _B);
-     order_order_bot =
-       (order_analysis_product _A.order_order_bot _B.order_order_bot)}
-    : ('a, 'b) analysis_product order_bot);;
-
 let rec widen_analysis_product (_A1, _A2) (_B1, _B2)
   p q = Product
           (widen _A2.widening_warrowing (pleft p) (pleft q),
@@ -3957,6 +3950,12 @@ let rec widening_analysis_product (_A1, _A2) (_B1, _B2) =
         _B1.order_bot_bounded_semilattice_sup_bot.order_order_bot);
      widen = widen_analysis_product (_A1, _A2) (_B1, _B2)}
     : ('a, 'b) analysis_product widening);;
+
+let rec order_bot_analysis_product _A _B =
+  ({bot_order_bot = (bot_analysis_product _A _B);
+     order_order_bot =
+       (order_analysis_product _A.order_order_bot _B.order_order_bot)}
+    : ('a, 'b) analysis_product order_bot);;
 
 let rec narrow_analysis_product (_A1, _A2) (_B1, _B2)
   p q = Product
@@ -4003,8 +4002,6 @@ type ('b, 'a) rbt = RBT of ('b, 'a) rbta;;
 type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
-
-type phase = W | Na;;
 
 type 'a cfg_ext =
   Cfg_ext of
@@ -4493,8 +4490,6 @@ let rec map_filter
         (match f x with None -> map_filter f xs
           | Some y -> y :: map_filter f xs);;
 
-let rec c (State_ext (c, infl, stabl, sigma, more)) = c;;
-
 let rec c_div
   a b = (if equal_inta b zero_inta then zero_inta
           else times_inta (times_inta (sgn_int a) (sgn_int b))
@@ -4696,7 +4691,7 @@ let rec mcp_rd
                              (slot5 r),
                             slot6 r)))));;
 
-let rec infl (State_ext (c, infl, stabl, sigma, more)) = infl;;
+let rec infl (State_ext (called, infl, stabl, sigma, more)) = infl;;
 
 let rec sp_publish g d k = Side (g, d, k ());;
 
@@ -4937,7 +4932,7 @@ let rec length_tailrec x0 n = match x0, n with [], n -> n
 
 let rec mc_channel c x = ask_rec (mc_qry c) query_depth bot_set x;;
 
-let rec stabl (State_ext (c, infl, stabl, sigma, more)) = stabl;;
+let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
 let rec or_opt
   x y = (if equal_option equal_bool x (Some true) ||
@@ -5280,6 +5275,8 @@ let rec mcp_combine
           (mcp_qry (v :: vb :: vc), mcp_step (v :: vb :: vc),
             mcp_en_from (v :: vb :: vc), mcp_comb (v :: vb :: vc),
             (fun _ _ dc _ -> dc), ());;
+
+let rec called (State_ext (called, infl, stabl, sigma, more)) = called;;
 
 let rec and_opt
   x y = (if equal_option equal_bool x (Some false) ||
@@ -8589,11 +8586,7 @@ let rec ctx_values
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
-let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
-
-let rec c_update
-  ca (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (ca c, infl, stabl, sigma, more);;
+let rec sigma (State_ext (called, infl, stabl, sigma, more)) = sigma;;
 
 let rec valid_formal g x = not (g x) && not ((x : string) = ret_var);;
 
@@ -9684,16 +9677,16 @@ let rec init_state (_C1, _C2)
         (fun _ -> bot _C1.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
         State_exta (bot_set, ()));;
 
+let rec point_update
+  pointa (State_ext (called, infl, stabl, sigma, State_exta (point, more))) =
+    State_ext (called, infl, stabl, sigma, State_exta (pointa point, more));;
+
 let rec warrow _A
   a b = (if less_eq
               _A.widening_warrowing.order_widening.preorder_order.ord_preorder b
               a
           then narrow _A.narrowing_warrowing a b
           else widen _A.widening_warrowing a b);;
-
-let rec point_update
-  pointa (State_ext (c, infl, stabl, sigma, State_exta (point, more))) =
-    State_ext (c, infl, stabl, sigma, State_exta (pointa point, more));;
 
 let rec destab_opt _A _B
   x i s c =
@@ -9709,8 +9702,8 @@ and destab_iter_opt _A _B
           destab_iter_opt _A _B ys ia sa c);;
 
 let rec sigma_update
-  sigmaa (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infl, stabl, sigmaa sigma, more);;
+  sigmaa (State_ext (called, infl, stabl, sigma, more)) =
+    State_ext (called, infl, stabl, sigmaa sigma, more);;
 
 let rec rho_update
   rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
@@ -9796,27 +9789,32 @@ let rec update_global_of (_A1, _A2, _A3) _B _C
           update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C);;
 
 let rec point
-  (State_ext (c, infl, stabl, sigma, State_exta (point, more))) = point;;
+  (State_ext (called, infl, stabl, sigma, State_exta (point, more))) = point;;
+
+let rec called_update
+  calleda (State_ext (called, infl, stabl, sigma, more)) =
+    State_ext (calleda called, infl, stabl, sigma, more);;
 
 let rec stabl_update
-  stabla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infl, stabla stabl, sigma, more);;
+  stabla (State_ext (called, infl, stabl, sigma, more)) =
+    State_ext (called, infl, stabla stabl, sigma, more);;
 
 let rec infl_update
-  infla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infla infl, stabl, sigma, more);;
+  infla (State_ext (called, infl, stabl, sigma, more)) =
+    State_ext (called, infla infl, stabl, sigma, more);;
 
 let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
   r t s =
     (match s
       with Q (y, (x, (state, ug_state))) ->
-        bind (if member _A x (c state)
+        bind (if member _A x (called state)
                then Some (sigma state (Inl x),
                            (point_update (fun _ -> inserta _A x (point state))
                               state,
                              ug_state))
                else tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                      (I (x, (c_update (fun _ -> inserta _A x (c state)) state,
+                      (I (x, (called_update
+                                (fun _ -> inserta _A x (called state)) state,
                                ug_state))))
           (fun (xd, (statea, ug_statea)) ->
             Some (xd, (infl_update
@@ -9837,12 +9835,12 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                        then Some (d_newa,
                                    (point_update
                                       (fun _ -> remove _A x (point state1))
-                                      (c_update
-(fun _ -> remove _A x (c state1)) state1),
+                                      (called_update
+(fun _ -> remove _A x (called state1)) state1),
                                      ug_state1))
                        else (let (infl1, stabl1) =
                                destab_opt _A _B (Inl x) (infl state1)
-                                 (stabl state1) (c state1)
+                                 (stabl state1) (called state1)
                                in
                               tD_side_rule_Interp_solve_rec_c _A _B
                                 (_C1, _C2, _C3) r t
@@ -9852,7 +9850,8 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
  ug_state1)))))))
           else Some (sigma state (Inl x),
                       (point_update (fun _ -> remove _A x (point state))
-                         (c_update (fun _ -> remove _A x (c state)) state),
+                         (called_update (fun _ -> remove _A x (called state))
+                           state),
                         ug_state)))
       | Ra (x, (state, ug_state)) ->
         bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
@@ -9895,7 +9894,8 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                 (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
             | (Some db, ug_statea) ->
               (let (infla, stabla) =
-                 destab_opt _A _B (Inr y) (infl state) (stabl state) (c state)
+                 destab_opt _A _B (Inr y) (infl state) (stabl state)
+                   (called state)
                  in
                 tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
                   (E (x, (ta, (sides_a_c_ca,
@@ -9912,7 +9912,8 @@ let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
 let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
   r t x =
     bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-           (I (x, (c_update (fun _ -> inserta _A x (c (init_state (_C2, _C3))))
+           (I (x, (called_update
+                     (fun _ -> inserta _A x (called (init_state (_C2, _C3))))
                      (init_state (_C2, _C3)),
                     init_basic_ug_state
                       _C2.order_bot_bounded_semilattice_sup_bot))))

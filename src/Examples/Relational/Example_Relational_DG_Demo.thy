@@ -12,8 +12,6 @@ theory Example_Relational_DG_Demo
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
 section \<open>End-to-end demo: a relational analysis on the same executable pipeline as Interval\<close>
 
 text \<open>

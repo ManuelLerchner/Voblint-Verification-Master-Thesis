@@ -11,8 +11,6 @@ theory Example_Cooperating_Demo
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 section \<open>Two cooperating analyses on one program\<close>
 
 text \<open>

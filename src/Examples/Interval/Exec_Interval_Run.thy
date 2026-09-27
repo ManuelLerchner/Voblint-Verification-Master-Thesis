@@ -5,7 +5,6 @@ theory Exec_Interval_Run
             Example_Interval_Loop_Coverage
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 
 text \<open>

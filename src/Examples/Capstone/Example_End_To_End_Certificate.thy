@@ -2,8 +2,6 @@ theory Example_End_To_End_Certificate
   imports "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Analysis_Certified"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
 section \<open>One configuration, one program, no premise left standing\<close>
 
 text \<open>

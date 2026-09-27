@@ -6,9 +6,6 @@ theory Example_Interval_Loop_Coverage
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
-
 text \<open>
   A full program carried end to end through the interval analyzer:
 

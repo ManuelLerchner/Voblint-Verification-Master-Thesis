@@ -1,5 +1,5 @@
 theory TD_Solver_Bridge
-  imports "TD.TD_side_upd_rule"
+  imports "TD.TD_side_Interface"
 begin
 
 section \<open>The semantic boundary between Voblint and the vendored TD solver\<close>
@@ -106,7 +106,7 @@ next
     leaves the \<open>destab_opt\<close> equation in place for the hypothesis itself.\<close>
   from Eval have fin: "finite (stabl state)" by blast
   have fin_destab: "\<And>y i' s'.
-      destab_opt y (infl state) (stabl state) (c state) = (i', s') \<Longrightarrow> finite s'"
+      destab_opt y (infl state) (stabl state) (called state) = (i', s') \<Longrightarrow> finite s'"
     using fin destab_opt_stabl_finite by blast
   from Eval fin_destab show ?case
     by (auto simp: eval.psimps[OF Eval(1)[unfolded eval_dom_def]] Let_def
@@ -122,8 +122,8 @@ lemma (in TD_side_upd_rule) finite_stabl_solve:
   shows "finite (fst (solve x))"
 proof -
   obtain d state ug_state where iterate: "(d, state, ug_state) =
-      iterate x (init_state \<lparr> c := insert x (c init_state) \<rparr>) init_ug_state"
-    by (cases "iterate x (init_state \<lparr> c := insert x (c init_state) \<rparr>) init_ug_state") auto
+      iterate x (init_state \<lparr> called := insert x (called init_state) \<rparr>) init_ug_state"
+    by (cases "iterate x (init_state \<lparr> called := insert x (called init_state) \<rparr>) init_ug_state") auto
   have "fst (solve x) = stabl state"
     using iterate unfolding solve_def by (auto split: prod.splits)
   moreover have "finite (stabl state)"
@@ -161,42 +161,42 @@ lemma update_rule_keyed:
   assumes sel: "update_rule init sel" and other: "update_rule init other"
   shows "update_rule init (update_global_keyed P sel other)"
 proof
-  show "\<forall>g orig. rho_lookup (\<rho> init) g orig \<le> \<bottom>"
+  show "\<forall>g orig. rho_lookup (ug_state.\<rho> init) g orig \<le> \<bottom>"
     by (rule update_rule.init_rho_leq_bot[OF sel])
 next
   fix "do" state' d orig g d' state g' orig'
   assume "(do, state') = update_global_keyed P sel other d orig g d' state" "g' \<noteq> g"
-  then show "rho_lookup (\<rho> state') g' orig' = rho_lookup (\<rho> state) g' orig'"
+  then show "rho_lookup (ug_state.\<rho> state') g' orig' = rho_lookup (ug_state.\<rho> state) g' orig'"
     unfolding update_global_keyed_def
     by (auto split: if_splits intro: update_rule.update_global_untouched(1)[OF sel]
           update_rule.update_global_untouched(1)[OF other])
 next
   fix "do" state' d orig g d' state g' orig'
   assume "(do, state') = update_global_keyed P sel other d orig g d' state" "orig' \<noteq> orig"
-  then show "rho_lookup (\<rho> state') g' orig' = rho_lookup (\<rho> state) g' orig'"
+  then show "rho_lookup (ug_state.\<rho> state') g' orig' = rho_lookup (ug_state.\<rho> state) g' orig'"
     unfolding update_global_keyed_def
     by (auto split: if_splits intro: update_rule.update_global_untouched(2)[OF sel]
           update_rule.update_global_untouched(2)[OF other])
 next
   fix "do" state' d orig g d' state
   assume "(do, state') = update_global_keyed P sel other d orig g d' state"
-  then show "d' \<le> rho_lookup (\<rho> state') g orig"
+  then show "d' \<le> rho_lookup (ug_state.\<rho> state') g orig"
     unfolding update_global_keyed_def
     by (auto split: if_splits intro: update_rule.update_global_recorded_in_rho[OF sel]
           update_rule.update_global_recorded_in_rho[OF other])
 next
   fix state' d orig g d' state
   assume "(None, state') = update_global_keyed P sel other d orig g d' state"
-    "\<forall>orig. rho_lookup (\<rho> state) g orig \<le> d"
-  then show "rho_lookup (\<rho> state') g orig \<le> d"
+    "\<forall>orig. rho_lookup (ug_state.\<rho> state) g orig \<le> d"
+  then show "rho_lookup (ug_state.\<rho> state') g orig \<le> d"
     unfolding update_global_keyed_def
     by (auto split: if_splits intro: update_rule.update_global_preserves_rho_invariant(1)[OF sel]
           update_rule.update_global_preserves_rho_invariant(1)[OF other])
 next
   fix d'' state' d orig g d' state orig'
   assume "(Some d'', state') = update_global_keyed P sel other d orig g d' state"
-    "\<forall>orig. rho_lookup (\<rho> state) g orig \<le> d"
-  then show "rho_lookup (\<rho> state') g orig' \<le> d''"
+    "\<forall>orig. rho_lookup (ug_state.\<rho> state) g orig \<le> d"
+  then show "rho_lookup (ug_state.\<rho> state') g orig' \<le> d''"
     unfolding update_global_keyed_def
     by (auto split: if_splits intro: update_rule.update_global_preserves_rho_invariant(2)[OF sel]
           update_rule.update_global_preserves_rho_invariant(2)[OF other])

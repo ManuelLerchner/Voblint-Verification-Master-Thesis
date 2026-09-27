@@ -34,13 +34,6 @@ theory Example_Parity_DG_Flagship
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-text \<open>The vendored solver's \<open>phase\<close> datatype and VIMP's expression syntax both
-  declare a constructor \<open>N\<close>, and VIMP's is the integer literal every numeral in
-  the program below elaborates to.  Hiding the solver's leaves \<open>N\<close> resolving to
-  VIMP's.  Sibling theories write the same hiding as \<open>hide_const phase.N\<close>, which
-  names the same constructor through its datatype instead of its theory.\<close>
-hide_const (open) Update_rules.N
-
 subsection \<open>The VIMP source program\<close>
 
 text \<open>

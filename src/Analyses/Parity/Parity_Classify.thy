@@ -4,8 +4,6 @@ theory Parity_Classify
     "Voblint_Result.DG_Result_Construction"
 begin
 
-hide_const phase.N
-
 section \<open>Parity instance of the generic check-discharge interface\<close>
 
 text \<open>

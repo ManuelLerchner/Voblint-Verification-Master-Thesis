@@ -4,8 +4,6 @@ theory Example_Guard_Refinement
   imports "Voblint_Analysis_Interval.Interval_Domain"
 begin
 
-hide_const (open) Update_rules.N
-
 text \<open>
   The identity assumption transfer is sound but imprecise.  Backward guard
   refinement intersects the incoming interval with the states satisfying the

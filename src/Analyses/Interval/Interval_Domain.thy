@@ -2,8 +2,6 @@ theory Interval_Domain
   imports Interval_Warrowing Interval_Transfer
 begin
 
-hide_const (open) Update_rules.N
-
 section \<open>Integrated Interval domain\<close>
 
 text \<open>This theory provides one import surface for interval bounds, lattice structure,

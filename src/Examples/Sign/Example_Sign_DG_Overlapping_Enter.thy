@@ -656,11 +656,6 @@ lemma ov_R_eq:
 lemma ov_exact: "ov_ep s = is_empty_state (fun_of_resolved_st_q_for ov_gs s)"
   unfolding ov_ep_def by (rule resolved_st_q_is_bot_for_iff) simp
 
-text \<open>Name the context variable \<open>ctx\<close>, never bare \<open>c\<close>: the vendored \<open>TD_side.state\<close> record
-  exposes an unqualified field accessor \<open>c :: (_,_,_) TD_side.state_scheme \<Rightarrow> _ set\<close>, and a
-  bound \<open>c\<close> in a raw \<open>\<forall>(_, c) \<in> _\<close> pattern here silently resolves to that constant
-  instead of a fresh variable, producing a baffling type-clash error far from its cause.\<close>
-
 lemma ov_fwd_closed_all:
   "\<forall>(u, ctx) \<in> fst ov_sol. \<forall>(u', a, v) \<in> intra ov_cfg. u = u' \<longrightarrow> (v, ctx) \<in> fst ov_sol"
   using ov_solution_snapshot by meson

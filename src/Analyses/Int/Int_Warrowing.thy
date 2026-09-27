@@ -5,7 +5,6 @@ theory Int_Warrowing
     "Voblint_Analysis_Parity.Parity_Warrowing"
     "Voblint_Analysis_Interval.Interval_Warrowing"
     "Voblint_Analysis_Congruence.Congruence_Warrowing"
-    "TD.Update_rules"
 begin
 
 section \<open>Composite widening and narrowing\<close>

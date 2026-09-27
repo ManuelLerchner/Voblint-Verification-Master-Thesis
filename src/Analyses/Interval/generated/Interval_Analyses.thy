@@ -11,7 +11,6 @@ theory Interval_Analyses
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Solver.Globals_Rule"
     "Voblint_VIMP.VIMP_Program"
-    "TD.TD_side_upd_rule"
 begin
 
 section \<open>Registering Interval at every context and update rule\<close>

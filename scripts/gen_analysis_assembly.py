@@ -53,7 +53,6 @@ COMMON_IMPORTS = [
     '"Voblint_Solver.TD_Solver_Bridge"',
     '"Voblint_Solver.Globals_Rule"',
     '"Voblint_VIMP.VIMP_Program"',
-    '"TD.TD_side_upd_rule"',
 ]
 
 INTERP = "TD_side_rule_Interp"
