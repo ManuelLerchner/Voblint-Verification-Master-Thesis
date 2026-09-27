@@ -10,7 +10,12 @@
 # every policy as a field of the combined state generated into
 # src/Executable_Surface/CLI/generated/MCP_Carrier.thy, so a domain registers the
 # entry-state or call-string policy only where a theory states facts about it.
-# `value_constructor` is its `abstract_value` constructor (default: `<name>Value`).
+# `value_constructor` is its `abstract_value` constructor (default: `<name>Value`),
+# `display_type` the type that constructor carries (default: `value_type`), `key`
+# the injective key that lists it (default: `<value_type>_key`) and `render` its
+# rendering over `$x` (default: `to_string $x`). `field_imports` names the qualified
+# theories the combined state imports for the field (default: the domain's own
+# generated registration).
 # `roles` overrides a role whose spelling does not follow that prefix; a role may
 # be an application `{const, args}` for an operation that takes a configuration
 # argument. `imports` names the domain's own theories the
@@ -69,6 +74,10 @@ domains:
     value_type: relc
     contexts: []
     imports: []
+    field_imports: [Voblint_Analysis_Relational.Rel_Order_Local]
+    display_type: (vname \<times> vname) list option
+    key: order_view_key
+    render: order_view_string $x
     field:
       state_type: relc
       published_type: relc

@@ -39,7 +39,7 @@ part that really does see all five.
 | File | What |
 | --- | --- |
 | `Analysis_Config.thy` | `context_mode`, the context-policy selection datatype; `globals_rule` comes from `Voblint_Solver.Globals_Rule`. The analyses a caller may activate are named in the generated `analysis_domain` (below), a plain `analysis_domain list`. |
-| `Dispatch_Carrier.thy` | one value type wide enough for every domain's abstract values, and an injective ordering key for listing contexts |
+| `Dispatch_Carrier.thy` | each domain's injective ordering key for listing contexts, and how a field's state is shown; the value union itself is generated into `MCP_Carrier.thy` |
 | `Arithmetic_Diagnostics.thy` | arithmetic occurrences, extraction completeness, nonzero-divisor obligations, and structured diagnostics |
 | `generated/MCP_Carrier.thy` | generated from `manifests/analyses.yaml`: `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, readback, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
 | `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the generated carrier only cites them |

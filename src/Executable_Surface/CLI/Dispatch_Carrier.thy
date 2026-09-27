@@ -1,38 +1,18 @@
 theory Dispatch_Carrier
   imports
-    Voblint_Analysis_Sign.Sign_Analyses
-    Voblint_Analysis_Interval.Interval_Analyses
-    Voblint_Analysis_Int.Int_Analyses
-    Voblint_Analysis_Parity.Parity_Analyses
-    Voblint_Analysis_Congruence.Congruence_Analyses
-    Voblint_Analysis_Relational.Rel_Order_Local
+    "Voblint_Domain.Int_Lattice"
+    "Voblint_Domain.Order_Lattice"
+    "Voblint_CFG.CFG_Def"
 begin
 
-section \<open>One value type wide enough for every domain's result\<close>
+section \<open>What each domain's published value needs to be shown and listed\<close>
 
 text \<open>
-  A run result crosses the dispatcher without its caller knowing which analysis
-  produced it, so every abstract value in it has to have one type.
-  \<open>abstract_value\<close> is that type: a tagged union with one constructor per
-  selectable domain.
-
-  This is handwritten and stays handwritten. The datatype names each domain's
-  own abstract value type, which is domain content rather than registration.
-\<close>
-
-datatype abstract_value =
-    SignValue sign
-  | IntervalValue ivl
-  | IntDomValue int_dom
-  | ParityValue parity
-  | CongruenceValue congruence
-  | OrderValue "(vname \<times> vname) list option"
-
-text \<open>
-  How a value reads is its domain's business: each domain's \<^class>\<open>executable_domain\<close>
-  instance carries its own \<^const>\<open>to_string\<close>, and this dispatch is the only rendering a
-  run result receives before it leaves Isabelle. The rendering changes no verdict, no
-  point and no context identity, so no soundness claim reads it.
+  A run result carries every published value in one tagged union,
+  \<open>abstract_value\<close>, which \<open>MCP_Carrier\<close> generates from the
+  analysis manifest with one constructor per registered analysis. What the union
+  needs from each domain is domain content and stays here: how an order value is
+  listed, and an injective key for every domain's value.
 
   An order value is listed as its pairs, or \<^const>\<open>None\<close> where the state is
   unreachable, so that a key can tell two apart.
@@ -41,14 +21,13 @@ text \<open>
 definition order_pairs :: "relc \<Rightarrow> (vname \<times> vname) list option" where
   "order_pairs d = (case d of RelBot \<Rightarrow> None | RelC ps \<Rightarrow> Some (sorted_list_of_set ps))"
 
-fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
-  "string_of_abstract_value (SignValue s) = to_string s"
-| "string_of_abstract_value (IntervalValue i) = to_string i"
-| "string_of_abstract_value (IntDomValue d) = to_string d"
-| "string_of_abstract_value (ParityValue v) = to_string v"
-| "string_of_abstract_value (CongruenceValue v) = to_string v"
-| "string_of_abstract_value (OrderValue v) =
-     to_string (case v of None \<Rightarrow> RelBot | Some ps \<Rightarrow> RelC (set ps))"
+text \<open>
+  A listed order reads as the order it lists. The listing and not the order is what
+  the union carries, since only a finite listing has an injective key.
+\<close>
+
+definition order_view_string :: "(vname \<times> vname) list option \<Rightarrow> String.literal" where
+  "order_view_string v = to_string (case v of None \<Rightarrow> RelBot | Some ps \<Rightarrow> RelC (set ps))"
 
 text \<open>
   What one analysis shows of a state, as Goblint's report shows each component of its
@@ -122,14 +101,6 @@ definition order_view_key :: "(vname \<times> vname) list option \<Rightarrow> o
         None \<Rightarrow> Key_List []
       | Some ps \<Rightarrow> Key_List [Key_List (map (\<lambda>(a, b). Key_List [literal_key a, literal_key b]) ps)])"
 
-fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
-  "abstract_value_key (SignValue v) = Key_List [Key_Int 0, sign_key v]"
-| "abstract_value_key (IntervalValue v) = Key_List [Key_Int 1, ivl_key v]"
-| "abstract_value_key (IntDomValue v) = Key_List [Key_Int 2, int_dom_key v]"
-| "abstract_value_key (ParityValue v) = Key_List [Key_Int 3, parity_key v]"
-| "abstract_value_key (CongruenceValue v) = Key_List [Key_Int 4, congruence_key v]"
-| "abstract_value_key (OrderValue v) = Key_List [Key_Int 5, order_view_key v]"
-
 lemma sign_key_inject [simp]: "sign_key a = sign_key b \<longleftrightarrow> a = b"
   by (cases a; cases b) simp_all
 
@@ -164,12 +135,5 @@ proof
     unfolding order_view_key_def
     by (auto split: option.splits dest!: list.inj_map_strong[rotated])
 qed simp
-
-lemma abstract_value_key_inject [simp]:
-  "abstract_value_key a = abstract_value_key b \<longleftrightarrow> a = b"
-  by (cases a; cases b) simp_all
-
-lemma inj_abstract_value_key: "inj abstract_value_key"
-  by (rule injI) simp
 
 end

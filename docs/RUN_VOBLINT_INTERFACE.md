@@ -179,8 +179,9 @@ is the step from that table to the `res_states` list OCaml reads.
 instance on the abstraction order, so there is no linear order to list an
 entry-state context set by. `Dispatch_Carrier.thy` supplies a structural
 encoding instead: `order_key` (`Key_Int | Key_Node | Key_List`) derives
-`linorder`, and `abstract_value_key` maps every abstract value into it, proved
-injective once (`inj_abstract_value_key`). `run_result_of` lists contexts with
+`linorder`, each domain has an injective key into it, and the generated
+`abstract_value_key` (`MCP_Carrier.thy`) maps every abstract value into it,
+proved injective once (`inj_abstract_value_key`). `run_result_of` lists contexts with
 `ordered_by_key`: unit contexts by `Key_List []`, entry-state contexts by
 `Key_List` of their values' keys, call strings by `Key_List (map Key_Node ...)`.
 `string_of_abstract_value` stays out of enumeration and out of

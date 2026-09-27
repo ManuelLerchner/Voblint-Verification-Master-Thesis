@@ -192,6 +192,20 @@ class Domain:
         self.value_constructor = entry.get("value_constructor", f"{self.name}Value")
         self.field_overrides = entry.get("field", {})
         self.path = f"src/Analyses/{self.name}/generated/{self.name}_Analyses.thy"
+        # What the combined state imports for this field: the domain's own
+        # registration unless the domain has none.
+        self.field_imports = entry.get(
+            "field_imports",
+            [f"Voblint_Analysis_{self.name}.{self.name}_Analyses"]
+            if self.contexts
+            else [],
+        )
+        # How a published value of this domain enters `abstract_value`: its
+        # type there, the injective key that lists it, and its rendering, a
+        # template over $x.
+        self.display_type = entry.get("display_type", self.value_type)
+        self.key = entry.get("key", f"{self.value_type}_key")
+        self.render_value = entry.get("render", "to_string $x")
 
     def roles(self):
         """The interface roles, spelled the domain's way unless overridden."""
@@ -511,15 +525,11 @@ def fun_block(header, cases):
 def render_mcp(doms):
     n = len(doms)
     G = "\\<G>"
-    out = [
-        "theory MCP_Carrier",
-        "  imports",
-        '    "Voblint_CLI.Analysis_Config"',
-        '    "Voblint_CLI.Dispatch_Carrier"',
-        '    "Voblint_CLI.MCP_Field"',
-        "begin",
-        "",
-    ]
+    imports = ["Voblint_CLI.Analysis_Config", "Voblint_CLI.Dispatch_Carrier"]
+    imports += [i for d in doms for i in d.field_imports]
+    imports += ["Voblint_CLI.MCP_Field"]
+    out = ["theory MCP_Carrier", "  imports"]
+    out += [f'    "{i}"' for i in dict.fromkeys(imports)] + ["begin", ""]
     out += [
         "section \\<open>The combined state of the registered analyses\\<close>",
         "",
@@ -540,6 +550,58 @@ def render_mcp(doms):
     out += ["datatype analysis_domain ="]
     out += [("    " if i == 0 else "  | ") + d.constructor for i, d in enumerate(doms)]
     out += [""]
+    out += [
+        "subsection \\<open>One value type wide enough for every analysis\\<close>",
+        "",
+    ]
+    out += text_block(
+        wrap_prose(
+            "A run result crosses the dispatcher without its caller knowing which"
+            " analysis produced it, so every published value in it has one type: a"
+            " tagged union with one constructor per registered analysis. Each is"
+            " rendered by its own analysis and listed by an injective key, so no"
+            " printer decides which contexts are listed."
+        )
+    ) + [""]
+    out += ["datatype abstract_value ="]
+    out += [
+        ("    " if i == 0 else "  | ") + f'{d.value_constructor} "{d.display_type}"'
+        for i, d in enumerate(doms)
+    ]
+    out += [""]
+    out += fun_block(
+        [
+            'fun string_of_abstract_value :: "abstract_value \\<Rightarrow> String.literal" where'
+        ],
+        [
+            (
+                f"string_of_abstract_value ({d.value_constructor} v)",
+                Template(d.render_value).substitute(x="v"),
+            )
+            for d in doms
+        ],
+    )
+    out += [""]
+    out += fun_block(
+        ['fun abstract_value_key :: "abstract_value \\<Rightarrow> order_key" where'],
+        [
+            (
+                f"abstract_value_key ({d.value_constructor} v)",
+                f"Key_List [Key_Int {i}, {d.key} v]",
+            )
+            for i, d in enumerate(doms)
+        ],
+    )
+    out += [
+        "",
+        "lemma abstract_value_key_inject [simp]:",
+        '  "abstract_value_key a = abstract_value_key b \\<longleftrightarrow> a = b"',
+        "  by (cases a; cases b) simp_all",
+        "",
+        'lemma inj_abstract_value_key: "inj abstract_value_key"',
+        "  by (rule injI) simp",
+        "",
+    ]
     out += ["subsection \\<open>Fields\\<close>", ""]
     for k in range(1, n + 1):
         out += [f"definition slot{k} where", f'  "slot{k} r = {slot_expr(k, n)}"', ""]

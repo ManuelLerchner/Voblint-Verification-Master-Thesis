@@ -2,6 +2,12 @@ theory MCP_Carrier
   imports
     "Voblint_CLI.Analysis_Config"
     "Voblint_CLI.Dispatch_Carrier"
+    "Voblint_Analysis_Sign.Sign_Analyses"
+    "Voblint_Analysis_Interval.Interval_Analyses"
+    "Voblint_Analysis_Parity.Parity_Analyses"
+    "Voblint_Analysis_Int.Int_Analyses"
+    "Voblint_Analysis_Congruence.Congruence_Analyses"
+    "Voblint_Analysis_Relational.Rel_Order_Local"
     "Voblint_CLI.MCP_Field"
 begin
 
@@ -27,6 +33,58 @@ datatype analysis_domain =
   | Int_Analysis
   | Congruence_Analysis
   | Order_Analysis
+
+subsection \<open>One value type wide enough for every analysis\<close>
+
+text \<open>
+  A run result crosses the dispatcher without its caller knowing which analysis
+  produced it, so every published value in it has one type: a tagged union with one
+  constructor per registered analysis. Each is rendered by its own analysis and listed
+  by an injective key, so no printer decides which contexts are listed.
+\<close>
+
+datatype abstract_value =
+    SignValue "sign"
+  | IntervalValue "ivl"
+  | ParityValue "parity"
+  | IntDomValue "int_dom"
+  | CongruenceValue "congruence"
+  | OrderValue "(vname \<times> vname) list option"
+
+fun string_of_abstract_value :: "abstract_value \<Rightarrow> String.literal" where
+  "string_of_abstract_value (SignValue v) =
+     to_string v"
+| "string_of_abstract_value (IntervalValue v) =
+     to_string v"
+| "string_of_abstract_value (ParityValue v) =
+     to_string v"
+| "string_of_abstract_value (IntDomValue v) =
+     to_string v"
+| "string_of_abstract_value (CongruenceValue v) =
+     to_string v"
+| "string_of_abstract_value (OrderValue v) =
+     order_view_string v"
+
+fun abstract_value_key :: "abstract_value \<Rightarrow> order_key" where
+  "abstract_value_key (SignValue v) =
+     Key_List [Key_Int 0, sign_key v]"
+| "abstract_value_key (IntervalValue v) =
+     Key_List [Key_Int 1, ivl_key v]"
+| "abstract_value_key (ParityValue v) =
+     Key_List [Key_Int 2, parity_key v]"
+| "abstract_value_key (IntDomValue v) =
+     Key_List [Key_Int 3, int_dom_key v]"
+| "abstract_value_key (CongruenceValue v) =
+     Key_List [Key_Int 4, congruence_key v]"
+| "abstract_value_key (OrderValue v) =
+     Key_List [Key_Int 5, order_view_key v]"
+
+lemma abstract_value_key_inject [simp]:
+  "abstract_value_key a = abstract_value_key b \<longleftrightarrow> a = b"
+  by (cases a; cases b) simp_all
+
+lemma inj_abstract_value_key: "inj abstract_value_key"
+  by (rule injI) simp
 
 subsection \<open>Fields\<close>
 

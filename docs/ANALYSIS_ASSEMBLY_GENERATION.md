@@ -109,11 +109,13 @@ field's lens laws) and `MCP_Analyses.thy` (normalization to `Bot`, the met
 answer, `mcp_classify`, and the three registrations `mcp_rule`, `mcp_es_rule`
 and `mcp_cs_rule` over the activation list `as`).
 
-The registry is not yet the only place a new domain is named. The display
-union `abstract_value` in `Dispatch_Carrier.thy`, with its imports, rendering
-and ordering key, is handwritten, and so is the domain list in
-`tests/test_analysis_registry.py`. Adding a domain means a manifest entry plus a
-constructor and its cases there.
+The display union `abstract_value`, its rendering, its ordering key and the
+theories the combined state imports for each field are generated too
+(`display_type`, `render`, `key`, `field_imports`). What a domain still brings
+by hand is domain content: its injective key in `Dispatch_Carrier.thy` beside
+the others. The domain list in `tests/test_analysis_registry.py` is written out
+by hand on purpose, as the independent expectation the generated registration
+is checked against.
 
 ## How the CLI reads them
 
