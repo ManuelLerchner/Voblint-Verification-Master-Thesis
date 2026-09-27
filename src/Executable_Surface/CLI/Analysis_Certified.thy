@@ -5,15 +5,14 @@ begin
 section \<open>One soundness statement over every configuration the CLI answers\<close>
 
 text \<open>
-  The tables so far are one per domain and context policy, each over any global update
-  rule. This theory states the result once, for an arbitrary configuration, over
-  \<^const>\<open>run_voblint\<close> alone.
+  The tables so far are one per context policy, each over any activation list and any
+  global update rule. This theory states the result once, for an arbitrary
+  configuration, over \<^const>\<open>run_voblint\<close> alone.
 
   The case split lives in two functions over the configuration: \<open>config_terminates\<close>
   names the one per-program fact a configuration needs --- its solver run completed ---
   and \<open>analysis_result_covers\<close> names the table it built. Both are functions for the
-  reason a table is: an abstract state's type is the domain's own carrier, so nothing
-  polymorphic can hold all five.
+  reason a table is: each context policy keys its table by its own context type.
 
   Coverage of the solve is not a premise: the keys of a terminating solve that a run
   can reach are closed on their own, which \<^theory>\<open>Voblint_Result.Routed_Live_Keys\<close>
@@ -24,221 +23,76 @@ text \<open>
 subsection \<open>What a configuration owes, and what its table claims\<close>
 
 fun config_terminates ::
-    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "config_terminates Sign_Analysis r Ctx_None p = sign_rule.terminates r (declared_global p) p"
-| "config_terminates Sign_Analysis r Ctx_EntryState p =
-     sign_es_rule.terminates r (declared_global p) p"
-| "config_terminates Sign_Analysis r (Ctx_CallString k) p =
-     sign_cs_rule.terminates k r (declared_global p) p"
-| "config_terminates Interval_Analysis r Ctx_None p =
-     interval_rule.terminates r (declared_global p) p"
-| "config_terminates Interval_Analysis r Ctx_EntryState p =
-     interval_es_rule.terminates r (declared_global p) p"
-| "config_terminates Interval_Analysis r (Ctx_CallString k) p =
-     interval_cs_rule.terminates k r (declared_global p) p"
-| "config_terminates Int_Analysis r Ctx_None p = int_rule.terminates r (declared_global p) p"
-| "config_terminates Int_Analysis r Ctx_EntryState p =
-     int_es_rule.terminates r (declared_global p) p"
-| "config_terminates Int_Analysis r (Ctx_CallString k) p =
-     int_cs_rule.terminates k r (declared_global p) p"
-| "config_terminates Parity_Analysis r Ctx_None p =
-     parity_rule.terminates r (declared_global p) p"
-| "config_terminates Parity_Analysis r Ctx_EntryState p =
-     parity_es_rule.terminates r (declared_global p) p"
-| "config_terminates Parity_Analysis r (Ctx_CallString k) p =
-     parity_cs_rule.terminates k r (declared_global p) p"
-| "config_terminates Congruence_Analysis r Ctx_None p =
-     congruence_rule.terminates r (declared_global p) p"
-| "config_terminates Congruence_Analysis r Ctx_EntryState p =
-     congruence_es_rule.terminates r (declared_global p) p"
-| "config_terminates Congruence_Analysis r (Ctx_CallString k) p =
-     congruence_cs_rule.terminates k r (declared_global p) p"
+    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "config_terminates as r Ctx_None p = mcp_rule.terminates as r (declared_global p) p"
+| "config_terminates as r Ctx_EntryState p = mcp_es_rule.terminates as r (declared_global p) p"
+| "config_terminates as r (Ctx_CallString k) p =
+     mcp_cs_rule.terminates as k r (declared_global p) p"
 
 fun analysis_result_covers ::
-    "analysis_domain \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store
+    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> store
        \<Rightarrow> bool" where
-  "analysis_result_covers Sign_Analysis r Ctx_None p =
-     table_covers (sign_rule.result r (declared_global p) p)"
-| "analysis_result_covers Sign_Analysis r Ctx_EntryState p =
-     table_covers (sign_es_rule.result r (declared_global p) p)"
-| "analysis_result_covers Sign_Analysis r (Ctx_CallString k) p =
-     table_covers (sign_cs_rule.result k r (declared_global p) p)"
-| "analysis_result_covers Interval_Analysis r Ctx_None p =
-     table_covers (interval_rule.result r (declared_global p) p)"
-| "analysis_result_covers Interval_Analysis r Ctx_EntryState p =
-     table_covers (interval_es_rule.result r (declared_global p) p)"
-| "analysis_result_covers Interval_Analysis r (Ctx_CallString k) p =
-     table_covers (interval_cs_rule.result k r (declared_global p) p)"
-| "analysis_result_covers Int_Analysis r Ctx_None p =
-     table_covers (int_rule.result r (declared_global p) p)"
-| "analysis_result_covers Int_Analysis r Ctx_EntryState p =
-     table_covers (int_es_rule.result r (declared_global p) p)"
-| "analysis_result_covers Int_Analysis r (Ctx_CallString k) p =
-     table_covers (int_cs_rule.result k r (declared_global p) p)"
-| "analysis_result_covers Parity_Analysis r Ctx_None p =
-     table_covers (parity_rule.result r (declared_global p) p)"
-| "analysis_result_covers Parity_Analysis r Ctx_EntryState p =
-     table_covers (parity_es_rule.result r (declared_global p) p)"
-| "analysis_result_covers Parity_Analysis r (Ctx_CallString k) p =
-     table_covers (parity_cs_rule.result k r (declared_global p) p)"
-| "analysis_result_covers Congruence_Analysis r Ctx_None p =
-     table_covers (congruence_rule.result r (declared_global p) p)"
-| "analysis_result_covers Congruence_Analysis r Ctx_EntryState p =
-     table_covers (congruence_es_rule.result r (declared_global p) p)"
-| "analysis_result_covers Congruence_Analysis r (Ctx_CallString k) p =
-     table_covers (congruence_cs_rule.result k r (declared_global p) p)"
+  "analysis_result_covers as r Ctx_None p =
+     table_covers (mcp_gamma_v (activation as)) (mcp_rule.result as r (declared_global p) p)"
+| "analysis_result_covers as r Ctx_EntryState p =
+     table_covers (mcp_gamma_v (activation as)) (mcp_es_rule.result as r (declared_global p) p)"
+| "analysis_result_covers as r (Ctx_CallString k) p =
+     table_covers (mcp_gamma_v (activation as))
+       (mcp_cs_rule.result as k r (declared_global p) p)"
 
 lemma analyse_program_AnalysedE [elim]:
-  assumes "analyse_program D rule ctx p = Analysed res"
-  obtains "wf_program_compile_input_exec p" and "res = analysis_result D rule ctx p"
+  assumes "analyse_program as rule ctx p = Analysed res"
+  obtains "wf_program_compile_input_exec p" and "res = analysis_result as rule ctx p"
   using assms unfolding analyse_program_def by (auto split: if_splits)
 
 lemma run_voblint_AnalysedE [elim]:
-  assumes "run_voblint D rule ctx p = Analysed res"
+  assumes "run_voblint as rule ctx p = Analysed res"
   obtains "wf_program_compile_input_exec p"
-    and "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+    and "res = map_run_result string_of_abstract_value (analysis_result as rule ctx p)"
   using assms unfolding run_voblint_def analyse_program_def by (auto split: if_splits)
 
 subsection \<open>Every configuration's result is sound at every collected store\<close>
 
 text \<open>
-  The three builders a result comes from, each read at one store the collecting
-  semantics admits.
+  The builder a result comes from, read at one store the collecting semantics admits.
+  It reads the table half of its solve; the global unknowns beside it carry no claim.
 \<close>
 
 lemma run_result_sound:
-  assumes "res = run_result_of into ctx_key ctx_view targets classify r shared seed_at step_at p"
-      and "sound_table p r classify"
+  assumes "fst solved = r"
+      and "sound_table p r classify gm"
       and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s \<and> checks_sound_at res v s \<and> diagnostics_sound_at res p v s"
-  by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) (simp_all add: assms(1))
+  shows "table_covers gm r v s
+         \<and> checks_sound_at (case solved of (t, shared, seed_at, step_at, succ) \<Rightarrow>
+             run_result_of render ctx_key ctx_view (targets succ) classify t shared seed_at
+               step_at p)
+             v s
+         \<and> diagnostics_sound_at (case solved of (t, shared, seed_at, step_at, succ) \<Rightarrow>
+             run_result_of render ctx_key ctx_view (targets succ) classify t shared seed_at
+               step_at p)
+             p v s"
+  unfolding prod.case_eq_if assms(1)
+  by (rule sound_table.result_sound_at [OF assms(2) _ _ assms(3)]) simp_all
 
 text \<open>
-  Each builder reads the table half of its solve; the global unknowns beside it carry
-  no claim.
-\<close>
-
-lemma unit_run_result_sound:
-  assumes "fst solved = r"
-      and "sound_table p r classify"
-      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s
-         \<and> checks_sound_at (unit_run_result into enter classify solved p) v s
-         \<and> diagnostics_sound_at (unit_run_result into enter classify solved p) p v s"
-  unfolding unit_run_result_def prod.case_eq_if assms(1)
-  by (rule run_result_sound [OF refl assms(2,3)])
-
-lemma entry_state_run_result_sound:
-  assumes "fst solved = r"
-      and "sound_table p r classify"
-      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s
-         \<and> checks_sound_at (entry_state_run_result into enter classify solved p) v s
-         \<and> diagnostics_sound_at (entry_state_run_result into enter classify solved p) p v s"
-  unfolding entry_state_run_result_def prod.case_eq_if assms(1)
-  by (rule run_result_sound [OF refl assms(2,3)])
-
-lemma call_string_run_result_sound:
-  assumes "fst solved = r"
-      and "sound_table p r classify"
-      and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "table_covers r v s
-         \<and> checks_sound_at (call_string_run_result into enter classify solved k p) v s
-         \<and> diagnostics_sound_at (call_string_run_result into enter classify solved k p) p v s"
-  unfolding call_string_run_result_def prod.case_eq_if assms(1)
-  by (rule run_result_sound [OF refl assms(2,3)])
-
-text \<open>
-  One line per domain and context policy. Every table asks for well-formedness and
+  One solve and one table per context policy. Every table asks for well-formedness and
   termination, and for nothing else.
 \<close>
 
 lemma analysis_result_sound:
   assumes wf: "wf_program_compile_input p"
-      and terminates: "config_terminates D rule ctx p"
+      and terminates: "config_terminates as rule ctx p"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "analysis_result_covers D rule ctx p v s
-         \<and> checks_sound_at (analysis_result D rule ctx p) v s
-         \<and> diagnostics_sound_at (analysis_result D rule ctx p) p v s"
-  using terminates
-proof (cases D; cases ctx)
-  assume "D = Sign_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: unit_run_result_sound
-          [OF sign_rule.fst_result_with_globals sign_rule_table [OF wf] mem])
-next
-  assume "D = Sign_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: entry_state_run_result_sound
-          [OF sign_es_rule.fst_result_with_globals sign_es_rule_table [OF wf] mem])
-next
-  fix k assume "D = Sign_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: call_string_run_result_sound
-          [OF sign_cs_rule.fst_result_with_globals sign_cs_rule_table [OF wf] mem])
-next
-  assume "D = Interval_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: unit_run_result_sound
-          [OF interval_rule.fst_result_with_globals interval_rule_table [OF wf] mem])
-next
-  assume "D = Interval_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: entry_state_run_result_sound
-          [OF interval_es_rule.fst_result_with_globals interval_es_rule_table [OF wf] mem])
-next
-  fix k
-  assume "D = Interval_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: call_string_run_result_sound
-          [OF interval_cs_rule.fst_result_with_globals interval_cs_rule_table [OF wf] mem])
-next
-  assume "D = Int_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: unit_run_result_sound
-          [OF int_rule.fst_result_with_globals int_rule_table [OF wf] mem])
-next
-  assume "D = Int_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: entry_state_run_result_sound
-          [OF int_es_rule.fst_result_with_globals int_es_rule_table [OF wf] mem])
-next
-  fix k assume "D = Int_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: call_string_run_result_sound
-          [OF int_cs_rule.fst_result_with_globals int_cs_rule_table [OF wf] mem])
-next
-  assume "D = Parity_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: unit_run_result_sound
-          [OF parity_rule.fst_result_with_globals parity_rule_table [OF wf] mem])
-next
-  assume "D = Parity_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: entry_state_run_result_sound
-          [OF parity_es_rule.fst_result_with_globals parity_es_rule_table [OF wf] mem])
-next
-  fix k assume "D = Parity_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: call_string_run_result_sound
-          [OF parity_cs_rule.fst_result_with_globals parity_cs_rule_table [OF wf] mem])
-next
-  assume "D = Congruence_Analysis" "ctx = Ctx_None" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: unit_run_result_sound
-          [OF congruence_rule.fst_result_with_globals congruence_rule_table [OF wf] mem])
-next
-  assume "D = Congruence_Analysis" "ctx = Ctx_EntryState" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: entry_state_run_result_sound
-          [OF congruence_es_rule.fst_result_with_globals congruence_es_rule_table [OF wf] mem])
-next
-  fix k
-  assume "D = Congruence_Analysis" "ctx = Ctx_CallString k" "config_terminates D rule ctx p"
-  then show ?thesis
-    by (simp add: call_string_run_result_sound
-          [OF congruence_cs_rule.fst_result_with_globals congruence_cs_rule_table [OF wf] mem])
-qed
+  shows "analysis_result_covers as rule ctx p v s
+         \<and> checks_sound_at (analysis_result as rule ctx p) v s
+         \<and> diagnostics_sound_at (analysis_result as rule ctx p) p v s"
+  by (insert terminates, cases ctx;
+      simp only: config_terminates.simps analysis_result_covers.simps analysis_result.simps;
+      rule run_result_sound,
+      rule mcp_rule.fst_result_with_globals mcp_es_rule.fst_result_with_globals
+        mcp_cs_rule.fst_result_with_globals,
+      erule mcp_rule_table [OF wf] mcp_es_rule_table [OF wf] mcp_cs_rule_table [OF wf],
+      rule mem)
 
 text \<open>
   Which checks a result lists does not depend on the table behind it: every
@@ -247,10 +101,9 @@ text \<open>
 
 lemma analysis_result_check_sites:
   "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk))
-       (res_checks (analysis_result D rule ctx p))
+       (res_checks (analysis_result as rule ctx p))
      = check_sites (prog_cfg p)"
-  by (cases D; cases ctx)
-     (simp_all add: run_result_builder_defs prod.case_eq_if result_checks_of_sites)
+  by (cases ctx) (simp_all add: prod.case_eq_if result_checks_of_sites)
 
 text \<open>
   The same claims read through \<^const>\<open>run_voblint\<close>: an analysed answer was only
@@ -259,22 +112,22 @@ text \<open>
 \<close>
 
 lemma run_voblint_sound_at:
-  assumes terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+  assumes terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-  shows "analysis_result_covers D rule ctx p v s \<and> checks_sound_at res v s
+  shows "analysis_result_covers as rule ctx p v s \<and> checks_sound_at res v s
            \<and> diagnostics_sound_at res p v s"
 proof -
   from ans have wfx: "wf_program_compile_input_exec p"
-    and res: "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+    and res: "res = map_run_result string_of_abstract_value (analysis_result as rule ctx p)"
     by blast+
   from analysis_result_sound [OF wf_program_compile_input_exec_sound [OF wfx] terminates mem]
   show ?thesis unfolding res map_run_result_sound_at .
 qed
 
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates D rule ctx p"
-    and ans: "run_voblint D rule ctx p = Analysed res"
+  assumes terminates: "config_terminates as rule ctx p"
+    and ans: "run_voblint as rule ctx p = Analysed res"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and absent: "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
@@ -282,8 +135,8 @@ theorem run_voblint_arithmetic_safe:
   unfolding diagnostics_sound_at_def by blast
 
 corollary run_voblint_arithmetic_intra_safe:
-  assumes "config_terminates D rule ctx p"
-    and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+    and "run_voblint as rule ctx p = Analysed res"
     and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
     and "(v, action, w) \<in> intra (prog_cfg p)"
@@ -300,11 +153,11 @@ text \<open>
 \<close>
 
 corollary run_voblint_check_sites:
-  assumes "run_voblint D rule ctx p = Analysed res"
+  assumes "run_voblint as rule ctx p = Analysed res"
   shows "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"
 proof -
-  from assms have "res = map_run_result string_of_abstract_value (analysis_result D rule ctx p)"
+  from assms have "res = map_run_result string_of_abstract_value (analysis_result as rule ctx p)"
     by blast
   then show ?thesis by (simp add: analysis_result_check_sites)
 qed
@@ -325,13 +178,13 @@ theorem run_voblint_certified_source_sound:
       and run: "declared_global p, prog_table p
                   \<turnstile> (main_body (prog_table p), s0, [])
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
   shows "\<exists>v stk.
              prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
                         cinit_stores (declared_global p)\<^esub> v
-           \<and> analysis_result_covers D rule ctx p v s
+           \<and> analysis_result_covers as rule ctx p v s
            \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
@@ -358,8 +211,8 @@ theorem run_voblint_check_sound:
                   \<turnstile> (main_body (prog_table p), s0, [])
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and chk: "next_check residual = Some (l, e)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
   shows "\<exists>c \<in> set (res_checks res). check_label c = l \<and> check_exp c = e
            \<and> s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,
                     cinit_stores (declared_global p)\<^esub> (check_point c)
@@ -401,8 +254,8 @@ corollary run_voblint_labelled_check_sound:
                   \<turnstile> (main_body (prog_table p), s0, [])
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and chk: "next_check residual = Some (l, e)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
       and distinct: "distinct (map check_label (res_checks res))"
   shows "\<exists>c \<in> set (res_checks res). check_label c = l"
     and "\<forall>c \<in> set (res_checks res). check_label c = l \<longrightarrow>
@@ -445,8 +298,8 @@ text \<open>
 \<close>
 
 corollary run_voblint_dead_check_unreached:
-  assumes terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+  assumes terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
       and listed: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,

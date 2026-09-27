@@ -37,6 +37,7 @@ let domain_label = function
   | Int_Analysis -> "Int_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
+  | Order_Analysis -> "Order_Analysis"
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
@@ -203,7 +204,10 @@ let rec show_exp_compact = function
    well-formed, so `Malformed_Program` is a defect in the export rather than a
    failed expectation. *)
 let report domain prog =
-  match run_voblint domain Globals_Warrow Ctx_None prog with
+  match run_voblint [ domain ] Globals_Warrow Ctx_None prog with
+  | Invalid_Activation ->
+      print_endline ("FAIL " ^ domain_label domain ^ ": invalid activation list");
+      exit 1
   | Malformed_Program ->
       print_endline
         ("FAIL " ^ domain_label domain ^ ": program is not well-formed");

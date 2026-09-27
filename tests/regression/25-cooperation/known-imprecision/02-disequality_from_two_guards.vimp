@@ -1,0 +1,22 @@
+// PARAM: --analysis interval
+// Concretely z == 0 at the check: both guards hold, so x == y and x != y
+// evaluates to 0.
+//
+// Mechanism: as in 01-equality_from_two_guards, the guards compare two
+// unbounded intervals and refine neither, so Interval evaluates x != y to
+// [0,1].
+//
+// The order analysis answers EvalInt (x != y) with the exact integer 0 once it holds both
+// (x, y) and (y, x) (rel_qry, src/Analyses/Relational/Rel_Order_Local.thy), so
+// --analysis interval,order assigns 0 and proves the check
+// (precision/04-disequality_asked_of_order). This case pins the baseline.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= y) {
+    if (y <= x) {
+      z = (x != y);
+      __voblint_check(z == 0); // UNKNOWN
+    }
+  }
+}

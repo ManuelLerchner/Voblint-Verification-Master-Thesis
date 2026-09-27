@@ -94,23 +94,6 @@ where
      refine mode (mod_int_dom_raw a b)"
 
 
-subsection \<open>Literal embedding\<close>
-
-definition int_dom_of_int :: "int => int_dom" where
-  "int_dom_of_int n =
-     (top :: int_dom)\<lparr>
-       int_sign := sign_of_int n,
-       int_ivl := Ivl (Fin n) (Fin n),
-       int_parity := parity_of_int n,
-       int_congruence := congruence_of_int n
-     \<rparr>"
-
-lemma gamma_int_dom_of_int [simp]:
-  "gamma_int_dom (int_dom_of_int n) = {n}"
-  by (auto simp: int_dom_of_int_def gamma_int_dom_def
-        sign_of_int_gamma parity_of_int_gamma)
-
-
 subsection \<open>Raw operation laws\<close>
 
 lemma plus_int_dom_raw_sound:

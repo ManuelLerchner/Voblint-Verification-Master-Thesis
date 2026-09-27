@@ -22,14 +22,13 @@ text \<open>
   rather than hand-editing; a drift check compares regenerated output against
   this file.
 
-  Parity runs through the shared D/G pipeline three times: at the unit context,
-  keyed by the abstract values a callee's formals hold on entry, and keyed by a
-  bounded call string. Each registration leaves the rule that merges a value
-  side-effected into a global as a parameter \<open>r\<close>, and the call-string
-  one also its bound \<open>k\<close>, so one registration serves every discipline and
-  every bound. The equation system, the solve, the result table and every soundness
-  endpoint come from the interpreted locale; this theory only names the domain's
-  own implementation and facts.
+  Parity runs through the shared D/G pipeline at the unit context. The CLI runs it as
+  a field of the combined state of \<open>MCP_Analyses\<close>, whose component and
+  soundness this unit registration supplies. Each registration leaves the rule that
+  merges a value side-effected into a global as a parameter \<open>r\<close>. The
+  equation system, the solve, the result table and every soundness endpoint come from
+  the interpreted locale; this theory only names the domain's own implementation and
+  facts.
 \<close>
 
 subsection \<open>At the unit context\<close>
@@ -43,7 +42,7 @@ global_interpretation parity_rule: unit_dg_analysis
     skip_parity assign_parity special_parity branch_parity body_parity return_parity
     enter_parity_ci_for event_parity "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule unit_dg_analysis.intro, rule routed_dg_analysis.intro,
+proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,
        goal_cases)
   case (1 \<G>) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
@@ -55,98 +54,6 @@ next
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
 next
   case (4 \<G> u ctx d ca) show ?case by simp
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule parity_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule parity_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule parity_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
-qed
-
-subsection \<open>At the entry-state context\<close>
-
-global_interpretation parity_es_rule: routed_dg_analysis
-    parity_tf_st_for parity_enter_st_for cinit_parity_st
-    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, parity list) routed_gk)
-       TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) r"
-    bot parity_classify_check
-    skip_parity assign_parity special_parity branch_parity body_parity return_parity
-    enter_parity_ci_for event_parity "\<lambda>_. formals_route_lifted_gen"
-    "TD_side_rule_Interp_solve_c r"
-  for r
-proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule parity_tf.is_sound_transfer_for)
-next
-  case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
-next
-  case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule exec_formals_route_commute[symmetric])
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule parity_classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule parity_classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule parity_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
-qed
-
-subsection \<open>At the call-string context\<close>
-
-global_interpretation parity_cs_rule: routed_dg_analysis
-    parity_tf_st_for parity_enter_st_for cinit_parity_st
-    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) r"
-    bot parity_classify_check
-    skip_parity assign_parity special_parity branch_parity body_parity return_parity
-    enter_parity_ci_for event_parity "\<lambda>_. cs_route k"
-    "TD_side_rule_Interp_solve_c r"
-  for k r
-proof (rule routed_dg_analysis.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule parity_tf.is_sound_transfer_for)
-next
-  case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
-next
-  case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)
 next
   case (5 v ctx) show ?case by simp
 next

@@ -11,7 +11,7 @@ text \<open>
   instance of generic derivations defined directly in \<open>backward_domain\<close>'s own
   context --- \<open>sign_less_true\<close>/\<open>sign_less_false\<close> read off \<open>inv_less_sign\<close>,
   \<open>sign_eq_true\<close> reads off \<open>sign_less_false\<close> in both directions, and
-  \<open>sign_eq_false\<close> reads off \<open>meet_sign\<close> collapsing to \<open>SBot\<close> --- with no extra
+  \<open>sign_eq_false\<close> reads off \<open>(\<sqinter>)\<close> collapsing to \<open>SBot\<close> --- with no extra
   proof obligation beyond \<open>backward_domain\<close>'s own assumptions. Exhaustive case
   analysis over the seven-element lattice confirms each derived pair
   classifies exactly the pairs a hand-written table would.
@@ -20,9 +20,9 @@ text \<open>
 text \<open>
   \<open>sign_less_true_eq\<close>/\<open>sign_less_false_eq\<close>/\<open>sign_eq_true_eq\<close>/\<open>sign_eq_false_eq\<close>
   below restate each derived predicate as an explicit truth table over
-  \<open>inv_less_sign\<close>/\<open>meet_sign\<close>. No downstream proof cites them: they exist as
+  \<open>inv_less_sign\<close>/\<open>(\<sqinter>)\<close>. No downstream proof cites them: they exist as
   regression and precision-equivalence guards, so a future change to
-  \<open>inv_less_sign\<close>/\<open>inv_eq_sign\<close>/\<open>meet_sign\<close> that silently narrows or widens
+  \<open>inv_less_sign\<close>/\<open>inv_eq_sign\<close>/\<open>(\<sqinter>)\<close> that silently narrows or widens
   what these four predicates classify breaks one of these four proofs, at the
   seven-element lattice, rather than surfacing only as a precision regression
   in a downstream analysis.
@@ -83,7 +83,7 @@ text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is
   concretizations are disjoint. Neither table is hand-built: \<open>sign_eq_true\<close>
   is Sign's instance of the \<open>eq_true\<close> derivation off \<open>less_false\<close> in both
   directions (integer trichotomy), and \<open>sign_eq_false\<close> is Sign's instance of
-  the \<open>eq_false\<close> derivation off \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint
+  the \<open>eq_false\<close> derivation off \<open>(\<sqinter>)\<close> collapsing to \<open>SBot\<close> (disjoint
   concretizations) --- both defined directly in \<open>backward_domain\<close>'s own
   context (\<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close>) with no extra
   proof obligation, and exhaustive case analysis over the seven-element
@@ -111,7 +111,7 @@ qed
 definition sign_eq_false :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
   "sign_eq_false = sign_eq_false_of_intersection"
 
-lemma sign_eq_false_eq: "sign_eq_false a b \<longleftrightarrow> meet_sign a b = SBot"
+lemma sign_eq_false_eq: "sign_eq_false a b \<longleftrightarrow> a \<sqinter> b = SBot"
   by (cases a; cases b;
       simp add: sign_eq_false_def sign_backward_domain.eq_false_def bot_sign_def is_bottom_sign_def)
 
@@ -122,8 +122,8 @@ proof
   assume heq: "i = j"
   have hia: "i \<in> gamma_sign a" using assms(2) .
   have hib: "i \<in> gamma_sign b" using assms(3) heq by simp
-  have "i \<in> gamma_sign (meet_sign a b)" using meet_sign_sound[OF hia hib] .
-  moreover have "meet_sign a b = SBot" using assms(1) sign_eq_false_eq by blast
+  have "i \<in> gamma_sign (a \<sqinter> b)" using inf_sign_sound[OF hia hib] .
+  moreover have "a \<sqinter> b = SBot" using assms(1) sign_eq_false_eq by blast
   ultimately show False by simp
 qed
 

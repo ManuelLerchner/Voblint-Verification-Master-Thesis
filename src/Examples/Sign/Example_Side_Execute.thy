@@ -105,7 +105,7 @@ corollary x1_certified_sound:
    \<le> \<lbrakk>x1_exit_env\<rbrakk>"
   unfolding x1_exit_env_def
   using x1_node_sound
-  by (simp add: prog_main_name_def gamma_point_def split: lifted.splits)
+  by (simp add: prog_main_name_def split: lifted.splits)
 
 definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"

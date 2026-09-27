@@ -40,22 +40,22 @@ subsection \<open>Composite semantic intersection\<close>
 definition intersect_int_dom :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom d1 d2 =
      d1\<lparr>
-       int_sign := intersect_sign (int_sign d1) (int_sign d2),
+       int_sign := int_sign d1 \<sqinter> int_sign d2,
        int_ivl := intersect_ivl (int_ivl d1) (int_ivl d2),
-       int_parity := intersect_parity (int_parity d1) (int_parity d2),
-       int_congruence := intersect_congruence (int_congruence d1) (int_congruence d2)
+       int_parity := int_parity d1 \<sqinter> int_parity d2,
+       int_congruence := int_congruence d1 \<sqinter> int_congruence d2
      \<rparr>"
 
 text \<open>
   \<open>intersect_ivl\<close>'s defining equation is globally tagged \<open>[simp]\<close>
   (\<open>Interval_Lattice\<close>), so plain \<open>simp\<close>/\<open>auto\<close> unfolds it to
-  \<open>normalize_ivl (meet_ivl a b)\<close> before \<open>gamma_intersect_ivl_exact\<close> or
+  \<open>normalize_ivl (a \<sqinter> b)\<close> before \<open>gamma_intersect_ivl_exact\<close> or
   \<open>intersect_ivl_le1\<close>/\<open>intersect_ivl_le2\<close>/\<open>intersect_ivl_mono\<close> -- all
   stated in terms of the abstract \<open>intersect_ivl\<close> -- get a chance to match.
   \<open>del: intersect_ivl_def\<close> below keeps \<open>intersect_ivl\<close> opaque for exactly
   those calls, matching \<open>is_bottom_int_dom_correct\<close>'s own
   \<open>simp only: gamma_intersect_ivl_exact ...\<close> workaround in
-  \<open>Int_Domain\<close>.
+  \<open>Int_Lattice\<close>.
 \<close>
 
 lemma intersect_int_dom_sound:
@@ -71,12 +71,12 @@ proof -
   have ivl_fact: "n \<in> gamma_ivl (intersect_ivl (int_ivl a) (int_ivl b))"
     unfolding intersect_ivl_def
     using meet_ivl_gamma[OF hn(2) hm(2)] normalize_ivl_gamma by simp
-  have sign_fact: "n \<in> gamma_sign (intersect_sign (int_sign a) (int_sign b))"
+  have sign_fact: "n \<in> gamma_sign (int_sign a \<sqinter> int_sign b)"
     using hn(1) hm(1) by simp
-  have parity_fact: "n \<in> gamma_parity (intersect_parity (int_parity a) (int_parity b))"
+  have parity_fact: "n \<in> gamma_parity (int_parity a \<sqinter> int_parity b)"
     using hn(3) hm(3) by simp
   have congruence_fact:
-    "n \<in> gamma_congruence (intersect_congruence (int_congruence a) (int_congruence b))"
+    "n \<in> gamma_congruence (int_congruence a \<sqinter> int_congruence b)"
     using hn(4) hm(4) by simp
   show ?thesis
     unfolding gamma_int_dom_def intersect_int_dom_def
@@ -86,14 +86,12 @@ qed
 
 lemma intersect_int_dom_le1: "intersect_int_dom a b \<le> a"
   unfolding intersect_int_dom_def less_eq_int_dom_ext_def
-  by (simp add: intersect_sign_le1 intersect_ivl_le1
-        intersect_parity_le1 intersect_congruence_le1
+  by (simp add: inf_le1 intersect_ivl_le1
       del: intersect_ivl_def)
 
 lemma intersect_int_dom_le2: "intersect_int_dom a b \<le> b"
   unfolding intersect_int_dom_def less_eq_int_dom_ext_def
-  by (simp add: intersect_sign_le2 intersect_ivl_le2
-        intersect_parity_le2 intersect_congruence_le2
+  by (simp add: inf_le2 intersect_ivl_le2
       del: intersect_ivl_def)
 
 lemma intersect_int_dom_mono:
@@ -108,8 +106,8 @@ proof -
     using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
   show ?thesis
     unfolding intersect_int_dom_def less_eq_int_dom_ext_def
-    by (simp add: intersect_sign_mono[OF s(1) t(1)] intersect_ivl_mono[OF s(2) t(2)]
-          intersect_parity_mono[OF s(3) t(3)] intersect_congruence_mono[OF s(4) t(4)]
+    using s t
+    by (simp add: intersect_ivl_mono[OF s(2) t(2)] le_infI1 le_infI2
         del: intersect_ivl_def)
 qed
 

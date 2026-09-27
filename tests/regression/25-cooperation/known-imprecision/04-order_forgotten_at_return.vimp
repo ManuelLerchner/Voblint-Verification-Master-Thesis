@@ -1,0 +1,24 @@
+// PARAM: --analysis interval,order
+// Concretely x <= y at the check: the call touches neither x nor y.
+//
+// Before the call the order analysis holds (x, y), learned from Interval as in
+// precision/06-order_asks_interval. It is deliberately coarse at calls: its return
+// stage answers the order that relates nothing, so the pair does not survive the
+// call, and Interval's joined intervals for x and y overlap.
+fun noop(a) {
+  b = a + 1;
+  return b;
+}
+
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  r = noop(c);
+  __voblint_check(x <= y); // UNKNOWN
+}

@@ -18,14 +18,28 @@ new domain would touch OCaml.
 All names below are defined in `src/Executable_Surface/CLI/Analysis_Run.thy`.
 
 ```text
-analyse_program : analysis_domain => globals_rule => context_mode => imp_prog
+analyse_program : analysis_domain list => globals_rule => context_mode => imp_prog
                => abstract_value analysis_answer            (typed, verified)
 
 run_voblint     = map_analysis_answer string_of_abstract_value o analyse_program
                                                              (exported, display only)
 
-datatype 'v analysis_answer = Malformed_Program | Analysed "'v run_result"
+datatype 'v analysis_answer =
+  Invalid_Activation | Malformed_Program | Analysed "'v run_result"
+
+valid_activation as <-> as ~= [] /\ distinct as
 ```
+
+The first argument is the activation list: the analyses that run together, in the
+order their values are displayed. `analyse_program` checks it before anything
+else. An empty list or one that names an analysis twice answers
+`Invalid_Activation`; a consumer passes the list it was given and lets this
+answer reject it, so no second notion of a valid configuration exists outside
+Isabelle. A valid list runs one solve over the combined state (see
+[One dispatcher](#one-dispatcher)). A state shows each active analysis's part on
+its own, in activation order, as Goblint's report shows each component of its
+combined state: a pointwise analysis as its variables' values (`Field_Store`), an
+analysis whose state relates variables as one value (`Field_Whole`).
 
 `map_run_result` is an explicit definition rather than a derived BNF map (plain
 `record`s are not BNFs), so the boundary itself spells out what presentation may
@@ -51,8 +65,11 @@ record 'v run_result =
 datatype 'v analysis_context =
   Context_Unit | Context_Entry "'v list" | Context_Call_String "pp list"
 
+datatype 'v field_state = Field_Store "(vname * 'v) list" | Field_Whole 'v
+type_synonym 'v analysis_view = "(analysis_domain * 'v field_state) list"
+
 record 'v result_state   = state_point :: pp, state_context :: nat,
-                           state_value :: "(vname * 'v) list lifted"   (Bot = unreachable)
+                           state_value :: "'v analysis_view lifted"   (Bot = unreachable)
                            state_checks :: "(exp * contextual_verdict) list"
                            state_diagnostics :: "(arithmetic_obligation * contextual_verdict) list"
 record call_route        = route_point :: pp, route_context :: nat,
@@ -62,7 +79,7 @@ record call_route        = route_point :: pp, route_context :: nat,
 record result_check      = check_point :: pp, check_exp :: exp,
                            check_verdict :: contextual_verdict
 record 'v result_global  = global_key :: result_global_key,
-                           global_state :: "(vname * 'v) list lifted"
+                           global_state :: "'v analysis_view lifted"
 datatype result_global_key = Global_Shared | Global_Seed pname "nat option"
                            (None = a procedure no solved context enters)
 datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)
@@ -101,19 +118,19 @@ definition diagnostics_sound_at :: "'v run_result => imp_prog => pp => store => 
        --> arithmetic_safe_at (prog_cfg p) v s)
 
 lemma run_voblint_sound_at:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "s : ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v"
-  shows "analysis_result_covers D rule ctx p v s
+  shows "analysis_result_covers as rule ctx p v s
          /\ checks_sound_at res v s /\ diagnostics_sound_at res p v s"
 ```
 
 `analysis_result_covers` is `table_covers` of the table the configuration's
 registration solved: the store lies in the entry filed at `v` under some context.
-Each configuration discharges the `sound_table` locale (finitely many contexts
+Each context policy discharges the `sound_table` locale (finitely many contexts
 per point, coverage, classifier soundness in both directions) through its
-`<d>_rule_table`, `<d>_es_rule_table` or `<d>_cs_rule_table` lemma, and
-`analysis_result_sound` does the case split once. Well-formedness is not a
+`mcp_rule_table`, `mcp_es_rule_table` or `mcp_cs_rule_table` lemma, for every
+activation list, and `analysis_result_sound` does the case split once. Well-formedness is not a
 premise: `run_voblint` answers `Analysed` only for a program that passes
 `wf_program_compile_input_exec`.
 
@@ -162,8 +179,9 @@ is the step from that table to the `res_states` list OCaml reads.
 instance on the abstraction order, so there is no linear order to list an
 entry-state context set by. `Dispatch_Carrier.thy` supplies a structural
 encoding instead: `order_key` (`Key_Int | Key_Node | Key_List`) derives
-`linorder`, and `abstract_value_key` maps every abstract value into it, proved
-injective once (`inj_abstract_value_key`). `run_result_of` lists contexts with
+`linorder`, each domain has an injective key into it, and the generated
+`abstract_value_key` (`MCP_Carrier.thy`) maps every abstract value into it,
+proved injective once (`inj_abstract_value_key`). `run_result_of` lists contexts with
 `ordered_by_key`: unit contexts by `Key_List []`, entry-state contexts by
 `Key_List` of their values' keys, call strings by `Key_List (map Key_Node ...)`.
 `string_of_abstract_value` stays out of enumeration and out of
@@ -195,12 +213,35 @@ cover:
 
 ## One dispatcher
 
-`analyse_program` is the only dispatcher. Its `analysis_result` reads one
-rule-parametric registration per domain and context policy, which
-`scripts/gen_analysis_assembly.py` emits from `manifests/analyses.yaml`:
-`<d>_rule` and `<d>_es_rule` for `r`, `<d>_cs_rule` for `k r`, each read through
-its `result_with_globals`. These are the only registrations a domain carries:
-the rule is a parameter, so no discipline has an instance of its own.
+`analyse_program` is the only dispatcher, and it no longer branches on the
+domain. `scripts/gen_analysis_assembly.py` emits one combined state from
+`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with
+one lifted field per listed analysis, each field carrying that analysis's
+per-domain state. `MCP_Analyses.thy` registers this state once per context
+policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for `as k r`.
+`analysis_result` reads the one registration its policy names through
+`result_with_globals`. The activation list, the rule and the call-string bound
+are all parameters, so no combination and no discipline has an instance of its
+own.
+
+A transfer asks the combined state through the query channel. Every active
+analysis answers from its own field, through the answer it publishes for checks
+(`part_answer`, `mcp_field`), and the answers are met. A handler may ask through
+the same channel while it answers: `ask_rec` answers a query already being asked
+with `⊤` and bounds the depth, as Goblint's `MCP.query'` does. Entry and both
+return stages receive the channel too, and the return stages also receive the
+callee's (`f_ask`). The pointwise analyses ask for the value of an assignment's
+right-hand side, and the order analysis asks how an assigned value compares with
+each variable and answers comparisons, so `interval,order` proves checks neither
+proves alone (`coop_demo_needs_both`).
+
+Inactive fields start at their bottom and stay there. A step whose result makes any
+active field `Bot` makes the whole state `Bot`, so one analysis proving a point
+unreachable makes it unreachable for all of them. A check reads the met answer
+of every active analysis to the query `EvalInt` of the check's expression, and
+`answer_check` classifies that one answer (`Check_Answer.thy`); no analysis
+classifies checks on its own. Singleton lists reproduce the verdicts of the
+former per-domain path on every CLI regression case.
 
 ## Steps
 

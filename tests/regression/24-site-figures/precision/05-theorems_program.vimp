@@ -16,33 +16,41 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       n=⊤
-//       q=⊤
+//       interval:
+//         n=⊤
+//         q=⊤
 //   main_pp2_ctx0: pp2
-//       n=[1,+∞]
-//       q=⊤
+//       interval:
+//         n=[1,+∞]
+//         q=⊤
 //   main_pp3_ctx0: pp3 [proved]
-//       n=[1,+∞]
-//       q=⊤
+//       interval:
+//         n=[1,+∞]
+//         q=⊤
 //       check n >= 1
 //   main_pp4_ctx0: pp4
-//       n=[-∞,0]
-//       q=⊤
+//       interval:
+//         n=[-∞,0]
+//         q=⊤
 //   main_pp5_ctx0: pp5 [unreachable]
 //       unreachable
 //       check n == 0 [dead]
 //   main_pp7_ctx0: pp7
-//       n=⊤
-//       q=⊤
+//       interval:
+//         n=⊤
+//         q=⊤
 //   main_exit_main_ctx0: exit_main
-//       n=⊤
-//       q=⊤
+//       interval:
+//         n=⊤
+//         q=⊤
 //   main_pp0_ctx0: pp0
-//       n=⊤
-//       q=⊤
+//       interval:
+//         n=⊤
+//         q=⊤
 //   main_entry_main_ctx0: entry_main
-//       n=⊤
-//       q=⊤
+//       interval:
+//         n=⊤
+//         q=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()

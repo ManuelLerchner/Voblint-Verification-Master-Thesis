@@ -84,13 +84,28 @@ def pages_base() -> str:
     return f"https://{owner.lower()}.github.io/{repo}/"
 
 
-def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+Ranked = dict[tuple[str, str], tuple[int, str]]
+
+
+def _index_page(index: Ranked, rel: str, body: str) -> None:
     for m in ANCHOR.finditer(body):
         qualified, kind = m.group(1), m.group(2)
         anchor = f"{qualified}|{kind}".replace("|", "%7C")
+        # Anchors are `<Theory>.<name>`, and a record field or locale member
+        # carries its owner too (`CFG_Def.cfg.intra`). Prose cites the short
+        # name, so register every suffix and let the least-qualified anchor
+        # win: a theory-level theorem beats a locale member or an example's
+        # interpretation of the same name.
         parts = qualified.split(".")
+        target = (len(parts), f"{rel}#{anchor}")
         for i in range(1, len(parts)):
-            index.setdefault((".".join(parts[i:]), kind), f"{rel}#{anchor}")
+            key = (".".join(parts[i:]), kind)
+            if key not in index or target < index[key]:
+                index[key] = target
+
+
+def _unrank(index: Ranked) -> dict[tuple[str, str], str]:
+    return {key: target for key, (_, target) in index.items()}
 
 
 def index_live(
@@ -111,7 +126,7 @@ def index_live(
         for m in re.finditer(r'href="([^"/]+)/index\.html"', root)
         if sessions in m.group(1)
     ]
-    index: dict[tuple[str, str], str] = {}
+    index: Ranked = {}
     pages = 0
     for session in sorted(names):
         listing = fetch(f"{base}Voblint/{session}/index.html", retries)
@@ -119,7 +134,7 @@ def index_live(
             continue
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
-            if page == "index.html":
+            if page == "index.html" or "." in page.removesuffix(".html"):
                 continue
             rel = f"Voblint/{session}/{page}"
             body = fetch(base + rel, retries)
@@ -132,25 +147,22 @@ def index_live(
         f"published page(s)",
         file=sys.stderr,
     )
-    return index
+    return _unrank(index)
 
 
 def index_anchors() -> dict[tuple[str, str], str]:
     """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html."""
-    index: dict[tuple[str, str], str] = {}
-    for path in HTML.rglob("*.html"):
+    index: Ranked = {}
+    # Project sessions all live in `chapter Voblint`; other chapters in a
+    # reused output directory hold library pages or stale sessions.
+    for path in sorted((HTML / "Voblint").rglob("*.html")):
+        # A session that elaborates another session's theory presents a copy
+        # named `<Owner>.<Theory>.html`; cite the owner's page instead.
+        if "." in path.stem:
+            continue
         rel = path.relative_to(HTML).as_posix()
-        for m in ANCHOR.finditer(path.read_text(errors="ignore")):
-            qualified, kind = m.group(1), m.group(2)
-            anchor = f"{qualified}|{kind}".replace("|", "%7C")
-            # Anchors are `<Theory>.<name>`, and a record field or locale
-            # member carries its owner too (`CFG_Def.cfg.intra`). Prose cites
-            # the short name, so register every suffix and let the shortest
-            # win -- an exact citation beats a qualified one.
-            parts = qualified.split(".")
-            for i in range(1, len(parts)):
-                index.setdefault((".".join(parts[i:]), kind), f"{rel}#{anchor}")
-    return index
+        _index_page(index, rel, path.read_text(errors="ignore"))
+    return _unrank(index)
 
 
 def cited() -> list[tuple[Path, int, str, str]]:

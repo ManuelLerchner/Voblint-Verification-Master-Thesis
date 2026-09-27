@@ -1,5 +1,5 @@
 theory Parity_Classify
-  imports Parity_Numeric_Queries "Voblint_Framework.Abstract_Checks"
+  imports Parity_Numeric_Queries "Voblint_Framework.Check_Answer"
     "Voblint_Framework.Analysis_Result" Parity_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
@@ -30,6 +30,7 @@ global_interpretation parity_check_domain:
     parity_truthy_query = parity_check_domain.truthy_query
     and parity_check_query = parity_check_domain.check_query
     and parity_classify_check = parity_check_domain.classify_check
+    and parity_eval_answer = parity_check_domain.eval_answer
     and parity_checks_proven = parity_check_domain.abstract_checks_proven
   by unfold_locales (rule parity_arith.aval_abs_sound)
 
@@ -42,6 +43,8 @@ text \<open>
   the qualified \<open>parity_check_domain.\<close> name.
 \<close>
 
+lemmas parity_eval_answer_sound = parity_check_domain.eval_answer_sound
+lemmas parity_answer_check = parity_check_domain.answer_check_eval_answer
 lemmas parity_classify_check_proved = parity_check_domain.classify_check_proved
 lemmas parity_classify_check_refuted = parity_check_domain.classify_check_refuted
 lemmas parity_checks_provenI = parity_check_domain.abstract_checks_provenI

@@ -27,13 +27,11 @@ as `signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+2ℤ`, and a whole 
 those is unreadable. The XML report separates graph from state the way Goblint's
 own HTML output does.
 
-`--analysis` takes a comma list, which puts every named domain in the same
-report, one `<analysis>` block per node, which is the element Goblint uses for
-exactly this. `--analysis int,interval,sign,parity` shows `int: PROVED` beside
-`interval: UNKNOWN` on the same node, so a precision claim is readable in place
-instead of across four runs. It needs `--html` and `--context none`: node
-identifiers depend on the context, so they only agree across domains when the
-context does.
+`--analysis` takes a comma list, which runs the named domains together in one
+solve. Each node has one `<analysis>` block per active domain, in list order,
+as Goblint's report has one per component of its combined state: a pointwise
+domain's block maps its variables to values, and the order analysis's block is
+one value (`{x≤y ∧ y≤x}`). Comparing domains means one report per domain.
 
 The entry point is `index.xml`, not an `.html` file, and it renders only when
 served, because browsers refuse to apply its stylesheet over `file://`.

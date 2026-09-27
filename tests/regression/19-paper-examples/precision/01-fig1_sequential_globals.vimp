@@ -50,23 +50,38 @@
 //
 // nodes:
 //   f_pp1_ctx0: pp1
+//       interval:
 //   f_pp2_ctx0: pp2
+//       interval:
 //   f_exit_f_ctx0: exit_f
+//       interval:
 //   main_pp4_ctx0: pp4
+//       interval:
 //   main_pp5_ctx0: pp5
+//       interval:
 //   main_pp8_ctx0: pp8 [proved]
+//       interval:
 //       check h == 1
 //   main_pp9_ctx0: pp9 [proved]
+//       interval:
 //       check g < 43
 //   main_pp10_ctx0: pp10
+//       interval:
 //   main_exit_main_ctx0: exit_main
+//       interval:
 //   f_pp0_ctx0: pp0
+//       interval:
 //   main_pp3_ctx0: pp3
+//       interval:
 //   main_pp6_ctx0: pp6
+//       interval:
 //   f_entry_f_ctx0: entry_f
+//       interval:
 //   main_pp7_ctx0: pp7 [proved]
+//       interval:
 //       check g == 42
 //   main_entry_main_ctx0: entry_main
+//       interval:
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: h := h + 1

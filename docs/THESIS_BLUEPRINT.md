@@ -261,11 +261,15 @@ policies with the update rule left as a parameter.
 
 ### 2.4 The configuration space
 
-`run_voblint :: analysis_domain => globals_rule => context_mode => imp_prog =>
+`run_voblint :: analysis_domain list => globals_rule => context_mode => imp_prog =>
 String.literal analysis_answer`.
 
-- `analysis_domain` — `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`,
-  `Parity_Analysis`, `Congruence_Analysis`.
+- the activation list, a distinct nonempty list over `analysis_domain` —
+  `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`, `Parity_Analysis`,
+  `Congruence_Analysis`. The listed analyses run together as fields of one
+  generated combined state (`MCP_Carrier`), registered once per context policy
+  (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule`). A check is classified by
+  `answer_check` over the met `EvalInt` answer of the active analyses.
 - `globals_rule` — always-join, per-origin, Apinis warrowing,
   warrowing-per-origin. All four are vendored rules under one
   `TD_side_rule_Interp` interpretation.
@@ -273,8 +277,9 @@ String.literal analysis_answer`.
   (including `0`).
 
 Every combination is answered, and every combination carries the source-level
-theorem. A malformed program answers `Malformed_Program` before any
-configuration is consulted.
+theorem. An empty or repeating activation list answers `Invalid_Activation`,
+and a malformed program answers `Malformed_Program`, before any configuration is
+consulted.
 
 ### 2.5 Goblint correspondence, as the repository records it
 
@@ -441,12 +446,12 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers D rule ctx p v s
+               ∧ analysis_result_covers as rule ctx p v s
                ∧ checks_sound_at res v s"
 ```
 
@@ -745,7 +750,7 @@ non-fixpoint modes are monotone. The development additionally records a
 violating the solver's `narrow_ge` law, because reduction may push a result
 strictly below the narrowing argument.
 
-**Evidence.** `Int_Domain.thy`, `Int_Refinement.thy` (1 430 lines),
+**Evidence.** `Int_Lattice.thy`, `Int_Refinement.thy` (1 430 lines),
 `Int_Refinement_Control.thy` (`refine_reductive`, `refine_nonfixpoint_mono`),
 `Int_Warrowing.thy` (the argument against refining narrowing),
 `Int_Backward.thy`; the CLI-visible witness
@@ -1338,12 +1343,12 @@ thesis section → theories → central definitions → central theorems.
 | 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_keys`, `lookup_context`, `wf_analysis_result`, `live_keys`, `cfg_succ_rel` | `live_keys_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Unit_DG_Analysis`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `unit_dg_analysis`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `unit_dg_analysis.source_sound`, `result_node_sound` |
-| 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
+| 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
 | 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locale `nonrelational_transfer`, `nonrelational_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.source_sound` |
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.source_sound` |
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |
-| 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence`, `inv_plus_congruence` | `congruence_lt_sound` |
+| 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence_rep`, `inv_plus_congruence` | `congruence_lt_sound` |
 | 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_transfer_for` |
 | 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |
@@ -1764,7 +1769,7 @@ Verified defects in the current gallery, all in figure payloads:
 | `fig:modules` | six theory names that do not exist: `Constraint_System`, `DG_Framework`, `Ivl_Exec`, `Analyse_Dispatch`, `State_Report_GraphViz`; caption cites `code_identifier` | zero occurrences in `src/`; the export uses one `module_name Generated` block and no `code_identifier` at all |
 | `fig:pipeline` | edge labelled `dg_gen_of` | zero occurrences; the generator is `routed_node_rhs` / `compiled_routed_eqs_for` |
 | `fig:correspondence` | shows `locale dg_spec = fixes tf, route, read, publish` | `dg_spec` is a **record** with ten fields; `route` is a parameter of `routed_context_base_hetero`, not of `dg_spec`; reads/publishes go through `man_global`/`man_sideg` |
-| `tab:instantiation` | Congruence marked ✗ for `dg_spec` / `analysis_contract`, captioned “not selectable on its own” | **false**: `Congruence_Analysis` is one of the five `analysis_domain` constructors and `Congruence_Analyses.thy` registers it at all three context policies |
+| `tab:instantiation` | Congruence marked ✗ for `dg_spec` / `analysis_contract`, captioned “not selectable on its own” | **false**: `Congruence_Analysis` is one of the five `analysis_domain` constructors and it runs at all three context policies as a field of the combined state |
 | `fig:cfg-source`, `fig:ast` | `proc fac(n) { … }` | VIMP's keyword is `fun` (`manifests/vimp-grammar.yaml`, `keywords: fun: FUN`) |
 | `fig:validltr` | constructors `Called`, `Resumed` | `Call`, `Resume`; the step rule appends through `extend` |
 | `tab:oracles` | a `sorry` column with ✓ marks, reading as “has a sorry”; `source_sound` attributed to `Voblint_CLI` | no `sorry` anywhere in `src/`; `source_sound` is `unit_dg_analysis.source_sound` in `Voblint_Result` |

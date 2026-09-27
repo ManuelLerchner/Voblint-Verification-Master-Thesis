@@ -368,24 +368,33 @@ section \<open>The collapsed obligations of a local-only specification\<close>
 
 text \<open>The same contract for an analysis that never touches the shared slot: every obligation
   is stated at plain values, with no valuation and no global key in sight.  The theorem
-  below derives the tree-level version from these three facts, so such an analysis proves
-  what it can state and inherits the rest.\<close>
+  below derives the tree-level version from these facts, so such an analysis proves
+  what it can state and inherits the rest.
+
+  An edge step is proved against every answer function that holds at the store the
+  edge starts from, never against a particular one, so its proof cannot depend on who
+  answers. Its own handler \<open>qry\<close> must answer soundly for the stores its state
+  describes; inside the generated system it is the handler that answers. Which
+  questions a transfer asks is not a parameter here: the contract below holds for
+  every choice.\<close>
 locale sound_local_dg_spec =
-  fixes sk :: "'D::bounded_semilattice_sup_bot \<Rightarrow> 'D"
-    and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D"
-    and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D"
-    and br :: "exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D"
-    and bd :: "pname \<Rightarrow> 'D \<Rightarrow> 'D"
-    and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D"
+  fixes qry :: "'D::bounded_semilattice_sup_bot \<Rightarrow> answers"
+    and sk :: "answers \<Rightarrow> 'D \<Rightarrow> 'D"
+    and asn :: "answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 'D \<Rightarrow> 'D"
+    and sp :: "answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 'D \<Rightarrow> 'D"
+    and br :: "answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'D \<Rightarrow> 'D"
+    and bd :: "answers \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D"
+    and rt :: "answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 'D \<Rightarrow> 'D"
     and en :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list"
-    and ev :: "analysis_event \<Rightarrow> 'D \<Rightarrow> 'D"
+    and ev :: "answers \<Rightarrow> analysis_event \<Rightarrow> 'D \<Rightarrow> 'D"
     and ce :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and ca :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D \<Rightarrow> 'D"
     and gammaD :: "'D \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
   assumes gammaD_mono: "d \<le> d' \<Longrightarrow> gammaD d \<subseteq> gammaD d'"
     and step_sound_local:
-      "edge_collect a (gammaD d) \<subseteq> gammaD (local_spec_step sk asn sp br bd rt ev a d)"
+      "edge_collect a (gammaD d \<inter> Collect (eval_query.oracle_holds A))
+         \<subseteq> gammaD (local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A) a d)"
     and enter_sound_local:
       "s \<in> gammaD d \<Longrightarrow>
          entry_pairs_cover gammaD s
@@ -394,22 +403,32 @@ locale sound_local_dg_spec =
     and combine_sound_local:
       "\<lbrakk>s \<in> gammaD dc; t \<in> gammaD de\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t \<in> gammaD (ca ci (ce ci dc de) de)"
+    and qry_sound: "s \<in> gammaD d \<Longrightarrow> eval_holds q (qry d q) s"
 begin
 
+text \<open>The answers a transfer receives in the generated system hold at every store its
+  state describes: each is either the handler's own or \<open>\<top>\<close>.\<close>
+
+lemma oracle_holds_local_answers:
+  "s \<in> gammaD d \<Longrightarrow> eval_query.oracle_holds (local_answers qry qs' d) s"
+  by (simp add: eval_query.oracle_holds_def local_answers_def qry_sound)
+
 theorem local_spec_contract:
-  "analysis_contract (local_dg_spec sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) \<G>"
+  "analysis_contract (local_dg_spec qs qry sk asn sp br bd rt en ev ce ca) (\<lambda>d g. gammaD d) \<G>"
 proof (unfold_locales, goal_cases wf mono step comb)
   case wf
-  then show ?case
-    by (simp add: dg_spec_wf_def local_transfer_def local_enter_transfer_def
-        local_combine_transfer_def)
+  then show ?case by (rule dg_spec_wf_local_dg_spec)
 next
   case mono
   then show ?case by (meson gammaD_mono)
 next
-  case step
+  case (step a \<tau> src gk)
+  let ?d = "locals (\<tau> src)"
+  let ?A = "local_answers qry (qs a ?d) ?d"
+  have "gammaD ?d \<inter> Collect (eval_query.oracle_holds ?A) = gammaD ?d"
+    using oracle_holds_local_answers by blast
   then show ?case
-    by (simp add: dg_spec_edge_program_def step_sound_local)
+    using step_sound_local[of a ?d ?A] by (simp add: dg_spec_edge_program_def)
 next
   case comb
   then show ?case
@@ -417,6 +436,17 @@ next
 qed
 
 end
+
+text \<open>The handler is the only obligation that mentions it, so any other sound
+  handler for the same states may replace it. A specification that answered
+  nothing thereby gains a handler without reproving its transfers.\<close>
+
+lemma sound_local_dg_spec_with_qry:
+  assumes "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
+    and "\<And>s d q. s \<in> gammaD d \<Longrightarrow> eval_holds q (qry' d q) s"
+  shows "sound_local_dg_spec qry' sk asn sp br bd rt en ev ce ca gammaD \<G>"
+  using assms unfolding sound_local_dg_spec_def
+  by fastforce 
 
 end
 

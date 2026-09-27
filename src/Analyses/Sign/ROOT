@@ -13,7 +13,7 @@ session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
   directories
     "generated"
   theories
-    Sign_Lattice
+    Sign_Warrowing
     Sign_Arithmetic
     Sign_Backward
     Sign_Special

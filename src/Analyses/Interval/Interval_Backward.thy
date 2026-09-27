@@ -144,9 +144,6 @@ qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
-definition ivl_of_int :: "int \<Rightarrow> ivl" where
-  [simp]: "ivl_of_int n = Ivl (Fin n) (Fin n)"
-
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
     "aval_ivl (N n)        \<sigma> = ivl_of_int n"
   | "aval_ivl (V x)        \<sigma> = \<sigma> x"
@@ -290,7 +287,7 @@ text \<open>
 \<close>
 
 fun inv_eq_ivl :: "bool => ivl => ivl => ivl * ivl" where
-    "inv_eq_ivl True  a1 a2 = (meet_ivl a1 a2, meet_ivl a1 a2)"
+    "inv_eq_ivl True  a1 a2 = (a1 \<sqinter> a2, a1 \<sqinter> a2)"
   | "inv_eq_ivl False a1 a2 = (a1, a2)"
 
 lemma inv_eq_ivl_sound:
@@ -301,7 +298,7 @@ proof (cases res)
   case True
   then have "n1 = n2" using assms(3) by simp
   then have "n1 \<in> gamma_ivl a2" using assms(2) by simp
-  then have "n1 \<in> gamma_ivl (meet_ivl a1 a2)" using meet_ivl_gamma[OF assms(1)] by simp
+  then have "n1 \<in> gamma_ivl (a1 \<sqinter> a2)" using meet_ivl_gamma[OF assms(1)] by simp
   then show ?thesis using True \<open>n1 = n2\<close> by simp
 next
   case False

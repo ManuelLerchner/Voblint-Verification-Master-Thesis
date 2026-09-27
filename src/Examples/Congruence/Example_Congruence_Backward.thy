@@ -11,12 +11,12 @@ text \<open>
 section \<open>Executable Congruence backward-analysis regressions\<close>
 
 lemma congruence_intersection_crt_regression:
-  "intersect_congruence (mk_congruence 1 4) (mk_congruence 3 6) =
+  "mk_congruence 1 4 \<sqinter> mk_congruence 3 6 =
    mk_congruence 9 12"
   by eval
 
 lemma congruence_intersection_incompatible_regression:
-  "intersect_congruence (mk_congruence 0 2) (mk_congruence 1 2) = bot"
+  "mk_congruence 0 2 \<sqinter> mk_congruence 1 2 = bot"
   by eval
 
 lemma inv_plus_congruence_regression:

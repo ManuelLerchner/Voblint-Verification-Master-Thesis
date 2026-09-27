@@ -35,6 +35,12 @@ CORPUS = REPO_ROOT / "tests" / "regression"
 # that no longer names a fixture fails the build rather than dropping a card.
 SHOWCASE = [
     (
+        "25-cooperation/precision/05-annotation_tour.vimp",
+        "Two analyses, one run",
+        "Interval and the order analysis ask each other at assignments and prove "
+        "checks neither proves alone; every kind of inline annotation appears once.",
+    ),
+    (
         "20-nested-loops/precision/02-nested2_narrowing_recovers_j.vimp",
         "Widening, then narrowing",
         "Nested loops: the inner head widens j to [0,+inf] and narrows it back, "
@@ -135,7 +141,9 @@ def example(path: Path) -> dict[str, object]:
     settings = analysis_settings(args)
     lines = path.read_text().splitlines()
     relative = path.relative_to(CORPUS)
-    playground = {"analysis": settings["analyses"][0]} if "analyses" in settings else {}
+    playground = (
+        {"analysis": ",".join(settings["analyses"])} if "analyses" in settings else {}
+    )
     playground |= {
         name: settings[key] for key, name in PLAYGROUND_KEYS.items() if key in settings
     }

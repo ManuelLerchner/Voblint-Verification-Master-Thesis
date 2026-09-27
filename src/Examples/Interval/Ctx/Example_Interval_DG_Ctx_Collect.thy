@@ -79,7 +79,7 @@ lemma twice_route_at_call1:
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def interval_es_rule.ctx_succ_def
-    interval_es_rule.sol_env_def
+    interval_es_rule.sol_env_def interval_es_rule.entry_of_exec
   by (rule refl)
 
 lemma twice_route_at_call2:
@@ -92,7 +92,7 @@ lemma twice_route_at_call2:
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def interval_es_rule.ctx_succ_def
-    interval_es_rule.sol_env_def
+    interval_es_rule.sol_env_def interval_es_rule.entry_of_exec
   by (rule refl)
 
 lemma twice_call_fwd_ok:
@@ -142,6 +142,7 @@ lemmas twice_routed_hyps =
   twice_ctx_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def,
     folded interval_es_rule.sol_vars_def twice_cfg_alt]
   twice_call_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def twice_empty_pred_def,
+    folded interval_es_rule.entry_of_exec,
     folded interval_es_rule.sol_vars_def interval_es_rule.sol_env_def twice_cfg_alt]
   twice_comb_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def,
     folded interval_es_rule.sol_vars_def twice_cfg_alt]
@@ -221,13 +222,13 @@ proof -
       (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)
       (exec_formals_route twice_gs (Statement 2) [] ?entry
          (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))"
-    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def[symmetric]
+    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.entry_of_exec[symmetric]
+      interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
           \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def\<close>)
-  thus ?thesis
-    by (simp add: twice_route_at_call1)
+             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+  thus ?thesis    by (simp add: twice_route_at_call1)
 qed
 
 lemma twice_context_at_call2:
@@ -259,13 +260,13 @@ proof -
       (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)
       (exec_formals_route twice_gs (Statement 3) [] ?entry
          (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))"
-    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def[symmetric]
+    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.entry_of_exec[symmetric]
+      interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
           \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def\<close>)
-  thus ?thesis
-    by (simp add: twice_route_at_call2)
+             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+  thus ?thesis    by (simp add: twice_route_at_call2)
 qed
 
 

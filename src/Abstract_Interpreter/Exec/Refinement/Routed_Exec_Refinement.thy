@@ -38,6 +38,93 @@ text \<open>
 \<close>
 
 
+subsection \<open>The buffered generator at any local specification\<close>
+
+text \<open>
+  The buffered generator a domain actually solves, reconciled with the unbuffered one
+  the framework is stated over, for every local specification. Both reshaping hooks
+  are the identity: the buffered generator only asks a hook to hoist what it
+  publishes at the buffered key \<open>gk0\<close>, and a local specification publishes nothing
+  there, since its edge transfers, its entry and its return all read and write the
+  local unknown only. A local specification's queries do not change that: its
+  handler answers from the local value, so an asking transfer is still a local one.
+\<close>
+
+theorem pp_local_dg_spec:
+  assumes S: "S = local_dg_spec qs qry sk asn sp br bd rt en ev ce ca"
+    and ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and pp: "part_post_solution
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
+        (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_key)
+        g bot0 s0d s0g)
+     x0 sigma_st vars"
+  shows "part_post_solution
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
+        (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_key)
+        g bot0 s0d s0g)
+     x0 sigma_st vars"
+proof -
+  have wf: "dg_spec_wf S" by (simp add: S)
+  have intra_free: "sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau> z = bot"
+    for a src \<tau> z
+    by (simp add: S dg_spec_edge_program_def)
+  have cmb_free: "sides_of_program
+      (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route' ctx' ca cc ex)
+      \<tau> (Inr gk0) = bot" for route' ctx' ca cc ex \<tau>
+    by (rule routed_call_program_side_free_at_gk0[OF wf])
+       (auto simp: S local_transfer_def local_combine_transfer_def ne
+         dest!: enter_runs_local_pub_bot)
+  show ?thesis
+  proof (rule part_post_solution_routed_node_rhs_buffered
+      [where cmb_c = "routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
+         and it_c = "\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0)"])
+    show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
+             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
+             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_entry_seed_programs seed_key) g c' w). sp_wf p"
+      by (rule routed_contribution_programs_wf)
+         (auto intro: sp_wf_dg_spec_edge_program[OF wf] sp_wf_routed_call_program[OF wf])
+    then show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
+             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
+             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_entry_seed_programs seed_key) g c' w). sp_wf p" .
+    show "\<And>c' src a \<tau>. locals (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
+             (Inr ((\<lambda>_. gk0) c'))) = bot"
+      by (simp add: intra_free bot_dg_state_def)
+    show "\<And>c' src a \<tau>. globs (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>)
+           = globs (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
+               (Inr ((\<lambda>_. gk0) c')))"
+      by (simp add: S dg_spec_edge_program_def bot_dg_state_def)
+    show "\<And>c' src a \<tau>. sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
+             (Inr ((\<lambda>_. gk0) c')) = bot"
+      by (rule intra_free)
+    show "\<And>c' ca cc ex \<tau>. locals (sides_of_program
+             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             \<tau> (Inr ((\<lambda>_. gk0) c'))) = bot"
+      by (simp add: cmb_free bot_dg_state_def)
+    show "\<And>c' ca cc ex \<tau>. globs (traverse_program
+             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex) \<tau>)
+           = globs (sides_of_program
+               (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+               \<tau> (Inr ((\<lambda>_. gk0) c')))"
+      by (simp add: routed_call_program_global_free[OF wf] cmb_free bot_dg_state_def)
+    show "\<And>c' ca cc ex \<tau>. sides_of_program
+             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
+      by (rule cmb_free)
+    show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
+           \<Longrightarrow> sides_of_program x \<tau> z = bot"
+      by (rule routed_entry_seed_programs_free)
+    show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
+           \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
+      by (rule routed_entry_seed_programs_local_only)
+  qed (simp_all add: pp)
+qed
+
 locale routed_domain_exec =
   routed_dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for \<G> :: "vname \<Rightarrow> bool"
@@ -147,64 +234,8 @@ theorem pp_st:
         (routed_entry_seed_programs seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
-proof (rule part_post_solution_routed_node_rhs_buffered
-    [where cmb_c = "cmb_st g" and it_c = intra_st])
-  show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
-           call_site_list route_st intra_st
-           (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-           (routed_entry_seed_programs seed_key) g c' w). sp_wf p"
-    by (rule routed_contribution_programs_wf)
-       (auto intro: sp_wf_dg_spec_edge_program[OF dg_spec_wf_local_state_dg_spec_st_for_lifted]
-         sp_wf_routed_call_program[OF dg_spec_wf_local_state_dg_spec_st_for_lifted])
-  show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
-           call_site_list route_st intra_st
-           (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-           (routed_entry_seed_programs seed_key) g c' w). sp_wf p"
-    by (rule routed_contribution_programs_wf)
-       (auto intro: sp_wf_dg_spec_edge_program[OF dg_spec_wf_local_state_dg_spec_st_for_lifted]
-         sp_wf_routed_call_program[OF dg_spec_wf_local_state_dg_spec_st_for_lifted])
-  show "\<And>c' src a \<tau>. locals (traverse_program (intra_st c' src a) \<tau>)
-         = locals (traverse_program (intra_st c' src a) \<tau>)"
-    by (rule refl)
-  show "\<And>c' src a \<tau>. locals (sides_of_program (intra_st c' src a) \<tau> (Inr ((\<lambda>_. gk0) c'))) = bot"
-    by (simp add: intra_st_side_free bot_dg_state_def)
-  show "\<And>c' src a \<tau>. globs (traverse_program (intra_st c' src a) \<tau>)
-         = globs (sides_of_program (intra_st c' src a) \<tau> (Inr ((\<lambda>_. gk0) c')))"
-    by (simp add: dg_spec_edge_program_def dg_spec_step_local_state_st_for_lifted bot_dg_state_def)
-  show "\<And>c' src a \<tau>. sides_of_program (intra_st c' src a) \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
-    by (rule intra_st_side_free)
-  show "\<And>c' src a \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow>
-         sides_of_program (intra_st c' src a) \<tau> z = sides_of_program (intra_st c' src a) \<tau> z"
-    by (rule refl)
-  show "\<And>c' src a \<tau>. dep_program \<tau> (intra_st c' src a) = dep_program \<tau> (intra_st c' src a)"
-    by (rule refl)
-  show "\<And>c' ca cc ex \<tau>. locals (traverse_program (cmb_st g route_st c' ca cc ex) \<tau>)
-         = locals (traverse_program (cmb_st g route_st c' ca cc ex) \<tau>)"
-    by (rule refl)
-  show "\<And>c' ca cc ex \<tau>.
-         locals (sides_of_program (cmb_st g route_st c' ca cc ex) \<tau> (Inr ((\<lambda>_. gk0) c'))) = bot"
-    by (simp add: cmb_st_side_free_at_gk0 bot_dg_state_def)
-  show "\<And>c' ca cc ex \<tau>. globs (traverse_program (cmb_st g route_st c' ca cc ex) \<tau>)
-         = globs (sides_of_program (cmb_st g route_st c' ca cc ex) \<tau> (Inr ((\<lambda>_. gk0) c')))"
-    by (simp add: routed_call_program_global_free[OF dg_spec_wf_local_state_dg_spec_st_for_lifted]
-        cmb_st_side_free_at_gk0 bot_dg_state_def)
-  show "\<And>c' ca cc ex \<tau>.
-         sides_of_program (cmb_st g route_st c' ca cc ex) \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
-    by (rule cmb_st_side_free_at_gk0)
-  show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow>
-         sides_of_program (cmb_st g route_st c' ca cc ex) \<tau> z
-           = sides_of_program (cmb_st g route_st c' ca cc ex) \<tau> z"
-    by (rule refl)
-  show "\<And>c' ca cc ex \<tau>. dep_program \<tau> (cmb_st g route_st c' ca cc ex)
-         = dep_program \<tau> (cmb_st g route_st c' ca cc ex)"
-    by (rule refl)
-  show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
-         \<Longrightarrow> sides_of_program x \<tau> z = bot"
-    by (rule routed_entry_seed_programs_free)
-  show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
-         \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
-    by (rule routed_entry_seed_programs_local_only)
-qed (rule pp)
+  by (rule pp_local_dg_spec[where S = spec_st])
+     (rule local_state_dg_spec_st_for_lifted_def, rule seed_key_ne_gk0, rule pp)
 
 end
 

@@ -15,8 +15,6 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
   directories
     "generated"
   theories
-    Congruence_Domain
-    Congruence_Lattice
     Congruence_Warrowing
     Congruence_Arithmetic
     Congruence_Backward

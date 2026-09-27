@@ -21,7 +21,7 @@ is the one analysis session that sees more than its own domain, by construction.
 ## The layer chain
 
 ```text
-Int_Domain              the four-component record and its concretization
+Int_Lattice             (Voblint_Domain) the four-component record and its concretization
 Int_Warrowing           componentwise widen/narrow and the numeric_domain instance
 Int_Refinement          exactness of reduction steps; one refinement round
 Int_Refinement_Control  the three refine modes
@@ -32,9 +32,8 @@ Int_Refinement_Control  the three refine modes
   -> Int_Classify                                    check discharge
   -> Int_Sound                                       mode-generic commutation and
                                                      initial-state facts
-  -> generated/Int_Analyses                          the unit, entry-state and call-string
-                                                     registrations at Refine_Fixpoint
-                                                     (generated; see below)
+  -> generated/Int_Analyses                          the unit-context registration at
+                                                     Refine_Fixpoint (generated; see below)
 ```
 
 Like Interval, Int has a component with infinite ascending chains, so the global
@@ -85,31 +84,37 @@ surface through and no reduction runs afterwards. That is deliberate: a concrete
 counterexample there shows that running `refine` after `narrow` (which is Goblint's own
 choice) would break the solver's `narrow_ge` bracket.
 
-## The two contextual configurations
+## Int in the entry-state and call-string runs
 
 `generated/Int_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 
-Neither contextual policy has a pipeline of its own. Both are interpretations
-of `routed_dg_analysis`, which owns the equation system, the solve, the covered
-keys, the reader, the result table, the contextual report and the
-activation-indexed soundness endpoint. Int supplies its own implementation and
-facts; the generator adds the routing functions and the solver.
+Int's own generated file registers only the context-insensitive run,
+`int_rule`. The entry-state and call-string runs are the CLI's combined
+registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
+which run every active analysis as fields of one state; Int is one of those
+fields whenever `Int_Analysis` is in the activation list. Neither policy has
+a pipeline of its own. Both are interpretations of `routed_dg_analysis`, which
+owns the equation system, the solve, the covered keys, the reader, the result
+table, the contextual report and the activation-indexed soundness endpoint —
+for every active combination at every policy.
 
-Int is the domain where two axes meet, and they stay independent.
+Int is the domain where two axes meet, and they stay independent in every run
+that includes it.
 
-`mode` is Int's refinement axis. Every obligation a registration asks for is
+`mode` is Int's refinement axis. Every obligation asked of Int's field is
 discharged by one of Int's own mode-generic facts — `int_is_sound_transfer_for`,
 `int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
-registry pins `Refine_Fixpoint` by naming the mode-taking operations as applied
+manifest pins `Refine_Fixpoint` by naming the mode-taking operations as applied
 roles (`{const: int_tf_st_for, args: [Refine_Fixpoint]}`), because a
 config-driven caller needs one concrete choice; the facts it cites are the same
 at every mode.
 
-The global update rule is the second axis. Every registration leaves it free as
-`r`, so one interpretation per context covers all four rules.
+The global update rule is the second axis. `int_rule` leaves it free as `r`,
+and so do the combined `mcp_es_rule` and `mcp_cs_rule` runs, alongside the
+activation list.
 
 A call string is the last `k` call sites on the stack. `cs_route` never reads
 the state it is handed, which makes `fun_route_activation_collect_sound` the
@@ -119,10 +124,11 @@ its formals hold on entry, and `exec_formals_route` does read that state, so
 admitted-context relation is the one the entry answer induces rather than the
 graph of a function on stores.
 
-All three registrations are `global_interpretation`s with their runtime data
-left free through `for` — `r` at the unit and entry-state contexts, `k r` at the
-call string — and none renames the pipeline through `defines`: a caller applies
-`int_cs_rule.result k r gs p` directly.
+`int_rule` is a `global_interpretation` with its runtime data left free
+through `for` — `r` at the unit context. `mcp_es_rule` and `mcp_cs_rule` leave
+the activation list free the same way — `as r`, and `as k r` at the call
+string — and none renames the pipeline through `defines`: a caller applies
+`mcp_cs_rule.result as k r gs p` directly, with `Int_Analysis` in `as`.
 
 Int carries no emptiness predicate of its own. The shared assembly pins the
 bottom test to the program's declaration predicate and proves it agrees with

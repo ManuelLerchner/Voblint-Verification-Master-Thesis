@@ -108,13 +108,6 @@ instance ..
 
 end
 
-definition congruence_of_int :: "int => congruence" where
-  "congruence_of_int n = mk_congruence n 0"
-
-lemma congruence_of_int_gamma [simp]:
-  "n \<in> gamma_congruence (congruence_of_int n)"
-  unfolding congruence_of_int_def by simp
-
 subsection \<open>Semantic soundness\<close>
 
 text \<open>

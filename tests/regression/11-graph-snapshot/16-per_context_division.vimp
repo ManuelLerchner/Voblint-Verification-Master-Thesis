@@ -23,33 +23,44 @@
 //
 // nodes:
 //   main_exit_main_ctx0: exit_main
-//       x=[0,0]
-//       y=[5,5]
+//       interval:
+//         x=[0,0]
+//         y=[5,5]
 //   main_pp2_ctx0: pp2
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //   main_pp3_ctx0: pp3
-//       x=[0,0]
-//       y=⊤
+//       interval:
+//         x=[0,0]
+//         y=⊤
 //   main_pp4_ctx0: pp4
-//       x=[0,0]
-//       y=[5,5]
+//       interval:
+//         x=[0,0]
+//         y=[5,5]
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
-//       y=⊤
+//       interval:
+//         x=⊤
+//         y=⊤
 //   f_exit_f_ctx0: exit_f
-//       n=[0,0]
+//       interval:
+//         n=[0,0]
 //   f_pp0_ctx0: pp0 [refuted]
-//       n=[0,0]
+//       interval:
+//         n=[0,0]
 //       division by zero whenever this operation is evaluated: 10 / n
 //   f_entry_f_ctx0: entry_f
-//       n=[0,0]
+//       interval:
+//         n=[0,0]
 //   f_exit_f_ctx1: exit_f
-//       n=[2,2]
+//       interval:
+//         n=[2,2]
 //   f_pp0_ctx1: pp0
-//       n=[2,2]
+//       interval:
+//         n=[2,2]
 //   f_entry_f_ctx1: entry_f
-//       n=[2,2]
+//       interval:
+//         n=[2,2]
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return 10 / n

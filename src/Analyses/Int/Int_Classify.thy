@@ -1,5 +1,5 @@
 theory Int_Classify
-  imports Int_Exec_Sound "Voblint_Framework.Abstract_Checks"
+  imports Int_Exec_Sound "Voblint_Framework.Check_Answer"
     "Voblint_Domain.Backward_Numeric_Queries"
     "Voblint_Framework.Analysis_Result"
     "Voblint_Result.DG_Result_Construction"
@@ -107,6 +107,7 @@ global_interpretation int_check_domain:
     int_truthy_query = int_check_domain.truthy_query
     and int_check_query = int_check_domain.check_query
     and int_classify_check = int_check_domain.classify_check
+    and int_eval_answer = int_check_domain.eval_answer
     and int_checks_proven = int_check_domain.abstract_checks_proven
   by unfold_locales (rule sound_evaluator.aval_abs_sound[OF int_dom_sound_evaluator])
 
@@ -119,6 +120,8 @@ text \<open>
   \<open>int_check_domain.\<close> name instead of a dedicated alias here.
 \<close>
 
+lemmas int_eval_answer_sound = int_check_domain.eval_answer_sound
+lemmas int_answer_check = int_check_domain.answer_check_eval_answer
 lemmas int_classify_check_proved = int_check_domain.classify_check_proved
 lemmas int_classify_check_refuted = int_check_domain.classify_check_refuted
 

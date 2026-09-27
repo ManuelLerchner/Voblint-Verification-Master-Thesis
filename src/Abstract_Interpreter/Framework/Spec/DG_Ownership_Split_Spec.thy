@@ -203,6 +203,14 @@ lemma globs_sides_ownership_split_combine_transfer_gen [simp]:
   by (simp add: sides_combine_transfer_program ownership_split_combine_transfer_gen_def
       local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
+text \<open>A whole-state transfer never asks, so the query channel the generator
+  installs around the wrapper leaves it unchanged.\<close>
+
+lemma ownership_split_transfer_gen_local_outer_man [simp]:
+  "ownership_split_transfer_gen cmb rg rl (local_transfer f) (outer_man Q m)
+     = ownership_split_transfer_gen cmb rg rl (local_transfer f) m"
+  by (simp add: ownership_split_transfer_gen_def local_transfer_def)
+
 subsection \<open>The ownership rule at the pointwise carrier\<close>
 
 text \<open>The three carrier operations the wrapper is generic in, fixed at the
@@ -342,6 +350,10 @@ lemma dgs_enter_ownership_split_lift [simp]:
   "enter\<^sup># (ownership_split_lift \<G> S) ci = ownership_split_enter_transfer \<G> (enter\<^sup># S ci)"
   unfolding ownership_split_lift_def by simp
 
+lemma dgs_query_ownership_split_lift [simp]:
+  "dgs_query (ownership_split_lift \<G> S) m q = sp_return \<top>"
+  unfolding ownership_split_lift_def by simp
+
 lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
   "dg_spec_combine_transfer (ownership_split_lift \<G> S) ci
      = ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)"
@@ -367,7 +379,7 @@ lemma dg_spec_wf_ownership_split_lift [intro]:
   by (auto simp: ownership_split_transfer_def ownership_split_transfer_gen_def
       ownership_split_enter_transfer_def ownership_split_enter_transfer_gen_def
       ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
-      intro!: sp_wf_bind dg_spec_wf_step[OF assms] dg_spec_wf_enter[OF assms]
+      intro!: sp_wf_bind dg_spec_wf_step_ask[OF assms] dg_spec_wf_enter[OF assms]
         dg_spec_wf_combine[OF assms])
 
 section \<open>What a split point means\<close>

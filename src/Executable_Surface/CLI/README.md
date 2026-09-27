@@ -8,20 +8,25 @@ That is the whole reason it is a session boundary rather than a folder: anything
 importing it sees every domain, so what lives here should be only what genuinely
 needs all of them.
 
-Soundness is not one of those things. Each domain's registrations -- the
-solve, result table and report over an arbitrary `imp_prog`, paired with their
-soundness endpoints -- depend on that domain and on the shared `Voblint_Result`
-locales, never on a sibling, so they live in that domain's own analysis session
-(`sign_rule`, `sign_es_rule` and `sign_cs_rule` in the generated `Sign_Analyses`
-of `Voblint_Analysis_Sign`, and so on). What is left here is the part that
-really does see all five.
+A domain's own context-free registration is not one of those things. Its
+solve, result table and report over an arbitrary `imp_prog`, paired with its
+soundness endpoints, depend on that domain and on the shared `Voblint_Result`
+locales, never on a sibling, so it lives in that domain's own analysis session
+(`sign_rule` in the generated `Sign_Analyses` of `Voblint_Analysis_Sign`, and
+so on). What does need all five is the combined run: `MCP_Analyses.thy` runs
+every active analysis as a field of one state and proves the combination
+sound for any distinct, nonempty activation, citing each active domain's own
+`comp_sound` and `init_sound` facts. `run_voblint` reads that combined
+registration -- `mcp_rule`, `mcp_es_rule` and `mcp_cs_rule` -- at every
+context policy, whatever analyses are activated. What is left here is the
+part that really does see all five.
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| registration | a domain's interpretation of `unit_dg_analysis` or `routed_dg_analysis` at one context policy, with the global update rule as a parameter: its solve, result table and report paired with their soundness endpoints, over an arbitrary `imp_prog`. Owned by the domain session, not this one. |
-| configuration | what a caller chooses: an `analysis_domain`, a `globals_rule` and a `context_mode`. Every combination is analysed; there is no default and no refused pairing. |
+| registration | an interpretation of `unit_dg_analysis` or `routed_dg_analysis` at one context policy: its solve, result table and report paired with their soundness endpoints, over an arbitrary `imp_prog`. Each domain owns one context-free registration in its own session, parametric in the global update rule (`sign_rule`, and so on; Interval also keeps its own entry-state and call-string registrations for its example theories). The registrations `run_voblint` actually reads -- `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` -- run every active analysis at once and are owned here, parametric in the activation list besides. |
+| configuration | what a caller chooses: an activation (a nonempty, distinct `analysis_domain list`), a `globals_rule` and a `context_mode`. Every well-formed combination is analysed; an empty activation or one naming an analysis twice is refused (`Invalid_Activation`). |
 | global update rule | how the solver merges a value side-effected into a global unknown: joined, joined per origin, warrowed, or warrowed per origin (`globals_rule`). Local unknowns are warrowed at widening points under every rule. |
 | flat report | `check_report_entry list` — one verdict per check, no contexts |
 | contextual report | one verdict per (check, context). Needed because a check can be `Dead` in one context and decided in another, which a flat verdict cannot express. |
@@ -33,20 +38,23 @@ really does see all five.
 
 | File | What |
 | --- | --- |
-| `Analysis_Config.thy` | `analysis_domain` and `context_mode`, the two selection datatypes that name domains and context policies; `globals_rule` comes from `Voblint_Solver.Globals_Rule` |
-| `Dispatch_Carrier.thy` | one value type wide enough for every domain's abstract values, and an injective ordering key for listing contexts |
+| `Analysis_Config.thy` | `context_mode`, the context-policy selection datatype; `globals_rule` comes from `Voblint_Solver.Globals_Rule`. The analyses a caller may activate are named in the generated `analysis_domain` (below), a plain `analysis_domain list`. |
+| `Dispatch_Carrier.thy` | each domain's injective ordering key for listing contexts, and how a field's state is shown; the value union itself is generated into `MCP_Carrier.thy` |
 | `Arithmetic_Diagnostics.thy` | arithmetic occurrences, extraction completeness, nonzero-divisor obligations, and structured diagnostics |
-| `Analysis_Run.thy` | `analysis_result`, one equation per domain and context policy over the rule-parametric registrations, and `run_voblint`: one configuration, run once, answering one structured result from one solve. The constant `export_code` exports. |
-| `Analysis_Run_Sound.thy` | what a result's check column proves about a run of the program, and the context-free tables `sign_rule_table`, ... |
-| `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `sign_es_rule_table`, `sign_cs_rule_table`, ... |
+| `generated/MCP_Carrier.thy` | generated from `manifests/analyses.yaml`: `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, readback, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
+| `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the generated carrier only cites them |
+| `MCP_Analyses.thy` | runs the active fields as one component, proves the combination sound for any distinct, nonempty activation, and registers it at every context policy: `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` |
+| `Analysis_Run.thy` | `analysis_result`, one equation per context policy over the activation- and rule-parametric registrations, and `run_voblint`: one activation and configuration, run once, answering `Invalid_Activation`, `Malformed_Program`, or one structured result from one solve. The constant `export_code` exports. |
+| `Analysis_Run_Sound.thy` | what a result's check column proves about a run of the program, and the context-free table `mcp_rule_table` |
+| `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `mcp_es_rule_table`, `mcp_cs_rule_table` |
 | `Analysis_Certified.thy` | one soundness statement over every configuration `run_voblint` answers |
 
 The soundness statements here are the ones that belong nowhere else: a theorem about
 `run_voblint` cannot live above the theory that defines it, and `run_voblint` is the
-constant `export_code` exports. Each table lemma cites one domain registration's
-published facts at an arbitrary rule, so it carries no domain reasoning of its own --
-only the instantiation that connects a runtime answer to the theorem about it.
-`Analysis_Certified` carries that connection through to `run_voblint`'s answer.
+constant `export_code` exports. Each table lemma cites the combined registration's
+published facts at an arbitrary activation and rule, so it carries no domain reasoning
+of its own -- only the instantiation that connects a runtime answer to the theorem
+about it. `Analysis_Certified` carries that connection through to `run_voblint`'s answer.
 
 ## Arithmetic diagnostics
 
@@ -95,20 +103,26 @@ the shared layer forbids ("nothing here may mention a concrete domain"). That la
 of every domain session, so keeping it there put a datatype naming `Sign_Analysis`
 inside a session `Voblint_Analysis_Sign` inherits from: not a cycle, but upside down.
 
-Nothing under `src/Analyses/` depends on it: `analysis_result` in `Analysis_Run` is
-the only definition that cases on it. `globals_rule` names no domain, so it lives with
-the solver in `Voblint_Solver`.
+Nothing under `src/Analyses/` depends on it. Within this session, the generated
+`MCP_Carrier` and `MCP_Analyses` case over it field by field to build and run the
+combined state; `globals_rule` names no domain, so it lives with the solver in
+`Voblint_Solver`.
 
 ## Worked example
 
 `voblint --analysis interval --context entry-state FILE.vimp` names no `--globals`,
 so `cli/entry/voblint.ml` picks `warrow` and calls
-`run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState p`. For a well-formed
-program that is `Analysed (analysis_result Interval_Analysis Globals_Warrow
-Ctx_EntryState p)`, with every abstract value rendered to a string. The equation
-for that cell hands `interval_es_rule.result Globals_Warrow (declared_global p) p`
-to `entry_state_run_result`, which lists one state per covered (point, entered
-argument context), the contexts each call enters, the check column and the
-diagnostics. Its soundness is `interval_es_rule_table` at `r = Globals_Warrow`,
-read through `run_voblint_certified_source_sound`. `--globals join` changes only
-the rule argument; the equation, the builder and the theorem are the same.
+`run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState p`. For a
+well-formed program and a valid activation that is `Analysed (analysis_result
+[Interval_Analysis] Globals_Warrow Ctx_EntryState p)`, with every abstract
+value rendered to a string. The equation for that cell hands
+`mcp_es_rule.result_with_globals [Interval_Analysis] Globals_Warrow
+(declared_global p) p` to `run_result_of`, which lists one state per covered
+(point, entered argument context), the contexts each call enters, the check
+column and the diagnostics. Its soundness is `mcp_es_rule_table` at
+`as = [Interval_Analysis]` and `r = Globals_Warrow`, read through
+`run_voblint_certified_source_sound`. `--globals join` changes only the rule
+argument, and activating more analyses at once changes only the activation
+list; the equation, the builder and the theorem are the same. Naming no
+analysis, or the same one twice, answers `Invalid_Activation` instead of
+running a solve.

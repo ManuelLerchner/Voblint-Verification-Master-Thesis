@@ -969,6 +969,24 @@ p.inspector-message {
   overflow-x: auto;
 }
 
+.inspector-analysis {
+  margin: 8px 0 2px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.inspector-analysis:first-child {
+  margin-top: 0;
+}
+
+.seed-lines code.seed-analysis {
+  background: none;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
 .inspector-table table {
   width: 100%;
   border-collapse: collapse;
@@ -1058,6 +1076,38 @@ kbd {
 
 .control-group select {
   width: 100%;
+}
+
+.analysis-choices {
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.analysis-choices legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+.analyzer-controls .analysis-choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.analysis-choices input {
+  margin: 0;
+  accent-color: #8bd5ca;
 }
 
 .analyzer-controls label {

@@ -1,5 +1,5 @@
 theory Sign_Classify
-  imports Sign_Numeric_Queries "Voblint_Framework.Abstract_Checks"
+  imports Sign_Numeric_Queries "Voblint_Framework.Check_Answer"
     "Voblint_Framework.Analysis_Result" Sign_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
@@ -29,6 +29,7 @@ global_interpretation sign_check_domain:
     sign_truthy_query = sign_check_domain.truthy_query
     and sign_check_query = sign_check_domain.check_query
     and sign_classify_check = sign_check_domain.classify_check
+    and sign_eval_answer = sign_check_domain.eval_answer
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
   by unfold_locales (rule sign_arith.aval_abs_sound)
 
@@ -42,6 +43,8 @@ text \<open>
   name instead of a dedicated alias here.
 \<close>
 
+lemmas sign_eval_answer_sound = sign_check_domain.eval_answer_sound
+lemmas sign_answer_check = sign_check_domain.answer_check_eval_answer
 lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
 lemmas sign_classify_check_refuted = sign_check_domain.classify_check_refuted
 lemmas sign_checks_provenI = sign_check_domain.abstract_checks_provenI

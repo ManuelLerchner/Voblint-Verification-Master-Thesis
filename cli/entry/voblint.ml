@@ -5,9 +5,9 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domain globals context
+       -> Voblint_CLI.Generated.run_voblint domains globals context
           (Isabelle-generated). One call checks the program is well-formed and
-          runs the one analysis the domain, global update rule and context name;
+          runs the analyses the activation list, global update rule and context name;
           every combination is answered. What comes back is data -- states per point and
           context, the routes calls take, the check column, diagnostics -- with
           every abstract value already rendered by its own domain. Every
@@ -26,13 +26,13 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int|parity|congruence [--context \
+  "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin] [--dot] [--timeout SECONDS] \
    FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval|int|parity|congruence[,...]\n\
+  \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
@@ -46,12 +46,17 @@ let usage =
   \                             pins a single integer and m = 1 constrains\n\
   \                             nothing. It decides no orderings and decides\n\
   \                             equalities only between singletons.\n\
-  \                             A comma list (e.g. int,interval) puts every\n\
-  \                             named domain side by side in one --html\n\
-  \                             report, one <analysis> block per node, so\n\
-  \                             their precision can be compared in place.\n\
-  \                             Requires --html and --context none; every\n\
-  \                             other output path uses the first domain only.\n\
+  \                             order is relational: it records which\n\
+  \                             variables are ordered by <= and answers\n\
+  \                             comparisons between them to the other\n\
+  \                             analyses of a comma list.\n\
+  \                             A comma list (e.g. interval,parity) runs the\n\
+  \                             named domains together in one solve: a state\n\
+  \                             shows each domain's part on its own, a\n\
+  \                             point any of them proves unreachable is\n\
+  \                             unreachable, and a check is decided by the\n\
+  \                             meet of their answers. Naming a domain twice\n\
+  \                             is rejected.\n\
   \  --context none|entry-state|call-string\n\
   \                             Context sensitivity (default: none, one\n\
   \                             context per callee regardless of call\n\
@@ -127,15 +132,6 @@ let print_diagnostics path analysis positions diagnostics =
         (Result_text.diagnostic_message diagnostic)
         analysis)
     diagnostics
-
-(* Names the analysis in the report's own <analysis name="..."> element, so a
-   node document says which domain produced the state it shows. *)
-let analysis_label = function
-  | Voblint_CLI.Generated.Sign_Analysis -> "sign"
-  | Voblint_CLI.Generated.Interval_Analysis -> "interval"
-  | Voblint_CLI.Generated.Int_Analysis -> "int"
-  | Voblint_CLI.Generated.Parity_Analysis -> "parity"
-  | Voblint_CLI.Generated.Congruence_Analysis -> "congruence"
 
 let rec mkdir_p dir =
   if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
@@ -244,9 +240,10 @@ type outcome =
   | Ok_dot of string
   | Ok_graph of string
   | Ok_report of string
-  (* The rejection is the analyzer's own answer, so it surfaces from inside
+  (* Both rejections are the analyzer's own answer, so they surface from inside
      the contained run rather than from a gate this file keeps. *)
   | Malformed
+  | Invalid_activation
 
 (* Raised where an answer other than a successful run arrives, so every
    rendering below can be written against the output it needs. *)
@@ -280,7 +277,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
               | Ok_report s ->
                   output_string oc "R\n";
                   output_string oc s
-              | Malformed -> output_string oc "M\n");
+              | Malformed -> output_string oc "M\n"
+              | Invalid_activation -> output_string oc "I\n");
               close_out oc;
               0
             with e ->
@@ -328,6 +326,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                     | "G" -> Ok (Ok_graph body)
                     | "R" -> Ok (Ok_report body)
                     | "M" -> Ok Malformed
+                    | "I" -> Ok Invalid_activation
                     | _ -> Error body)
                 | None -> Error "analysis subprocess produced no output")
             | _, Unix.WEXITED code ->
@@ -365,10 +364,9 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 type context_kind = CK_None | CK_EntryState | CK_CallString
 
 let () =
-  let analysis = ref None in
-  (* Every domain named by --analysis, in order. Only --html reads past the
-     head; see the comma-list note in parse_args. *)
-  let analyses = ref [] in
+  (* Every domain named by --analysis, in order, exactly as given: run_voblint
+     alone decides whether the list is a valid activation. *)
+  let analyses = ref None in
   let context_kind = ref CK_None in
   let context_depth = ref None in
   let globals = ref Voblint_CLI.Generated.Globals_Warrow in
@@ -388,9 +386,6 @@ let () =
         print_endline usage;
         exit 0
     | "--analysis" :: v :: rest ->
-        (* A comma list asks one report to carry several domains side by side.
-         The head stays the analysis every other output path means by
-         "--analysis", so a single name behaves exactly as before. *)
         let kind_of name =
           match name with
           | "sign" -> Voblint_CLI.Generated.Sign_Analysis
@@ -398,19 +393,12 @@ let () =
           | "int" -> Voblint_CLI.Generated.Int_Analysis
           | "parity" -> Voblint_CLI.Generated.Parity_Analysis
           | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
+          | "order" -> Voblint_CLI.Generated.Order_Analysis
           | _ ->
               prerr_endline ("unknown --analysis value: " ^ name);
               exit 1
         in
-        let names =
-          String.split_on_char ',' v |> List.filter (fun n -> n <> "")
-        in
-        if names = [] then begin
-          prerr_endline "voblint: --analysis expects at least one domain";
-          exit 1
-        end;
-        analyses := List.map kind_of names;
-        analysis := Some (List.hd !analyses);
+        analyses := Some (List.map kind_of (String.split_on_char ',' v));
         parse_args rest
     | "--context" :: v :: rest ->
         (match v with
@@ -518,11 +506,12 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
-  let kind =
-    match !analysis with
-    | Some k -> k
+  let domains =
+    match !analyses with
+    | Some ds -> ds
     | None ->
-        prerr_endline "missing --analysis sign|interval|int|parity|congruence";
+        prerr_endline
+          "missing --analysis sign|interval|int|parity|congruence|order";
         prerr_endline usage;
         exit 1
   in
@@ -534,32 +523,16 @@ let () =
       "voblint: --html cannot be combined with --dot/--graph-snapshot";
     exit 1
   end;
-  (* Several domains in one report means several solves feeding one set of node
-     documents, merged by node identifier. Identifiers are built from the CFG
-     and the context, so they only agree across domains when the context is the
-     same for all of them -- which is why a list is confined to the
-     context-insensitive path rather than silently merging mismatched nodes. *)
-  if List.length !analyses > 1 then begin
-    if not !html then begin
-      prerr_endline
-        "voblint: --analysis with several domains is only supported by --html";
-      exit 1
-    end;
-    if context <> Voblint_CLI.Generated.Ctx_None then begin
-      prerr_endline
-        "voblint: --analysis with several domains requires --context none";
-      exit 1
-    end
-  end;
-  let result_for k =
+  let label = String.concat "," (List.map A.analysis_label domains) in
+  let solve () =
     match
-      Value_symbols.decode_answer (C.run_voblint k !globals context prog)
+      Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
     with
+    | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.Analysed result ->
         if !html || !dot || !graph_snapshot then
-          print_diagnostics path (analysis_label k) stmt_positions
-            (C.res_diagnostics result);
+          print_diagnostics path label stmt_positions (C.res_diagnostics result);
         result
   in
   (* Checked here, not inside the contained child: a refusal to write into the
@@ -572,85 +545,55 @@ let () =
         try
           if !html then (
             let dir = !html_dir in
-            (* Everything a report browser reads back is one solve per domain:
-             the graph it draws, the states in its node documents, the check
-             column beside the source and the solved globals all come off the
-             same result, under the same view. *)
-            let payload_for k =
-              let result = result_for k in
-              ( Context_graph.build prog result,
-                C.res_checks result,
-                A.global_rows result,
-                C.res_diagnostics result )
-            in
-            let payloads =
-              List.map (fun k -> (analysis_label k, payload_for k)) !analyses
-            in
-            let graphs =
-              List.map (fun (label, (g, _, _, _)) -> (label, g)) payloads
-            in
-            let globals =
-              List.filter_map
-                (fun (label, (_, _, gvs, _)) ->
-                  if gvs = [] then None else Some (label, gvs))
-                payloads
-            in
+            (* Everything a report browser reads back is one solve: the graph
+             it draws, the states in its node documents, the check column
+             beside the source and the solved globals all come off the same
+             result, under the same view. *)
+            let result = solve () in
+            let graph = Context_graph.build prog result in
+            let globals = A.global_sections result in
             (* The source view's inline annotations need a verdict and a
-             position; each check row carries its position as its label. The
-             head of --analysis is the domain the text report would print, so
-             its verdicts are the ones annotated here. Unreachable checks are
-             dropped, matching what the text report's DEAD label says without a
-             verdict to show. *)
+             position; each check row carries its position as its label.
+             Unreachable checks are dropped, matching what the text report's
+             DEAD label says without a verdict to show. *)
             let checks =
-              match payloads with
-              | (_, (_, rows, _, _)) :: _ ->
-                  List.filter_map
-                    (fun (check, (line, column)) ->
-                      match C.check_verdict check with
-                      | C.Bot -> None
-                      | C.Lifted v ->
-                          Some
-                            {
-                              Render_xml.line;
-                              column;
-                              verdict = A.verdict_name v;
-                              cond =
-                                Vimp_printer.string_of_exp (C.check_exp check);
-                              message = None;
-                            })
-                    (Render_text.located_checks rows)
-              | [] ->
-                  (* --analysis names at least one domain or the run never got
-                 here, so an empty list would mean a report with no findings
-                 beside its graph. *)
-                  failwith "no --analysis domain to report"
+              List.filter_map
+                (fun (check, (line, column)) ->
+                  match C.check_verdict check with
+                  | C.Bot -> None
+                  | C.Lifted v ->
+                      Some
+                        {
+                          Render_xml.line;
+                          column;
+                          verdict = A.verdict_name v;
+                          cond = Vimp_printer.string_of_exp (C.check_exp check);
+                          message = None;
+                        })
+                (Render_text.located_checks (C.res_checks result))
             in
             let diagnostics =
-              List.concat_map
-                (fun (label, (_, _, _, diagnostics)) ->
-                  List.map
-                    (fun diagnostic ->
-                      let line, column =
-                        Option.value ~default:(0, 0)
-                          (Render_text.diagnostic_location stmt_positions
-                             diagnostic)
-                      in
-                      {
-                        Render_xml.line;
-                        column;
-                        verdict = Render_text.diagnostic_severity diagnostic;
-                        cond = "";
-                        message =
-                          Some
-                            (Result_text.diagnostic_message diagnostic
-                            ^ " [" ^ label ^ "]");
-                      })
-                    diagnostics)
-                payloads
+              List.map
+                (fun diagnostic ->
+                  let line, column =
+                    Option.value ~default:(0, 0)
+                      (Render_text.diagnostic_location stmt_positions diagnostic)
+                  in
+                  {
+                    Render_xml.line;
+                    column;
+                    verdict = Render_text.diagnostic_severity diagnostic;
+                    cond = "";
+                    message =
+                      Some
+                        (Result_text.diagnostic_message diagnostic
+                        ^ " [" ^ label ^ "]");
+                  })
+                (C.res_diagnostics result)
             in
             let checks = checks @ diagnostics in
             let files, nodes, dead =
-              Report_dir.emit ~graphs ~source_file:(Filename.basename path)
+              Report_dir.emit ~graph ~source_file:(Filename.basename path)
                 ~source_text:src ~fn:"main" ~checks ~positions:stmt_positions
                 ~globals
             in
@@ -661,15 +604,12 @@ let () =
             Ok_report (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead))
           else if !graph_snapshot then
             Ok_graph
-              (Render_snapshot.render
-                 (Context_graph.build prog (result_for kind)))
+              (Render_snapshot.render (Context_graph.build prog (solve ())))
           else if !dot then
-            Ok_dot
-              (Render_dot.render (Context_graph.build prog (result_for kind)))
+            Ok_dot (Render_dot.render (Context_graph.build prog (solve ())))
           else
             Ok_text
-              (Render_text.render_report path (analysis_label kind)
-                 stmt_positions (result_for kind))
+              (Render_text.render_report path label stmt_positions (solve ()))
         with Answered o -> o)
   with
   | Ok (Ok_text s) -> print_string s
@@ -732,6 +672,9 @@ let () =
   | Ok Malformed ->
       Printf.eprintf "%s: program is not well-formed\n" path;
       exit 4
+  | Ok Invalid_activation ->
+      prerr_endline "voblint: --analysis names a domain more than once";
+      exit 1
   | Error msg ->
       Printf.eprintf "voblint: %s\n" msg;
       exit 3

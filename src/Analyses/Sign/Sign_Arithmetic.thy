@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Sign_Warrowing "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
 section \<open>What arithmetic does to a known sign\<close>
@@ -120,12 +120,6 @@ lemma sign_mod_mono:
   "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> sign_mod a1 b1 \<le> sign_mod a2 b2"
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: sign_mod_def sup_sign_def less_eq_sign_def)
-
-fun sign_of_int :: "int => sign" where
-  "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
-
-lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
-  by (auto split: if_splits)
 
 subsection \<open>Comparison and truthiness queries\<close>
 

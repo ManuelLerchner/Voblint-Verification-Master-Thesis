@@ -6,10 +6,13 @@
    caller's own context. The route is the result's, never re-derived: which context
    a call enters is a decision of the verified analysis, and this file only draws it.
 
-   Node states show the owning procedure's formals and locals. A declared global is
-   shared by every context, so it is not repeated per node; the return slot is the
-   compiler's own intermediate, not a program variable, so it is not shown either --
-   a combine edge names the call whose result it assigns instead. *)
+   A node state shows each active analysis's part on its own, in activation order, as
+   Goblint's report shows each component of its combined state: a pointwise analysis
+   the owning procedure's formals and locals, an analysis that relates variables one
+   value for the whole state. A declared global is shared by every context, so it is
+   not repeated in the drawn state; the return slot is the compiler's own
+   intermediate, not a program variable, so it is not shown either -- a combine edge
+   names the call whose result it assigns instead. *)
 
 module C = Voblint_CLI.Generated
 module A = Result_text
@@ -24,13 +27,16 @@ type node = {
   label : string;
   kind : node_kind;
   status : node_status option;
-  bindings : (string * string) list;
-  (* Declared globals at this point. The local state carries them like any other
-     variable, so they are per point and per context; the drawn graph leaves them
-     out only to keep its tooltips short. *)
-  globals : (string * string) list;
-  (* The return slot, which only an exit state gives a meaningful value. *)
-  ret : string option;
+  (* Each active analysis's part of the state, pointwise parts restricted to the
+     owner's scope. *)
+  sections : (string * A.section) list;
+  (* Declared globals at this point, per pointwise analysis. The local state carries
+     them like any other variable, so they are per point and per context; the drawn
+     graph leaves them out only to keep its tooltips short. *)
+  globals : (string * (string * string) list) list;
+  (* The return slot per pointwise analysis, which only an exit state gives a
+     meaningful value. *)
+  ret : (string * string) list;
   findings : string list;
   point : C.cfg_node;
   owner : string;
@@ -123,14 +129,35 @@ let status_of state =
       else if List.mem (C.Lifted C.Check_Proved) verdicts then Some Proved
       else None
 
-(* A node's variable bindings, one per name the owner's scope shows, in scope order. *)
-let bindings_of names state =
+let sections_of state =
   match C.state_value state with
   | C.Bot -> []
-  | C.Lifted bindings ->
-      List.filter_map
-        (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings))
-        names
+  | C.Lifted view -> A.sections_of view
+
+(* The bindings a store section holds for [names], in [names] order. *)
+let pick names bindings =
+  List.filter_map
+    (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings))
+    names
+
+(* A node's sections: a store restricted to the owner's scope, a whole value as is. *)
+let scoped_sections names state =
+  List.map
+    (fun (label, section) ->
+      ( label,
+        match section with
+        | A.Store bindings -> A.Store (pick names bindings)
+        | A.Whole v -> A.Whole v ))
+    (sections_of state)
+
+(* What each pointwise analysis holds for [names]. *)
+let stores_of names state =
+  List.filter_map
+    (fun (label, section) ->
+      match section with
+      | A.Store bindings -> Some (label, pick names bindings)
+      | A.Whole _ -> None)
+    (sections_of state)
 
 (* What the analysis concluded at a node, short enough to label it with. *)
 let findings_of state =
@@ -154,7 +181,7 @@ let findings_of state =
       (C.state_diagnostics state)
 
 (* Everything known at a node: its state, then its findings. *)
-let lines n = List.map (fun (x, v) -> x ^ "=" ^ v) n.bindings @ n.findings
+let lines n = List.concat_map A.section_lines n.sections @ n.findings
 
 let build prog (result : (string, unit) C.run_result_ext) : t =
   let g = C.res_cfg result in
@@ -228,9 +255,15 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
           label = A.point_name p;
           kind = kind_of g p;
           status = status_of st;
-          bindings = bindings_of (names_of (owner_of p)) st;
-          globals = bindings_of globals st;
-          ret = List.assoc_opt ret_var (bindings_of [ ret_var ] st);
+          sections = scoped_sections (names_of (owner_of p)) st;
+          globals = stores_of globals st;
+          ret =
+            List.filter_map
+              (fun (label, bindings) ->
+                Option.map
+                  (fun v -> (label, v))
+                  (List.assoc_opt ret_var bindings))
+              (stores_of [ ret_var ] st);
           findings = findings_of st @ unentered_calls p c;
           point = p;
           owner = owner_of p;

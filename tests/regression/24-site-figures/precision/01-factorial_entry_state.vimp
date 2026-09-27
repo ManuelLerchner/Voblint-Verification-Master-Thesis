@@ -27,49 +27,63 @@
 //
 // nodes:
 //   main_pp7_ctx0: pp7
-//       a=[2,2]
+//       interval:
+//         a=[2,2]
 //   main_exit_main_ctx0: exit_main
-//       a=[2,2]
+//       interval:
+//         a=[2,2]
 //   main_pp5_ctx0: pp5
-//       a=⊤
+//       interval:
+//         a=⊤
 //   main_pp6_ctx0: pp6 [proved]
-//       a=[2,2]
+//       interval:
+//         a=[2,2]
 //       check a == 2
 //   main_entry_main_ctx0: entry_main
-//       a=⊤
+//       interval:
+//         a=⊤
 //   f_pp1_ctx0: pp1
-//       n=[1,1]
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         r=⊤
 //   f_exit_f_ctx0: exit_f
-//       n=[1,1]
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         r=⊤
 //   f_pp0_ctx0: pp0
-//       n=[1,1]
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         r=⊤
 //   f_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //   f_pp3_ctx0: pp3 [unreachable]
 //       unreachable
 //   f_entry_f_ctx0: entry_f
-//       n=[1,1]
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         r=⊤
 //   f_pp1_ctx1: pp1 [unreachable]
 //       unreachable
 //   f_exit_f_ctx1: exit_f
-//       n=[2,2]
-//       r=[1,1]
+//       interval:
+//         n=[2,2]
+//         r=[1,1]
 //   f_pp0_ctx1: pp0
-//       n=[2,2]
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         r=⊤
 //   f_pp2_ctx1: pp2
-//       n=[2,2]
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         r=⊤
 //   f_pp3_ctx1: pp3
-//       n=[2,2]
-//       r=[1,1]
+//       interval:
+//         n=[2,2]
+//         r=[1,1]
 //   f_entry_f_ctx1: entry_f
-//       n=[2,2]
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         r=⊤
 //
 // edges:
 //   f_pp0_ctx0 -> f_pp1_ctx0: [n < 2]

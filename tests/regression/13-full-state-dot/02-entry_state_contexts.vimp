@@ -25,40 +25,53 @@
 //
 // nodes:
 //   main_pp5_ctx0: pp5 [proved]
-//       a=[9,9]
-//       b=[16,16]
+//       interval:
+//         a=[9,9]
+//         b=[16,16]
 //       check b == 16
 //   main_pp6_ctx0: pp6
-//       a=[9,9]
-//       b=[16,16]
+//       interval:
+//         a=[9,9]
+//         b=[16,16]
 //   main_exit_main_ctx0: exit_main
-//       a=[9,9]
-//       b=[16,16]
+//       interval:
+//         a=[9,9]
+//         b=[16,16]
 //   main_pp2_ctx0: pp2
-//       a=⊤
-//       b=⊤
+//       interval:
+//         a=⊤
+//         b=⊤
 //   main_pp3_ctx0: pp3
-//       a=[9,9]
-//       b=⊤
+//       interval:
+//         a=[9,9]
+//         b=⊤
 //   main_pp4_ctx0: pp4 [proved]
-//       a=[9,9]
-//       b=[16,16]
+//       interval:
+//         a=[9,9]
+//         b=[16,16]
 //       check a == 9
 //   main_entry_main_ctx0: entry_main
-//       a=⊤
-//       b=⊤
+//       interval:
+//         a=⊤
+//         b=⊤
 //   square_exit_square_ctx0: exit_square
-//       n=[3,3]
+//       interval:
+//         n=[3,3]
 //   square_pp0_ctx0: pp0
-//       n=[3,3]
+//       interval:
+//         n=[3,3]
 //   square_entry_square_ctx0: entry_square
-//       n=[3,3]
+//       interval:
+//         n=[3,3]
 //   square_exit_square_ctx1: exit_square
-//       n=[4,4]
+//       interval:
+//         n=[4,4]
 //   square_pp0_ctx1: pp0
-//       n=[4,4]
+//       interval:
+//         n=[4,4]
 //   square_entry_square_ctx1: entry_square
-//       n=[4,4]
+//       interval:
+//         n=[4,4]
 //
 // edges:
 //   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n

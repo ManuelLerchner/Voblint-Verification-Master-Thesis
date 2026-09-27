@@ -7,61 +7,7 @@ begin
 
 section \<open>Sign backward filtering\<close>
 
-subsection \<open>Meet (greatest lower bound)\<close>
-
-text \<open>
-  The seven-element sign lattice has a well-defined glb.  Adding @{class semilattice_inf}
-  here gives @{text \<open>inf_mono\<close>} for free, which is needed for the monotonicity proof
-  of @{text bfilter}.
-\<close>
-
-fun meet_sign :: "sign => sign => sign" where
-    "meet_sign SBot    _       = SBot"
-  | "meet_sign _       SBot    = SBot"
-  | "meet_sign STop    b       = b"
-  | "meet_sign a       STop    = a"
-  | "meet_sign SNeg    SNeg    = SNeg"
-  | "meet_sign SNeg    SNonPos = SNeg"
-  | "meet_sign SNonPos SNeg    = SNeg"
-  | "meet_sign SNonPos SNonPos = SNonPos"
-  | "meet_sign SNonPos SZero   = SZero"
-  | "meet_sign SZero   SNonPos = SZero"
-  | "meet_sign SNonPos SNonNeg = SZero"
-  | "meet_sign SNonNeg SNonPos = SZero"
-  | "meet_sign SZero   SZero   = SZero"
-  | "meet_sign SZero   SNonNeg = SZero"
-  | "meet_sign SNonNeg SZero   = SZero"
-  | "meet_sign SNonNeg SNonNeg = SNonNeg"
-  | "meet_sign SNonNeg SPos    = SPos"
-  | "meet_sign SPos    SNonNeg = SPos"
-  | "meet_sign SPos    SPos    = SPos"
-  | "meet_sign _       _       = SBot"
-
-lemma meet_sign_sound:
-  "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (meet_sign a b)"
-  by (cases a; cases b; auto)
-
-instantiation sign :: inf begin
-definition inf_sign :: "sign => sign => sign" where
-  "inf_sign = meet_sign"
-instance ..
-end
-
-declare inf_sign_def [simp]
-
-instance sign :: semilattice_inf
-proof intro_classes
-  fix x y z :: sign
-  show "x \<sqinter> y \<le> x"
-    by (cases x; cases y; auto simp: less_eq_sign_def)
-  show "x \<sqinter> y \<le> y"
-    by (cases x; cases y; auto simp: less_eq_sign_def)
-  show "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z"
-    by (cases x; cases y; cases z; auto simp: less_eq_sign_def)
-qed
-
-instance sign :: lattice ..
-instance sign :: bounded_lattice_bot ..
+text \<open>The sign meet lives with the lattice in \<^theory>\<open>Voblint_Domain.Sign_Lattice\<close>.\<close>
 
 subsection \<open>Backward-analysis: inverse operators\<close>
 
@@ -75,15 +21,15 @@ text \<open>
 
 fun inv_less_sign :: "bool => sign => sign => sign * sign" where
     "inv_less_sign True  a1 a2 =
-       (let a1' = if sign_le a2 SNonPos then meet_sign a1 SNeg else a1 ;
-                a2' = if sign_le a1 SNonNeg then meet_sign a2 SPos else a2
+       (let a1' = if sign_le a2 SNonPos then a1 \<sqinter> SNeg else a1 ;
+                a2' = if sign_le a1 SNonNeg then a2 \<sqinter> SPos else a2
         in (a1', a2'))"
   | "inv_less_sign False a1 a2 =
-       (let a1' = if sign_le a2 SPos then meet_sign a1 SPos
-                  else if sign_le a2 SNonNeg then meet_sign a1 SNonNeg
+       (let a1' = if sign_le a2 SPos then a1 \<sqinter> SPos
+                  else if sign_le a2 SNonNeg then a1 \<sqinter> SNonNeg
                   else a1 ;
-                a2' = if sign_le a1 SNeg then meet_sign a2 SNeg
-                  else if sign_le a1 SNonPos then meet_sign a2 SNonPos
+                a2' = if sign_le a1 SNeg then a2 \<sqinter> SNeg
+                  else if sign_le a1 SNonPos then a2 \<sqinter> SNonPos
                   else a2
         in (a1', a2'))"
 
@@ -98,7 +44,7 @@ text \<open>
   @{text inv_eq_sign} narrows on a guard @{text \<open>e1 = e2\<close>} known true or
   false. The true branch narrows both operands to their intersection, exactly
   matching what \<open>bfilter\<close> already computes for @{text \<open>Eq _ _ True\<close>}
-  via @{const meet_sign} directly. The false branch only narrows a boundary
+  via @{const inf} directly. The false branch only narrows a boundary
   singleton away from a wider operand that has @{const SZero} as one of its
   bounds: excluding @{text 0} from @{const SNonNeg} leaves @{const SPos},
   from @{const SNonPos} leaves @{const SNeg}; both directions, symmetric in
@@ -117,19 +63,19 @@ text \<open>
   @{const inv_less_sign}'s own @{term \<open>sign_le a2 SNonPos\<close>}-style guards do;
   it also makes the @{const SBot} case sound for free (vacuously, since
   @{term \<open>gamma_sign SBot = {}\<close>}), without @{const inv_less_sign}'s separate
-  reliance on @{text \<open>meet_sign SBot _ = SBot\<close>}.
+  reliance on @{text \<open>SBot \<sqinter> _ = SBot\<close>}.
 \<close>
 
 fun inv_eq_sign :: "bool => sign => sign => sign * sign" where
-    "inv_eq_sign True  a1 a2 = (meet_sign a1 a2, meet_sign a1 a2)"
+    "inv_eq_sign True  a1 a2 = (a1 \<sqinter> a2, a1 \<sqinter> a2)"
   | "inv_eq_sign False a1 a2 =
        (let a1' = if sign_le a1 SZero \<and> sign_le a2 SZero then SBot
-                  else if sign_le a2 SZero \<and> sign_le a1 SNonNeg then meet_sign a1 SPos
-                  else if sign_le a2 SZero \<and> sign_le a1 SNonPos then meet_sign a1 SNeg
+                  else if sign_le a2 SZero \<and> sign_le a1 SNonNeg then a1 \<sqinter> SPos
+                  else if sign_le a2 SZero \<and> sign_le a1 SNonPos then a1 \<sqinter> SNeg
                   else a1 ;
                 a2' = if sign_le a1 SZero \<and> sign_le a2 SZero then SBot
-                  else if sign_le a1 SZero \<and> sign_le a2 SNonNeg then meet_sign a2 SPos
-                  else if sign_le a1 SZero \<and> sign_le a2 SNonPos then meet_sign a2 SNeg
+                  else if sign_le a1 SZero \<and> sign_le a2 SNonNeg then a2 \<sqinter> SPos
+                  else if sign_le a1 SZero \<and> sign_le a2 SNonPos then a2 \<sqinter> SNeg
                   else a2
         in (a1', a2'))"
 
@@ -143,8 +89,8 @@ proof (cases res)
     and heq: "(n1 = n2) = res"
   have "n1 = n2" using heq True by simp
   then have "n1 \<in> gamma_sign a2" using h2 by simp
-  then have "n1 \<in> gamma_sign (meet_sign a1 a2)"
-    using meet_sign_sound[OF h1] by simp
+  then have "n1 \<in> gamma_sign (a1 \<sqinter> a2)"
+    using inf_sign_sound[OF h1] by simp
   then show ?thesis using True \<open>n1 = n2\<close> by simp
 next
   case False
@@ -157,22 +103,6 @@ next
         auto simp: less_eq_sign_def Let_def)
 qed
 
-lemma meet_sign_mono:
-  assumes "x \<le> x'" and "y \<le> y'"
-  shows "meet_sign x y \<le> meet_sign x' y'"
-  using inf_mono[OF assms] by simp
-
-text \<open>
-  Reductiveness: @{const meet_sign} is exactly @{term "(\<sqinter>)"} for @{typ sign}
-  (@{thm inf_sign_def}), so it never enlarges either operand.
-\<close>
-
-lemma meet_sign_le1: "meet_sign a b \<le> a"
-  by (cases a; cases b; auto simp: less_eq_sign_def)
-
-lemma meet_sign_le2: "meet_sign a b \<le> b"
-  by (cases a; cases b; auto simp: less_eq_sign_def)
-
 lemma inv_eq_sign_mono:
   assumes "a1 \<le> (a1' :: sign)"
       and "a2 \<le> a2'"
@@ -181,7 +111,7 @@ lemma inv_eq_sign_mono:
      snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
 proof (cases r)
   case True
-  then show ?thesis using assms by (simp add: meet_sign_mono)
+  then show ?thesis using assms by (simp add: le_infI1 le_infI2)
 next
   case False
   then show ?thesis
@@ -251,8 +181,8 @@ proof (cases r)
     using narrow1_mono[OF A2 A1, of SNonNeg SPos] .
 
   show ?thesis
-    using fst_mono snd_mono True sign_le_iff
-    by auto
+    using True fst_mono snd_mono
+    by (simp only: inv_less_sign.simps Let_def sign_le_iff prod.sel)
 next
   case False
 
@@ -283,8 +213,8 @@ next
     using narrow2_mono[OF A2 A1, of SNeg SNonPos] neg_order by simp
 
   show ?thesis
-    using fst_mono snd_mono False sign_le_iff
-    by fastforce
+    using False fst_mono snd_mono
+    by (simp only: inv_less_sign.simps Let_def sign_le_iff prod.sel)
 qed
 
 subsection \<open>Backward-domain interpretation\<close>
@@ -298,7 +228,7 @@ text \<open>
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_mono meet_sign aval_sign sign_tobool
+    backward_domain_mono inf aval_sign sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
@@ -316,9 +246,9 @@ global_interpretation sign_backward_domain:
     and sign_eq_true_of_less = sign_backward_domain.eq_true
     and sign_eq_false_of_intersection = sign_backward_domain.eq_false
 proof unfold_locales
-qed (use sign_tobool_mono in \<open>simp_all add: meet_sign_sound inv_less_sign_sound
-       inv_eq_sign_sound inv_conservative_def sign_tobool_sound meet_sign_mono aval_sign_mono
-       inv_less_sign_mono inv_eq_sign_mono meet_sign_le1 meet_sign_le2\<close>)
+qed (use sign_tobool_mono in \<open>simp_all add: inf_sign_sound inv_less_sign_sound
+       inv_eq_sign_sound inv_conservative_def sign_tobool_sound inf_mono aval_sign_mono
+       inv_less_sign_mono inv_eq_sign_mono le_infI1 le_infI2\<close>)
 
 text \<open>
   Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /

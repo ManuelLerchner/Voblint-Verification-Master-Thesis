@@ -70,6 +70,17 @@ text \<open>The routed callee entry the solved system selects is the executable
   \<^const>\<open>ctx_call\<close>: the route reads the caller's solved state from the solver's own
   table, which is exactly how \<^const>\<open>ctx_call\<close> is defined.\<close>
 
+text \<open>The state a call enters its callee with, as the registration's pipeline names it
+  and as the executable entry transfer computes it.\<close>
+
+lemma rc_entered:
+  "routed_dg_pipeline.entry_of
+     (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+        (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
+     rc_gs rc_program ci d
+   = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"
+  by (simp add: routed_dg_pipeline.entry_of_def rc_empty_pred_def)
+
 lemma rc_route_at_call:
   "exec_formals_route rc_gs (Statement 3) []
      (transfer_lift rc_empty_pred
@@ -80,8 +91,7 @@ lemma rc_route_at_call:
                    (Inl (Statement 3, [])))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
-  unfolding rc_empty_pred_def ctx_call_def interval_es_rule.ctx_succ_def
-    interval_es_rule.sol_env_def
+  unfolding ctx_call_def interval_es_rule.ctx_succ_def interval_es_rule.sol_env_def rc_entered
   by (rule refl)
 
 lemma rc_call_fwd_ok:
@@ -121,7 +131,7 @@ lemma rc_cfg_alt: "prog_cfg rc_program = compile_prog rc_pi rc_procs"
 lemmas rc_routed_hyps =
   rc_ctx_terminates
   rc_fwd_ok[folded interval_es_rule.sol_vars_def rc_cfg_alt]
-  rc_call_fwd_ok[unfolded rc_empty_pred_def,
+  rc_call_fwd_ok[folded rc_entered,
     folded interval_es_rule.sol_vars_def interval_es_rule.sol_env_def rc_cfg_alt]
   rc_comb_fwd_ok[folded interval_es_rule.sol_vars_def rc_cfg_alt]
 
@@ -185,10 +195,11 @@ proof -
       (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
       (exec_formals_route rc_gs (Statement 3) [] ?entry
          (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]))"
-    unfolding rc_empty_pred_def interval_es_rule.sol_env_def[symmetric]
+    unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
+          \<open>simp_all add: interval_gamma_def rc_entered rc_empty_pred_def
+             interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
 qed

@@ -39,8 +39,8 @@ subsection \<open>Narrowing is exactly componentwise\<close>
 
 text \<open>
   Sign, Parity, and Congruence all choose the conservative \<open>narrow a b = a\<close>
-  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Lattice\<close>,
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>,
+  (\<^theory>\<open>Voblint_Analysis_Sign.Sign_Warrowing\<close>,
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Warrowing\<close>,
   \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Warrowing\<close>):
   once widened, they never narrow back, which trivially satisfies
   \<open>narrow_ge\<close>/\<open>narrow_le\<close> without needing anything about their own
@@ -63,9 +63,9 @@ subsection \<open>The composite \<open>warrowing\<close> laws hold generically\<
 text \<open>
   Not just spot-checked by \<open>eval\<close> at one instance: these cite the
   \<open>warrowing\<close> class facts directly at \<open>int_dom\<close>, witnessing that the
-  \<open>instantiation int_dom_ext :: (int_dom_record_warrowing) warrowing\<close>
-  block in \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> actually resolves and
-  discharges its obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
+  \<open>warrowing\<close> instantiation of \<open>int_dom_ext\<close> in
+  \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> actually resolves and discharges
+  its obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
 \<close>
 
 lemma int_dom_widen_ge1: "(a :: int_dom) \<le> widen a b"

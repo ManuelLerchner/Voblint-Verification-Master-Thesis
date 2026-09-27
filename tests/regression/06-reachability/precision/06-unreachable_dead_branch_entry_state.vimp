@@ -35,21 +35,27 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
-//       x=[5,5]
+//       interval:
+//         x=[5,5]
 //   main_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //       check x == 99 [dead]
 //   main_pp3_ctx0: pp3 [proved]
-//       x=[5,5]
+//       interval:
+//         x=[5,5]
 //       check x == 5
 //   main_pp4_ctx0: pp4
-//       x=[5,5]
+//       interval:
+//         x=[5,5]
 //   main_exit_main_ctx0: exit_main
-//       x=[5,5]
+//       interval:
+//         x=[5,5]
 //   main_pp0_ctx0: pp0
-//       x=⊤
+//       interval:
+//         x=⊤
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
+//       interval:
+//         x=⊤
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: x := 5

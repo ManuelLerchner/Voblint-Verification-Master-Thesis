@@ -59,6 +59,7 @@ let domain_of_string = function
   | "int" -> Some C.Int_Analysis
   | "parity" -> Some C.Parity_Analysis
   | "congruence" -> Some C.Congruence_Analysis
+  | "order" -> Some C.Order_Analysis
   | _ -> None
 
 let globals_of_string = function
@@ -87,6 +88,18 @@ let context_of_string mode (depth : Js.number_t) =
 (* Browser entry point                                                        *)
 (* -------------------------------------------------------------------------- *)
 
+(* A comma list, kept exactly as given, and no names at all as the empty list:
+   run_voblint alone decides whether it is a valid activation. *)
+let domains_of_string names =
+  List.fold_right
+    (fun name acc ->
+      match (domain_of_string name, acc) with
+      | Some d, Ok ds -> Ok (d :: ds)
+      | None, _ -> Error ("Unknown analysis domain: " ^ name)
+      | _, (Error _ as e) -> e)
+    (if names = "" then [] else String.split_on_char ',' names)
+    (Ok [])
+
 let run analysis_js globals_js context_js context_depth source_js =
   let analysis_name = Js.to_string analysis_js in
 
@@ -98,16 +111,15 @@ let run analysis_js globals_js context_js context_depth source_js =
 
   let answer =
     match
-      ( domain_of_string analysis_name,
+      ( domains_of_string analysis_name,
         globals_of_string globals_name,
         context_of_string context_name context_depth )
     with
-    | None, _, _ ->
-        Render_json.error_json ("Unknown analysis domain: " ^ analysis_name)
+    | Error message, _, _ -> Render_json.error_json message
     | _, None, _ ->
         Render_json.error_json ("Unknown globals rule: " ^ globals_name)
     | _, _, Error message -> Render_json.error_json message
-    | Some analysis, Some globals, Ok context -> (
+    | Ok domains, Some globals, Ok context -> (
         try
           let program, stmt_positions, header_positions =
             Vimp_frontend.program "browser.vimp" source
@@ -115,14 +127,17 @@ let run analysis_js globals_js context_js context_depth source_js =
           let analysis_start = now_ms () in
           let answer =
             Value_symbols.decode_answer
-              (C.run_voblint analysis globals context program)
+              (C.run_voblint domains globals context program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
-            Render_json.run_voblint_json ~kind:analysis ~globals ~ctx:context
-              program answer
+            Render_json.run_voblint_json ~domains ~globals ~ctx:context program
+              answer
           in
           match answer with
+          | C.Invalid_Activation ->
+              Render_json.error_json ~raw
+                "Select at least one analysis, each at most once"
           | C.Malformed_Program ->
               let message =
                 match Wf_explain.explain program with

@@ -18,7 +18,6 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
   directories
     "generated"
   theories
-    Int_Domain
     Int_Warrowing
     Int_Refinement
     Int_Refinement_Control

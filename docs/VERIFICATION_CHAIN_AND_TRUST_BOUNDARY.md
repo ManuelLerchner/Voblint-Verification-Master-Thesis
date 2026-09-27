@@ -101,11 +101,11 @@ solver layer beyond ordinary code-generation trust.
 ## 5. Soundness endpoints
 
 The chain ends at `run_voblint_certified_source_sound` (`Analysis_Certified.thy`):
-for every domain, global update rule and context policy, a source run's
+for every activation list, global update rule and context policy, a source run's
 store lies in the analysis result at a genuinely reachable node, and every
 definite verdict listed there holds for that store.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
-point is unreachable, at every configuration. The caller owes `config_terminates D rule ctx p` -- the
+point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:
 `live_keys_cover` (`Routed_Live_Keys.thy`) proves it from termination. The

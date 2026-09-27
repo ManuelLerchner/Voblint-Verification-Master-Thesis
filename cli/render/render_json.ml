@@ -46,7 +46,7 @@ let check_json result (check, position) =
   let state =
     match C.check_verdict check with
     | C.Bot -> ""
-    | C.Lifted _ -> A.state_slice result point cnd
+    | C.Lifted _ -> String.concat "; " (A.state_slice result point cnd)
   in
   Printf.sprintf "{\"point\":%s,\"condition\":%s,\"verdict\":%s,\"state\":%s%s}"
     (json_string (A.point_name point))
@@ -83,6 +83,16 @@ let statement_json (index, (line, column, end_line, end_column)) =
     line column end_line end_column
 
 let binding_json (x, v) = "[" ^ json_string x ^ "," ^ json_string v ^ "]"
+
+(* One active analysis's part of a state: its bindings, or its whole value. *)
+let section_json (label, section) =
+  match section with
+  | A.Store bindings ->
+      Printf.sprintf "{\"analysis\":%s,\"bindings\":%s}" (json_string label)
+        (json_list binding_json bindings)
+  | A.Whole v ->
+      Printf.sprintf "{\"analysis\":%s,\"whole\":%s}" (json_string label)
+        (json_string v)
 
 let status_name = function
   | G.Proved -> "proved"
@@ -124,8 +134,8 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of
       (Option.value ~default:0 (Hashtbl.find_opt incoming e.dst) > 1)
       (match step_state n e with
       | Some C.Bot -> ",\"state\":null"
-      | Some (C.Lifted bindings) ->
-          ",\"state\":" ^ json_list binding_json bindings
+      | Some (C.Lifted view) ->
+          ",\"state\":" ^ json_list section_json (A.sections_of view)
       | None -> "")
   in
   let steps =
@@ -147,15 +157,15 @@ let node_json (graph : G.t) context_of context_key incoming entered exit_of
       graph.edges
   in
   Printf.sprintf
-    "{\"id\":%s,\"point\":%s,\"kind\":%s,\"context\":%s,\"context_key\":%s,\"status\":%s,\"bindings\":%s,\"globals\":%s,\"ret\":%s,\"findings\":%s,\"divisions\":%s,\"next\":%s,\"enters\":%s}"
+    "{\"id\":%s,\"point\":%s,\"kind\":%s,\"context\":%s,\"context_key\":%s,\"status\":%s,\"sections\":%s,\"globals\":%s,\"ret\":%s,\"findings\":%s,\"divisions\":%s,\"next\":%s,\"enters\":%s}"
     (json_string n.id) (json_string n.label)
     (json_string (kind_name n.kind))
     (json_string (context_of n.id))
     (json_string (context_key n))
     (json_option (fun s -> json_string (status_name s)) n.status)
-    (json_list binding_json n.bindings)
-    (json_list binding_json n.globals)
-    (json_option json_string n.ret)
+    (json_list section_json n.sections)
+    (json_list (fun (l, bs) -> section_json (l, A.Store bs)) n.globals)
+    (json_list binding_json n.ret)
     (json_list json_string n.findings)
     (json_list division_json (divisions n))
     (json_list step steps) (json_list enter enters)
@@ -466,15 +476,30 @@ let context_json = function
   | C.Context_Call_String us ->
       tagged "Context_Call_String" [ json_list cfg_node_json us ]
 
+let domain_json d =
+  tagged
+    (match d with
+    | C.Sign_Analysis -> "Sign_Analysis"
+    | C.Interval_Analysis -> "Interval_Analysis"
+    | C.Int_Analysis -> "Int_Analysis"
+    | C.Parity_Analysis -> "Parity_Analysis"
+    | C.Congruence_Analysis -> "Congruence_Analysis"
+    | C.Order_Analysis -> "Order_Analysis")
+    []
+
+let field_state_json = function
+  | C.Field_Store bs ->
+      tagged "Field_Store" [ json_list (json_pair json_string json_string) bs ]
+  | C.Field_Whole v -> tagged "Field_Whole" [ json_string v ]
+
+let view_json = json_list (json_pair domain_json field_state_json)
+
 let state_json st =
   json_object
     [
       ("state_point", cfg_node_json (C.state_point st));
       ("state_context", nat_json (C.state_context st));
-      ( "state_value",
-        lifted_json
-          (json_list (json_pair json_string json_string))
-          (C.state_value st) );
+      ("state_value", lifted_json view_json (C.state_value st));
       ( "state_checks",
         json_list
           (json_pair exp_json (lifted_json check_result_json))
@@ -485,8 +510,7 @@ let state_json st =
           (C.state_diagnostics st) );
       ( "state_steps",
         json_list
-          (json_pair cfg_node_json
-             (lifted_json (json_list (json_pair json_string json_string))))
+          (json_pair cfg_node_json (lifted_json view_json))
           (C.state_steps st) );
     ]
 
@@ -517,10 +541,7 @@ let result_global_json g =
   json_object
     [
       ("global_key", result_global_key_json (C.global_key g));
-      ( "global_state",
-        lifted_json
-          (json_list (json_pair json_string json_string))
-          (C.global_state g) );
+      ("global_state", lifted_json view_json (C.global_state g));
     ]
 
 let arithmetic_diagnostic_json d =
@@ -546,18 +567,9 @@ let run_result_json r =
     ]
 
 let analysis_answer_json = function
+  | C.Invalid_Activation -> tagged "Invalid_Activation" []
   | C.Malformed_Program -> tagged "Malformed_Program" []
   | C.Analysed r -> tagged "Analysed" [ run_result_json r ]
-
-let domain_json d =
-  tagged
-    (match d with
-    | C.Sign_Analysis -> "Sign_Analysis"
-    | C.Interval_Analysis -> "Interval_Analysis"
-    | C.Int_Analysis -> "Int_Analysis"
-    | C.Parity_Analysis -> "Parity_Analysis"
-    | C.Congruence_Analysis -> "Congruence_Analysis")
-    []
 
 let globals_rule_json r =
   tagged
@@ -594,13 +606,13 @@ let program_json p =
       );
     ]
 
-let run_voblint_json ~kind ~globals ~ctx program answer =
+let run_voblint_json ~domains ~globals ~ctx program answer =
   json_object
     [
       ( "input",
         json_object
           [
-            ("kind", domain_json kind);
+            ("as", json_list domain_json domains);
             ("rule", globals_rule_json globals);
             ("ctx", context_mode_json ctx);
             ("p", program_json program);
@@ -637,27 +649,34 @@ let seeds_json program result (graph : G.t) =
       graph.nodes
   in
   let globals = C.declared_global_vars program in
-  let shown f line =
+  let shown f name =
     let formals =
       match C.prog_table program f with
       | Some (C.Proc_decl_ext (formals, _, ())) -> formals
       | None -> []
     in
-    match String.index_opt line '=' with
-    | Some i ->
-        let name = String.sub line 0 i in
-        List.mem name formals || List.mem name globals
-    | None -> false
+    List.mem name formals || List.mem name globals
   in
-  let seed (g, (key, lines)) =
+  let seed (g, (key, _)) =
     match C.global_key g with
     | C.Global_Shared -> None
     | C.Global_Seed (f, i) ->
         let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in
-        let reachable =
-          match C.global_state g with C.Bot -> false | C.Lifted _ -> true
+        let reachable, lines =
+          match C.global_state g with
+          | C.Bot -> (false, [ "unreachable" ])
+          | C.Lifted view ->
+              ( true,
+                List.concat_map
+                  (fun (label, section) ->
+                    A.section_lines
+                      ( label,
+                        match section with
+                        | A.Store bs ->
+                            A.Store (List.filter (fun (x, _) -> shown f x) bs)
+                        | whole -> whole ))
+                  (A.sections_of view) )
         in
-        let lines = if reachable then List.filter (shown f) lines else lines in
         Some
           (Printf.sprintf
              "{\"key\":%s,\"procedure\":%s,\"entry\":%s,\"reachable\":%b,\"lines\":%s}"

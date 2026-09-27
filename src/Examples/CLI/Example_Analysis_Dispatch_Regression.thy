@@ -33,7 +33,7 @@ definition dispatch_demo_prog :: imp_prog where
 
 definition dispatch_demo_checks where
   "dispatch_demo_checks D rule ctx =
-     (case run_voblint D rule ctx dispatch_demo_prog of
+     (case run_voblint [D] rule ctx dispatch_demo_prog of
         Analysed res \<Rightarrow> Some (map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk))
                                  (res_checks res))
       | Malformed_Program \<Rightarrow> None)"
@@ -59,22 +59,22 @@ lemma dispatch_demo_rule_invariant:
 
 text \<open>
   The call-string plan reads the table its rule names, not whichever one its domain
-  publishes first. Int is where that is observable: its call-string registration
-  \<open>int_cs_rule\<close> solves an always-join table and a warrowing one, and the two rows
-  below are the two solves.
+  publishes first. Int is where that is observable: the call-string registration
+  \<open>mcp_cs_rule\<close> of the active analyses solves an always-join table and a warrowing
+  one, and the two rows below are the two solves.
 \<close>
 
 lemma dispatch_demo_call_string_reads_the_named_rule:
-  "(case run_voblint Int_Analysis Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
+  "(case run_voblint [Int_Analysis] Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = int_cs_rule.verdict_report 1 Globals_Warrow
+          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Warrow
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
-  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
+  "(case run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = int_cs_rule.verdict_report 1 Globals_Join
+          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Join
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   by eval+
@@ -85,7 +85,7 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_run_voblint_entry_state:
-  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_EntryState dispatch_demo_prog of
+  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
@@ -95,7 +95,7 @@ lemma dispatch_demo_run_voblint_entry_state:
   by eval
 
 lemma dispatch_demo_run_voblint_flat:
-  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_None dispatch_demo_prog of
+  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_None dispatch_demo_prog of
       Analysed res \<Rightarrow> res_contexts res = [Context_Unit]
     | _ \<Rightarrow> False)"
   by eval
@@ -122,13 +122,20 @@ definition step_demo_prog :: imp_prog where
 
 text \<open>One variable's value at a point and after each of the point's steps, under Interval.\<close>
 
+fun field_value :: "vname \<Rightarrow> 'v field_state \<Rightarrow> 'v option" where
+  "field_value x (Field_Store bs) = map_of bs x"
+| "field_value x (Field_Whole _) = None"
+
+definition interval_value :: "vname \<Rightarrow> 'v analysis_view \<Rightarrow> 'v option" where
+  "interval_value x view = Option.bind (map_of view Interval_Analysis) (field_value x)"
+
 definition step_view :: "imp_prog \<Rightarrow> vname \<Rightarrow> pp \<Rightarrow> (abstract_value option lifted
     \<times> (pp \<times> abstract_value option lifted) list) list" where
   "step_view p x v =
-     map (\<lambda>st. (map_lift (\<lambda>bs. map_of bs x) (state_value st),
-                map (\<lambda>(w, s). (w, map_lift (\<lambda>bs. map_of bs x) s)) (state_steps st)))
+     map (\<lambda>st. (map_lift (interval_value x) (state_value st),
+                map (\<lambda>(w, s). (w, map_lift (interval_value x) s)) (state_steps st)))
        (filter (\<lambda>st. state_point st = v)
-          (res_states (analysis_result Interval_Analysis Globals_Warrow Ctx_None p)))"
+          (res_states (analysis_result [Interval_Analysis] Globals_Warrow Ctx_None p)))"
 
 abbreviation step_demo_i :: "pp \<Rightarrow> (abstract_value option lifted
     \<times> (pp \<times> abstract_value option lifted) list) list" where
@@ -182,6 +189,42 @@ lemma dead_step_branch_steps_nowhere:
   by eval
 
 
+subsection \<open>One analysis asks another\<close>
+
+text \<open>
+  Both guards hold only where \<open>x = y\<close>, so \<open>z = 1\<close> at the check. Interval alone
+  keeps \<open>x\<close> and \<open>y\<close> unbounded and assigns \<open>z\<close> the interval \<open>[0, 1]\<close>. The order
+  analysis alone records \<open>x \<le> y\<close> and \<open>y \<le> x\<close> but tracks no values, so it cannot
+  answer \<open>z == 1\<close>. Run together, Interval's assignment asks the combined state for
+  the value of \<open>x == y\<close>, the order analysis answers the exact integer \<open>1\<close>, and
+  Interval assigns \<open>[1, 1]\<close>.
+\<close>
+
+definition coop_demo_prog :: imp_prog where
+  "coop_demo_prog =
+     program {
+       fun main() {
+         if (x <= y) {
+           if (y <= x) {
+             z = (x == y);
+             __voblint_check(z == 1);
+           }
+         }
+       }
+     }"
+
+definition coop_demo_verdicts where
+  "coop_demo_verdicts as =
+     (case run_voblint as Globals_Warrow Ctx_None coop_demo_prog of
+        Analysed res \<Rightarrow> Some (map check_verdict (res_checks res))
+      | _ \<Rightarrow> None)"
+
+lemma coop_demo_needs_both:
+  "coop_demo_verdicts [Interval_Analysis] = Some [Decided Check_Unknown]"
+  "coop_demo_verdicts [Order_Analysis] = Some [Decided Check_Unknown]"
+  "coop_demo_verdicts [Interval_Analysis, Order_Analysis] = Some [Decided Check_Proved]"
+  by eval+
+
 subsection \<open>A check's row carries its label\<close>
 
 text \<open>
@@ -205,7 +248,7 @@ definition labelled_checks_prog :: imp_prog where
        []"
 
 lemma labelled_checks_rows:
-  "(case run_voblint Interval_Analysis Globals_Warrow Ctx_None labelled_checks_prog of
+  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_None labelled_checks_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_label chk, check_verdict chk)) (res_checks res) =
           [((6, 3), Lifted Check_Refuted), ((2, 3), Lifted Check_Proved)]

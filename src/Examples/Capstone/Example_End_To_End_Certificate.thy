@@ -45,7 +45,7 @@ lemma certificate_demo_wf: "wf_program_compile_input_exec certificate_demo_prog"
 subsection \<open>What the configuration answers\<close>
 
 lemma certificate_demo_report:
-  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  "(case run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
             certificate_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
@@ -60,12 +60,12 @@ text \<open>
 \<close>
 
 lemma certificate_demo_analysed:
-  "\<exists>res. run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  "\<exists>res. run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
            certificate_demo_prog = Analysed res
        \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
            = [(Statement 4, Decided Check_Proved)]"
   using certificate_demo_report
-  by (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  by (cases "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                certificate_demo_prog")
      auto
 
@@ -331,17 +331,17 @@ text \<open>
 
 lemma certificate_demo_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Join
-     (routed_dg_pipeline.equations (int_tf_st_for Refine_Fixpoint)
-        (int_dom_enter_st_for Refine_Fixpoint) cinit_int_dom_st
+     (routed_dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
+        (mcp_init (activation [Int_Analysis]))
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
         (declared_global certificate_demo_prog) certificate_demo_prog)
      (routed_dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
   unfolding routed_dg_pipeline.root_query_def by eval
 
 lemma certificate_demo_terminates:
-  "int_cs_rule.terminates 1 Globals_Join (declared_global certificate_demo_prog)
-     certificate_demo_prog"
-  by (rule int_cs_rule.terminates_of_solve_c [OF certificate_demo_solve_c])
+  "mcp_cs_rule.terminates [Int_Analysis] 1 Globals_Join
+     (declared_global certificate_demo_prog) certificate_demo_prog"
+  by (rule mcp_cs_rule.terminates_of_solve_c [OF certificate_demo_solve_c])
 
 text \<open>
   Nothing about which keys the solve reached is owed: the keys a run can reach are
@@ -350,8 +350,8 @@ text \<open>
 \<close>
 
 lemma certificate_demo_config_terminates:
-  "config_terminates Int_Analysis Globals_Join (Ctx_CallString 1) certificate_demo_prog"
-  by (simp del: One_nat_def add: certificate_demo_terminates)
+  "config_terminates [Int_Analysis] Globals_Join (Ctx_CallString 1) certificate_demo_prog"
+  using certificate_demo_terminates by (simp del: One_nat_def)
 
 subsection \<open>What the printed verdict means at that node\<close>
 
@@ -361,7 +361,7 @@ text \<open>
 \<close>
 
 lemma certificate_demo_report_full:
-  "(case run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  "(case run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
             certificate_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
@@ -370,7 +370,7 @@ lemma certificate_demo_report_full:
   by eval
 
 lemma certificate_demo_check:
-  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  assumes ans: "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
   shows "\<exists>chk. res_checks res = [chk] \<and> check_point chk = Statement 4
              \<and> check_exp chk = Less (N 0) (V (STR ''b''))
@@ -385,12 +385,13 @@ text \<open>
 
 abbreviation certificate_demo_table where
   "certificate_demo_table \<equiv>
-     int_cs_rule.result 1 Globals_Join (declared_global certificate_demo_prog)
+     mcp_cs_rule.result [Int_Analysis] 1 Globals_Join (declared_global certificate_demo_prog)
        certificate_demo_prog"
 
 lemma certificate_demo_sound_table:
-  "sound_table certificate_demo_prog certificate_demo_table int_classify_check"
-  by (rule int_cs_rule_table
+  "sound_table certificate_demo_prog certificate_demo_table
+     (mcp_classify (activation [Int_Analysis])) (mcp_gamma_v (activation [Int_Analysis]))"
+  by (rule mcp_cs_rule_table
         [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
             certificate_demo_terminates])
 
@@ -402,7 +403,7 @@ text \<open>
 \<close>
 
 lemma certificate_demo_result_covers_at_check:
-  "analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
+  "analysis_result_covers [Int_Analysis] Globals_Join (Ctx_CallString 1)
      certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
   using sound_table.covers [OF certificate_demo_sound_table certificate_demo_reaches_check]
   by (simp del: One_nat_def)
@@ -414,14 +415,14 @@ text \<open>
 \<close>
 
 lemma certificate_demo_checks_sound_at_check:
-  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  assumes ans: "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
       and mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   shows "checks_sound_at res (Statement 4) s"
   using run_voblint_sound_at [OF certificate_demo_config_terminates ans mem] by blast
 
 theorem certificate_demo_check_semantically_true:
-  assumes ans: "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  assumes ans: "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
   shows "\<forall>s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4).
            truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
@@ -448,7 +449,7 @@ text \<open>
 
 theorem certificate_demo_full_certificate:
   obtains res where
-    "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+    "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
        certificate_demo_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
@@ -457,11 +458,11 @@ theorem certificate_demo_full_certificate:
        ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
-    "analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
+    "analysis_result_covers [Int_Analysis] Globals_Join (Ctx_CallString 1)
        certificate_demo_prog (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "checks_sound_at res (Statement 4) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
-proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+proof (cases "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
   case (Analysed res)
   then have checks:
@@ -493,17 +494,17 @@ text \<open>
 
 theorem certificate_demo_source_certified:
   "\<exists>res v stk.
-     run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+     run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
        certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
        = [(Statement 4, Decided Check_Proved)]
    \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog \<turnstile> (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
-   \<and> analysis_result_covers Int_Analysis Globals_Join (Ctx_CallString 1)
+   \<and> analysis_result_covers [Int_Analysis] Globals_Join (Ctx_CallString 1)
        certificate_demo_prog v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))
    \<and> checks_sound_at res v ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
-proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+proof (cases "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
   case (Analysed res)
   then have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
@@ -522,7 +523,7 @@ text \<open>
 \<close>
 
 theorem certificate_demo_check_listed_sound:
-  "\<exists>res. run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+  "\<exists>res. run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
            certificate_demo_prog = Analysed res
      \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Less (N 0) (V (STR ''b''))
           \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
@@ -530,7 +531,7 @@ theorem certificate_demo_check_listed_sound:
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e
                      ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
-proof (cases "run_voblint Int_Analysis Globals_Join (Ctx_CallString 1)
+proof (cases "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                 certificate_demo_prog")
   case (Analysed res)
   have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)

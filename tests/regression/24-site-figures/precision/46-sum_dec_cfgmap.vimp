@@ -47,28 +47,36 @@
 //
 // nodes:
 //   main_pp11_ctx0: pp11
-//       x=[3,3]
+//       interval:
+//         x=[3,3]
 //   main_exit_main_ctx0: exit_main
-//       x=[3,3]
+//       interval:
+//         x=[3,3]
 //   main_pp9_ctx0: pp9
-//       x=⊤
+//       interval:
+//         x=⊤
 //   main_pp10_ctx0: pp10 [proved]
-//       x=[3,3]
+//       interval:
+//         x=[3,3]
 //       check x == 3
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
+//       interval:
+//         x=⊤
 //   sum_pp3_ctx0: pp3
-//       n=[0,0]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[0,0]
+//         m=⊤
+//         r=⊤
 //   sum_exit_sum_ctx0: exit_sum
-//       n=[0,0]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[0,0]
+//         m=⊤
+//         r=⊤
 //   sum_pp2_ctx0: pp2
-//       n=[0,0]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[0,0]
+//         m=⊤
+//         r=⊤
 //   sum_pp5_ctx0: pp5 [unreachable]
 //       unreachable
 //   sum_pp6_ctx0: pp6 [unreachable]
@@ -76,73 +84,92 @@
 //   sum_pp7_ctx0: pp7 [unreachable]
 //       unreachable
 //   sum_entry_sum_ctx0: entry_sum
-//       n=[0,0]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[0,0]
+//         m=⊤
+//         r=⊤
 //   dec_exit_dec_ctx0: exit_dec
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   sum_pp3_ctx1: pp3 [unreachable]
 //       unreachable
 //   sum_exit_sum_ctx1: exit_sum
-//       n=[1,1]
-//       m=[0,0]
-//       r=[0,0]
+//       interval:
+//         n=[1,1]
+//         m=[0,0]
+//         r=[0,0]
 //   dec_pp0_ctx0: pp0
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   sum_pp2_ctx1: pp2
-//       n=[1,1]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         m=⊤
+//         r=⊤
 //   sum_pp5_ctx1: pp5
-//       n=[1,1]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         m=⊤
+//         r=⊤
 //   dec_entry_dec_ctx0: entry_dec
-//       x=[1,1]
+//       interval:
+//         x=[1,1]
 //   sum_pp6_ctx1: pp6
-//       n=[1,1]
-//       m=[0,0]
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         m=[0,0]
+//         r=⊤
 //   sum_pp7_ctx1: pp7
-//       n=[1,1]
-//       m=[0,0]
-//       r=[0,0]
+//       interval:
+//         n=[1,1]
+//         m=[0,0]
+//         r=[0,0]
 //   sum_entry_sum_ctx1: entry_sum
-//       n=[1,1]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[1,1]
+//         m=⊤
+//         r=⊤
 //   dec_exit_dec_ctx1: exit_dec
-//       x=[2,2]
+//       interval:
+//         x=[2,2]
 //   sum_pp3_ctx2: pp3 [unreachable]
 //       unreachable
 //   sum_exit_sum_ctx2: exit_sum
-//       n=[2,2]
-//       m=[1,1]
-//       r=[1,1]
+//       interval:
+//         n=[2,2]
+//         m=[1,1]
+//         r=[1,1]
 //   dec_pp0_ctx1: pp0
-//       x=[2,2]
+//       interval:
+//         x=[2,2]
 //   sum_pp2_ctx2: pp2
-//       n=[2,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         m=⊤
+//         r=⊤
 //   sum_pp5_ctx2: pp5
-//       n=[2,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         m=⊤
+//         r=⊤
 //   dec_entry_dec_ctx1: entry_dec
-//       x=[2,2]
+//       interval:
+//         x=[2,2]
 //   sum_pp6_ctx2: pp6
-//       n=[2,2]
-//       m=[1,1]
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         m=[1,1]
+//         r=⊤
 //   sum_pp7_ctx2: pp7
-//       n=[2,2]
-//       m=[1,1]
-//       r=[1,1]
+//       interval:
+//         n=[2,2]
+//         m=[1,1]
+//         r=[1,1]
 //   sum_entry_sum_ctx2: entry_sum
-//       n=[2,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[2,2]
+//         m=⊤
+//         r=⊤
 //
 // edges:
 //   dec_pp0_ctx0 -> dec_exit_dec_ctx0: return x - 1

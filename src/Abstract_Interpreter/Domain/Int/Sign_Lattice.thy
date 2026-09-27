@@ -1,8 +1,8 @@
 theory Sign_Lattice
-  imports "Voblint_Domain.Abstract_Domain" "TD.Update_rules"
+  imports "Voblint_Domain.Abstract_Domain"
 begin
 
-section \<open>Sign domain: sound-domain instantiation\<close>
+section \<open>Sign lattice\<close>
 
 text \<open>
   sign abstracts integers by their sign:
@@ -18,11 +18,9 @@ text \<open>
   Finite; no widening needed.
 \<close>
 
-subsection \<open>Sign datatype\<close>
+subsection \<open>Carrier and concretization\<close>
 
 datatype sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop
-
-subsection \<open>Concretization\<close>
 
 fun gamma_sign :: "sign => int set" where
     "gamma_sign SBot    = {}"
@@ -33,7 +31,13 @@ fun gamma_sign :: "sign => int set" where
   | "gamma_sign SPos    = {n. n > 0}"
   | "gamma_sign STop    = UNIV"
 
-subsection \<open>Partial order\<close>
+fun sign_of_int :: "int => sign" where
+  "sign_of_int n = (if n < 0 then SNeg else if n = 0 then SZero else SPos)"
+
+lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
+  by (auto split: if_splits)
+
+subsection \<open>Order\<close>
 
 fun sign_le :: "sign => sign => bool" where
     "sign_le SBot    _       = True"
@@ -84,6 +88,15 @@ proof intro_classes
     unfolding less_eq_sign_def by (rule sign_le_trans)
 qed
 
+instantiation sign :: order begin
+instance proof intro_classes
+  fix x y :: sign
+  assume "x \<le> y" "y \<le> x"
+  then show "x = y"
+    unfolding less_eq_sign_def by (blast intro: sign_le_antisym)
+qed
+end
+
 text \<open>
   The bottom instance lifts pointwise to abstract states and enables monotone
   least-upper-bound iteration.
@@ -94,27 +107,31 @@ definition "bot_sign = SBot"
 instance ..
 end
 
-text \<open>
-  \<open>SBot\<close> is the only empty value a finite enumerated domain can have (every
-  other constructor denotes a nonempty set of integers), so a direct
-  equality test is already exact --- unlike Interval's analogous fact,
-  which cannot use equality against one representative because Interval's
-  bound-pair representation has many empty values besides its canonical
-  \<open>bot\<close>. Exposed here, at the domain's own theory, rather than inlined
-  where a caller happens to need it, so every consumer (not just one) gets
-  the same domain-owned fact.
-\<close>
+instantiation sign :: order_bot begin
+instance proof intro_classes
+  fix x :: sign
+  show "bot \<le> x"
+    unfolding less_eq_sign_def bot_sign_def by simp
+qed
+end
 
-definition is_bottom_sign :: "sign \<Rightarrow> bool" where
-  "is_bottom_sign s = (s = SBot)"
+instantiation sign :: top begin
+definition "top_sign = STop"
+instance ..
+end
 
-lemma is_bottom_sign_correct: "is_bottom_sign s \<longleftrightarrow> gamma_sign s = {}"
-  unfolding is_bottom_sign_def
-  by (cases s) (auto intro: exI[of _ "-1"] exI[of _ "0"] exI[of _ "1"])
+instantiation sign :: order_top begin
+instance proof intro_classes
+  fix x :: sign
+  show "x \<le> top"
+    unfolding less_eq_sign_def top_sign_def by (cases x) simp_all
+qed
+end
 
+lemma gamma_sign_top: "gamma_sign top = UNIV"
+  unfolding top_sign_def by simp
 
-
-subsection \<open>Join (least upper bound)\<close>
+subsection \<open>Join\<close>
 
 fun join_sign :: "sign => sign => sign" where
     "join_sign SBot    b       = b"
@@ -149,57 +166,6 @@ lemma join_sign_ub2: "sign_le b (join_sign a b)"
 lemma join_sign_least: "sign_le a csg \<Longrightarrow> sign_le b csg \<Longrightarrow> sign_le (join_sign a b) csg"
   by (cases a; cases b; cases csg; simp)
 
-subsection \<open>Abstract arithmetic operations\<close>
-
-subsection \<open>Typeclass instances\<close>
-
-text \<open>
-  Hoisted above the \<open>numeric_domain\<close> instance because the
-  \<open>numeric_domain\<close> locale's class constraint is
-  \<open>bounded_semilattice_sup_bot\<close>.
-\<close>
-
-instantiation sign :: order begin
-instance proof intro_classes
-  fix x y :: sign
-  assume "x \<le> y" "y \<le> x"
-  then show "x = y"
-    unfolding less_eq_sign_def by (blast intro: sign_le_antisym)
-qed
-end
-
-instantiation sign :: order_bot begin
-instance proof intro_classes
-  fix x :: sign
-  show "bot \<le> x"
-    unfolding less_eq_sign_def bot_sign_def by simp
-qed
-end
-
-instantiation sign :: top begin
-definition "top_sign = STop"
-instance ..
-end
-
-instantiation sign :: order_top begin
-instance proof intro_classes
-  fix x :: sign
-  show "x \<le> top"
-    unfolding less_eq_sign_def top_sign_def by (cases x) simp_all
-qed
-end
-
-text \<open>\<open>STop\<close> is likewise the unique top of a finite enumeration.\<close>
-
-definition is_top_sign :: "sign \<Rightarrow> bool" where
-  "is_top_sign s = (s = STop)"
-
-lemma gamma_sign_top: "gamma_sign top = UNIV"
-  unfolding top_sign_def by simp
-
-lemma is_top_sign_correct_gamma: "is_top_sign s \<longleftrightarrow> gamma_sign s = UNIV"
-  by(cases s) (auto simp: is_top_sign_def set_eq_iff; presburger)+
-
 instantiation sign :: sup begin
 definition sup_sign :: "sign => sign => sign" where
   "sup_sign = join_sign"
@@ -224,29 +190,91 @@ text \<open>
 
 instance sign :: bounded_semilattice_sup_bot ..
 
+subsection \<open>Meet\<close>
 
-subsection \<open>Type-class warrowing for TD warrowing solver\<close>
+text \<open>
+  The sign meet is exact: it concretizes to the intersection of its operands.
+  As a @{class semilattice_inf} instance it gives @{text \<open>inf_mono\<close>} for free,
+  which the monotonicity proof of @{text bfilter} needs.
+\<close>
 
-definition narrow_sign_td :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
-  "narrow_sign_td a b = a"
+instantiation sign :: inf begin
 
-instantiation sign :: warrowing begin
-  definition "widen (a :: sign) b = join_sign a b"
-  definition "narrow (a :: sign) b = narrow_sign_td a b"
-instance proof intro_classes
-  fix a b :: sign
-  show "a \<le> widen a b"
-    unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub1)
-  show "b \<le> widen a b"
-    unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub2)
-  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
-    unfolding narrow_sign_def narrow_sign_td_def by simp
-  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
-    unfolding narrow_sign_def narrow_sign_td_def by simp
-qed
+fun inf_sign :: "sign => sign => sign" where
+    "inf_sign SBot    _       = SBot"
+  | "inf_sign _       SBot    = SBot"
+  | "inf_sign STop    b       = b"
+  | "inf_sign a       STop    = a"
+  | "inf_sign SNeg    SNeg    = SNeg"
+  | "inf_sign SNeg    SNonPos = SNeg"
+  | "inf_sign SNonPos SNeg    = SNeg"
+  | "inf_sign SNonPos SNonPos = SNonPos"
+  | "inf_sign SNonPos SZero   = SZero"
+  | "inf_sign SZero   SNonPos = SZero"
+  | "inf_sign SNonPos SNonNeg = SZero"
+  | "inf_sign SNonNeg SNonPos = SZero"
+  | "inf_sign SZero   SZero   = SZero"
+  | "inf_sign SZero   SNonNeg = SZero"
+  | "inf_sign SNonNeg SZero   = SZero"
+  | "inf_sign SNonNeg SNonNeg = SNonNeg"
+  | "inf_sign SNonNeg SPos    = SPos"
+  | "inf_sign SPos    SNonNeg = SPos"
+  | "inf_sign SPos    SPos    = SPos"
+  | "inf_sign _       _       = SBot"
+
+instance ..
+
 end
 
-subsection \<open>Printing\<close>
+lemma gamma_inf_sign [simp]:
+  "gamma_sign (a \<sqinter> b) = gamma_sign a \<inter> gamma_sign b"
+  by (cases a; cases b) auto
+
+lemma inf_sign_sound:
+  "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (a \<sqinter> b)"
+  by simp
+
+instance sign :: semilattice_inf
+proof intro_classes
+  fix x y z :: sign
+  show "x \<sqinter> y \<le> x"
+    by (cases x; cases y; auto simp: less_eq_sign_def)
+  show "x \<sqinter> y \<le> y"
+    by (cases x; cases y; auto simp: less_eq_sign_def)
+  show "x \<le> y \<Longrightarrow> x \<le> z \<Longrightarrow> x \<le> y \<sqinter> z"
+    by (cases x; cases y; cases z; auto simp: less_eq_sign_def)
+qed
+
+instance sign :: lattice ..
+instance sign :: bounded_lattice_bot ..
+
+subsection \<open>Executable interface\<close>
+
+text \<open>
+  \<open>SBot\<close> is the only empty value a finite enumerated domain can have (every
+  other constructor denotes a nonempty set of integers), so a direct
+  equality test is already exact --- unlike Interval's analogous fact,
+  which cannot use equality against one representative because Interval's
+  bound-pair representation has many empty values besides its canonical
+  \<open>bot\<close>. Exposed here, at the domain's own theory, rather than inlined
+  where a caller happens to need it, so every consumer (not just one) gets
+  the same domain-owned fact.
+\<close>
+
+definition is_bottom_sign :: "sign \<Rightarrow> bool" where
+  "is_bottom_sign s = (s = SBot)"
+
+lemma is_bottom_sign_correct: "is_bottom_sign s \<longleftrightarrow> gamma_sign s = {}"
+  unfolding is_bottom_sign_def
+  by (cases s) (auto intro: exI[of _ "-1"] exI[of _ "0"] exI[of _ "1"])
+
+text \<open>\<open>STop\<close> is likewise the unique top of a finite enumeration.\<close>
+
+definition is_top_sign :: "sign \<Rightarrow> bool" where
+  "is_top_sign s = (s = STop)"
+
+lemma is_top_sign_correct_gamma: "is_top_sign s \<longleftrightarrow> gamma_sign s = UNIV"
+  by(cases s) (auto simp: is_top_sign_def set_eq_iff; presburger)+
 
 text \<open>
   Goblint has no sign value domain; its tutorial sign analysis prints \<open>-\<close>, \<open>0\<close>
@@ -261,33 +289,5 @@ fun string_of_sign :: "sign \<Rightarrow> String.literal" where
   | "string_of_sign SNonNeg = sym_ge + STR ''0''"
   | "string_of_sign SPos    = STR ''+''"
   | "string_of_sign STop    = sym_top"
-
-subsection \<open>Abstract domain instantiation\<close>
-
-instantiation sign :: numeric_domain begin
-definition gamma_abs_sign [simp]: "\<gamma> (a :: sign) = gamma_sign a"
-definition is_empty_sign [simp]: "is_empty (a :: sign) = is_bottom_sign a"
-definition to_string_sign [simp]: "to_string (a :: sign) = string_of_sign a"
-instance proof intro_classes
-  show "\<gamma> (bot :: sign) = {}"
-    unfolding bot_sign_def by simp
-next
-  show "\<gamma> (top :: sign) = UNIV"
-    by (simp add: gamma_sign_top)
-next
-  fix a b :: sign
-  assume H: "a \<le> b"
-  show "\<gamma> a \<subseteq> \<gamma> b"
-  proof -
-    have "gamma_sign a \<subseteq> gamma_sign b"
-      using H unfolding less_eq_sign_def by (rule gamma_sign_mono)
-    then show ?thesis by simp
-  qed
-next
-  fix a :: sign
-  show "is_empty a \<longleftrightarrow> \<gamma> a = {}"
-    by (simp add: is_bottom_sign_correct)
-qed
-end
 
 end

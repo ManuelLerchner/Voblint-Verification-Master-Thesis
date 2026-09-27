@@ -1,0 +1,19 @@
+// PARAM: --analysis interval,order
+// Concretely z == 1 at the check: both guards hold, so x == y.
+//
+// Interval alone leaves z = [0,1] (known-imprecision/01-equality_from_two_guards)
+// and the order analysis alone tracks no values (known-imprecision/03-order_alone).
+// Run together, Interval's assignment asks the combined state for EvalInt (x == y);
+// the order analysis holds (x, y) and (y, x) and answers the exact integer 1, so
+// Interval assigns [1,1] and proves the check. The same run is pinned in Isabelle
+// by coop_demo_needs_both (src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy).
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      __voblint_check(z == 1); // PROVED
+    }
+  }
+}

@@ -21,8 +21,12 @@ voblint --help
   Parity x Congruence domain, fixed at its most precise refinement mode.
   `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
   only by refuting them across differing parities. `congruence` is the residue-class domain, one
-  value constrained to `x = r (mod m)`. A comma list puts several domains side
-  by side in one `--html` report and requires `--html` and `--context none`.
+  value constrained to `x = r (mod m)`. A comma list runs the named domains
+  together in one solve, under every output and context mode: a state shows
+  each domain's part on its own, in list order, a point any of them proves unreachable is
+  unreachable, and a check is decided by the meet of their answers. The list
+  reaches `run_voblint` as given, and its `Invalid_Activation` answer rejects a
+  domain named twice (exit 1).
 - `--context none|entry-state|call-string` selects context sensitivity
   (default `none`). `entry-state` re-analyzes each callee per distinct
   entered-argument context; `call-string` splits it by bounded call history

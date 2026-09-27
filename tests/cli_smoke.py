@@ -81,25 +81,24 @@ CASES = [
         "",
     ),
     (
-        "several domains without --html is rejected",
-        ["--analysis", "int,interval", SANITY_FILE],
-        1,
-        "only supported by --html",
-    ),
-    (
-        # Node identifiers are built from the CFG and the context, so they only
-        # agree across domains when the context is the same for all of them.
-        "several domains with a context is rejected",
+        "several domains run together under a context",
         [
             "--analysis",
             "int,interval",
             "--context",
             "entry-state",
-            "--html",
             SANITY_FILE,
         ],
+        0,
+        "[int,interval]",
+    ),
+    (
+        # The activation list reaches run_voblint as given; its
+        # Invalid_Activation answer is the rejection.
+        "a domain named twice is rejected",
+        ["--analysis", "interval,interval", SANITY_FILE],
         1,
-        "requires --context none",
+        "more than once",
     ),
     (
         "an unknown domain inside a list is rejected",

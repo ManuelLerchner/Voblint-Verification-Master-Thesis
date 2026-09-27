@@ -405,6 +405,20 @@ pre-commit:
 # --------------------------------------------------------------------------
 pre-push:
   jobs:
+    # The OCaml export is stamped with a hash of the theories it came from.
+    # Regenerate it whenever those theories change and fail on drift, so a
+    # push never carries a stale export or a stale stamp. Needs an Isabelle
+    # session build, hence pre-push. Runs before the thesis group: regeneration
+    # rewrites codegen/generated/, which thesis-claims builds the CLI from.
+    - name: codegen-current
+      glob:
+        - "src/**/*.thy"
+        - "src/**/ROOT"
+        - "ROOTS"
+        - "scripts/regenerate-codegen.sh"
+        - "scripts/mk/codegen.sh"
+      run: pixi run codegen-check
+
     - name: thesis-current
       group:
         parallel: true
@@ -417,16 +431,3 @@ pre-push:
 
           - name: thesis-build
             run: pixi run thesis-typst
-
-          # The OCaml export is stamped with a hash of the theories it came
-          # from. Regenerate it whenever those theories change and fail on
-          # drift, so a push never carries a stale export or a stale stamp.
-          # Needs an Isabelle session build, hence pre-push.
-          - name: codegen-current
-            glob:
-              - "src/**/*.thy"
-              - "src/**/ROOT"
-              - "ROOTS"
-              - "scripts/regenerate-codegen.sh"
-              - "scripts/mk/codegen.sh"
-            run: pixi run codegen-check

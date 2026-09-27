@@ -7,5 +7,7 @@ session Voblint_Examples_Relational in "." = "Voblint_Analysis_Relational" +
   sessions
     "Voblint_Routing"
     "Voblint_Analysis_Interval"
+    "Voblint_Framework"
   theories
     Example_Relational_DG_Demo
+    Example_Cooperating_Demo

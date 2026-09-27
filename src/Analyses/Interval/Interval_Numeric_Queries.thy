@@ -279,7 +279,7 @@ lemma interval_eq_false_witness_disjoint:
   by (simp add: less_eint_def)
 
 lemma interval_meet_of_witness_not_bot:
-  "meet_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) \<noteq> bot"
+  "Ivl (Fin 1) (Fin 2) \<sqinter> Ivl (Fin 5) (Fin 6) \<noteq> bot"
   by (simp add: bot_ivl_def)
 
 lemma interval_intersect_of_witness_bot:

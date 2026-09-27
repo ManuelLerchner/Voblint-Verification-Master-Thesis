@@ -7,8 +7,7 @@ Executable witnesses live under
 
 | File | Role |
 | --- | --- |
-| `Interval_Bounds.thy` | extended integer bounds and bound operations |
-| `Interval_Lattice.thy` | interval order, lattice, and concretization |
+| `Interval_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): bounds, order, lattice, and concretization |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws, then the `numeric_domain` instance, which needs them |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
 | `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |

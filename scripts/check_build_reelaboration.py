@@ -44,7 +44,7 @@ from pathlib import Path
 BUDGET = {
     "HOL-Library": 0,  # an ancestor since Voblint_VIMP = "HOL-Library"
     "TD": 8,  # Framework hoists the expensive ones; Domain keeps two (~8s)
-    "HOL-Computational_Algebra": 2,  # hoisted into Voblint_Nonrelational
+    "HOL-Computational_Algebra": 2,  # hoisted into Voblint_VIMP
     "Deriving": 8,  # 8 tiny theories, ~3s total, one user
     "HOL-IMP": 1,  # one theory, under a second
 }

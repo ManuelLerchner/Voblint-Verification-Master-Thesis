@@ -39,7 +39,7 @@ text \<open>
 \<close>
 
 locale unit_dg_analysis =
-  routed_dg_analysis tf_st enter_st init_st "Analysis_Global ()" Activation_Seed
+  routed_dg_analysis_exec tf_st enter_st init_st "Analysis_Global ()" Activation_Seed
     "\<lambda>_. route_unit" "()" solve solve_dom bot_state classify
     sk asn spc br bd rt en ev "\<lambda>_. route_unit" solve_c
   for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action

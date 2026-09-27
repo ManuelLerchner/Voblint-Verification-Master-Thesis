@@ -138,8 +138,21 @@ They differ only in **which four query functions they feed in**:
 | | Sign (`Sign_Classify.thy`) | Interval (`Interval_Classify.thy`) |
 | --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
-| `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
+| `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`⊓` on `sign`) | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |
+
+### Classification over several active analyses
+
+`run_voblint` classifies a check once, whatever the activation list. Each
+domain supplies `<domain>_eval_answer`, its answer to the query `EvalInt` of the
+check's expression, normalized by `check_truth_exp` to a Boolean-valued one.
+`<domain>_answer_check` proves that `answer_check` of that answer agrees with the
+domain's own `<domain>_classify_check`, so a singleton activation list keeps the
+domain's verdicts. With several active analyses, `mcp_answer` meets their
+answers and `mcp_classify = answer_check (mcp_answer as)` classifies the met
+answer (`Check_Answer.thy`, `MCP_Analyses.thy`). One analysis can therefore
+decide a check another cannot. A point any active analysis proves unreachable
+makes the combined state `Bot`, and its checks report `Dead`.
 
 ### Solver frontends: the unit-context assembly
 
@@ -158,8 +171,11 @@ the check classifier and the facts that make them sound. The generated
 `Sign_Analyses.thy` holds `global_interpretation sign_rule: unit_dg_analysis ...
 for r`, taking the global update rule as a parameter; a caller reads
 `sign_rule.result`, `sign_rule.state_at` and `sign_rule.report` at a rule. Every
-domain, Int included, carries the same registration beside `<d>_es_rule` and
-`<d>_cs_rule` for the two contextual policies.
+domain, Int included, carries the same unit registration; Interval also carries
+`interval_es_rule` and `interval_cs_rule` for the two contextual policies, which
+its examples use. `run_voblint` reads none of these: it runs the combined state
+(`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` in `MCP_Analyses.thy`), which
+classifies checks as described below.
 
 The node-soundness bridge is generic and proved once inside
 `unit_dg_analysis`. `result_node_sound_closure` composes

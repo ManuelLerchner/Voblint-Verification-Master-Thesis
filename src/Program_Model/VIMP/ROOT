@@ -11,7 +11,13 @@ session Voblint_VIMP in "." = "HOL-Library" +
   sessions
     Deriving
     "HOL-IMP"
+    "HOL-Computational_Algebra"
   theories
+    (* Elaborated here, not where it is used: Voblint_Domain's congruence lattice
+       and Voblint_Framework, which re-reads Voblint_Domain, both sit below this
+       session and would otherwise each elaborate it. This is their nearest
+       common ancestor. *)
+    "HOL-Computational_Algebra.Euclidean_Algorithm"
     VIMP_Syntax
     VIMP_Globals
     VIMP_Expr

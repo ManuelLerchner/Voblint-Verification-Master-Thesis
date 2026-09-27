@@ -119,7 +119,7 @@ describe the expectation syntax.
 
 ## What Voblint proves
 
-For every domain, globals rule and context policy, the report `run_voblint`
+For every selection of analyses, globals rule and context policy, the report `run_voblint`
 returns is sound for every execution of the program: whenever an execution
 reaches a program point, the state filed for that point contains its store, and
 every `PROVED` or `REFUTED` verdict there is correct for it. The theorem is stated
@@ -144,12 +144,12 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 ∈ cinit_stores (declared_global p)"
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
                ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers D rule ctx p v s
+               ∧ analysis_result_covers as rule ctx p v s
                ∧ checks_sound_at res v s"
 ```
 
@@ -167,7 +167,8 @@ theorem run_voblint_certified_source_sound:
 | `analysis_result_covers ... v s` | The abstract state filed for `v`, in an admitted context, contains `s`. |
 | `checks_sound_at res v s` | No check at `v` is `DEAD`, and every `PROVED` or `REFUTED` verdict there holds for `s`. |
 
-`D` ranges over Sign, Interval, Parity, Congruence and Int; `rule` over the four
+`as` ranges over nonempty lists of distinct analyses among Sign, Interval, Parity,
+Congruence, Int and Order, run together; `rule` over the four
 globals rules; `ctx` over no contexts, entry states, and call strings of any
 length.
 
@@ -209,8 +210,8 @@ theorem run_voblint_check_sound:
       and run: "star (pstep (declared_global p) (prog_table p))
                   (main_body (prog_table p), s0, []) (residual, s, frs)"
       and chk: "next_check residual = Some (l, e)"
-      and terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+      and terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
@@ -221,8 +222,8 @@ theorem run_voblint_check_sound:
 
 ```isabelle
 corollary run_voblint_dead_check_unreached:
-  assumes terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+  assumes terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
       and listed: "chk ∈ set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "ltr_collect (declared_global p) (prog_cfg p)
@@ -231,8 +232,8 @@ corollary run_voblint_dead_check_unreached:
 
 ```isabelle
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates D rule ctx p"
-      and ans: "run_voblint D rule ctx p = Analysed res"
+  assumes terminates: "config_terminates as rule ctx p"
+      and ans: "run_voblint as rule ctx p = Analysed res"
       and mem: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
       and absent: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"

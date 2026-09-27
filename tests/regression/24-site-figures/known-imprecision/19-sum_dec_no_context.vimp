@@ -27,50 +27,65 @@
 //
 // nodes:
 //   dec_exit_dec_ctx0: exit_dec
-//       x=[-∞,2]
+//       interval:
+//         x=[-∞,2]
 //   sum_pp3_ctx0: pp3
-//       n=[-∞,0]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[-∞,0]
+//         m=⊤
+//         r=⊤
 //   sum_exit_sum_ctx0: exit_sum
-//       n=[-∞,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[-∞,2]
+//         m=⊤
+//         r=⊤
 //   main_pp11_ctx0: pp11
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //   main_exit_main_ctx0: exit_main
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //   dec_pp0_ctx0: pp0
-//       x=[-∞,2]
+//       interval:
+//         x=[-∞,2]
 //   sum_pp2_ctx0: pp2
-//       n=[-∞,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[-∞,2]
+//         m=⊤
+//         r=⊤
 //   sum_pp5_ctx0: pp5
-//       n=[1,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[1,2]
+//         m=⊤
+//         r=⊤
 //   dec_entry_dec_ctx0: entry_dec
-//       x=[-∞,2]
+//       interval:
+//         x=[-∞,2]
 //   sum_pp6_ctx0: pp6
-//       n=[1,2]
-//       m=[-∞,1]
-//       r=⊤
+//       interval:
+//         n=[1,2]
+//         m=[-∞,1]
+//         r=⊤
 //   sum_pp7_ctx0: pp7
-//       n=[1,2]
-//       m=[-∞,1]
-//       r=[0,+∞]
+//       interval:
+//         n=[1,2]
+//         m=[-∞,1]
+//         r=[0,+∞]
 //   main_pp9_ctx0: pp9
-//       x=⊤
+//       interval:
+//         x=⊤
 //   sum_entry_sum_ctx0: entry_sum
-//       n=[-∞,2]
-//       m=⊤
-//       r=⊤
+//       interval:
+//         n=[-∞,2]
+//         m=⊤
+//         r=⊤
 //   main_pp10_ctx0: pp10 [unknown]
-//       x=[0,+∞]
+//       interval:
+//         x=[0,+∞]
 //       check x == 3
 //   main_entry_main_ctx0: entry_main
-//       x=⊤
+//       interval:
+//         x=⊤
 //
 // edges:
 //   dec_pp0_ctx0 -> dec_exit_dec_ctx0: return x - 1

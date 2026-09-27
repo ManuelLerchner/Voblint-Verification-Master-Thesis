@@ -23,7 +23,7 @@ value "Ivl (Fin (-2)) (Fin 3) * Ivl (Fin (-1)) (Fin 4)"
 value "join_ivl (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 2) (Fin 5))"
 value "widen_ivl_core (Ivl (Fin 0) (Fin 1)) (Ivl (Fin 0) (Fin 2))"
 value "widen_ivl_core (Ivl (Fin 1) (Fin 3)) (Ivl (Fin 0) (Fin 3))"
-value "meet_ivl (Ivl (Fin 0) (Fin 10)) (Ivl (Fin 3) (Fin 7))"
+value "Ivl (Fin 0) (Fin 10) \<sqinter> Ivl (Fin 3) (Fin 7)"
 
 value "string_of_eint MinInf"
 value "string_of_eint PlusInf"

@@ -39,6 +39,41 @@ let diagnostic_message d =
   division_message (C.diagnostic_verdict d)
     (C.arithmetic_operation (C.diagnostic_obligation d))
 
+(* The name an analysis goes by on the command line and in every report. *)
+let analysis_label = function
+  | C.Sign_Analysis -> "sign"
+  | C.Interval_Analysis -> "interval"
+  | C.Int_Analysis -> "int"
+  | C.Parity_Analysis -> "parity"
+  | C.Congruence_Analysis -> "congruence"
+  | C.Order_Analysis -> "order"
+
+(* One active analysis's part of a state, as the run result shows it: a value per
+   variable, or one value for a state that relates variables. *)
+type section = Store of (string * string) list | Whole of string
+
+let sections_of view =
+  List.map
+    (fun (a, field) ->
+      ( analysis_label a,
+        match field with
+        | C.Field_Store bindings -> Store bindings
+        | C.Field_Whole v -> Whole v ))
+    view
+
+(* A section's lines under its analysis's name: one per variable [names] keeps, or
+   the whole value. *)
+let section_lines ?names (label, section) =
+  let keep x = match names with None -> true | Some ns -> List.mem x ns in
+  (label ^ ":")
+  ::
+  (match section with
+  | Store bindings ->
+      List.filter_map
+        (fun (x, v) -> if keep x then Some ("  " ^ x ^ "=" ^ v) else None)
+        bindings
+  | Whole v -> [ "  " ^ v ])
+
 let context_label = function
   | C.Context_Unit -> "unit"
   | C.Context_Entry [] | C.Context_Call_String [] -> "root context"
@@ -46,10 +81,10 @@ let context_label = function
   | C.Context_Call_String points ->
       "call-string=" ^ String.concat " " (List.map point_name points)
 
-(* One row per global unknown: its name, then the bindings of the state it holds. A
-   seed is named by its procedure and, when a run has several contexts, by the
-   context it was entered at. *)
-let global_rows result =
+(* One row per global unknown: its name, then each active analysis's part of the state
+   it holds, or [None] where it holds none. A seed is named by its procedure and, when a
+   run has several contexts, by the context it was entered at. *)
+let global_sections result =
   let contexts = Array.of_list (C.res_contexts result) in
   List.map
     (fun g ->
@@ -62,13 +97,21 @@ let global_rows result =
             | C.Context_Unit -> "enter " ^ f
             | ctx -> "enter " ^ f ^ " @ " ^ context_label ctx)
       in
-      let lines =
+      ( key,
         match C.global_state g with
-        | C.Bot -> [ "unreachable" ]
-        | C.Lifted bindings -> List.map (fun (x, v) -> x ^ "=" ^ v) bindings
-      in
-      (key, lines))
+        | C.Bot -> None
+        | C.Lifted view -> Some (sections_of view) ))
     (C.res_globals result)
+
+(* The same rows as text lines. *)
+let global_rows result =
+  List.map
+    (fun (key, sections) ->
+      ( key,
+        match sections with
+        | None -> [ "unreachable" ]
+        | Some sections -> List.concat_map section_lines sections ))
+    (global_sections result)
 
 let special_text dst = function
   | C.Nondet_Int -> dst ^ " := __voblint_nondet_int()"
@@ -156,23 +199,46 @@ let exp_vars e =
   in
   go [] e
 
-(* What the variables a check reads hold at its point, across every live context:
-   one value per context-distinct rendering, so a context-free run shows its single
-   value and a contextual one shows each context's own. *)
+(* What each active analysis holds at a check's point, across every live context: the
+   variables the check reads, or a whole value, one per context-distinct rendering, so
+   a context-free run shows its single value and a contextual one shows each
+   context's own. One entry per analysis, in activation order. *)
 let state_slice result point cnd =
   let live =
     List.filter_map
       (fun st ->
         if C.state_point st <> point then None
-        else match C.state_value st with C.Lifted b -> Some b | C.Bot -> None)
+        else
+          match C.state_value st with
+          | C.Lifted view -> Some (sections_of view)
+          | C.Bot -> None)
       (C.res_states result)
   in
-  String.concat ", "
-    (List.filter_map
-       (fun x ->
-         match
-           List.sort_uniq compare (List.filter_map (List.assoc_opt x) live)
-         with
-         | [] -> None
-         | values -> Some (x ^ "=" ^ String.concat " | " values))
-       (exp_vars cnd))
+  let labels =
+    match live with [] -> [] | sections :: _ -> List.map fst sections
+  in
+  let joined values = String.concat " | " (List.sort_uniq compare values) in
+  List.filter_map
+    (fun label ->
+      let parts = List.filter_map (List.assoc_opt label) live in
+      let text =
+        match parts with
+        | Whole _ :: _ ->
+            joined
+              (List.filter_map (function Whole v -> Some v | _ -> None) parts)
+        | _ ->
+            String.concat ", "
+              (List.filter_map
+                 (fun x ->
+                   match
+                     List.filter_map
+                       (function
+                         | Store b -> List.assoc_opt x b | Whole _ -> None)
+                       parts
+                   with
+                   | [] -> None
+                   | values -> Some (x ^ "=" ^ joined values))
+                 (exp_vars cnd))
+      in
+      if text = "" then None else Some (label ^ ": " ^ text))
+    labels

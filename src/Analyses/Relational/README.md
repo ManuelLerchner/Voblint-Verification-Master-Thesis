@@ -1,13 +1,13 @@
 # Analyses / Relational
 
-One theory, one job: prove that the generic pipeline never assumed its abstract
-values were pointwise maps from variables to lattice elements.
+The analysis over the order lattice `relc` (`Voblint_Domain.Order_Lattice`), a
+carrier that is *not* an `abs_state`: it relates variables to each other, so it
+cannot be decomposed variable by variable.
 
-Every other domain here is non-relational — a state is one abstract value per
-variable, independently. `Rel_Order_Domain` supplies an order carrier that is *not*
-an `abs_state`: it relates variables to each other, so it cannot be decomposed
-variable by variable. It is then run through the same equation generator, the same
-routed spine and the same vendored solver.
+| Theory | Role |
+| --- | --- |
+| `Rel_Order_Domain` | The transfers, with a precise assume refinement on bare-variable comparisons, run through the same equation generator, routed spine and vendored solver as every other domain. It proves that the generic pipeline never assumed pointwise states |
+| `Rel_Order_Local` | The same analysis as a component of the combined state: it answers comparisons (`rel_qry`) and, at an assignment, asks how the new value compares with the other variables. The CLI runs it as `--analysis order` |
 
 ## Why this is a session and not an example
 

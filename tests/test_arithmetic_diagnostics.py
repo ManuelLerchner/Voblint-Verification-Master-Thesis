@@ -47,7 +47,7 @@ def run_program(tmp_path, source, *args, analysis="interval"):
         assert Path(match[1]) == path
         assert 1 <= int(match[2]) <= len(source.splitlines())
         assert int(match[3]) > 0
-        assert match[7] in analysis.split(",")
+        assert match[7] == analysis
         diagnostics.append(match)
     return proc, diagnostics
 
@@ -234,7 +234,9 @@ def test_multiline_operations_use_statement_start_positions(tmp_path):
     ]
 
 
-def test_html_preserves_findings_from_every_domain(tmp_path):
+def test_html_reports_the_combined_finding(tmp_path):
+    # One solve for the whole list: Interval's exact zero decides the finding,
+    # and Parity's weaker "possible" warning does not survive beside it.
     out = tmp_path / "report"
     _, findings = run_program(
         tmp_path,
@@ -243,19 +245,17 @@ def test_html_preserves_findings_from_every_domain(tmp_path):
         str(out),
         analysis="interval,parity",
     )
-    assert sorted(finding.group(4, 7) for finding in findings) == [
-        ("error", "interval"),
-        ("warning", "parity"),
+    assert [finding.group(4, 7) for finding in findings] == [
+        ("error", "interval,parity")
     ]
     warnings = list((out / "warn").glob("warn*.xml"))
-    assert len(warnings) == 2
-    messages = ["".join(ET.parse(path).getroot().itertext()) for path in warnings]
-    assert any("[interval]" in message for message in messages)
-    assert any("[parity]" in message for message in messages)
+    assert len(warnings) == 1
+    message = "".join(ET.parse(warnings[0]).getroot().itertext())
+    assert "[interval,parity]" in message
     source = ET.parse(out / "files/arithmetic.vimp.xml").getroot()
     line = source.find("./ln[@nr='2']")
     assert line is not None
-    assert all(path.stem in line.get("wrn", "") for path in warnings)
+    assert warnings[0].stem in line.get("wrn", "")
 
 
 def test_plain_report_has_two_aligned_tables(tmp_path):
