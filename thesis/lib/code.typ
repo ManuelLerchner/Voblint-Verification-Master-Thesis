@@ -99,7 +99,7 @@
 #let playground-defaults = (
   "analysis": "interval",
   "globals": "warrow",
-  "context": "call-string",
+  "context": "entry-state",
   "k": 1,
 )
 

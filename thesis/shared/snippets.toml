@@ -8,13 +8,13 @@ why = "Chapter 5, the domain interface figure: the executable operations a domai
 [snippets.numeric_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
-[snippets.abstract_numeric_queries]
+[snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
 [snippets.widening]
 why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
 
-[snippets.semantic_intersection]
+[snippets.sound_intersection]
 why = "Background, Isabelle mechanisms: a small locale with one parameter and one assumption."
 
 [snippets.pstep]
@@ -202,6 +202,9 @@ file = "~~/src/HOL/Orderings.thy"
 
 [snippets.backward_domain]
 why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
+
+[snippets.backward_ops]
+why = "Chapter 5, the inverse operators and their soundness laws, a parent of backward_domain."
 
 
 [snippets.sound_evaluator]
