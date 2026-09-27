@@ -1,0 +1,22 @@
+// PARAM: --analysis interval,order
+// Concretely x <= y at the check: each branch assigns x below y.
+//
+// Interval alone joins x = [0,20] and y = [10,30], which overlap, and the order
+// analysis alone answers only comparisons between variables whose order it
+// already records. Run together, the order analysis asks at y = 10 and y = 30
+// how the new value compares with x; Interval answers x <= y with the exact 1,
+// both branches record the pair, and the join keeps it. This is cooperation
+// from the numeric analysis to the relational one, the reverse of
+// 03-equality_asked_of_order. The same run is pinned in Isabelle by
+// order_asks_needs_both (src/Examples/CLI/Example_Order_Asks_Interval.thy).
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  __voblint_check(x <= y); // PROVED
+}

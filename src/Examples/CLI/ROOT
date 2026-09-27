@@ -16,6 +16,7 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     Example_Analysis_Result_Regression
     Example_Min_Max_Regression
     Example_Arithmetic_Diagnostics_Regression
+    Example_Order_Asks_Interval
 
     (* Check discharge against a computed post-solution, store-only, through
        each domain's codegen entry point. *)
