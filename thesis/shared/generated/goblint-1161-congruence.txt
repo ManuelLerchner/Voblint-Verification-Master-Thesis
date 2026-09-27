@@ -5,6 +5,6 @@ None
 
 Assertion checks
 Location  Point  Condition    Verdict  State
---------  -----  -----------  -------  --------
-16:3      pp5    c % 2 == 1   UNKNOWN  c=1+2ℤ
-17:3      pp6    c % 2 == -1  UNKNOWN  c=1+2ℤ
+--------  -----  -----------  -------  --------------------
+16:3      pp5    c % 2 == 1   UNKNOWN  congruence: c=1+2ℤ
+17:3      pp6    c % 2 == -1  UNKNOWN  congruence: c=1+2ℤ

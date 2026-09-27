@@ -96,18 +96,20 @@
 #part("The Analyzer", lbl: <part:analyzer>)
 #include "content/05-domains.typ"
 #include "content/06-analysis-interface.typ"
-#include "content/07-equations.typ"
-#include "content/08-solving.typ"
-#include "content/09-results.typ"
+#include "content/07-cooperation.typ"
+#include "content/08-equations.typ"
+#include "content/09-solving.typ"
+#include "content/10-results.typ"
 
 #part("Instances and Practice", lbl: <part:instances>)
-#include "content/10-instances.typ"
-#include "content/11-executable.typ"
-#include "content/12-evaluation.typ"
+#include "content/11-instances.typ"
+#include "content/12-executable.typ"
+#include "content/13-evaluation.typ"
+#include "content/14-tooling.typ"
 
 #part("Assessment", lbl: <part:assessment>)
-#include "content/13-related.typ"
-#include "content/14-conclusion.typ"
+#include "content/15-related.typ"
+#include "content/16-conclusion.typ"
 
 // Appendices retain stable labels while using a separate alphabetic counter.
 #set heading(numbering: "A.1.")

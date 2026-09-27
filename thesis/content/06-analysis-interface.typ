@@ -56,6 +56,7 @@ unchanged when refinement is disabled.
     [#isaconst("dgs_enter")], [call entry #isaconst("call_enter"), as pairs],
     [#isaconst("dgs_combine_env")], [first stage of the return: environments],
     [#isaconst("dgs_combine_assign")], [second stage: result into the destination],
+    [#isaconst("dgs_query")], [none: answers a question about the current state],
     table.hline(),
   ),
   placement: auto,
@@ -63,7 +64,8 @@ unchanged when refinement is disabled.
     #raw("dgs_")$m$ has the role of the method $m$ of Goblint's `Spec`, except
     #isaconst("dgs_event"): Goblint handles its check function in `special`.
     Only the composition of the two return stages carries an obligation
-    (@sec:sound-core).],
+    (@sec:sound-core). The query handler is the subject of
+    @ch:cooperation.],
 ) <tab:dg-spec-fields>
 
 A transfer from one local value to the next suffices for an analysis that
@@ -308,14 +310,17 @@ over the executable carrier of @ch:solving. It splits the return as Goblint
 does: the environment stage takes caller locals and callee globals, and the
 assign stage writes the result. #isathm("analysis_contract_st") derives its
 analysis soundness contract from the same per-operation rules, pulled back
-along the readback of @ch:solving.
+along the readback of @ch:solving. The analyzer runs this specification as one
+component of the combined state of @ch:cooperation (#isaconst("exec_component")).
 
 == What the interface leaves out <sec:omissions>
 
-There is no query channel for transfers, no synchronization, no
-analysis-supplied initial state, and no composition of analyses. Each would
+There is no synchronization and no analysis-supplied initial state. Each would
 need its own concrete semantics and obligation. The context of a call is not a
-field either: the routing policy of @ch:equations chooses it.
+field either: the routing policy of @ch:equations chooses it. The query field
+#isaconst("dgs_query") has no obligation in this chapter. A transfer may ask
+through the manager, but what an answer means, and how several analyses answer
+one another, is the subject of @ch:cooperation.
 
 An analysis proves one
 soundness rule per operation, and #isathm("local_state_dg_spec_for_contract")

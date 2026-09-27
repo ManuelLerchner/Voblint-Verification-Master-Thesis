@@ -718,3 +718,54 @@ why = "Flow-sensitive globals: Sign derives y=+ and x=+ at pp7, after both calls
 [claims.ast-contexts]
 argv = ["--ast", "docs/readme-figures/contexts.vimp"]
 why = "The parsed imp_prog of the running example, drawn as the abstract-syntax figure of Chapter 3: main's body as nested Seq, bump's declaration in the procedure table."
+
+# Chapter 7, cooperating analyses: one program per direction, each run with
+# either analysis alone and with both activated.
+
+[claims.coop-eq-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
+]
+why = "Interval alone after two guards x <= y, y <= x: z = (x == y) gives z=[0,1], so z == 1 is UNKNOWN."
+
+[claims.coop-eq-order]
+argv = [
+  "--analysis",
+  "order",
+  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
+]
+why = "The order analysis alone records x <= y and y <= x but tracks no value of z, so z == 1 is UNKNOWN."
+
+[claims.coop-eq-both]
+argv = [
+  "--analysis",
+  "interval,order",
+  "tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp",
+]
+why = "Interval asks EvalInt (x == y), the order analysis answers 1, Interval assigns z=[1,1] and z == 1 is PROVED."
+
+[claims.coop-le-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
+]
+why = "Interval alone joins x=[0,20] and y=[10,30], which overlap, so x <= y is UNKNOWN."
+
+[claims.coop-le-order]
+argv = [
+  "--analysis",
+  "order",
+  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
+]
+why = "The order analysis alone cannot compare a variable with a constant, so x <= y is UNKNOWN."
+
+[claims.coop-le-both]
+argv = [
+  "--analysis",
+  "interval,order",
+  "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
+]
+why = "The order analysis asks Interval at y = 10 and y = 30, records x <= y on both branches, and x <= y is PROVED."

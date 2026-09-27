@@ -6,5 +6,5 @@ None
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  -----
-70:7      pp4    x == 1     DEAD     
-74:7      pp7    x == 6     DEAD     
+78:7      pp4    x == 1     DEAD     
+82:7      pp7    x == 6     DEAD     

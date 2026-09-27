@@ -117,3 +117,8 @@ theory = "Voblint_Compile.Source_To_Trace"
 [facts.bfilter_sound]
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 fact = "backward_domain.bfilter_sound"
+
+[facts.mcp_combine_sound]
+why = "Cooperation chapter: independent sound components combine into a sound component."
+session = "Voblint_Framework"
+theory = "Voblint_Framework.MCP_Spec"

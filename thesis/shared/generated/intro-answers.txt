@@ -7,8 +7,8 @@ Location  Point  Severity  Message
 
 Assertion checks
 Location  Point  Condition           Verdict  State
---------  -----  ------------------  -------  ---------
-22:3      pp10   0 <= p && p <= 100  PROVED   p=[0,100]
-23:3      pp11   p > 100             REFUTED  p=[0,100]
-24:3      pp12   p == 50             UNKNOWN  p=[0,100]
+--------  -----  ------------------  -------  -------------------
+22:3      pp10   0 <= p && p <= 100  PROVED   interval: p=[0,100]
+23:3      pp11   p > 100             REFUTED  interval: p=[0,100]
+24:3      pp12   p == 50             UNKNOWN  interval: p=[0,100]
 28:5      pp16   p == 0              DEAD     

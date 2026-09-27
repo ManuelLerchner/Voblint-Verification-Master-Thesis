@@ -12,7 +12,9 @@ and once as a tutor gave me many insights and a look behind the scenes of
 teaching and research at the chair.
 
 I would also like to thank Michael Petter for helping to scope the project at
-its start and shape its initial direction. I am grateful to Sarah Tilscher and
+its start and shape its initial direction, and Julian Erhard for his feedback
+on the formalization, which led to the cooperating analyses of
+@ch:cooperation. I am grateful to Sarah Tilscher and
 Alexandra Graß for developing and maintaining the verified TD solver
 formalization, the foundation of this work.
 
