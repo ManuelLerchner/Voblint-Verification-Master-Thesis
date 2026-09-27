@@ -38,7 +38,6 @@ text \<open>\<open>key\<close> fixes one context per trace by decoding the enter
   \<open>call_context_rel_of_fun\<close> and \<open>trace_context_of_fun_iff\<close>.\<close>
 
 
-
 lemma key_extend_nonempty:
   "path t \<noteq> [] \<Longrightarrow> key enterc initial_ctx (extend t x) = key enterc initial_ctx t"
   by (cases t) (auto simp: hd_append)
@@ -462,4 +461,3 @@ lemma activation_collect_of_fun:
 
 
 end
-

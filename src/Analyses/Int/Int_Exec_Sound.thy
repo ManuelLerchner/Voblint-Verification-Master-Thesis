@@ -42,4 +42,3 @@ fun int_dom_enter_st_for ::
 | "int_dom_enter_st_for Refine_Fixpoint \<G> = int_dom_enter_fixpoint_st_for \<G>"
 
 end
-

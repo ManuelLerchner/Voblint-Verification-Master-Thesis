@@ -631,7 +631,6 @@ lemma ov_alt2_route:
   using ov_solution_snapshot by blast
 
 
-
 subsection \<open>Soundness through the relational context layer\<close>
 
 text \<open>
@@ -1054,4 +1053,3 @@ text \<open>
 \<close>
 
 end
-

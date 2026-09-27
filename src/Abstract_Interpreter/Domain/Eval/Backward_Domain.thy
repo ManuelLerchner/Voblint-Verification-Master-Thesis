@@ -72,16 +72,16 @@ locale backward_ops = sound_intersection intersect
       inv_less_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
-  and inv_eq_sound:
+    and inv_eq_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 = n2) = res
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_eq res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_eq res a1 a2))"
-  and inv_plus_sound:
+    and inv_plus_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 + n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_plus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_plus r a1 a2))"
-  and inv_minus_sound:
+    and inv_minus_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 - n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_minus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_minus r a1 a2))"
-  and inv_times_sound:
+    and inv_times_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
 begin
@@ -183,7 +183,7 @@ lemma feasible_of_concrete [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
   shows "feasible e pol \<sigma>"
   unfolding feasible_def using assms is_empty_correct tobool_sound by blast
- 
+
 text \<open>
   \<open>bfilter\<close> narrows a state under an assumed truth value of \<open>e\<close>: \<open>bfilter e
   True\<close> is \<open>assume e\<close>, \<open>bfilter e False\<close> is \<open>assume-not e\<close>. \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>

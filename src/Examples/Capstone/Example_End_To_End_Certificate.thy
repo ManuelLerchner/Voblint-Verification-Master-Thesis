@@ -282,7 +282,8 @@ proof -
              where \<G> = "declared_global certificate_demo_prog"
                and g = "prog_cfg certificate_demo_prog"]
     by (simp add: certificate_demo_entry_eval)
-  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
+  have s2:
+    "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
     by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: certificate_demo_intra_eval)
   have ce1: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
@@ -415,7 +416,8 @@ text \<open>
 lemma certificate_demo_checks_sound_at_check:
   assumes ans: "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
-      and mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
+      and mem:
+        "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   shows "checks_sound_at res (Statement 4) s"
   using run_voblint_sound_at [OF certificate_demo_config_terminates ans mem] by blast
 
@@ -426,7 +428,8 @@ theorem certificate_demo_check_semantically_true:
            truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
 proof (intro ballI)
   fix s :: store
-  assume mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
+  assume mem:
+    "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   obtain chk where r: "res_checks res = [chk]" and rp: "check_point chk = Statement 4"
     and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
     and rv: "check_verdict chk = Decided Check_Proved"

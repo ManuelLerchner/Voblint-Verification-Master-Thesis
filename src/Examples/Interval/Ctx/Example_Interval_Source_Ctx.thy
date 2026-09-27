@@ -72,5 +72,3 @@ proof -
 qed
 
 end
-
-

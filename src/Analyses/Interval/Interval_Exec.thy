@@ -107,6 +107,4 @@ lemma ivl_enter_st_for_commute:
   by (simp add: ivl_tf.op_defs enter_binding_def enter_frame_def)
 
 
-
 end
-

@@ -493,7 +493,8 @@ proof -
     "K = K1 \<union> K2"
     by (rule compile_IfE)
   show "(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)) \<in> E" using E by blast
-  show "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E" using E by blast
+  show "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E"
+    using E by blast
 qed
 
 lemma compile_While_assume_edges:

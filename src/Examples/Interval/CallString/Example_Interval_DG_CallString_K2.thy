@@ -130,9 +130,11 @@ lemma callee_covered_f3_2: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 lemma callee_covered_f10_2: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
-lemma callee_covered_g_f3_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f3_2:
+  "(FunctionEntry (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
-lemma callee_covered_g_f10_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f10_2:
+  "(FunctionEntry (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 
 lemma covered_ret6_2: "(Statement 6, []) \<in> fst nest_2_sol"
@@ -338,7 +340,4 @@ theorem nest_k2_strictly_more_precise_than_k1:
                     nest_2_y_after_second_return less_ivl_def less_eq_ivl_def)
 
 
-
 end
-
-

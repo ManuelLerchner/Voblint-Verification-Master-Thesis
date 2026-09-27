@@ -270,7 +270,6 @@ proof -
 qed
 
 
-
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
 definition ivl_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
@@ -327,7 +326,8 @@ text \<open>The semantic store-decode and the routed relation agree: the value \
 theorem ivl_context_is_entry_state_context_call1:
   assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
-    and es: "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
+    and es:
+      "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) [] (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) (STR ''twice''))
            s s' (ivl_context (Statement 2) [] s')"
@@ -340,7 +340,8 @@ qed
 theorem ivl_context_is_entry_state_context_call2:
   assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
-    and es: "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
+    and es:
+      "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
@@ -374,4 +375,3 @@ lemma twice_ctx_global_slot_inert:
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 end
-

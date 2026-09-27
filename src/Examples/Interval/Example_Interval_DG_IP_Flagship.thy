@@ -157,7 +157,8 @@ theorem twice_source_run_sound:
                    \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program v\<rbrakk>"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
-  have run': "twice_gs, prog_table twice_program \<turnstile> (main_body (prog_table twice_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  have run':
+    "twice_gs, prog_table twice_program \<turnstile> (main_body (prog_table twice_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run[unfolded src'] by (simp flip: twice_pi_def)
   have wf: "wf_compile_input twice_gs (prog_table twice_program) (prog_procs twice_program)"
     using twice_wf by (simp add: twice_pi_def twice_procs_def)
@@ -170,7 +171,3 @@ proof -
 qed
 
 end
-
-
-
-

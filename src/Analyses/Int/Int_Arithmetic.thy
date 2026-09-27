@@ -726,10 +726,12 @@ begin
 
 interpretation int_arith: expression_domain_sound
     "aval_int_dom mode" int_dom_of_int
-    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode" "mod_int_dom mode"
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
+      "mod_int_dom mode"
     int_dom_lt int_dom_eqb int_dom_tobool
   by unfold_locales
-     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound div_int_dom_sound mod_int_dom_sound
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+       div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
 
 lemmas aval_int_dom_sound = int_arith.aval_abs_sound[unfolded gamma_abs_int_dom_ext]
@@ -746,10 +748,12 @@ begin
 
 interpretation int_arith_mono: expression_domain_mono
     "aval_int_dom mode" int_dom_of_int
-    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode" "mod_int_dom mode"
+    "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
+      "mod_int_dom mode"
     int_dom_lt int_dom_eqb int_dom_tobool
   by unfold_locales
-     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound div_int_dom_sound mod_int_dom_sound
+     (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
+       div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound
                     plus_int_dom_mono[OF mode_nonfixpoint]
                     minus_int_dom_mono[OF mode_nonfixpoint]

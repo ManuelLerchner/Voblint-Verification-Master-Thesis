@@ -467,7 +467,8 @@ lemma congruence_lt_sound:
   assumes "congruence_lt a b = Some c" and "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
   shows "(i < j) = c"
 proof -
-  obtain c1 c2 where s1: "congruence_singleton a = Some c1" and s2: "congruence_singleton b = Some c2"
+  obtain c1 c2 where s1: "congruence_singleton a = Some c1" and s2:
+    "congruence_singleton b = Some c2"
       and c_def: "c = (c1 < c2)"
     using assms(1) unfolding congruence_lt_def by (auto split: option.splits)
   have "i = c1" using congruence_singleton_sound[OF s1 assms(2)] .
@@ -479,7 +480,8 @@ lemma congruence_eqb_sound:
   assumes "congruence_eqb a b = Some c" and "i \<in> gamma_congruence a" and "j \<in> gamma_congruence b"
   shows "(i = j) = c"
 proof -
-  obtain c1 c2 where s1: "congruence_singleton a = Some c1" and s2: "congruence_singleton b = Some c2"
+  obtain c1 c2 where s1: "congruence_singleton a = Some c1" and s2:
+    "congruence_singleton b = Some c2"
       and c_def: "c = (c1 = c2)"
     using assms(1) unfolding congruence_eqb_def by (auto split: option.splits)
   have "i = c1" using congruence_singleton_sound[OF s1 assms(2)] .
@@ -502,7 +504,8 @@ lemma congruence_lt_mono:
       and "congruence_lt a2 b2 = Some c"
   shows "congruence_lt a1 b1 = Some c"
 proof -
-  obtain c1 c2 where s1: "congruence_singleton a2 = Some c1" and s2: "congruence_singleton b2 = Some c2"
+  obtain c1 c2 where s1: "congruence_singleton a2 = Some c1" and s2:
+    "congruence_singleton b2 = Some c2"
       and c_def: "c = (c1 < c2)"
     using assms(5) unfolding congruence_lt_def by (auto split: option.splits)
   have "congruence_singleton a1 = Some c1"
@@ -517,7 +520,8 @@ lemma congruence_eqb_mono:
       and "congruence_eqb a2 b2 = Some c"
   shows "congruence_eqb a1 b1 = Some c"
 proof -
-  obtain c1 c2 where s1: "congruence_singleton a2 = Some c1" and s2: "congruence_singleton b2 = Some c2"
+  obtain c1 c2 where s1: "congruence_singleton a2 = Some c1" and s2:
+    "congruence_singleton b2 = Some c2"
       and c_def: "c = (c1 = c2)"
     using assms(5) unfolding congruence_eqb_def by (auto split: option.splits)
   have "congruence_singleton a1 = Some c1"
@@ -831,8 +835,10 @@ interpretation congruence_arith: expression_domain_mono
     aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod
     congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales
-  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound congruence_div_sound congruence_mod_sound
-                        congruence_plus_mono congruence_minus_mono congruence_times_mono congruence_div_mono congruence_mod_mono
+  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
+    congruence_div_sound congruence_mod_sound
+                        congruence_plus_mono congruence_minus_mono congruence_times_mono
+                          congruence_div_mono congruence_mod_mono
                         congruence_lt_sound congruence_eqb_sound
                         congruence_tobool_sound[unfolded truthy_def])
   apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence]

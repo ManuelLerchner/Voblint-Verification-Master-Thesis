@@ -202,8 +202,10 @@ interpretation parity_arith: expression_domain_mono
     aval_parity parity_of_int "(+)" "(-)" "(*)" parity_div parity_mod
     parity_lt parity_eqb parity_tobool
   apply unfold_locales
-  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound parity_div_sound parity_mod_sound
-                        parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono parity_div_mono parity_mod_mono
+  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
+    parity_div_sound parity_mod_sound
+                        parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
+                          parity_div_mono parity_mod_mono
                         parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
                         sup_parity_def
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)

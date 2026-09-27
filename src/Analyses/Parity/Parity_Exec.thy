@@ -95,4 +95,3 @@ lemma parity_enter_st_for_commute:
                 enter_frame_def enter_frame_parity_st_for_commute)
 
 end
-

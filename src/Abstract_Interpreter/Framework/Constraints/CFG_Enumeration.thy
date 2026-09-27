@@ -659,4 +659,3 @@ lemma ctx_vars_cover_live_combineD [dest]:
   unfolding ctx_vars_cover_live_def by blast
 
 end
-

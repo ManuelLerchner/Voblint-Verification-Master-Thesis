@@ -256,4 +256,3 @@ lemma labelled_checks_rows:
   by eval
 
 end
-

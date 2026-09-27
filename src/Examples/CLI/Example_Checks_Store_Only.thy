@@ -228,4 +228,3 @@ corollary checks_ex_report_agrees_with_node_classification:
   by (auto simp: checks_ex_intra_eval)
 
 end
-

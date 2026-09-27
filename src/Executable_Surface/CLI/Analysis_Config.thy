@@ -22,4 +22,3 @@ text \<open>
 datatype context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString nat
 
 end
-

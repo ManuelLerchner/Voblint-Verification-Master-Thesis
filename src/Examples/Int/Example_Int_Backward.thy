@@ -174,4 +174,3 @@ lemma int_division_remainder_progressive:
   by eval+
 
 end
-

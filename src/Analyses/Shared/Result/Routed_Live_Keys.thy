@@ -494,7 +494,8 @@ proof (rule activation_collect_sound_live_keys[OF wf solves])
              (locals (sol_env (declared_global p) p (Inl (u, ctx)))))
           (CallEdge dst pars args) = ctx'"
     using Rc
-    by (simp add: route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
+    by (simp add:
+      route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
 next
   fix u ctx dst pars args q cont and s :: store
   show "\<exists>ctx'. call_context_rel_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
@@ -533,7 +534,8 @@ next
   fix u ctx dst pars args q cont and s :: store
   assume "(u, ctx) \<in> live_keys p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and sin: "s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (locals (sol_env (declared_global p) p (Inl (u, ctx)))))"
+    and sin:
+      "s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (locals (sol_env (declared_global p) p (Inl (u, ctx)))))"
   show "\<exists>ctx'. admitted_contexts (declared_global p) p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
                  (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"

@@ -438,11 +438,11 @@ proof (rule dg_prog_st_commuteI)
           (sp_compile (routed_call_alternative_program S_abs gk0 seed_key route_abs is_bot_abs
              ctx ca cc p (map_prod Floc Floc alt)))"
   proof (cases alt)
-  case (Pair cont entry)
-  show ?thesis
-  proof (cases "is_bot_st entry")
-    case True
-    then have abs: "is_bot_abs (Floc entry)" by (simp add: Hbot)
+    case (Pair cont entry)
+    show ?thesis
+    proof (cases "is_bot_st entry")
+      case True
+      then have abs: "is_bot_abs (Floc entry)" by (simp add: Hbot)
     have cb: "dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st (call_info_of ca p) (mk_dg_man cont (\<lambda>_. gk0)) bot))
@@ -450,13 +450,13 @@ proof (rule dg_prog_st_commuteI)
            (dg_spec_combine_transfer S_abs (call_info_of ca p)
               (mk_dg_man (Floc cont) (\<lambda>_. gk0)) bot))"
       using Hcomb[of "call_info_of ca p" cont bot] by (simp add: Floc_bot)
-    show ?thesis
-      unfolding Pair using cb by (simp add: True abs sp_compile_def)
-  next
-    case False
-    then have abs: "\<not> is_bot_abs (Floc entry)" by (simp add: Hbot)
-    have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
-      by (rule Hroute[symmetric])
+      show ?thesis
+        unfolding Pair using cb by (simp add: True abs sp_compile_def)
+    next
+      case False
+      then have abs: "\<not> is_bot_abs (Floc entry)" by (simp add: Hbot)
+      have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
+        by (rule Hroute[symmetric])
     have eq_st: "sp_compile (routed_call_alternative_program
         S_st gk0 seed_key route_st is_bot_st ctx ca cc p (cont, entry))
         = Side (seed_key (FunctionEntry p) (route_st cc ctx entry ca)) (DG entry bot)
@@ -473,14 +473,14 @@ proof (rule dg_prog_st_commuteI)
                   (dg_spec_combine_transfer S_abs (call_info_of ca p)
                      (mk_dg_man (Floc cont) (\<lambda>_. gk0)) (locals cs))))"
       using abs by (simp add: r sp_compile_def)
-    show ?thesis
-      unfolding Pair map_prod_simp fst_conv snd_conv eq_st eq_abs
-      by (rule dg_tree_st_commute_side_effect
-            [where d = "DG entry bot", simplified fun_of_dg_st_gen_simps Fglob_bot],
-          rule dg_tree_st_commute_QueryL,
-          simp only: fun_of_dg_st_gen_simps,
-          rule Hcomb)
-  qed
+      show ?thesis
+        unfolding Pair map_prod_simp fst_conv snd_conv eq_st eq_abs
+        by (rule dg_tree_st_commute_side_effect
+              [where d = "DG entry bot", simplified fun_of_dg_st_gen_simps Fglob_bot],
+            rule dg_tree_st_commute_QueryL,
+            simp only: fun_of_dg_st_gen_simps,
+            rule Hcomb)
+    qed
   qed
 qed
 
@@ -603,4 +603,3 @@ lemma dg_prog_st_commute_routed_entry_seed_programs:
 
 end
 end
-

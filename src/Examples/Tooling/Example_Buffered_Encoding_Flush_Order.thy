@@ -44,7 +44,8 @@ text \<open>The direct encoding is spelled as the unbuffered routed generator it
   the unit context; the buffered one is the constructor every analysis solves.\<close>
 
 definition fo_direct ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+    where
   "fo_direct =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ()) route_unit
        (\<lambda>c src a. dg_spec_edge_program fo_spec a src (\<lambda>_. Analysis_Global ()))
@@ -54,7 +55,8 @@ definition fo_direct ::
        fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition fo_buffered ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+    where
   "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
      fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 

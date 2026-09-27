@@ -313,4 +313,3 @@ proof (rule equals0I)
 qed
 
 end
-

@@ -208,7 +208,8 @@ theorem parity_source_run_sound:
   shows "\<exists>v stk. parity_pi, parity_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program v\<rbrakk>"
 proof -
-  have run': "parity_gs, prog_table parity_program \<turnstile> (main_body (prog_table parity_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  have run':
+    "parity_gs, prog_table parity_program \<turnstile> (main_body (prog_table parity_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp flip: parity_pi_def)
   have wf: "wf_compile_input parity_gs (prog_table parity_program) (prog_procs parity_program)"
     using parity_wf parity_cfg_prog_cfg
@@ -254,4 +255,3 @@ proof
 qed
 
 end
-

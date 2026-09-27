@@ -98,4 +98,3 @@ lemma int_tf_abs_once_special_min:
   by simp eval
 
 end
-

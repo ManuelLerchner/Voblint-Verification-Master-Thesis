@@ -58,4 +58,3 @@ definition special_table :: "pname \<Rightarrow> special_desc option" where
       else None)"
 
 end
-

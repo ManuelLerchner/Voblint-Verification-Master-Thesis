@@ -108,7 +108,8 @@ theorem dgEx_source_run_sound:
   shows "\<exists>v stk. sign_ex_pi, gEx \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<lbrakk>sign_rule.state_at Globals_Join sign_ex_gs sign_ex_prog v\<rbrakk>"
 proof -
-  have run': "sign_ex_gs, prog_table sign_ex_prog \<turnstile> (main_body (prog_table sign_ex_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  have run':
+    "sign_ex_gs, prog_table sign_ex_prog \<turnstile> (main_body (prog_table sign_ex_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp add: sign_ex_pi_def)
   have wf: "wf_compile_input sign_ex_gs (prog_table sign_ex_prog) (prog_procs sign_ex_prog)"
     using dgEx_wf by (simp add: sign_ex_pi_def)
@@ -133,4 +134,3 @@ lemma dgEx_inspect:
   by eval
 
 end
-

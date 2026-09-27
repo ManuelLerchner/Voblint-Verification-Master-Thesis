@@ -182,5 +182,3 @@ theorem loop_env_post_fixpoint:
                  le_fun_def less_eq_ivl_def normalize_ivl_def)
 
 end
-
-

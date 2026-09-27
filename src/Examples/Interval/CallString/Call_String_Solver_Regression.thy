@@ -83,4 +83,3 @@ lemma nest_1_eqs_statement3:
         local_enter_transfer_def)
 
 end
-

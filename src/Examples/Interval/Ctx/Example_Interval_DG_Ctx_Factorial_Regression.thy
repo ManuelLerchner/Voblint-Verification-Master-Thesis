@@ -50,7 +50,8 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 
 definition fact_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+    where
   "fact_sol = interval_es_rule.solution Globals_Warrow fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's

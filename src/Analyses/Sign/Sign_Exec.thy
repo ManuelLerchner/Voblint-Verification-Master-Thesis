@@ -82,4 +82,3 @@ lemma sign_enter_st_for_commute:
                 enter_frame_sign_st_for_commute)
 
 end
-

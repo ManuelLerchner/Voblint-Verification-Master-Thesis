@@ -892,4 +892,3 @@ lemma mcp_independent_map:
   using assms by (induction as) auto
 
 end
-

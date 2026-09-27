@@ -287,4 +287,3 @@ theorem sign_k2_strictly_more_precise_than_k1_at_g:
                     less_sign_def sign_le_refl)
 
 end
-

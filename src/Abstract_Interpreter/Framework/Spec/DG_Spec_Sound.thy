@@ -446,7 +446,6 @@ lemma sound_local_dg_spec_with_qry:
     and "\<And>s d q. s \<in> gammaD d \<Longrightarrow> eval_holds q (qry' d q) s"
   shows "sound_local_dg_spec qry' sk asn sp br bd rt en ev ce ca gammaD \<G>"
   using assms unfolding sound_local_dg_spec_def
-  by fastforce 
+  by fastforce
 
 end
-

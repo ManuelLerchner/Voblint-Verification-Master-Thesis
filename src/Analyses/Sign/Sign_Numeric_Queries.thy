@@ -146,5 +146,4 @@ global_interpretation sign_numeric_queries:
             dest: sign_less_false_sound sign_eq_false_sound)
 
 
-
 end

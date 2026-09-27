@@ -155,6 +155,3 @@ next
 qed
 
 end
-
-
-

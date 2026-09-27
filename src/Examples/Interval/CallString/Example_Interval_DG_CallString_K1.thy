@@ -465,7 +465,4 @@ lemma nest_1_seed_f_second:
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 
-
 end
-
-

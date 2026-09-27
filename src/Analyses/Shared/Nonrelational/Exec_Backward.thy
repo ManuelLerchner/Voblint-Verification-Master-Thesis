@@ -514,7 +514,7 @@ next
   case (Lifted t)
     have eq: "Lifted (fun_of_resolved_st_q_for \<G> t)
               = bfilter_lifted b2 res (fun_of_resolved_st_q_for \<G> s)"
-    using IH2 Lifted by simp
+      using IH2 Lifted by simp
   have live_t: "live_resolved_st_q \<G> t"
   proof -
     have "normalized_lift is_empty_state (Lifted (fun_of_resolved_st_q_for \<G> t))"
@@ -522,7 +522,7 @@ next
     then show ?thesis by (simp add: live_resolved_st_q_def)
   qed
     show ?thesis
-    unfolding Lifted using IH1[OF live_t] eq[symmetric] by simp
+      unfolding Lifted using IH1[OF live_t] eq[symmetric] by simp
 qed
 
 text \<open>
@@ -542,7 +542,6 @@ lemma bfilter_lift_gate_step:
          = (if feasible b pol (fun_of_resolved_st_q_for \<G> s)
             then bfilter_lifted b pol (fun_of_resolved_st_q_for \<G> s) else Bot)"
   by (cases "feasible b pol (fun_of_resolved_st_q_for \<G> s)") (simp_all add: IH)
-
 
 
 lemma afilter_st_lift_correct:
@@ -721,13 +720,13 @@ next
 next
   case (Eq e1 e2)
     show ?case
-    by (simp add: Let_def case_prod_beta bind_lift_left_identity
-        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Eq.prems]])
+      by (simp add: Let_def case_prod_beta bind_lift_left_identity
+          afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF Eq.prems]])
 next
   case (NotEq e1 e2)
     show ?case
-    by (simp add: Let_def case_prod_beta bind_lift_left_identity
-        afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF NotEq.prems]])
+      by (simp add: Let_def case_prod_beta bind_lift_left_identity
+          afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF NotEq.prems]])
 qed
 
 text \<open>
@@ -774,9 +773,9 @@ lemma branch_st_commute:
   also have "... = collapse_lift (bfilter_lifted e pol (fun_of_resolved_st_q_for \<G> s))"
     using eq by simp
     finally show ?thesis
-    using True
-    by (simp add: branch_st_def branch_def branch_lifted_def
-        bfilter_st_lift_with_ops)
+      using True
+      by (simp add: branch_st_def branch_def branch_lifted_def
+          bfilter_st_lift_with_ops)
 next
   case False
   then show ?thesis

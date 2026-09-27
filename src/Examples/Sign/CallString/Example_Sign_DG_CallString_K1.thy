@@ -134,7 +134,8 @@ interpretation sign_nest_domain: routed_dg_domain_exec
       rule sign_enter_st_for_commute, rule sign_nest_exact)
 
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
-  by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
+  by (intro ext)
+    (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
 interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
@@ -395,4 +396,3 @@ lemma sign_nest_1_g_entry_merged:
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 end
-

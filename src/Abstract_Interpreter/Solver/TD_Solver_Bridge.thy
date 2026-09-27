@@ -210,8 +210,8 @@ global_interpretation TD_side_seed_join_warrowing_Interp:
   TD_side_upd_rule init_basic_ug_state
     "update_global_keyed P update_global_always_join update_global_warrowing_apinis" T for P T
   defines TD_side_seed_join_warrowing_Interp_solve = TD_side_seed_join_warrowing_Interp.solve
-  and TD_side_seed_join_warrowing_Interp_solve_c = TD_side_seed_join_warrowing_Interp.solve_c
-  and TD_side_seed_join_warrowing_Interp_solve_rec_c =
+    and TD_side_seed_join_warrowing_Interp_solve_c = TD_side_seed_join_warrowing_Interp.solve_c
+    and TD_side_seed_join_warrowing_Interp_solve_rec_c =
     TD_side_seed_join_warrowing_Interp.solve_rec_c
   by (simp add: TD_side_upd_rule.intro update_rule_keyed always_join.update_rule_axioms
         warrowing_apinis.update_rule_axioms)

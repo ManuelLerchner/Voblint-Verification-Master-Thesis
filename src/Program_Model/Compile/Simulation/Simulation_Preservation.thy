@@ -246,7 +246,8 @@ proof -
     by (rule csim.Base[OF ctrlq caccq])
   have "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters, ?callee, [] @ [Frame s dst]) \<approx> (en_q, ?callee, [] @ [(w, dst, s)])"
     by (rule csim.Nested[OF baseCallee callerSKIP cacc])
-  then have "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst]) \<approx> (en_q, ?callee, [(w, dst, s)])" by simp
+  then have "\<Pi>, g \<turnstile> (seq_after (Seq (body decl) Restore) afters, ?callee, [Frame s dst]) \<approx> (en_q, ?callee, [(w, dst, s)])"
+    by simp
   with star show ?thesis by blast
 qed
 

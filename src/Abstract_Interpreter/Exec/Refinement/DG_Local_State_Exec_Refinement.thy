@@ -395,7 +395,8 @@ definition entry_exec_route :: "'a exec_dg_st lifted \<Rightarrow> call_action \
         formals_context pars (fun_of_resolved_st_q_for \<G>
           (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
-definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
+definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
+  where
   "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
 
 lemma entry_exec_route_commute:

@@ -197,7 +197,9 @@ lemma coop_ivl_component:
         dcM de)
      (\<lambda>d. \<lbrakk>coop_ivl.reader d\<rbrakk>\<^sub>\<bottom>) coop_gs"
   by (rule sound_local_assign_ask,
-      rule sound_local_dg_spec_with_qry[OF coop_ivl.sound_local_spec_st[OF ivl_tf.is_sound_transfer_for]],
+      rule
+        sound_local_dg_spec_with_qry[OF
+          coop_ivl.sound_local_spec_st[OF ivl_tf.is_sound_transfer_for]],
       rule ivl_qry_sound)
 
 theorem coop_contract:

@@ -228,13 +228,13 @@ locale backward_domain_mono =
     + mono_evaluator gamma_state aval_abs + mono_truth_test tobool +
   assumes inv_less_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_less res x1 y1) (inv_less res x2 y2)"
-  and inv_eq_mono:
+    and inv_eq_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_eq res x1 y1) (inv_eq res x2 y2)"
-  and inv_plus_mono:
+    and inv_plus_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_plus r1 x1 y1) (inv_plus r2 x2 y2)"
-  and inv_minus_mono:
+    and inv_minus_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_minus r1 x1 y1) (inv_minus r2 x2 y2)"
-  and inv_times_mono:
+    and inv_times_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_times r1 x1 y1) (inv_times r2 x2 y2)"
 begin
 

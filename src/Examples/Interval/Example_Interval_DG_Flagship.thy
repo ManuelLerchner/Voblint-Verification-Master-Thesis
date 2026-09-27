@@ -205,12 +205,14 @@ lemma flagship_wf:
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  assumes run:
+    "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
   shows "\<exists>v stk. flagship_pi, flagship_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog v\<rbrakk>"
 proof -
-  have run': "flagship_gs, prog_table flagship_prog \<turnstile> (main_body (prog_table flagship_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  have run':
+    "flagship_gs, prog_table flagship_prog \<turnstile> (main_body (prog_table flagship_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp add: flagship_pi_def)
   have wf: "wf_compile_input flagship_gs (prog_table flagship_prog) (prog_procs flagship_prog)"
     using flagship_wf by (simp add: flagship_pi_def)
@@ -237,4 +239,3 @@ qed
 
 
 end
-

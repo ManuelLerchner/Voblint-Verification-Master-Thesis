@@ -129,12 +129,15 @@ theorem main_prog_result:
   "pcompletes proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25))"
 proof -
   have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx = 4; \<rbrakk>) s (s((STR ''Gx'') := 4))"
-    using pcompletes_assign[where \<G> = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
+    using pcompletes_assign[where \<G> = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a =
+      "N 4" and s = s]
     by simp
-  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
+  have step2:
+    "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc(); \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
-  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr(); \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
+  have step3:
+    "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr(); \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
     using call_sqr_result[where s = "s((STR ''Gx'') := 5)"]
     by simp
   show ?thesis
@@ -196,8 +199,6 @@ lemma main_cfg_calls:
      {(Statement 5, CallEdge None [] [], FunctionEntry (STR ''inc''), Statement 6),
       (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)}"
   by (simp add: main_cfg_full)
-
- 
 
 
 text \<open>

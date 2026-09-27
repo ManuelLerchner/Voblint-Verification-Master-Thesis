@@ -150,5 +150,3 @@ export_code
   in OCaml module_name Generated file_prefix "Voblint_CLI"
 
 end
-
-

@@ -32,4 +32,3 @@ value "(bfilter_ivl (Less (V (STR ''x'')) (N 5)) True
          ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 0) (Fin 10)))) (STR ''x'')"
 
 end
-

@@ -374,4 +374,3 @@ lemma mono_tree_deps_fold_rhs_program_projected:
   by (fastforce simp: dep_program_fold_rhs_program_projected_char[OF wf])
 
 end
-
