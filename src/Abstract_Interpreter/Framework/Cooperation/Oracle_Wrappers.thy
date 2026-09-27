@@ -81,17 +81,16 @@ qed
 section \<open>A component that asks at its assignments\<close>
 
 text \<open>
-  The same wrapper around a whole component: it adds the question at every
-  assignment and runs the assignment on the literal when the answer is a single
-  integer. It changes neither the component's concretization nor its entry, so
-  soundness, framing and a single entry carry over. Where every answer is
-  \<^term>\<open>\<top>\<close>, as when no other active analysis answers, it is the component
-  itself.
+  The same wrapper around a whole component: at every assignment it asks the
+  channel for the value of the right-hand side and runs the assignment on the
+  literal when the answer is a single integer. It changes neither the
+  component's concretization nor its entry, so soundness, framing and a single
+  entry carry over. Where every answer is \<^term>\<open>\<top>\<close>, as when no active
+  analysis answers, it is the component itself.
 \<close>
 
 definition ask_assign :: "'s mcp_component \<Rightarrow> 's mcp_component" where
   "ask_assign c = c\<lparr>
-     mc_qs := assign_ask_qs (mc_qs c),
      mc_step := (\<lambda>A a x. case a of
         EA_Assign y e \<Rightarrow> assign_ask (\<lambda>A y e. mc_step c A (EA_Assign y e)) A y e x
       | _ \<Rightarrow> mc_step c A a x) \<rparr>"

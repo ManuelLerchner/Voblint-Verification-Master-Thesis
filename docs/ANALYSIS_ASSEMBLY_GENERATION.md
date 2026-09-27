@@ -99,7 +99,10 @@ domain with `contexts: []` has no registration of its own and gives every role i
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
 `order_component` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
 keys no context. The generator also emits `mcp_component_of_silent`: every
-pointwise field answers every query with `\<top>`.
+pointwise field's own component answers every query with `\<top>`.
+`MCP_Analyses.thy` replaces each field's handler with the answer the field
+publishes for checks (`mcp_field`), so every active analysis answers during the
+solve.
 
 What does not depend on the domain list is handwritten: `MCP_Field.thy` (one
 field's lens laws) and `MCP_Analyses.thy` (normalization to `Bot`, the met

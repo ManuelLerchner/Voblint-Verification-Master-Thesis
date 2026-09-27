@@ -223,13 +223,16 @@ policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for `as k r`.
 are all parameters, so no combination and no discipline has an instance of its
 own.
 
-A transfer asks the combined state through the query channel, and every active
-analysis answers from its own field; the answers are met. The pointwise analyses
-ask for the value of an assignment's right-hand side and answer nothing, and the
-order analysis answers comparisons, so `interval,order` proves checks neither
-proves alone (`coop_demo_needs_both`). Where no active analysis answers, every
-answer is `⊤` and the asking assignment steps as before (`mcp_comp_silent`,
-`ask_assign_top`).
+A transfer asks the combined state through the query channel. Every active
+analysis answers from its own field, through the answer it publishes for checks
+(`part_answer`, `mcp_field`), and the answers are met. A handler may ask through
+the same channel while it answers: `ask_rec` answers a query already being asked
+with `⊤` and bounds the depth, as Goblint's `MCP.query'` does. Entry and both
+return stages receive the channel too, and the return stages also receive the
+callee's (`f_ask`). The pointwise analyses ask for the value of an assignment's
+right-hand side, and the order analysis asks how an assigned value compares with
+each variable and answers comparisons, so `interval,order` proves checks neither
+proves alone (`coop_demo_needs_both`).
 
 Inactive fields start at their bottom and stay there. A step whose result makes any
 active field `Bot` makes the whole state `Bot`, so one analysis proving a point

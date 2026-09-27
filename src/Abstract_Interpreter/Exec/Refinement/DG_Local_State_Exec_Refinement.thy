@@ -425,7 +425,7 @@ definition exec_component ::
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> 'a exec_dg_st lifted mcp_component" where
   "exec_component \<G> empty_pred tf_st enter_st = local_component
-     (\<lambda>_ _. []) (\<lambda>_ _. \<top>)
+     (\<lambda>_ _. \<top>)
      (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
      (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
      (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
@@ -450,7 +450,7 @@ lemma component_spec_exec_component [code_unfold]:
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
 lemma mc_en_exec_component [simp]:
-  "mc_en (exec_component \<G> empty_pred tf_st enter_st) ci (d, d)
+  "mc_en (exec_component \<G> empty_pred tf_st enter_st) A ci (d, d)
    = [(d, transfer_lift empty_pred (enter_st ci) d)]"
   by (simp add: exec_component_def lens_component_def)
 

@@ -171,7 +171,7 @@ text \<open>
 \<close>
 
 definition order_component :: "vname list \<Rightarrow> relc mcp_component" where
-  "order_component ys = local_component (rel_qs ys) rel_qry
+  "order_component ys = local_component rel_qry
      (\<lambda>A d. d) (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
      (\<lambda>A sc x d. forget_relc x d) (\<lambda>A b pol d. branch_step_rel b pol d)
      (\<lambda>A p d. d) (\<lambda>A eo p d. rel_ret eo d) (\<lambda>ci d. [(d, top_relc)])

@@ -20,6 +20,41 @@ lemma mcp_component_of_frame:
   by (cases a; cases b; simp only: part_gamma.simps mcp_component_of.simps;
       rule field_frame; simp add: lift_get_put_other)
 
+lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
+  by (cases a; cases x) (simp_all add: mcp_rd_def)
+
+subsection \<open>Each analysis answers what it knows\<close>
+
+text \<open>
+  While the system is solved, a field answers a query as its published value
+  does: from its own readback, through the answer its analysis registers for
+  checks. An analysis written without a query handler thereby becomes a
+  provider on the combined state, as every Goblint analysis answers
+  \<open>EvalInt\<close> from its own domain. The answer is sound for the stores the
+  field describes, so the handler replaces the component's own
+  (\<^const>\<open>with_qry\<close>) without touching a transfer.
+\<close>
+
+definition part_answer :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> answers"
+where
+  "part_answer \<G> a x q = (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> val_answer a (mcp_rd \<G> r) q)"
+
+lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> eval_holds q (part_answer \<G> a x q) s"
+  by (cases x) (auto simp: part_answer_def part_gamma_rd intro: val_answer_sound)
+
+definition mcp_field ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted mcp_component" where
+  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (mcp_component_of \<G> p a)"
+
+lemma mcp_field_sound:
+  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)
+     (mcp_field (declared_global p) p a)"
+  unfolding mcp_field_def
+  by (rule with_qry_sound[OF mcp_component_of_sound]) (rule part_answer_sound)
+
+lemma mcp_field_frame: "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_field \<G> p a) (part_gamma \<G> b)"
+  unfolding mcp_field_def by (rule with_qry_frame[OF mcp_component_of_frame])
+
 subsection \<open>The active analyses, run as one\<close>
 
 text \<open>
@@ -46,7 +81,7 @@ lemma mcp_gamma_norm:
 
 definition mcp_comp ::
   "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted mcp_component" where
-  "mcp_comp as \<G> p = map_component (mcp_norm as) (mcp_combine (map (mcp_component_of \<G> p) as))"
+  "mcp_comp as \<G> p = map_component (mcp_norm as) (mcp_combine (map (mcp_field \<G> p) as))"
 
 theorem mcp_comp_sound:
   assumes "distinct as" and "as \<noteq> []"
@@ -55,35 +90,21 @@ theorem mcp_comp_sound:
            (mcp_comp as (declared_global p) p)"
 proof -
   let ?gcs = "map (\<lambda>a. (part_gamma (declared_global p) a,
-                         mcp_component_of (declared_global p) p a)) as"
+                         mcp_field (declared_global p) p a)) as"
   have "mcp_component_sound (declared_global p) (mcp_gamma (map fst ?gcs))
           (mcp_combine (map snd ?gcs))"
     by (rule mcp_combine_sound)
-       (auto simp: mcp_component_of_sound assms
-         intro!: mcp_independent_map mcp_component_of_frame)
+       (auto simp: mcp_field_sound assms
+         intro!: mcp_independent_map mcp_field_frame)
   then show ?thesis
     unfolding mcp_comp_def
     by (intro map_component_sound) (simp_all add: comp_def mcp_gamma_norm)
 qed
 
-text \<open>
-  Where no active analysis answers queries, the combined state answers every query
-  with \<^term>\<open>\<top>\<close>. A field that asks at its assignments then steps exactly as its
-  analysis alone (\<open>ask_assign_top\<close>): asking changes a run only once an analysis
-  that answers is active.
-\<close>
-
-theorem mcp_comp_silent:
-  assumes "\<And>a. a \<in> set as \<Longrightarrow> mc_qry (mcp_component_of \<G> p a) x q = \<top>"
-  shows "mc_qry (mcp_comp as \<G> p) x q = \<top>"
-  unfolding mcp_comp_def map_component_def
-  using assms by (auto intro!: mcp_combine_qry_top)
-
 lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp_comp as \<G> p)"
-  unfolding mcp_comp_def
+  unfolding mcp_comp_def mcp_field_def
   by (intro single_entry_map_component single_entry_mcp_combine)
-     (auto simp: single_entry_mcp_component_of)
-
+     (auto simp: single_entry_mcp_component_of single_entry_with_qry)
 
 subsection \<open>What the combined state publishes\<close>
 
@@ -93,9 +114,6 @@ text \<open>
   active fields, and a check is decided from the meet of the active analyses'
   answers.
 \<close>
-
-lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
-  by (cases a; cases x) (simp_all add: mcp_rd_def)
 
 lemma mcp_gamma_rd:
   "as \<noteq> [] \<Longrightarrow> mcp_gamma (map (part_gamma \<G>) as) x
@@ -201,7 +219,8 @@ next
   case (EnterSingle p ci d)
   show ?case
     using single_entryD[OF single_entry_mcp_comp[OF activation_ne],
-        of as "declared_global p" p ci "(d, d)"]
+        of as "declared_global p" p
+          "mc_channel (mcp_comp (activation as) (declared_global p) p) d" ci "(d, d)"]
     by (simp add: routed_dg_pipeline.entry_of_def)
 next
   case (EmptyRd p s) show ?case by (rule mcp_emp_rd)

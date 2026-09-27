@@ -163,7 +163,7 @@ text \<open>
 \<close>
 
 definition entry_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
-  where "entry_of \<G> p ci d = snd (hd (mc_en (comp \<G> p) ci (d, d)))"
+  where "entry_of \<G> p ci d = snd (hd (mc_en (comp \<G> p) (mc_channel (comp \<G> p) d) ci (d, d)))"
 
 text \<open>
   The unknown the solver is asked for. It is the program exit at the root
@@ -277,7 +277,7 @@ definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_
           read (globs (snd sol (Inr gk0))),
           (\<lambda>f ctx. read (locals (snd sol (Inr (seed (FunctionEntry f) ctx))))),
           (\<lambda>v ctx a. read (let d = locals (snd sol (Inl (v, ctx)))
-                            in mc_step c (local_answers (mc_qry c) (mc_qs c a d) d) a d)),
+                            in component_step c a d)),
           (\<lambda>u ctx ca q.
              let d = entry_of \<G> p (call_info_of ca q) (locals (snd sol (Inl (u, ctx))))
              in if d = Bot then None else Some (route \<G> u ctx d ca))))"
@@ -396,7 +396,8 @@ locale routed_dg_analysis =
                (\<lambda>d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
                (comp (declared_global p) p)"
     and enter_single:
-      "\<And>p ci d. mc_en (comp (declared_global p) p) ci (d, d)
+      "\<And>p ci d. mc_en (comp (declared_global p) p) (mc_channel (comp (declared_global p) p) d)
+                    ci (d, d)
                   = [(d, entry_of (declared_global p) p ci d)]"
     and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
     and empty\<^sub>V_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> gamma\<^sub>V v = {}"
@@ -552,9 +553,11 @@ lemma entry_cover:
            (call_enter pgs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, entered ci d)]"
 proof -
-  obtain q where "q \<in> set (mc_en (comp pgs p) ci (d, d))" "s \<in> cgam (fst q)"
+  obtain q where "q \<in> set (mc_en (comp pgs p) (mc_channel (comp pgs p) d) ci (d, d))"
+      "s \<in> cgam (fst q)"
       "call_enter pgs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> cgam (snd q)"
-    using comp_sound[of p] assms unfolding mcp_component_sound_def by (metis fst_conv)
+    using comp_sound[of p] assms mc_channel_sound[OF comp_sound[of p] assms]
+    unfolding mcp_component_sound_def by (metis fst_conv)
   then show ?thesis
     unfolding enter_single by (intro entry_pairs_coverI[of d "entered ci d"]) auto
 qed
