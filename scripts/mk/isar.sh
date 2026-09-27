@@ -5,7 +5,7 @@
 # other AFP commands would be read as part of the preceding command.
 #
 # Usage: isar.sh check|fmt [OPTIONS] [PATHS...]
-# `fmt` wraps lines at 100 symbols, the limit thy_stats' style view reports.
+# `fmt` wraps lines at 100 symbols, the limit `isar stats style` reports.
 # Without PATHS it formats every tracked theory under src/ except generated
 # ones: their generators own the layout, and the drift checks compare it.
 set -euo pipefail

@@ -407,8 +407,8 @@ docs-overview-generate = { cmd = "mkdir -p docs/generated && isar project names 
 # Size and shape of the .thy corpus: lines per session, per theory, and per
 # proof, plus a watchlist of theories past the 1500-line / 100-symbol style
 # limits. Reporting only -- never gates a build, so it stays out of `verify`.
-# Views and formats: `pixi run theory-stats -- --help`.
-theory-stats = { cmd = "python3 scripts/thy_stats.py", description = "Report theory, session, proof, and line-length statistics." }
+# Views and formats: `pixi run theory-stats --help`, e.g. `pixi run theory-stats style .`.
+theory-stats = { cmd = "isar stats", description = "Report theory, session, proof, and line-length statistics (isar stats; views: summary, sessions, theories, proofs, commands, style)." }
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
