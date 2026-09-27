@@ -89,6 +89,18 @@ def command_counts(directory: str = ".") -> dict[str, dict[str, int]]:
     return counts
 
 
+def theory_command_counts(
+    directory: str = ".",
+) -> dict[tuple[str, str], dict[str, int]]:
+    """(session, theory) -> command -> number of uses (`isar stats commands --by theory`)."""
+    counts: dict[tuple[str, str], dict[str, int]] = {}
+    for row in isar("stats", "commands", "--by", "theory", directory)["commands"]:
+        counts.setdefault((row["session"], row["theory"]), {})[row["command"]] = row[
+            "count"
+        ]
+    return counts
+
+
 def graph(directory: str = ".", theories: bool = False) -> dict:
     """Session graph (parent and `sessions` edges), or the theory import graph."""
     return isar("project", "graph", *(["--theories"] if theories else []), directory)

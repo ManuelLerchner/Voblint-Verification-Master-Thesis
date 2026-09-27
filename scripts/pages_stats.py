@@ -30,6 +30,7 @@ from isar_json import (
     THEOREM_COMMANDS,
     command_counts,
     sessions,
+    theory_command_counts,
     theory_sizes,
 )
 
@@ -238,6 +239,10 @@ def collect() -> dict:
     solver_used = sorted(
         (t for t in solver if t["theory"] in used_names), key=lambda t: t["theory"]
     )
+    per_theory = theory_command_counts("vendor/td-verification") if solver else {}
+    used_commands: dict[str, int] = {}
+    for t in solver_used:
+        add(used_commands, per_theory.get((t["session"], t["theory"]), {}))
 
     handwritten = [
         p
@@ -288,6 +293,8 @@ def collect() -> dict:
                 "lines": sum(t["lines"] for t in solver_used),
                 "code": sum(t["code_lines"] for t in solver_used),
                 "doc": sum(t["doc_lines"] for t in solver_used),
+                "defs": count(used_commands, DEFINITION_COMMANDS),
+                "proofs": count(used_commands, THEOREM_COMMANDS),
             },
         },
         "sessions": session_graph.collect(),

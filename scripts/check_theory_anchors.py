@@ -14,17 +14,18 @@ happens to have one and warns rather than fails, which leaves the deciding check
 in `pages-site` -- the last CI job, after the HTML build, both PDFs and site
 assembly. Two links reached the deployed site that way.
 
-The qualifier does not need the render. `isar project names` (isar-tools) reads
-each declaration's scope off the theory: an `(in loc)` target, else the
-innermost open `locale`/`class`/`context NAME` block. This compares that with
-what the link claims.
+The qualifier does not need the render. `isar project names --derived`
+(isar-tools) reads each name's scope off the theory: an `(in loc)` target, else
+the innermost open `locale`/`class`/`context NAME` block; and it knows the names
+declarations make besides their own: locale parameters and assumptions, record
+fields, `f_def`, `f.simps`, the rules of an inductive, qualified
+interpretations. This compares that with what the link claims.
 
 Deliberately narrow, because guessing Isabelle's name space wrongly is worse
 than not guessing. A link is checked only when its base name is declared exactly
-once in its theory, by a fact command (`lemma`, `theorem`, `lemmas`, ...);
-anything else -- a `definition`'s derived `_def`, a name from an
-interpretation, a duplicate -- is left to the rendered-site check. It reports
-what it skipped.
+once in its theory; a duplicate, or a name isar-tools does not know (one a
+locale inherits, say), is left to the rendered-site check. It reports what it
+skipped.
 
 Usage: python3 scripts/check_theory_anchors.py [--verbose]
 """
@@ -45,27 +46,27 @@ REPO = Path(__file__).resolve().parent.parent
 THEORY_LINK = re.compile(r"^Voblint/(?P<session>[^/]+)/(?P<theory>[^/]+)\.html$")
 
 
-def declared_facts() -> dict[tuple[str, str], list[str]]:
-    """(theory, base name) -> qualified names of the facts declaring it."""
+def declared_names() -> dict[tuple[str, str], list[str]]:
+    """(theory, base name) -> qualified names declaring it."""
     run = subprocess.run(
-        ["isar", "project", "names", "--kind", "fact", "--format", "json", str(REPO)],
+        ["isar", "project", "names", "--derived", "--format", "json", str(REPO)],
         capture_output=True,
         text=True,
         check=False,
     )
     if run.returncode != 0:
         sys.exit(f"isar project names failed:\n{run.stderr}")
-    facts: dict[tuple[str, str], list[str]] = {}
+    names: dict[tuple[str, str], list[str]] = {}
     for row in json.loads(run.stdout)["names"]:
         qualified = row["name"]
         theory, _, rest = qualified.partition(".")
-        facts.setdefault((theory, rest.rsplit(".", 1)[-1]), []).append(qualified)
-    return facts
+        names.setdefault((theory, rest.rsplit(".", 1)[-1]), []).append(qualified)
+    return names
 
 
 def main() -> int:
     verbose = "--verbose" in sys.argv
-    facts = declared_facts()
+    declared = declared_names()
     problems, checked, skipped = [], 0, []
 
     for url, sources in sorted(collected().items()):
@@ -82,10 +83,10 @@ def main() -> int:
             )
             continue
         base = name.rsplit(".", 1)[-1]
-        hits = facts.get((theory, base), [])
+        hits = declared.get((theory, base), [])
         if len(hits) != 1:
             skipped.append(
-                f"{theory}.{base}: {len(hits)} fact declarations; left to the site check"
+                f"{theory}.{base}: {len(hits)} declarations; left to the site check"
             )
             continue
         checked += 1
