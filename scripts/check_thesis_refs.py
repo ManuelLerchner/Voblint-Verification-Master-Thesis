@@ -131,6 +131,9 @@ ALLOWED = {
     "assign",
     "ctx",
     "combine_env",
+    # OCaml toolchain packages, named in the tooling chapter.
+    "js_of_ocaml",
+    "wasm_of_ocaml",
 }
 
 
