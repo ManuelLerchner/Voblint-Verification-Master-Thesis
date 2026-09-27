@@ -16,8 +16,8 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 python = ">=3.11"
 
 # isar-tools: source tooling for the .thy/ROOT files (`isar check`, `isar fmt`,
-# `isar project extract|names`). Pure Python, no Isabelle needed; tasks that
-# must recognise AFP commands pass the AFP with -d (scripts/mk/isar.sh).
+# `isar stats`, `isar project extract|names`). Pure Python, no Isabelle or AFP
+# needed; configured in isar.toml.
 [pypi-dependencies]
 isar-tools = ">=0.2.0,<0.3"
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
@@ -287,20 +287,16 @@ ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", descripti
 # ignored vendor/autocorrode/ directory, outside the repository's submodule set.
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
-# Source checks and formatting with isar-tools. Both read AFP commands (`derive`,
-# ...) from $AFP, so they need the AFP but not an Isabelle build. `isar-check`
-# runs the project, proofs, and syntax groups: ROOT entries, `sorry`/`oops`
-# and unclosed proofs, and lexical errors, after `isar-fmt-check`. `isar-fmt`
-# formats the given theories (default: every tracked src/ theory except
-# generated ones); layout only, see isar-tools' docs/FORMATTER.md.
-# `src`, not `.`: isar-tools 0.1.0 would also check the theories of the AFP
-# and td-verification checkouts that CI places inside the repository. Switch
-# back to `.` (which also reads ROOTS) with isar-tools 0.1.1 (isar-tools#19).
-isar-check = { cmd = "bash scripts/mk/isar.sh check src", depends-on = [
+# Source checks and formatting with isar-tools, configured in isar.toml (no AFP
+# needed). `isar-check` runs the project, proofs, and syntax groups: ROOT
+# entries, `sorry`/`oops` and unclosed proofs, lexical errors, and theory names,
+# after `isar-fmt-check`. `isar-fmt` formats the given theories, or all of them
+# but the generated ones; layout only, see isar-tools' docs/FORMATTER.md.
+isar-check = { cmd = "isar check .", depends-on = [
   "isar-fmt-check",
 ], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
-isar-fmt = { cmd = "bash scripts/mk/isar.sh fmt", description = "Format Isabelle theories with isar-tools (default: tracked src/ theories except generated ones; pass paths to narrow)." }
-isar-fmt-check = { cmd = "bash scripts/mk/isar.sh fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
+isar-fmt = { cmd = "isar fmt", description = "Format Isabelle theories with isar-tools (default: all but generated ones; pass paths to narrow)." }
+isar-fmt-check = { cmd = "isar fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
 
 # Isabelle build
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
@@ -344,7 +340,23 @@ codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", desc
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
 sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
-reelaboration-check = { cmd = "python3 scripts/check_build_reelaboration.py", description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
+# A session inherits its parent chain's heaps and nothing else: a theory of a
+# library session that is no ancestor is re-elaborated inside every session
+# that imports it. The build stays green; only the clock shows it (19% of a
+# clean build once). This reads an `isabelle build -v` log and holds each
+# library session to a budget of such elaborations; every library session not
+# listed gets 0, so a new one slipping in fails. Budgets:
+#   HOL-Library 0  an ancestor since Voblint_VIMP = "HOL-Library"
+#   TD 8           Framework hoists the expensive ones; Domain keeps two (~8s)
+#   HOL-Computational_Algebra 2  hoisted into Voblint_VIMP
+#   Deriving 8     8 tiny theories, ~3s total, one user
+#   HOL-IMP 1      one theory, under a second
+# The fix is ancestry, or building the theory into the nearest common
+# ancestor's heap with a qualified `theories` entry. A log that rebuilt nothing
+# proves nothing and passes (--allow-empty); CI's html job does a clean build.
+reelaboration-check = { cmd = "isar stats build {{ log }} --budget HOL-Library=0 --budget TD=8 --budget HOL-Computational_Algebra=2 --budget Deriving=8 --budget HOL-IMP=1 --default-budget 0 --project . --allow-empty", args = [
+  { arg = "log", default = "build/isabelle-build.log" },
+], description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
 # Everything the export exposes is decided by its root list, and a missing
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.
