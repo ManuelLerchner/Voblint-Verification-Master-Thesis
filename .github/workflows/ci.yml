@@ -138,6 +138,12 @@ jobs:
         if: steps.changed.outputs.thy == 'true' || steps.heaps.outputs.present != 'true'
         run: pixi run isabelle-build
 
+      # isar-tools: ROOT entries, sorry/oops and unclosed proofs, and lexical
+      # errors, read from the sources in seconds. It needs the AFP (bridged
+      # above) to recognise AFP commands, so it runs here rather than in the
+      # lint job, and before the build so a stray `sorry` fails fast.
+      - name: Check theory sources (isar-tools)
+        run: pixi run isar-check
       - name: Skip build when theories are unchanged
         if: steps.changed.outputs.thy != 'true' && steps.heaps.outputs.present == 'true'
         run: echo "No .thy files changed and the cache restored heaps; skipping the Isabelle build."
