@@ -394,10 +394,11 @@ sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = 
 #   HOL-Computational_Algebra 2  hoisted into Voblint_VIMP
 #   Deriving 8     8 tiny theories, ~3s total, one user
 #   HOL-IMP 1      one theory, under a second
+#   Root_Balanced_Tree 1  Time_Monad, inside TD itself when TD is rebuilt
 # The fix is ancestry, or building the theory into the nearest common
 # ancestor's heap with a qualified `theories` entry. A log that rebuilt nothing
 # proves nothing and passes (--allow-empty); CI's html job does a clean build.
-reelaboration-check = { cmd = "isar stats build {{ log }} --budget HOL-Library=0 --budget TD=8 --budget HOL-Computational_Algebra=2 --budget Deriving=8 --budget HOL-IMP=1 --default-budget 0 --project . --allow-empty", args = [
+reelaboration-check = { cmd = "isar stats build {{ log }} --budget HOL-Library=0 --budget TD=8 --budget HOL-Computational_Algebra=2 --budget Deriving=8 --budget HOL-IMP=1 --budget Root_Balanced_Tree=1 --default-budget 0 --project . --allow-empty", args = [
   { arg = "log", default = "build/isabelle-build.log" },
 ], description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
 # Everything the export exposes is decided by its root list, and a missing
