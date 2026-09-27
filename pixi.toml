@@ -13,7 +13,13 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 # on PATH, not on a pixi-managed OCaml environment.
 
 [dependencies]
-python = ">=3.10"
+python = ">=3.11"
+
+# isar-tools: source tooling for the .thy/ROOT files (`isar check`, `isar fmt`,
+# `isar project extract|names`). Pure Python, no Isabelle needed; tasks that
+# must recognise AFP commands pass the AFP with -d (scripts/mk/isar.sh).
+[pypi-dependencies]
+isar-tools = ">=0.1.0,<0.2"
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
@@ -176,9 +182,10 @@ thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-
 ], description = "Regenerate thesis analyzer figures from current CLI output." }
 
 # Declarations the thesis shows are lifted out of the theories by name, never
-# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
-thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
-thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
+# retyped (`isar project extract`, manifest thesis/shared/snippets.toml). Pure
+# text extraction -- no Isabelle needed, so this runs fail-fast.
+thesis-snippets = { cmd = "isar project extract --manifest thesis/shared/snippets.toml --out thesis/shared/generated/snippets --check", description = "Check thesis Isabelle snippets against their source declarations." }
+thesis-snippets-write = { cmd = "isar project extract --manifest thesis/shared/snippets.toml --out thesis/shared/generated/snippets --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
 
 # Theorem statements are exported from a built session, which is what gives the
 # Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
@@ -280,6 +287,14 @@ ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", descripti
 # ignored vendor/autocorrode/ directory, outside the repository's submodule set.
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
+# Source checks and formatting with isar-tools. Both read AFP commands (`derive`,
+# ...) from $AFP, so they need the AFP but not an Isabelle build. `isar-check`
+# runs the project, proofs, and syntax groups: ROOT entries, `sorry`/`oops`
+# and unclosed proofs, and lexical errors. `isar-fmt` formats the given
+# theories (default: src/); layout only, see isar-tools' docs/FORMATTER.md.
+isar-check = { cmd = "bash scripts/mk/isar.sh check .", description = "Check ROOT files, unfinished proofs, and theory syntax with isar-tools." }
+isar-fmt = { cmd = "bash scripts/mk/isar.sh fmt", description = "Format Isabelle theories with isar-tools (default: src/; pass paths to narrow)." }
+
 # Isabelle build
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
   "vendor-init",
@@ -360,7 +375,7 @@ regression-lint = { cmd = "python3 tests/run.py --lint", description = "Check re
 # a lint; deliberately not in `verify` yet -- there is a standing backlog of
 # undocumented headings, and gating on it today would just be a red build.
 # Add it to `verify` once that backlog is cleared.
-docs-coverage-check = { cmd = "python3 scripts/extract_definitions.py --lint", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
+docs-coverage-check = { cmd = "isar check docs src", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
 
 # Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
@@ -378,9 +393,9 @@ retired-identifiers-check = { cmd = "python3 scripts/check_retired_identifiers.p
 # assumption, whether or not it was ever a constant here. Isabelle generalizes
 # the assumption over it, so the locale keeps building while the assumption
 # stops saying anything.
-locale-parameters-check = { cmd = "python3 scripts/check_locale_parameters.py", description = "Check locale assumptions for accidentally free identifiers." }
+locale-parameters-check = { cmd = "isar check locales src", description = "Check locale assumptions for accidentally free identifiers." }
 
-docs-overview-generate = { cmd = "python3 scripts/extract_definitions.py --dump --out docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
+docs-overview-generate = { cmd = "mkdir -p docs/generated && isar project names --format markdown > docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
 
 # Size and shape of the .thy corpus: lines per session, per theory, and per
 # proof, plus a watchlist of theories past the 1500-line / 100-symbol style
@@ -483,6 +498,7 @@ verify = { depends-on = [
   # Keep the main build before consumers such as thesis-facts/codegen so
   # they can reuse the populated heap store.
   # ------------------------------------------------------------------------
+  "isar-check",
   "isabelle-build",
   "reelaboration-check",
   "thesis-facts",

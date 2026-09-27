@@ -14,23 +14,26 @@ happens to have one and warns rather than fails, which leaves the deciding check
 in `pages-site` -- the last CI job, after the HTML build, both PDFs and site
 assembly. Two links reached the deployed site that way.
 
-The qualifier does not need the render. It is where the declaration sits:
-`context <name>` and `locale <name>` open one, an anonymous `context` opens
-none, and `end` closes. This reads that off the theory and compares it with what
-the link claims.
+The qualifier does not need the render. `isar project names` (isar-tools) reads
+each declaration's scope off the theory: an `(in loc)` target, else the
+innermost open `locale`/`class`/`context NAME` block. This compares that with
+what the link claims.
 
 Deliberately narrow, because guessing Isabelle's name space wrongly is worse
 than not guessing. A link is checked only when its base name is declared exactly
-once by a `lemma`/`theorem`/`corollary`/`proposition`/`lemmas` command; anything
-else -- a `definition`'s derived `_def`, a name from an interpretation, a
-duplicate -- is left to the rendered-site check. It reports what it skipped.
+once in its theory, by a fact command (`lemma`, `theorem`, `lemmas`, ...);
+anything else -- a `definition`'s derived `_def`, a name from an
+interpretation, a duplicate -- is left to the rendered-site check. It reports
+what it skipped.
 
 Usage: python3 scripts/check_theory_anchors.py [--verbose]
 """
 
 from __future__ import annotations
 
+import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -38,56 +41,31 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_pages_links import collected, split  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
-SRC = REPO / "src"
 
 THEORY_LINK = re.compile(r"^Voblint/(?P<session>[^/]+)/(?P<theory>[^/]+)\.html$")
-FACT = re.compile(
-    r"^\s*(?:lemma|theorem|corollary|proposition|lemmas)\s+([A-Za-z][A-Za-z0-9_']*)\s*[:\[]",
-    re.M,
-)
-# `context <name>` / `locale <name> = ...` open a named scope; a bare `context`
-# (fixes/assumes only) opens an anonymous one. Both are closed by `end`.
-OPEN_NAMED = re.compile(r"^(?:context|locale|class)\s+([A-Za-z][A-Za-z0-9_']*)")
-OPEN_ANON = re.compile(r"^context\b\s*$")
-CLOSE = re.compile(r"^end\b")
-COMMENT = re.compile(r"\(\*.*?\*\)", re.S)
 
 
-def strip_comments(text: str) -> str:
-    """Blank out comments, keeping every newline so line numbers stay true."""
-    return COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), text)
-
-
-def theory_files() -> dict[str, Path]:
-    out: dict[str, list[Path]] = {}
-    for thy in SRC.rglob("*.thy"):
-        out.setdefault(thy.stem, []).append(thy)
-    return {k: v[0] for k, v in out.items() if len(v) == 1}
-
-
-def qualifier_of(text: str, line_no: int) -> str | None:
-    """The locale prefix a declaration on `line_no` is rendered under."""
-    stack: list[str | None] = []
-    for i, line in enumerate(text.split("\n"), start=1):
-        if i >= line_no:
-            break
-        if CLOSE.match(line):
-            if stack:
-                stack.pop()
-            continue
-        m = OPEN_NAMED.match(line)
-        if m:
-            stack.append(m.group(1))
-            continue
-        if OPEN_ANON.match(line):
-            stack.append(None)
-    named = [s for s in stack if s]
-    return ".".join(named) if named else None
+def declared_facts() -> dict[tuple[str, str], list[str]]:
+    """(theory, base name) -> qualified names of the facts declaring it."""
+    run = subprocess.run(
+        ["isar", "project", "names", "--kind", "fact", "--format", "json", str(REPO)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if run.returncode != 0:
+        sys.exit(f"isar project names failed:\n{run.stderr}")
+    facts: dict[tuple[str, str], list[str]] = {}
+    for row in json.loads(run.stdout)["names"]:
+        qualified = row["name"]
+        theory, _, rest = qualified.partition(".")
+        facts.setdefault((theory, rest.rsplit(".", 1)[-1]), []).append(qualified)
+    return facts
 
 
 def main() -> int:
     verbose = "--verbose" in sys.argv
-    files = theory_files()
+    facts = declared_facts()
     problems, checked, skipped = [], 0, []
 
     for url, sources in sorted(collected().items()):
@@ -103,31 +81,18 @@ def main() -> int:
                 f"{url} ({', '.join(sorted(sources))}): anchor does not start with '{theory}.'"
             )
             continue
-        rest = name[len(theory) + 1 :]
-        base = rest.rsplit(".", 1)[-1]
-        claimed = rest[: -(len(base) + 1)] if "." in rest else None
-
-        thy = files.get(theory)
-        if thy is None:
-            skipped.append(f"{theory}: no unique .thy under src/")
-            continue
-        text = strip_comments(thy.read_text())
-        # start(1), not start(): `^\s*` can swallow a preceding blank line.
-        hits = [mm.start(1) for mm in FACT.finditer(text) if mm.group(1) == base]
+        base = name.rsplit(".", 1)[-1]
+        hits = facts.get((theory, base), [])
         if len(hits) != 1:
             skipped.append(
-                f"{theory}.{base}: {len(hits)} plain declarations; left to the site check"
+                f"{theory}.{base}: {len(hits)} fact declarations; left to the site check"
             )
             continue
-        line_no = text.count("\n", 0, hits[0]) + 1
-        actual = qualifier_of(text, line_no)
         checked += 1
-        if actual != claimed:
+        if hits[0] != name:
             problems.append(
-                f"{url} ({', '.join(sorted(sources))}): anchor says "
-                f"'{theory}.{rest}', but {base} is declared at {thy.relative_to(REPO)}:{line_no} "
-                f"{'inside ' + actual if actual else 'at theory level'}, so the rendered id is "
-                f"'{theory}.{(actual + '.' if actual else '')}{base}'"
+                f"{url} ({', '.join(sorted(sources))}): anchor says '{name}', "
+                f"but the theory declares it as '{hits[0]}'"
             )
 
     for p in problems:

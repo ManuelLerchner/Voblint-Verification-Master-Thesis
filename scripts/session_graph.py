@@ -19,7 +19,7 @@ import re
 import sys
 from pathlib import Path
 
-from extract_definitions import REPO_ROOT, VENDOR_SESSIONS
+from thy_scan import REPO_ROOT, VENDOR_SESSIONS
 from thy_stats import scan_theory
 
 ROOTS_FILE = REPO_ROOT / "ROOTS"

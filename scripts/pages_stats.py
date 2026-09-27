@@ -26,7 +26,7 @@ from datetime import date
 from pathlib import Path
 
 import session_graph
-from extract_definitions import VENDOR_SESSIONS, iter_theory_files
+from thy_scan import VENDOR_SESSIONS, iter_theory_files
 from thy_stats import scan_theory, statement_kinds
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

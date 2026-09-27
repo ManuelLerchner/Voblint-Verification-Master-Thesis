@@ -36,7 +36,7 @@ The one thing that argued for LaTeX was Isabelle's document preparation:
 fails when `foo` is gone. That guarantee is available here too --
 `tools/facts.py` exports the proved statement from a built session and the
 template renders it -- and it does not require writing prose inside theory
-files to get it. Two further checks with no LaTeX equivalent, `snippets.py` and
+files to get it. Two further checks with no LaTeX equivalent, `thesis-snippets` and
 `claims.py`, follow from the same idea.
 
 Everything else was already in Typst's favour: sub-second incremental builds,
@@ -91,7 +91,7 @@ misses. Unresolved names come with a spelling suggestion.
 ### `pixi run thesis-snippets` -- is this still what the theory says?
 
 Declarations are cited by **name** in `shared/snippets.toml`, never by line
-range, and `tools/snippets.py` lifts each one's source text into
+range, and `isar project extract` (isar-tools) lifts each one's source text into
 `shared/generated/snippets/`. The name has to resolve, and the extracted text
 is committed, so a rename fails and an edit to a shown definition surfaces as a
 diff.

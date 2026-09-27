@@ -13,7 +13,7 @@ Views (--view, repeatable, default `sessions files`):
   style     lines over the 100-symbol limit, theories over 1500 lines,
             `sorry`/`oops`, and reconstruction methods worth watching
 
-Line-based scanner sharing extract_definitions.py's comment/string masking.
+Line-based scanner sharing thy_scan.py's comment/string masking.
 Good enough to rank and compare; not an Isabelle parser, so a proof span is
 "keyword to the next top-level command", counting its non-blank lines with
 comments and text blocks masked out.
@@ -28,7 +28,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from extract_definitions import (
+from thy_scan import (
     DEF_KEYWORDS,
     HEADING_KEYWORDS,
     THEOREM_KEYWORDS,
