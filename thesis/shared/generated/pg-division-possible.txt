@@ -7,5 +7,5 @@ Location  Point  Severity  Message
 
 Assertion checks
 Location  Point  Condition     Verdict  State
---------  -----  ------------  -------  -----------
-4:3       pp2    divisor != 0  UNKNOWN  divisor=⊤
+--------  -----  ------------  -------  ---------------------
+4:3       pp2    divisor != 0  UNKNOWN  interval: divisor=⊤

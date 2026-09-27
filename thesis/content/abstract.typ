@@ -29,11 +29,13 @@ claiming that the assertion is reached. Further theorems show that a
 check reported `DEAD` is unreachable and that reached divisors are nonzero absent a
 warning.
 
-Inspired by Goblint, the analyzer combines four
-numeric domains (Sign, Interval, Parity and Congruence) and their reduced
-product, with four update rules for the solver's global unknowns
-and three context policies: none, bounded call strings and
-entry-state contexts. The main theorem covers every combination. Isabelle's
+Inspired by Goblint, the analyzer offers four
+numeric domains (Sign, Interval, Parity and Congruence), their reduced
+product and a relational order analysis, four update rules for the solver's
+global unknowns and three context policies: none, bounded call strings and
+entry-state contexts. As in Goblint's MCP, several analyses can run together
+on one combined state and answer one another's queries. The main theorem covers
+every combination. Isabelle's
 code generator exports the verified analysis function to OCaml, which runs on the
 command line and in the browser. We test this exported analyzer on a
 regression suite of #stat("corpus.cases") VIMP programs. The Isabelle examples
@@ -52,10 +54,12 @@ per-context sets of stores together contain every reachable store.
 
 Each domain, each context policy and the solver prove their own obligations,
 and one theorem combines them for every configuration. The formalization
-is modular: a new domain supplies its operations and
-proofs, its registration for every policy and
-update rule is generated, and after handwritten dispatch code, the main
-theorem covers it.
+is modular: a new analysis proves its operations sound against every sound
+answer to its queries, a list of obligations that names no other analysis,
+context policy or solver. Its registration in the combined state is
+generated, and the main theorem then covers it. This fixed list of obligations
+also makes the framework a practical target for extension with AI agents,
+which we used to add the order analysis and the query layer.
 
 Because the solve diverges for some configurations, termination is a premise
 for each program, and the guarantee is

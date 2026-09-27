@@ -224,6 +224,15 @@ tree with four parts.
           rows.push(code(if fill == vb.const { ":: " + rhs } else { rhs }))
         }
       }
+      // A pure combination such as `backward_domain` or `warrowing` declares
+      // nothing itself; an empty box would read as a rendering fault.
+      if d.fixes == () and d.laws == () {
+        rows.push(table.hline(stroke: 0.4pt + vb.at(d.origin)))
+        rows.push(table.cell(colspan: 2, align: center, text(
+          fill: vb.muted,
+          style: "italic",
+        )[combines its parents]))
+      }
       // Styled inside, so that `measure` sees the size the node is drawn at.
       let t = {
         set text(size: 5pt)

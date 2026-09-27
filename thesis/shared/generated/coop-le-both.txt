@@ -1,0 +1,9 @@
+tests/regression/25-cooperation/precision/06-order_asks_interval.vimp [interval,order]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------------------------------------------
+21:3      pp6    x <= y     PROVED   interval: x=[0,20], y=[10,30]; order: {x≤y}

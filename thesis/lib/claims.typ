@@ -52,7 +52,11 @@
         current = m.captures.at(0)
         nodes.insert(current, (label: m.captures.at(1), status: m.captures.at(2), lines: ()))
       } else if line.starts-with("      ") and current != none {
-        nodes.at(current).lines.push(line.trim())
+        // The CLI heads each active analysis's part of a state with its
+        // name; the figures read single-analysis runs, whose values follow.
+        if line.match(regex("^      [a-z]+:$")) == none {
+          nodes.at(current).lines.push(line.trim())
+        }
       }
     } else if section == "edges" {
       let m = line.match(regex("^  (\S+) -> (\S+): (.*)$"))

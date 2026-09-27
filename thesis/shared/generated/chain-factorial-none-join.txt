@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -----
-82:3      pp6    a == 2     UNKNOWN  a=⊤
+--------  -----  ---------  -------  ---------------
+93:3      pp6    a == 2     UNKNOWN  interval: a=⊤

@@ -1196,7 +1196,28 @@ PART III — THE ANALYZER
   6.5 analysis_contract: the contract, stated over compiled trees
   6.6 The whole-state shortcut: eight operations and one interpretation
   6.7 The ownership-split lifter as a Spec2Spec functor
-  6.8 What the interface deliberately does not have (sync, query, startstate)
+  6.8 What the interface deliberately does not have (sync, startstate)
+
+7 Cooperating analyses (added 2026-09-27)                          [5%]
+  7.1 Queries and answers (query_algebra, eval_holds)
+  7.2 One obligation per operation, against every sound channel (mcp_component_sound)
+  7.3 Closing the channel (ask_rec, mc_channel_sound)
+  7.4 Many analyses over one state (lens_of, mcp_frame, mcp_combine_sound)
+  7.5 What a new analysis has to prove
+  7.6 What the combination leaves out
+  Reason for the structural change: PR #217/#218 made every run of
+  run_voblint a combination of MCP components (routed_dg_analysis.comp_sound
+  is mcp_component_sound), so the pipeline chapters depend on it. It sits
+  between 6 and the equations because mcp_contract produces the
+  analysis_contract the equations consume. Later chapters shift by one.
+
+14 Tooling and open-source work (added 2026-09-27, after Evaluation)  [3%]
+  isar-tools; conda-forge recipes for a single pixi install; upstream
+  td-verification changes; the derive-and-check pipeline from manifests and
+  theories to the site and the thesis; why agent-written changes need
+  deterministic checks. Reason: requested by the author; engineering
+  contributions with no place in the proof chapters. Related work and the
+  conclusion become 15 and 16.
 
 7 Equations, contexts, and routing                                 [12%]
   7.1 From a graph to a strategy tree
@@ -1227,7 +1248,7 @@ PART III — THE ANALYZER
   9.8 Reading the theorem: the two existentials and the one premise
 
 PART IV — INSTANCES AND PRACTICE
-10 Five domains and a relational witness                           [8%]
+10 Five domains and an order analysis                           [8%]
   10.1 What a domain must supply, as a checklist
   10.2 Sign: a finite lattice and an exact solve
   10.3 Interval: infinite height, widening, narrowing

@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -------
-108:3     pp6    a == 2     PROVED   a=[2,2]
+--------  -----  ---------  -------  -----------------
+122:3     pp6    a == 2     PROVED   interval: a=[2,2]

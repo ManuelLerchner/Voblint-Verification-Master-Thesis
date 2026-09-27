@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -----
-16:5      pp3    x == 5     UNKNOWN  x=⊤
+--------  -----  ---------  -------  -------------
+16:5      pp3    x == 5     UNKNOWN  parity: x=⊤

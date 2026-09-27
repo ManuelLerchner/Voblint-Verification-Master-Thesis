@@ -5,5 +5,5 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ------
-18:3      pp5    y >= 0     PROVED   y=≥0
+--------  -----  ---------  -------  ------------
+18:3      pp5    y >= 0     PROVED   sign: y=≥0

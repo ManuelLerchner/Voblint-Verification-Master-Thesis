@@ -7,8 +7,8 @@ Location  Point  Severity  Message
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ----------
-30:3      pp10   i == 5     PROVED   i=[5,5]
-31:3      pp11   i < 5      REFUTED  i=[5,5]
-35:3      pp14   hits == 8  PROVED   hits=[8,8]
-43:3      pp20   a == 2     UNKNOWN  a=⊤
+--------  -----  ---------  -------  --------------------
+30:3      pp10   i == 5     PROVED   interval: i=[5,5]
+31:3      pp11   i < 5      REFUTED  interval: i=[5,5]
+35:3      pp14   hits == 8  PROVED   interval: hits=[8,8]
+43:3      pp20   a == 2     UNKNOWN  interval: a=⊤

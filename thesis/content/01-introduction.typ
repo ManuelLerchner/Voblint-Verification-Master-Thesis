@@ -279,7 +279,7 @@ whether this gap can be closed by machine-checked proof:
 
 Voblint answers these questions for a Goblint-style analyzer with several context
 policies, over a small language with parameters, return values and recursive
-procedures. It is not a verification of Goblint itself. It isolates the parts of Goblint's architecture that the proof is about (calling contexts, side-effecting constraint systems, configurable domains and the top-down solver) in a language small enough to mechanize every semantic connection. Here, _end to end_ means from source executions to the result the analysis function returns. Voblint provides the semantic connections on both sides of the solver and depends on it only through its post-solution guarantee (@ch:solving). @fig:intro-trust places each stage of the analyzer relative to the proof.
+procedures. It is not a verification of Goblint itself. It isolates the parts of Goblint's architecture that the proof is about (calling contexts, side-effecting constraint systems, configurable domains, analyses that answer one another's queries, and the top-down solver) in a language small enough to mechanize every semantic connection. Here, _end to end_ means from source executions to the result the analysis function returns. Voblint provides the semantic connections on both sides of the solver and depends on it only through its post-solution guarantee (@ch:solving). @fig:intro-trust places each stage of the analyzer relative to the proof.
 
 #figure(
   {
@@ -448,7 +448,11 @@ answers one of the questions of @sec:rqs.
   separately. One theorem discharges the coverage contract for every policy
   that proves its routing adequacy and totality, in every domain
   (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
-  source-level theorem covers every configuration.
+  source-level theorem covers every configuration. Analyses that exchange facts
+  through Goblint-style queries are verified separately too: each proves its
+  operations against every sound query channel, and independent analyses
+  combine into one that meets the same contract
+  (#isathm("mcp_combine_sound"), @ch:cooperation).
 - _Necessity and non-vacuity as theorems._ Counterexample theorems show that
   dropping or weakening several obligations in the exhibited ways admits
   unsound results (#isathm("total_dropped_unsound")), and theorems proved by
@@ -471,11 +475,13 @@ what an analysis must over-approximate: source execution and its compilation
 to a graph (@ch:program-model), and activation-local traces with contexts and
 the coverage contract (@ch:traces). #partref(<part:analyzer>) builds the analyzer from
 separately verified ingredients: domains (@ch:domains), the analysis
-interface (@ch:analysis-interface), the equations (@ch:equations) and the
+interface (@ch:analysis-interface), the combination of cooperating analyses
+(@ch:cooperation), the equations (@ch:equations) and the
 solver (@ch:solving), and @ch:results composes
-them into the source-level theorem. #partref(<part:instances>) instantiates it for five domains
-(@ch:instances), follows #isaconst("run_voblint") to the delivered tools and the
-trust boundary (@ch:executable), and assesses the evidence for each question
-(@ch:evaluation). #partref(<part:assessment>) compares the work with prior systems (@ch:related)
+them into the source-level theorem. #partref(<part:instances>) instantiates it for five domains and an order
+analysis (@ch:instances), follows #isaconst("run_voblint") to the delivered tools and the
+trust boundary (@ch:executable), assesses the evidence for each question
+(@ch:evaluation), and describes the tooling built around the formalization
+(@ch:tooling). #partref(<part:assessment>) compares the work with prior systems (@ch:related)
 and answers the questions (@ch:conclusion). @fig:intro-nest names the chapter
 that defines each set of the soundness chain.
