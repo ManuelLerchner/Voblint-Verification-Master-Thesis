@@ -319,7 +319,6 @@ next
   then show ?thesis using A1 A2 by simp
 qed
 
-lemmas aval_ivl_mono = ivl_arith.aval_dom_mono
 
 lemma inv_less_ivl_mono:
   assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
@@ -416,7 +415,7 @@ proof unfold_locales
   then have "n \<in> gamma_ivl a" and "n \<in> gamma_ivl b" by simp_all
   then show "n \<in> \<gamma> (intersect_ivl a b)" using intersect_ivl_gamma by simp
 qed (simp_all add: inv_less_ivl_sound inv_eq_ivl_sound
-       interval_tobool_sound[unfolded truthy_def] intersect_ivl_mono aval_ivl_mono
+       interval_tobool_sound[unfolded truthy_def] intersect_ivl_mono ivl_arith.aval_dom_mono
        inv_less_ivl_mono inv_eq_ivl_mono inv_conservative_def
        intersect_ivl_le1 intersect_ivl_le2 interval_tobool_mono
      del: intersect_ivl_def)

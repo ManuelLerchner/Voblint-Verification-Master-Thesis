@@ -77,7 +77,6 @@ text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Stat
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
   parameter --- the same source location regardless of which \<open>f\<close> activation runs it.\<close>
 
-lemmas nest_finE = nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>nest_cfg\<close>: each call site \<open>u\<close>
   pins down its callee \<open>p\<close> and continuation \<open>cont\<close>.\<close>
@@ -315,7 +314,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule nest_finE)
+  show ?case by (rule nest.finite_intra)
 next
   case PP
   show ?case
@@ -396,7 +395,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 theorem nest_1_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 1),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule nest_1_cs.activation_collect_sound[unfolded nest_cfg_compile,
+  by (rule nest_1_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])
 
 section \<open>What the 1-call-string context actually computes\<close>

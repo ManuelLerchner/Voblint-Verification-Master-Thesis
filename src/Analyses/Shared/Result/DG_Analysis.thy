@@ -771,7 +771,7 @@ proof -
           [where R = R, OF solves fwd_ok comb_fwd_ok cover_R total_R])
   show ?thesis
     unfolding reader_def
-    by (rule adapter.routed_activation_collect_sound[OF entry_cov cinit_le_init])
+    by (rule adapter.activation_collect_dg_sound[OF entry_cov cinit_le_init])
 qed
 
 subsubsection \<open>The two context policies this assembly supports\<close>
@@ -913,14 +913,13 @@ interpretation entry: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g.
     "prog_cfg p" gk0 "route pgs" Bot "Lifted init_st" Bot
     "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot"
     entry_context_rel "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
-  by (rule entry_state_routed_analysis_sound
-        [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
+  by (rule entry_state_routed_analysis_sound        [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
 
 text \<open>
-  The routed protocol at one call, re-exported so a domain cites them without
-  naming the routed sublocale: the callee entry state published under an
-  admitted context is sound, and a return combine at the caller's own context
-  is sound.
+  The routed protocol at one call: the callee entry state published under an
+  admitted context is sound, and a return combine at the caller's own context is
+  sound. The interpretation above is local to this context, so these exports are
+  what an interpretation of this locale can cite.
 \<close>
 
 lemmas entry_state_routed_context_call = entry.routed_context_call
@@ -932,7 +931,7 @@ theorem entry_state_activation_collect_sound:
            \<subseteq> cgam
                  ((reader pgs p (Inl (v, ctx))))"
   unfolding reader_def
-  by (rule entry.routed_activation_collect_sound[OF entry_cov cinit_le_init])
+  by (rule entry.activation_collect_dg_sound[OF entry_cov cinit_le_init])
 
 theorem entry_state_has_context:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"

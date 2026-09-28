@@ -158,7 +158,7 @@ lemma rc_call_site_action:
   "call_action_at_call_site (compile_prog rc_pi rc_procs) (Statement 3)
      = CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]"
 proof (rule call_action_at_call_site_eq
-    [OF rc_finC[unfolded rc_cfg_def] compile_prog_calls_source_unique])
+    [OF rc.finite_calls[unfolded rc_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
           FunctionEntry (STR ''p''), Statement 4)
           \<in> calls (compile_prog rc_pi rc_procs)"

@@ -3435,3 +3435,19 @@ int_answer_check
 int_classify_check_proved
 int_classify_check_refuted
 Int_Exec_Sound
+
+# --- Rename-only lemma aliases, cited through their qualified names (2026-09-29) ---
+aval_int_dom_mono
+aval_ivl_mono
+aval_parity_mono
+aval_sign_mono
+gEx_finC
+gEx_finE
+mode_fixpoint_state
+mode_once_state
+nest_finE
+rc_finC
+routed_activation_collect_sound
+sign_nest_finE
+twice_finC
+twice_finE

@@ -76,7 +76,6 @@ proof unfold_locales
 qed
 
 lemmas sign_nest_entry = sign_nest.entry[unfolded prog_main_name_def]
-lemmas sign_nest_finE = sign_nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>sign_nest_cfg\<close>: each call site
   \<open>u\<close> pins down its callee \<open>p\<close> and continuation \<open>cont\<close>. \<open>g\<close> is called once, from inside
@@ -285,7 +284,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule sign_nest_finE)
+  show ?case by (rule sign_nest.finite_intra)
 next
   case PP
   show ?case
@@ -370,7 +369,7 @@ theorem sign_nest_1_activation_collect_sound:
      cinit_stores sign_nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
            (sign_ctx_sg_1 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule sign_nest_1_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+  by (rule sign_nest_1_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
 
 section \<open>What the 1-call-string context actually computes\<close>

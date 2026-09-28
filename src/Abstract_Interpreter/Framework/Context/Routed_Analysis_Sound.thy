@@ -83,13 +83,5 @@ locale routed_analysis_sound =
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-begin
-
-text \<open>The activation-collecting endpoint, named without mentioning the
-  sublocale so an instance cites it directly.\<close>
-
-lemmas routed_activation_collect_sound = activation_collect_dg_sound
-
-end
 
 end

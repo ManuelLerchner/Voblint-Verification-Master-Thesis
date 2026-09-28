@@ -215,6 +215,5 @@ interpretation parity_arith: expression_domain_mono
   done
 
 lemmas aval_parity_sound = parity_arith.aval_abs_sound[unfolded gamma_abs_parity]
-lemmas aval_parity_mono = parity_arith.aval_dom_mono
 
 end

@@ -17,7 +17,7 @@ text \<open>
   \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
   monotone, which is exactly what the shared \<open>expression_domain_sound\<close> locale
   needs; interpreting it at the end yields \<open>aval_sign_sound\<close> and
-  \<open>aval_sign_mono\<close> for whole expressions.
+  \<open>sign_arith.aval_dom_mono\<close> for whole expressions.
 \<close>
 
 instantiation sign :: plus begin
@@ -351,6 +351,6 @@ interpretation sign_arith: expression_domain_mono
   done
 
 lemmas aval_sign_sound = sign_arith.aval_abs_sound[unfolded gamma_abs_sign]
-lemmas aval_sign_mono = sign_arith.aval_dom_mono
+
 
 end

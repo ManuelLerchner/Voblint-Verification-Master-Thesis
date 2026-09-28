@@ -79,8 +79,6 @@ lemma twice_calls_unique_site:
       u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
   unfolding twice_cfg_def by eval
 
-lemmas twice_finE = twice.finite_intra
-lemmas twice_finC = twice.finite_calls
 
 lemma twice_cfg_prog_cfg: "twice_cfg = prog_cfg twice_program"
   by (simp add: twice_cfg_def twice_pi_def twice_procs_def prog_cfg_def)

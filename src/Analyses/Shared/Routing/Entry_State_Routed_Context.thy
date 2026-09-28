@@ -164,15 +164,6 @@ next
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 qed
 
-text \<open>CALL and COMB, at the entry-state instance: the callee entry state published under
-  every admitted context is sound, and a return combine at the caller's own context is
-  sound.  Both are \<^locale>\<open>routed_context_base_hetero\<close>'s theorems, re-exported here so a
-  concrete instance cites them without naming the sublocale.\<close>
-
-lemmas routed_context_call = routed.routed_context_call
-lemmas routed_context_comb = routed.routed_context_comb
-lemmas activation_collect_sound = routed.activation_collect_dg_sound
-
 end
 
 end

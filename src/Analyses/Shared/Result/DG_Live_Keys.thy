@@ -464,7 +464,7 @@ proof -
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
-    by (rule live.routed_activation_collect_sound
+    by (rule live.activation_collect_dg_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
 qed
@@ -656,7 +656,7 @@ proof -
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
-    by (rule live.routed_activation_collect_sound
+    by (rule live.activation_collect_dg_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
 qed

@@ -713,7 +713,7 @@ text \<open>
   Soundness holds at every \<open>mode\<close>. Monotonicity holds only away from
   \<open>Refine_Fixpoint\<close>, so it is a second interpretation, inside a context that
   carries that side condition --- which is what puts the condition on the
-  exported \<open>aval_int_dom_mono\<close> and keeps it off \<open>aval_int_dom_sound\<close>.
+  exported \<open>int_dom_mono_evaluator\<close> and keeps it off \<open>aval_int_dom_sound\<close>.
 \<close>
 
 lemma int_dom_truth_test: "mono_truth_test int_dom_tobool"
@@ -762,7 +762,6 @@ interpretation int_arith_mono: expression_domain_mono
                     mod_int_dom_mono[OF mode_nonfixpoint]
                     int_dom_lt_mono int_dom_eqb_mono int_dom_tobool_mono)
 
-lemmas aval_int_dom_mono = int_arith_mono.aval_dom_mono
 
 lemma int_dom_mono_evaluator: "mono_evaluator gamma_state (aval_int_dom mode)"
   by (intro mono_evaluator.intro int_dom_sound_evaluator mono_evaluator_axioms.intro)

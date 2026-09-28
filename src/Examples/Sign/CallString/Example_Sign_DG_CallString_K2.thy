@@ -158,7 +158,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule sign_nest_finE)
+  show ?case by (rule sign_nest.finite_intra)
 next
   case PP
   show ?case
@@ -242,7 +242,7 @@ theorem sign_nest_2_activation_collect_sound:
      cinit_stores sign_nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
            (sign_ctx_sg_2 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule sign_nest_2_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+  by (rule sign_nest_2_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])
 
 

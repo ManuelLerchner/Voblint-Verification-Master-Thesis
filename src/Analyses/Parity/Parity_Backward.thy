@@ -110,7 +110,7 @@ lemma parity_backward_domain:
 proof unfold_locales
 qed (simp_all add: inv_conservative_def inv_eq_parity_sound inv_plus_parity_sound
        inv_minus_parity_sound inv_times_parity_sound parity_tobool_sound[unfolded truthy_def]
-       inf_mono aval_parity_mono inv_eq_parity_mono inv_plus_parity_mono
+       inf_mono parity_arith.aval_dom_mono inv_eq_parity_mono inv_plus_parity_mono
        inv_minus_parity_mono inv_times_parity_mono parity_tobool_mono le_infI1 le_infI2)
 
 subsection \<open>Executable refinement tests\<close>

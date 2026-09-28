@@ -54,8 +54,6 @@ text \<open>
   running alone against the \<^const>\<open>Refine_Never\<close> state above.
 \<close>
 
-lemmas mode_once_state = arithmetic_once_result
-
 lemma mode_never_ne_once:
   "plus_int_dom Refine_Never arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Once arithmetic_left arithmetic_right"
@@ -75,8 +73,6 @@ text \<open>
   to the tighter interval one full round later.
 \<close>
 
-lemmas mode_fixpoint_state = arithmetic_fixpoint_result
-
 lemma mode_never_ne_fixpoint:
   "plus_int_dom Refine_Never arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Fixpoint arithmetic_left arithmetic_right"
@@ -84,7 +80,7 @@ lemma mode_never_ne_fixpoint:
 
 text \<open>
   Sign's own three-value progression \<open>STop \<rightarrow> SNonPos \<rightarrow> SZero\<close>
-  (\<open>mode_never_state\<close>/\<open>mode_once_state\<close>/\<open>mode_fixpoint_state\<close>, unfolded)
+  (\<open>mode_never_state\<close>/\<open>arithmetic_once_result\<close>/\<open>arithmetic_fixpoint_result\<close>, unfolded)
   witnesses a genuine three-way divergence: \<^const>\<open>Refine_Never\<close>,
   \<^const>\<open>Refine_Once\<close>, and \<^const>\<open>Refine_Fixpoint\<close> compute three pairwise
   distinct \<open>int_dom\<close> values on the same input, not merely two.

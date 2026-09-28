@@ -172,7 +172,7 @@ lemma twice_call_site_action1:
   "call_action_at_call_site (compile_prog twice_pi twice_procs) (Statement 2)
      = CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]"
 proof (rule call_action_at_call_site_eq
-    [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
+    [OF twice.finite_calls[unfolded twice_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 2, CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3],
           FunctionEntry (STR ''twice''), Statement 3)
           \<in> calls (compile_prog twice_pi twice_procs)"
@@ -183,7 +183,7 @@ lemma twice_call_site_action2:
   "call_action_at_call_site (compile_prog twice_pi twice_procs) (Statement 3)
      = CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]"
 proof (rule call_action_at_call_site_eq
-    [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
+    [OF twice.finite_calls[unfolded twice_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10],
           FunctionEntry (STR ''twice''), Statement 4)
           \<in> calls (compile_prog twice_pi twice_procs)"
