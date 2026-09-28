@@ -305,8 +305,8 @@ shows both routes to the contract.
     _cbox((0, 0), <c-num>, [numeric domain \ #isalocale("numeric_domain")]),
     _cbox((2, 0), <c-rel>, [relational state \ #isatype("relc")]),
     _cbox((0, 1), <c-pw>, [pointwise state \ #isatype("abs_state")]),
-    _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_transfer_for")]),
-    _cbox((1, 3), <c-local>, [sound component \ #isaconst("mcp_component_sound")]),
+    _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
+    _cbox((1, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
     _cbox((2, 2), <c-relspec>, [local and shared state \ #isaconst("rel_order_spec")]),
     _cbox((1, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
     edge(
@@ -323,7 +323,7 @@ shows both routes to the contract.
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("sound_transfer_for.state_component_sound")),
+      label: _clab(isathm("sound_nonrelational_transfer.state_spec_sound")),
       label-side: right,
     ),
     edge(
@@ -331,7 +331,7 @@ shows both routes to the contract.
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("order_component_sound")),
+      label: _clab(isathm("order_spec_sound")),
       label-side: left,
       bend: -25deg,
     ),
@@ -341,7 +341,7 @@ shows both routes to the contract.
       <c-contract>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("component_contract")),
+      label: _clab(isathm("dg_spec_of_contract")),
       label-side: right,
     ),
     edge(
@@ -378,7 +378,7 @@ unchanged resume value is sound although it may describe stale globals, as in
 the `inc` program, because the return takes every global from the callee's
 exit. This builder leaves #isaconst("dgs_combine_env") the identity and does
 the whole return in #isaconst("dgs_combine_assign"). The analysis proves one
-rule per operation in #isalocale("sound_transfer_for"), and
+rule per operation in #isalocale("sound_nonrelational_transfer"), and
 #isathm("local_state_dg_spec_for_contract") derives the analysis soundness
 contract.
 
@@ -388,7 +388,7 @@ does: the environment stage takes caller locals and callee globals, and the
 assign stage writes the result. #isathm("analysis_contract_st") derives its
 analysis soundness contract from the same per-operation rules, pulled back
 along the readback of @ch:solving. The analyzer runs this specification as one
-component of the combined state of @ch:cooperation (#isaconst("exec_component")).
+component of the combined state of @ch:cooperation (#isaconst("exec_spec")).
 
 == What the interface leaves out <sec:omissions>
 

@@ -523,7 +523,7 @@ why = "Chapter 5, the forward evaluator every expression-level interface of a do
 [snippets.sound_truth_test]
 why = "Chapter 5, the truth test every expression-level interface of a domain shares."
 
-[snippets.mcp_component_sound]
+[snippets.sound_local_spec]
 why = "Chapter 7, the obligation of one cooperating analysis, stated against every sound channel."
 
 [snippets.mcp_combine_sound]

@@ -281,7 +281,7 @@ theories the numeric domains share.
 The specification #isaconst("rel_order_spec") reads and publishes the shared
 component, so it cannot join the combined state of @ch:cooperation, whose
 components are pure. The same carrier therefore has a second, local form, the
-order analysis (#isaconst("order_component")), which the analyzer runs as
+order analysis (#isaconst("order_spec")), which the analyzer runs as
 `order`. It answers comparisons between variables it has ordered, and at an
 assignment $x := e$ it asks the other active analyses how $e$ compares with
 each variable and records the pairs the answers confirm (@sec:coop-catalogue).
@@ -295,7 +295,7 @@ laws of @ch:domains with facts about integers alone, and one interpretation per
 domain and context family makes the source-level theorem hold for each. The
 instances show that the interface asks for no backward filter (Parity), no
 monotone reduction (Int in the fixpoint mode) and no pointwise store
-(#isaconst("rel_order_spec"), #isaconst("order_component")). The solver's narrowing law restricts where the
+(#isaconst("rel_order_spec"), #isaconst("order_spec")). The solver's narrowing law restricts where the
 product may reduce. The precision differences of this chapter are
 executable evidence about single programs; @ch:evaluation collects them with
 the machine-checked precision witnesses.

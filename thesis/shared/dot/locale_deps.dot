@@ -6,9 +6,8 @@ digraph locales {
   "dg_analysis_adapter" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "dg_ctx_activation_base" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "dg_domain_exec" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
-  "sound_transfer_for" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
+  "sound_nonrelational_transfer" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "analysis_contract" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
-  "sound_local_dg_spec" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "pure_entry_routed_context" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "ltr_coverage" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "nonrelational_transfer" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
@@ -19,7 +18,6 @@ digraph locales {
   "routed_domain_exec" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_context_base_hetero" -> "dg_analysis_adapter";
   "analysis_contract" -> "dg_ctx_activation_base";
-  "sound_local_dg_spec" -> "sound_transfer_for";
   "routed_context_base_hetero" -> "pure_entry_routed_context";
   "dg_ctx_activation_base" -> "pure_entry_routed_context";
   "dg_analysis_adapter" -> "routed_analysis_sound";

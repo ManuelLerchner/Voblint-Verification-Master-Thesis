@@ -226,7 +226,7 @@ The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$ (#isaconst("less_eq_ivl")). The join $[l, u] ljoin [l', u'] =
 [min(l, l'), max(u, u')]$ (#isaconst("sup_ivl")) is the smallest interval containing both, and may
 contain values neither operand does: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
-intersects the bounds (#isaconst("meet_ivl")). Voblint's type #isatype("ivl")
+intersects the bounds (#isaconst("inf_ivl")). Voblint's type #isatype("ivl")
 keeps raw bound pairs, whose order and join agree with this description on
 non-empty intervals (@sec:interval-domain).
 
@@ -299,7 +299,7 @@ only the proofs use it (@sec:engineering).
 For a concrete operation $f : C -> C$ and an abstract operation, or transfer
 function, $sh(f) : A -> A$, the required local property @cousot77[§6] @mine17[Def. 2.15] is
 $ s in conc(a) quad ==> quad f(s) in conc(sh(f)(a)). $
-Voblint states it once per kind of edge in #isalocale("sound_transfer_for"), for
+Voblint states it once per kind of edge in #isalocale("sound_nonrelational_transfer"), for
 instance for an assignment as #isathm("tf_sound_assign_for"). The loop body's
 increment has the interval transfer $[l, u] |-> [l + 1, u + 1]$, the addition
 #isaconst("plus_ivl") with $[1, 1]$, which satisfies this property. A nondeterministic operation must include every
@@ -653,9 +653,9 @@ A type has at most one instance of each class.
 A _locale_ fixes parameters and assumptions, and interpreting it proves the
 assumptions for an instance and yields its theorems @ballarin14. Unlike a
 class, a locale can be interpreted several times for one type.
-#isalocale("semantic_intersection") fixes an intersection operator and assumes
+#isalocale("sound_intersection") fixes an intersection operator and assumes
 that it keeps every value both operands admit:
-#thy("semantic_intersection")
+#thy("sound_intersection")
 
 An _inductive definition_ is the least relation closed under its rules and
 comes with rule induction, and #isacmd("inductive_set") defines a set the same
