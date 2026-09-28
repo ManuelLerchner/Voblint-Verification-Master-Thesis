@@ -4163,7 +4163,15 @@ type ('a, 'b) mcp_component_ext =
   Mcp_component_ext of
     ((query -> unit int_dom_ext query_lift) ->
       'a -> query -> unit int_dom_ext query_lift) *
-      ((query -> unit int_dom_ext query_lift) -> edge_action -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> string -> exp -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        special_call -> string -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> exp -> bool -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> string -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) ->
+        exp option -> string -> 'a -> 'a) *
+      ((query -> unit int_dom_ext query_lift) -> analysis_event -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) ->
         unit call_info_ext -> 'a * 'a -> ('a * 'a) list) *
       ((query -> unit int_dom_ext query_lift) ->
@@ -4556,39 +4564,106 @@ let rec ask_rec
 
 let rec mc_comb_assign
   (Mcp_component_ext
-    (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
     = mc_comb_assign;;
 
 let rec mc_comb_env
   (Mcp_component_ext
-    (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
     = mc_comb_env;;
-
-let rec mc_step
-  (Mcp_component_ext
-    (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
-    = mc_step;;
 
 let rec mc_qry
   (Mcp_component_ext
-    (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
     = mc_qry;;
 
 let rec mc_en
   (Mcp_component_ext
-    (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
     = mc_en;;
+
+let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
+
+let rec make_component
+  qry st en ce ca =
+    Mcp_component_ext
+      (qry, (fun a -> st a EA_Nop), (fun a x e -> st a (EA_Assign (x, e))),
+        (fun a sc x -> st a (EA_Special (sc, x))),
+        (fun a b pol -> st a (if pol then EA_Assume b else EA_AssumeNot b)),
+        (fun a p -> st a (EA_Body p)), (fun a r p -> st a (EA_Ret (r, p))),
+        (fun a ev -> st a (event_action ev)), en, ce, ca, ());;
+
+let rec mc_special
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_special;;
+
+let rec mc_return
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_return;;
+
+let rec mc_branch
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_branch;;
+
+let rec mc_assign
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_assign;;
+
+let rec mc_event
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_event;;
+
+let rec mc_skip
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_skip;;
+
+let rec mc_body
+  (Mcp_component_ext
+    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = mc_body;;
+
+let rec local_spec_step
+  sk asn sp br bd rt ev x7 = match sk, asn, sp, br, bd, rt, ev, x7 with
+    sk, asn, sp, br, bd, rt, ev, EA_Nop -> sk
+    | sk, asn, sp, br, bd, rt, ev, EA_Assign (x, e) -> asn x e
+    | sk, asn, sp, br, bd, rt, ev, EA_Special (sc, x) -> sp sc x
+    | sk, asn, sp, br, bd, rt, ev, EA_Assume b -> br b true
+    | sk, asn, sp, br, bd, rt, ev, EA_AssumeNot b -> br b false
+    | sk, asn, sp, br, bd, rt, ev, EA_Body p -> bd p
+    | sk, asn, sp, br, bd, rt, ev, EA_Ret (e, p) -> rt e p
+    | sk, asn, sp, br, bd, rt, ev, EA_Check (l, cnd) ->
+        ev (Check_Event (l, cnd));;
+
+let rec mc_step
+  c a = local_spec_step (mc_skip c a) (mc_assign c a) (mc_special c a)
+          (mc_branch c a) (mc_body c a) (mc_return c a) (mc_event c a);;
 
 let rec lens_of
   get put c =
-    Mcp_component_ext
-      ((fun a x -> mc_qry c a (get x)),
-        (fun a aa x -> put x (mc_step c a aa (get x))),
-        (fun a ci p ->
-          map (fun (q, e) -> (put (fst p) q, put (snd p) e))
-            (mc_en c a ci (get (fst p), get (snd p)))),
-        (fun a b ci x de -> put x (mc_comb_env c a b ci (get x) (get de))),
-        (fun b ci x de -> put x (mc_comb_assign c b ci (get x) (get de))), ());;
+    make_component (fun a x -> mc_qry c a (get x))
+      (fun a aa x -> put x (mc_step c a aa (get x)))
+      (fun a ci p ->
+        map (fun (q, e) -> (put (fst p) q, put (snd p) e))
+          (mc_en c a ci (get (fst p), get (snd p))))
+      (fun a b ci x de -> put x (mc_comb_env c a b ci (get x) (get de)))
+      (fun b ci x de -> put x (mc_comb_assign c b ci (get x) (get de)));;
 
 let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
                             | QLifted v, QBot -> QBot
@@ -4651,9 +4726,11 @@ let rec mcp_step cs aa a x = fold (fun c -> mc_step c aa a) cs x;;
 let rec mc_qry_update
   mc_qrya
     (Mcp_component_ext
-      (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
+      (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+        mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
     = Mcp_component_ext
-        (mc_qrya mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more);;
+        (mc_qrya mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body,
+          mc_return, mc_event, mc_en, mc_comb_env, mc_comb_assign, more);;
 
 let rec with_qry h c = mc_qry_update (fun _ -> h) c;;
 
@@ -5043,8 +5120,6 @@ let rec dg_spec_step
     | s, EA_Ret (e, p) -> dgs_return s e p
     | s, EA_Check (l, cnd) -> dgs_event s (Check_Event (l, cnd));;
 
-let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
-
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec declared_global_vars
@@ -5259,14 +5334,12 @@ let rec mcp_en_from cs a ci p = fold (fun c -> maps (mc_en c a ci)) cs [p];;
 
 let rec mcp_combine
   = function [c] -> c
-    | [] -> Mcp_component_ext
-              (mcp_qry [], mcp_step [], mcp_en_from [], mcp_comb [],
-                (fun _ _ dc _ -> dc), ())
+    | [] -> make_component (mcp_qry []) (mcp_step []) (mcp_en_from [])
+              (mcp_comb []) (fun _ _ dc _ -> dc)
     | v :: vb :: vc ->
-        Mcp_component_ext
-          (mcp_qry (v :: vb :: vc), mcp_step (v :: vb :: vc),
-            mcp_en_from (v :: vb :: vc), mcp_comb (v :: vb :: vc),
-            (fun _ _ dc _ -> dc), ());;
+        make_component (mcp_qry (v :: vb :: vc)) (mcp_step (v :: vb :: vc))
+          (mcp_en_from (v :: vb :: vc)) (mcp_comb (v :: vb :: vc))
+          (fun _ _ dc _ -> dc);;
 
 let rec called (State_ext (called, infl, stabl, sigma, more)) = called;;
 
@@ -5375,34 +5448,10 @@ let rec int_less
   a b = (if int_less_true a b then Some true
           else (if int_less_false a b then Some false else None));;
 
-let rec mc_comb_assign_update
-  mc_comb_assigna
-    (Mcp_component_ext
-      (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
-    = Mcp_component_ext
-        (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assigna mc_comb_assign,
-          more);;
-
-let rec mc_step_update
-  mc_stepa
-    (Mcp_component_ext
-      (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
-    = Mcp_component_ext
-        (mc_qry, mc_stepa mc_step, mc_en, mc_comb_env, mc_comb_assign, more);;
-
-let rec mc_en_update
-  mc_ena
-    (Mcp_component_ext
-      (mc_qry, mc_step, mc_en, mc_comb_env, mc_comb_assign, more))
-    = Mcp_component_ext
-        (mc_qry, mc_step, mc_ena mc_en, mc_comb_env, mc_comb_assign, more);;
-
 let rec map_component
-  k c = mc_comb_assign_update
-          (fun _ b ci x de -> k (mc_comb_assign c b ci x de))
-          (mc_en_update
-            (fun _ a ci p -> map (fun (q, e) -> (q, k e)) (mc_en c a ci p))
-            (mc_step_update (fun _ a aa x -> k (mc_step c a aa x)) c));;
+  k c = make_component (mc_qry c) (fun a aa x -> k (mc_step c a aa x))
+          (fun a ci p -> map (fun (q, e) -> (q, k e)) (mc_en c a ci p))
+          (mc_comb_env c) (fun b ci x de -> k (mc_comb_assign c b ci x de));;
 
 let rec update_resolved_st _A
   (dl, (dg, ps)) loc a = (dl, (dg, (loc, a) :: delete equal_location loc ps));;
@@ -5446,30 +5495,17 @@ let rec transfer_lift
 let rec ci_dst
   (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
 
-let rec local_spec_step
-  sk asn sp br bd rt ev x7 = match sk, asn, sp, br, bd, rt, ev, x7 with
-    sk, asn, sp, br, bd, rt, ev, EA_Nop -> sk
-    | sk, asn, sp, br, bd, rt, ev, EA_Assign (x, e) -> asn x e
-    | sk, asn, sp, br, bd, rt, ev, EA_Special (sc, x) -> sp sc x
-    | sk, asn, sp, br, bd, rt, ev, EA_Assume b -> br b true
-    | sk, asn, sp, br, bd, rt, ev, EA_AssumeNot b -> br b false
-    | sk, asn, sp, br, bd, rt, ev, EA_Body p -> bd p
-    | sk, asn, sp, br, bd, rt, ev, EA_Ret (e, p) -> rt e p
-    | sk, asn, sp, br, bd, rt, ev, EA_Check (l, cnd) ->
-        ev (Check_Event (l, cnd));;
-
 let rec lens_component
   get put qry sk asn sp br bd rt en ev ce ca =
-    Mcp_component_ext
-      ((fun _ x -> qry (get x)),
-        (fun a aa x ->
-          put x (local_spec_step (sk a) (asn a) (sp a) (br a) (bd a) (rt a)
-                  (ev a) aa (get x))),
-        (fun _ ci p ->
-          map (fun (c, e) -> (put (fst p) c, put (snd p) e))
-            (en ci (get (fst p)))),
-        (fun _ _ ci x de -> put x (ce ci (get x) (get de))),
-        (fun _ ci x de -> put x (ca ci (get x) (get de))), ());;
+    make_component (fun _ x -> qry (get x))
+      (fun a aa x ->
+        put x (local_spec_step (sk a) (asn a) (sp a) (br a) (bd a) (rt a) (ev a)
+                aa (get x)))
+      (fun _ ci p ->
+        map (fun (c, e) -> (put (fst p) c, put (snd p) e))
+          (en ci (get (fst p))))
+      (fun _ _ ci x de -> put x (ce ci (get x) (get de)))
+      (fun _ ci x de -> put x (ca ci (get x) (get de)));;
 
 let rec exec_component _A
   g empty_pred tf_st enter_st =
@@ -7886,24 +7922,21 @@ let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
 let rec ivl_tf_st_for x = generic_tf_st_for bot_ivl ivl_ops x;;
 
+let rec mc_assign_update
+  mc_assigna
+    (Mcp_component_ext
+      (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+        mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    = Mcp_component_ext
+        (mc_qry, mc_skip, mc_assigna mc_assign, mc_special, mc_branch, mc_body,
+          mc_return, mc_event, mc_en, mc_comb_env, mc_comb_assign, more);;
+
 let rec assign_ask
   asn a x e d =
     (match answer_const (a (EvalInt e)) with None -> asn a x e d
       | Some n -> asn a x (N n) d);;
 
-let rec ask_assign
-  c = mc_step_update
-        (fun _ a aa x ->
-          (match aa with EA_Nop -> mc_step c a aa x
-            | EA_Assign (y, e) ->
-              assign_ask (fun ab ya ea -> mc_step c ab (EA_Assign (ya, ea))) a y
-                e x
-            | EA_Special (_, _) -> mc_step c a aa x
-            | EA_Assume _ -> mc_step c a aa x
-            | EA_AssumeNot _ -> mc_step c a aa x | EA_Body _ -> mc_step c a aa x
-            | EA_Ret (_, _) -> mc_step c a aa x
-            | EA_Check (_, _) -> mc_step c a aa x))
-        c;;
+let rec ask_assign c = mc_assign_update (fun _ -> assign_ask (mc_assign c)) c;;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 

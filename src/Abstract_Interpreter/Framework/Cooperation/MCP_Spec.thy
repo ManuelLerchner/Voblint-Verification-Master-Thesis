@@ -34,10 +34,82 @@ text \<open>
 
 record 's mcp_component =
   mc_qry :: "answers \<Rightarrow> 's \<Rightarrow> answers"
-  mc_step :: "answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's"
+  mc_skip :: "answers \<Rightarrow> 's \<Rightarrow> 's"
+  mc_assign :: "answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
+  mc_special :: "answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's"
+  mc_branch :: "answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
+  mc_body :: "answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  mc_return :: "answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  mc_event :: "answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's"
   mc_en :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
   mc_comb_env :: "answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
   mc_comb_assign :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+
+text \<open>
+  The edge transfers are separate fields, one per kind of edge, as Goblint's
+  \<open>Spec\<close> has \<open>skip\<close>, \<open>assign\<close>, \<open>special\<close>, \<open>branch\<close>, \<open>body\<close>, \<open>return\<close> and
+  \<open>event\<close>. A component that overrides one of them updates that field alone. The
+  step on an arbitrary edge is derived from them.
+\<close>
+
+definition mc_step :: "'s mcp_component \<Rightarrow> answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
+  "mc_step c A = local_spec_step (mc_skip c A) (mc_assign c A) (mc_special c A)
+     (mc_branch c A) (mc_body c A) (mc_return c A) (mc_event c A)"
+
+lemma mc_step_simps [simp]:
+  "mc_step c A EA_Nop = mc_skip c A"
+  "mc_step c A (EA_Assign x e) = mc_assign c A x e"
+  "mc_step c A (EA_Special sc x) = mc_special c A sc x"
+  "mc_step c A (EA_Assume b) = mc_branch c A b True"
+  "mc_step c A (EA_AssumeNot b) = mc_branch c A b False"
+  "mc_step c A (EA_Body p) = mc_body c A p"
+  "mc_step c A (EA_Ret r p) = mc_return c A r p"
+  "mc_step c A (EA_Check l cnd) = mc_event c A (Check_Event l cnd)"
+  by (simp_all add: mc_step_def)
+
+lemma mc_step_update_other [simp]:
+  "mc_step (c\<lparr>mc_qry := h\<rparr>) = mc_step c"
+  "mc_step (c\<lparr>mc_en := e\<rparr>) = mc_step c"
+  "mc_step (c\<lparr>mc_comb_env := ce\<rparr>) = mc_step c"
+  "mc_step (c\<lparr>mc_comb_assign := ca\<rparr>) = mc_step c"
+  by (simp_all add: mc_step_def fun_eq_iff)
+
+text \<open>
+  A component whose edge transfers are one function of the edge, such as a
+  lens onto a field or a fold over several components, is built from that
+  function: each field is the function at its kind of edge.
+\<close>
+
+definition make_component ::
+  "(answers \<Rightarrow> 's \<Rightarrow> answers) \<Rightarrow> (answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
+   \<Rightarrow> (answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's mcp_component" where
+  "make_component qry st en ce ca = \<lparr>
+     mc_qry = qry,
+     mc_skip = (\<lambda>A. st A EA_Nop),
+     mc_assign = (\<lambda>A x e. st A (EA_Assign x e)),
+     mc_special = (\<lambda>A sc x. st A (EA_Special sc x)),
+     mc_branch = (\<lambda>A b pol. st A (if pol then EA_Assume b else EA_AssumeNot b)),
+     mc_body = (\<lambda>A p. st A (EA_Body p)),
+     mc_return = (\<lambda>A r p. st A (EA_Ret r p)),
+     mc_event = (\<lambda>A ev. st A (event_action ev)),
+     mc_en = en, mc_comb_env = ce, mc_comb_assign = ca \<rparr>"
+
+lemma make_component_sel [simp]:
+  "mc_qry (make_component qry st en ce ca) = qry"
+  "mc_step (make_component qry st en ce ca) = st"
+  "mc_en (make_component qry st en ce ca) = en"
+  "mc_comb_env (make_component qry st en ce ca) = ce"
+  "mc_comb_assign (make_component qry st en ce ca) = ca"
+proof -
+  have "mc_step (make_component qry st en ce ca) A a = st A a" for A a
+  proof (cases a)
+    case (EA_Check l cnd)
+    then show ?thesis by (simp add: make_component_def mc_step_def)
+  qed (simp_all add: make_component_def mc_step_def)
+  then show "mc_step (make_component qry st en ce ca) = st" by (simp add: fun_eq_iff)
+qed (simp_all add: make_component_def)
 
 text \<open>
   The return runs in the two stages of Goblint's \<open>combine_env\<close> and
@@ -478,12 +550,8 @@ text \<open>
 
 fun mcp_combine :: "'s mcp_component list \<Rightarrow> 's mcp_component" where
   "mcp_combine [c] = c"
-| "mcp_combine cs = \<lparr>
-     mc_qry = mcp_qry cs,
-     mc_step = mcp_step cs,
-     mc_en = mcp_en_from cs,
-     mc_comb_env = mcp_comb cs,
-     mc_comb_assign = (\<lambda>B ci dc de. dc) \<rparr>"
+| "mcp_combine cs =
+     make_component (mcp_qry cs) (mcp_step cs) (mcp_en_from cs) (mcp_comb cs) (\<lambda>B ci dc de. dc)"
 
 text \<open>Components that answer nothing combine to a state that answers nothing.\<close>
 
@@ -507,10 +575,9 @@ proof (cases "\<exists>gc. gcs = [gc]")
   then show ?thesis using sound by (simp add: mcp_component_sound_def mcp_gamma_def)
 next
   case False
-  have comb: "mcp_combine (map snd gcs) = \<lparr>
-     mc_qry = mcp_qry (map snd gcs), mc_step = mcp_step (map snd gcs),
-     mc_en = mcp_en_from (map snd gcs), mc_comb_env = mcp_comb (map snd gcs),
-     mc_comb_assign = (\<lambda>B ci dc de. dc) \<rparr>"
+  have comb: "mcp_combine (map snd gcs) =
+     make_component (mcp_qry (map snd gcs)) (mcp_step (map snd gcs))
+       (mcp_en_from (map snd gcs)) (mcp_comb (map snd gcs)) (\<lambda>B ci dc de. dc)"
     using False ne by (cases "map snd gcs" rule: mcp_combine.cases) (auto simp: Cons_eq_map_conv)
   have enter: "\<exists>q \<in> set (mcp_en_from (map snd gcs) A ci p).
                  s \<in> mcp_gamma (map fst gcs) (fst q)
@@ -559,13 +626,13 @@ definition lens_component ::
    \<Rightarrow> (call_info \<Rightarrow> 'c \<Rightarrow> 'c \<Rightarrow> 'c) \<Rightarrow> (call_info \<Rightarrow> 'c \<Rightarrow> 'c \<Rightarrow> 'c)
    \<Rightarrow> 's mcp_component"
 where
-  "lens_component get put qry sk asn sp br bd rt en ev ce ca = \<lparr>
-     mc_qry = (\<lambda>A x. qry (get x)),
-     mc_step = (\<lambda>A a x. put x (local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A)
-                                 a (get x))),
-     mc_en = (\<lambda>A ci p. map (\<lambda>(c, e). (put (fst p) c, put (snd p) e)) (en ci (get (fst p)))),
-     mc_comb_env = (\<lambda>A B ci x de. put x (ce ci (get x) (get de))),
-     mc_comb_assign = (\<lambda>B ci x de. put x (ca ci (get x) (get de))) \<rparr>"
+  "lens_component get put qry sk asn sp br bd rt en ev ce ca = make_component
+     (\<lambda>A x. qry (get x))
+     (\<lambda>A a x. put x (local_spec_step (sk A) (asn A) (sp A) (br A) (bd A) (rt A) (ev A)
+                       a (get x)))
+     (\<lambda>A ci p. map (\<lambda>(c, e). (put (fst p) c, put (snd p) e)) (en ci (get (fst p))))
+     (\<lambda>A B ci x de. put x (ce ci (get x) (get de)))
+     (\<lambda>B ci x de. put x (ca ci (get x) (get de)))"
 
 theorem lens_component_sound:
   assumes spec: "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
@@ -660,13 +727,13 @@ text \<open>
 
 definition lens_of :: "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> 'c mcp_component \<Rightarrow> 's mcp_component"
 where
-  "lens_of get put c = \<lparr>
-     mc_qry = (\<lambda>A x. mc_qry c A (get x)),
-     mc_step = (\<lambda>A a x. put x (mc_step c A a (get x))),
-     mc_en = (\<lambda>A ci p. map (\<lambda>(q, e). (put (fst p) q, put (snd p) e))
-                        (mc_en c A ci (get (fst p), get (snd p)))),
-     mc_comb_env = (\<lambda>A B ci x de. put x (mc_comb_env c A B ci (get x) (get de))),
-     mc_comb_assign = (\<lambda>B ci x de. put x (mc_comb_assign c B ci (get x) (get de))) \<rparr>"
+  "lens_of get put c = make_component
+     (\<lambda>A x. mc_qry c A (get x))
+     (\<lambda>A a x. put x (mc_step c A a (get x)))
+     (\<lambda>A ci p. map (\<lambda>(q, e). (put (fst p) q, put (snd p) e))
+                (mc_en c A ci (get (fst p), get (snd p))))
+     (\<lambda>A B ci x de. put x (mc_comb_env c A B ci (get x) (get de)))
+     (\<lambda>B ci x de. put x (mc_comb_assign c B ci (get x) (get de)))"
 
 lemma get_mc_comb_lens_of:
   assumes "\<And>x v. get (put x v) = v"
@@ -738,10 +805,11 @@ text \<open>
 \<close>
 
 definition map_component :: "('s \<Rightarrow> 's) \<Rightarrow> 's mcp_component \<Rightarrow> 's mcp_component" where
-  "map_component k c = c\<lparr>
-     mc_step := (\<lambda>A a x. k (mc_step c A a x)),
-     mc_en := (\<lambda>A ci p. map (\<lambda>(q, e). (q, k e)) (mc_en c A ci p)),
-     mc_comb_assign := (\<lambda>B ci x de. k (mc_comb_assign c B ci x de)) \<rparr>"
+  "map_component k c = make_component (mc_qry c)
+     (\<lambda>A a x. k (mc_step c A a x))
+     (\<lambda>A ci p. map (\<lambda>(q, e). (q, k e)) (mc_en c A ci p))
+     (mc_comb_env c)
+     (\<lambda>B ci x de. k (mc_comb_assign c B ci x de))"
 
 theorem map_component_sound:
   assumes sound: "mcp_component_sound \<G> g c"

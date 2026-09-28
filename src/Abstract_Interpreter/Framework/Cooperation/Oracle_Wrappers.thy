@@ -90,10 +90,7 @@ text \<open>
 \<close>
 
 definition ask_assign :: "'s mcp_component \<Rightarrow> 's mcp_component" where
-  "ask_assign c = c\<lparr>
-     mc_step := (\<lambda>A a x. case a of
-        EA_Assign y e \<Rightarrow> assign_ask (\<lambda>A y e. mc_step c A (EA_Assign y e)) A y e x
-      | _ \<Rightarrow> mc_step c A a x) \<rparr>"
+  "ask_assign c = c\<lparr>mc_assign := assign_ask (mc_assign c)\<rparr>"
 
 lemma ask_assign_step_cases:
   "mc_step (ask_assign c) A a x = mc_step c A a x
@@ -116,8 +113,10 @@ theorem ask_assign_frame:
   assumes frame: "mcp_frame c g"
   shows "mcp_frame (ask_assign c) g"
 proof -
+  have st: "g (mc_step c A a x) = g x" for A a x
+    using frame unfolding mcp_frame_def by blast
   have "g (mc_step (ask_assign c) A a x) = g x" for A a x
-    using ask_assign_step_cases[of c A a x] frame unfolding mcp_frame_def by auto
+    using ask_assign_step_cases[of c A a x] st by metis
   then show ?thesis
     using frame unfolding mcp_frame_def by (simp add: ask_assign_def)
 qed
