@@ -80,7 +80,7 @@
     },
     "mcp_combine_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<forall>(g, c)\\<in>set gcs. mcp_component_sound \\<G> g c;\n mcp_independent gcs; gcs \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> mcp_component_sound \\<G> (mcp_gamma (map fst gcs))\n                   (mcp_combine (map snd gcs))",
+      "statement": "\\<lbrakk>\\<forall>(g, c)\\<in>set gcs. sound_local_spec \\<G> g c;\n mcp_independent gcs; gcs \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> sound_local_spec \\<G> (mcp_gamma (map fst gcs))\n                   (mcp_combine (map snd gcs))",
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: independent sound components combine into a sound component."
     },
