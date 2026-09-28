@@ -370,6 +370,85 @@ lemma sound_local_spec_update:
        \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_combine_assign := ca\<rparr>)"
   using assms unfolding sound_local_spec_iff by simp_all
 
+subsection \<open>Conservative defaults\<close>
+
+text \<open>
+  A field whose concrete counterpart leaves the store unchanged has a default
+  that decides nothing: the handler answers \<open>\<top>\<close>, and skip, body, event and
+  branch keep the state. Each is sound for every concretization. Assign,
+  special, return, entry and the second return stage change the store or the
+  frame, so no default is sound for every concretization and an analysis
+  supplies them. The first return stage defaults to the caller's state; it has
+  no law of its own, only the composed return does.
+\<close>
+
+definition query_unknown :: "answers \<Rightarrow> 's \<Rightarrow> answers" where
+  "query_unknown A x = \<top>"
+
+definition skip_identity :: "answers \<Rightarrow> 's \<Rightarrow> 's" where
+  "skip_identity A x = x"
+
+definition body_identity :: "answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's" where
+  "body_identity A p x = x"
+
+definition event_identity :: "answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's" where
+  "event_identity A ev x = x"
+
+definition branch_identity :: "answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's" where
+  "branch_identity A b pol x = x"
+
+definition combine_env_identity :: "answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "combine_env_identity A B ci x de = x"
+
+lemma sound_query_unknown: "sound_query gm query_unknown"
+  by (simp add: sound_query_def query_unknown_def)
+
+lemma sound_skip_identity: "sound_skip gm skip_identity"
+  by (simp add: sound_skip_def skip_identity_def)
+
+lemma sound_body_identity: "sound_body gm body_identity"
+  by (simp add: sound_body_def body_identity_def)
+
+lemma sound_event_identity: "sound_event gm event_identity"
+  by (simp add: sound_event_def event_identity_def)
+
+lemma sound_branch_identity: "sound_branch gm branch_identity"
+  by (simp add: sound_branch_def branch_identity_def)
+
+lemma sound_combine_env_identity:
+  "sound_combine \<G> gm combine_env_identity ca \<longleftrightarrow>
+     (\<forall>B s t ci x de. s \<in> gm x \<longrightarrow> t \<in> gm de \<longrightarrow> eval_query.oracle_holds B t \<longrightarrow>
+        combine_collect \<G> (ci_dst ci) s t \<in> gm (ca B ci x de))"
+  unfolding sound_combine_def combine_env_identity_def
+  using eval_query.oracle_holds_top by blast
+
+text \<open>
+  A local specification that supplies only the five operations without a
+  default. An analysis starts from it and overrides the fields it decides more
+  precisely; each override needs only its own law again
+  (\<open>sound_local_spec_update\<close>).
+\<close>
+
+definition conservative_local_spec ::
+  "(answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's local_spec" where
+  "conservative_local_spec asn sp rt en ca = \<lparr>
+     ls_query = query_unknown, ls_skip = skip_identity, ls_assign = asn,
+     ls_special = sp, ls_branch = branch_identity, ls_body = body_identity,
+     ls_return = rt, ls_event = event_identity, ls_enter = en,
+     ls_combine_env = combine_env_identity, ls_combine_assign = ca \<rparr>"
+
+theorem sound_conservative_local_spec:
+  assumes "\<And>x y. x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
+    and "sound_assign gm asn" and "sound_special gm sp" and "sound_return gm rt"
+    and "sound_enter \<G> gm en" and "sound_combine \<G> gm combine_env_identity ca"
+  shows "sound_local_spec \<G> gm (conservative_local_spec asn sp rt en ca)"
+  by (rule sound_local_specI)
+     (simp_all add: conservative_local_spec_def assms sound_query_unknown sound_skip_identity
+        sound_body_identity sound_event_identity sound_branch_identity)
 text \<open>
   A component leaves a concretization alone when none of its operations
   changes what that concretization says. For components that each own one

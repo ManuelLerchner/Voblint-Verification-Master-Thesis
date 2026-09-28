@@ -7454,6 +7454,16 @@ let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
 let rec ivl_tf_st_for x = generic_tf_st_for bot_ivl ivl_ops x;;
 
+let rec ls_branch_update
+  ls_brancha
+    (Local_spec_ext
+      (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
+        ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
+    = Local_spec_ext
+        (ls_query, ls_skip, ls_assign, ls_special, ls_brancha ls_branch,
+          ls_body, ls_return, ls_event, ls_enter, ls_combine_env,
+          ls_combine_assign, more);;
+
 let rec assume_not_step
   b d = (match d with RelBot -> RelBot
           | RelC ps ->
@@ -7782,6 +7792,25 @@ let rec assume_step
 let rec branch_step_rel
   b pol d = (if pol then assume_step b d else assume_not_step b d);;
 
+let rec combine_env_identity a b ci x de = x;;
+
+let rec branch_identity a b pol x = x;;
+
+let rec event_identity a ev x = x;;
+
+let rec skip_identity a x = x;;
+
+let rec query_unknown
+  a x = top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
+
+let rec body_identity a p x = x;;
+
+let rec conservative_local_spec
+  asn sp rt en ca =
+    Local_spec_ext
+      (query_unknown, skip_identity, asn, sp, branch_identity, body_identity,
+        rt, event_identity, en, combine_env_identity, ca, ());;
+
 let rec answer_const = function QLifted d -> int_dom_constant d
                        | QBot -> None
                        | QTop -> None;;
@@ -7891,13 +7920,12 @@ let rec rel_eval
 let rec rel_qry d (EvalInt e) = rel_eval d e;;
 
 let rec order_spec
-  ys = Local_spec_ext
-         ((fun _ -> rel_qry), (fun _ d -> d),
-           (fun a x e d -> rel_learn a ys x e (forget_relc x d)),
-           (fun _ _ -> forget_relc), (fun _ -> branch_step_rel),
-           (fun _ _ d -> d), (fun _ eo _ -> rel_ret eo), (fun _ _ d -> d),
-           (fun _ _ p -> [(fst p, top_relc)]), (fun _ _ _ dc _ -> dc),
-           (fun _ _ _ _ -> top_relc), ());;
+  ys = ls_branch_update (fun _ _ -> branch_step_rel)
+         (ls_query_update (fun _ _ -> rel_qry)
+           (conservative_local_spec
+             (fun a x e d -> rel_learn a ys x e (forget_relc x d))
+             (fun _ _ -> forget_relc) (fun _ eo _ -> rel_ret eo)
+             (fun _ _ p -> [(fst p, top_relc)]) (fun _ _ _ _ -> top_relc)));;
 
 let rec ls_assign_update
   ls_assigna

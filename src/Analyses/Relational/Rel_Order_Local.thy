@@ -110,48 +110,48 @@ subsection \<open>The component\<close>
 
 text \<open>
   The order analysis as a component of the combined state, over the variables
-  \<open>ys\<close> it relates. It asks at assignments and answers comparisons. Its entry
-  answers one alternative: the callee starts from the empty relation, and the
-  return keeps nothing, which is sound and imprecise by design.
+  \<open>ys\<close> it relates. It starts from the conservative local specification: skip,
+  body and events keep the relation, and the first return stage keeps the
+  caller's. It supplies the operations without a default -- assignments ask and
+  learn, the callee starts from the empty relation, and the return keeps
+  nothing, which is sound and imprecise by design -- and overrides the handler
+  and the branch, where it decides more than the default.
 \<close>
 
 definition rel_ret :: "exp option \<Rightarrow> relc \<Rightarrow> relc" where
   "rel_ret eo d = (case eo of None \<Rightarrow> d | Some a \<Rightarrow> forget_relc ret_var d)"
 
 definition order_spec :: "vname list \<Rightarrow> relc local_spec" where
-  "order_spec ys = \<lparr>
-     ls_query = (\<lambda>A. rel_qry),
-     ls_skip = (\<lambda>A d. d),
-     ls_assign = (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)),
-     ls_special = (\<lambda>A sc x d. forget_relc x d),
-     ls_branch = (\<lambda>A b pol d. branch_step_rel b pol d),
-     ls_body = (\<lambda>A p d. d),
-     ls_return = (\<lambda>A eo p d. rel_ret eo d),
-     ls_event = (\<lambda>A ev d. d),
-     ls_enter = (\<lambda>A ci p. [(fst p, top_relc)]),
-     ls_combine_env = (\<lambda>A B ci dc de. dc),
-     ls_combine_assign = (\<lambda>B ci d de. top_relc) \<rparr>"
+  "order_spec ys = (conservative_local_spec
+       (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
+       (\<lambda>A sc x d. forget_relc x d)
+       (\<lambda>A eo p d. rel_ret eo d)
+       (\<lambda>A ci p. [(fst p, top_relc)])
+       (\<lambda>B ci d de. top_relc))
+     \<lparr>ls_query := (\<lambda>A. rel_qry), ls_branch := (\<lambda>A b pol d. branch_step_rel b pol d)\<rparr>"
 
 theorem order_spec_sound: "sound_local_spec \<G> gamma_rel (order_spec ys)"
 proof -
-  have step: "edge_collect a (gamma_rel d \<inter> Collect (eval_query.oracle_holds ask))
-                \<subseteq> gamma_rel (ls_step (order_spec ys) ask a d)" for a d ask
-  proof (cases a)
-    case (EA_Assign x e)
-    then show ?thesis by (auto simp: order_spec_def intro!: rel_learn_sound)
-  next
-    case (EA_Special sc x)
-    then show ?thesis by (cases sc) (auto simp: order_spec_def)
-  next
-    case (EA_Ret eo p)
-    then show ?thesis by (cases eo) (auto simp: order_spec_def rel_ret_def)
-  qed (auto simp: order_spec_def branch_step_rel_def)
+  have special: "sound_special gamma_rel (\<lambda>A sc x d. forget_relc x d)"
+    unfolding sound_special_def
+  proof (intro allI impI)
+    fix A d s sc x t
+    assume "s \<in> gamma_rel d" "t \<in> special_step sc x s"
+    then show "t \<in> gamma_rel (forget_relc x d)" by (cases sc) auto
+  qed
+  have base: "sound_local_spec \<G> gamma_rel (conservative_local_spec
+       (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)) (\<lambda>A sc x d. forget_relc x d)
+       (\<lambda>A eo p d. rel_ret eo d) (\<lambda>A ci p. [(fst p, top_relc)]) (\<lambda>B ci d de. top_relc))"
+    by (rule sound_conservative_local_spec[OF gamma_rel_mono _ special])
+       (auto simp: sound_assign_def sound_return_def sound_enter_def rel_ret_def
+          sound_combine_env_identity split: option.splits intro!: rel_learn_sound)
   show ?thesis
-    unfolding sound_local_spec_def
-    using gamma_rel_mono step rel_qry_sound by (auto simp: order_spec_def)
+    unfolding order_spec_def
+    by (intro sound_local_spec_update_branch[OF sound_local_spec_update_query[OF base]])
+       (auto simp: sound_query_def sound_branch_def branch_step_rel_def rel_qry_sound)
 qed
 
 lemma single_entry_order_spec: "single_entry (order_spec ys)"
-  by (simp add: single_entry_def order_spec_def)
+  by (simp add: single_entry_def order_spec_def conservative_local_spec_def)
 
 end
