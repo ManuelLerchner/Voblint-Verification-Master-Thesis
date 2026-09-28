@@ -149,6 +149,128 @@ definition mcp_component_sound ::
           eval_holds q (mc_qry c A x q) s)"
 
 text \<open>
+  The step obligation splits into one law per kind of edge, each about the
+  field that handles it: the store the edge produces lies in what the field
+  returns, for every store and channel that hold before. A component proves the
+  laws of the fields it defines, and a field it replaces needs only its own law
+  again (\<open>mcp_component_sound_update\<close>).
+\<close>
+
+definition skip_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "skip_sound gm f \<longleftrightarrow>
+     (\<forall>A x s. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A x))"
+
+definition assign_sound ::
+  "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "assign_sound gm f \<longleftrightarrow>
+     (\<forall>A x s y e. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s(y := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gm (f A y e x))"
+
+definition special_sound ::
+  "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "special_sound gm f \<longleftrightarrow>
+     (\<forall>A x s sc y t. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> t \<in> special_step sc y s
+        \<longrightarrow> t \<in> gm (f A sc y x))"
+
+definition branch_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "branch_sound gm f \<longleftrightarrow>
+     (\<forall>A x s b pol. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol
+        \<longrightarrow> s \<in> gm (f A b pol x))"
+
+definition body_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "body_sound gm f \<longleftrightarrow>
+     (\<forall>A x s p. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A p x))"
+
+definition return_sound ::
+  "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "return_sound gm f \<longleftrightarrow>
+     (\<forall>A x s r p. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s
+        \<longrightarrow> s(ret_var := (case r of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> gm (f A r p x))"
+
+definition event_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "event_sound gm f \<longleftrightarrow>
+     (\<forall>A x s ev. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A ev x))"
+
+theorem mc_step_sound_iff:
+  "(\<forall>A a x. edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A)) \<subseteq> gm (mc_step c A a x))
+   \<longleftrightarrow> skip_sound gm (mc_skip c) \<and> assign_sound gm (mc_assign c) \<and> special_sound gm (mc_special c)
+     \<and> branch_sound gm (mc_branch c) \<and> body_sound gm (mc_body c)
+     \<and> return_sound gm (mc_return c) \<and> event_sound gm (mc_event c)"
+  (is "?step \<longleftrightarrow> ?fields")
+proof
+  assume step: ?step
+  have at: "t \<in> gm (mc_step c A a x)"
+    if "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> edge_step a s" for A a x s t
+    using step that unfolding edge_collect_def by blast
+  have pol: "s \<in> gm (mc_branch c A b pol x)"
+    if "s \<in> gm x" "eval_query.oracle_holds A s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol" for A b pol x s
+  proof (cases pol)
+    case True
+    then show ?thesis
+      using at[OF that(1,2), where a = "EA_Assume b" and t = s] that(3) by simp
+  next
+    case False
+    then show ?thesis
+      using at[OF that(1,2), where a = "EA_AssumeNot b" and t = s] that(3) by simp
+  qed
+  have ev: "s \<in> gm (mc_event c A ev x)"
+    if "s \<in> gm x" "eval_query.oracle_holds A s" for A ev x s
+  proof (cases ev)
+    case (Check_Event l e)
+    then show ?thesis using at[OF that, where a = "EA_Check l e" and t = s] by simp
+  qed
+  have special: "t \<in> gm (mc_special c A sc y x)"
+    if "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> special_step sc y s" for A x s sc y t
+    using at[OF that(1,2), where a = "EA_Special sc y" and t = t] that(3)
+    by (simp only: edge_step.simps mc_step_simps)
+  show ?fields
+    unfolding skip_sound_def assign_sound_def special_sound_def branch_sound_def body_sound_def
+      return_sound_def event_sound_def
+    using at[where a = EA_Nop] at[where a = "EA_Assign _ _"]
+      at[where a = "EA_Body _"] at[where a = "EA_Ret _ _"] pol ev special
+    by (fastforce+)
+next
+  assume F: ?fields
+  show ?step
+  proof (intro allI subsetI)
+    fix A a x t
+    assume "t \<in> edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A))"
+    then obtain s where s: "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> edge_step a s"
+      unfolding edge_collect_def by blast
+    show "t \<in> gm (mc_step c A a x)"
+    proof (cases a)
+      case (EA_Special sc y)
+      have "t \<in> special_step sc y s" using s(3) EA_Special by (simp only: edge_step.simps)
+      then show ?thesis
+        using F s(1,2) EA_Special unfolding special_sound_def by (simp only: mc_step_simps)
+    next
+      case (EA_Assume b)
+      then have "t = s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = True" using s(3) by (simp_all split: if_splits)
+      then show ?thesis
+        using F s(1,2) EA_Assume unfolding branch_sound_def by (simp only: mc_step_simps)
+    next
+      case (EA_AssumeNot b)
+      then have "t = s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = False" using s(3) by (simp_all split: if_splits)
+      then show ?thesis
+        using F s(1,2) EA_AssumeNot unfolding branch_sound_def by (simp only: mc_step_simps)
+    qed (use F s in \<open>auto simp: skip_sound_def assign_sound_def body_sound_def return_sound_def
+                     event_sound_def\<close>)
+  qed
+qed
+
+text \<open>A sound component stays sound when one edge field is replaced by a sound one.\<close>
+
+lemma mcp_component_sound_update:
+  assumes "mcp_component_sound \<G> gm c"
+  shows "skip_sound gm sk \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_skip := sk\<rparr>)"
+    and "assign_sound gm asn \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_assign := asn\<rparr>)"
+    and "special_sound gm sp \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_special := sp\<rparr>)"
+    and "branch_sound gm br \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_branch := br\<rparr>)"
+    and "body_sound gm bd \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_body := bd\<rparr>)"
+    and "return_sound gm rt \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_return := rt\<rparr>)"
+    and "event_sound gm ev \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_event := ev\<rparr>)"
+  using assms unfolding mcp_component_sound_def mc_step_sound_iff by simp_all
+
+text \<open>
   A component leaves a concretization alone when none of its operations
   changes what that concretization says. For components that each own one
   field of a record this is the lens law that updating one field leaves the
