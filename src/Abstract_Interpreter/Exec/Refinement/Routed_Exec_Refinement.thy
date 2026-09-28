@@ -38,20 +38,20 @@ text \<open>
 \<close>
 
 
-subsection \<open>The buffered generator at any local specification\<close>
+subsection \<open>The buffered generator at any component\<close>
 
 text \<open>
   The buffered generator a domain actually solves, reconciled with the unbuffered one
-  the framework is stated over, for every local specification. Both reshaping hooks
-  are the identity: the buffered generator only asks a hook to hoist what it
-  publishes at the buffered key \<open>gk0\<close>, and a local specification publishes nothing
+  the framework is stated over, for every component run as a specification. Both
+  reshaping hooks are the identity: the buffered generator only asks a hook to hoist
+  what it publishes at the buffered key \<open>gk0\<close>, and a component publishes nothing
   there, since its edge transfers, its entry and its return all read and write the
-  local unknown only. A local specification's queries do not change that: its
-  handler answers from the local value, so an asking transfer is still a local one.
+  local unknown only. Its queries do not change that: its channel is a pure function
+  of the local value, so an asking transfer is still a local one.
 \<close>
 
-theorem pp_local_dg_spec:
-  assumes S: "S = local_dg_spec qs qry sk asn sp br bd rt en ev ce ca"
+theorem pp_component_spec:
+  assumes S: "S = component_spec c"
     and ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
@@ -234,7 +234,7 @@ theorem pp_st:
         (routed_entry_seed_programs seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
-  by (rule pp_local_dg_spec[where S = spec_st])
+  by (rule pp_component_spec[where S = spec_st])
      (rule local_state_dg_spec_st_for_lifted_def, rule seed_key_ne_gk0, rule pp)
 
 end

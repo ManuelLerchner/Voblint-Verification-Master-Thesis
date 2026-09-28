@@ -143,7 +143,7 @@ definition analysis_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
   "analysis_spec \<G> p = component_spec (comp \<G> p)"
 
 lemma dg_spec_wf_analysis_spec [intro, simp]: "dg_spec_wf (analysis_spec \<G> p)"
-  by (simp add: analysis_spec_def component_spec_def)
+  by (simp add: analysis_spec_def)
 
 text \<open>
   The state a call enters its callee with. The pipeline supports components
@@ -541,9 +541,8 @@ theorem pp_routed:
         (routed_entry_seed_programs seed)
         (prog_cfg p) Bot (Lifted init_st) Bot)
      (root_query p) (sol_env pgs p) (sol_vars pgs p)"
-  apply (rule pp_local_dg_spec[where S = "analysis_spec pgs p"])
-    apply (unfold analysis_spec_def component_spec_def)[1]
-    apply (rule refl)
+  apply (rule pp_component_spec[where S = "analysis_spec pgs p"])
+    apply (rule analysis_spec_def)
    apply (rule seed_ne_gk0)
   using pp_buffered[OF solves] unfolding equations_def compiled_routed_eqs_for_def bot_lifted_eq .
 

@@ -807,8 +807,7 @@ def render_mcp(doms):
         "lemma mcp_component_of_silent:",
         f'  "a \\<in> {{{", ".join(silent)}}}',
         f'     \\<Longrightarrow> mc_query (mcp_component_of {G} p a) A x q = \\<top>"',
-        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def"
-        " lens_component_def)",
+        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def)",
         "",
     ]
     inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])

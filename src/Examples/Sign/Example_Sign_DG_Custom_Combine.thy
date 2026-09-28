@@ -260,7 +260,7 @@ lemma traverse_combine_env_join:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_local_dg_spec
+    dg_spec_combine_transfer_component_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -274,7 +274,7 @@ lemma sides_combine_env_join:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_local_dg_spec
+    dg_spec_combine_transfer_component_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -291,7 +291,7 @@ lemma traverse_combine_stock:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_local_dg_spec
+    dg_spec_combine_transfer_component_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -305,7 +305,7 @@ lemma sides_combine_stock:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_local_dg_spec
+    dg_spec_combine_transfer_component_spec
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 

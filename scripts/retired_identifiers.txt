@@ -3273,3 +3273,39 @@ sound_local_dg_spec_with_qry
 coop_spec
 coop_contract
 coop_ivl_component
+# --- A local analysis is a component: component_spec builds its D/G record and
+# component_contract proves its contract; the positional locale and its
+# builders are gone (2026-09-28) ---
+sound_local_dg_spec
+local_dg_spec
+local_dg_spec_simps
+local_spec_contract
+dg_spec_step_local_dg_spec
+dg_spec_combine_transfer_local_dg_spec
+dg_spec_wf_local_dg_spec
+local_answers
+local_answers_Nil
+oracle_holds_local_answers
+asking_transfer
+asking_transfer_no_queries
+asking_transfer_local_query
+sp_wf_asking_transfer
+ask_all
+sp_wf_ask_all
+ask_all_local_query
+lens_component
+lens_component_sound
+lens_frame
+local_component
+local_component_sound
+mc_channel_local_component
+component_spec_local_component
+component_local_spec
+local_spec_step_component_spec
+local_spec_step_event_action
+sound_local_spec_st
+local_spec_step_transfer_lift_tf_st
+pp_local_dg_spec
+component_spec_exec_component
+mc_en_exec_component
+rel_local_component

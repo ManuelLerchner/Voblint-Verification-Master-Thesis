@@ -234,141 +234,69 @@ text \<open>
   discharges its entry coverage from it.
 \<close>
 
+lemma entered_st:
+  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+    and s: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
+  shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+           \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
+  unfolding enter_lift_commute
+  by (rule transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty s])
+     (simp add: call_enter_CallEdge sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
+
 theorem entry_pairs_cover_st:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
     and sin: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
   shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>reader d'\<rbrakk>\<^sub>\<bottom>) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (enter_st ci) d)]"
-proof -
-  have entered: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-      \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
-    unfolding enter_lift_commute
-  proof (rule transfer_lift_sound_mem
-        [where h = "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
-    show "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-        call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
-      by (simp add: call_enter_CallEdge
-          sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
-    show "\<And>\<sigma>. is_empty_state \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-      by (rule is_empty_state_gamma_state_empty)
-    show "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>" by (rule sin)
-  qed
-  show ?thesis
-    by (rule entry_pairs_coverI
-          [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
-       (simp_all add: sin entered)
-qed
+  by (rule entry_pairs_coverI
+        [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
+     (simp_all add: sin entered_st[OF tf_sound sin])
 
 text \<open>
-  The executable carrier as a local-only specification, read back through
-  \<open>reader\<close>. Stated on its own so that constructions over local specifications,
-  such as a product of cooperating analyses, can take the executable carrier as
-  a component; the contract below is its one-line consequence.
+  The executable analysis as a component, read back through \<open>reader\<close>. The
+  contract below is its one-line consequence.
 \<close>
 
-theorem sound_local_spec_st:
+theorem exec_component_sound:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_dg_spec
-     (\<lambda>_ _. \<top>)
-     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
-     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
-     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
-     (\<lambda>_ b pol. transfer_lift empty_pred
-        (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
-     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
-     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
-     (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
-     (\<lambda>_ ev. transfer_lift empty_pred
-        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
-     (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
-        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
-     (\<lambda>ci dcM de. transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
-        dcM de)
-     (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) \<G>"
+  shows "mcp_component_sound \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) (exec_component \<G> empty_pred tf_st enter_st)"
 proof -
-  show ?thesis
-  proof (unfold_locales, goal_cases)
-    case 1
-    then show ?case
-      by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
+  have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
+    for a d
+  proof (cases "normalized_lift empty_pred d")
+    case True
+    show ?thesis
+      unfolding step_lift_commute[OF True]
+      by (rule transfer_lift_sound_collect
+            [OF sound_transfer_for.step_sound_for[OF tf_sound]
+                edge_collect_empty_set is_empty_state_gamma_state_empty])
   next
-    case 5
-    show ?case by simp
-  next
-    case (2 a d A)
-    have step: "edge_collect a (\<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)
-                  \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
-    proof (cases "normalized_lift empty_pred d")
-      case True
-      then have eq: "reader (transfer_lift empty_pred (tf_st a) d)
-                       = transfer_lift is_empty_state (local_spec_step sk asn sp br bd rt ev a) (reader d)"
-        by (rule step_lift_commute)
-      show ?thesis
-        unfolding eq
-        by (rule transfer_lift_sound_collect
-              [OF sound_transfer_for.step_sound_for[OF tf_sound]
-                  edge_collect_empty_set is_empty_state_gamma_state_empty])
-    next
-      case False
-      then obtain s where "d = Lifted s" "empty_pred s"
-        by (cases d) simp_all
-      then have "\<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> = {}"
-        by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
-      then show ?thesis
-        by (simp)
-    qed
-    then show ?case
-      using edge_collect_mono[OF Int_lower1]
-      by (fastforce simp: local_spec_step_transfer_lift_tf_st)
-  next
-    case (3 s d ci)
-    have entered: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-        \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
-      unfolding enter_lift_commute
-    proof (rule transfer_lift_sound_mem
-          [where h = "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"])
-      show "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-          call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-            \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
-        by (simp add: call_enter_CallEdge
-            sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
-      show "\<And>\<sigma>. is_empty_state \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-        by (rule is_empty_state_gamma_state_empty)
-      show "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>" by (rule 3)
-    qed
-    show ?case
-      by (rule entry_pairs_coverI
-            [where cont = d and entry = "transfer_lift empty_pred (enter_st ci) d"])
-         (simp_all add: 3 entered)
-  next
-    case (4 s dc t de ci)
-    show ?case
-      unfolding combine_env_st_lifted_def[symmetric] combine_lift_commute
-    proof (rule transfer_lift2_sound_mem[where h = "combine_collect \<G> (ci_dst ci)"])
-      show "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow>
-          combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) \<sigma>1 \<sigma>2\<rbrakk>"
-        by (rule combine_collect_sound)
-      show "\<And>\<sigma>. is_empty_state \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-        by (rule is_empty_state_gamma_state_empty)
-      show "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" by (rule 4(1))
-      show "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" by (rule 4(2))
-    qed
+    case False
+    then obtain s where "d = Lifted s" "empty_pred s" by (cases d) simp_all
+    then show ?thesis by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
   qed
+  have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>reader (transfer_lift2 empty_pred
+        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+           (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+        (combine_env_st_lifted dc de) de)\<rbrakk>\<^sub>\<bottom>"
+    if "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci
+    unfolding combine_lift_commute
+    by (rule
+      transfer_lift2_sound_mem[OF combine_collect_sound is_empty_state_gamma_state_empty that])
+  have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
+    by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
+  show ?thesis
+    unfolding mcp_component_sound_def
+    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step] entered_st[OF tf_sound] comb
+    by (auto simp: exec_component_def)
 qed
 
 theorem analysis_contract_st:
   assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
   shows "analysis_contract spec_st gamma_exec \<G>"
-proof -
-  have geq: "gamma_exec = (\<lambda>d g. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)"
-    by (simp add: fun_eq_iff gamma_exec_def)
-  show ?thesis
-    unfolding local_state_dg_spec_st_for_lifted_def geq
-    by (rule sound_local_dg_spec.local_spec_contract[OF sound_local_spec_st[OF tf_sound]])
-qed
+  unfolding local_state_dg_spec_st_for_lifted_def gamma_exec_def[abs_def]
+  by (rule component_contract[OF exec_component_sound[OF tf_sound]])
 
 subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
 
@@ -411,65 +339,5 @@ lemma entry_exec_route_gen_commute:
 
 end
 
-section \<open>The executable analysis as one component\<close>
-
-text \<open>
-  An executable analysis is the component its local specification is: the
-  specification's own operations through the identity lens. Its specification
-  as a component is exactly \<^const>\<open>local_state_dg_spec_st_for_lifted\<close>, so a
-  pipeline that runs components generates the same equations for it as before.
-\<close>
-
-definition exec_component ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> 'a exec_dg_st lifted mcp_component" where
-  "exec_component \<G> empty_pred tf_st enter_st = local_component
-     (\<lambda>_ _. \<top>)
-     (\<lambda>_. transfer_lift empty_pred (tf_st EA_Nop))
-     (\<lambda>_ x e. transfer_lift empty_pred (tf_st (EA_Assign x e)))
-     (\<lambda>_ sc x. transfer_lift empty_pred (tf_st (EA_Special sc x)))
-     (\<lambda>_ b pol. transfer_lift empty_pred
-        (tf_st (if pol then EA_Assume b else EA_AssumeNot b)))
-     (\<lambda>_ p. transfer_lift empty_pred (tf_st (EA_Body p)))
-     (\<lambda>_ e p. transfer_lift empty_pred (tf_st (EA_Ret e p)))
-     (\<lambda>ci d. [(d, transfer_lift empty_pred (enter_st ci) d)])
-     (\<lambda>_ ev. transfer_lift empty_pred
-        (tf_st (case ev of Check_Event l bc \<Rightarrow> EA_Check l bc)))
-     (\<lambda>ci dc de. case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
-        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
-     (\<lambda>ci dcM de. transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
-        dcM de)"
-
-lemma component_spec_exec_component [code_unfold]:
-  "component_spec (exec_component \<G> empty_pred tf_st enter_st)
-   = local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st"
-  unfolding exec_component_def component_spec_local_component
-  by (simp add: local_state_dg_spec_st_for_lifted_def)
-
-lemma mc_en_exec_component [simp]:
-  "mc_enter (exec_component \<G> empty_pred tf_st enter_st) A ci (d, d)
-   = [(d, transfer_lift empty_pred (enter_st ci) d)]"
-  by (simp add: exec_component_def lens_component_def)
-
-lemma mc_step_exec_component [simp]:
-  "mc_step (exec_component \<G> empty_pred tf_st enter_st) A a d
-   = transfer_lift empty_pred (tf_st a) d"
-  by (simp add: exec_component_def lens_component_def local_spec_step_transfer_lift_tf_st)
-
-context dg_domain_exec
-begin
-
-theorem exec_component_sound:
-  assumes "sound_transfer_for \<G> sk asn sp br bd rt en ev"
-  shows "mcp_component_sound \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>)
-           (exec_component \<G> empty_pred tf_st enter_st)"
-  unfolding exec_component_def
-  by (rule local_component_sound[OF sound_local_spec_st[OF assms]])
-
-end
 
 end

@@ -47,6 +47,6 @@ lemma field_frame:
 
 lemma single_entry_exec_component:
   "single_entry (exec_component \<G> empty_pred tf_st enter_st)"
-  by (simp add: single_entry_def exec_component_def lens_component_def)
+  by (simp add: single_entry_def exec_component_def)
 
 end

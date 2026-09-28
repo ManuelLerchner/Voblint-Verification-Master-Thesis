@@ -108,69 +108,50 @@ qed
 
 subsection \<open>The component\<close>
 
+text \<open>
+  The order analysis as a component of the combined state, over the variables
+  \<open>ys\<close> it relates. It asks at assignments and answers comparisons. Its entry
+  answers one alternative: the callee starts from the empty relation, and the
+  return keeps nothing, which is sound and imprecise by design.
+\<close>
+
 definition rel_ret :: "exp option \<Rightarrow> relc \<Rightarrow> relc" where
   "rel_ret eo d = (case eo of None \<Rightarrow> d | Some a \<Rightarrow> forget_relc ret_var d)"
 
-theorem rel_local_component:
-  "sound_local_dg_spec rel_qry
-     (\<lambda>A d. d)
-     (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
-     (\<lambda>A sc x d. forget_relc x d)
-     (\<lambda>A b pol d. branch_step_rel b pol d)
-     (\<lambda>A p d. d)
-     (\<lambda>A eo p d. rel_ret eo d)
-     (\<lambda>ci d. [(d, top_relc)])
-     (\<lambda>A ev d. d)
-     (\<lambda>ci dc de. dc)
-     (\<lambda>ci d de. top_relc)
-     gamma_rel \<G>"
-proof (unfold_locales, goal_cases)
-  case (1 d d')
-  then show ?case by (rule gamma_rel_mono)
-next
-  case (2 a d ask)
-  show ?case
-  proof (cases a)
-    case (EA_Assign x e)
-    then show ?thesis
-      by (auto intro!: rel_learn_sound)
-  next
-    case (EA_Special sc x)
-    then show ?thesis by (cases sc) auto
-  next
-    case (EA_Ret eo p)
-    then show ?thesis by (cases eo) (auto simp: rel_ret_def)
-  qed (auto simp: branch_step_rel_def)
-next
-  case (3 s d ci)
-  then show ?case by (auto simp: entry_pairs_cover_def)
-next
-  case (4 s dc t de ci)
-  then show ?case by simp
-next
-  case (5 s d q)
-  then show ?case by (rule rel_qry_sound)
-qed
-
-subsection \<open>The component on the combined state\<close>
-
-text \<open>
-  The same operations as a component of the combined state, over the variables
-  \<open>ys\<close> it relates. It asks at assignments and answers comparisons; its entry
-  answers one alternative.
-\<close>
-
 definition order_component :: "vname list \<Rightarrow> relc mcp_component" where
-  "order_component ys = local_component rel_qry
-     (\<lambda>A d. d) (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
-     (\<lambda>A sc x d. forget_relc x d) (\<lambda>A b pol d. branch_step_rel b pol d)
-     (\<lambda>A p d. d) (\<lambda>A eo p d. rel_ret eo d) (\<lambda>ci d. [(d, top_relc)])
-     (\<lambda>A ev d. d) (\<lambda>ci dc de. dc) (\<lambda>ci d de. top_relc)"
+  "order_component ys = \<lparr>
+     mc_query = (\<lambda>A. rel_qry),
+     mc_skip = (\<lambda>A d. d),
+     mc_assign = (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)),
+     mc_special = (\<lambda>A sc x d. forget_relc x d),
+     mc_branch = (\<lambda>A b pol d. branch_step_rel b pol d),
+     mc_body = (\<lambda>A p d. d),
+     mc_return = (\<lambda>A eo p d. rel_ret eo d),
+     mc_event = (\<lambda>A ev d. d),
+     mc_enter = (\<lambda>A ci p. [(fst p, top_relc)]),
+     mc_combine_env = (\<lambda>A B ci dc de. dc),
+     mc_combine_assign = (\<lambda>B ci d de. top_relc) \<rparr>"
 
 theorem order_component_sound: "mcp_component_sound \<G> gamma_rel (order_component ys)"
-  unfolding order_component_def by (rule local_component_sound[OF rel_local_component])
+proof -
+  have step: "edge_collect a (gamma_rel d \<inter> Collect (eval_query.oracle_holds ask))
+                \<subseteq> gamma_rel (mc_step (order_component ys) ask a d)" for a d ask
+  proof (cases a)
+    case (EA_Assign x e)
+    then show ?thesis by (auto simp: order_component_def intro!: rel_learn_sound)
+  next
+    case (EA_Special sc x)
+    then show ?thesis by (cases sc) (auto simp: order_component_def)
+  next
+    case (EA_Ret eo p)
+    then show ?thesis by (cases eo) (auto simp: order_component_def rel_ret_def)
+  qed (auto simp: order_component_def branch_step_rel_def)
+  show ?thesis
+    unfolding mcp_component_sound_def
+    using gamma_rel_mono step rel_qry_sound by (auto simp: order_component_def)
+qed
 
 lemma single_entry_order_component: "single_entry (order_component ys)"
-  by (simp add: single_entry_def order_component_def lens_component_def)
+  by (simp add: single_entry_def order_component_def)
 
 end
