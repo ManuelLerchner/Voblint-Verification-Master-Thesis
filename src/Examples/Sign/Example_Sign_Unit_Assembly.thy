@@ -37,7 +37,7 @@ text \<open>
 \<close>
 
 lemma sign_assembly_demo_report:
-  "set (sign_rule.report Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog)
+  "set (sign_rule.report Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog ())
      = {(Statement 4, Less (N 0) (V (STR ''Gx'')), Check_Proved)}"
   unfolding sign_rule.report_def by eval
 
@@ -48,7 +48,7 @@ text \<open>
 
 lemma sign_assembly_demo_report_with_state_verdicts:
   "map (\<lambda>(v, c, r, unreachable, _). (v, c, r, unreachable))
-     (sign_rule.report_with_state Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog)
+     (sign_rule.report_with_state Globals_Join sign_assembly_demo_gs sign_assembly_demo_prog ())
      = [(Statement 4, Less (N 0) (V (STR ''Gx'')), Check_Proved, False)]"
   unfolding sign_rule.report_with_state_def by eval
 

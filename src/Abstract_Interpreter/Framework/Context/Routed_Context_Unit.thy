@@ -12,10 +12,11 @@ text \<open>
   the abstract state. \<open>route_unit\<close> is that routing function; nothing else
   about \<^locale>\<open>routed_context_base_hetero\<close> changes.
 
-  The context-insensitive analysis is the routed analysis instantiated at this routing
-  function (\<open>unit_dg_analysis\<close>); nothing here is a second analysis. What this theory
-  adds is the collapse at the end: at the unit context the activation-indexed collecting
-  semantics is \<^const>\<open>ltr_collect\<close>.
+  The context-insensitive analysis is the routed analysis registered at this routing
+  function, exactly as the call-string and entry-state analyses are registered at
+  theirs; nothing here is a second analysis. What this theory adds is the collapse at
+  the end: at the unit context the activation-indexed collecting semantics is
+  \<^const>\<open>ltr_collect\<close>.
 \<close>
 
 subsection \<open>Unit routing\<close>

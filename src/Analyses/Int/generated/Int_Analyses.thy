@@ -4,7 +4,6 @@ theory Int_Analyses
     Int_Classify
     Int_Transfer
     Int_Exec
-    "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
@@ -23,7 +22,7 @@ text \<open>
 
   Int runs through the shared D/G pipeline at the unit context. The CLI runs it as a
   field of the combined state of \<open>MCP_Analyses\<close>, whose component and
-  soundness this unit registration supplies. Each registration leaves the rule that
+  soundness the unit registration supplies. Each registration leaves the rule that
   merges a value side-effected into a global as a parameter \<open>r\<close>. The
   equation system, the solve, the result table and every soundness endpoint come from
   the interpreted locale; this theory only names the domain's own implementation and
@@ -32,18 +31,19 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation int_rule: unit_dg_analysis
+global_interpretation int_rule: routed_dg_analysis_exec
     "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
        TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
     bot int_classify_check
     skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
-    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "TD_side_rule_Interp_solve_c r"
+    "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. route_unit"
+    "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,
-       goal_cases)
+proof (rule routed_dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

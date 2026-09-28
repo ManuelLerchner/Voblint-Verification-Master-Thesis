@@ -4,7 +4,6 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec
-    "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
@@ -24,7 +23,7 @@ text \<open>
   Interval runs through the shared D/G pipeline at the unit context, keyed by the
   abstract values a callee's formals hold on entry, and keyed by a bounded call
   string. The CLI runs it as a field of the combined state of
-  \<open>MCP_Analyses\<close>, whose component and soundness this unit registration
+  \<open>MCP_Analyses\<close>, whose component and soundness the unit registration
   supplies. Each registration leaves the rule that merges a value side-effected into a
   global as a parameter \<open>r\<close>, and the call-string one also its bound
   \<open>k\<close>. The equation system, the solve, the result table and every
@@ -34,17 +33,18 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation interval_rule: unit_dg_analysis
+global_interpretation interval_rule: routed_dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
        TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    enter_ivl_ci_for event_ivl "TD_side_rule_Interp_solve_c r"
+    enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
+    "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,
-       goal_cases)
+proof (rule routed_dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

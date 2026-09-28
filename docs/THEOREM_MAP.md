@@ -19,7 +19,7 @@ The *context* axis is not, and the closing note says where it stops.
 | Context-indexed D/G post-solutions cover every admitted activation | [`Voblint_Framework.Routed_Context:routed_context_base_hetero.activation_collect_dg_sound`](../src/Abstract_Interpreter/Framework/Context/Routed_Context.thy) | Discharges the five activation obligations from one routed D/G `part_post_solution`. |
 | A returning executable solve yields a post-solution | [`Voblint_Solver.TD_Solver_Bridge:TD_side_upd_rule.solve_dom_of_solve_c`](../src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy), [`TD.TD_side_upd_rule:TD_side_upd_rule.partial_post_solution`](../vendor/td-verification/TD_side_upd_rule.thy) | `solve_dom_of_solve_c` turns `solve_c x ≠ None` into `solve_dom x`; the vendored `partial_post_solution` turns `solve_dom x` into `part_post_solution` for `solve x`. Every registration, per domain and combined, discharges the two solver assumptions of `routed_dg_analysis` with exactly these facts (`TD_side_rule_Interp.*`), and `run_voblint`'s termination premise is `solve_dom`. The composite `TD_side_upd_rule.part_post_solution_of_solve_c` is cited only by two Sign examples. |
 | A terminating routed solve bounds every activation at a functional route | [`Voblint_Result.Routed_Live_Keys:routed_dg_analysis.fun_route_activation_collect_sound_of_terminates`](../src/Analyses/Shared/Result/Routed_Live_Keys.thy) | Combines solver correctness, executable readback, and routed D/G soundness without exposing transport details to clients; coverage is derived from termination, not assumed. |
-| The computed analysis result bounds every modeled source run | [`Voblint_Result.Unit_DG_Analysis:unit_dg_analysis.result_node_sound_of_terminates`](../src/Analyses/Shared/Result/Unit_DG_Analysis.thy), [`Voblint_Result.Unit_DG_Analysis:unit_dg_analysis.source_sound`](../src/Analyses/Shared/Result/Unit_DG_Analysis.thy) | The context-insensitive endpoints, stated once over the published `state_at`; every domain's unit route is an instance. |
+| The computed analysis result bounds every modeled source run | [`Voblint_Result.Routed_Live_Keys:routed_dg_analysis.fun_route_result_node_sound`](../src/Analyses/Shared/Result/Routed_Live_Keys.thy), [`Voblint_Result.Routed_Live_Keys:routed_dg_analysis.fun_route_source_sound`](../src/Analyses/Shared/Result/Routed_Live_Keys.thy) | The endpoints for a route that is a function of the call site, stated once over the published `state_at` at a context; every domain's unit registration is an instance, at the one context `()`. |
 | A routed solve bounds every activation its context policy admits | [`Voblint_Result.Routed_DG_Analysis:routed_dg_analysis.entry_state_activation_collect_sound`](../src/Analyses/Shared/Result/Routed_DG_Analysis.thy), [`Voblint_Result.Routed_DG_Analysis:routed_dg_analysis.fun_route_activation_collect_sound`](../src/Analyses/Shared/Result/Routed_DG_Analysis.thy) | The entry-state and call-string endpoints every domain re-exports. Each bounds `activation_collect` at one context, against the solved reader; neither mentions `ltr_collect` or a source run. |
 | Every valid trace carries a context the policy admits | [`Voblint_Result.Routed_DG_Analysis:routed_dg_analysis.entry_state_has_context`](../src/Analyses/Shared/Result/Routed_DG_Analysis.thy) | Supplies the witness a caller needs before a per-context bound says anything about a given run. |
 | The solved reader and the published result table describe the same stores | [`Voblint_Result.Routed_DG_Analysis:routed_dg_analysis.gamma_reader_eq_lookup`](../src/Analyses/Shared/Result/Routed_DG_Analysis.thy) | Rewrites a reader-shaped bound into `lookup_context` of the table a caller reads, with no coverage premise. |
@@ -40,9 +40,11 @@ chain.
 
 The two axes run equally far. Context-free is complete for all five domains at
 every global update rule, through each domain's generated `<d>_rule`
-registration of `unit_dg_analysis`: `report_proved_sound`/`report_refuted_sound`
-conclude over `ltr_collect`, and `source_sound`/`completed_run_sound` place a
-source run's store in the published state `state_at gs p v`, the table's entry
+registration of `routed_dg_analysis_exec` at the unit route:
+`fun_route_report_proved_sound`/`fun_route_report_refuted_sound` conclude over
+the activation-indexed collector, which `activation_collect_unit_eq_ltr_collect`
+identifies with `ltr_collect` at `()`, and `fun_route_source_sound` places a
+source run's store in the published state `state_at gs p () v`, the table's entry
 at `lookup_context ... v ()`. Under `Ctx_EntryState` and
 `Ctx_CallString` the same reaches a source run through
 `sound_table_of_activation` and `sound_table.source_sound`, which together close

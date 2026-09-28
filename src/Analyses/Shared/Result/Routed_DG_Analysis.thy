@@ -101,18 +101,6 @@ lemma exec_formals_route_commute:
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
         exec_formals_route_def fun_of_resolved_st_q_for_def)
 
-text \<open>
-  Reading a lifted abstract state as a plain one and concretizing agrees with
-  concretizing the lifted state directly, because the bottom store describes
-  nothing. Every result-table reading takes the first route and every routed
-  endpoint the second, so this is the equation between them.
-\<close>
-
-lemma gamma_state_case_eq_point:
-  fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "\<lbrakk>case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
-  by (cases x) (simp_all)
-
 lemma gamma_point_canonicalize:
   fixes x :: "'a::numeric_domain abs_state lifted"
   shows "\<lbrakk>canonicalize_lift is_empty_state x\<rbrakk>\<^sub>\<bottom> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
@@ -311,6 +299,27 @@ lemma verdict_report_proj:
   unfolding verdict_report_def check_projection_def
   by (rule classify_checks_verdicts_proj [symmetric])
 
+text \<open>
+  The same table read at one context: the state published there, and the check
+  report off those states. These are \<^locale>\<open>analysis_surface\<close>'s readings of this
+  pipeline's result, so every policy publishes the same surface; a
+  context-insensitive run reads it at \<open>()\<close>.
+\<close>
+
+definition state_at :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'v" where
+  "state_at \<G> = analysis_surface.state_at (result \<G>) bot_state"
+
+definition report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'c \<Rightarrow> check_report_entry list" where
+  "report \<G> = analysis_surface.report (result \<G>) bot_state classify"
+
+definition report_with_state :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+    \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'v) list" where
+  "report_with_state \<G> = analysis_surface.report_with_state (result \<G>) bot_state classify"
+
+lemma state_at_unfold:
+  "state_at \<G> p ctx v
+     = (case lookup_context (result \<G> p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
+  by (simp add: state_at_def analysis_surface.state_at_def)
 end
 
 subsection \<open>Executability of the derived objects\<close>
@@ -355,7 +364,9 @@ declare routed_dg_pipeline.live_succ_def [code_unfold]
 declare routed_dg_pipeline.result_with_globals_def [code]
 declare routed_dg_pipeline.check_projection_def [code]
 declare routed_dg_pipeline.verdict_report_def [code]
-
+declare routed_dg_pipeline.state_at_def [code]
+declare routed_dg_pipeline.report_def [code]
+declare routed_dg_pipeline.report_with_state_def [code]
 
 subsection \<open>The contracts\<close>
 

@@ -4,7 +4,6 @@ theory Parity_Analyses
     Parity_Classify
     Parity_Transfer
     Parity_Exec
-    "Voblint_Result.Unit_DG_Analysis"
     "Voblint_Result.Routed_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
@@ -23,7 +22,7 @@ text \<open>
 
   Parity runs through the shared D/G pipeline at the unit context. The CLI runs it as
   a field of the combined state of \<open>MCP_Analyses\<close>, whose component and
-  soundness this unit registration supplies. Each registration leaves the rule that
+  soundness the unit registration supplies. Each registration leaves the rule that
   merges a value side-effected into a global as a parameter \<open>r\<close>. The
   equation system, the solve, the result table and every soundness endpoint come from
   the interpreted locale; this theory only names the domain's own implementation and
@@ -32,17 +31,18 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation parity_rule: unit_dg_analysis
+global_interpretation parity_rule: routed_dg_analysis_exec
     parity_tf_st_for parity_enter_st_for cinit_parity_st
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
        TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) r"
     bot parity_classify_check
     skip_parity assign_parity special_parity branch_parity body_parity return_parity
-    enter_parity_ci_for event_parity "TD_side_rule_Interp_solve_c r"
+    enter_parity_ci_for event_parity "\<lambda>_. route_unit"
+    "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,
-       goal_cases)
+proof (rule routed_dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule parity_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

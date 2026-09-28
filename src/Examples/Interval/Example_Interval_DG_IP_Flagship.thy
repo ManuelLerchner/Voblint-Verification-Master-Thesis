@@ -108,35 +108,26 @@ lemma twice_terminates: "interval_sj_terminates twice_gs twice_program"
   using TD_side_seed_join_warrowing_Interp.solve_dom_of_solve_c[OF twice_terminates_c]
   by (simp add: twice_eqs_def twice_cfg_prog_cfg)
 
-text \<open>
-  Coverage is read off the solved key set: a routed callee entry is solved only once
-  a caller publishes its seed, so which nodes this run visited --- here both call
-  sites, the shared callee entry, and both continuations --- is decided by
-  \<^const>\<open>vars_cover_exec\<close> over the two edge enumerations.
-\<close>
-
-lemma twice_vars_cover:
-  "vars_cover (prog_cfg twice_program) (interval_sj_vars twice_gs twice_program)"
-  by (rule interval_seed_join.vars_cover_of_exec_prog) eval
-
 subsection \<open>Inspecting the certified result\<close>
 
 lemma twice_p_at_entry:
-  "interval_sj_state_at twice_gs twice_program (FunctionEntry (STR ''twice'')) (STR ''p'')
+  "interval_sj_state_at twice_gs twice_program () (FunctionEntry (STR ''twice'')) (STR ''p'')
      = Ivl (Fin 3) (Fin 10)"
   by eval
 
 lemma twice_ret_at_exit:
-  "interval_sj_state_at twice_gs twice_program (FunctionResult (STR ''twice'')) (STR ''#ret'')
-     = Ivl (Fin 6) (Fin 20)"
+  "interval_sj_state_at twice_gs twice_program () (FunctionResult (STR ''twice''))
+     (STR ''#ret'') = Ivl (Fin 6) (Fin 20)"
   by eval
 
 lemma twice_x_computed:
-  "interval_sj_state_at twice_gs twice_program (Statement 3) (STR ''x'') = Ivl (Fin 6) (Fin 20)"
+  "interval_sj_state_at twice_gs twice_program () (Statement 3) (STR ''x'')
+     = Ivl (Fin 6) (Fin 20)"
   by eval
 
 lemma twice_y_computed:
-  "interval_sj_state_at twice_gs twice_program (Statement 4) (STR ''y'') = Ivl (Fin 6) (Fin 20)"
+  "interval_sj_state_at twice_gs twice_program () (Statement 4) (STR ''y'')
+     = Ivl (Fin 6) (Fin 20)"
   by eval
 
 subsection \<open>Source-level soundness\<close>
@@ -154,7 +145,7 @@ theorem twice_source_run_sound:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s, []) \<rightarrow>\<^sub>p\<^sup>* src'"
       and init: "s \<in> cinit_stores twice_gs"
   shows "\<exists>v t stk. twice_pi, twice_cfg \<turnstile> src' \<approx> (v, t, stk)
-                   \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program v\<rbrakk>"
+                   \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program () v\<rbrakk>"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have run':
@@ -162,10 +153,11 @@ proof -
     using run[unfolded src'] by (simp flip: twice_pi_def)
   have wf: "wf_compile_input twice_gs (prog_table twice_program) (prog_procs twice_program)"
     using twice_wf by (simp add: twice_pi_def twice_procs_def)
+  have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   have cert:
     "\<exists>v stk. twice_pi, twice_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-       \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program v\<rbrakk>"
-    using interval_seed_join.source_sound[OF twice_terminates twice_vars_cover wf init run']
+       \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program () v\<rbrakk>"
+    using interval_seed_join.fun_route_source_sound[OF unit_route wf twice_terminates init run']
     by (simp add: twice_cfg_prog_cfg twice_pi_def)
   show ?thesis using cert src' by blast
 qed

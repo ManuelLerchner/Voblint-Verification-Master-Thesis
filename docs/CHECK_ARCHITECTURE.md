@@ -68,9 +68,9 @@ frontend and `sound_numeric_queries` instance below that line.
 `Sign_Classify.thy`, `Interval_Classify.thy`, `Parity_Classify.thy`,
 `Congruence_Classify.thy` and `Int_Classify.thy` are thin instantiations of the
 generic layers, not separate implementations of the pipeline. The per-node state
-they classify is the registration's `analysis_result` table, which
-`unit_dg_analysis` reads back through the generic `analysis_surface` locale
-(`state_at`, `report`).
+they classify is the registration's `analysis_result` table, which every
+registration reads back at a context through the generic `analysis_surface`
+locale (`state_at`, `report`).
 
 ## Layer responsibilities
 
@@ -160,30 +160,32 @@ Each domain routes its own transfer functions and executable mirror through
 the shared D/G generator, solves with the vendored `TD_side` solver, and
 exposes the result as an `analysis_result` table indexed by `(node, context)`.
 
-`Routed_DG_Analysis.thy` performs that assembly once, and `Unit_DG_Analysis.thy`
-instantiates it at the unit context. `routed_dg_pipeline` is the construction
-half — equation system, solve, covered keys, reader, result table, globals,
-report — and carries no correctness assumptions; `routed_dg_analysis` adds the
-domain and solver contracts, and `unit_dg_analysis` derives the published
-context-free soundness theorems. A domain instantiates it by naming its
+`Routed_DG_Analysis.thy` performs that assembly once, for every context policy.
+`routed_dg_pipeline` is the construction half — equation system, solve,
+covered keys, reader, result table, globals, the published `state_at` and
+`report` at a context — and carries no correctness assumptions;
+`routed_dg_analysis` adds the domain and solver contracts, and
+`Routed_Live_Keys.thy` derives the published soundness theorems from
+termination. A domain instantiates it by naming its
 executable transfer, its callee entry, the state a run starts from, the solver,
 the check classifier and the facts that make them sound. The generated
-`Sign_Analyses.thy` holds `global_interpretation sign_rule: unit_dg_analysis ...
-for r`, taking the global update rule as a parameter; a caller reads
-`sign_rule.result`, `sign_rule.state_at` and `sign_rule.report` at a rule. Every
+`Sign_Analyses.thy` holds `global_interpretation sign_rule:
+routed_dg_analysis_exec ... for r` at the unit route, taking the global update
+rule as a parameter; a caller reads `sign_rule.result`, `sign_rule.state_at` and
+`sign_rule.report` at a rule and the context `()`. Every
 domain, Int included, carries the same unit registration; Interval also carries
 `interval_es_rule` and `interval_cs_rule` for the two contextual policies, which
 its examples use. `run_voblint` reads none of these: it runs the combined state
 (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` in `MCP_Analyses.thy`), which
 classifies checks as described below.
 
-The node-soundness bridge is generic and proved once inside
-`unit_dg_analysis`. `result_node_sound_closure` composes
-`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`)
-with the unit-context collapse `activation_collect_unit_eq_ltr_collect`
-(`Routed_Context_Unit.thy`), so it connects the solved table back to
-`ltr_collect` at *any* covered node — not only the solver's own query seed
-(`cfg_exit`); `result_node_sound` is its corollary under `vars_cover`. A
+The node-soundness bridge is generic and proved once in `Routed_Live_Keys.thy`
+for every route that is a function of the call site, the unit route among them.
+`fun_route_result_node_sound` bounds `ltr_collect` at *any* node by the union of
+the states published there over the contexts — not only at the solver's own
+query seed (`cfg_exit`); at the unit route the union has the one member `()`, and
+`activation_collect_unit_eq_ltr_collect` (`Routed_Context_Unit.thy`) turns the
+per-context report endpoints into statements about `ltr_collect`. A
 domain inherits both from its interpretation rather than re-exporting the
 adapter lemma under a spine prefix of its own. That is what lets a check be
 discharged at its own CFG node without forwarding stores to the procedure

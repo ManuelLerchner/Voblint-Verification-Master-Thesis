@@ -34,8 +34,8 @@ Parity_Domain      arithmetic, comparisons, and the expression evaluator
 from `manifests/analyses.yaml`.
 
 `Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
-global update rule `r` as a parameter: `unit_dg_analysis`
-(`Shared/Result/Unit_DG_Analysis.thy`) at the unit context. It discharges the
+global update rule `r` as a parameter: `routed_dg_analysis_exec`
+(`Shared/Result/Routed_DG_Analysis.thy`) at the unit route. It discharges the
 same twelve obligations from Parity's transfer contract, two commutation laws,
 the solver contract, the classifier contract and the initial-state contract,
 and gets back the equation system, the solve, the reader, the result table,

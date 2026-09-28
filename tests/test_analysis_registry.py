@@ -77,7 +77,7 @@ def test_every_domain_registers_its_unit_route(generated, domain):
     found = [interpretation_params(text, name) for text in generated.values()]
     found = [f for f in found if f]
     assert len(found) == 1, f"{name}: {len(found)} registrations"
-    assert found[0] == ("unit_dg_analysis", ["r"])
+    assert found[0] == ("routed_dg_analysis_exec", ["r"])
 
 
 @pytest.mark.parametrize("name,locale,params", MCP_ROUTES)

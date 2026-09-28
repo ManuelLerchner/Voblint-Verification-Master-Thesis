@@ -117,9 +117,9 @@ classification (`Numeric_Queries.thy`).
 
 No domain writes its configuration out by hand.
 `manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's `<Domain>_Analyses` theory: one rule-parametric
-registration of `unit_dg_analysis` and two of `routed_dg_analysis`
-(`Voblint_Result`). The equation system, solve, reader, result table, report and
+generates each domain's `<Domain>_Analyses` theory: rule-parametric
+registrations of `routed_dg_analysis_exec` (`Voblint_Result`), one per context
+policy the domain lists. The equation system, solve, reader, result table, report and
 soundness endpoints come from those locales, and the generated theory only names
 a domain's own facts.
 

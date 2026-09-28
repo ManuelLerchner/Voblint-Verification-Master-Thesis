@@ -15,7 +15,7 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case, the only context-insensitive pipeline there is |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `Routed_Live_Keys` states its endpoints from termination alone |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
@@ -38,7 +38,8 @@ remain in `Sign_Numeric_Queries`;
 `Routing/Compiled_Routed_Equations` assembles the common executable equation
 system from the chosen keys, route, specification, graph, and initial state.
 `Result/DG_Result_Construction` turns the solved system into a published table
-and `Result/Analysis_Surface` is what `unit_dg_analysis` reads it back through.
+and `Result/Analysis_Surface` is what every registration reads it back through,
+at a given context.
 
 Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what the
 CLI's combined registrations interpret at the routed policies: `mcp_cs_rule`
@@ -47,10 +48,9 @@ at the call-string routing pair and `mcp_es_rule` at the entry-state one
 locale owns the equation system, the solve, the covered keys, the reader, the
 result table, the contextual report and the activation-indexed soundness
 endpoints, so a policy costs an interpretation rather than a pipeline. The
-context-insensitive route stays local to a domain and is the same shape one
-layer over: `sign_rule` is a `global_interpretation` of
-`Result/Unit_DG_Analysis`'s `unit_dg_analysis` in Sign's own generated theory,
-`Sign_Analyses`. Every registration takes the global update rule as a
+context-insensitive route is the same locale at the unit route, local to a
+domain: `sign_rule` is a `global_interpretation` of `routed_dg_analysis_exec`
+in Sign's own generated theory, `Sign_Analyses`. Every registration takes the global update rule as a
 parameter, and the combined ones take the activation list besides. Sign
 contributes the lattice and the transfer functions. Every other piece of those
 sentences is from here.

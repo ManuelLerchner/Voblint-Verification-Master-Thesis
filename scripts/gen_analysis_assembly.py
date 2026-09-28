@@ -8,9 +8,9 @@ One output per domain, plus one for the combined state:
 
 A domain is registered once per context it lists (`contexts`, default `[unit]`),
 each registration taking the global update rule as a parameter, so one
-registration serves every solver discipline. The unit registration interprets
-`unit_dg_analysis`, the entry-state and call-string ones its parent
-`routed_dg_analysis_exec`. The combined state has one lifted field per domain,
+registration serves every solver discipline. Every registration interprets
+`routed_dg_analysis_exec`; the contexts differ only in their keys and route. The
+combined state has one lifted field per domain,
 in manifest order, and the per-domain cases the handwritten `MCP_Analyses`
 registers over.
 
@@ -46,7 +46,6 @@ ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 # Named explicitly rather than relied on transitively: an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
 COMMON_IMPORTS = [
-    '"Voblint_Result.Unit_DG_Analysis"',
     '"Voblint_Result.Routed_Live_Keys"',
     '"Voblint_Framework.Call_String_Context"',
     '"Voblint_Framework.Routed_Context"',
@@ -126,14 +125,9 @@ CONTEXTS = [
         "key": "unit",
         "suffix": "",
         "title": "the unit context",
-        "locale": "unit_dg_analysis",
-        "header": [
-            "proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,",
-            "       goal_cases)",
-        ],
         "gk": lambda vt: "(unit, unit) routed_gk",
-        "keys": None,
-        "route_abs": None,
+        "keys": '"Analysis_Global ()" Activation_Seed "\\<lambda>_. route_unit" "()"',
+        "route_abs": '"\\<lambda>_. route_unit"',
         "params": "r",
         "case4": ["  case (4 \\<G> u ctx d ca) show ?case by simp"],
     },
@@ -141,8 +135,6 @@ CONTEXTS = [
         "key": "entry-state",
         "suffix": "_es",
         "title": "the entry-state context",
-        "locale": "routed_dg_analysis_exec",
-        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: f"(unit, {vt} list) routed_gk",
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
@@ -157,8 +149,6 @@ CONTEXTS = [
         "key": "call-string",
         "suffix": "_cs",
         "title": "the call-string context",
-        "locale": "routed_dg_analysis_exec",
-        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: "call_string_gk",
         "keys": (
             "Call_String_Context.Global Call_String_Context.Seed"
@@ -330,30 +320,24 @@ def registration(dom, ctx):
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
     out = [
-        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: {ctx['locale']}",
+        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: routed_dg_analysis_exec",
         f"    {t['tf_st']} {t['enter_st']} {t['init_st']}",
+        f"    {ctx['keys']}",
     ]
-    if ctx["keys"]:
-        out.append(f"    {ctx['keys']}")
     out += [
         f'    "{INTERP}_solve r"',
         f'    "{INTERP}.solve_dom TYPE({ctx["gk"](vt)})',
         f'       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state) r"',
         f"    bot {t['classifier']}",
     ]
-    tail = [t["enter_ci"], t["event"]] + (
-        [ctx["route_abs"]] if ctx["route_abs"] else []
-    )
     groups = [
         [t[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
-        tail,
+        [t["enter_ci"], t["event"], ctx["route_abs"]],
         [f'"{INTERP}_solve_c r"'],
     ]
-    if not ctx["route_abs"]:
-        groups = [groups[0], tail + groups[2]]
     out += pack_operands(groups)
     out.append(f"  for {ctx['params']}")
-    out += ctx["header"]
+    out.append("proof (rule routed_dg_analysis_exec.intro, goal_cases)")
     out += [
         f"  case (1 \\<G>) show ?case by (rule {r['transfer_sound']})",
         "next",
@@ -414,7 +398,7 @@ def render(dom):
         + wrap_prose(
             f"{dom.name} runs through the shared D/G pipeline {listed}. The CLI runs it as"
             " a field of the combined state of \\<open>MCP_Analyses\\<close>,"
-            " whose component and soundness this unit registration supplies. Each"
+            " whose component and soundness the unit registration supplies. Each"
             " registration leaves the rule that merges a value side-effected into a"
             " global as a parameter \\<open>r\\<close>"
             + (

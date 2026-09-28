@@ -3226,3 +3226,16 @@ semantic_intersection
 numeric_ops
 Abstract_Numeric_Queries
 Numeric_Ops
+# --- The unit context is a routing policy like the others, not a locale of its
+# own: every registration interprets routed_dg_analysis_exec, and the surface and
+# endpoints take the context as an argument (2026-09-28) ---
+unit_dg_analysis
+Unit_DG_Analysis
+vars_cover_of_exec_prog
+result_node_sound_closure
+report_proved_sound_closure
+report_refuted_sound_closure
+source_sound_closure
+completed_run_sound_closure
+completed_run_sound
+gamma_state_case_eq_point

@@ -24,14 +24,15 @@ lists `entry-state` and `call-string`, which its examples read:
 
 | Registration | Locale | Context policy | Parameters |
 | --- | --- | --- | --- |
-| `<d>_rule` | `unit_dg_analysis` | unit | `r` |
-| `<d>_es_rule` | `routed_dg_analysis` | entry state | `r` |
-| `<d>_cs_rule` | `routed_dg_analysis` | call string | `k r` |
+| `<d>_rule` | `routed_dg_analysis_exec` | unit | `r` |
+| `<d>_es_rule` | `routed_dg_analysis_exec` | entry state | `r` |
+| `<d>_cs_rule` | `routed_dg_analysis_exec` | call string | `k r` |
 
 `r :: globals_rule` is the global update rule, so one registration serves every
 solver discipline; `k` is the call-string bound. None of them has a `defines`
 clause: a caller reads the locale's own constants and facts under the
-qualifier, as in `sign_rule.result Globals_Join gs p` or `sign_rule.source_sound`.
+qualifier, as in `sign_rule.result Globals_Join gs p` or
+`sign_rule.fun_route_source_sound`.
 
 Theory names, paths, imports, binders and the entire proof text are derived by
 convention, identically for every domain. Domain rationale -- why a lattice has
@@ -138,7 +139,7 @@ The tooling is about 970 lines -- a 61-line registry, a 784-line generator and
 and the 276-line combined state.
 
 Two different things are at work and they are worth keeping apart. The
-*assembly* -- `routed_dg_analysis` and its unit instance `unit_dg_analysis` --
+*assembly* -- `routed_dg_analysis` and its executable builder `routed_dg_analysis_exec` --
 removes repeated implementation and repeated reasoning: the equation system, the
 solve, the reader, the result table and the soundness transport are constructed
 and proved once. The *generator* removes repeated registration text. A new
@@ -146,8 +147,8 @@ domain becomes cheaper to integrate through both, and neither removes the
 domain's own mathematics.
 
 The failure mode to watch is not a domain needing a shape of its own. A domain
-can legitimately fall outside the supported family -- `unit_dg_analysis` states
-its own scope, and a relational carrier is outside it by construction. The
+can legitimately fall outside the supported family -- `routed_dg_analysis_exec`
+states its own scope, and a relational carrier is outside it by construction. The
 warning signs are semantic exceptions and per-domain overrides of the proof text
 accumulating *inside* the generator, at which point the registry has become a
 second programming language and the uniform shape is a fiction. A `roles` entry

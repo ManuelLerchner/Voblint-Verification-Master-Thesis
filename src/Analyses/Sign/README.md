@@ -16,15 +16,15 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
-| `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `unit_dg_analysis` at the unit context. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the context-free soundness endpoints come out |
+| `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `routed_dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
 
 `generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`
 from `manifests/analyses.yaml`; edit those, not the theory.
 
 Sign's soundness endpoints live here rather than in `Voblint_CLI` because
-nothing in them needs to see another domain: `sign_rule.source_sound`,
-`sign_rule.result_node_sound` and their siblings depend on Sign and on the
-`unit_dg_analysis` endpoints of `Voblint_Result`, both of which this session
+nothing in them needs to see another domain: `sign_rule.fun_route_source_sound`,
+`sign_rule.fun_route_result_node_sound` and their siblings depend on Sign and on
+the routed endpoints of `Voblint_Result`, both of which this session
 already has. The combined CLI state still depends on this registration:
 `MCP_Carrier` cites `sign_rule.comp_sound` and `sign_rule.init_sound` when it
 proves the combined component and its initial state sound, whatever other
@@ -64,8 +64,8 @@ That difference is the whole content of the routing-agreement obligation, and
 it is why the executable route and its abstract counterpart
 `formals_route_lifted_gen` are separate parameters.
 
-The context-insensitive run is neither of these: it is `sign_rule`, Sign's own
-registration of `unit_dg_analysis` at the unit context.
+The context-insensitive run is the third policy: it is `sign_rule`, Sign's own
+registration of `routed_dg_analysis_exec` at the unit route.
 
 ## Why widening buys Sign nothing
 

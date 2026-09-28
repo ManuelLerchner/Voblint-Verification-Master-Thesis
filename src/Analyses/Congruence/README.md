@@ -66,7 +66,7 @@ and terminates without acceleration.
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `unit_dg_analysis` at the unit context, at any global update rule; see below |
+| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `routed_dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
 
