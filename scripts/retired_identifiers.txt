@@ -3248,3 +3248,10 @@ routed_dg_pipeline
 routed_dg_analysis
 Routed_DG_Analysis
 Routed_Live_Keys
+# --- A component's fields take the names of Goblint's Spec operations
+# (query, enter, combine_env, combine_assign) (2026-09-28) ---
+mc_qry
+mc_en
+mc_comb_env
+mc_comb_assign
+mc_comb

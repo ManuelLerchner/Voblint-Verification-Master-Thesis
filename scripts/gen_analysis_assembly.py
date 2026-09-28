@@ -806,7 +806,7 @@ def render_mcp(doms):
     out += [
         "lemma mcp_component_of_silent:",
         f'  "a \\<in> {{{", ".join(silent)}}}',
-        f'     \\<Longrightarrow> mc_qry (mcp_component_of {G} p a) A x q = \\<top>"',
+        f'     \\<Longrightarrow> mc_query (mcp_component_of {G} p a) A x q = \\<top>"',
         "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def"
         " lens_component_def)",
         "",

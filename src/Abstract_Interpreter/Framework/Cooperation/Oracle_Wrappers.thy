@@ -145,8 +145,9 @@ proof -
       unfolding a using val by auto
     with base[of "EA_Assign y (N n)" x A] show ?thesis unfolding eq by argo
   qed
-  have eqs: "mc_en (ask_assign c) = mc_en c" "mc_comb_env (ask_assign c) = mc_comb_env c"
-    "mc_comb_assign (ask_assign c) = mc_comb_assign c" "mc_qry (ask_assign c) = mc_qry c"
+  have eqs: "mc_enter (ask_assign c) = mc_enter c"
+    "mc_combine_env (ask_assign c) = mc_combine_env c"
+    "mc_combine_assign (ask_assign c) = mc_combine_assign c" "mc_query (ask_assign c) = mc_query c"
     by (simp_all add: ask_assign_def)
   show ?thesis
     unfolding mcp_component_sound_def eqs

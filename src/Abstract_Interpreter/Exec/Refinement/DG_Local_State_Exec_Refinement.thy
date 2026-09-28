@@ -451,7 +451,7 @@ lemma component_spec_exec_component [code_unfold]:
   by (simp add: local_state_dg_spec_st_for_lifted_def)
 
 lemma mc_en_exec_component [simp]:
-  "mc_en (exec_component \<G> empty_pred tf_st enter_st) A ci (d, d)
+  "mc_enter (exec_component \<G> empty_pred tf_st enter_st) A ci (d, d)
    = [(d, transfer_lift empty_pred (enter_st ci) d)]"
   by (simp add: exec_component_def lens_component_def)
 

@@ -4562,29 +4562,29 @@ let rec ask_rec
                     x
                     q));;
 
-let rec mc_comb_assign
+let rec mc_combine_assign
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
-    = mc_comb_assign;;
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
+    = mc_combine_assign;;
 
-let rec mc_comb_env
+let rec mc_combine_env
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
-    = mc_comb_env;;
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
+    = mc_combine_env;;
 
-let rec mc_qry
+let rec mc_query
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
-    = mc_qry;;
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
+    = mc_query;;
 
-let rec mc_en
+let rec mc_enter
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
-    = mc_en;;
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
+    = mc_enter;;
 
 let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
 
@@ -4599,44 +4599,44 @@ let rec make_component
 
 let rec mc_special
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_special;;
 
 let rec mc_return
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_return;;
 
 let rec mc_branch
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_branch;;
 
 let rec mc_assign
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_assign;;
 
 let rec mc_event
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_event;;
 
 let rec mc_skip
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_skip;;
 
 let rec mc_body
   (Mcp_component_ext
-    (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-      mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+    (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+      mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = mc_body;;
 
 let rec local_spec_step
@@ -4657,13 +4657,13 @@ let rec mc_step
 
 let rec lens_of
   get put c =
-    make_component (fun a x -> mc_qry c a (get x))
+    make_component (fun a x -> mc_query c a (get x))
       (fun a aa x -> put x (mc_step c a aa (get x)))
       (fun a ci p ->
         map (fun (q, e) -> (put (fst p) q, put (snd p) e))
-          (mc_en c a ci (get (fst p), get (snd p))))
-      (fun a b ci x de -> put x (mc_comb_env c a b ci (get x) (get de)))
-      (fun b ci x de -> put x (mc_comb_assign c b ci (get x) (get de)));;
+          (mc_enter c a ci (get (fst p), get (snd p))))
+      (fun a b ci x de -> put x (mc_combine_env c a b ci (get x) (get de)))
+      (fun b ci x de -> put x (mc_combine_assign c b ci (get x) (get de)));;
 
 let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
                             | QLifted v, QBot -> QBot
@@ -4677,7 +4677,7 @@ let rec mcp_qry
   cs a x q =
     fold (fun c r ->
            inf_query_lift (inf_int_dom_ext bounded_lattice_unit) r
-             (mc_qry c a x q))
+             (mc_query c a x q))
       cs (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
 let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
@@ -4718,21 +4718,22 @@ let rec lift_put _A (_B1, _B2)
 
 let rec mcp_comb
   cs a b ci x de =
-    fold (fun c y -> mc_comb_assign c b ci (mc_comb_env c a b ci y de) de) cs
-      x;;
+    fold (fun c y -> mc_combine_assign c b ci (mc_combine_env c a b ci y de) de)
+      cs x;;
 
 let rec mcp_step cs aa a x = fold (fun c -> mc_step c aa a) cs x;;
 
-let rec mc_qry_update
-  mc_qrya
+let rec mc_query_update
+  mc_querya
     (Mcp_component_ext
-      (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-        mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+      (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+        mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = Mcp_component_ext
-        (mc_qrya mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body,
-          mc_return, mc_event, mc_en, mc_comb_env, mc_comb_assign, more);;
+        (mc_querya mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body,
+          mc_return, mc_event, mc_enter, mc_combine_env, mc_combine_assign,
+          more);;
 
-let rec with_qry h c = mc_qry_update (fun _ -> h) c;;
+let rec with_qry h c = mc_query_update (fun _ -> h) c;;
 
 let ret_var : string = "#ret";;
 
@@ -5007,7 +5008,7 @@ let rec int_eq
 let rec length_tailrec x0 n = match x0, n with [], n -> n
                          | x :: xs, n -> length_tailrec xs (suc n);;
 
-let rec mc_channel c x = ask_rec (mc_qry c) query_depth bot_set x;;
+let rec mc_channel c x = ask_rec (mc_query c) query_depth bot_set x;;
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
@@ -5330,7 +5331,7 @@ let rec mcp_init
                             (if membera equal_analysis_domain asa Order_Analysis
                               then top_relc else bot_relca))))));;
 
-let rec mcp_en_from cs a ci p = fold (fun c -> maps (mc_en c a ci)) cs [p];;
+let rec mcp_en_from cs a ci p = fold (fun c -> maps (mc_enter c a ci)) cs [p];;
 
 let rec mcp_combine
   = function [c] -> c
@@ -5449,9 +5450,10 @@ let rec int_less
           else (if int_less_false a b then Some false else None));;
 
 let rec map_component
-  k c = make_component (mc_qry c) (fun a aa x -> k (mc_step c a aa x))
-          (fun a ci p -> map (fun (q, e) -> (q, k e)) (mc_en c a ci p))
-          (mc_comb_env c) (fun b ci x de -> k (mc_comb_assign c b ci x de));;
+  k c = make_component (mc_query c) (fun a aa x -> k (mc_step c a aa x))
+          (fun a ci p -> map (fun (q, e) -> (q, k e)) (mc_enter c a ci p))
+          (mc_combine_env c)
+          (fun b ci x de -> k (mc_combine_assign c b ci x de));;
 
 let rec update_resolved_st _A
   (dl, (dg, ps)) loc a = (dl, (dg, (loc, a) :: delete equal_location loc ps));;
@@ -7925,11 +7927,12 @@ let rec ivl_tf_st_for x = generic_tf_st_for bot_ivl ivl_ops x;;
 let rec mc_assign_update
   mc_assigna
     (Mcp_component_ext
-      (mc_qry, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
-        mc_event, mc_en, mc_comb_env, mc_comb_assign, more))
+      (mc_query, mc_skip, mc_assign, mc_special, mc_branch, mc_body, mc_return,
+        mc_event, mc_enter, mc_combine_env, mc_combine_assign, more))
     = Mcp_component_ext
-        (mc_qry, mc_skip, mc_assigna mc_assign, mc_special, mc_branch, mc_body,
-          mc_return, mc_event, mc_en, mc_comb_env, mc_comb_assign, more);;
+        (mc_query, mc_skip, mc_assigna mc_assign, mc_special, mc_branch,
+          mc_body, mc_return, mc_event, mc_enter, mc_combine_env,
+          mc_combine_assign, more);;
 
 let rec assign_ask
   asn a x e d =
@@ -8905,12 +8908,13 @@ let rec component_spec _A
         (dgs_combine_assign_update
           (fun _ ci ->
             local_combine_transfer
-              (fun dc de -> mc_comb_assign c (mc_channel c de) ci dc de))
+              (fun dc de -> mc_combine_assign c (mc_channel c de) ci dc de))
           (dgs_combine_env_update
             (fun _ ci ->
               local_combine_transfer
                 (fun dc de ->
-                  mc_comb_env c (mc_channel c dc) (mc_channel c de) ci dc de))
+                  mc_combine_env c (mc_channel c dc) (mc_channel c de) ci dc
+                    de))
             (dgs_event_update
               (fun _ ev ->
                 asking_transfer (fun _ -> [])
@@ -8918,7 +8922,7 @@ let rec component_spec _A
               (dgs_enter_update
                 (fun _ ci ->
                   local_enter_transfer
-                    (fun d -> mc_en c (mc_channel c d) ci (d, d)))
+                    (fun d -> mc_enter c (mc_channel c d) ci (d, d)))
                 (dgs_return_update
                   (fun _ e p ->
                     asking_transfer (fun _ -> [])
@@ -9710,7 +9714,7 @@ let rec result_with_globals (_A1, _A2) _C
                       component_step c a b)),
               (fun u ctx ca q ->
                 (let d =
-                   snd (hd (mc_en (comp g p)
+                   snd (hd (mc_enter (comp g p)
                              (mc_channel (comp g p)
                                (locals (snd sol (Inl (u, ctx)))))
                              (call_info_of ca q)

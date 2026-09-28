@@ -358,7 +358,7 @@ lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \<G> p a)"
 
 lemma mcp_component_of_silent:
   "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, Int_Analysis, Congruence_Analysis}
-     \<Longrightarrow> mc_qry (mcp_component_of \<G> p a) A x q = \<top>"
+     \<Longrightarrow> mc_query (mcp_component_of \<G> p a) A x q = \<top>"
   by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def lens_component_def)
 
 lemma mcp_init_sound:

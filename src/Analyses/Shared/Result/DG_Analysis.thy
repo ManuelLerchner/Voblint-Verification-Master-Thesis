@@ -151,7 +151,7 @@ text \<open>
 \<close>
 
 definition entry_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
-  where "entry_of \<G> p ci d = snd (hd (mc_en (comp \<G> p) (mc_channel (comp \<G> p) d) ci (d, d)))"
+  where "entry_of \<G> p ci d = snd (hd (mc_enter (comp \<G> p) (mc_channel (comp \<G> p) d) ci (d, d)))"
 
 text \<open>
   The unknown the solver is asked for. It is the program exit at the root
@@ -407,7 +407,7 @@ locale dg_analysis =
                (\<lambda>d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
                (comp (declared_global p) p)"
     and enter_single:
-      "\<And>p ci d. mc_en (comp (declared_global p) p) (mc_channel (comp (declared_global p) p) d)
+      "\<And>p ci d. mc_enter (comp (declared_global p) p) (mc_channel (comp (declared_global p) p) d)
                     ci (d, d)
                   = [(d, entry_of (declared_global p) p ci d)]"
     and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
@@ -564,7 +564,7 @@ lemma entry_cover:
            (call_enter pgs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, entered ci d)]"
 proof -
-  obtain q where "q \<in> set (mc_en (comp pgs p) (mc_channel (comp pgs p) d) ci (d, d))"
+  obtain q where "q \<in> set (mc_enter (comp pgs p) (mc_channel (comp pgs p) d) ci (d, d))"
       "s \<in> cgam (fst q)"
       "call_enter pgs (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> cgam (snd q)"
     using comp_sound[of p] assms mc_channel_sound[OF comp_sound[of p] assms]
