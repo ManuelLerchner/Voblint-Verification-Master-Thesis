@@ -75,24 +75,11 @@ ROLES = [
     "return",
     "enter_ci",
     "event",
-    "transfer_sound",
-    "tf_commute",
-    "tf_abs_def",
-    "enter_commute",
     "classifier",
-    "classify_proved",
-    "classify_refuted",
+    "exec_intro",
     "init_gamma",
 ]
-FACT_ROLES = {
-    "transfer_sound",
-    "tf_commute",
-    "tf_abs_def",
-    "enter_commute",
-    "init_gamma",
-    "classify_proved",
-    "classify_refuted",
-}
+FACT_ROLES = {"exec_intro", "init_gamma"}
 
 # How an analysis runs as one field of the combined state. Each role is a term
 # template; its placeholders are $G (the globals predicate), $p (the program),
@@ -121,7 +108,7 @@ FIELD_ROLES = [
 ]
 
 # What distinguishes the three contexts: the global and seed keys, the route on
-# the executable and on the abstract carrier, and obligation 4, which says the
+# the executable and on the abstract carrier, and the route agreement, which says the
 # route reads only what the abstraction preserves.
 CONTEXTS = [
     {
@@ -132,7 +119,7 @@ CONTEXTS = [
         "keys": '"Analysis_Global ()" Activation_Seed "\\<lambda>_. route_unit" "()"',
         "route_abs": '"\\<lambda>_. route_unit"',
         "params": "r",
-        "case4": ["  case (4 \\<G> u ctx d ca) show ?case by simp"],
+        "case_route": ["  case (1 \\<G> u ctx d ca) show ?case by simp"],
     },
     {
         "key": "entry-state",
@@ -142,8 +129,8 @@ CONTEXTS = [
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",
-        "case4": [
-            "  case (4 \\<G> u ctx d ca) show ?case",
+        "case_route": [
+            "  case (1 \\<G> u ctx d ca) show ?case",
             "    unfolding fun_of_exec_dg_st_for_def",
             "    by (rule exec_formals_route_commute[symmetric])",
         ],
@@ -159,8 +146,8 @@ CONTEXTS = [
         ),
         "route_abs": '"\\<lambda>_. cs_route k"',
         "params": "k r",
-        "case4": [
-            "  case (4 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
+        "case_route": [
+            "  case (1 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
         ],
     },
 ]
@@ -214,13 +201,8 @@ class Domain:
             "return": f"return_{i}",
             "enter_ci": f"enter_{i}_ci_for",
             "event": f"event_{i}",
-            "transfer_sound": f"{i}_tf.is_sound_nonrelational_transfer",
-            "tf_commute": f"{i}_tf_st_for_commute",
-            "tf_abs_def": f"{i}_tf.tf_abs_def",
-            "enter_commute": f"{i}_enter_st_for_commute",
             "classifier": f"{self.name.lower()}_classify_check",
-            "classify_proved": f"{i}_tf.check.classify_check_proved",
-            "classify_refuted": f"{i}_tf.check.classify_check_refuted",
+            "exec_intro": f"{i}_tf.dg_analysis_execI",
             "init_gamma": f"{self.name.lower()}_cinit_gamma",
         }
         roles.update(self.overrides)
@@ -318,9 +300,14 @@ def pack_operands(groups):
     return out + [line]
 
 
+def const_name(role):
+    return role["const"] if isinstance(role, dict) else role
+
+
 def registration(dom, ctx):
-    """One registration with the same twelve discharges every time; only the
-    context terms and obligation 4 vary."""
+    """One registration. The bundle's certificate discharges every domain
+    obligation; the six left are the context's, the solver's and the initial
+    state's, and only the route agreement varies with the context."""
     r = dom.roles()
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
@@ -342,36 +329,23 @@ def registration(dom, ctx):
     ]
     out += pack_operands(groups)
     out.append(f"  for {ctx['params']}")
-    out.append("proof (rule dg_analysis_exec.intro, goal_cases)")
+    folded = " ".join(f"{const_name(r[k])}_def" for k in ["tf_st", "enter_st"])
     out += [
-        f"  case (1 \\<G>) show ?case by (rule {r['transfer_sound']})",
+        f"proof (rule {r['exec_intro']}",
+        f"    [folded {folded}], goal_cases)",
+        *ctx["case_route"],
         "next",
-        "  case (2 \\<G> a s) then show ?case",
-        "    unfolding fun_of_exec_dg_st_for_def",
-        f"    by (rule {r['tf_commute']}[unfolded {r['tf_abs_def']}])",
+        "  case (2 v ctx) show ?case by simp",
         "next",
-        "  case (3 \\<G> ci s) show ?case",
-        f"    unfolding fun_of_exec_dg_st_for_def by (rule {r['enter_commute']})",
-        "next",
-        *ctx["case4"],
-        "next",
-        "  case (5 v ctx) show ?case by simp",
-        "next",
-        "  case (6 eqs x) then show ?case",
+        "  case (3 eqs x) then show ?case",
         *rule_step(f"{INTERP}.partial_post_solution[OF _ surjective_pairing]"),
         "next",
-        "  case (7 eqs x) then show ?case",
+        "  case (4 eqs x) then show ?case",
         *rule_step(f"{INTERP}.finite_stabl_solve"),
         "next",
-        f"  case (8 c d s) then show ?case by (rule {r['classify_proved']})",
+        f"  case (5 \\<G>) show ?case by (rule {r['init_gamma']})",
         "next",
-        f"  case (9 c d s) then show ?case by (rule {r['classify_refuted']})",
-        "next",
-        "  case 10 show ?case by (rule refl)",
-        "next",
-        f"  case (11 \\<G>) show ?case by (rule {r['init_gamma']})",
-        "next",
-        "  case (12 eqs x) then show ?case",
+        "  case (6 eqs x) then show ?case",
         *rule_step(f"{INTERP}.solve_dom_of_solve_c"),
         "qed",
     ]

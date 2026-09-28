@@ -41,10 +41,13 @@ README.
 
 ## What is generated, and what is not
 
-Generated: the interpretations and the twelve obligation discharges of
-each. Between the contexts only the context terms differ -- global and
-seed keys, the executable and abstract route -- together with obligation 4, the
-routing agreement.
+Generated: the interpretations and their proofs. Each proof applies
+`<impl>_tf.dg_analysis_execI`, which the domain's bundle certificate already
+provides: the transfer, the two readbacks and the classifier are discharged
+once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
+obligations remain per registration: the routing agreement, the seed key, the
+three solver contracts and the initial state. Between the contexts only the
+context terms and the routing agreement differ.
 
 Not generated, ever: the mathematics. Every obligation is discharged by citing
 a fact the registry only *names* -- the domain's own, or the rule-parametric
@@ -57,17 +60,12 @@ position Isabelle checks.
 
 Because the proof text is uniform, a domain has to satisfy the shape it cites
 into. Each role has a conventional spelling built from `impl`:
-`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.is_sound_nonrelational_transfer`,
-`<impl>_tf_st_for_commute`, and so on. The classifier and the initial-state fact
-use the lowercased domain name (`interval_classify_check`,
-`interval_cinit_gamma`) even where `impl` differs (`ivl`).
-
-Obligation 2 carries a liveness premise, so the fact named for it must be
-registration-shaped -- premise and all. Sign's and Interval's commutation
-theorems already are. Parity's is stronger: unconditional, and therefore not
-citable into the chained proof. Parity keeps its stronger theorem and supplies a
-registration-shaped corollary, which the registry names under
-`roles: tf_commute: parity_tf_st_for_commute_if_live`.
+`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.dg_analysis_execI`, and so on.
+The proof folds `<tf_st>_def` and `<enter_st>_def`, so the two executable
+transfers must be defined as `generic_tf_st_for` and `generic_enter_st_for` at the
+domain's bundle. The classifier and the initial-state fact use the lowercased
+domain name (`interval_classify_check`, `interval_cinit_gamma`) even where `impl`
+differs (`ivl`).
 
 A role may also be an application `{const, args}` for an operation that takes a
 configuration argument. Int registers at its most precise refinement mode this

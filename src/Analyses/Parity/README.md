@@ -36,10 +36,10 @@ from `manifests/analyses.yaml`.
 
 `Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
 global update rule `r` as a parameter: `dg_analysis_exec`
-(`Shared/Result/DG_Analysis.thy`) at the unit route. It discharges the
-same twelve obligations from Parity's transfer contract, two commutation laws,
-the solver contract, the classifier contract and the initial-state contract,
-and gets back the equation system, the solve, the reader, the result table,
+(`Shared/Result/DG_Analysis.thy`) at the unit route. It applies
+`parity_tf.dg_analysis_execI`, which Parity's bundle certificate provides, and
+discharges the six obligations left: the routing agreement, the seed key, the
+solver contract and the initial-state contract. It gets back the equation system, the solve, the reader, the result table,
 the report and the context-free soundness endpoints. The entry-state and
 call-string runs are the CLI's combined registrations, `mcp_es_rule` and
 `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`), which route calls to more than one

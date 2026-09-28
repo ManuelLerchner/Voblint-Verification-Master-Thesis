@@ -57,7 +57,6 @@ domains:
       return: {const: return_int_dom, args: [Refine_Fixpoint]}
       enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Fixpoint]}
       event: event_int_dom
-      enter_commute: int_dom_enter_st_for_commute
       classifier: {const: int_classify_check, args: [Refine_Fixpoint]}
     field:
       answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st $q)'

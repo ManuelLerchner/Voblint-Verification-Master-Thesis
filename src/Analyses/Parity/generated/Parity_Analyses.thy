@@ -42,35 +42,21 @@ global_interpretation parity_rule: dg_analysis_exec
     enter_parity_ci_for event_parity "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule parity_tf.is_sound_nonrelational_transfer)
+proof (rule parity_tf.dg_analysis_execI
+    [folded parity_tf_st_for_def parity_enter_st_for_def], goal_cases)
+  case (1 \<G> u ctx d ca) show ?case by simp
 next
-  case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute[unfolded parity_tf.tf_abs_def])
+  case (2 v ctx) show ?case by simp
 next
-  case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case by simp
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
+  case (3 eqs x) then show ?case
     by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
 next
-  case (7 eqs x) then show ?case
+  case (4 eqs x) then show ?case
     by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
-  case (8 c d s) then show ?case by (rule parity_tf.check.classify_check_proved)
+  case (5 \<G>) show ?case by (rule parity_cinit_gamma)
 next
-  case (9 c d s) then show ?case by (rule parity_tf.check.classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule parity_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
+  case (6 eqs x) then show ?case
     by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
 qed
 

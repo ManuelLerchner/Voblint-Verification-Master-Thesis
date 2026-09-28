@@ -4,6 +4,7 @@ theory Nonrelational_Transfer
     "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Check_Answer"
     "Voblint_VIMP.VIMP_Globals"
+    "Voblint_Result.DG_Analysis"
 begin
 
 section \<open>What each kind of CFG edge does to one abstract value per variable\<close>
@@ -214,6 +215,49 @@ theorem tf_st_for_commute:
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: n_bfilter_eq backward.branch_st_commute[OF assms])
+
+lemma enter_st_for_commute:
+  "fun_of_resolved_st_q_for \<G> (generic_enter_st_for ops \<G> ci s) =
+   enter_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+  by (simp add: generic_enter_st_for_def op_defs enter_binding_def enter_frame_def)
+
+subsection \<open>Registering the bundle with the pipeline\<close>
+
+text \<open>
+  The bundle already settles everything \<^locale>\<open>dg_analysis_exec\<close> asks of the domain:
+  the derived transfer is sound, the executable step and entry read back to it, and the
+  derived classifier is sound in both directions. What remains belongs to the context
+  policy (the routing agreement and the seed key), the solver (its partial
+  post-solution, finite domain and success condition) and the initial state, and stays
+  a premise.
+\<close>
+
+theorem dg_analysis_execI:
+  assumes route_agree:
+      "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
+         = route_abs \<G> u ctx (map_lift (fun_of_exec_dg_st_for \<G>) d) ca"
+    and seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
+    and solve_pp:
+      "\<And>eqs x. solve_dom eqs x
+         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
+    and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
+    and init_sound:
+      "\<And>\<G>. cinit_stores \<G>
+               \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+    and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
+  shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st gk0 seed
+           route solve solve_dom bot check.classify_check
+           skip assign special_transfer br body ret enter_ci_for event route_abs solve_c"
+proof (rule dg_analysis_exec.intro, goal_cases)
+  case (1 \<G>) show ?case by (rule is_sound_nonrelational_transfer)
+next
+  case (2 \<G> a s) then show ?case
+    unfolding fun_of_exec_dg_st_for_def tf_abs_def[symmetric] by (rule tf_st_for_commute)
+next
+  case (3 \<G> ci s) show ?case
+    unfolding fun_of_exec_dg_st_for_def by (rule enter_st_for_commute)
+qed (fact route_agree seed_ne_gk0 solve_pp solve_fin init_sound dom_of_solve_c
+       check.classify_check_proved check.classify_check_refuted refl)+
 
 end
 
