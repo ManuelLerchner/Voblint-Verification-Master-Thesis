@@ -10,7 +10,10 @@ by scanning declarations, because the name is gone from the tree by then.
 
 So the retired names are listed explicitly, in `retired_identifiers.txt`, and
 this checks that none of them came back. Matching is whole-word: a retired
-`caller_cont` would not match a live `dgs_caller_cont`.
+`caller_cont` would not match a live `dgs_caller_cont`. The facts Isabelle
+generates from a retired name count as the name itself: `foo_def`, `foo_def_raw`,
+`foo_axioms` and `foo_axioms_def` (dotted facts such as `foo.simps` already
+match).
 
 Run over the whole tree, or over the paths given as arguments (the pre-commit
 hook passes staged files).
@@ -50,7 +53,9 @@ def main(argv: list[str]) -> int:
         return 0
 
     pattern = re.compile(
-        r"(?<![A-Za-z0-9_'])(" + "|".join(map(re.escape, names)) + r")(?![A-Za-z0-9_'])"
+        r"(?<![A-Za-z0-9_'])("
+        + "|".join(map(re.escape, names))
+        + r")(?:_def_raw|_def|_axioms_def|_axioms)?(?![A-Za-z0-9_'])"
     )
 
     found: dict[str, list[str]] = {}

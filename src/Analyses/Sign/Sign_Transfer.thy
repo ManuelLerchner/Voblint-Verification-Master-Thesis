@@ -34,6 +34,9 @@ text \<open>
   second name for the same function.
 \<close>
 
+lemma sign_check_domain: "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
+  by unfold_locales (rule sign_arith.aval_abs_sound)
+
 definition sign_ops :: "sign nonrelational_ops" where
   "sign_ops = \<lparr> n_aval = aval_sign, n_query = \<lparr>q_less = sign_less, q_eq = sign_eq\<rparr>,
                 n_refine = sign_refine_ops, n_special = sign_special_ops, n_top = STop \<rparr>"
@@ -80,7 +83,7 @@ proof -
             inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
       by (rule sign_backward_domain)
     show "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
-      by unfold_locales (rule sign_arith.aval_abs_sound)
+      by (rule sign_check_domain)
     show "STop = top"
       by (simp add: top_sign_def)
   qed

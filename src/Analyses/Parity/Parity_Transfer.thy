@@ -26,6 +26,9 @@ text \<open>
   rather than introducing a second name for it.
 \<close>
 
+lemma parity_check_domain: "abstract_check_domain parity_less parity_eq gamma_state aval_parity"
+  by unfold_locales (rule parity_arith.aval_abs_sound)
+
 definition parity_ops :: "parity nonrelational_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_query = \<lparr>q_less = parity_less, q_eq = parity_eq\<rparr>,
                   n_refine = parity_refine_ops, n_special = parity_special_ops, n_top = PTop \<rparr>"
@@ -70,7 +73,7 @@ proof -
             inv_conservative inv_eq_parity inv_plus_parity inv_minus_parity inv_times_parity"
       by (rule parity_backward_domain)
     show "abstract_check_domain parity_less parity_eq gamma_state aval_parity"
-      by unfold_locales (rule parity_arith.aval_abs_sound)
+      by (rule parity_check_domain)
     show "PTop = top"
       by (simp add: top_parity_def)
   qed

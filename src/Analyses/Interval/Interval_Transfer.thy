@@ -26,6 +26,10 @@ text \<open>
   Interval's own \<open>fun\<close>, rather than introducing a second name for it.
 \<close>
 
+lemma interval_check_domain:
+  "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
+  by unfold_locales (rule ivl_arith.aval_abs_sound)
+
 definition ivl_ops :: "ivl nonrelational_ops" where
   "ivl_ops = \<lparr> n_aval = aval_ivl, n_query = \<lparr>q_less = interval_less, q_eq = interval_eq\<rparr>,
                n_refine = ivl_refine_ops, n_special = ivl_special_ops, n_top = ivl_top \<rparr>"
@@ -71,7 +75,7 @@ proof -
             inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative"
       by (rule ivl_backward_domain)
     show "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
-      by unfold_locales (rule ivl_arith.aval_abs_sound)
+      by (rule interval_check_domain)
     show "ivl_top = top"
       by (simp add: top_ivl_def)
   qed

@@ -398,7 +398,7 @@ text \<open>
   \<open>branch_mono\<close> and the rest of the monotonicity layer.
 \<close>
 
-lemma int_dom_backward_domain_reductive:
+lemma int_backward_domain:
   "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
@@ -417,7 +417,7 @@ lemma int_dom_backward_domain_mono:
     "backward_domain_mono (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
        (inv_less_int_dom mode) (inv_eq_int_dom mode)
        (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_mono.intro int_dom_backward_domain_reductive
+proof (intro backward_domain_mono.intro int_backward_domain
     int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_mono_axioms.intro
     mono_intersection.intro mono_intersection_axioms.intro
     sound_intersection.intro)
@@ -488,7 +488,7 @@ proof -
       "inv_less_int_dom Refine_Fixpoint" "inv_eq_int_dom Refine_Fixpoint"
       "inv_plus_int_dom Refine_Fixpoint" "inv_minus_int_dom Refine_Fixpoint"
       "inv_times_int_dom Refine_Fixpoint"
-    by (rule int_dom_backward_domain_reductive)
+    by (rule int_backward_domain)
   show ?thesis by unfold_locales
 qed
 

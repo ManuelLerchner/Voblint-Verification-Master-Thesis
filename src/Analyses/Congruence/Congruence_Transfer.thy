@@ -26,6 +26,10 @@ text \<open>
   \<open>fun\<close>, rather than introducing a second name for it.
 \<close>
 
+lemma congruence_check_domain:
+  "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
+  by unfold_locales (rule congruence_arith.aval_abs_sound)
+
 definition congruence_ops :: "congruence nonrelational_ops" where
   "congruence_ops =
      \<lparr> n_aval = aval_congruence, n_query = \<lparr>q_less = congruence_lt, q_eq = congruence_eqb\<rparr>,
@@ -73,7 +77,7 @@ proof -
             inv_plus_congruence inv_minus_congruence inv_times_congruence"
       by (rule congruence_backward_domain)
     show "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
-      by unfold_locales (rule congruence_arith.aval_abs_sound)
+      by (rule congruence_check_domain)
   qed simp
 qed (simp_all add: special_congruence_eq_transfer fun_eq_iff)
 

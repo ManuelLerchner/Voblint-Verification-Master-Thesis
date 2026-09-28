@@ -126,9 +126,10 @@ makes no claim either way.
 
 ### Per-domain instances
 
-`Sign_Classify.thy` and `Interval_Classify.thy` each do one
-`global_interpretation abstract_check_domain ...`, `defines`-exporting
-`<domain>_check_query`/`<domain>_classify_check`/`<domain>_checks_proven`.
+Each domain proves one certificate lemma `<domain>_check_domain: abstract_check_domain ...`
+(in `<Domain>_Transfer.thy`); its single `sound_nonrelational_ops` interpretation
+then `defines`-exports `<domain>_check_query`/`<domain>_classify_check`/`<domain>_checks_proven`,
+with the facts under `<impl>_tf.check.`.
 Neither restates the Boolean recursion, the classification logic, or the
 `checks_proven` bridge — that would be duplicating what `Abstract_Checks.thy`
 already proves once.

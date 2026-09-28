@@ -86,15 +86,13 @@ composite `int_dom` only reduces internally among its own scalar components.
 Design investigation tracked in #70; alignment inventory and staging (Phase 3)
 in #141.
 
-## Soundness and monotonicity in `nonrelational_transfer`
+## Soundness and monotonicity in the transfer bundle (done)
 
-`nonrelational_transfer` assumes `br_mono` and extends `mono_special_ops`, so
-Sign, Interval, Parity and Congruence prove monotonicity to reach the
-soundness path, which does not use it; Int stays outside the builder because
-its fixpoint mode has no monotonicity proof. Splitting the locale into a sound
-layer and a monotone one is deferred until the cooperating-analyses work
-(`COOPERATING_ANALYSES_DESIGN.md`) shows a client for the weaker layer, since
-that work may reshape the non-relational transfer boundary itself.
+`sound_nonrelational_ops` asks only for soundness (a reductive backward domain,
+sound special calls, sound checks); `mono_nonrelational_ops` adds monotonicity.
+Sign, Interval, Parity and Congruence interpret the monotone locale; Int
+interprets the sound one, parametric in its refinement mode, because the fixpoint
+mode has no monotonicity proof.
 
 ## Numeric precision
 

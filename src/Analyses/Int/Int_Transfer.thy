@@ -194,21 +194,21 @@ lemma int_dom_ops_simps [simp]:
   "n_top (int_dom_ops mode) = top"
   by (simp_all add: int_dom_ops_def)
 
-lemma int_dom_check_domain:
+lemma int_check_domain:
   "abstract_check_domain int_less int_eq gamma_state (aval_int_dom mode)"
   by (intro abstract_check_domain.intro int_dom_numeric_queries.sound_numeric_queries_axioms
         int_dom_sound_evaluator)
 
 lemma int_dom_sound_ops: "sound_nonrelational_ops (int_dom_ops mode)"
   by (rule sound_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
-     (rule int_dom_sound_special_ops int_dom_backward_domain_reductive int_dom_check_domain refl)+
+     (rule int_dom_sound_special_ops int_backward_domain int_check_domain refl)+
 
 lemma int_dom_mono_ops:
   assumes "mode \<noteq> Refine_Fixpoint"
   shows "mono_nonrelational_ops (int_dom_ops mode)"
   by (rule mono_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
      (rule int_dom_mono_special_ops[OF assms] int_dom_backward_domain_mono[OF assms]
-        int_dom_check_domain refl)+
+        int_check_domain refl)+
 
 global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
   rewrites "n_top (int_dom_ops mode) = top"
