@@ -208,7 +208,7 @@ Without contexts, the two activations of `f` share one entry and one exit. The
 combine after the recursive call reads the returned value from that same exit,
 so the value `f` returns is computed from itself, and the analysis loses it.
 Widening the entry is not the cause: under the joining update rules the entry
-stays at $n in [1, 2]$, and the check is still #raw(chain-join.at(3)) with
+stays at ${n |-> [1, 2]}$, and the check is still #raw(chain-join.at(3)) with
 #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
 its own entry and exit, and the result stays exact.
 

@@ -391,7 +391,7 @@ Its path-sensitive lifter uses this to enter the callee once for each path of
 the caller
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml")[`PathSensitive2`]).
 When such alternatives overlap, one concrete call belongs to several contexts
-at once. Suppose the caller knows $x in [0, 9]$ before a call
+at once. Suppose the caller's state maps $x$ to $[0, 9]$ before a call
 `h(x)` and the entry operation splits the parameter's range into the
 alternatives $[0, 5]$ and $[3, 9]$. For a sound split, the alternatives must together cover the caller's value,
 but they need not be disjoint. Entry-state routing

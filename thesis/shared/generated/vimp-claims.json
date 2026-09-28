@@ -248,7 +248,7 @@
   },
   "dom-guard-sign": {
     "fixture": "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
-    "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = 0 - x;\n  }\n  __voblint_check(y >= 0);\n}",
+    "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = - x;\n  }\n  __voblint_check(y >= 0);\n}",
     "settings": {
       "analysis": "sign",
       "context": "none",

@@ -402,7 +402,7 @@
     "pointwise abstract state",
     _dom,
     isa: [#isatype("abs_state"), #isaconst("gamma_state")],
-    notation: nota("gamma_state"),
+    notation: nota("gamma_S"),
     see: <ch:domains>,
   )[
     A function from variable names to abstract values. It represents the stores
@@ -414,8 +414,8 @@
     "unreachable element",
     _dom,
     isa: [#isatype("lifted"), #isaconst("normalize_lift")],
-    notation: nota("gamma_state_lift"),
-    see: <sec:lift>,
+    notation: nota("gamma_S"),
+    see: <sec:nonrel-state>,
   )[
     The constructor #ctor("Bot") placed below every #ctor("Lifted") payload.
     It means that no execution reaches the point and represents no store.

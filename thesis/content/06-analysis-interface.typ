@@ -286,7 +286,83 @@ nothing is checked against $lbot$. The contract asks the carriers only for a
 bounded join semilattice and $conc_(D G)$ only for monotonicity; it never
 requires a map from variables to abstract values. For this reason the
 relational carrier of @sec:relational (#isaconst("rel_order_spec")) satisfies
-the same contract without a change to the framework.
+the same contract without a change to the framework. @fig:contract-routes
+shows both routes to the contract.
+
+#let _cbox(pos, name, body) = node(
+  pos,
+  text(size: 8pt, body),
+  name: name,
+  inset: 4pt,
+  stroke: 0.6pt + vb.neutral,
+  shape: rect,
+  corner-radius: 2pt,
+)
+#let _clab(body) = text(size: 7pt, body)
+#figure(
+  diagram(
+    spacing: (14mm, 9mm),
+    _cbox((0, 0), <c-num>, [numeric domain \ #isalocale("numeric_domain")]),
+    _cbox((2, 0), <c-rel>, [relational state \ #isatype("relc")]),
+    _cbox((0, 1), <c-pw>, [pointwise state \ #isatype("abs_state")]),
+    _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_transfer_for")]),
+    _cbox((1, 3), <c-local>, [whole local state \ #isalocale("sound_local_dg_spec")]),
+    _cbox((2, 2), <c-relspec>, [local and shared state \ #isaconst("rel_order_spec")]),
+    _cbox((1, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
+    edge(
+      <c-num>,
+      <c-pw>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[values per variable],
+      label-side: left,
+    ),
+    edge(<c-pw>, <c-tf>, "->", stroke: 0.6pt + vb.neutral),
+    edge(
+      <c-tf>,
+      <c-local>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[sublocale],
+      label-side: right,
+    ),
+    edge(
+      <c-rel>,
+      <c-local>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("rel_local_component")),
+      label-side: left,
+      bend: -25deg,
+    ),
+    edge(<c-rel>, <c-relspec>, "->", stroke: 0.6pt + vb.neutral),
+    edge(
+      <c-local>,
+      <c-contract>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("sound_local_dg_spec.local_spec_contract")),
+      label-side: right,
+    ),
+    edge(
+      <c-relspec>,
+      <c-contract>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[interpretation],
+      label-side: left,
+    ),
+  ),
+  kind: image,
+  placement: auto,
+  caption: [How the analyses of this thesis reach the analysis soundness
+    contract. An arrow leads from what an analysis supplies to what it thereby
+    establishes, and its label names the Isabelle fact. A numeric domain
+    becomes a pointwise state and proves one rule per operation. These rules
+    are an instance of the contract for a whole local state, from which the
+    analysis soundness contract follows. The relational carrier reaches the
+    same two locales directly, without per-value laws.],
+) <fig:contract-routes>
 
 == Whole-state analyses <sec:whole-state>
 

@@ -11,6 +11,9 @@ why = "The domain interface figure: what a domain must supply and prove."
 [snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
+[snippets.abstract_check_domain]
+why = "Chapter 5, the query figure: checks combine the queries with forward evaluation."
+
 [snippets.widening]
 why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
 
@@ -153,6 +156,10 @@ why = "Chapter 4, a graph step keeps a representing trace."
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
 
+[snippets.branch_step_rel_sound]
+why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
+file = "src/Analyses/Relational/Rel_Order_Domain.thy"
+
 [snippets.semilattice_sup]
 why = "Chapter 5, the join laws executable_domain inherits from HOL."
 file = "~~/src/HOL/Lattices.thy"
@@ -174,7 +181,7 @@ why = "Chapter 5, the solver's narrowing operator and its laws."
 
 [snippets.warrowing]
 why = "Chapter 5, widening and narrowing combined into the solver's update class."
-file = "vendor/td-verification/Update_rules.thy"
+file = "vendor/td-verification/Warrowing.thy"
 
 [snippets.ord]
 why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
@@ -218,3 +225,77 @@ why = "Chapter 7, the obligation of one cooperating analysis, stated against eve
 
 [snippets.mcp_combine_sound]
 why = "Chapter 7, soundness of the combination of independent components."
+
+[snippets.sign_backward_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Sign/Sign_Backward.thy"
+
+[snippets.ivl_backward_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Interval/Interval_Backward.thy"
+
+[snippets.congruence_backward_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Congruence/Congruence_Backward.thy"
+
+[snippets.int_dom_backward_never]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Int/Int_Backward.thy"
+
+[snippets.int_dom_backward_once]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Int/Int_Backward.thy"
+
+[snippets.int_dom_backward_fixpoint]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Int/Int_Backward.thy"
+
+[snippets.sign_check_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Sign/Sign_Classify.thy"
+
+[snippets.interval_check_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Interval/Interval_Classify.thy"
+
+[snippets.parity_check_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Parity/Parity_Classify.thy"
+
+[snippets.congruence_check_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Congruence/Congruence_Classify.thy"
+
+[snippets.int_check_domain]
+why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+file = "src/Analyses/Int/Int_Classify.thy"
+
+[snippets.relc_executable_domain]
+why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."
+instance = "relc :: executable_domain"
+file = "src/Abstract_Interpreter/Domain/Relational/Order_Lattice.thy"
+
+[snippets.sign_numeric_domain]
+why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
+instance = "sign :: numeric_domain"
+file = "src/Analyses/Sign/Sign_Warrowing.thy"
+
+[snippets.ivl_numeric_domain]
+why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
+instance = "ivl :: numeric_domain"
+file = "src/Analyses/Interval/Interval_Warrowing.thy"
+
+[snippets.parity_numeric_domain]
+why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
+instance = "parity :: numeric_domain"
+file = "src/Analyses/Parity/Parity_Warrowing.thy"
+
+[snippets.congruence_numeric_domain]
+why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
+instance = "congruence :: numeric_domain"
+file = "src/Analyses/Congruence/Congruence_Warrowing.thy"
+
+[snippets.int_dom_ext_numeric_domain]
+why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
+instance = "int_dom_ext :: numeric_domain"
+file = "src/Analyses/Int/Int_Warrowing.thy"

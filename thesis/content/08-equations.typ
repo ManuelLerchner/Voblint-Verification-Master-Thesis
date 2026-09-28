@@ -214,8 +214,8 @@ per call, and it changes where widening happens. A
 seed has no equation of its own, and #isaconst("run_voblint") merges
 contributions into it with the update rule selected for shared keys, so under
 a warrowing rule a seed can be widened. In @sec:eq-coarse the first call
-contributes $n in [5, 5]$ to the one seed of `bump` and the second
-$n in [4, 4]$. Their join $[4, 5]$ is not below $[5, 5]$, so the rule widens
+contributes ${n |-> [5, 5]}$ to the one seed of `bump` and the second
+${n |-> [4, 4]}$. Their join ${n |-> [4, 5]}$ is not below ${n |-> [5, 5]}$, so the rule widens
 the lower bound to $-infinity$. Neither contribution changes afterwards, and the
 rule leaves the key untouched when an origin repeats its contribution, so no
 narrowing step recovers the bound. No operational equivalence with Goblint's
@@ -252,7 +252,7 @@ Apinis et al., where calls are distinguished by one component of the reaching
 abstract state and merged on the others @apinis12. Such a context cannot be a
 function of the concrete call. Abstracting the concrete entered store would
 select a context at which no seed was published. If the caller's solved value
-only knows $n in [4, 5]$, a concrete call with $n = 4$ is routed to the context
+maps $n$ to $[4, 5]$, a concrete call with $n = 4$ is routed to the context
 $[4, 5]$, while its own entered store abstracts to $[4, 4]$. Moreover, an
 entry operation may answer one call with several overlapping alternatives
 (@sec:contexts).
