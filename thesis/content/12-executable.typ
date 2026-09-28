@@ -105,7 +105,7 @@ routing, solver and check classifier) and assumes nothing, so its definitions
 become code equations directly. Even the bottom state is a parameter, because a
 least element taken from a type class would have to be executable at a
 function type. #isalocale("dg_analysis") imports it and adds the
-contracts: soundness of the component (#isaconst("mcp_component_sound")) and of
+contracts: soundness of the component (#isaconst("sound_local_spec")) and of
 the initial state, a single entry alternative, the solver certificate,
 discharge of the termination premise by a finished executable run, and
 correctness of the check classifier. #isalocale("dg_analysis_exec")
@@ -116,8 +116,8 @@ its soundness proof for the domain's field. The analyzer interprets
 of any activation list (#isaconst("mcp_comp"), @fig:assembly), and every run
 inherits the argument of @ch:results from these three interpretations. The
 order analysis has no interpretation of its own. It enters as a field, with
-the soundness of #isathm("order_component_sound"), and a new analysis enters
-the same way through the generated registration of #isaconst("mcp_component_of").
+the soundness of #isathm("order_spec_sound"), and a new analysis enters
+the same way through the generated registration of #isaconst("local_spec_of").
 
 #figure(
   {
@@ -147,7 +147,7 @@ the same way through the generated registration of #isaconst("mcp_component_of")
         (1, 1),
         isalocale("dg_analysis"),
         [adds the contracts, among them \
-          #isaconst("mcp_component_sound")],
+          #isaconst("sound_local_spec")],
         color: vb.proved,
       ),
       loc(

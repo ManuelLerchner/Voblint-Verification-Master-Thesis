@@ -134,7 +134,7 @@ name = "backward_domain"
 chapter = "ch:domains"
 concept = "Sound transfer functions"
 kind = "locale"
-name = "sound_transfer_for"
+name = "sound_nonrelational_transfer"
 
 [[anchor]]
 chapter = "ch:analysis-interface"

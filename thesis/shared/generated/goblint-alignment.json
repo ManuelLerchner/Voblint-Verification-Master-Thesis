@@ -200,22 +200,22 @@
       "note": "No soundness theorem here covers wrap-around arithmetic."
     },
     {
-      "status": "absent",
+      "status": "simplified",
       "goblint": {
         "name": "Queries (ask)",
         "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167",
         "file": "src/domains/queries.ml"
       },
       "voblint": {
-        "label": "Two numeric queries in the check layer",
+        "label": "man_ask",
         "refs": [
           {
-            "kind": "locale",
-            "name": "abstract_numeric_queries"
+            "kind": "const",
+            "name": "man_ask"
           }
         ]
       },
-      "note": "A transfer function cannot ask a query at all."
+      "note": "A transfer asks through its manager; every active analysis answers and the answers are met. Each pointwise analysis asks for the value of an assignment's right-hand side, and the order analysis asks how an assigned value compares with the other variables, so cooperation runs both ways: the order analysis can hand Interval an exact result, and Interval can hand the order analysis a comparison. A handler may ask in turn, and a query already being asked is answered with top. A check is decided by the met answer to EvalInt of its condition. Only EvalInt exists, answers are not cached, and a combined analysis reads and publishes no globals of its own."
     },
     {
       "status": "absent",
@@ -231,9 +231,27 @@
       "note": "The analysis record has no sync hook; publication happens only in an edge transfer's result."
     },
     {
+      "status": "simplified",
+      "goblint": {
+        "name": "MCP, the analysis combinator",
+        "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml",
+        "file": "src/analyses/mCP.ml"
+      },
+      "voblint": {
+        "label": "local_spec",
+        "refs": [
+          {
+            "kind": "type",
+            "name": "local_spec"
+          }
+        ]
+      },
+      "note": "The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is. Every operation, entry and return included, receives the query channel, and a return also receives the callee's. Activation has no dependency order."
+    },
+    {
       "status": "absent",
       "goblint": {
-        "name": "Threads and the analysis manager",
+        "name": "Threads",
         "url": "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260",
         "file": "src/framework/analyses.ml"
       },
@@ -241,7 +259,7 @@
         "label": "none",
         "refs": []
       },
-      "note": "Goblint composes many analyses through its manager and handles thread creation and privatization. None of it is modeled here."
+      "note": "Thread creation and privatization are not modeled."
     },
     {
       "status": "simplified",
@@ -340,8 +358,12 @@
       "name": "int_dom"
     },
     {
-      "kind": "locale",
-      "name": "abstract_numeric_queries"
+      "kind": "const",
+      "name": "man_ask"
+    },
+    {
+      "kind": "type",
+      "name": "local_spec"
     },
     {
       "kind": "const",

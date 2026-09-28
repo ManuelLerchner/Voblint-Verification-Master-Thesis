@@ -213,7 +213,7 @@ and does not import #isasession("Voblint_Nonrelational"), and
 #isasession("Voblint_Examples_Relational") runs it through the generator. No
 framework session imports either; the framework theories mention the carrier
 only in document text. Making it selectable as the order analysis needed its
-component proof (#isathm("order_component_sound")) and an entry in the
+component proof (#isathm("order_spec_sound")) and an entry in the
 analysis manifest, from which the combined state and its registration are
 generated; no theorem of the framework or of the numeric domains changed. The statistics tooling measures directories, not
 sessions, so we give no line count for the extension.

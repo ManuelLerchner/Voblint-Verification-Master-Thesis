@@ -383,7 +383,7 @@ L4  WHAT AN ANALYSIS SUPPLIES
     dg_spec (Spec analogue), man_local/global/sideg    DG_Spec, DG_Manager
     analysis_contract: gammaDG_mono, step_sound,
                         combine_sound                  DG_Spec_Sound
-    sound_transfer_for → local_state_dg_spec_for_contract   DG_Local_State_Spec
+    sound_nonrelational_transfer → local_state_dg_spec_for_contract   DG_Local_State_Spec
     nonrelational_transfer (one interpretation per domain)    Nonrelational_Transfer
              │
              v
@@ -1201,14 +1201,14 @@ PART III — THE ANALYZER
 
 7 Cooperating analyses (added 2026-09-27)                          [5%]
   7.1 Queries and answers (query_algebra, eval_holds)
-  7.2 One obligation per operation, against every sound channel (mcp_component_sound)
-  7.3 Closing the channel (ask_rec, mc_channel_sound)
+  7.2 One obligation per operation, against every sound channel (sound_local_spec)
+  7.3 Closing the channel (ask_rec, ls_channel_sound)
   7.4 Many analyses over one state (lens_of, mcp_frame, mcp_combine_sound)
   7.5 What a new analysis has to prove
   7.6 What the combination leaves out
   Reason for the structural change: PR #217/#218 made every run of
   run_voblint a combination of MCP components (dg_analysis.comp_sound
-  is mcp_component_sound), so the pipeline chapters depend on it. It sits
+  is sound_local_spec), so the pipeline chapters depend on it. It sits
   between 6 and the equations because mcp_contract produces the
   analysis_contract the equations consume. Later chapters shift by one.
 
@@ -1456,7 +1456,7 @@ thesis section → theories → central definitions → central theorems.
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Numeric_Queries`, `Backward_Numeric_Queries` | locale `backward_domain`, `afilter`, `bfilter`, `branch_lifted`, locale `sound_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
-| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `mcp_component_sound`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_contract`, `combine_sound_program` |
+| 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `sound_local_spec`, `sound_nonrelational_transfer`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_contract`, `combine_sound_program` |
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Keyed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `routed_gk` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
@@ -1474,7 +1474,7 @@ thesis section → theories → central definitions → central theorems.
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.fun_route_source_sound` |
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |
 | 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence_rep`, `inv_plus_congruence` | `congruence_lt_sound` |
-| 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_transfer_for` |
+| 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_nonrelational_transfer` |
 | 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |
 | 12.3 | `Voblint_Examples_Sign.Example_Sign_DG_CallString_K1/K2`, `Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision`, `Voblint_Examples_CLI.*` | — | `sign_k2_strictly_more_precise_than_k1_at_g` |

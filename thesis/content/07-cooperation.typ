@@ -121,10 +121,12 @@ predecessor state as in Goblint, a handler may ask in turn
 (@sec:coop-channel), and the obligations cover calls, returns and the routed
 equations of @ch:equations.
 
-An analysis in this form is an _MCP component_ (#isatype("mcp_component")),
-with five operations, each receiving a channel (@tab:mcp-component). The
-handler answers queries about a state. The step runs an edge. Entry returns the
-pairs of @sec:calls. The return has Goblint's two stages, and both also receive
+An analysis in this form supplies a _local specification_
+(#isatype("local_spec")): a record of its operations, each receiving a channel
+(@tab:local-spec). The handler answers queries about a state. The record holds
+one transfer per kind of edge, as Goblint's `Spec` has `assign`, `branch`,
+`return` and the others, and the step on an arbitrary edge is derived from
+them. Entry returns the pairs of @sec:calls. The return has Goblint's two stages, and both also receive
 the callee's channel, which describes the stores at the callee's exit. Goblint's
 two return functions receive the callee's `ask` function as an extra argument
 in the same way.
@@ -137,28 +139,28 @@ in the same way.
     table.hline(),
     [*operation*], [*Goblint*], [*answers it receives*],
     table.hline(stroke: 0.5pt),
-    [#isaconst("mc_query")], [`query`], [the channel of the state it answers for],
-    [#isaconst("mc_step")], [edge transfers], [the channel of the predecessor state],
-    [#isaconst("mc_enter")], [`enter`], [the channel of the caller state],
-    [#isaconst("mc_combine_env")], [first return stage], [the caller's and the callee's channel],
-    [#isaconst("mc_combine_assign")], [second return stage], [the callee's channel],
+    [#isaconst("ls_query")], [`query`], [the channel of the state it answers for],
+    [#isaconst("ls_step")], [edge transfers], [the channel of the predecessor state],
+    [#isaconst("ls_enter")], [`enter`], [the channel of the caller state],
+    [#isaconst("ls_combine_env")], [first return stage], [the caller's and the callee's channel],
+    [#isaconst("ls_combine_assign")], [second return stage], [the callee's channel],
     table.hline(),
   ),
   placement: auto,
-  caption: [The operations of an MCP component. Each receives the answers
-    as an argument; the framework, not the component, decides where they
-    come from.],
-) <tab:mcp-component>
+  caption: [The operations of a local specification, with the edge
+    transfers collected in the derived step. Each receives the answers as an
+    argument; the framework, not the analysis, decides where they come from.],
+) <tab:local-spec>
 
-#definition(name: [Sound component], isa: "mcp_component_sound", cmd: "definition")[
-  A component $c$ is sound for a concretization $conc$ if $conc$ is monotone
+#definition(name: [Sound local specification], isa: "sound_local_spec", cmd: "definition")[
+  A local specification $c$ is sound for a concretization $conc$ if $conc$ is monotone
   and, for every channel that holds at the stores involved, the step satisfies
   the inclusion above, some entry pair covers the caller and the entered
   store (@sec:calls), the composed return covers #isaconst("combine_collect"),
   and every answer of the handler holds at every store of $conc(x)$.
 ]
 
-#thy("mcp_component_sound")
+#thy("sound_local_spec")
 
 The obligation matches #oblig("INTRA"), paired entry coverage and
 #oblig("RETURN") of @ch:analysis-interface, each weakened by the assumption
@@ -189,9 +191,9 @@ bound (#isaconst("query_depth")) aborts the generated program when it is
 exhausted. Logically the aborted branch returns $ltop$, so the bound does not
 affect soundness.
 
-#theorem(name: [The closed channel holds], isa: "mc_channel_sound")[
+#theorem(name: [The closed channel holds], isa: "ls_channel_sound")[
   If $c$ is sound for $conc$ and $s in conc(x)$, then the channel
-  #isaconst("mc_channel") $c$ $x$ holds at $s$.
+  #isaconst("ls_channel") $c$ $x$ holds at $s$.
 ]
 
 The proof is an induction on the depth (#isathm("ask_rec_sound")). At depth
@@ -203,10 +205,10 @@ also why the theorem discharges the assumption of the step obligation: the
 stores in $conc(x)$ are those at which the closed channel holds.
 
 The closed channel turns a component into a specification of
-@ch:analysis-interface. #isaconst("component_spec") runs every operation with
+@ch:analysis-interface. #isaconst("dg_spec_of") runs every operation with
 the channel of the state it is applied to, and
-#isathm("component_contract") proves the analysis soundness contract
-#isalocale("analysis_contract") from #isaconst("mcp_component_sound"). The
+#isathm("dg_spec_of_contract") proves the analysis soundness contract
+#isalocale("analysis_contract") from #isaconst("sound_local_spec"). The
 record #isatype("dg_spec") has a matching field #isaconst("dgs_query") for a
 handler that may read globals, and the generator installs it through the same
 recursion (#isaconst("ask_with")). The components below do not use globals.
@@ -255,7 +257,7 @@ whole return, and its second stage returns what it is given.
 The combined state becomes unreachable as soon as one active field is, as
 Goblint's MCP raises `Deadcode` when one analysis does. The normalization
 #isaconst("mcp_norm") keeps the concretization, because an empty field already
-empties the intersection, and #isathm("map_component_sound") carries soundness
+empties the intersection, and #isathm("map_local_spec_sound") carries soundness
 across it. #isathm("mcp_contract") then gives the analysis soundness contract
 for the combination. @ch:equations consumes that contract and does not need to
 know how many analyses produced it.
@@ -286,7 +288,7 @@ framework proves once.
   placement: auto,
   caption: [The obligations of an analysis that joins the combined state,
     and what the framework proves once from them. The left column is
-    #isaconst("mcp_component_sound"); the right column holds for every list of
+    #isaconst("sound_local_spec"); the right column holds for every list of
     distinct analyses whose components satisfy it.],
 ) <tab:mcp-catalogue>
 
@@ -299,10 +301,10 @@ The order analysis shows the size of such an addition. Its state is a set of
 pairs $(x, y)$ with $x lt.eq y$ (#isatype("relc")). It answers comparisons
 between variables it has ordered (#isathm("rel_qry_sound")), learns pairs at
 assignments by asking, and enters and returns with no facts. It proves its
-obligations as a component in #isathm("order_component_sound"), and the
+obligations as a component in #isathm("order_spec_sound"), and the
 generated registration of
 @ch:executable puts it into the combined state. No theorem of the framework
-changed. For the executed numeric analyses, #isaconst("exec_component")
+changed. For the executed numeric analyses, #isaconst("exec_spec")
 presents the executable analysis of @sec:whole-state as a component, and a
 handler that answers from the field's readback replaces its own
 (#isathm("with_qry_sound")). Every numeric analysis therefore answers
