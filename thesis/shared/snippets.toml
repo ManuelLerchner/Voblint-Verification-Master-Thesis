@@ -227,48 +227,44 @@ why = "Chapter 7, the obligation of one cooperating analysis, stated against eve
 why = "Chapter 7, soundness of the combination of independent components."
 
 [snippets.sign_backward_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
 file = "src/Analyses/Sign/Sign_Backward.thy"
 
 [snippets.ivl_backward_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
 file = "src/Analyses/Interval/Interval_Backward.thy"
 
+[snippets.parity_backward_domain]
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Parity/Parity_Backward.thy"
+
 [snippets.congruence_backward_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
 file = "src/Analyses/Congruence/Congruence_Backward.thy"
 
-[snippets.int_dom_backward_never]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Int/Int_Backward.thy"
-
-[snippets.int_dom_backward_once]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Int/Int_Backward.thy"
-
-[snippets.int_dom_backward_fixpoint]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
+[snippets.int_backward_domain]
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
 file = "src/Analyses/Int/Int_Backward.thy"
 
 [snippets.sign_check_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Sign/Sign_Classify.thy"
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Sign/Sign_Transfer.thy"
 
 [snippets.interval_check_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Interval/Interval_Classify.thy"
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Interval/Interval_Transfer.thy"
 
 [snippets.parity_check_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Parity/Parity_Classify.thy"
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Parity/Parity_Transfer.thy"
 
 [snippets.congruence_check_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Congruence/Congruence_Classify.thy"
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Congruence/Congruence_Transfer.thy"
 
 [snippets.int_check_domain]
-why = "Chapter 5, Figure 5.2: an instance of a final domain locale."
-file = "src/Analyses/Int/Int_Classify.thy"
+why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
+file = "src/Analyses/Int/Int_Transfer.thy"
 
 [snippets.relc_executable_domain]
 why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."

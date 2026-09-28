@@ -202,7 +202,7 @@
     }
   },
   "dom-disjunct-parity": {
-    "fixture": "tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp",
+    "fixture": "tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp",
     "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {\n    __voblint_check(x == 5);\n  }\n}",
     "settings": {
       "analysis": "parity",

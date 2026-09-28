@@ -259,13 +259,15 @@ finite-context-space arguments. `Voblint_Result` is the publication surface:
 every route that is a function of the call site, the unit route among them),
 `Source_Activation_Sound`.
 `Voblint_Nonrelational` is what a pointwise domain reuses — the shared
-expression-soundness induction, special-call dispatch, the generic transfer
-locale `nonrelational_transfer`, the primitive bundle `nonrelational_ops`, and the
+expression-soundness induction, special-call dispatch, the bundle of primitive
+operations `nonrelational_ops`, the locales `sound_nonrelational_ops`/`mono_nonrelational_ops`
+that derive the filters, branch, check classifier and transfer from it, and the
 executable backward filter.
 
 **`src/Analyses/<Domain>/`.** Each domain supplies a lattice, arithmetic,
-optionally backward inversion, special calls, numeric queries, the transfer
-registration (one `interpretation` of `nonrelational_transfer`), an executable
+inverse operators, special calls, numeric queries, the bundle
+`<impl>_ops` with its capability certificates and one interpretation of
+`sound_nonrelational_ops` or `mono_nonrelational_ops`, an executable
 mirror with its commute lemmas, the initial-state fact, a check classifier, and
 a *generated* `<Domain>_Analyses.thy` registering it at all three context
 policies with the update rule left as a parameter.
@@ -384,7 +386,7 @@ L4  WHAT AN ANALYSIS SUPPLIES
     analysis_contract: gammaDG_mono, step_sound,
                         combine_sound                  DG_Spec_Sound
     sound_nonrelational_transfer → local_state_dg_spec_for_contract   DG_Local_State_Spec
-    nonrelational_transfer (one interpretation per domain)    Nonrelational_Transfer
+    sound_/mono_nonrelational_ops (one interpretation per domain)    Nonrelational_Transfer
              │
              v
 L5  EQUATIONS
@@ -1253,7 +1255,7 @@ PART IV — INSTANCES AND PRACTICE
   10.1 What a domain must supply, as a checklist
   10.2 Sign: a finite lattice and an exact solve
   10.3 Interval: infinite height, widening, narrowing
-  10.4 Parity, and a domain with no backward filter
+  10.4 Parity: refinement through parity alone
   10.5 Congruence: Chinese remainder as an exact meet
   10.6 int_dom: a reduced product with an explicit reduction policy
   10.7 Why narrowing cannot refine (a negative result)
@@ -1381,8 +1383,8 @@ existential/premise subtleties in §9.8 are what a careful examiner will probe.
 
 **Ch. 10.** Prerequisite: Ch. 5, Ch. 6. Use the checklist in §10.1 as the
 chapter's skeleton and fill it five times, in decreasing detail: Sign in full,
-Interval in full for widening, Parity as the "what if a domain has no backward
-filter" case, Congruence for the exact meet, `int_dom` for reduction. §10.7's
+Interval in full for widening, Parity for refinement from
+parity alone, Congruence for the exact meet, `int_dom` for reduction. §10.7's
 negative result deserves a full page. §10.8 is one page.
 
 **Ch. 11.** Concrete, and larger than the first draft of this plan allowed.
@@ -1469,12 +1471,12 @@ thesis section → theories → central definitions → central theorems.
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.DG_Analysis`, `DG_Live_Keys`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `dg_pipeline`, locale `dg_analysis`, locale `dg_analysis_exec`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `fun_route_source_sound`, `fun_route_result_node_sound` |
 | 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
-| 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locale `nonrelational_transfer`, `nonrelational_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
+| 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locales `sound_nonrelational_ops`/`mono_nonrelational_ops`, `nonrelational_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.fun_route_source_sound` |
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.fun_route_source_sound` |
-| 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `branch_parity` | `parity_tf_st_for_commute` |
+| 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `parity_refine_ops`, `inv_plus_parity` | `parity_tf_st_for_commute` |
 | 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence_rep`, `inv_plus_congruence` | `congruence_lt_sound` |
-| 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_tf_st_*_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_is_sound_nonrelational_transfer` |
+| 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_dom_ops`, `int_tf_st_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_tf.is_sound_nonrelational_transfer` |
 | 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |
 | 12.3 | `Voblint_Examples_Sign.Example_Sign_DG_CallString_K1/K2`, `Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision`, `Voblint_Examples_CLI.*` | — | `sign_k2_strictly_more_precise_than_k1_at_g` |
@@ -2013,7 +2015,7 @@ colours, with no linked assets.
 | Figure | What is wrong | Work |
 | --- | --- | --- |
 | class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `numeric_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_semilattice_sup_bot` |
-| locale graph | four nodes come out isolated (`numeric_domain`, `ltr_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
+| locale graph | four nodes come out isolated (`numeric_domain`, `ltr_coverage`, `sound_nonrelational_ops`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
 | `cost-nodes` / `cost-contexts` | the bar values are the explainer's, not measured here | re-derive from the regression runner (U8) and keep the extracted figure as the layout |
 | `strata` | eleven session colours collapse to a depth ramp, which is right for print but drops the identity the web version carries | add a legend, or label each stratum |
 | `iceberg`, `export-lane` | vendor logos dropped (Typst cannot nest an SVG) | fine as is; the shapes still read |

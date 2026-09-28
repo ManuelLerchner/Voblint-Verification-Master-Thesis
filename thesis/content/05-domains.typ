@@ -195,8 +195,8 @@ forward evaluation, and backward refinement.
       + repr(stale),
   )
   // Each instance is listed at the most derived node it reaches: a type at the
-  // class it instantiates, an interpretation at a final locale, one nothing else
-  // extends. An interpretation may target a strengthening the figure leaves out
+  // class it instantiates, a lemma proving a final locale, one nothing else
+  // extends. The lemma may prove a strengthening the figure leaves out
   // (`backward_domain_mono`).
   let interpreted = (:)
   for (n, instances) in cfg.at("interpreted", default: (:)) {
@@ -213,8 +213,8 @@ forward evaluation, and backward refinement.
         )
         return (name: inst.captures.at(0), locale: n, kind: "class")
       }
-      let m = src.match(regex("(?m)^(?:global_)?interpretation\\s+(\\S+):\\s+(\\S+)"))
-      assert(m != none and m.captures.at(0) == i, message: "no interpretation " + i)
+      let m = src.match(regex("(?m)^lemma\\s+(\\S+):\\s+\"(\\S+)"))
+      assert(m != none and m.captures.at(0) == i, message: "no lemma " + i)
       assert(
         not hierarchy.any(d => n in d.parents),
         message: "domain tree " + key + ": " + n + " is extended, so it is not final",
@@ -222,7 +222,7 @@ forward evaluation, and backward refinement.
       let locale = m.captures.at(1)
       assert(
         locale == n or locale.starts-with(n + "_"),
-        message: i + " interprets " + locale + ", not " + n,
+        message: i + " proves " + locale + ", not " + n,
       )
       (name: i, locale: locale, kind: "locale")
     }))
@@ -233,6 +233,7 @@ forward evaluation, and backward refinement.
     bends: cfg.bends,
     parent-bends: cfg.parent-bends,
     widths: cfg.at("widths", default: (:)),
+    row-gap: cfg.at("row-gap", default: 6.0) * 1pt,
     interpreted: interpreted,
   )
 }
@@ -291,20 +292,15 @@ forward evaluation, and backward refinement.
         rows.push(table.cell(colspan: 2, align: center, text(
           fill: vb.muted,
           style: "italic",
-        )[#if instances.all(it => it.kind == "class") [instantiated by] else [interpreted by]]))
+        )[#if instances.all(it => it.kind == "class") [instantiated by] else [proved by]]))
         // Types need no second column, so they share one wrapped line.
         let types = instances.filter(it => it.kind == "class")
         if types != () {
           rows.push(table.cell(colspan: 2, types.map(it => code(it.name)).join[, ]))
         }
-        // The locale column names only a strengthening the figure leaves out.
+        // The strengthening a lemma proves is named in the caption, not per row.
         for it in instances.filter(it => it.kind == "locale") {
-          if it.locale == d.name {
-            rows.push(table.cell(colspan: 2, code(it.name)))
-          } else {
-            rows.push(code(it.name))
-            rows.push(code(it.locale, fill: vb.muted))
-          }
+          rows.push(table.cell(colspan: 2, code(it.name)))
         }
       }
       // Styled inside, so that `measure` sees the size the node is drawn at.
@@ -323,8 +319,7 @@ forward evaluation, and backward refinement.
         width: calc.min(measure(t).width, cap),
         stroke: (
           paint: vb.at(d.origin),
-          // An interface an analysis implements stands out from the plumbing.
-          thickness: if d.name in tree.interpreted { 1.6pt } else { 0.7pt },
+          thickness: 0.7pt,
           dash: if d.kind == "locale" { "dashed" } else { none },
         ),
         radius: 2pt,
@@ -340,7 +335,7 @@ forward evaluation, and backward refinement.
       let h = calc.max(..row.keys().map(n => measure(boxes.at(n)).height))
       // Physical coordinates grow upwards.
       for (n, x) in row { at.insert(n, (x * size.width, -(y + h / 2))) }
-      y += h + 6pt
+      y += h + tree.row-gap
     }
     let hollow = (inherit: "stealth", stealth: 0, fill: white, size: 7)
     diagram(
@@ -389,9 +384,10 @@ forward evaluation, and backward refinement.
     are not drawn. Each
     class (solid) or locale (dashed) lists the operations and laws it declares.
     Solid arrows point to what a declaration extends, dashed ones to the class
-    its type variable is constrained to. Thick borders mark the interfaces an
-    analysis implements; each lists its implementations, with the strengthening
-    an interpretation targets where it differs. Colour gives where a node is
+    its type variable is constrained to. An interface an analysis implements
+    lists the instances or lemmas establishing it. The backward lemmas prove the monotone strengthening
+    #isalocale("backward_domain_mono"), except Int's, which proves the
+    reductive one. Colour gives where a node is
     declared:
     #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
     #swatch(vb.voblint) Voblint. Read from the declarations.],
@@ -412,9 +408,9 @@ $
   a lle b ==> conc(a) subset.eq conc(b), quad
   #isaconst("is_empty") (a) <==> conc(a) = emptyset.
 $
-The third law turns the solver's inequalities into inclusions. The fourth
-decides emptiness for every value, not only for $lbot$. A type with all of this
-is a _numeric domain_ (#isalocale("numeric_domain")).
+The third law turns the solver's inequalities into inclusions; the fourth
+decides emptiness for every value, not only for $lbot$. Such a type is a
+_numeric domain_ (#isalocale("numeric_domain")).
 
 Forward evaluation computes an abstract value for an expression $e$ from an
 abstract description $d$ of a set of stores $sem(d)$, as in the generic
@@ -426,7 +422,6 @@ $"tobool"(a)$ returns $"Some"(b)$ if it can decide that every integer in
 $conc(a)$ has truth value $b$, where non-zero counts as true, and
 $"None"$ otherwise:
 $ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
-A branch whose condition the test decides cannot take the other arm.
 
 To answer the checks of @sec:queries, a domain also supplies two queries on
 abstract values, $"less"(a, b)$ for $a < b$ and $"eq"(a, b)$ for $a = b$
@@ -446,27 +441,22 @@ $
 $
 and likewise for equality, addition, subtraction and multiplication. An
 intersection combines a refined value with the value known before. Nipkow and
-Klein use the meet of a lattice for this and require it to be precise,
-$conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$. Since one inclusion holds
-in every lattice, they note that the actual requirement is the other one, which
-is also all that soundness needs @nipkow14[Sect. 13.7]. The interface keeps
-this inclusion but drops the lattice. The intersection is any operation with
+Klein use a lattice meet and require $conc(a_1 lmeet a_2) = conc(a_1) inter
+conc(a_2)$; one inclusion holds in every lattice, and the other is all that
+soundness needs @nipkow14[Sect. 13.7]. The interface keeps that inclusion and
+drops the lattice. The intersection is any operation with
 $ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
 not necessarily a meet of the order, and the carrier classes require a join
 but no meet.
 
-The interface also asks for no monotone operations. Nipkow and Klein prove
-their interpreter with widening and narrowing correct only for monotone
-operations, because the narrowing phase keeps a post-fixpoint only when the
-step function is monotone @nipkow14[Lemma 13.39]. Voblint's solver needs no such
-invariant. It re-evaluates an unknown whenever a value it read has changed,
-and it stops only when every unknown it reached is stable. A terminated solve
-therefore satisfies each of its inequalities directly, whatever the operations
-are (#isathm("partial_post_solution")). Monotone operations would help to make
-the result precise or to prove that the solve terminates. Voblint proves
-neither: precision is not a theorem, and termination is a premise.
+The interface also asks for no monotone operations. Nipkow and Klein need them
+because their narrowing keeps a post-fixpoint only for a monotone step function
+@nipkow14[Lemma 13.39]. Voblint's solver stops only when every unknown it reached
+is stable, so a terminated solve satisfies each inequality whatever the
+operations are (#isathm("partial_post_solution")). Monotonicity would help precision and termination, which
+Voblint does not prove: precision is not a theorem, termination a premise.
 
-== Intervals as a numeric domain#thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
+== Intervals as a numeric domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
 
 The interval domain of @sec:abs-int shows how a concrete type meets these laws.
 @sec:abs-int described it on non-empty intervals. The formal type must also
@@ -1072,7 +1062,7 @@ stays #raw(_c.verdict).
     [exact state-emptiness test, readback (@sec:readback)],
     [least upper bounds], [the solver's order class],
     [#isalocale("warrowing")], [the solver's update rule],
-    [sound inverse operators, if any], [#isathm("bfilter_sound") (@sec:branches)],
+    [sound inverse operators], [#isathm("bfilter_sound") (@sec:branches)],
     [sound comparison queries], [check verdicts (@sec:verdicts)],
     [reductive intersection], [executable branch filter, readback (@sec:readback)],
     table.hline(stroke: 0.5pt),

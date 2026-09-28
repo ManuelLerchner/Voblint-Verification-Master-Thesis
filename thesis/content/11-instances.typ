@@ -25,7 +25,7 @@ interpreted into the analysis assembly of @sec:engineering, so the source-level
 theorem of @sec:headline covers it under every context policy and update rule.
 Each domain tests a different part of the interface. Sign is finite, so
 its join serves as its widening. Interval is infinite and needs widening and
-narrowing. Parity has no backward filter. Congruence has an exact meet. The
+narrowing. Parity refines guards through parity alone. Congruence has an exact meet. The
 product Int combines the four under a partial reduction. A relational carrier
 (@sec:relational) asks whether the contract depends on pointwise states at all,
 and as the order analysis it cooperates with the numeric domains through the
@@ -40,12 +40,14 @@ counterpart, and exclusion sets, enumerations, interval sets and bitfields have
 none here (@app:goblint-alignment). Exclusion sets are ruled out by the
 least-upper-bound requirement of @ch:domains.
 
-== What an instance supplies
+== What an instance supplies <sec:instances-supply>
 
 A domain instance proves the laws of #isalocale("numeric_domain") and of
-@tab:domain-contract for its carrier and supplies a branch transfer, either the
-generic filter of #isalocale("backward_domain") or the identity. @fig:gamma
-shows one value of each carrier and the integers it denotes.
+@tab:domain-contract for its carrier and supplies its operations: an evaluator,
+the comparison queries, the inverse operators with an intersection, and the
+abstract `min` and `max`. The branch transfer is not among them; it is derived
+from the inverse operators by the filter of #isalocale("backward_domain").
+@fig:gamma shows one value of each carrier and the integers it denotes.
 
 #figure(
   {
@@ -90,14 +92,19 @@ shows one value of each carrier and the integers it denotes.
     of its components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
-Sign, Interval, Parity and Congruence package their transfer functions by
-interpreting the locale #isalocale("nonrelational_transfer"). Beyond soundness
-it assumes that the branch transfer, the expression evaluator and the abstract
-`min` and `max` are monotone (#isathm("nonrelational_transfer.br_mono"),
-#isathm("mono_evaluator.aval_abs_mono"),
-#isathm("mono_special_ops.special_min_mono")). Int does not interpret it,
-because its operations carry the refinement mode, and for the fixpoint mode
-no monotonicity is proved (@sec:reduced-product). No soundness theorem uses
+Every domain supplies its operations as one record of primitive choices,
+#isatype("nonrelational_ops"): the evaluator, the comparison queries, the
+refinement operations of @ch:domains, the abstract `min` and `max`, and the
+whole-value element. Interpreting #isalocale("sound_nonrelational_ops") at that
+record derives the guard filters, the branch transfer, the check classifier and
+every transfer function, and proves them sound once. The domain proves only the
+certificates of @fig:domain-carrier. The locale asks for soundness alone;
+#isalocale("mono_nonrelational_ops") adds that the evaluator, `min`, `max` and the
+refinement operations are monotone, and derives monotone transfer functions
+(#isathm("mono_nonrelational_ops.br_mono")). Sign, Interval, Parity and
+Congruence interpret the monotone locale. Int interprets the sound one once,
+parametric in its refinement mode, because for the fixpoint mode no
+monotonicity is proved (@sec:reduced-product). No soundness theorem uses
 these monotonicity facts. They match the hypotheses of
 #isathm("routed_node_rhs_mono_eq"), which prepares the vendored least-solution
 theorem for the solver without widening, and the analyzer does not use that
@@ -182,13 +189,15 @@ interval is convex, so it cannot say "odd".
 Parity records only evenness. For `x = 2 * n; y = 2 * n + 1` with `n`
 unconstrained, Interval answers #verdict("dom-even-odd-interval", "20:3") on
 `x != y`, while Parity derives #state("dom-even-odd-parity", "20:3") and
-answers #verdict("dom-even-odd-parity", "20:3"). Parity is also the domain
-without backward filtering: its branch transfer #isaconst("branch_parity") is
-the identity, sound because a guard only selects a subset of the incoming
-stores. On the contradictory guard of @fig:domain-reachability, Sign reports
-the branch #verdict("dom-disjunct-sign", "13:5"), Parity
-#verdict("dom-disjunct-parity", "16:5"). The interface therefore admits an
-instance without the precision mechanism of @ch:domains.
+answers #verdict("dom-even-odd-parity", "20:3"). Parity also refines guards: an
+equality that held gives both sides the meet of their parities, and a known sum
+or difference fixes one operand's parity from the other's
+(#isaconst("inv_plus_parity")). On the contradictory guard of
+@fig:domain-reachability, `x == 1` makes `x` odd and `x == 0` then empties it,
+so Parity reports the branch #verdict("dom-disjunct-parity", "12:5"), as Sign
+does (#verdict("dom-disjunct-sign", "13:5")). An order comparison says nothing
+about parity, and Parity refines it with the identity
+#isaconst("inv_conservative"), which the interface admits for every operator.
 
 Congruence analysis goes back to Granger @granger89. A value denotes
 $setcomp(n, n equiv c med (mod m))$, with $m = 0$ meaning the single integer
