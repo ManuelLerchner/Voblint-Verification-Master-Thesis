@@ -87,16 +87,6 @@ definition rel_learn :: "answers \<Rightarrow> vname list \<Rightarrow> vname \<
           \<union> set (map (\<lambda>y. (y, x))
                 (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
 
-text \<open>The questions \<open>rel_learn\<close> consults at \<open>x = e\<close>, and nothing elsewhere.\<close>
-
-definition rel_qs :: "vname list \<Rightarrow> edge_action \<Rightarrow> relc \<Rightarrow> query list" where
-  "rel_qs ys a d =
-     (case a of
-        EA_Assign x e \<Rightarrow>
-          concat (map (\<lambda>y. if y = x then []
-                           else [EvalInt (LessEq e (V y)), EvalInt (LessEq (V y) e)]) ys)
-      | _ \<Rightarrow> [])"
-
 lemma rel_learn_sound:
   assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>d\<rbrakk>"
     and "eval_query.oracle_holds ask s"

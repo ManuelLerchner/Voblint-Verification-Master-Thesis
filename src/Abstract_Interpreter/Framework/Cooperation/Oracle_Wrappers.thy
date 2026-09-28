@@ -20,60 +20,27 @@ definition assign_ask ::
         Some n \<Rightarrow> asn A x (N n) d
       | None \<Rightarrow> asn A x e d)"
 
-text \<open>The question the wrapper needs, added to the ones the component already
-  asks at an assignment.\<close>
+text \<open>The wrapper keeps an assignment's law: where it substitutes the literal, the
+  answer holds at the store, so the literal evaluates to what \<open>e\<close> does.\<close>
 
-definition assign_ask_qs ::
-  "(edge_action \<Rightarrow> 'D \<Rightarrow> query list) \<Rightarrow> edge_action \<Rightarrow> 'D \<Rightarrow> query list" where
-  "assign_ask_qs qs a d =
-     (case a of
-        EA_Assign x e \<Rightarrow> EvalInt e # qs a d
-      | _ \<Rightarrow> qs a d)"
-
-theorem sound_local_assign_ask:
-  assumes "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
-  shows "sound_local_dg_spec qry sk (assign_ask asn) sp br bd rt en ev ce ca gammaD \<G>"
-proof -
-  interpret C: sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>
-    by (fact assms)
-  have assign:
-    "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gammaD (assign_ask asn A x e d)"
-    if s: "s \<in> gammaD d" and o: "eval_query.oracle_holds A s" for s A x e d
-  proof -
-    have base: "s(x := \<lbrakk>e'\<rbrakk>\<^sub>e s) \<in> gammaD (asn A x e' d)" for e'
-      using C.step_sound_local[of "EA_Assign x e'" d A] s o by auto
-    show ?thesis
-    proof (cases "answer_const (A (EvalInt e))")
-      case None
-      then show ?thesis using base[of e] by (simp add: assign_ask_def)
-    next
-      case (Some n)
-      have "\<lbrakk>e\<rbrakk>\<^sub>e s = n"
-        by (rule eval_holds_constD[OF eval_query.oracle_holdsD[OF o] Some])
-      then show ?thesis
-        using Some base[of "N n"] by (simp add: assign_ask_def)
-    qed
-  qed
-  show ?thesis
-  proof (unfold_locales, goal_cases)
-    case (1 d d')
-    then show ?case by (rule C.gammaD_mono)
+lemma assign_ask_sound:
+  assumes "assign_sound gm asn"
+  shows "assign_sound gm (assign_ask asn)"
+  unfolding assign_sound_def
+proof (intro allI impI)
+  fix A x s y e
+  assume s: "s \<in> gm x" and o: "eval_query.oracle_holds A s"
+  have base: "s(y := \<lbrakk>e'\<rbrakk>\<^sub>e s) \<in> gm (asn A y e' x)" for e'
+    using assms s o unfolding assign_sound_def by blast
+  show "s(y := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gm (assign_ask asn A y e x)"
+  proof (cases "answer_const (A (EvalInt e))")
+    case None
+    then show ?thesis using base[of e] by (simp add: assign_ask_def)
   next
-    case (2 a d A)
-    show ?case
-    proof (cases a)
-      case (EA_Assign x e)
-      then show ?thesis using assign by auto
-    qed (use C.step_sound_local[of a d A] in simp_all)
-  next
-    case (3 s d ci)
-    then show ?case by (rule C.enter_sound_local)
-  next
-    case (4 s dc t de ci)
-    then show ?case by (rule C.combine_sound_local)
-  next
-    case (5 s d q)
-    then show ?case by (rule C.qry_sound)
+    case (Some n)
+    have "\<lbrakk>e\<rbrakk>\<^sub>e s = n"
+      by (rule eval_holds_constD[OF eval_query.oracle_holdsD[OF o] Some])
+    then show ?thesis using Some base[of "N n"] by (simp add: assign_ask_def)
   qed
 qed
 
@@ -125,34 +92,10 @@ theorem ask_assign_sound:
   assumes sound: "mcp_component_sound \<G> gm c"
   shows "mcp_component_sound \<G> gm (ask_assign c)"
 proof -
-  have base: "edge_collect a' (gm x \<inter> Collect (eval_query.oracle_holds A)) \<subseteq> gm (mc_step c A a' x)"
-    for A a' x
-    using sound unfolding mcp_component_sound_def by blast
-  have step: "edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A))
-                \<subseteq> gm (mc_step (ask_assign c) A a x)" for A a x
-  proof (cases "mc_step (ask_assign c) A a x = mc_step c A a x")
-    case True
-    then show ?thesis using base by simp
-  next
-    case False
-    then obtain y e n where a: "a = EA_Assign y e" and n: "answer_const (A (EvalInt e)) = Some n"
-        and eq: "mc_step (ask_assign c) A a x = mc_step c A (EA_Assign y (N n)) x"
-      using ask_assign_step_cases by metis
-    have val: "\<lbrakk>e\<rbrakk>\<^sub>e s = n" if "eval_query.oracle_holds A s" for s
-      by (rule eval_holds_constD[OF eval_query.oracle_holdsD[OF that] n])
-    have "edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A))
-            = edge_collect (EA_Assign y (N n)) (gm x \<inter> Collect (eval_query.oracle_holds A))"
-      unfolding a using val by auto
-    with base[of "EA_Assign y (N n)" x A] show ?thesis unfolding eq by argo
-  qed
-  have eqs: "mc_enter (ask_assign c) = mc_enter c"
-    "mc_combine_env (ask_assign c) = mc_combine_env c"
-    "mc_combine_assign (ask_assign c) = mc_combine_assign c" "mc_query (ask_assign c) = mc_query c"
-    by (simp_all add: ask_assign_def)
-  show ?thesis
-    unfolding mcp_component_sound_def eqs
-    using sound[unfolded mcp_component_sound_def] step
-    by presburger
+  have "assign_sound gm (mc_assign c)"
+    using sound unfolding mcp_component_sound_def mc_step_sound_iff by blast
+  then show ?thesis
+    unfolding ask_assign_def by (rule mcp_component_sound_update(2)[OF sound assign_ask_sound])
 qed
 
 end

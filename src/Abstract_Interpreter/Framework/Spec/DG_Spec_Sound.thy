@@ -437,15 +437,4 @@ qed
 
 end
 
-text \<open>The handler is the only obligation that mentions it, so any other sound
-  handler for the same states may replace it. A specification that answered
-  nothing thereby gains a handler without reproving its transfers.\<close>
-
-lemma sound_local_dg_spec_with_qry:
-  assumes "sound_local_dg_spec qry sk asn sp br bd rt en ev ce ca gammaD \<G>"
-    and "\<And>s d q. s \<in> gammaD d \<Longrightarrow> eval_holds q (qry' d q) s"
-  shows "sound_local_dg_spec qry' sk asn sp br bd rt en ev ce ca gammaD \<G>"
-  using assms unfolding sound_local_dg_spec_def
-  by fastforce
-
 end

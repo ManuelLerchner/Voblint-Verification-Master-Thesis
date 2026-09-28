@@ -3255,3 +3255,21 @@ mc_en
 mc_comb_env
 mc_comb_assign
 mc_comb
+# --- Cooperation runs through MCP components; the question-list product and
+# its demo are gone (2026-09-28) ---
+product_local_spec
+product_contract
+local_spec_step_pmap
+pmap
+pmap2
+prod_enter
+gamma_prod
+qry_prod
+qs_prod
+assign_ask_qs
+sound_local_assign_ask
+rel_qs
+sound_local_dg_spec_with_qry
+coop_spec
+coop_contract
+coop_ivl_component

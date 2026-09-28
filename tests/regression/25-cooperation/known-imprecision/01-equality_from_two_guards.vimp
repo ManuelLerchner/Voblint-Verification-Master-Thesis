@@ -7,13 +7,13 @@
 // evaluates x == y from two full intervals and only knows the comparison
 // yields 0 or 1, so z = [0,1].
 //
-// The cooperating product of Interval and the order analysis recovers the
-// check: the order analysis records (x, y) and (y, x) from the two guards and
-// answers EvalInt (x == y) with the exact integer 1, and Interval, asking at the assignment,
-// assigns 1. Established for this program in
-// src/Examples/Relational/Example_Cooperating_Demo.thy (coop_after_assignment,
-// by evaluation; coop_ivl_alone_after_assignment gives the [0,1] baseline).
-// --analysis interval,order runs that product
+// Interval and the order analysis together recover the check: the order
+// analysis records (x, y) and (y, x) from the two guards and answers
+// EvalInt (x == y) with the exact integer 1, and Interval, asking at the
+// assignment, assigns 1. Established for this program in
+// src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy
+// (coop_demo_needs_both, by evaluation of run_voblint).
+// --analysis interval,order runs both
 // (precision/03-equality_asked_of_order); this case pins the baseline.
 fun main() {
   x = __voblint_nondet_int();
