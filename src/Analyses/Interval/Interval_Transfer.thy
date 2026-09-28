@@ -108,7 +108,7 @@ text \<open>
   registration data; the theorems about them stay under \<open>ivl_tf.\<close>, which is where
   a reader looks to find out that they are the generic ones rather than
   Interval's own. \<^const>\<open>skip_ivl\<close>'s soundness is \<open>ivl_tf.skip_sound\<close>, and the
-  framework's transfer contract at Interval is \<open>ivl_tf.is_sound_transfer_for\<close>.
+  framework's transfer contract at Interval is \<open>ivl_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 
 text \<open>

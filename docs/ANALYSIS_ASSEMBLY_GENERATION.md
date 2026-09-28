@@ -57,7 +57,7 @@ position Isabelle checks.
 
 Because the proof text is uniform, a domain has to satisfy the shape it cites
 into. Each role has a conventional spelling built from `impl`:
-`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.is_sound_transfer_for`,
+`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.is_sound_nonrelational_transfer`,
 `<impl>_tf_st_for_commute`, and so on. The classifier and the initial-state fact
 use the lowercased domain name (`interval_classify_check`,
 `interval_cinit_gamma`) even where `impl` differs (`ivl`).
@@ -83,23 +83,23 @@ holds the `analysis_domain` datatype, one constructor per domain, and the
 combined state `mcp_st`: a nested product with one lifted field per domain,
 each field carrying that domain's `exec_dg_st`. Beside it comes the per-domain
 dispatch the combined state needs, one equation per domain each:
-`mcp_component_of` (a field's transfer, lensed into the product), the field
+`local_spec_of` (a field's transfer, lensed into the product), the field
 concretization and liveness readers, `val_answer` (a field's answer to a
 query), `value_of` (a field's value for display, wrapped in the domain's
 `value_constructor`), `mcp_init` (active fields start at the domain's initial
 state, inactive ones at `Bot`) and the readers for the formals a context is
-keyed by. The lemmas `mcp_component_of_sound`, `mcp_init_sound` and
+keyed by. The lemmas `local_spec_of_sound`, `mcp_init_sound` and
 `val_answer_sound` are proved by case analysis over the domain, citing only
 facts the domains already export.
 
 Each of these lines comes from a field role, a term template in the generator's
 `FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
-field runs `ask_assign (exec_component ...)`, which asks for the value of an
+field runs `ask_assign (exec_spec ...)`, which asks for the value of an
 assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
-`order_component` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
-keys no context. The generator also emits `mcp_component_of_silent`: every
+`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
+keys no context. The generator also emits `local_spec_of_silent`: every
 pointwise field's own component answers every query with `\<top>`.
 `MCP_Analyses.thy` replaces each field's handler with the answer the field
 publishes for checks (`mcp_field`), so every active analysis answers during the

@@ -45,7 +45,7 @@ global_interpretation interval_rule: dg_analysis_exec
     "TD_side_rule_Interp_solve_c r"
   for r
 proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
@@ -90,7 +90,7 @@ global_interpretation interval_es_rule: dg_analysis_exec
     "TD_side_rule_Interp_solve_c r"
   for r
 proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
@@ -137,7 +137,7 @@ global_interpretation interval_cs_rule: dg_analysis_exec
     "TD_side_rule_Interp_solve_c r"
   for k r
 proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def

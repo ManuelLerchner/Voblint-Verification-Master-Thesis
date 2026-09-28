@@ -61,7 +61,7 @@ and terminates without acceleration.
 | `Congruence_Arithmetic.thy` | modular `+`, `-`, `*` on residue classes |
 | `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand |
 | `Congruence_Special.thy` | `Min`/`Max` return an operand, so both answer with the join of their arguments; `Nondet_Int` lands at `top` |
-| `Congruence_Transfer.thy` | one abstract operation per edge kind the framework can hand a domain, and their `sound_transfer_for` contract |
+| `Congruence_Transfer.thy` | one abstract operation per edge kind the framework can hand a domain, and their `sound_nonrelational_transfer` contract |
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |

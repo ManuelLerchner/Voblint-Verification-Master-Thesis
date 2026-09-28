@@ -32,18 +32,18 @@ text \<open>
   as \<^class>\<open>numeric_domain\<close> keeps \<open>gamma\<close> out of \<^class>\<open>executable_domain\<close>.
 \<close>
 
-record 's mcp_component =
-  mc_query :: "answers \<Rightarrow> 's \<Rightarrow> answers"
-  mc_skip :: "answers \<Rightarrow> 's \<Rightarrow> 's"
-  mc_assign :: "answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
-  mc_special :: "answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's"
-  mc_branch :: "answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
-  mc_body :: "answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
-  mc_return :: "answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
-  mc_event :: "answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's"
-  mc_enter :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
-  mc_combine_env :: "answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
-  mc_combine_assign :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+record 's local_spec =
+  ls_query :: "answers \<Rightarrow> 's \<Rightarrow> answers"
+  ls_skip :: "answers \<Rightarrow> 's \<Rightarrow> 's"
+  ls_assign :: "answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's"
+  ls_special :: "answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_branch :: "answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's"
+  ls_body :: "answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_return :: "answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's"
+  ls_event :: "answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's"
+  ls_enter :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
+  ls_combine_env :: "answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  ls_combine_assign :: "answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
 
 text \<open>
   The edge transfers are separate fields, one per kind of edge, as Goblint's
@@ -52,30 +52,30 @@ text \<open>
   step on an arbitrary edge is derived from them.
 \<close>
 
-definition mc_step :: "'s mcp_component \<Rightarrow> answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
-  "mc_step c A = local_spec_step (mc_skip c A) (mc_assign c A) (mc_special c A)
-     (mc_branch c A) (mc_body c A) (mc_return c A) (mc_event c A)"
+definition ls_step :: "'s local_spec \<Rightarrow> answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
+  "ls_step c A = local_spec_step (ls_skip c A) (ls_assign c A) (ls_special c A)
+     (ls_branch c A) (ls_body c A) (ls_return c A) (ls_event c A)"
 
-lemma mc_step_simps [simp]:
-  "mc_step c A EA_Nop = mc_skip c A"
-  "mc_step c A (EA_Assign x e) = mc_assign c A x e"
-  "mc_step c A (EA_Special sc x) = mc_special c A sc x"
-  "mc_step c A (EA_Assume b) = mc_branch c A b True"
-  "mc_step c A (EA_AssumeNot b) = mc_branch c A b False"
-  "mc_step c A (EA_Body p) = mc_body c A p"
-  "mc_step c A (EA_Ret r p) = mc_return c A r p"
-  "mc_step c A (EA_Check l cnd) = mc_event c A (Check_Event l cnd)"
-  by (simp_all add: mc_step_def)
+lemma ls_step_simps [simp]:
+  "ls_step c A EA_Nop = ls_skip c A"
+  "ls_step c A (EA_Assign x e) = ls_assign c A x e"
+  "ls_step c A (EA_Special sc x) = ls_special c A sc x"
+  "ls_step c A (EA_Assume b) = ls_branch c A b True"
+  "ls_step c A (EA_AssumeNot b) = ls_branch c A b False"
+  "ls_step c A (EA_Body p) = ls_body c A p"
+  "ls_step c A (EA_Ret r p) = ls_return c A r p"
+  "ls_step c A (EA_Check l cnd) = ls_event c A (Check_Event l cnd)"
+  by (simp_all add: ls_step_def)
 
-lemma mc_step_event_action [simp]: "mc_step c A (event_action e) = mc_event c A e"
+lemma ls_step_event_action [simp]: "ls_step c A (event_action e) = ls_event c A e"
   by (cases e) simp
 
-lemma mc_step_update_other [simp]:
-  "mc_step (c\<lparr>mc_query := h\<rparr>) = mc_step c"
-  "mc_step (c\<lparr>mc_enter := e\<rparr>) = mc_step c"
-  "mc_step (c\<lparr>mc_combine_env := ce\<rparr>) = mc_step c"
-  "mc_step (c\<lparr>mc_combine_assign := ca\<rparr>) = mc_step c"
-  by (simp_all add: mc_step_def fun_eq_iff)
+lemma ls_step_update_other [simp]:
+  "ls_step (c\<lparr>ls_query := h\<rparr>) = ls_step c"
+  "ls_step (c\<lparr>ls_enter := e\<rparr>) = ls_step c"
+  "ls_step (c\<lparr>ls_combine_env := ce\<rparr>) = ls_step c"
+  "ls_step (c\<lparr>ls_combine_assign := ca\<rparr>) = ls_step c"
+  by (simp_all add: ls_step_def fun_eq_iff)
 
 text \<open>
   A component whose edge transfers are one function of the edge, such as a
@@ -83,36 +83,36 @@ text \<open>
   function: each field is the function at its kind of edge.
 \<close>
 
-definition make_component ::
+definition make_local_spec ::
   "(answers \<Rightarrow> 's \<Rightarrow> answers) \<Rightarrow> (answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's)
    \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list)
    \<Rightarrow> (answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
-   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's mcp_component" where
-  "make_component qry st en ce ca = \<lparr>
-     mc_query = qry,
-     mc_skip = (\<lambda>A. st A EA_Nop),
-     mc_assign = (\<lambda>A x e. st A (EA_Assign x e)),
-     mc_special = (\<lambda>A sc x. st A (EA_Special sc x)),
-     mc_branch = (\<lambda>A b pol. st A (if pol then EA_Assume b else EA_AssumeNot b)),
-     mc_body = (\<lambda>A p. st A (EA_Body p)),
-     mc_return = (\<lambda>A r p. st A (EA_Ret r p)),
-     mc_event = (\<lambda>A ev. st A (event_action ev)),
-     mc_enter = en, mc_combine_env = ce, mc_combine_assign = ca \<rparr>"
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> 's local_spec" where
+  "make_local_spec qry st en ce ca = \<lparr>
+     ls_query = qry,
+     ls_skip = (\<lambda>A. st A EA_Nop),
+     ls_assign = (\<lambda>A x e. st A (EA_Assign x e)),
+     ls_special = (\<lambda>A sc x. st A (EA_Special sc x)),
+     ls_branch = (\<lambda>A b pol. st A (if pol then EA_Assume b else EA_AssumeNot b)),
+     ls_body = (\<lambda>A p. st A (EA_Body p)),
+     ls_return = (\<lambda>A r p. st A (EA_Ret r p)),
+     ls_event = (\<lambda>A ev. st A (event_action ev)),
+     ls_enter = en, ls_combine_env = ce, ls_combine_assign = ca \<rparr>"
 
-lemma make_component_sel [simp]:
-  "mc_query (make_component qry st en ce ca) = qry"
-  "mc_step (make_component qry st en ce ca) = st"
-  "mc_enter (make_component qry st en ce ca) = en"
-  "mc_combine_env (make_component qry st en ce ca) = ce"
-  "mc_combine_assign (make_component qry st en ce ca) = ca"
+lemma make_local_spec_sel [simp]:
+  "ls_query (make_local_spec qry st en ce ca) = qry"
+  "ls_step (make_local_spec qry st en ce ca) = st"
+  "ls_enter (make_local_spec qry st en ce ca) = en"
+  "ls_combine_env (make_local_spec qry st en ce ca) = ce"
+  "ls_combine_assign (make_local_spec qry st en ce ca) = ca"
 proof -
-  have "mc_step (make_component qry st en ce ca) A a = st A a" for A a
+  have "ls_step (make_local_spec qry st en ce ca) A a = st A a" for A a
   proof (cases a)
     case (EA_Check l cnd)
-    then show ?thesis by (simp add: make_component_def mc_step_def)
-  qed (simp_all add: make_component_def mc_step_def)
-  then show "mc_step (make_component qry st en ce ca) = st" by (simp add: fun_eq_iff)
-qed (simp_all add: make_component_def)
+    then show ?thesis by (simp add: make_local_spec_def ls_step_def)
+  qed (simp_all add: make_local_spec_def ls_step_def)
+  then show "ls_step (make_local_spec qry st en ce ca) = st" by (simp add: fun_eq_iff)
+qed (simp_all add: make_local_spec_def)
 
 text \<open>
   The return runs in the two stages of Goblint's \<open>combine_env\<close> and
@@ -122,9 +122,9 @@ text \<open>
   since soundness and independence speak only about the composite.
 \<close>
 
-abbreviation mc_combine ::
-  "'s mcp_component \<Rightarrow> answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
-  "mc_combine c A B ci x de \<equiv> mc_combine_assign c B ci (mc_combine_env c A B ci x de) de"
+abbreviation ls_combine ::
+  "'s local_spec \<Rightarrow> answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "ls_combine c A B ci x de \<equiv> ls_combine_assign c B ci (ls_combine_env c A B ci x de) de"
 
 text \<open>
   A component is sound for a concretization \<open>gamma\<close> when each operation covers the
@@ -135,76 +135,76 @@ text \<open>
   store for the callee's channel.
 \<close>
 
-definition mcp_component_sound ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('s::order \<Rightarrow> store set) \<Rightarrow> 's mcp_component \<Rightarrow> bool" where
-  "mcp_component_sound \<G> gm c \<longleftrightarrow>
+definition sound_local_spec ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('s::order \<Rightarrow> store set) \<Rightarrow> 's local_spec \<Rightarrow> bool" where
+  "sound_local_spec \<G> gm c \<longleftrightarrow>
      (\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y)
      \<and> (\<forall>A a x. edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A))
-                  \<subseteq> gm (mc_step c A a x))
+                  \<subseteq> gm (ls_step c A a x))
      \<and> (\<forall>A s ci p. s \<in> gm (fst p) \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow>
-          (\<exists>q \<in> set (mc_enter c A ci p). s \<in> gm (fst q)
+          (\<exists>q \<in> set (ls_enter c A ci p). s \<in> gm (fst q)
              \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
                  \<in> gm (snd q)))
      \<and> (\<forall>A B s t ci x de. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow>
           t \<in> gm de \<longrightarrow> eval_query.oracle_holds B t \<longrightarrow>
-          combine_collect \<G> (ci_dst ci) s t \<in> gm (mc_combine c A B ci x de))
+          combine_collect \<G> (ci_dst ci) s t \<in> gm (ls_combine c A B ci x de))
      \<and> (\<forall>A s x q. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow>
-          eval_holds q (mc_query c A x q) s)"
+          eval_holds q (ls_query c A x q) s)"
 
 text \<open>
   The step obligation splits into one law per kind of edge, each about the
   field that handles it: the store the edge produces lies in what the field
   returns, for every store and channel that hold before. A component proves the
   laws of the fields it defines, and a field it replaces needs only its own law
-  again (\<open>mcp_component_sound_update\<close>).
+  again (\<open>sound_local_spec_update\<close>).
 \<close>
 
-definition skip_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "skip_sound gm f \<longleftrightarrow>
+definition sound_skip :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_skip gm f \<longleftrightarrow>
      (\<forall>A x s. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A x))"
 
-definition assign_sound ::
+definition sound_assign ::
   "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "assign_sound gm f \<longleftrightarrow>
+  "sound_assign gm f \<longleftrightarrow>
      (\<forall>A x s y e. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s(y := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gm (f A y e x))"
 
-definition special_sound ::
+definition sound_special ::
   "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "special_sound gm f \<longleftrightarrow>
+  "sound_special gm f \<longleftrightarrow>
      (\<forall>A x s sc y t. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> t \<in> special_step sc y s
         \<longrightarrow> t \<in> gm (f A sc y x))"
 
-definition branch_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "branch_sound gm f \<longleftrightarrow>
+definition sound_branch :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_branch gm f \<longleftrightarrow>
      (\<forall>A x s b pol. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol
         \<longrightarrow> s \<in> gm (f A b pol x))"
 
-definition body_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "body_sound gm f \<longleftrightarrow>
+definition sound_body :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_body gm f \<longleftrightarrow>
      (\<forall>A x s p. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A p x))"
 
-definition return_sound ::
+definition sound_return ::
   "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> exp option \<Rightarrow> pname \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "return_sound gm f \<longleftrightarrow>
+  "sound_return gm f \<longleftrightarrow>
      (\<forall>A x s r p. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s
         \<longrightarrow> s(ret_var := (case r of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> gm (f A r p x))"
 
-definition event_sound :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
-  "event_sound gm f \<longleftrightarrow>
+definition sound_event :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_event gm f \<longleftrightarrow>
      (\<forall>A x s ev. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A ev x))"
 
-theorem mc_step_sound_iff:
-  "(\<forall>A a x. edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A)) \<subseteq> gm (mc_step c A a x))
-   \<longleftrightarrow> skip_sound gm (mc_skip c) \<and> assign_sound gm (mc_assign c) \<and> special_sound gm (mc_special c)
-     \<and> branch_sound gm (mc_branch c) \<and> body_sound gm (mc_body c)
-     \<and> return_sound gm (mc_return c) \<and> event_sound gm (mc_event c)"
+theorem ls_step_sound_iff:
+  "(\<forall>A a x. edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A)) \<subseteq> gm (ls_step c A a x))
+   \<longleftrightarrow> sound_skip gm (ls_skip c) \<and> sound_assign gm (ls_assign c) \<and> sound_special gm (ls_special c)
+     \<and> sound_branch gm (ls_branch c) \<and> sound_body gm (ls_body c)
+     \<and> sound_return gm (ls_return c) \<and> sound_event gm (ls_event c)"
   (is "?step \<longleftrightarrow> ?fields")
 proof
   assume step: ?step
-  have at: "t \<in> gm (mc_step c A a x)"
+  have at: "t \<in> gm (ls_step c A a x)"
     if "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> edge_step a s" for A a x s t
     using step that unfolding edge_collect_def by blast
-  have pol: "s \<in> gm (mc_branch c A b pol x)"
+  have pol: "s \<in> gm (ls_branch c A b pol x)"
     if "s \<in> gm x" "eval_query.oracle_holds A s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol" for A b pol x s
   proof (cases pol)
     case True
@@ -215,19 +215,19 @@ proof
     then show ?thesis
       using at[OF that(1,2), where a = "EA_AssumeNot b" and t = s] that(3) by simp
   qed
-  have ev: "s \<in> gm (mc_event c A ev x)"
+  have ev: "s \<in> gm (ls_event c A ev x)"
     if "s \<in> gm x" "eval_query.oracle_holds A s" for A ev x s
   proof (cases ev)
     case (Check_Event l e)
     then show ?thesis using at[OF that, where a = "EA_Check l e" and t = s] by simp
   qed
-  have special: "t \<in> gm (mc_special c A sc y x)"
+  have special: "t \<in> gm (ls_special c A sc y x)"
     if "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> special_step sc y s" for A x s sc y t
     using at[OF that(1,2), where a = "EA_Special sc y" and t = t] that(3)
-    by (simp only: edge_step.simps mc_step_simps)
+    by (simp only: edge_step.simps ls_step_simps)
   show ?fields
-    unfolding skip_sound_def assign_sound_def special_sound_def branch_sound_def body_sound_def
-      return_sound_def event_sound_def
+    unfolding sound_skip_def sound_assign_def sound_special_def sound_branch_def sound_body_def
+      sound_return_def sound_event_def
     using at[where a = EA_Nop] at[where a = "EA_Assign _ _"]
       at[where a = "EA_Body _"] at[where a = "EA_Ret _ _"] pol ev special
     by (fastforce+)
@@ -239,39 +239,39 @@ next
     assume "t \<in> edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A))"
     then obtain s where s: "s \<in> gm x" "eval_query.oracle_holds A s" "t \<in> edge_step a s"
       unfolding edge_collect_def by blast
-    show "t \<in> gm (mc_step c A a x)"
+    show "t \<in> gm (ls_step c A a x)"
     proof (cases a)
       case (EA_Special sc y)
       have "t \<in> special_step sc y s" using s(3) EA_Special by (simp only: edge_step.simps)
       then show ?thesis
-        using F s(1,2) EA_Special unfolding special_sound_def by (simp only: mc_step_simps)
+        using F s(1,2) EA_Special unfolding sound_special_def by (simp only: ls_step_simps)
     next
       case (EA_Assume b)
       then have "t = s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = True" using s(3) by (simp_all split: if_splits)
       then show ?thesis
-        using F s(1,2) EA_Assume unfolding branch_sound_def by (simp only: mc_step_simps)
+        using F s(1,2) EA_Assume unfolding sound_branch_def by (simp only: ls_step_simps)
     next
       case (EA_AssumeNot b)
       then have "t = s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = False" using s(3) by (simp_all split: if_splits)
       then show ?thesis
-        using F s(1,2) EA_AssumeNot unfolding branch_sound_def by (simp only: mc_step_simps)
-    qed (use F s in \<open>auto simp: skip_sound_def assign_sound_def body_sound_def return_sound_def
-                     event_sound_def\<close>)
+        using F s(1,2) EA_AssumeNot unfolding sound_branch_def by (simp only: ls_step_simps)
+    qed (use F s in \<open>auto simp: sound_skip_def sound_assign_def sound_body_def sound_return_def
+                     sound_event_def\<close>)
   qed
 qed
 
 text \<open>A sound component stays sound when one edge field is replaced by a sound one.\<close>
 
-lemma mcp_component_sound_update:
-  assumes "mcp_component_sound \<G> gm c"
-  shows "skip_sound gm sk \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_skip := sk\<rparr>)"
-    and "assign_sound gm asn \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_assign := asn\<rparr>)"
-    and "special_sound gm sp \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_special := sp\<rparr>)"
-    and "branch_sound gm br \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_branch := br\<rparr>)"
-    and "body_sound gm bd \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_body := bd\<rparr>)"
-    and "return_sound gm rt \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_return := rt\<rparr>)"
-    and "event_sound gm ev \<Longrightarrow> mcp_component_sound \<G> gm (c\<lparr>mc_event := ev\<rparr>)"
-  using assms unfolding mcp_component_sound_def mc_step_sound_iff by simp_all
+lemma sound_local_spec_update:
+  assumes "sound_local_spec \<G> gm c"
+  shows "sound_skip gm sk \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_skip := sk\<rparr>)"
+    and "sound_assign gm asn \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_assign := asn\<rparr>)"
+    and "sound_special gm sp \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_special := sp\<rparr>)"
+    and "sound_branch gm br \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_branch := br\<rparr>)"
+    and "sound_body gm bd \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_body := bd\<rparr>)"
+    and "sound_return gm rt \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_return := rt\<rparr>)"
+    and "sound_event gm ev \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_event := ev\<rparr>)"
+  using assms unfolding sound_local_spec_def ls_step_sound_iff by simp_all
 
 text \<open>
   A component leaves a concretization alone when none of its operations
@@ -280,19 +280,19 @@ text \<open>
   others.
 \<close>
 
-definition mcp_frame :: "'s mcp_component \<Rightarrow> ('s \<Rightarrow> store set) \<Rightarrow> bool" where
+definition mcp_frame :: "'s local_spec \<Rightarrow> ('s \<Rightarrow> store set) \<Rightarrow> bool" where
   "mcp_frame c gm \<longleftrightarrow>
-     (\<forall>A a x. gm (mc_step c A a x) = gm x)
-     \<and> (\<forall>A ci p q. q \<in> set (mc_enter c A ci p) \<longrightarrow>
+     (\<forall>A a x. gm (ls_step c A a x) = gm x)
+     \<and> (\<forall>A ci p q. q \<in> set (ls_enter c A ci p) \<longrightarrow>
           gm (fst q) = gm (fst p) \<and> gm (snd q) = gm (snd p))
-     \<and> (\<forall>A B ci x de. gm (mc_combine c A B ci x de) = gm x)"
+     \<and> (\<forall>A B ci x de. gm (ls_combine c A B ci x de) = gm x)"
 
 text \<open>
   Cooperating analyses come as pairs of a concretization and a component.
   They are independent when each leaves the others' concretizations alone.
 \<close>
 
-type_synonym 's certified_component = "('s \<Rightarrow> store set) \<times> 's mcp_component"
+type_synonym 's certified_component = "('s \<Rightarrow> store set) \<times> 's local_spec"
 
 fun mcp_independent :: "'s certified_component list \<Rightarrow> bool" where
   "mcp_independent [] \<longleftrightarrow> True"
@@ -343,17 +343,17 @@ text \<open>A handler that never asks answers through the closed channel as it i
 lemma ask_rec_const: "ask_rec (\<lambda>A x. h x) (Suc n) {} x = h x"
   by (simp add: fun_eq_iff)
 
-definition mc_channel :: "'s mcp_component \<Rightarrow> 's \<Rightarrow> answers" where
-  "mc_channel c x = ask_rec (mc_query c) query_depth {} x"
+definition ls_channel :: "'s local_spec \<Rightarrow> 's \<Rightarrow> answers" where
+  "ls_channel c x = ask_rec (ls_query c) query_depth {} x"
 
-lemma mc_channel_sound:
-  assumes "mcp_component_sound \<G> gm c" and "s \<in> gm x"
-  shows "eval_query.oracle_holds (mc_channel c x) s"
-  unfolding mc_channel_def
-  by (rule ask_rec_sound) (use assms in \<open>simp add: mcp_component_sound_def\<close>)
+lemma ls_channel_sound:
+  assumes "sound_local_spec \<G> gm c" and "s \<in> gm x"
+  shows "eval_query.oracle_holds (ls_channel c x) s"
+  unfolding ls_channel_def
+  by (rule ask_rec_sound) (use assms in \<open>simp add: sound_local_spec_def\<close>)
 
-lemma mc_channel_const: "mc_query c = (\<lambda>A x. h x) \<Longrightarrow> mc_channel c = h"
-  by (simp add: mc_channel_def query_depth_def fun_eq_iff eval_nat_numeral)
+lemma ls_channel_const: "ls_query c = (\<lambda>A x. h x) \<Longrightarrow> ls_channel c = h"
+  by (simp add: ls_channel_def query_depth_def fun_eq_iff eval_nat_numeral)
 
 section \<open>The combined operations\<close>
 
@@ -368,24 +368,24 @@ text \<open>
   same channel, as every Goblint component gets the same \<open>man.ask\<close>.
 \<close>
 
-definition mcp_step :: "'s mcp_component list \<Rightarrow> answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
-  "mcp_step cs A a x = fold (\<lambda>c y. mc_step c A a y) cs x"
+definition mcp_step :: "'s local_spec list \<Rightarrow> answers \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
+  "mcp_step cs A a x = fold (\<lambda>c y. ls_step c A a y) cs x"
 
 definition mcp_en_from ::
-  "'s mcp_component list \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list" where
-  "mcp_en_from cs A ci p = fold (\<lambda>c ps. concat (map (mc_enter c A ci) ps)) cs [p]"
+  "'s local_spec list \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list" where
+  "mcp_en_from cs A ci p = fold (\<lambda>c ps. concat (map (ls_enter c A ci) ps)) cs [p]"
 
 definition mcp_comb ::
-  "'s mcp_component list \<Rightarrow> answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
-  "mcp_comb cs A B ci x de = fold (\<lambda>c y. mc_combine c A B ci y de) cs x"
+  "'s local_spec list \<Rightarrow> answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "mcp_comb cs A B ci x de = fold (\<lambda>c y. ls_combine c A B ci y de) cs x"
 
 text \<open>
   The combined handler meets every component's answer, each given the same
   channel, as \<open>MCP.query'\<close> meets the results of all analyses.
 \<close>
 
-definition mcp_qry :: "'s mcp_component list \<Rightarrow> answers \<Rightarrow> 's \<Rightarrow> answers" where
-  "mcp_qry cs A x q = fold (\<lambda>c r. r \<sqinter> mc_query c A x q) cs \<top>"
+definition mcp_qry :: "'s local_spec list \<Rightarrow> answers \<Rightarrow> 's \<Rightarrow> answers" where
+  "mcp_qry cs A x q = fold (\<lambda>c r. r \<sqinter> ls_query c A x q) cs \<top>"
 
 definition mcp_gamma :: "('s \<Rightarrow> store set) list \<Rightarrow> 's \<Rightarrow> store set" where
   "mcp_gamma gs x = (\<Inter>g \<in> set gs. g x)"
@@ -401,16 +401,16 @@ lemma mcp_gamma_Nil [simp]: "mcp_gamma [] x = UNIV"
 text \<open>Components a fold runs leave an independent concretization as it was.\<close>
 
 lemma gamma_fold_step:
-  "(\<forall>c \<in> set cs. mcp_frame c g) \<Longrightarrow> g (fold (\<lambda>c y. mc_step c A a y) cs x) = g x"
+  "(\<forall>c \<in> set cs. mcp_frame c g) \<Longrightarrow> g (fold (\<lambda>c y. ls_step c A a y) cs x) = g x"
   by (induction cs arbitrary: x) (simp_all add: mcp_frame_def)
 
 lemma gamma_fold_comb:
-  "(\<forall>c \<in> set cs. mcp_frame c g) \<Longrightarrow> g (fold (\<lambda>c y. mc_combine c A B ci y de) cs x) = g x"
+  "(\<forall>c \<in> set cs. mcp_frame c g) \<Longrightarrow> g (fold (\<lambda>c y. ls_combine c A B ci y de) cs x) = g x"
   by (induction cs arbitrary: x) (simp_all add: mcp_frame_def)
 
 lemma mcp_gamma_frame:
-  "(\<forall>g \<in> set gs. mcp_frame c g) \<Longrightarrow> mcp_gamma gs (mc_step c A a x) = mcp_gamma gs x"
-  "(\<forall>g \<in> set gs. mcp_frame c g) \<Longrightarrow> mcp_gamma gs (mc_combine c A B ci x de) = mcp_gamma gs x"
+  "(\<forall>g \<in> set gs. mcp_frame c g) \<Longrightarrow> mcp_gamma gs (ls_step c A a x) = mcp_gamma gs x"
+  "(\<forall>g \<in> set gs. mcp_frame c g) \<Longrightarrow> mcp_gamma gs (ls_combine c A B ci x de) = mcp_gamma gs x"
   by (auto simp: mcp_gamma_def mcp_frame_def intro!: INF_cong)
 
 lemma mcp_independent_Cons_frames:
@@ -420,7 +420,7 @@ lemma mcp_independent_Cons_frames:
   using assms by auto
 
 lemma mcp_step_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c" and "mcp_independent gcs"
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c" and "mcp_independent gcs"
   shows "edge_collect a (mcp_gamma (map fst gcs) x \<inter> Collect (eval_query.oracle_holds A))
            \<subseteq> mcp_gamma (map fst gcs) (mcp_step (map snd gcs) A a x)"
   using assms
@@ -431,12 +431,12 @@ next
   case (Cons gc gcs)
   obtain g c where gc: "gc = (g, c)" by fastforce
   let ?O = "Collect (eval_query.oracle_holds A)"
-  let ?x1 = "mc_step c A a x"
+  let ?x1 = "ls_step c A a x"
   have frames: "\<forall>g' \<in> fst ` set gcs. mcp_frame c g'" "\<forall>c' \<in> snd ` set gcs. mcp_frame c' g"
     "mcp_independent gcs"
     using mcp_independent_Cons_frames[OF Cons.prems(2)[unfolded gc]] by simp_all
   have own: "edge_collect a (g x \<inter> ?O) \<subseteq> g ?x1"
-    using Cons.prems(1) unfolding gc by (simp add: mcp_component_sound_def)
+    using Cons.prems(1) unfolding gc by (simp add: sound_local_spec_def)
   have own_kept: "g (mcp_step (map snd gcs) A a ?x1) = g ?x1"
     unfolding mcp_step_def by (rule gamma_fold_step) (use frames in auto)
   have rest: "edge_collect a (mcp_gamma (map fst gcs) ?x1 \<inter> ?O)
@@ -453,7 +453,7 @@ next
 qed
 
 lemma mcp_comb_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c" and "mcp_independent gcs"
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c" and "mcp_independent gcs"
     and "s \<in> mcp_gamma (map fst gcs) x" and "eval_query.oracle_holds A s"
     and "t \<in> mcp_gamma (map fst gcs) de" and "eval_query.oracle_holds B t"
   shows "combine_collect \<G> (ci_dst ci) s t
@@ -465,12 +465,12 @@ proof (induction gcs arbitrary: x)
 next
   case (Cons gc gcs)
   obtain g c where gc: "gc = (g, c)" by fastforce
-  let ?x1 = "mc_combine c A B ci x de"
+  let ?x1 = "ls_combine c A B ci x de"
   have frames: "\<forall>g' \<in> fst ` set gcs. mcp_frame c g'" "\<forall>c' \<in> snd ` set gcs. mcp_frame c' g"
     "mcp_independent gcs"
     using mcp_independent_Cons_frames[OF Cons.prems(2)[unfolded gc]] by simp_all
   have own: "combine_collect \<G> (ci_dst ci) s t \<in> g ?x1"
-    using Cons.prems(1,3-6) unfolding gc by (simp add: mcp_component_sound_def)
+    using Cons.prems(1,3-6) unfolding gc by (simp add: sound_local_spec_def)
   have own_kept: "g (mcp_comb (map snd gcs) A B ci ?x1 de) = g ?x1"
     unfolding mcp_comb_def by (rule gamma_fold_comb) (use frames in auto)
   have rest_eq: "mcp_gamma (map fst gcs) ?x1 = mcp_gamma (map fst gcs) x"
@@ -490,13 +490,13 @@ text \<open>
 \<close>
 
 lemma mcp_en_fold_sound:
-  assumes "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c" and "mcp_independent gcs"
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c" and "mcp_independent gcs"
     and "\<forall>c \<in> snd ` set gcs. \<forall>d \<in> set ds. mcp_frame c d"
     and "\<exists>p \<in> set ps. s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma ds (fst p)
                        \<and> E \<in> mcp_gamma ds (snd p)"
     and A: "eval_query.oracle_holds A s"
     and E: "E = call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s"
-  shows "\<exists>p \<in> set (fold (\<lambda>c ps. concat (map (mc_enter c A ci) ps)) (map snd gcs) ps).
+  shows "\<exists>p \<in> set (fold (\<lambda>c ps. concat (map (ls_enter c A ci) ps)) (map snd gcs) ps).
            s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma ds (fst p)
            \<and> E \<in> mcp_gamma (map fst gcs) (snd p) \<and> E \<in> mcp_gamma ds (snd p)"
   using assms(1-4)
@@ -512,27 +512,27 @@ next
   obtain p where p: "p \<in> set ps" "s \<in> g (fst p)" "s \<in> mcp_gamma (map fst gcs) (fst p)"
       "s \<in> mcp_gamma ds (fst p)" "E \<in> mcp_gamma ds (snd p)"
     using Cons.prems(4) unfolding gc by auto
-  have "mcp_component_sound \<G> g c" using Cons.prems(1) unfolding gc by simp
-  then obtain q where q: "q \<in> set (mc_enter c A ci p)" "s \<in> g (fst q)" "E \<in> g (snd q)"
-    using p(2) A unfolding E mcp_component_sound_def by meson
+  have "sound_local_spec \<G> g c" using Cons.prems(1) unfolding gc by simp
+  then obtain q where q: "q \<in> set (ls_enter c A ci p)" "s \<in> g (fst q)" "E \<in> g (snd q)"
+    using p(2) A unfolding E sound_local_spec_def by meson
   have keep: "d (fst q) = d (fst p) \<and> d (snd q) = d (snd p)"
     if "d \<in> fst ` set gcs \<union> set ds" for d
   proof -
     have "mcp_frame c d" using that frames(1) Cons.prems(3) unfolding gc by auto
     then show ?thesis using q(1) unfolding mcp_frame_def by blast
   qed
-  have q_in: "q \<in> set (concat (map (mc_enter c A ci) ps))"
+  have q_in: "q \<in> set (concat (map (ls_enter c A ci) ps))"
     using p(1) q(1) by auto
-  have "\<exists>p \<in> set (fold (\<lambda>c ps. concat (map (mc_enter c A ci) ps)) (map snd gcs)
-                 (concat (map (mc_enter c A ci) ps))).
+  have "\<exists>p \<in> set (fold (\<lambda>c ps. concat (map (ls_enter c A ci) ps)) (map snd gcs)
+                 (concat (map (ls_enter c A ci) ps))).
           s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma (g # ds) (fst p)
           \<and> E \<in> mcp_gamma (map fst gcs) (snd p) \<and> E \<in> mcp_gamma (g # ds) (snd p)"
   proof (rule Cons.IH)
-    show "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c" using Cons.prems(1) by simp
+    show "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c" using Cons.prems(1) by simp
     show "mcp_independent gcs" by (fact frames(3))
     show "\<forall>c' \<in> snd ` set gcs. \<forall>d \<in> set (g # ds). mcp_frame c' d"
       using frames(2) Cons.prems(3) unfolding gc by auto
-    show "\<exists>p \<in> set (concat (map (mc_enter c A ci) ps)).
+    show "\<exists>p \<in> set (concat (map (ls_enter c A ci) ps)).
             s \<in> mcp_gamma (map fst gcs) (fst p) \<and> s \<in> mcp_gamma (g # ds) (fst p)
             \<and> E \<in> mcp_gamma (g # ds) (snd p)"
     proof (rule bexI[OF _ q_in])
@@ -552,18 +552,18 @@ qed
 
 lemma mcp_qry_fold_sound:
   "s \<in> mcp_gamma (map fst gcs) x \<Longrightarrow> eval_query.oracle_holds A s
-   \<Longrightarrow> \<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c
+   \<Longrightarrow> \<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c
    \<Longrightarrow> eval_holds q r s
-   \<Longrightarrow> eval_holds q (fold (\<lambda>c r. r \<sqinter> mc_query c A x q) (map snd gcs) r) s"
+   \<Longrightarrow> eval_holds q (fold (\<lambda>c r. r \<sqinter> ls_query c A x q) (map snd gcs) r) s"
 proof (induction gcs arbitrary: r)
   case (Cons gc gcs)
   obtain g c where gc: "gc = (g, c)" by fastforce
-  have "eval_holds q (mc_query c A x q) s"
-    using Cons.prems unfolding gc by (simp add: mcp_component_sound_def)
-  with Cons.prems(4) have "eval_holds q (r \<sqinter> mc_query c A x q) s"
+  have "eval_holds q (ls_query c A x q) s"
+    using Cons.prems unfolding gc by (simp add: sound_local_spec_def)
+  with Cons.prems(4) have "eval_holds q (r \<sqinter> ls_query c A x q) s"
     by (rule eval_query.inf_sound)
   then show ?case
-    using Cons.IH[of "r \<sqinter> mc_query c A x q"] Cons.prems(1-3) unfolding gc by simp
+    using Cons.IH[of "r \<sqinter> ls_query c A x q"] Cons.prems(1-3) unfolding gc by simp
 qed simp
 
 section \<open>A component as a specification\<close>
@@ -579,56 +579,56 @@ text \<open>
 
 text \<open>The step a component takes on an edge, with its own channel.\<close>
 
-definition component_step :: "'s mcp_component \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
-  "component_step c a d = mc_step c (mc_channel c d) a d"
+definition closed_step :: "'s local_spec \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
+  "closed_step c a d = ls_step c (ls_channel c d) a d"
 
-definition component_spec :: "'s mcp_component \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
-  "component_spec c = local_dg_spec_template\<lparr>
-     dgs_skip := local_transfer (component_step c EA_Nop),
-     dgs_assign := (\<lambda>x e. local_transfer (component_step c (EA_Assign x e))),
-     dgs_special := (\<lambda>sc x. local_transfer (component_step c (EA_Special sc x))),
+definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
+  "dg_spec_of c = local_dg_spec_template\<lparr>
+     dgs_skip := local_transfer (closed_step c EA_Nop),
+     dgs_assign := (\<lambda>x e. local_transfer (closed_step c (EA_Assign x e))),
+     dgs_special := (\<lambda>sc x. local_transfer (closed_step c (EA_Special sc x))),
      dgs_branch := (\<lambda>b pol. local_transfer
-                      (component_step c (if pol then EA_Assume b else EA_AssumeNot b))),
-     dgs_body := (\<lambda>p. local_transfer (component_step c (EA_Body p))),
-     dgs_return := (\<lambda>e p. local_transfer (component_step c (EA_Ret e p))),
-     dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. mc_enter c (mc_channel c d) ci (d, d))),
-     dgs_event := (\<lambda>ev. local_transfer (component_step c (event_action ev))),
+                      (closed_step c (if pol then EA_Assume b else EA_AssumeNot b))),
+     dgs_body := (\<lambda>p. local_transfer (closed_step c (EA_Body p))),
+     dgs_return := (\<lambda>e p. local_transfer (closed_step c (EA_Ret e p))),
+     dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))),
+     dgs_event := (\<lambda>ev. local_transfer (closed_step c (event_action ev))),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer
-        (\<lambda>dc de. mc_combine_env c (mc_channel c dc) (mc_channel c de) ci dc de)),
+        (\<lambda>dc de. ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de)),
      dgs_combine_assign := (\<lambda>ci. local_combine_transfer
-        (\<lambda>dc de. mc_combine_assign c (mc_channel c de) ci dc de)),
-     dgs_query := local_query (mc_channel c) \<rparr>"
+        (\<lambda>dc de. ls_combine_assign c (ls_channel c de) ci dc de)),
+     dgs_query := local_query (ls_channel c) \<rparr>"
 
-declare component_spec_def [code_unfold]
+declare dg_spec_of_def [code_unfold]
 
-lemma component_spec_simps [simp]:
-  "skip\<^sup># (component_spec c) = local_transfer (component_step c EA_Nop)"
-  "assign\<^sup># (component_spec c) x e = local_transfer (component_step c (EA_Assign x e))"
-  "special\<^sup># (component_spec c) sc x = local_transfer (component_step c (EA_Special sc x))"
-  "branch\<^sup># (component_spec c) b pol
-     = local_transfer (component_step c (if pol then EA_Assume b else EA_AssumeNot b))"
-  "body\<^sup># (component_spec c) p = local_transfer (component_step c (EA_Body p))"
-  "return\<^sup># (component_spec c) eo p = local_transfer (component_step c (EA_Ret eo p))"
-  "enter\<^sup># (component_spec c) ci
-     = local_enter_transfer (\<lambda>d. mc_enter c (mc_channel c d) ci (d, d))"
-  "event\<^sup># (component_spec c) ev = local_transfer (component_step c (event_action ev))"
-  "combine_env\<^sup># (component_spec c) ci = local_combine_transfer
-     (\<lambda>dc de. mc_combine_env c (mc_channel c dc) (mc_channel c de) ci dc de)"
-  "combine_assign\<^sup># (component_spec c) ci = local_combine_transfer
-     (\<lambda>dc de. mc_combine_assign c (mc_channel c de) ci dc de)"
-  "dgs_query (component_spec c) = local_query (mc_channel c)"
-  by (simp_all add: component_spec_def)
+lemma dg_spec_of_simps [simp]:
+  "skip\<^sup># (dg_spec_of c) = local_transfer (closed_step c EA_Nop)"
+  "assign\<^sup># (dg_spec_of c) x e = local_transfer (closed_step c (EA_Assign x e))"
+  "special\<^sup># (dg_spec_of c) sc x = local_transfer (closed_step c (EA_Special sc x))"
+  "branch\<^sup># (dg_spec_of c) b pol
+     = local_transfer (closed_step c (if pol then EA_Assume b else EA_AssumeNot b))"
+  "body\<^sup># (dg_spec_of c) p = local_transfer (closed_step c (EA_Body p))"
+  "return\<^sup># (dg_spec_of c) eo p = local_transfer (closed_step c (EA_Ret eo p))"
+  "enter\<^sup># (dg_spec_of c) ci
+     = local_enter_transfer (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))"
+  "event\<^sup># (dg_spec_of c) ev = local_transfer (closed_step c (event_action ev))"
+  "combine_env\<^sup># (dg_spec_of c) ci = local_combine_transfer
+     (\<lambda>dc de. ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de)"
+  "combine_assign\<^sup># (dg_spec_of c) ci = local_combine_transfer
+     (\<lambda>dc de. ls_combine_assign c (ls_channel c de) ci dc de)"
+  "dgs_query (dg_spec_of c) = local_query (ls_channel c)"
+  by (simp_all add: dg_spec_of_def)
 
-lemma dg_spec_step_component_spec [simp]:
-  "dg_spec_step (component_spec c) a = local_transfer (component_step c a)"
+lemma dg_spec_step_dg_spec_of [simp]:
+  "dg_spec_step (dg_spec_of c) a = local_transfer (closed_step c a)"
   by (cases a) simp_all
 
-lemma dg_spec_combine_transfer_component_spec [simp]:
-  "dg_spec_combine_transfer (component_spec c) ci
-     = local_combine_transfer (\<lambda>dc de. mc_combine c (mc_channel c dc) (mc_channel c de) ci dc de)"
+lemma dg_spec_combine_transfer_dg_spec_of [simp]:
+  "dg_spec_combine_transfer (dg_spec_of c) ci
+     = local_combine_transfer (\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)"
   by (intro ext) (simp add: dg_spec_combine_transfer_local local_combine_transfer_def)
 
-lemma dg_spec_wf_component_spec [intro, simp]: "dg_spec_wf (component_spec c)"
+lemma dg_spec_wf_dg_spec_of [intro, simp]: "dg_spec_wf (dg_spec_of c)"
   by (auto simp: dg_spec_wf_def local_query_def local_enter_transfer_def
       local_combine_transfer_def local_transfer_def)
 
@@ -638,42 +638,42 @@ text \<open>
   laws it proves against every holding channel apply to that one.
 \<close>
 
-lemma component_step_sound:
-  assumes sound: "mcp_component_sound \<G> gm c"
-  shows "edge_collect a (gm d) \<subseteq> gm (component_step c a d)"
+lemma closed_step_sound:
+  assumes sound: "sound_local_spec \<G> gm c"
+  shows "edge_collect a (gm d) \<subseteq> gm (closed_step c a d)"
 proof -
-  have "gm d = gm d \<inter> Collect (eval_query.oracle_holds (mc_channel c d))"
-    using mc_channel_sound[OF sound] by blast
-  moreover have "edge_collect a (gm d \<inter> Collect (eval_query.oracle_holds (mc_channel c d)))
-      \<subseteq> gm (mc_step c (mc_channel c d) a d)"
-    using sound unfolding mcp_component_sound_def by blast
-  ultimately show ?thesis by (simp add: component_step_def)
+  have "gm d = gm d \<inter> Collect (eval_query.oracle_holds (ls_channel c d))"
+    using ls_channel_sound[OF sound] by blast
+  moreover have "edge_collect a (gm d \<inter> Collect (eval_query.oracle_holds (ls_channel c d)))
+      \<subseteq> gm (ls_step c (ls_channel c d) a d)"
+    using sound unfolding sound_local_spec_def by blast
+  ultimately show ?thesis by (simp add: closed_step_def)
 qed
 
-lemma component_combine_sound:
-  assumes sound: "mcp_component_sound \<G> gm c" and "s \<in> gm dc" and "t \<in> gm de"
+lemma closed_combine_sound:
+  assumes sound: "sound_local_spec \<G> gm c" and "s \<in> gm dc" and "t \<in> gm de"
   shows "combine_collect \<G> (ci_dst ci) s t
-           \<in> gm (mc_combine c (mc_channel c dc) (mc_channel c de) ci dc de)"
-  using assms mc_channel_sound[OF sound assms(2)] mc_channel_sound[OF sound assms(3)]
-  unfolding mcp_component_sound_def by blast
+           \<in> gm (ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)"
+  using assms ls_channel_sound[OF sound assms(2)] ls_channel_sound[OF sound assms(3)]
+  unfolding sound_local_spec_def by blast
 
-theorem component_contract:
-  assumes sound: "mcp_component_sound \<G> gm c"
-  shows "analysis_contract (component_spec c) (\<lambda>d g. gm d) \<G>"
+theorem dg_spec_of_contract:
+  assumes sound: "sound_local_spec \<G> gm c"
+  shows "analysis_contract (dg_spec_of c) (\<lambda>d g. gm d) \<G>"
 proof (unfold_locales, goal_cases wf mono step comb)
   case wf
-  then show ?case by (rule dg_spec_wf_component_spec)
+  then show ?case by (rule dg_spec_wf_dg_spec_of)
 next
   case mono
-  then show ?case using sound unfolding mcp_component_sound_def by metis
+  then show ?case using sound unfolding sound_local_spec_def by metis
 next
   case (step a \<tau> src gk)
   then show ?case
-    using component_step_sound[OF sound] by (simp add: dg_spec_edge_program_def)
+    using closed_step_sound[OF sound] by (simp add: dg_spec_edge_program_def)
 next
   case comb
   then show ?case
-    by (simp add: local_combine_transfer_def component_combine_sound[OF sound])
+    by (simp add: local_combine_transfer_def closed_combine_sound[OF sound])
 qed
 
 section \<open>Several components as one\<close>
@@ -690,35 +690,35 @@ text \<open>
   only the env stage receives.
 \<close>
 
-fun mcp_combine :: "'s mcp_component list \<Rightarrow> 's mcp_component" where
+fun mcp_combine :: "'s local_spec list \<Rightarrow> 's local_spec" where
   "mcp_combine [c] = c"
 | "mcp_combine cs =
-     make_component (mcp_qry cs) (mcp_step cs) (mcp_en_from cs) (mcp_comb cs) (\<lambda>B ci dc de. dc)"
+     make_local_spec (mcp_qry cs) (mcp_step cs) (mcp_en_from cs) (mcp_comb cs) (\<lambda>B ci dc de. dc)"
 
 text \<open>Components that answer nothing combine to a state that answers nothing.\<close>
 
-lemma mcp_qry_top: "(\<And>c. c \<in> set cs \<Longrightarrow> mc_query c A x q = \<top>) \<Longrightarrow> mcp_qry cs A x q = \<top>"
+lemma mcp_qry_top: "(\<And>c. c \<in> set cs \<Longrightarrow> ls_query c A x q = \<top>) \<Longrightarrow> mcp_qry cs A x q = \<top>"
   unfolding mcp_qry_def by (induction cs) auto
 
 lemma mcp_combine_qry_top:
-  "(\<And>c. c \<in> set cs \<Longrightarrow> mc_query c A x q = \<top>) \<Longrightarrow> mc_query (mcp_combine cs) A x q = \<top>"
+  "(\<And>c. c \<in> set cs \<Longrightarrow> ls_query c A x q = \<top>) \<Longrightarrow> ls_query (mcp_combine cs) A x q = \<top>"
   by (cases cs rule: mcp_combine.cases) (auto intro!: mcp_qry_top)
 
-definition mcp_spec :: "'s mcp_component list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
-  "mcp_spec cs = component_spec (mcp_combine cs)"
+definition mcp_spec :: "'s local_spec list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
+  "mcp_spec cs = dg_spec_of (mcp_combine cs)"
 
 theorem mcp_combine_sound:
-  assumes sound: "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c"
+  assumes sound: "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c"
     and indep: "mcp_independent gcs" and ne: "gcs \<noteq> []"
-  shows "mcp_component_sound \<G> (mcp_gamma (map fst gcs)) (mcp_combine (map snd gcs))"
+  shows "sound_local_spec \<G> (mcp_gamma (map fst gcs)) (mcp_combine (map snd gcs))"
 proof (cases "\<exists>gc. gcs = [gc]")
   case True
   then obtain g c where "gcs = [(g, c)]" by fastforce
-  then show ?thesis using sound by (simp add: mcp_component_sound_def mcp_gamma_def)
+  then show ?thesis using sound by (simp add: sound_local_spec_def mcp_gamma_def)
 next
   case False
   have comb: "mcp_combine (map snd gcs) =
-     make_component (mcp_qry (map snd gcs)) (mcp_step (map snd gcs))
+     make_local_spec (mcp_qry (map snd gcs)) (mcp_step (map snd gcs))
        (mcp_en_from (map snd gcs)) (mcp_comb (map snd gcs)) (\<lambda>B ci dc de. dc)"
     using False ne by (cases "map snd gcs" rule: mcp_combine.cases) (auto simp: Cons_eq_map_conv)
   have enter: "\<exists>q \<in> set (mcp_en_from (map snd gcs) A ci p).
@@ -729,21 +729,21 @@ next
     using mcp_en_fold_sound[OF sound indep, of "[]" "[p]" s _ A ci] that
     by (auto simp: mcp_en_from_def)
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> mcp_gamma (map fst gcs) x \<subseteq> mcp_gamma (map fst gcs) y"
-    using sound by (fastforce simp: mcp_gamma_def mcp_component_sound_def)
+    using sound by (fastforce simp: mcp_gamma_def sound_local_spec_def)
   have qry: "\<forall>A s x q. s \<in> mcp_gamma (map fst gcs) x \<longrightarrow> eval_query.oracle_holds A s
                \<longrightarrow> eval_holds q (mcp_qry (map snd gcs) A x q) s"
     unfolding mcp_qry_def using mcp_qry_fold_sound[OF _ _ sound] by simp
   show ?thesis
-    unfolding comb mcp_component_sound_def
+    unfolding comb sound_local_spec_def
     using mono mcp_step_sound[OF sound indep] mcp_comb_sound[OF sound indep] enter qry
     by simp
 qed
 
 theorem mcp_contract:
-  assumes "\<forall>(g, c) \<in> set gcs. mcp_component_sound \<G> g c" and "mcp_independent gcs"
+  assumes "\<forall>(g, c) \<in> set gcs. sound_local_spec \<G> g c" and "mcp_independent gcs"
     and "gcs \<noteq> []"
   shows "analysis_contract (mcp_spec (map snd gcs)) (\<lambda>d g. mcp_gamma (map fst gcs) d) \<G>"
-  unfolding mcp_spec_def by (rule component_contract[OF mcp_combine_sound[OF assms]])
+  unfolding mcp_spec_def by (rule dg_spec_of_contract[OF mcp_combine_sound[OF assms]])
 
 section \<open>A component on one field of a larger state\<close>
 
@@ -755,44 +755,44 @@ text \<open>
   of the whole state, which are the stores the field describes as well.
 \<close>
 
-definition lens_of :: "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> 'c mcp_component \<Rightarrow> 's mcp_component"
+definition lens_of :: "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> 'c local_spec \<Rightarrow> 's local_spec"
 where
-  "lens_of get put c = make_component
-     (\<lambda>A x. mc_query c A (get x))
-     (\<lambda>A a x. put x (mc_step c A a (get x)))
+  "lens_of get put c = make_local_spec
+     (\<lambda>A x. ls_query c A (get x))
+     (\<lambda>A a x. put x (ls_step c A a (get x)))
      (\<lambda>A ci p. map (\<lambda>(q, e). (put (fst p) q, put (snd p) e))
-                (mc_enter c A ci (get (fst p), get (snd p))))
-     (\<lambda>A B ci x de. put x (mc_combine_env c A B ci (get x) (get de)))
-     (\<lambda>B ci x de. put x (mc_combine_assign c B ci (get x) (get de)))"
+                (ls_enter c A ci (get (fst p), get (snd p))))
+     (\<lambda>A B ci x de. put x (ls_combine_env c A B ci (get x) (get de)))
+     (\<lambda>B ci x de. put x (ls_combine_assign c B ci (get x) (get de)))"
 
 lemma get_mc_comb_lens_of:
   assumes "\<And>x v. get (put x v) = v"
-  shows "get (mc_combine (lens_of get put c) A B ci x de) = mc_combine c A B ci (get x) (get de)"
+  shows "get (ls_combine (lens_of get put c) A B ci x de) = ls_combine c A B ci (get x) (get de)"
   by (simp add: lens_of_def assms)
 
 theorem lens_of_sound:
-  assumes sound: "mcp_component_sound \<G> g c"
+  assumes sound: "sound_local_spec \<G> g c"
     and get_put: "\<And>x v. get (put x v) = v"
     and get_mono: "\<And>x y. x \<le> y \<Longrightarrow> get x \<le> get y"
-  shows "mcp_component_sound \<G> (\<lambda>x. g (get x)) (lens_of get put c)"
+  shows "sound_local_spec \<G> (\<lambda>x. g (get x)) (lens_of get put c)"
 proof -
-  have enter: "\<exists>q \<in> set (mc_enter (lens_of get put c) A ci p).
+  have enter: "\<exists>q \<in> set (ls_enter (lens_of get put c) A ci p).
                  s \<in> g (get (fst q))
                  \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
                      \<in> g (get (snd q))"
     if s_in: "s \<in> g (get (fst p))" and A: "eval_query.oracle_holds A s" for A s ci p
   proof -
     have "s \<in> g (fst (get (fst p), get (snd p)))" using s_in by simp
-    then obtain q where "q \<in> set (mc_enter c A ci (get (fst p), get (snd p)))" "s \<in> g (fst q)"
+    then obtain q where "q \<in> set (ls_enter c A ci (get (fst p), get (snd p)))" "s \<in> g (fst q)"
         "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
-      using sound A unfolding mcp_component_sound_def by metis
+      using sound A unfolding sound_local_spec_def by metis
     then show ?thesis
       by (intro bexI[of _ "(put (fst p) (fst q), put (snd p) (snd q))"])
          (auto simp: lens_of_def get_put)
   qed
   show ?thesis
     using sound get_mono enter
-    unfolding mcp_component_sound_def get_mc_comb_lens_of[of get put, OF get_put]
+    unfolding sound_local_spec_def get_mc_comb_lens_of[of get put, OF get_put]
     by (simp add: lens_of_def get_put)
 qed
 
@@ -810,14 +810,14 @@ text \<open>
   once it runs in the combined state.
 \<close>
 
-definition with_qry :: "(answers \<Rightarrow> 's \<Rightarrow> answers) \<Rightarrow> 's mcp_component \<Rightarrow> 's mcp_component" where
-  "with_qry h c = c\<lparr>mc_query := h\<rparr>"
+definition with_qry :: "(answers \<Rightarrow> 's \<Rightarrow> answers) \<Rightarrow> 's local_spec \<Rightarrow> 's local_spec" where
+  "with_qry h c = c\<lparr>ls_query := h\<rparr>"
 
 theorem with_qry_sound:
-  assumes "mcp_component_sound \<G> gm c"
+  assumes "sound_local_spec \<G> gm c"
     and "\<And>A s x q. s \<in> gm x \<Longrightarrow> eval_query.oracle_holds A s \<Longrightarrow> eval_holds q (h A x q) s"
-  shows "mcp_component_sound \<G> gm (with_qry h c)"
-  using assms unfolding mcp_component_sound_def with_qry_def by simp
+  shows "sound_local_spec \<G> gm (with_qry h c)"
+  using assms unfolding sound_local_spec_def with_qry_def by simp
 
 lemma with_qry_frame: "mcp_frame c g \<Longrightarrow> mcp_frame (with_qry h c) g"
   by (simp add: mcp_frame_def with_qry_def)
@@ -834,32 +834,32 @@ text \<open>
   soon as one active analysis is, as Goblint's \<open>MCP\<close> raises \<open>Deadcode\<close>.
 \<close>
 
-definition map_component :: "('s \<Rightarrow> 's) \<Rightarrow> 's mcp_component \<Rightarrow> 's mcp_component" where
-  "map_component k c = make_component (mc_query c)
-     (\<lambda>A a x. k (mc_step c A a x))
-     (\<lambda>A ci p. map (\<lambda>(q, e). (q, k e)) (mc_enter c A ci p))
-     (mc_combine_env c)
-     (\<lambda>B ci x de. k (mc_combine_assign c B ci x de))"
+definition map_local_spec :: "('s \<Rightarrow> 's) \<Rightarrow> 's local_spec \<Rightarrow> 's local_spec" where
+  "map_local_spec k c = make_local_spec (ls_query c)
+     (\<lambda>A a x. k (ls_step c A a x))
+     (\<lambda>A ci p. map (\<lambda>(q, e). (q, k e)) (ls_enter c A ci p))
+     (ls_combine_env c)
+     (\<lambda>B ci x de. k (ls_combine_assign c B ci x de))"
 
-theorem map_component_sound:
-  assumes sound: "mcp_component_sound \<G> g c"
+theorem map_local_spec_sound:
+  assumes sound: "sound_local_spec \<G> g c"
     and keep: "\<And>x. g (k x) = g x"
-  shows "mcp_component_sound \<G> g (map_component k c)"
+  shows "sound_local_spec \<G> g (map_local_spec k c)"
 proof -
-  have enter: "\<exists>q \<in> set (mc_enter (map_component k c) A ci p).
+  have enter: "\<exists>q \<in> set (ls_enter (map_local_spec k c) A ci p).
                  s \<in> g (fst q)
                  \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
     if s_in: "s \<in> g (fst p)" and A: "eval_query.oracle_holds A s" for A s ci p
   proof -
-    obtain q where "q \<in> set (mc_enter c A ci p)" "s \<in> g (fst q)"
+    obtain q where "q \<in> set (ls_enter c A ci p)" "s \<in> g (fst q)"
         "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> g (snd q)"
-      using sound s_in A unfolding mcp_component_sound_def by metis
+      using sound s_in A unfolding sound_local_spec_def by metis
     then show ?thesis
-      by (intro bexI[of _ "(fst q, k (snd q))"]) (auto simp: map_component_def keep)
+      by (intro bexI[of _ "(fst q, k (snd q))"]) (auto simp: map_local_spec_def keep)
   qed
   show ?thesis
-    using sound enter unfolding mcp_component_sound_def
-    by (simp add: map_component_def keep)
+    using sound enter unfolding sound_local_spec_def
+    by (simp add: map_local_spec_def keep)
 qed
 
 section \<open>Components whose entry answers once\<close>
@@ -870,11 +870,11 @@ text \<open>
   normalization keep that shape.
 \<close>
 
-definition single_entry :: "'s mcp_component \<Rightarrow> bool" where
-  "single_entry c \<longleftrightarrow> (\<forall>A ci p. \<exists>e. mc_enter c A ci p = [(fst p, e)])"
+definition single_entry :: "'s local_spec \<Rightarrow> bool" where
+  "single_entry c \<longleftrightarrow> (\<forall>A ci p. \<exists>e. ls_enter c A ci p = [(fst p, e)])"
 
 lemma single_entryD:
-  "single_entry c \<Longrightarrow> mc_enter c A ci p = [(fst p, snd (hd (mc_enter c A ci p)))]"
+  "single_entry c \<Longrightarrow> ls_enter c A ci p = [(fst p, snd (hd (ls_enter c A ci p)))]"
   unfolding single_entry_def by (metis list.sel(1) snd_conv)
 
 lemma single_entry_lens_of:
@@ -883,22 +883,22 @@ lemma single_entry_lens_of:
   unfolding single_entry_def
 proof (intro allI)
   fix A ci p
-  obtain e where "mc_enter c A ci (get (fst p), get (snd p)) = [(get (fst p), e)]"
+  obtain e where "ls_enter c A ci (get (fst p), get (snd p)) = [(get (fst p), e)]"
     using single unfolding single_entry_def by (metis fst_conv)
-  then show "\<exists>e. mc_enter (lens_of get put c) A ci p = [(fst p, e)]"
+  then show "\<exists>e. ls_enter (lens_of get put c) A ci p = [(fst p, e)]"
     by (simp add: lens_of_def put_get)
 qed
 
-lemma single_entry_map_component:
+lemma single_entry_map_local_spec:
   assumes "single_entry c"
-  shows "single_entry (map_component k c)"
+  shows "single_entry (map_local_spec k c)"
   unfolding single_entry_def
 proof (intro allI)
   fix A ci p
-  obtain e where "mc_enter c A ci p = [(fst p, e)]"
+  obtain e where "ls_enter c A ci p = [(fst p, e)]"
     using assms unfolding single_entry_def by blast
-  then show "\<exists>e. mc_enter (map_component k c) A ci p = [(fst p, e)]"
-    by (simp add: map_component_def)
+  then show "\<exists>e. ls_enter (map_local_spec k c) A ci p = [(fst p, e)]"
+    by (simp add: map_local_spec_def)
 qed
 
 lemma single_entry_with_qry: "single_entry c \<Longrightarrow> single_entry (with_qry h c)"
@@ -906,11 +906,11 @@ lemma single_entry_with_qry: "single_entry c \<Longrightarrow> single_entry (wit
 
 lemma single_entry_mcp_en_fold:
   assumes "\<forall>c \<in> set cs. single_entry c"
-  shows "\<exists>e. fold (\<lambda>c ps. concat (map (mc_enter c A ci) ps)) cs [(d, e0)] = [(d, e)]"
+  shows "\<exists>e. fold (\<lambda>c ps. concat (map (ls_enter c A ci) ps)) cs [(d, e0)] = [(d, e)]"
   using assms
 proof (induction cs arbitrary: e0)
   case (Cons c cs)
-  obtain e1 where "mc_enter c A ci (d, e0) = [(d, e1)]"
+  obtain e1 where "ls_enter c A ci (d, e0) = [(d, e1)]"
     using Cons.prems unfolding single_entry_def by (metis fst_conv list.set_intros(1))
   then show ?case using Cons.IH[of e1] Cons.prems by simp
 qed simp
@@ -923,7 +923,7 @@ proof (cases "\<exists>c. cs = [c]")
   then show ?thesis using single by auto
 next
   case False
-  then have "mc_enter (mcp_combine cs) = mcp_en_from cs"
+  then have "ls_enter (mcp_combine cs) = mcp_en_from cs"
     using ne by (cases cs rule: mcp_combine.cases) auto
   then show ?thesis
     unfolding single_entry_def mcp_en_from_def

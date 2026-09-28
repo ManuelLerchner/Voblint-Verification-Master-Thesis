@@ -71,21 +71,21 @@ every well-formed ask channel (`dg_spec_wf_step_ask`, `dg_spec_wf_query`);
 
 ## Components (`MCP_Spec.thy`)
 
-An analysis that cooperates is an `mcp_component`: a record with one field per
-operation of Goblint's `Spec` (`mc_query`, `mc_skip`, `mc_assign`, `mc_special`,
-`mc_branch`, `mc_body`, `mc_return`, `mc_event`, `mc_enter`,
-`mc_combine_env`, `mc_combine_assign`). Every field receives the channel
-`answers`, the counterpart of `man.ask`. `mcp_component_sound 𝒢 γ c` states
+An analysis that cooperates is an `local_spec`: a record with one field per
+operation of Goblint's `Spec` (`ls_query`, `ls_skip`, `ls_assign`, `ls_special`,
+`ls_branch`, `ls_body`, `ls_return`, `ls_event`, `ls_enter`,
+`ls_combine_env`, `ls_combine_assign`). Every field receives the channel
+`answers`, the counterpart of `man.ask`. `sound_local_spec 𝒢 γ c` states
 each operation's obligation against every channel that holds at the store it
 is asked about; the edge obligation splits into one named law per field
-(`mc_step_sound_iff`), and `mcp_component_sound_update` replaces one field
+(`ls_step_sound_iff`), and `sound_local_spec_update` replaces one field
 while re-proving only that field's law.
 
 `mcp_combine` folds several components into one, meeting their handlers
 (`mcp_qry`) and entering with the Cartesian product of alternatives
 (`mcp_en_from`). `mcp_combine_sound` proves the combination sound for the
 intersection of the concretizations when the components are pairwise framed
-(`mcp_independent`). `component_contract` turns a sound component into an
+(`mcp_independent`). `dg_spec_of_contract` turns a sound component into an
 `analysis_contract`. `lens_of` runs a component on one field of the combined
 record; `analysis_product` (`Local_Spec_Product.thy`) is the componentwise
 ordered pair the generated carrier nests.
@@ -96,7 +96,7 @@ ordered pair the generated carrier nests.
   `EvalInt e` with an exact integer `n`, assign `N n`; otherwise the
   component's own assignment. It replaces the assign field only, so its
   soundness is `assign_ask_sound` plus the update lemma.
-- `order_component` (`Rel_Order_Local.thy`): the order carrier `relc`. Its
+- `order_spec` (`Rel_Order_Local.thy`): the order carrier `relc`. Its
   handler `rel_qry` answers comparisons between variables it has ordered with
   the exact integers `1` or `0`, everything else `⊤`. At `x = e` it asks the
   channel `e <= y` and `y <= e` for each tracked `y` and records a pair on the

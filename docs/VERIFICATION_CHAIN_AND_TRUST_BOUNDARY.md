@@ -29,10 +29,10 @@ one sits in the chain.
 
 ## 1. Abstract transfer soundness
 
-A domain proves one fact per operation and interprets `sound_transfer_for`
+A domain proves one fact per operation and interprets `sound_nonrelational_transfer`
 (`DG_Local_State_Spec.thy`) once: the non-relational domains through
-`is_sound_transfer_for` (`Nonrelational_Transfer.thy`), the `int_dom` product
-through `int_is_sound_transfer_for` (`Int_Transfer.thy`).
+`is_sound_nonrelational_transfer` (`Nonrelational_Transfer.thy`), the `int_dom` product
+through `int_is_sound_nonrelational_transfer` (`Int_Transfer.thy`).
 `local_state_dg_spec_for_contract` turns that into `analysis_contract` for
 the whole-state specification every shipped domain uses.
 

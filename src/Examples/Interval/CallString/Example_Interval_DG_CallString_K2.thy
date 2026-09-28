@@ -214,7 +214,7 @@ next
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
-            [OF ivl_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF ivl_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case

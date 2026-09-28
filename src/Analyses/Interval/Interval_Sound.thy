@@ -71,7 +71,7 @@ lemma interval_gamma_eq: "interval_gamma \<G> = ivl_dom.gamma_exec"
 theorem interval_sound_exec:
   "analysis_contract (interval_spec \<G> empty_pred) (interval_gamma \<G>) \<G>"
   unfolding interval_gamma_eq interval_spec_def
-  by (rule ivl_dom.analysis_contract_st[OF ivl_tf.is_sound_transfer_for])
+  by (rule ivl_dom.analysis_contract_st[OF ivl_tf.is_sound_nonrelational_transfer])
 
 text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
@@ -82,7 +82,7 @@ theorem interval_entry_cover_exec:
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (ivl_enter_st_for \<G> ci) d)]"
   using assms unfolding interval_gamma_eq ivl_dom.gamma_exec_def
-  by (rule ivl_dom.entry_pairs_cover_st[OF ivl_tf.is_sound_transfer_for])
+  by (rule ivl_dom.entry_pairs_cover_st[OF ivl_tf.is_sound_nonrelational_transfer])
 
 end
 

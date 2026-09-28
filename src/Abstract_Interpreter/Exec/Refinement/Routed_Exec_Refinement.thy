@@ -50,8 +50,8 @@ text \<open>
   of the local value, so an asking transfer is still a local one.
 \<close>
 
-theorem pp_component_spec:
-  assumes S: "S = component_spec c"
+theorem pp_dg_spec_of:
+  assumes S: "S = dg_spec_of c"
     and ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
@@ -234,7 +234,7 @@ theorem pp_st:
         (routed_entry_seed_programs seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
-  by (rule pp_component_spec[where S = spec_st])
+  by (rule pp_dg_spec_of[where S = spec_st])
      (rule local_state_dg_spec_st_for_lifted_def, rule seed_key_ne_gk0, rule pp)
 
 end

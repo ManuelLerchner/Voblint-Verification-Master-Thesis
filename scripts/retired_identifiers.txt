@@ -3309,3 +3309,34 @@ pp_local_dg_spec
 component_spec_exec_component
 mc_en_exec_component
 rel_local_component
+# --- The local-analysis interface is local_spec, certified by sound_local_spec;
+# the MCP-era names are retired (2026-09-28) ---
+mcp_component
+mcp_component_sound
+mc_query
+mc_skip
+mc_assign
+mc_special
+mc_branch
+mc_body
+mc_return
+mc_event
+mc_enter
+mc_combine_env
+mc_combine_assign
+mc_combine
+mc_step
+mc_channel
+make_component
+map_component
+state_component
+lifted_state_component
+exec_component
+order_component
+tf_component
+lifted_tf_component
+component_spec
+component_contract
+component_step
+component_combine_sound
+sound_transfer_for

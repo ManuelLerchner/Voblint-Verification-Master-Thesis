@@ -163,7 +163,7 @@
         "name": "Voblint Playground",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any (runs in the browser)",
-        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick a domain, a globals rule and a context sensitivity, then inspect every abstract state.",
+        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick one or more domains, a globals rule and a context sensitivity, then inspect every abstract state.",
         "author": {
           "@type": "Person",
           "name": "Manuel Lerchner"
@@ -188,7 +188,7 @@
       </a>
       <ul class="site-links">
         <li><a href="index.html" aria-current="page">How it works</a></li>
-        <li><a href="Voblint/index.html">Formalization</a></li>
+        <li><a href="formalization.pdf">Formalization</a></li>
         <li><a href="thesis.pdf">Thesis</a></li>
         <li>
           <a class="nav-icon" href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis" target="_blank" rel="noreferrer" title="GitHub">
@@ -746,7 +746,7 @@
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">Five domains, five kinds of description</h3>
+      <h3 class="setting-title">Five numeric domains, five kinds of description</h3>
       <div class="domain-grid">
         <article class="domain-card">
           <svg viewBox="0 0 200 124" role="img"
@@ -928,7 +928,7 @@
           component reaches it alone: Interval on its own stops at <code>[−5, 5]</code>, because
           it never learns <code>x ≡ 5 (mod 6)</code>, while Congruence keeps that class and
           nothing about magnitude, so the sign guard tells it nothing. Run this under
-          <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Analysis_Parity/Parity_Domain.html#Parity_Domain.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Analysis_Sign/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a>
+          <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Domain/Parity_Lattice.html#Parity_Lattice.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Domain/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a>
           and both arms come back UNKNOWN. Together the class and the bounds leave
           <code>{−1, 5}</code>, which the guard splits into one value per arm.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/45-remainder_sign_split.vimp&amp;analysis=int&amp;context=none">Run it in the playground ↗</a>
@@ -2344,7 +2344,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
             a run picks for the globals. A domain joins in through
             <a href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.executable_domain%7Cclass"><code>executable_domain</code></a>,
             which includes the solver's
-            <a href="Voblint/Voblint_Domain/TD.Update_rules.html#Update_rules.warrowing%7Cclass"><code>warrowing</code></a> class.
+            <a href="Voblint/Voblint_Domain/TD.Warrowing.html#Warrowing.warrowing%7Cclass"><code>warrowing</code></a> class.
             Step through it below.
           </p>
         </div>
@@ -4402,7 +4402,7 @@ fun main() {
           <span data-stat="isabelle.lines">—</span> in <code>src/</code>, with
           <code>pstep</code>'s <span data-stat="semantics.pstep_rules">—</span> rules among
           them: <a href="Voblint/Voblint_VIMP/VIMP_Syntax.html"><code>VIMP_Syntax</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Expr.html"><code>VIMP_Expr</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Special.html"><code>VIMP_Special</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html"><code>VIMP_Globals</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Program.html"><code>VIMP_Program</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Proc.html"><code>VIMP_Proc</code></a>. Everything else, the compiler,
-          the equation generator, the solver, the five domains and the result table, the kernel
+          the equation generator, the solver, the six analyses and the result table, the kernel
           has already checked against them. Review is bounded by the size of the semantics, not by
           the size of the analyzer.
         </p>
@@ -4859,7 +4859,7 @@ fun main() {
 
         <div class="bridge-toggles" role="group" aria-label="Pillars">
           <button type="button" data-pillar="1" aria-pressed="true"><b>1</b> Compiler simulation <code>csim_step</code></button>
-          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_transfer_for</code></button>
+          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_nonrelational_transfer</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
           <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
@@ -4873,7 +4873,7 @@ fun main() {
         <figcaption>
           Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler; it also needs the other
           half of the simulation, which carries a source run into a valid trace. Pillars 2 and 5,
-          <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale"><code>sound_transfer_for</code></a>
+          <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale"><code>sound_nonrelational_transfer</code></a>
           and <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
           are obligations each domain discharges, pillar 3,
           <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
@@ -4962,11 +4962,11 @@ fun main() {
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+      and "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
-           ∧ analysis_result_covers D rule ctx p v s
+           ∧ analysis_result_covers as rule ctx p v s
            ∧ checks_sound_at res v s"</pre>
             </details>
           </article>
@@ -4992,10 +4992,10 @@ fun main() {
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "next_check residual = Some e"
-      and "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_exp c = e
+      and "next_check residual = Some (l, e)"
+      and "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
+  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
            ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s))
@@ -5021,8 +5021,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_dead_check_unreached:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "chk ∈ set (res_checks res)"
       and "check_verdict chk = Dead"
   shows "𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point chk) = {}"</pre>
@@ -5047,8 +5047,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_arithmetic_safe:
-  assumes "config_terminates D rule ctx p"
-      and "run_voblint D rule ctx p = Analysed res"
+  assumes "config_terminates as rule ctx p"
+      and "run_voblint as rule ctx p = Analysed res"
       and "s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v"
       and "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"</pre>
@@ -5072,8 +5072,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_check_sites:
-  assumes "run_voblint D rule ctx p = Analysed res"
-  shows "map (λchk. (check_point chk, check_exp chk)) (res_checks res)
+  assumes "run_voblint as rule ctx p = Analysed res"
+  shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"</pre>
             </details>
           </article>
@@ -5301,7 +5301,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   non-relational domains discharge it once, in
                   <code>nonrelational_transfer.assign_sound</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for.tf_sound_assign_for%7Cfact">tf_sound_assign_for ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer.tf_sound_assign_for%7Cfact">tf_sound_assign_for ↗</a>
               </li>
 
               <li class="zoom-level" data-level="6">
@@ -5331,14 +5331,14 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                 <p>
                   Every rung above is an <code>&#8712; &#947;</code> claim, and this is where
                   &#947; stops being a symbol. An interval is two
-                  <a href="Voblint/Voblint_Analysis_Interval/Interval_Bounds.html#Interval_Bounds.eint%7Ctype"><code>eint</code></a>
+                  <a href="Voblint/Voblint_Domain/Interval_Lattice.html#Interval_Lattice.eint%7Ctype"><code>eint</code></a>
                   bounds &#8212; <code>MinInf</code>, <code>Fin</code> of an integer, or
                   <code>PlusInf</code> &#8212; so <code>[0, 4]</code> is
                   <code>Ivl (Fin 0) (Fin 4)</code>, and the set it stands for is the
                   comprehension above: <code>{0, 1, 2, 3, 4}</code>. Nothing below this. The
                   integers are HOL's, and the order on <code>eint</code> is three cases.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Lattice.html#Interval_Lattice.gamma_ivl%7Cconst">gamma_ivl &#8599;</a>
+                <a class="isa-link" href="Voblint/Voblint_Domain/Interval_Lattice.html#Interval_Lattice.gamma_ivl%7Cconst">gamma_ivl &#8599;</a>
               </li>
 
               <li class="zoom-level" data-level="9">
@@ -5438,8 +5438,8 @@ qed</code></pre>
               <circle cx="230" cy="270" r="8"/><text x="230" y="296">expression_domain_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Domain/Backward_Domain.html#Backward_Domain.backward_domain%7Clocale" data-name="backward_domain" data-theory="Voblint_Domain.Backward_Domain" data-info="Guards: the backward filter keeps every store the condition admits.">
               <circle cx="390" cy="270" r="8"/><text x="390" y="296">backward_domain</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale" data-name="sound_transfer_for" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
-              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_transfer_for</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale" data-name="sound_nonrelational_transfer" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
+              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_nonrelational_transfer</text></a>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign. Goblint's Spec, in Isabelle.">
               <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
@@ -5465,7 +5465,7 @@ qed</code></pre>
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Keys" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every domain, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
               <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_certified_source_sound</text></a>
@@ -5604,7 +5604,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">IntDomTuple</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Analysis_Int/Int_Domain.html#Int_Domain.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
+            <a class="align-voblint" href="Voblint/Voblint_Domain/Int_Lattice.html#Int_Lattice.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
             <span class="align-note">Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked.</span>
           </li>
           <li class="align-row absent">
@@ -5613,11 +5613,11 @@ qed</code></pre>
             <span class="align-voblint">Mathematical integers</span>
             <span class="align-note">No soundness theorem here covers wrap-around arithmetic.</span>
           </li>
-          <li class="align-row absent">
+          <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
-            <span class="align-link" aria-label="absent"><span>absent</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Domain/Abstract_Numeric_Queries.html#Abstract_Numeric_Queries.abstract_numeric_queries%7Clocale" title="Definition in the formalization">Two numeric queries in the check layer</a>
-            <span class="align-note">A transfer function cannot ask a query at all.</span>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Manager.html#DG_Manager.man.man_ask%7Cconst" title="Definition in the formalization">man_ask</a>
+            <span class="align-note">A transfer asks through its manager; every active analysis answers and the answers are met. Each pointwise analysis asks for the value of an assignment's right-hand side, and the order analysis asks how an assigned value compares with the other variables, so cooperation runs both ways: the order analysis can hand Interval an exact result, and Interval can hand the order analysis a comparison. A handler may ask in turn, and a query already being asked is answered with top. A check is decided by the met answer to <code>EvalInt</code> of its condition. Only <code>EvalInt</code> exists, answers are not cached, and a combined analysis reads and publishes no globals of its own.</span>
           </li>
           <li class="align-row absent">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L199" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sync</a>
@@ -5625,11 +5625,17 @@ qed</code></pre>
             <span class="align-voblint">none</span>
             <span class="align-note">The analysis record has no sync hook; publication happens only in an edge transfer's result.</span>
           </li>
+          <li class="align-row simplified">
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">MCP, the analysis combinator</a>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype" title="Definition in the formalization">local_spec</a>
+            <span class="align-note">The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is. Every operation, entry and return included, receives the query channel, and a return also receives the callee's. Activation has no dependency order.</span>
+          </li>
           <li class="align-row absent">
-            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads and the analysis manager</a>
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L257-L260" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Threads</a>
             <span class="align-link" aria-label="absent"><span>absent</span></span>
             <span class="align-voblint">none</span>
-            <span class="align-note">Goblint composes many analyses through its manager and handles thread creation and privatization. None of it is modeled here.</span>
+            <span class="align-note">Thread creation and privatization are not modeled.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Solver termination</a>
@@ -5659,15 +5665,21 @@ qed</code></pre>
 
       <div class="prose-block">
         <p>
-          One row above understates itself. Every shipped domain keeps a pointwise state, one
+          One row above understates itself. Five of the six analyses keep a pointwise state, one
           abstract value per variable, so it is fair to ask whether the framework only works for
-          that shape. It does not, and there is a witness:
+          that shape. The sixth, the order analysis, answers that it does not. Its carrier is a
+          set of known pairs <code>x &#8804; y</code>, with no <code>vname &#8658; 'a</code>
+          anywhere in it.
           <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Domain.html"><code>Rel_Order_Domain</code></a>
-          carries a set of known pairs <code>x &#8804; y</code> instead &#8212; no
-          <code>vname &#8658; 'a</code> anywhere in the carrier &#8212; and interprets
+          interprets
           <a href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale"><code>analysis_contract</code></a>
-          with no change to the framework. It is a deliberately useless analysis, precise only on
-          a guard and forgetful everywhere else. Its job is to be relational and still fit.
+          with it and no change to the framework, and
+          <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html"><code>Rel_Order_Local</code></a>
+          runs the same carrier inside the combined state next to the other analyses. There it
+          answers comparisons from the pairs it records and, at an assignment, asks the others how
+          the new value compares with each variable. It stays small on purpose: no transitive
+          closure, and calls enter and return with no facts. Run with Interval, it proves checks
+          neither analysis proves alone.
         </p>
       </div>
     </section>
@@ -6222,6 +6234,22 @@ qed</code></pre>
         </li>
 
         <li>
+          <a class="resource-card" href="thesis.pdf">
+            <span class="resource-icon resource-icon-accent" aria-hidden="true">
+              <i class="fa-solid fa-graduation-cap"></i>
+            </span>
+            <span class="resource-content">
+              <span class="resource-title">Master thesis</span>
+              <span class="resource-description">
+                The written thesis, with design rationale, proof architecture, and
+                references back into the Isabelle development.
+              </span>
+            </span>
+            <span class="resource-arrow" aria-hidden="true">→</span>
+          </a>
+        </li>
+
+        <li>
           <a class="resource-card" href="Voblint/index.html">
             <span class="resource-icon" aria-hidden="true">
               <i class="fa-solid fa-book-open"></i>
@@ -6243,26 +6271,10 @@ qed</code></pre>
               <i class="fa-solid fa-file-pdf"></i>
             </span>
             <span class="resource-content">
-              <span class="resource-title">Formalization PDF</span>
+              <span class="resource-title">Isabelle documentation</span>
               <span class="resource-description">
                 Isabelle-generated printout of the development, including the
                 certificate appendix.
-              </span>
-            </span>
-            <span class="resource-arrow" aria-hidden="true">→</span>
-          </a>
-        </li>
-
-        <li>
-          <a class="resource-card" href="thesis.pdf">
-            <span class="resource-icon resource-icon-accent" aria-hidden="true">
-              <i class="fa-solid fa-graduation-cap"></i>
-            </span>
-            <span class="resource-content">
-              <span class="resource-title">Master thesis</span>
-              <span class="resource-description">
-                The written thesis, with design rationale, proof architecture, and
-                references back into the Isabelle development.
               </span>
             </span>
             <span class="resource-arrow" aria-hidden="true">→</span>

@@ -101,7 +101,7 @@ text \<open>
   where a reader looks to find out that they are the generic ones rather than
   Parity's own. \<^const>\<open>skip_parity\<close>'s soundness is \<open>parity_tf.skip_sound\<close>, and
   the framework's transfer contract at Parity is
-  \<open>parity_tf.is_sound_transfer_for\<close>.
+  \<open>parity_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 
 end

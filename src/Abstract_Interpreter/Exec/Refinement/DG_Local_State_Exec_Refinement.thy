@@ -235,16 +235,17 @@ text \<open>
 \<close>
 
 lemma entered_st:
-  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
     and s: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
   shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
            \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
   unfolding enter_lift_commute
   by (rule transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty s])
-     (simp add: call_enter_CallEdge sound_transfer_for.tf_sound_enter_entry_for[OF tf_sound])
+     (simp add: call_enter_CallEdge
+       sound_nonrelational_transfer.tf_sound_enter_entry_for[OF tf_sound])
 
 theorem entry_pairs_cover_st:
-  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
     and sin: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
   shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>reader d'\<rbrakk>\<^sub>\<bottom>) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
@@ -258,9 +259,9 @@ text \<open>
   contract below is its one-line consequence.
 \<close>
 
-theorem exec_component_sound:
-  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
-  shows "mcp_component_sound \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) (exec_component \<G> empty_pred tf_st enter_st)"
+theorem exec_spec_sound:
+  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
+  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) (exec_spec \<G> empty_pred tf_st enter_st)"
 proof -
   have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     for a d
@@ -269,7 +270,7 @@ proof -
     show ?thesis
       unfolding step_lift_commute[OF True]
       by (rule transfer_lift_sound_collect
-            [OF sound_transfer_for.step_sound_for[OF tf_sound]
+            [OF sound_nonrelational_transfer.step_sound_for[OF tf_sound]
                 edge_collect_empty_set is_empty_state_gamma_state_empty])
   next
     case False
@@ -287,16 +288,16 @@ proof -
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
     by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
   show ?thesis
-    unfolding mcp_component_sound_def
+    unfolding sound_local_spec_def
     using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step] entered_st[OF tf_sound] comb
-    by (auto simp: exec_component_def)
+    by (auto simp: exec_spec_def)
 qed
 
 theorem analysis_contract_st:
-  assumes tf_sound: "sound_transfer_for \<G> sk asn sp br bd rt en ev"
+  assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
   shows "analysis_contract spec_st gamma_exec \<G>"
   unfolding local_state_dg_spec_st_for_lifted_def gamma_exec_def[abs_def]
-  by (rule component_contract[OF exec_component_sound[OF tf_sound]])
+  by (rule dg_spec_of_contract[OF exec_spec_sound[OF tf_sound]])
 
 subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
 

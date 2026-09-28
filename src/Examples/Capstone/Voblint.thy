@@ -320,7 +320,7 @@ text \<open>
       return combination, and their soundness against
       \<^verbatim>\<open>gamma_state\<close>.
     \<^item> @{theory Voblint_Framework.DG_Local_State_Spec} --- the
-      \<^verbatim>\<open>sound_transfer_for\<close> contract and two Base
+      \<^verbatim>\<open>sound_nonrelational_transfer\<close> contract and two Base
       constructions. Their edge and \<^verbatim>\<open>EA_Check\<close> soundness
       facts discharge \<^theory>\<open>Voblint_Framework.DG_Spec_Sound\<close>'s
       \<^verbatim>\<open>step_sound\<close> and

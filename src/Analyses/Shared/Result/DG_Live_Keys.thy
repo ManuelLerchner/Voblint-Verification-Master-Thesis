@@ -136,7 +136,7 @@ begin
 lemma analysis_spec_enter:
   "enter\<^sup># (analysis_spec (declared_global p) p) ci
      = local_enter_transfer (\<lambda>d. [(d, entry_of (declared_global p) p ci d)])"
-  by (simp add: analysis_spec_def component_spec_def enter_single)
+  by (simp add: analysis_spec_def dg_spec_of_def enter_single)
 
 lemma analysis_contribs_wf [simp]:
   "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
@@ -309,7 +309,7 @@ begin
 
 interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
     "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)" "declared_global p"
-  unfolding analysis_spec_def by (rule component_contract[OF comp_sound])
+  unfolding analysis_spec_def by (rule dg_spec_of_contract[OF comp_sound])
 
 text \<open>
   The routed soundness at the live keys, for any relation admitting call contexts.
@@ -396,7 +396,7 @@ next
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
   show ?case
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov_e req covE
-    by (fastforce simp: analysis_spec_def component_spec_def enter_single entry_pairs_cover_def)
+    by (fastforce simp: analysis_spec_def dg_spec_of_def enter_single entry_pairs_cover_def)
 next
   case (EnterTotal u ctx dst pars args q cont s)
   then show ?case by (rule total_R)

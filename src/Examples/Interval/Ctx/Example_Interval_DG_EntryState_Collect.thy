@@ -75,7 +75,7 @@ text \<open>The state a call enters its callee with, as the registration's pipel
 
 lemma rc_entered:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
         (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
      rc_gs rc_program ci d
    = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"

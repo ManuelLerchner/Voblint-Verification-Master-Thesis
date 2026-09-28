@@ -118,40 +118,40 @@ text \<open>
 definition rel_ret :: "exp option \<Rightarrow> relc \<Rightarrow> relc" where
   "rel_ret eo d = (case eo of None \<Rightarrow> d | Some a \<Rightarrow> forget_relc ret_var d)"
 
-definition order_component :: "vname list \<Rightarrow> relc mcp_component" where
-  "order_component ys = \<lparr>
-     mc_query = (\<lambda>A. rel_qry),
-     mc_skip = (\<lambda>A d. d),
-     mc_assign = (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)),
-     mc_special = (\<lambda>A sc x d. forget_relc x d),
-     mc_branch = (\<lambda>A b pol d. branch_step_rel b pol d),
-     mc_body = (\<lambda>A p d. d),
-     mc_return = (\<lambda>A eo p d. rel_ret eo d),
-     mc_event = (\<lambda>A ev d. d),
-     mc_enter = (\<lambda>A ci p. [(fst p, top_relc)]),
-     mc_combine_env = (\<lambda>A B ci dc de. dc),
-     mc_combine_assign = (\<lambda>B ci d de. top_relc) \<rparr>"
+definition order_spec :: "vname list \<Rightarrow> relc local_spec" where
+  "order_spec ys = \<lparr>
+     ls_query = (\<lambda>A. rel_qry),
+     ls_skip = (\<lambda>A d. d),
+     ls_assign = (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)),
+     ls_special = (\<lambda>A sc x d. forget_relc x d),
+     ls_branch = (\<lambda>A b pol d. branch_step_rel b pol d),
+     ls_body = (\<lambda>A p d. d),
+     ls_return = (\<lambda>A eo p d. rel_ret eo d),
+     ls_event = (\<lambda>A ev d. d),
+     ls_enter = (\<lambda>A ci p. [(fst p, top_relc)]),
+     ls_combine_env = (\<lambda>A B ci dc de. dc),
+     ls_combine_assign = (\<lambda>B ci d de. top_relc) \<rparr>"
 
-theorem order_component_sound: "mcp_component_sound \<G> gamma_rel (order_component ys)"
+theorem order_spec_sound: "sound_local_spec \<G> gamma_rel (order_spec ys)"
 proof -
   have step: "edge_collect a (gamma_rel d \<inter> Collect (eval_query.oracle_holds ask))
-                \<subseteq> gamma_rel (mc_step (order_component ys) ask a d)" for a d ask
+                \<subseteq> gamma_rel (ls_step (order_spec ys) ask a d)" for a d ask
   proof (cases a)
     case (EA_Assign x e)
-    then show ?thesis by (auto simp: order_component_def intro!: rel_learn_sound)
+    then show ?thesis by (auto simp: order_spec_def intro!: rel_learn_sound)
   next
     case (EA_Special sc x)
-    then show ?thesis by (cases sc) (auto simp: order_component_def)
+    then show ?thesis by (cases sc) (auto simp: order_spec_def)
   next
     case (EA_Ret eo p)
-    then show ?thesis by (cases eo) (auto simp: order_component_def rel_ret_def)
-  qed (auto simp: order_component_def branch_step_rel_def)
+    then show ?thesis by (cases eo) (auto simp: order_spec_def rel_ret_def)
+  qed (auto simp: order_spec_def branch_step_rel_def)
   show ?thesis
-    unfolding mcp_component_sound_def
-    using gamma_rel_mono step rel_qry_sound by (auto simp: order_component_def)
+    unfolding sound_local_spec_def
+    using gamma_rel_mono step rel_qry_sound by (auto simp: order_spec_def)
 qed
 
-lemma single_entry_order_component: "single_entry (order_component ys)"
-  by (simp add: single_entry_def order_component_def)
+lemma single_entry_order_spec: "single_entry (order_spec ys)"
+  by (simp add: single_entry_def order_spec_def)
 
 end

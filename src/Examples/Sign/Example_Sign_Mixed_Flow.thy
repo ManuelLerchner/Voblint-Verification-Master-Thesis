@@ -37,7 +37,8 @@ proof (cases "live_resolved_st_q \<G> s")
   case True
   show ?thesis
     unfolding sign_tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
-    by (rule sound_transfer_for.step_sound_for[OF sign_tf.is_sound_transfer_for])
+    by (rule
+      sound_nonrelational_transfer.step_sound_for[OF sign_tf.is_sound_nonrelational_transfer])
 next
   case False
   then have "\<lbrakk>fun_of_resolved_st_q_for \<G> s\<rbrakk> = {}"
@@ -153,7 +154,8 @@ lemma sign_call_enter_sound:
            \<in> \<lbrakk>fun_of_resolved_st_q_for \<G>
                 (sign_enter_st_for \<G> (call_info_of (CallEdge dst pars args) p) D)\<rbrakk>"
   unfolding sign_enter_st_for_commute
-  using sound_transfer_for.tf_sound_enter_entry_for[OF sign_tf.is_sound_transfer_for assms,
+  using sound_nonrelational_transfer.tf_sound_enter_entry_for[OF
+    sign_tf.is_sound_nonrelational_transfer assms,
       of "call_info_of (CallEdge dst pars args) p"]
   by (simp add: call_enter_CallEdge)
 

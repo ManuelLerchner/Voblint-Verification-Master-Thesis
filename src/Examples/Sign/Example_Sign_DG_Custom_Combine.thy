@@ -260,7 +260,7 @@ lemma traverse_combine_env_join:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_component_spec
+    dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -274,7 +274,7 @@ lemma sides_combine_env_join:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_component_spec
+    dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -291,7 +291,7 @@ lemma traverse_combine_stock:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_component_spec
+    dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -305,7 +305,7 @@ lemma sides_combine_stock:
             (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
-    dg_spec_combine_transfer_component_spec
+    dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
@@ -332,10 +332,10 @@ lemma sides_combine_env_join_ge:
 theorem analysis_contract_sign_dg_spec_env_join:
   "analysis_contract (sign_dg_spec_env_join \<G>) (gamma_ownership_split \<G>) \<G>"
 proof -
-  interpret sign_tf: sound_transfer_for \<G>
+  interpret sign_tf: sound_nonrelational_transfer \<G>
       skip_sign assign_sign special_sign branch_sign body_sign return_sign
       "enter_sign_ci_for \<G>" event_sign
-    by (rule sign_tf.is_sound_transfer_for)
+    by (rule sign_tf.is_sound_nonrelational_transfer)
   interpret stock: analysis_contract
     "ownership_split_lift \<G> (sign_base_spec \<G>)" "gamma_ownership_split \<G>" \<G>
     by (rule sign_tf.ownership_split_lift_contract)

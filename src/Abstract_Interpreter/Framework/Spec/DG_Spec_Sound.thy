@@ -12,7 +12,7 @@ text \<open>
   publishes at that slot. There is no reconstructed \<open>'dg \<times> 'dl\<close> pair anywhere: a transfer
   that publishes nothing is judged against \<open>bot\<close>, and a concretization
   that ignores its global argument (every Base-style domain) discharges
-  that side vacuously. \<open>component_contract\<close> in \<open>MCP_Spec\<close> is exactly
+  that side vacuously. \<open>dg_spec_of_contract\<close> in \<open>MCP_Spec\<close> is exactly
   that collapse: for a specification built from a component, all
   global obligations vanish and what remains are the component's own laws.
 \<close>

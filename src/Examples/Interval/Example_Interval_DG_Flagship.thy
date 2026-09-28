@@ -57,7 +57,7 @@ global_interpretation interval_seed_join: dg_analysis_exec
     and interval_sj_result = interval_seed_join.result
     and interval_sj_state_at = interval_seed_join.state_at
 proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
+  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def

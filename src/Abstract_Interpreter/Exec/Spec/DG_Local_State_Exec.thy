@@ -42,12 +42,12 @@ text \<open>
   nothing.
 \<close>
 
-definition exec_component ::
+definition exec_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> 'a exec_dg_st lifted mcp_component" where
-  "exec_component \<G> empty_pred tf_st enter_st = make_component
+   \<Rightarrow> 'a exec_dg_st lifted local_spec" where
+  "exec_spec \<G> empty_pred tf_st enter_st = make_local_spec
      (\<lambda>_ _. \<top>)
      (\<lambda>_ a. transfer_lift empty_pred (tf_st a))
      (\<lambda>_ ci p. [(fst p, transfer_lift empty_pred (enter_st ci) (fst p))])
@@ -56,19 +56,19 @@ definition exec_component ::
         (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
              (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0))"
 
-lemma mc_step_exec_component [simp]:
-  "mc_step (exec_component \<G> empty_pred tf_st enter_st) A a = transfer_lift empty_pred (tf_st a)"
-  by (simp add: exec_component_def)
+lemma ls_step_exec_spec [simp]:
+  "ls_step (exec_spec \<G> empty_pred tf_st enter_st) A a = transfer_lift empty_pred (tf_st a)"
+  by (simp add: exec_spec_def)
 
-lemma component_step_exec_component [simp]:
-  "component_step (exec_component \<G> empty_pred tf_st enter_st) a
+lemma closed_step_exec_spec [simp]:
+  "closed_step (exec_spec \<G> empty_pred tf_st enter_st) a
      = transfer_lift empty_pred (tf_st a)"
-  by (simp add: component_step_def fun_eq_iff)
+  by (simp add: closed_step_def fun_eq_iff)
 
-lemma mc_enter_exec_component [simp]:
-  "mc_enter (exec_component \<G> empty_pred tf_st enter_st) A ci (d, d)
+lemma ls_enter_exec_spec [simp]:
+  "ls_enter (exec_spec \<G> empty_pred tf_st enter_st) A ci (d, d)
    = [(d, transfer_lift empty_pred (enter_st ci) d)]"
-  by (simp add: exec_component_def)
+  by (simp add: exec_spec_def)
 
 definition local_state_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
@@ -78,7 +78,7 @@ definition local_state_dg_spec_st_for_lifted ::
    \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st
-     = component_spec (exec_component \<G> empty_pred tf_st enter_st)"
+     = dg_spec_of (exec_spec \<G> empty_pred tf_st enter_st)"
 
 text \<open>Consumed at code-generation time like every other specification builder
   (see \<^theory>\<open>Voblint_Framework.DG_Spec\<close>): the executable carrier changes what a
@@ -109,6 +109,6 @@ lemma dg_spec_combine_transfer_local_state_st_for_lifted:
             (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
                  (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
             (combine_env_st_lifted dc de) de)"
-  by (simp add: local_state_dg_spec_st_for_lifted_def exec_component_def)
+  by (simp add: local_state_dg_spec_st_for_lifted_def exec_spec_def)
 
 end

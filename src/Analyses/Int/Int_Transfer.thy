@@ -12,7 +12,7 @@ section \<open>Composite integer-domain transfer functions\<close>
 
 text \<open>
   Registers the composite Sign/Interval/Parity/Congruence domain against the
-  framework's transfer contract (\<^locale>\<open>sound_transfer_for\<close>), mirroring
+  framework's transfer contract (\<^locale>\<open>sound_nonrelational_transfer\<close>), mirroring
   Interval's and Sign's own registrations. One registration covers all three
   refinement modes, since every operation already takes \<open>mode\<close> as an argument
   and \<open>branch_int_dom_for\<close> dispatches the one whose name does not.
@@ -403,8 +403,8 @@ fun branch_int_dom_for ::
 | "branch_int_dom_for Refine_Once = branch_int_dom_once"
 | "branch_int_dom_for Refine_Fixpoint = branch_int_dom_fixpoint"
 
-lemma int_is_sound_transfer_for:
-  "sound_transfer_for \<G> skip_int_dom (assign_int_dom mode) (special_int_dom mode)
+lemma int_is_sound_nonrelational_transfer:
+  "sound_nonrelational_transfer \<G> skip_int_dom (assign_int_dom mode) (special_int_dom mode)
      (branch_int_dom_for mode) body_int_dom (return_int_dom mode)
      (enter_int_dom_ci_for mode \<G>) event_int_dom"
   apply unfold_locales

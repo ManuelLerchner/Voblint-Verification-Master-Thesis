@@ -139,7 +139,7 @@ lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
 
 interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
-  by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_nonrelational_transfer])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -313,7 +313,7 @@ next
       [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
-            [OF sign_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF sign_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: sign_nest_gamma_eq sign_nest_domain.gamma_exec_def)
   show ?case

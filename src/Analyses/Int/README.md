@@ -104,7 +104,7 @@ Int is the domain where two axes meet, and they stay independent in every run
 that includes it.
 
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
-discharged by one of Int's own mode-generic facts — `int_is_sound_transfer_for`,
+discharged by one of Int's own mode-generic facts — `int_is_sound_nonrelational_transfer`,
 `int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
 manifest pins `Refine_Fixpoint` by naming the mode-taking operations as applied

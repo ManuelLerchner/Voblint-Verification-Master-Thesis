@@ -211,7 +211,7 @@ class Domain:
             "return": f"return_{i}",
             "enter_ci": f"enter_{i}_ci_for",
             "event": f"event_{i}",
-            "transfer_sound": f"{i}_tf.is_sound_transfer_for",
+            "transfer_sound": f"{i}_tf.is_sound_nonrelational_transfer",
             "tf_commute": f"{i}_tf_st_for_commute",
             "tf_abs_def": f"{i}_tf.tf_abs_def",
             "enter_commute": f"{i}_enter_st_for_commute",
@@ -235,7 +235,7 @@ class Domain:
             "state_type": f"{vt} exec_dg_st lifted",
             "published_type": f"{vt} abs_state lifted",
             "context_type": f"{vt} list",
-            "component": "ask_assign (exec_component $G"
+            "component": "ask_assign (exec_spec $G"
             " (resolved_st_q_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
             "gamma": "\\<lbrakk>map_lift (fun_of_resolved_st_q_for $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
@@ -253,7 +253,7 @@ class Domain:
             "route": "exec_formals_route $G u [] $f ca",
             "context_values": f"map {vc} $c",
             "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
-            "single_entry": "single_entry_ask_assign[OF single_entry_exec_component]",
+            "single_entry": "single_entry_ask_assign[OF single_entry_exec_spec]",
             "init_sound": f"{p}_rule.init_sound",
             "answer_sound": f"{p}_eval_answer_sound",
         }
@@ -614,13 +614,13 @@ def render_mcp(doms):
 
     out += fun_block(
         [
-            "fun mcp_component_of ::",
+            "fun local_spec_of ::",
             '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain'
-            ' \\<Rightarrow> mcp_st lifted mcp_component" where',
+            ' \\<Rightarrow> mcp_st lifted local_spec" where',
         ],
         per(
             lambda k, d: (
-                f"mcp_component_of {G} p {d.constructor}",
+                f"local_spec_of {G} p {d.constructor}",
                 f"lens_of (lift_get slot{k}) (lift_put set_slot{k})"
                 f" {arg(d.term('component', G=G, p='p'))}",
             )
@@ -787,16 +787,16 @@ def render_mcp(doms):
         f"field_component_sound[OF {d.field()['component_sound']}]" for d in doms
     )
     out += [
-        "lemma mcp_component_of_sound:",
-        '  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)',
-        '     (mcp_component_of (declared_global p) p a)"',
-        "  by (cases a; simp only: part_gamma.simps mcp_component_of.simps;",
+        "lemma local_spec_of_sound:",
+        '  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)',
+        '     (local_spec_of (declared_global p) p a)"',
+        "  by (cases a; simp only: part_gamma.simps local_spec_of.simps;",
     ]
     out += wrap_term("rule " + comps + ";", 6)
     out += ["      auto simp: less_eq_analysis_product_def)", ""]
     singles = " ".join(dict.fromkeys(d.field()["single_entry"] for d in doms))
     out += [
-        'lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \\<G> p a)"'
+        'lemma single_entry_local_spec_of: "single_entry (local_spec_of \\<G> p a)"'
     ]
     out += wrap_term(
         f"by (cases a) (auto intro!: single_entry_lens_of lift_put_get {singles})", 2
@@ -804,10 +804,10 @@ def render_mcp(doms):
     out += [""]
     silent = [d.constructor for d in doms if "component" not in d.field_overrides]
     out += [
-        "lemma mcp_component_of_silent:",
+        "lemma local_spec_of_silent:",
         f'  "a \\<in> {{{", ".join(silent)}}}',
-        f'     \\<Longrightarrow> mc_query (mcp_component_of {G} p a) A x q = \\<top>"',
-        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def)",
+        f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
+        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)",
         "",
     ]
     inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])

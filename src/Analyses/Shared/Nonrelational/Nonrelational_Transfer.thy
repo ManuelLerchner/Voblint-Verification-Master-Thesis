@@ -155,8 +155,8 @@ text \<open>The eight operations discharge the framework's contract in one
   \<open>unfold_locales\<close>: the call boundary the contract fixes is the structural one,
   so only the per-edge operations and the callee entry are the domain's own.\<close>
 
-lemma is_sound_transfer_for:
-  "sound_transfer_for \<G> skip assign special_transfer br body ret (enter_ci_for \<G>) event"
+lemma is_sound_nonrelational_transfer:
+  "sound_nonrelational_transfer \<G> skip assign special_transfer br body ret (enter_ci_for \<G>) event"
   by unfold_locales
      (simp_all add: assign_sound special_transfer_sound br_sound skip_sound body_sound
         ret_sound enter_ci_for_sound event_sound)

@@ -150,30 +150,30 @@ type_synonym mcp_ctx =
 
 subsection \<open>Each analysis on its own field\<close>
 
-fun mcp_component_of ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted mcp_component" where
-  "mcp_component_of \<G> p Sign_Analysis =
-     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_component \<G>
+fun local_spec_of ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
+  "local_spec_of \<G> p Sign_Analysis =
+     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_spec \<G>
        (resolved_st_q_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
        (sign_enter_st_for \<G>)))"
-| "mcp_component_of \<G> p Interval_Analysis =
-     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_component \<G>
+| "local_spec_of \<G> p Interval_Analysis =
+     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_spec \<G>
        (resolved_st_q_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
        (ivl_enter_st_for \<G>)))"
-| "mcp_component_of \<G> p Parity_Analysis =
-     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_component \<G>
+| "local_spec_of \<G> p Parity_Analysis =
+     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_spec \<G>
        (resolved_st_q_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
        (parity_enter_st_for \<G>)))"
-| "mcp_component_of \<G> p Int_Analysis =
-     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_component \<G>
+| "local_spec_of \<G> p Int_Analysis =
+     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_spec \<G>
        (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint
        \<G>) (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
-| "mcp_component_of \<G> p Congruence_Analysis =
-     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_component \<G>
+| "local_spec_of \<G> p Congruence_Analysis =
+     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_spec \<G>
        (resolved_st_q_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
        (congruence_enter_st_for \<G>)))"
-| "mcp_component_of \<G> p Order_Analysis =
-     lens_of (lift_get slot6) (lift_put set_slot6) (order_component (program_vars p))"
+| "local_spec_of \<G> p Order_Analysis =
+     lens_of (lift_get slot6) (lift_put set_slot6) (order_spec (program_vars p))"
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
@@ -340,26 +340,26 @@ fun ctx_values :: "analysis_domain \<Rightarrow> mcp_ctx \<Rightarrow> abstract_
 
 subsection \<open>What each analysis's registration supplies\<close>
 
-lemma mcp_component_of_sound:
-  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)
-     (mcp_component_of (declared_global p) p a)"
-  by (cases a; simp only: part_gamma.simps mcp_component_of.simps;
+lemma local_spec_of_sound:
+  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
+     (local_spec_of (declared_global p) p a)"
+  by (cases a; simp only: part_gamma.simps local_spec_of.simps;
       rule field_component_sound[OF ask_assign_sound[OF sign_rule.comp_sound]]
         field_component_sound[OF ask_assign_sound[OF interval_rule.comp_sound]]
         field_component_sound[OF ask_assign_sound[OF parity_rule.comp_sound]]
         field_component_sound[OF ask_assign_sound[OF int_rule.comp_sound]]
         field_component_sound[OF ask_assign_sound[OF congruence_rule.comp_sound]]
-        field_component_sound[OF order_component_sound];
+        field_component_sound[OF order_spec_sound];
       auto simp: less_eq_analysis_product_def)
 
-lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \<G> p a)"
+lemma single_entry_local_spec_of: "single_entry (local_spec_of \<G> p a)"
   by (cases a) (auto intro!: single_entry_lens_of lift_put_get single_entry_ask_assign[OF
-    single_entry_exec_component] single_entry_order_component)
+    single_entry_exec_spec] single_entry_order_spec)
 
-lemma mcp_component_of_silent:
+lemma local_spec_of_silent:
   "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, Int_Analysis, Congruence_Analysis}
-     \<Longrightarrow> mc_query (mcp_component_of \<G> p a) A x q = \<top>"
-  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def)
+     \<Longrightarrow> ls_query (local_spec_of \<G> p a) A x q = \<top>"
+  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)
 
 lemma mcp_init_sound:
   "cinit_stores (declared_global p)

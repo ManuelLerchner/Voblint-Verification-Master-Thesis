@@ -24,14 +24,14 @@ text \<open>The wrapper keeps an assignment's law: where it substitutes the lite
   answer holds at the store, so the literal evaluates to what \<open>e\<close> does.\<close>
 
 lemma assign_ask_sound:
-  assumes "assign_sound gm asn"
-  shows "assign_sound gm (assign_ask asn)"
-  unfolding assign_sound_def
+  assumes "sound_assign gm asn"
+  shows "sound_assign gm (assign_ask asn)"
+  unfolding sound_assign_def
 proof (intro allI impI)
   fix A x s y e
   assume s: "s \<in> gm x" and o: "eval_query.oracle_holds A s"
   have base: "s(y := \<lbrakk>e'\<rbrakk>\<^sub>e s) \<in> gm (asn A y e' x)" for e'
-    using assms s o unfolding assign_sound_def by blast
+    using assms s o unfolding sound_assign_def by blast
   show "s(y := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gm (assign_ask asn A y e x)"
   proof (cases "answer_const (A (EvalInt e))")
     case None
@@ -56,13 +56,13 @@ text \<open>
   analysis answers, it is the component itself.
 \<close>
 
-definition ask_assign :: "'s mcp_component \<Rightarrow> 's mcp_component" where
-  "ask_assign c = c\<lparr>mc_assign := assign_ask (mc_assign c)\<rparr>"
+definition ask_assign :: "'s local_spec \<Rightarrow> 's local_spec" where
+  "ask_assign c = c\<lparr>ls_assign := assign_ask (ls_assign c)\<rparr>"
 
 lemma ask_assign_step_cases:
-  "mc_step (ask_assign c) A a x = mc_step c A a x
+  "ls_step (ask_assign c) A a x = ls_step c A a x
    \<or> (\<exists>y e n. a = EA_Assign y e \<and> answer_const (A (EvalInt e)) = Some n
-        \<and> mc_step (ask_assign c) A a x = mc_step c A (EA_Assign y (N n)) x)"
+        \<and> ls_step (ask_assign c) A a x = ls_step c A (EA_Assign y (N n)) x)"
   by (cases a) (auto simp: ask_assign_def assign_ask_def split: option.splits)
 
 lemma answer_const_top [simp]: "answer_const \<top> = None"
@@ -70,7 +70,7 @@ lemma answer_const_top [simp]: "answer_const \<top> = None"
 
 lemma ask_assign_top:
   assumes "\<And>q. A q = \<top>"
-  shows "mc_step (ask_assign c) A a x = mc_step c A a x"
+  shows "ls_step (ask_assign c) A a x = ls_step c A a x"
   by (cases a) (simp_all add: ask_assign_def assign_ask_def assms)
 
 lemma single_entry_ask_assign: "single_entry c \<Longrightarrow> single_entry (ask_assign c)"
@@ -80,22 +80,22 @@ theorem ask_assign_frame:
   assumes frame: "mcp_frame c g"
   shows "mcp_frame (ask_assign c) g"
 proof -
-  have st: "g (mc_step c A a x) = g x" for A a x
+  have st: "g (ls_step c A a x) = g x" for A a x
     using frame unfolding mcp_frame_def by blast
-  have "g (mc_step (ask_assign c) A a x) = g x" for A a x
+  have "g (ls_step (ask_assign c) A a x) = g x" for A a x
     using ask_assign_step_cases[of c A a x] st by metis
   then show ?thesis
     using frame unfolding mcp_frame_def by (simp add: ask_assign_def)
 qed
 
 theorem ask_assign_sound:
-  assumes sound: "mcp_component_sound \<G> gm c"
-  shows "mcp_component_sound \<G> gm (ask_assign c)"
+  assumes sound: "sound_local_spec \<G> gm c"
+  shows "sound_local_spec \<G> gm (ask_assign c)"
 proof -
-  have "assign_sound gm (mc_assign c)"
-    using sound unfolding mcp_component_sound_def mc_step_sound_iff by blast
+  have "sound_assign gm (ls_assign c)"
+    using sound unfolding sound_local_spec_def ls_step_sound_iff by blast
   then show ?thesis
-    unfolding ask_assign_def by (rule mcp_component_sound_update(2)[OF sound assign_ask_sound])
+    unfolding ask_assign_def by (rule sound_local_spec_update(2)[OF sound assign_ask_sound])
 qed
 
 end
