@@ -99,20 +99,20 @@ instance of each class, while transfer functions, routing policy and solver
 vary over one carrier. They are therefore locale parameters.
 
 Second, code generation needs unconditional equations, and theorems about the
-result need semantic premises. #isalocale("routed_dg_pipeline") fixes the
+result need semantic premises. #isalocale("dg_pipeline") fixes the
 executable ingredients (an MCP component, its readback, the initial state,
 routing, solver and check classifier) and assumes nothing, so its definitions
 become code equations directly. Even the bottom state is a parameter, because a
 least element taken from a type class would have to be executable at a
-function type. #isalocale("routed_dg_analysis") imports it and adds the
+function type. #isalocale("dg_analysis") imports it and adds the
 contracts: soundness of the component (#isaconst("mcp_component_sound")) and of
 the initial state, a single entry alternative, the solver certificate,
 discharge of the termination premise by a finished executable run, and
-correctness of the check classifier. #isalocale("routed_dg_analysis_exec")
+correctness of the check classifier. #isalocale("dg_analysis_exec")
 derives these contracts for a numeric domain from its per-operation rules and
 its readback. Each numeric domain interprets it, which gives the component and
 its soundness proof for the domain's field. The analyzer interprets
-#isalocale("routed_dg_analysis") once per context family for the combination
+#isalocale("dg_analysis") once per context family for the combination
 of any activation list (#isaconst("mcp_comp"), @fig:assembly), and every run
 inherits the argument of @ch:results from these three interpretations. The
 order analysis has no interpretation of its own. It enters as a field, with
@@ -141,18 +141,18 @@ the same way through the generated registration of #isaconst("mcp_component_of")
     let lab(body) = text(size: 7pt, fill: vb.muted, body)
     diagram(
       spacing: (9mm, 8mm),
-      loc((1, 0), isalocale("routed_dg_pipeline"), [an MCP component and the other \
+      loc((1, 0), isalocale("dg_pipeline"), [an MCP component and the other \
         executable ingredients; no assumptions]),
       loc(
         (1, 1),
-        isalocale("routed_dg_analysis"),
+        isalocale("dg_analysis"),
         [adds the contracts, among them \
           #isaconst("mcp_component_sound")],
         color: vb.proved,
       ),
       loc(
         (2.4, 1),
-        isalocale("routed_dg_analysis_exec"),
+        isalocale("dg_analysis_exec"),
         [derives them from a numeric \
           domain's per-operation rules],
         color: vb.proved,
@@ -169,7 +169,7 @@ the same way through the generated registration of #isaconst("mcp_component_of")
   kind: image,
   caption: [The analysis assembly. Solid arrows are locale extension, dotted
     ones global interpretations. The analyzer interprets
-    #isalocale("routed_dg_analysis") once per context family for the combined
+    #isalocale("dg_analysis") once per context family for the combined
     component, with the activation list, the global update rule and, for call
     strings, the depth $k$ as parameters. The numeric domains' own
     interpretations supply the components the combination is built from.],

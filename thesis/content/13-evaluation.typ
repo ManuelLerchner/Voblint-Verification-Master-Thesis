@@ -199,7 +199,7 @@ the post-solution certificate #isaconst("part_post_solution")
 (@sec:update-rules). Analyses combine without reference to one another: each
 proves its component obligation against every sound query channel, and
 #isathm("mcp_combine_sound") composes any list of independent components
-(@ch:cooperation). The assembly interprets #isalocale("routed_dg_analysis")
+(@ch:cooperation). The assembly interprets #isalocale("dg_analysis")
 once per context family for the combination, with the activation list, the
 update rule and the call-string depth as parameters (@fig:assembly), and
 #isathm("run_voblint_certified_source_sound") covers every resulting

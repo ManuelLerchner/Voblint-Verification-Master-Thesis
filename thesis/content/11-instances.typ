@@ -104,7 +104,7 @@ theorem for the solver without widening, and the analyzer does not use that
 solver. The step from generic to concrete is an interpretation. Each domain
 becomes one field of the combined state of @ch:cooperation, and one
 interpretation per context family discharges the contracts of
-#isalocale("routed_dg_analysis") for the combination of any activation list
+#isalocale("dg_analysis") for the combination of any activation list
 (#isathm("mcp_comp_sound"), @fig:assembly). The source-level theorem about
 #isaconst("run_voblint") is proved from these interpretations.
 

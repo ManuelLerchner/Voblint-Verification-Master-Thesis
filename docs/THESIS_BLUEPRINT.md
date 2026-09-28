@@ -88,7 +88,7 @@ supplies a `dg_spec` — the Isabelle counterpart of Goblint's `Spec`: one
 manager-native transfer per edge action, plus `enter`, `combine_env` and
 `combine_assign` — and proves one soundness contract about it. A context
 policy supplies a routing function and its relation. A solver discipline is an
-argument. The generic assembly (`routed_dg_analysis`) is
+argument. The generic assembly (`dg_analysis`) is
 proved once, and every combination inherits it: five domains, four global
 update rules, three context policies, call strings at every bound. The
 registrations that instantiate this are generated from a manifest, not written
@@ -253,9 +253,9 @@ dead-state test proved equivalent to the infinite one.
 the compiled equation system and the two concrete context policies
 (`Call_String_Routed_Context`, `Entry_State_Routed_Context`) plus the
 finite-context-space arguments. `Voblint_Result` is the publication surface:
-`Analysis_Surface`, `Routed_DG_Analysis` (construction half
-`routed_dg_pipeline`, correctness half `routed_dg_analysis`),
-`Routed_Live_Keys` (coverage derived from termination, and the endpoints for
+`Analysis_Surface`, `DG_Analysis` (construction half
+`dg_pipeline`, correctness half `dg_analysis`),
+`DG_Live_Keys` (coverage derived from termination, and the endpoints for
 every route that is a function of the call site, the unit route among them),
 `Source_Activation_Sound`.
 `Voblint_Nonrelational` is what a pointwise domain reuses — the shared
@@ -415,16 +415,16 @@ L7  SOLVER
 L8  EXECUTABLE ↔ MATHEMATICAL
     resolved_st_q (quotient), fun_of_resolved_st_q_for   Exec_St_Base, Exec_St_Transfer
     generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
-    routed_dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
+    dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
     readback_result_value, canonicalize_lift            Exec_Result_Readback
              │
              v
 L9  PUBLICATION
     analysis_result, lookup_context, wf_analysis_result  Analysis_Result
     dg_analysis_adapter                                  DG_Analysis_Adapter
-    routed_dg_pipeline / routed_dg_analysis              Routed_DG_Analysis
+    dg_pipeline / dg_analysis              DG_Analysis
     live_keys, live_keys_cover,
-    fun_route_source_sound, fun_route_result_node_sound  Routed_Live_Keys
+    fun_route_source_sound, fun_route_result_node_sound  DG_Live_Keys
     source_activation_sound,
     source_sound_from_collecting_cap                     Source_Activation_Sound
              │
@@ -718,7 +718,7 @@ says so.
 **Claim.** The whole soundness argument depends on the external verified
 solver only through `part_post_solution`. `activation_collect_dg_sound` proves
 collecting soundness from *any* valuation satisfying that certificate, without
-asking how it was computed. The analysis locale `routed_dg_analysis` takes the
+asking how it was computed. The analysis locale `dg_analysis` takes the
 solver's `solve`, its domain predicate `solve_dom` and its executable `solve_c`
 as parameters and asks for two facts about them: `solve_dom x` implies
 `part_post_solution` for `solve x`, and `solve_c x ≠ None` implies
@@ -732,7 +732,7 @@ cite it. Consequently all four vendored update rules are covered by one
 interpretation, and swapping the solver would not touch the semantic layer.
 
 **Evidence.** `TD_Solver_Bridge.thy`, `Globals_Rule.thy`, `Routed_Context.thy`,
-`Routed_DG_Analysis.thy` (the locale assumptions and `terminates_of_solve_c`),
+`DG_Analysis.thy` (the locale assumptions and `terminates_of_solve_c`),
 and the generated `<Domain>_Analyses.thy` registrations.
 
 **Must compare.** Verasco's structural iterator and modular domain interfaces; La Spina's Coq WTO solvers
@@ -751,7 +751,7 @@ inherit one theorem, and each domain's registrations are *generated* from
 
 **Evidence.** `Sign_Sound.thy` / `Interval_Sound.thy` / `Parity_Sound.thy` /
 `Congruence_Sound.thy` / `Int_Sound.thy` (each explicitly says it mentions no
-context and no solver); `routed_dg_analysis`, `routed_dg_analysis_exec`,
+context and no solver); `dg_analysis`, `dg_analysis_exec`,
 `Routed_Analysis_Sound.thy`, `Routed_Exec_Refinement.thy`; the generated
 `<Domain>_Analyses.thy` files and their drift check.
 
@@ -965,7 +965,7 @@ special case and once properly — and the second telling is the real one, so th
 first is scaffolding the reader must discard. Worse, the special case is
 *monovariant*, and the development's actual design makes monovariant analysis
 an instance of the routed one (every domain's unit registration interprets
-`routed_dg_analysis_exec` at the unit route, as its call-string and entry-state
+`dg_analysis_exec` at the unit route, as its call-string and entry-state
 registrations do at theirs). Presenting the special case as primary inverts the
 formalization's own architecture and creates a chapter-long correction later.
 
@@ -1051,7 +1051,7 @@ that way.** It is discharged in five named steps, each in a different session:
 | `ltr_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
 | `dg_ctx_activation_base` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
 | `routed_context_base_hetero` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
-| `routed_dg_analysis` / `routed_dg_analysis_exec` | the published table and the source bridge | `Voblint_Result` |
+| `dg_analysis` / `dg_analysis_exec` | the published table and the source bridge | `Voblint_Result` |
 | `sound_table` / `run_voblint_certified_source_sound` | the configuration-level statement | `Voblint_CLI` |
 
 Chapter 9 therefore *assembles* rather than *proves*, and should say so. Each
@@ -1207,7 +1207,7 @@ PART III — THE ANALYZER
   7.5 What a new analysis has to prove
   7.6 What the combination leaves out
   Reason for the structural change: PR #217/#218 made every run of
-  run_voblint a combination of MCP components (routed_dg_analysis.comp_sound
+  run_voblint a combination of MCP components (dg_analysis.comp_sound
   is mcp_component_sound), so the pipeline chapters depend on it. It sits
   between 6 and the equations because mcp_contract produces the
   analysis_contract the equations consume. Later chapters shift by one.
@@ -1243,7 +1243,7 @@ PART III — THE ANALYZER
   9.2 Live keys: coverage derived from termination
   9.3 Three-valued verdicts, and why Dead is a fourth thing
   9.4 Arithmetic diagnostics
-  9.5 Assembling one analysis: routed_dg_analysis
+  9.5 Assembling one analysis: dg_analysis
   9.6 The monovariant case as an instance, not a special case
   9.7 run_voblint and its soundness theorem
   9.8 Reading the theorem: the two existentials and the one premise
@@ -1465,9 +1465,9 @@ thesis section → theories → central definitions → central theorems.
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `solve_dom_of_solve_c` |
 | 8.4–8.6 | `Voblint_Exec.Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer`, `Exec_St_Reachability`, `Exec_DG_State` | `resolved_st`, `resolved_st_q` (quotient), `location`, `location_of`, `fun_of_resolved_st_q_for`, `resolved_st_is_bot`, `canonical_location`, `exec_dg_st`, `fun_of_dg_st_for` | `resolved_st_q_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
-| 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_keys`, `lookup_context`, `wf_analysis_result`, `live_keys`, `cfg_succ_rel` | `live_keys_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
+| 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.DG_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_keys`, `lookup_context`, `wf_analysis_result`, `live_keys`, `cfg_succ_rel` | `live_keys_cover`, `dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
-| 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Routed_Live_Keys`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `routed_dg_analysis_exec`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `fun_route_source_sound`, `fun_route_result_node_sound` |
+| 9.5–9.6 | `Voblint_Result.DG_Analysis`, `DG_Live_Keys`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `dg_pipeline`, locale `dg_analysis`, locale `dg_analysis_exec`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `fun_route_source_sound`, `fun_route_result_node_sound` |
 | 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
 | 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locale `nonrelational_transfer`, `nonrelational_ops`, `generic_tf_abs`, locale `expression_domain_sound` | `tf_abs_eq_generic`, `aval_dom_sound` |
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.fun_route_source_sound` |
@@ -2154,15 +2154,15 @@ fragments it yields 17 nodes and 10 edges, and the edges are the proof spine:
 ```text
 analysis_contract -> dg_ctx_activation_base -> routed_context_base_hetero
   -> dg_analysis_adapter -> routed_analysis_sound
-routed_dg_pipeline -> routed_dg_analysis -> unit_dg_analysis
+dg_pipeline -> dg_analysis -> unit_dg_analysis
 ```
 
 Two things this settles. §3's layering L4 → L6 → L9 is the real inheritance
 chain, not an exposition convenience. And `unit_dg_analysis` really is below
-`routed_dg_analysis`, which is the machine-checked form of "monovariant
+`dg_analysis`, which is the machine-checked form of "monovariant
 analysis is an instance, not a special case" — the claim §6.1 uses to reject
 the example-first structure. (2026-09-28: the separate unit locale is gone; the
-unit context is now a registration of `routed_dg_analysis_exec` at the unit
+unit context is now a registration of `dg_analysis_exec` at the unit
 route, exactly like the other two policies.)
 
 **`class_deps` needs work before it is a figure.** `Sorts.super_classes`
