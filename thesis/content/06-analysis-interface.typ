@@ -306,7 +306,7 @@ shows both routes to the contract.
     _cbox((2, 0), <c-rel>, [relational state \ #isatype("relc")]),
     _cbox((0, 1), <c-pw>, [pointwise state \ #isatype("abs_state")]),
     _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_transfer_for")]),
-    _cbox((1, 3), <c-local>, [whole local state \ #isalocale("sound_local_dg_spec")]),
+    _cbox((1, 3), <c-local>, [sound component \ #isaconst("mcp_component_sound")]),
     _cbox((2, 2), <c-relspec>, [local and shared state \ #isaconst("rel_order_spec")]),
     _cbox((1, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
     edge(
@@ -323,7 +323,7 @@ shows both routes to the contract.
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab[sublocale],
+      label: _clab(isathm("sound_transfer_for.state_component_sound")),
       label-side: right,
     ),
     edge(
@@ -331,7 +331,7 @@ shows both routes to the contract.
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("rel_local_component")),
+      label: _clab(isathm("order_component_sound")),
       label-side: left,
       bend: -25deg,
     ),
@@ -341,7 +341,7 @@ shows both routes to the contract.
       <c-contract>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("sound_local_dg_spec.local_spec_contract")),
+      label: _clab(isathm("component_contract")),
       label-side: right,
     ),
     edge(
@@ -359,9 +359,10 @@ shows both routes to the contract.
     contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
     becomes a pointwise state and proves one rule per operation. These rules
-    are an instance of the contract for a whole local state, from which the
-    analysis soundness contract follows. The relational carrier reaches the
-    same two locales directly, without per-value laws.],
+    make a sound component, from which the analysis soundness contract
+    follows. The relational carrier is a sound component directly, without
+    per-value laws, and its variant with a shared state interprets the
+    contract itself.],
 ) <fig:contract-routes>
 
 == Whole-state analyses <sec:whole-state>

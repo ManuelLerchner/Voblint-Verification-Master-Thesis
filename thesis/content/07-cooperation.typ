@@ -299,8 +299,8 @@ The order analysis shows the size of such an addition. Its state is a set of
 pairs $(x, y)$ with $x lt.eq y$ (#isatype("relc")). It answers comparisons
 between variables it has ordered (#isathm("rel_qry_sound")), learns pairs at
 assignments by asking, and enters and returns with no facts. It proves its
-obligations in #isathm("rel_local_component"). #isathm("order_component_sound")
-lifts the result to a component, and the generated registration of
+obligations as a component in #isathm("order_component_sound"), and the
+generated registration of
 @ch:executable puts it into the combined state. No theorem of the framework
 changed. For the executed numeric analyses, #isaconst("exec_component")
 presents the executable analysis of @sec:whole-state as a component, and a
