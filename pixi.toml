@@ -186,6 +186,7 @@ thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-
 # retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
 thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
 thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
+thesis-domain-tree = { cmd = "python3 thesis/tools/domain_tree.py", description = "Check that the chapter 5 domain trees list every implementation of a drawn interface." }
 
 # Theorem statements are exported from a built session, which is what gives the
 # Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
@@ -268,6 +269,7 @@ thesis-generated = { depends-on = [
 thesis-check = { depends-on = [
   "thesis-refs",
   "thesis-snippets",
+  "thesis-domain-tree",
   "thesis-figures",
   "thesis-playground",
   "thesis-alignment",
@@ -541,6 +543,7 @@ verify = { depends-on = [
   "locale-parameters-check",
   "thesis-refs",
   "thesis-snippets",
+  "thesis-domain-tree",
   "thesis-alignment",
   "thesis-notation",
   "thesis-conda",

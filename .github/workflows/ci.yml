@@ -697,6 +697,11 @@ jobs:
       - name: Thesis snippets match the theories (no build needed)
         run: pixi run thesis-snippets
 
+      # The chapter 5 domain trees list their implementations by hand; a new
+      # class instance or certificate lemma must appear in the list.
+      - name: Thesis domain trees list every implementation (no build needed)
+        run: pixi run thesis-domain-tree
+
       # The notation table is derived from the theories and rendered in the
       # thesis, the README and the explainer; all three must be current.
       # Needs td-verification: widen and narrow are declared there.
