@@ -4934,14 +4934,6 @@ let rec mc_channel c x = ask_rec (mc_qry c) query_depth bot_set x;;
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
-let rec or_opt
-  x y = (if equal_option equal_bool x (Some true) ||
-              equal_option equal_bool y (Some true)
-          then Some true
-          else (if equal_option equal_bool x (Some false) &&
-                     equal_option equal_bool y (Some false)
-                 then Some false else None));;
-
 let prog_main_name : string = "main";;
 
 let rec body (Proc_decl_ext (formals, body, more)) = body;;
@@ -5278,13 +5270,13 @@ let rec mcp_combine
 
 let rec called (State_ext (called, infl, stabl, sigma, more)) = called;;
 
-let rec and_opt
-  x y = (if equal_option equal_bool x (Some false) ||
-              equal_option equal_bool y (Some false)
-          then Some false
-          else (if equal_option equal_bool x (Some true) &&
-                     equal_option equal_bool y (Some true)
-                 then Some true else None));;
+let rec bin_log
+  f ann x y =
+    (if equal_option equal_bool x (Some ann) ||
+          equal_option equal_bool y (Some ann)
+      then Some ann
+      else (match (x, y) with (None, _) -> None | (Some _, None) -> None
+             | (Some a, Some b) -> Some (f a b)));;
 
 let rec sup_set _A
   x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
@@ -5772,14 +5764,16 @@ let rec aval_congruence
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
           else of_bool_option sup_congruence congruence_of_int
-                 (and_opt (congruence_tobool (aval_congruence e1 sigma))
+                 (bin_log (fun a b -> a && b) false
+                   (congruence_tobool (aval_congruence e1 sigma))
                    (congruence_tobool (aval_congruence e2 sigma))))
     | Or (e1, e2), sigma ->
         (if is_empty_congruence (aval_congruence e1 sigma) ||
               is_empty_congruence (aval_congruence e2 sigma)
           then bot_congruencea
           else of_bool_option sup_congruence congruence_of_int
-                 (or_opt (congruence_tobool (aval_congruence e1 sigma))
+                 (bin_log (fun a b -> a || b) true
+                   (congruence_tobool (aval_congruence e1 sigma))
                    (congruence_tobool (aval_congruence e2 sigma))));;
 
 let rec be_inv_less
@@ -6894,7 +6888,8 @@ let rec aval_int_dom
             then bot_int_dom_exta bounded_lattice_unit
             else of_bool_option (sup_int_dom_ext bounded_lattice_unit)
                    int_dom_of_int
-                   (and_opt (int_dom_tobool a) (int_dom_tobool b))))
+                   (bin_log (fun aa ba -> aa && ba) false (int_dom_tobool a)
+                     (int_dom_tobool b))))
     | mode, Or (e1, e2), sigma ->
         (let a = aval_int_dom mode e1 sigma in
          let b = aval_int_dom mode e2 sigma in
@@ -6903,7 +6898,8 @@ let rec aval_int_dom
             then bot_int_dom_exta bounded_lattice_unit
             else of_bool_option (sup_int_dom_ext bounded_lattice_unit)
                    int_dom_of_int
-                   (or_opt (int_dom_tobool a) (int_dom_tobool b))));;
+                   (bin_log (fun aa ba -> aa || ba) true (int_dom_tobool a)
+                     (int_dom_tobool b))));;
 
 let rec branch_int_dom_fixpoint_st
   g e pol s =
@@ -7669,14 +7665,16 @@ let rec aval_parity
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (and_opt (parity_tobool (aval_parity a sigma))
+                 (bin_log (fun aa ba -> aa && ba) false
+                   (parity_tobool (aval_parity a sigma))
                    (parity_tobool (aval_parity b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_parity (aval_parity a sigma) ||
               is_empty_parity (aval_parity b sigma)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (or_opt (parity_tobool (aval_parity a sigma))
+                 (bin_log (fun aa ba -> aa || ba) true
+                   (parity_tobool (aval_parity a sigma))
                    (parity_tobool (aval_parity b sigma))));;
 
 let parity_ops : (parity, unit) nonrelational_ops_ext
@@ -7739,13 +7737,15 @@ let rec aval_ivl
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (and_opt (interval_tobool (aval_ivl a sigma))
+                 (bin_log (fun aa ba -> aa && ba) false
+                   (interval_tobool (aval_ivl a sigma))
                    (interval_tobool (aval_ivl b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (or_opt (interval_tobool (aval_ivl a sigma))
+                 (bin_log (fun aa ba -> aa || ba) true
+                   (interval_tobool (aval_ivl a sigma))
                    (interval_tobool (aval_ivl b sigma))));;
 
 let rec branch_ivl_st
@@ -7849,14 +7849,16 @@ let rec aval_sign
               is_empty_sign (aval_sign b sigma)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (and_opt (sign_tobool (aval_sign a sigma))
+                 (bin_log (fun aa ba -> aa && ba) false
+                   (sign_tobool (aval_sign a sigma))
                    (sign_tobool (aval_sign b sigma))))
     | Or (a, b), sigma ->
         (if is_empty_sign (aval_sign a sigma) ||
               is_empty_sign (aval_sign b sigma)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (or_opt (sign_tobool (aval_sign a sigma))
+                 (bin_log (fun aa ba -> aa || ba) true
+                   (sign_tobool (aval_sign a sigma))
                    (sign_tobool (aval_sign b sigma))));;
 
 let rec branch_sign_st
@@ -8233,9 +8235,11 @@ let rec congruence_check_query
   x0 d = match x0, d with
     Not b, d -> map_option not (congruence_check_query b d)
     | And (b1, b2), d ->
-        and_opt (congruence_check_query b1 d) (congruence_check_query b2 d)
+        bin_log (fun a b -> a && b) false (congruence_check_query b1 d)
+          (congruence_check_query b2 d)
     | Or (b1, b2), d ->
-        or_opt (congruence_check_query b1 d) (congruence_check_query b2 d)
+        bin_log (fun a b -> a || b) true (congruence_check_query b1 d)
+          (congruence_check_query b2 d)
     | Less (a, b), d ->
         congruence_lt (aval_congruence a d) (aval_congruence b d)
     | LessEq (a, b), d ->
@@ -8302,9 +8306,11 @@ let rec interval_less
 let rec interval_check_query
   x0 d = match x0, d with Not b, d -> map_option not (interval_check_query b d)
     | And (b1, b2), d ->
-        and_opt (interval_check_query b1 d) (interval_check_query b2 d)
+        bin_log (fun a b -> a && b) false (interval_check_query b1 d)
+          (interval_check_query b2 d)
     | Or (b1, b2), d ->
-        or_opt (interval_check_query b1 d) (interval_check_query b2 d)
+        bin_log (fun a b -> a || b) true (interval_check_query b1 d)
+          (interval_check_query b2 d)
     | Less (a, b), d -> interval_less (aval_ivl a d) (aval_ivl b d)
     | LessEq (a, b), d ->
         map_option not (interval_less (aval_ivl b d) (aval_ivl a d))
@@ -8362,9 +8368,11 @@ let rec parity_less
 let rec parity_check_query
   x0 d = match x0, d with Not b, d -> map_option not (parity_check_query b d)
     | And (b1, b2), d ->
-        and_opt (parity_check_query b1 d) (parity_check_query b2 d)
+        bin_log (fun a b -> a && b) false (parity_check_query b1 d)
+          (parity_check_query b2 d)
     | Or (b1, b2), d ->
-        or_opt (parity_check_query b1 d) (parity_check_query b2 d)
+        bin_log (fun a b -> a || b) true (parity_check_query b1 d)
+          (parity_check_query b2 d)
     | Less (a, b), d -> parity_less (aval_parity a d) (aval_parity b d)
     | LessEq (a, b), d ->
         map_option not (parity_less (aval_parity b d) (aval_parity a d))
@@ -8421,8 +8429,12 @@ let rec sign_less
 
 let rec sign_check_query
   x0 d = match x0, d with Not b, d -> map_option not (sign_check_query b d)
-    | And (b1, b2), d -> and_opt (sign_check_query b1 d) (sign_check_query b2 d)
-    | Or (b1, b2), d -> or_opt (sign_check_query b1 d) (sign_check_query b2 d)
+    | And (b1, b2), d ->
+        bin_log (fun a b -> a && b) false (sign_check_query b1 d)
+          (sign_check_query b2 d)
+    | Or (b1, b2), d ->
+        bin_log (fun a b -> a || b) true (sign_check_query b1 d)
+          (sign_check_query b2 d)
     | Less (a, b), d -> sign_less (aval_sign a d) (aval_sign b d)
     | LessEq (a, b), d ->
         map_option not (sign_less (aval_sign b d) (aval_sign a d))
@@ -8452,8 +8464,12 @@ let rec int_truthy_query
 
 let rec int_check_query
   x0 d = match x0, d with Not b, d -> map_option not (int_check_query b d)
-    | And (b1, b2), d -> and_opt (int_check_query b1 d) (int_check_query b2 d)
-    | Or (b1, b2), d -> or_opt (int_check_query b1 d) (int_check_query b2 d)
+    | And (b1, b2), d ->
+        bin_log (fun a b -> a && b) false (int_check_query b1 d)
+          (int_check_query b2 d)
+    | Or (b1, b2), d ->
+        bin_log (fun a b -> a || b) true (int_check_query b1 d)
+          (int_check_query b2 d)
     | Less (a, b), d ->
         int_less (aval_int_dom Refine_Fixpoint a d)
           (aval_int_dom Refine_Fixpoint b d)
