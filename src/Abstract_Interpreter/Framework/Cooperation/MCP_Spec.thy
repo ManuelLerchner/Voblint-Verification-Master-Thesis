@@ -127,7 +127,7 @@ abbreviation ls_combine ::
   "ls_combine c A B ci x de \<equiv> ls_combine_assign c B ci (ls_combine_env c A B ci x de) de"
 
 text \<open>
-  A component is sound for a concretization \<open>gamma\<close> when each operation covers the
+  A local specification is sound for a concretization \<open>gamma\<close> when each operation covers the
   concrete behaviour, whatever the other fields of the record hold. Every
   operation is proved against every channel that holds at the stores it is
   asked about, so its proof cannot depend on who answers: the caller's store for a
@@ -192,6 +192,34 @@ definition sound_return ::
 definition sound_event :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> analysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
   "sound_event gm f \<longleftrightarrow>
      (\<forall>A x s ev. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> s \<in> gm (f A ev x))"
+
+text \<open>
+  The laws of the other fields. The handler's answers hold at every store its
+  state describes. An entry covers the caller's store and the store the call
+  enters by one of its pairs. The two return stages carry one law together,
+  because only their composition describes a concrete store.
+\<close>
+
+definition sound_query :: "('s \<Rightarrow> store set) \<Rightarrow> (answers \<Rightarrow> 's \<Rightarrow> answers) \<Rightarrow> bool" where
+  "sound_query gm h \<longleftrightarrow>
+     (\<forall>A s x q. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow> eval_holds q (h A x q) s)"
+
+definition sound_enter ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> store set)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list) \<Rightarrow> bool" where
+  "sound_enter \<G> gm en \<longleftrightarrow>
+     (\<forall>A s ci p. s \<in> gm (fst p) \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow>
+        (\<exists>q \<in> set (en A ci p). s \<in> gm (fst q)
+           \<and> call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s \<in> gm (snd q)))"
+
+definition sound_combine ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> store set)
+   \<Rightarrow> (answers \<Rightarrow> answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's)
+   \<Rightarrow> (answers \<Rightarrow> call_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+  "sound_combine \<G> gm ce ca \<longleftrightarrow>
+     (\<forall>A B s t ci x de. s \<in> gm x \<longrightarrow> eval_query.oracle_holds A s \<longrightarrow>
+        t \<in> gm de \<longrightarrow> eval_query.oracle_holds B t \<longrightarrow>
+        combine_collect \<G> (ci_dst ci) s t \<in> gm (ca B ci (ce A B ci x de) de))"
 
 theorem ls_step_sound_iff:
   "(\<forall>A a x. edge_collect a (gm x \<inter> Collect (eval_query.oracle_holds A)) \<subseteq> gm (ls_step c A a x))
@@ -260,18 +288,87 @@ next
   qed
 qed
 
-text \<open>A sound component stays sound when one edge field is replaced by a sound one.\<close>
+text \<open>
+  The certificate is exactly the conjunction of a monotone concretization and
+  one law per field, the two return stages sharing one law. A local
+  specification is therefore built, taken apart and changed field by field.
+\<close>
+
+theorem sound_local_spec_iff:
+  "sound_local_spec \<G> gm c \<longleftrightarrow>
+     (\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y)
+     \<and> sound_query gm (ls_query c)
+     \<and> sound_skip gm (ls_skip c) \<and> sound_assign gm (ls_assign c)
+     \<and> sound_special gm (ls_special c) \<and> sound_branch gm (ls_branch c)
+     \<and> sound_body gm (ls_body c) \<and> sound_return gm (ls_return c)
+     \<and> sound_event gm (ls_event c)
+     \<and> sound_enter \<G> gm (ls_enter c)
+     \<and> sound_combine \<G> gm (ls_combine_env c) (ls_combine_assign c)"
+  unfolding sound_local_spec_def ls_step_sound_iff sound_query_def sound_enter_def
+    sound_combine_def
+  by (intro iffI; elim conjE; intro conjI; assumption)
+
+lemma sound_local_specI:
+  assumes "\<And>x y. x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
+    and "sound_query gm (ls_query c)"
+    and "sound_skip gm (ls_skip c)" and "sound_assign gm (ls_assign c)"
+    and "sound_special gm (ls_special c)" and "sound_branch gm (ls_branch c)"
+    and "sound_body gm (ls_body c)" and "sound_return gm (ls_return c)"
+    and "sound_event gm (ls_event c)"
+    and "sound_enter \<G> gm (ls_enter c)"
+    and "sound_combine \<G> gm (ls_combine_env c) (ls_combine_assign c)"
+  shows "sound_local_spec \<G> gm c"
+  using assms unfolding sound_local_spec_iff by blast
+
+lemma sound_local_specD:
+  assumes "sound_local_spec \<G> gm c"
+  shows sound_local_spec_monoD: "x \<le> y \<Longrightarrow> gm x \<subseteq> gm y"
+    and sound_local_spec_queryD: "sound_query gm (ls_query c)"
+    and sound_local_spec_skipD: "sound_skip gm (ls_skip c)"
+    and sound_local_spec_assignD: "sound_assign gm (ls_assign c)"
+    and sound_local_spec_specialD: "sound_special gm (ls_special c)"
+    and sound_local_spec_branchD: "sound_branch gm (ls_branch c)"
+    and sound_local_spec_bodyD: "sound_body gm (ls_body c)"
+    and sound_local_spec_returnD: "sound_return gm (ls_return c)"
+    and sound_local_spec_eventD: "sound_event gm (ls_event c)"
+    and sound_local_spec_enterD: "sound_enter \<G> gm (ls_enter c)"
+    and sound_local_spec_combineD:
+      "sound_combine \<G> gm (ls_combine_env c) (ls_combine_assign c)"
+  using assms unfolding sound_local_spec_iff by blast+
+
+text \<open>
+  A sound local specification stays sound when one field is replaced by one
+  satisfying that field's law. A return stage is replaced together with the law
+  of the composed return it forms with the other stage.
+\<close>
 
 lemma sound_local_spec_update:
   assumes "sound_local_spec \<G> gm c"
-  shows "sound_skip gm sk \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_skip := sk\<rparr>)"
-    and "sound_assign gm asn \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_assign := asn\<rparr>)"
-    and "sound_special gm sp \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_special := sp\<rparr>)"
-    and "sound_branch gm br \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_branch := br\<rparr>)"
-    and "sound_body gm bd \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_body := bd\<rparr>)"
-    and "sound_return gm rt \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_return := rt\<rparr>)"
-    and "sound_event gm ev \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_event := ev\<rparr>)"
-  using assms unfolding sound_local_spec_def ls_step_sound_iff by simp_all
+  shows sound_local_spec_update_query:
+      "sound_query gm h \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_query := h\<rparr>)"
+    and sound_local_spec_update_skip:
+      "sound_skip gm sk \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_skip := sk\<rparr>)"
+    and sound_local_spec_update_assign:
+      "sound_assign gm asn \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_assign := asn\<rparr>)"
+    and sound_local_spec_update_special:
+      "sound_special gm sp \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_special := sp\<rparr>)"
+    and sound_local_spec_update_branch:
+      "sound_branch gm br \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_branch := br\<rparr>)"
+    and sound_local_spec_update_body:
+      "sound_body gm bd \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_body := bd\<rparr>)"
+    and sound_local_spec_update_return:
+      "sound_return gm rt \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_return := rt\<rparr>)"
+    and sound_local_spec_update_event:
+      "sound_event gm ev \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_event := ev\<rparr>)"
+    and sound_local_spec_update_enter:
+      "sound_enter \<G> gm en \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_enter := en\<rparr>)"
+    and sound_local_spec_update_combine_env:
+      "sound_combine \<G> gm ce (ls_combine_assign c)
+       \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_combine_env := ce\<rparr>)"
+    and sound_local_spec_update_combine_assign:
+      "sound_combine \<G> gm (ls_combine_env c) ca
+       \<Longrightarrow> sound_local_spec \<G> gm (c\<lparr>ls_combine_assign := ca\<rparr>)"
+  using assms unfolding sound_local_spec_iff by simp_all
 
 text \<open>
   A component leaves a concretization alone when none of its operations

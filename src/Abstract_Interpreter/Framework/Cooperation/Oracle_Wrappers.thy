@@ -91,11 +91,8 @@ qed
 theorem ask_assign_sound:
   assumes sound: "sound_local_spec \<G> gm c"
   shows "sound_local_spec \<G> gm (ask_assign c)"
-proof -
-  have "sound_assign gm (ls_assign c)"
-    using sound unfolding sound_local_spec_def ls_step_sound_iff by blast
-  then show ?thesis
-    unfolding ask_assign_def by (rule sound_local_spec_update(2)[OF sound assign_ask_sound])
-qed
+  unfolding ask_assign_def
+  by (rule sound_local_spec_update_assign[OF sound
+        assign_ask_sound[OF sound_local_spec_assignD[OF sound]]])
 
 end
