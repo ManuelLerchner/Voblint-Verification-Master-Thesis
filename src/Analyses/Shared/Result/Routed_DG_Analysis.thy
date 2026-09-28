@@ -110,12 +110,12 @@ text \<open>
 
 lemma gamma_state_case_eq_point:
   fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "\<lbrakk>case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = gamma_point x"
+  shows "\<lbrakk>case x of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
   by (cases x) (simp_all)
 
 lemma gamma_point_canonicalize:
   fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "gamma_point (canonicalize_lift is_empty_state x) = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
+  shows "\<lbrakk>canonicalize_lift is_empty_state x\<rbrakk>\<^sub>\<bottom> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
   by (cases x)
      (simp_all add: normalize_lift_def is_empty_state_gamma_state_empty)
 

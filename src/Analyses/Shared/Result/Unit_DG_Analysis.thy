@@ -161,7 +161,7 @@ proof -
       using call_fwd_ok by simp
   qed
   finally have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
-      \<subseteq> gamma_point (lookup_context (result ugs p) v ())"
+      \<subseteq> \<lbrakk>lookup_context (result ugs p) v ()\<rbrakk>\<^sub>\<bottom>"
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
     unfolding state_at_unfold
@@ -335,7 +335,7 @@ proof -
     by (rule fun_route_activation_collect_sound_of_terminates
           [where ctx_fun = enterc_unit, OF _ wf solves]) simp
   finally have "\<C>\<^bsub>ugs,prog_cfg p,cinit_stores ugs\<^esub> v
-      \<subseteq> gamma_point (lookup_context (result ugs p) v ())"
+      \<subseteq> \<lbrakk>lookup_context (result ugs p) v ()\<rbrakk>\<^sub>\<bottom>"
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
     unfolding state_at_unfold

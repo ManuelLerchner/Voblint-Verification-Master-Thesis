@@ -259,7 +259,7 @@ subsection \<open>The C-faithful initial store set\<close>
 text \<open>
   \<^const>\<open>cinit_stores\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>) is the C-faithful initial
   store set. Any analysis that uses a domain-specific abstract seed \<open>s0\<close>
-  satisfying \<open>cinit_stores \<G> \<subseteq> gamma_state s0\<close> may state its soundness
+  satisfying \<open>cinit_stores \<G> \<subseteq> \<lbrakk>s0\<rbrakk>\<close> may state its soundness
   theorem against \<open>cinit_stores \<G>\<close> rather than \<open>UNIV\<close>, matching VIMP's
   C-like initialization semantics.\<close>
 

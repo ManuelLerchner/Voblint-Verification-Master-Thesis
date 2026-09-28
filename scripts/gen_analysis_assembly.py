@@ -248,11 +248,11 @@ class Domain:
             "component": "ask_assign (exec_component $G"
             " (resolved_st_q_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
-            "gamma": "gamma_point (map_lift (fun_of_resolved_st_q_for $G) $f)",
+            "gamma": "\\<lbrakk>map_lift (fun_of_resolved_st_q_for $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
             "empty": "(case $f of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for $gs st)",
             "read": "map_lift (fun_of_resolved_st_q_for $G) $f",
-            "published_gamma": "gamma_point $v",
+            "published_gamma": "\\<lbrakk>$v\\<rbrakk>\\<^sub>\\<bottom>",
             "published_empty": "(case $v of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> is_empty_state st)",
             "answer": "(case $v of Bot \\<Rightarrow> \\<top>"

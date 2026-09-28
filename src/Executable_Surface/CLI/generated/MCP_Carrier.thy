@@ -177,17 +177,17 @@ fun mcp_component_of ::
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
-     (\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot1 x)))"
+     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot1 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Interval_Analysis =
-     (\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot2 x)))"
+     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot2 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Parity_Analysis =
-     (\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot3 x)))"
+     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot3 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Int_Analysis =
-     (\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot4 x)))"
+     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot4 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Congruence_Analysis =
-     (\<lambda>x. gamma_point (map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot5 x)))"
+     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot5 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Order_Analysis =
-     (\<lambda>x. gamma_rel (lift_get slot6 x))"
+     (\<lambda>x. \<lbrakk>(lift_get slot6 x)\<rbrakk>)"
 
 fun part_live :: "analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
   "part_live Sign_Analysis r =
@@ -228,17 +228,17 @@ definition mcp_rd :: "(vname \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightarr
 
 fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "val_gamma Sign_Analysis v =
-     gamma_point (slot1 v)"
+     \<lbrakk>(slot1 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Interval_Analysis v =
-     gamma_point (slot2 v)"
+     \<lbrakk>(slot2 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Parity_Analysis v =
-     gamma_point (slot3 v)"
+     \<lbrakk>(slot3 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Int_Analysis v =
-     gamma_point (slot4 v)"
+     \<lbrakk>(slot4 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Congruence_Analysis v =
-     gamma_point (slot5 v)"
+     \<lbrakk>(slot5 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Order_Analysis v =
-     gamma_rel (slot6 v)"
+     \<lbrakk>(slot6 v)\<rbrakk>"
 
 definition mcp_gamma_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "mcp_gamma_v as v = (\<Inter>a \<in> set as. val_gamma a v)"

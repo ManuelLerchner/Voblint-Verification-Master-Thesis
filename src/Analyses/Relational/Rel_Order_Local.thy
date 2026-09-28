@@ -49,22 +49,22 @@ definition rel_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
 fun rel_qry :: "relc \<Rightarrow> answers" where
   "rel_qry d (EvalInt e) = rel_eval d e"
 
-lemma relc_has_sound: "s \<in> gamma_rel d \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
+lemma relc_has_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
   by (cases d) auto
 
 lemma var_of_SomeD: "var_of a = Some x \<Longrightarrow> a = V x"
   by (cases a) simp_all
 
-lemma rel_le_sound: "s \<in> gamma_rel d \<Longrightarrow> rel_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
+lemma rel_le_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> rel_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by (auto simp: rel_le_def split: option.splits dest!: var_of_SomeD
       dest: relc_has_sound)
 
 lemma rel_eval_sound:
-  "s \<in> gamma_rel d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (rel_eval d e)"
+  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (rel_eval d e)"
   by (cases e) (auto simp: rel_eval_def
       dest: rel_le_sound intro: order_antisym)
 
-lemma rel_qry_sound: "s \<in> gamma_rel d \<Longrightarrow> eval_holds q (rel_qry d q) s"
+lemma rel_qry_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> eval_holds q (rel_qry d q) s"
   by (cases q) (simp add: rel_eval_sound)
 
 subsection \<open>Learning orders from the oracle\<close>
@@ -98,9 +98,9 @@ definition rel_qs :: "vname list \<Rightarrow> edge_action \<Rightarrow> relc \<
       | _ \<Rightarrow> [])"
 
 lemma rel_learn_sound:
-  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gamma_rel d"
+  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>d\<rbrakk>"
     and "eval_query.oracle_holds ask s"
-  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gamma_rel (rel_learn ask ys x e d)"
+  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>rel_learn ask ys x e d\<rbrakk>"
 proof (cases d)
   case RelBot
   with assms(1) show ?thesis by simp

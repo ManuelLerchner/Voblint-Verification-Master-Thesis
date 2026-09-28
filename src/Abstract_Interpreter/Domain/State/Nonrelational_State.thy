@@ -1,5 +1,5 @@
 theory Nonrelational_State
-  imports Abstract_Domain "Voblint_VIMP.VIMP_Syntax"
+  imports Abstract_Domain State_Concretization
 begin
 
 section \<open>What a store of one abstract value per variable denotes, and when it denotes nothing\<close>
@@ -30,9 +30,10 @@ text \<open>Pointwise join on abstract states is idempotent because the value-do
   standard idempotent-join laws without a separate state-level assumption.\<close>
 subsection \<open>State concretization\<close>
 
-definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store set"
-    ("\<lbrakk>_\<rbrakk>") where
-  "\<lbrakk>\<sigma>\<rbrakk> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
+definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store set" where
+  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
+
+adhoc_overloading gamma_S == gamma_state
 
 lemma gamma_stateI [intro]:
   "(\<And>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> s \<in> \<lbrakk>\<sigma>\<rbrakk>"

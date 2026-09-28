@@ -359,6 +359,7 @@ text \<open>
 \<close>
 
 lemma gated_join_sound:
+  fixes f1 f2 :: "'a abs_state"
   assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
     and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
     and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
