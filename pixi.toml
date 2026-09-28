@@ -208,6 +208,10 @@ thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", 
 thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check the thesis's Goblint comparison data against the explainer page's alignment rows." }
 thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis appendix." }
 
+# The locale hierarchy figure is read off the built Voblint_Examples heap by
+# thesis/tools/locale_graph.ML, so it needs `pixi run isabelle-build` first.
+thesis-locale-graph = { cmd = "bash scripts/mk/locale-graph.sh", description = "Regenerate the thesis's locale dependency graph from the built Voblint_Examples heap." }
+
 # One notation table, derived from the theories' declarations and rendered in
 # appendix B, the README and the explainer's legend. Checks the rendered anchors
 # when build/isabelle-html exists, and the link map otherwise.
