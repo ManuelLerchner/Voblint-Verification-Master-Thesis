@@ -140,12 +140,12 @@ KIND_COMMANDS = {
 }
 COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmds}
 
-# `record 'a domain_transfer =` and `datatype ('a, 'b) t = ...` put type
-# parameters between the command and the name, so those are skipped first.
+# `record 'a domain_transfer =`, `record 'a::bot t =` and `datatype ('a, 'b) t = ...`
+# put type parameters between the command and the name, so those are skipped first.
 DECL = re.compile(
     r"^[ \t]*(?:qualified\s+)?("
     + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
-    + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)\s+)*"
+    + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*(?:::[A-Za-z_][A-Za-z0-9_]*)?)\s+)*"
     + r"([A-Za-z][A-Za-z0-9_']*)",
     re.M,
 )
