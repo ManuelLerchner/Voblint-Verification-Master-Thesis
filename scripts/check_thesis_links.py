@@ -160,7 +160,9 @@ def index_live(
         _index_page(index, f"Voblint/{session}/index.html", listing)
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
-            if page == "index.html":
+            # A session that elaborates another session's theory presents a
+            # copy named `<Owner>.<Theory>.html`; cite the owner's page instead.
+            if page == "index.html" or "." in page.removesuffix(".html"):
                 continue
             rel = f"Voblint/{session}/{page}"
             body = fetch(base + rel, retries)
@@ -189,6 +191,10 @@ def index_anchors() -> dict[tuple[str, str], str]:
             p.as_posix(),
         ),
     ):
+        # A session that elaborates another session's theory presents a copy
+        # named `<Owner>.<Theory>.html`; cite the owner's page instead.
+        if "." in path.stem:
+            continue
         rel = path.relative_to(HTML).as_posix()
         _index_page(index, rel, path.read_text(errors="ignore"))
     return index
@@ -233,8 +239,8 @@ def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
     """Names Typst cites by iterating a manifest, which no source text spells out.
 
     The anchor index appendix renders every `anchors.toml` item, the oracle
-    audit table every `facts.toml` key, and the domain tree every class or
-    locale placed in `domain-tree.toml`.
+    audit table every `facts.toml` key, and each domain tree every class or
+    locale placed in its table of `domain-tree.toml`.
     """
     refs = []
     anchors = shared / "anchors.toml"
@@ -253,7 +259,8 @@ def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
     if tree.is_file():
         refs += [
             (tree, 1, "locale", name)
-            for row in tomllib.loads(tree.read_text()).get("rows", [])
+            for figure in tomllib.loads(tree.read_text()).values()
+            for row in figure["rows"]
             for name in row
         ]
     return refs
