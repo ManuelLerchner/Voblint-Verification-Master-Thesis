@@ -304,7 +304,7 @@ shows both routes to the contract.
     spacing: (14mm, 9mm),
     _cbox((0, 0), <c-num>, [numeric domain \ #isalocale("numeric_domain")]),
     _cbox((2, 0), <c-rel>, [relational state \ #isatype("relc")]),
-    _cbox((0, 1), <c-pw>, [pointwise state \ #isatype("abs_state")]),
+    _cbox((0, 1), <c-pw>, [primitive operations \ #isatype("nonrelational_ops")]),
     _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
     _cbox((1, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
     _cbox((2, 2), <c-relspec>, [local and shared state \ #isaconst("rel_order_spec")]),
@@ -317,7 +317,14 @@ shows both routes to the contract.
       label: _clab[values per variable],
       label-side: left,
     ),
-    edge(<c-pw>, <c-tf>, "->", stroke: 0.6pt + vb.neutral),
+    edge(
+      <c-pw>,
+      <c-tf>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer")),
+      label-side: left,
+    ),
     edge(
       <c-tf>,
       <c-local>,
@@ -358,9 +365,10 @@ shows both routes to the contract.
   caption: [How the analyses of this thesis reach the analysis soundness
     contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
-    becomes a pointwise state and proves one rule per operation. These rules
-    make a sound component, from which the analysis soundness contract
-    follows. The relational carrier is a sound component directly, without
+    supplies a record of primitive operations over pointwise states, and
+    interpreting #isalocale("sound_nonrelational_ops") at it derives one rule
+    per operation. These rules make a sound component, from which the analysis
+    soundness contract follows. The relational carrier is a sound component directly, without
     per-value laws, and its variant with a shared state interprets the
     contract itself.],
 ) <fig:contract-routes>
@@ -380,7 +388,9 @@ exit. This builder leaves #isaconst("dgs_combine_env") the identity and does
 the whole return in #isaconst("dgs_combine_assign"). The analysis proves one
 rule per operation in #isalocale("sound_nonrelational_transfer"), and
 #isathm("local_state_dg_spec_for_contract") derives the analysis soundness
-contract.
+contract. A non-relational domain does not prove these rules one by one. It
+supplies its primitive operations as one record, and the rules follow from
+certificates about those operations alone (@sec:instances-supply).
 
 The executed analyses use a variant, #isaconst("local_state_dg_spec_st_for_lifted"),
 over the executable carrier of @ch:solving. It splits the return as Goblint

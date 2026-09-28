@@ -314,8 +314,8 @@ answer #cli-same(
   ("pg-int-refinement-sign", "y == 2"),
   ("pg-int-refinement-interval", "y == 2"),
   ("pg-int-refinement-parity", "y == 2"),
-): their backward step for `+` is the identity or, for Parity, absent
-(@ch:instances). Congruence inverts the addition, and the product Int, which
+): Sign and Interval invert `+` with the identity, and Parity's inverse
+recovers only that `y` is even (@ch:instances). Congruence inverts the addition, and the product Int, which
 contains it, answers #cli-verdict("pg-int-refinement-int", "y == 2").
 Congruence alone also answers
 #cli-verdict("pg-int-refinement-congruence", "y == 2")\; the screenshot omits

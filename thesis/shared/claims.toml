@@ -223,9 +223,9 @@ why = "Normalizing each infeasible disjunct to Bot makes the branch DEAD under S
 argv = [
   "--analysis",
   "parity",
-  "tests/regression/18-parity/known-imprecision/02-branch_never_narrows.vimp",
+  "tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp",
 ]
-why = "Parity has no guard filter, so the same infeasible branch stays UNKNOWN."
+why = "Parity's equality refinement empties each contradictory arm, so the branch is DEAD."
 
 [claims.dom-stride2-sign]
 argv = [
