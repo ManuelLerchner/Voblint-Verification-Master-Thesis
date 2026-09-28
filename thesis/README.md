@@ -189,7 +189,7 @@ Figures that state facts about the formalization are generated, not drawn.
 | Figure | Source | Generator |
 | --- | --- | --- |
 | CFGs, traces, solver states | analyzer GraphViz output | `diagraph`, inline |
-| locale hierarchy | `Locale.pretty_locale_deps` | `tools/locale_graph.ML` |
+| locale hierarchy | `Locale.pretty_locale_deps` | `tools/locale_graph.ML`, run by `pixi run thesis-locale-graph` |
 | class hierarchy | `class_deps` | Isabelle command |
 | what a theorem rests on | `thm_deps` | Isabelle command |
 | oracle / `sorry` audit | `thm_oracles` | Isabelle command |
