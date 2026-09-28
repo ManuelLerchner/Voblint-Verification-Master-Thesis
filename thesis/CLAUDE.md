@@ -23,6 +23,7 @@ clean. The checks that keep the text honest, and what each one reads:
 | `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup |
 | `thesis-links` | a name the markup links has no anchor in the rendered theories (`--write` regenerates `shared/generated/links.json`; `--live` checks the deployed pages) |
 | `thesis-snippets` | a declaration or theorem statement shown with `thy`/`proved` no longer matches its source text |
+| `thesis-domain-tree` | a class instantiation or certificate lemma for an interface drawn in a chapter 5 domain tree is missing from that tree's list in `shared/domain-tree.toml` |
 | `thesis-facts` | a fact in `shared/facts.toml` is not proved by the built session, its printed statement changed, or a `proved` snippet comes from another theory than the one proving it |
 | `thesis-claims` | quoted analyzer output no longer matches the analyzer |
 | `thesis-figures` | an SVG extracted from the explainer drifted |
