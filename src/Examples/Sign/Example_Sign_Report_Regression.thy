@@ -4,8 +4,6 @@ theory Example_Sign_Report_Regression
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 section \<open>Four whole-program runs Sign's report has to keep getting right\<close>
 
 text \<open>

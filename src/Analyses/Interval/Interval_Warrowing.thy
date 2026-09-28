@@ -1,5 +1,5 @@
 theory Interval_Warrowing
-  imports "Voblint_Domain.Interval_Lattice" "TD.Update_rules"
+  imports "Voblint_Domain.Interval_Lattice"
 begin
 
 section \<open>Interval widening and narrowing\<close>

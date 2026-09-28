@@ -4,8 +4,6 @@ theory Example_Congruence_DG_Run
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 section \<open>End-to-end Congruence analysis on the D/G pipeline\<close>
 
 text \<open>

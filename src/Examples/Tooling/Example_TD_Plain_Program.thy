@@ -1,7 +1,7 @@
 theory Example_TD_Plain_Program
   imports
     "Voblint_Solver.Strategy_Tree_Program"
-    "TD.TD_side_upd_rule"
+    "TD.TD_side_Interface"
 begin
 
 section \<open>Must-be-initialized analysis compiled from a side-effect-free strategy program\<close>

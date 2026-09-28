@@ -6,9 +6,6 @@ theory Example_Parity_Checks_Store_Only
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
-
 text \<open>
   Third-domain worked example, mirroring
   Voblint_Examples_CLI.Example_Checks_Store_Only (Sign) and

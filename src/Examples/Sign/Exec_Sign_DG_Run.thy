@@ -3,15 +3,11 @@ theory Exec_Sign_DG_Run
     "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Solver.TD_Solver_Bridge"
-    "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
-
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
 
 section \<open>Running the verified solver on the native D/G spine (Sign)\<close>
 

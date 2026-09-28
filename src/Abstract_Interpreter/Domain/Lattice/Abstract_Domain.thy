@@ -1,8 +1,6 @@
 theory Abstract_Domain
-  imports "TD.Update_rules"
+  imports "TD.Warrowing"
 begin
-
-hide_const (open) Update_rules.N
 
 unbundle lattice_syntax
 

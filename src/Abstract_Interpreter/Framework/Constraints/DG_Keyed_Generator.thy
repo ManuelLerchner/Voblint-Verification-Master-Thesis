@@ -1,13 +1,8 @@
 theory DG_Keyed_Generator
-  imports DG_Constraint_Programs CFG_Enumeration "TD.TD_side"
+  imports DG_Constraint_Programs CFG_Enumeration "TD.TD_side_Interface"
     "Voblint_Solver.Strategy_Tree_Side_Buffering"
     "Voblint_Solver.Strategy_Tree_Post_Solution"
 begin
-
-text \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close> for its internal state; hide the short
-  name so our \<open>\<sigma>\<close> variables (abstract state maps) are unambiguous.\<close>
-
-hide_const (open) \<sigma>
 
 context
 begin

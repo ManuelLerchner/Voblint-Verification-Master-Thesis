@@ -7,9 +7,6 @@ theory Example_Interval_Checks_Store_Only
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
-
 text \<open>
   The Interval analogue of \<open>Example_Checks_Store_Only\<close> (Sign): exercises
   \<^const>\<open>checks_proven\<close> against a computed Interval post-solution, discharged

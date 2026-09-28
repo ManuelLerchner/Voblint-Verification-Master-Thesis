@@ -2,8 +2,6 @@ theory Example_Sign_Unit_Assembly
   imports "Voblint_Analysis_Sign.Sign_Analyses" "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 section \<open>The assembled Sign pipeline, run\<close>
 
 text \<open>

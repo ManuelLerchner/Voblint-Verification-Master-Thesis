@@ -23,13 +23,6 @@ text \<open>
   unknown, and \<open>Statement 1\<close> names the point after the true-branch guard.
 \<close>
 
-text \<open>
-  Disambiguate VIMP's numeral constructor \<open>N\<close> from the \<open>phase\<close> datatype's
-  constructor of the same name.
-\<close>
-
-hide_const phase.N
-
 definition int_ex_prog :: imp_prog where
   "int_ex_prog = program { fun main() { if (y + 1 == 3) { x = 1; } else { x = 0; } } }"
 

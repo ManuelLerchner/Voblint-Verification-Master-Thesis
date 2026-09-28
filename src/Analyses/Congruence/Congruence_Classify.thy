@@ -4,8 +4,6 @@ theory Congruence_Classify
     "Voblint_Result.DG_Result_Construction"
 begin
 
-hide_const phase.N
-
 section \<open>Deciding a check from a map of residue classes\<close>
 
 text \<open>

@@ -7,9 +7,6 @@ theory Example_Checks_Store_Only
           "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
-(* Disambiguate our N constructor from the phase datatype constructor. *)
-hide_const phase.N
-
 text \<open>
   Exercises \<^const>\<open>checks_proven\<close> against a computed (not hand-built) Sign
   post-solution, discharged node-locally through the generic

@@ -25,10 +25,6 @@ theory Example_Interval_DG_Flagship
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
-text \<open>The phase datatype's constructor \<open>N\<close> would shadow the numeral
-  constructor the source program below is written with.\<close>
-hide_const (open) phase.N
-
 subsection \<open>The analysis: Interval at the seed-joining warrowing solver\<close>
 
 text \<open>
