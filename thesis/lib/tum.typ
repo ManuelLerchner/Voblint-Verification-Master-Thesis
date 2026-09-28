@@ -63,7 +63,10 @@
   let mark = (ctx, cand) => {
     numbering(cand.numbering, ..counter(heading).at(cand.location()))
     h(0.5em)
-    cand.body
+    {
+      show <thy-badge>: none
+      cand.body
+    }
   }
   let level = 1
   let title = hydra(
@@ -289,6 +292,7 @@
   // columns (16.4pt for a chapter, then 34.2pt and 31.4pt), 11pt of air above
   // each chapter line.
   show outline.entry: it => {
+    show <thy-badge>: none
     let el = it.element
     if el.func() == figure and el.numbering != none {
       let loc = el.location()

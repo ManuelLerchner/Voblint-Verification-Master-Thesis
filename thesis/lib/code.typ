@@ -313,8 +313,11 @@
     stroke: 0.6pt + vb.accent,
     text(size: 0.5em, font: "DejaVu Sans Mono", fill: vb.accent)[thy],
   )
-  h(0.35em)
-  if href == none { body } else { link(href, body) }
+  // Labelled so that the contents and running heads can drop it.
+  [#box({
+    h(0.35em)
+    if href == none { body } else { link(href, body) }
+  }) <thy-badge>]
 }
 
 // The Concrete Semantics Fig. 4.1 table -- Isabelle symbols beside their ASCII
