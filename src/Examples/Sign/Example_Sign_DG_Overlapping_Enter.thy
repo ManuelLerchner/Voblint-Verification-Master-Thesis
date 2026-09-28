@@ -151,7 +151,7 @@ next
   fix ci d key ex
   show "sp_wf (dg_spec_combine_transfer (ov_spec \<G> ep) ci (mk_dg_man d key) ex)"
     unfolding dg_spec_combine_transfer_def dgs_combine_env_ov_spec dgs_combine_assign_ov_spec
-    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def
+    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def
         local_combine_transfer_def)
 qed
 
