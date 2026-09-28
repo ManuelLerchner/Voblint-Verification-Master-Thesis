@@ -34,8 +34,8 @@ Parity_Domain      arithmetic, comparisons, and the expression evaluator
 from `manifests/analyses.yaml`.
 
 `Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
-global update rule `r` as a parameter: `routed_dg_analysis_exec`
-(`Shared/Result/Routed_DG_Analysis.thy`) at the unit route. It discharges the
+global update rule `r` as a parameter: `dg_analysis_exec`
+(`Shared/Result/DG_Analysis.thy`) at the unit route. It discharges the
 same twelve obligations from Parity's transfer contract, two commutation laws,
 the solver contract, the classifier contract and the initial-state contract,
 and gets back the equation system, the solve, the reader, the result table,
@@ -76,7 +76,7 @@ registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Parity is one of
 those fields whenever `Parity_Analysis` is in the activation list. Neither
 policy has a pipeline of its own. Both are interpretations of
-`routed_dg_analysis`, which owns the equation system, the solve, the covered
+`dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every active combination at every
 policy.

@@ -66,7 +66,7 @@ and terminates without acceleration.
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
 | `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `routed_dg_analysis_exec` at the unit route, at any global update rule; see below |
+| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
 
@@ -91,7 +91,7 @@ registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Congruence is one of
 those fields whenever `Congruence_Analysis` is in the activation list. Neither
 policy has a pipeline of its own. Both are interpretations of
-`routed_dg_analysis`, which owns the equation system, the solve, the covered
+`dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every active combination at every
 policy.

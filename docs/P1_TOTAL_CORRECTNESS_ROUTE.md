@@ -10,7 +10,7 @@ phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 The end-to-end endpoints (`fun_route_source_sound`,
 `fun_route_result_node_sound` and the other routed `*_of_terminates` theorems
-in `Routed_Live_Keys.thy`) carry one solver hypothesis:
+in `DG_Live_Keys.thy`) carry one solver hypothesis:
 
 ```isabelle
 assumes solves: "terminates ugs p"

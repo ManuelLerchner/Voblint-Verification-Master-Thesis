@@ -45,7 +45,7 @@ definition fact_cfg :: cfg where
 
 text \<open>Every value below is Interval's entry-state registration \<open>interval_es_rule\<close> at
   \<^const>\<open>Globals_Warrow\<close>. The routed callee context is
-  \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type omits the domain, so evaluation
+  \<^const>\<open>dg_pipeline.ctx_succ\<close>, whose type omits the domain, so evaluation
   inlines its body rather than looking for a code equation of its own.\<close>
 
 

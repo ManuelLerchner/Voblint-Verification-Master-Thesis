@@ -19,7 +19,7 @@ refinement layer, not as part of the framework.
 | `Spec/Exec_DG_State.thy` | The executable D/G carrier `exec_dg_st` and its classifier-parametric readback |
 | `Spec/Ownership_Split_Exec.thy` | The ownership-splitting analysis at that carrier: the generic transfer at the executable merge/project triple |
 | `Spec/DG_Local_State_Exec.thy` | The executable Base-style D/G construction: definitions and their selector equations |
-| `Refinement/DG_Local_State_Exec_Refinement.thy` | `routed_dg_domain_exec`: soundness at the executable carrier, pulled back along the readback |
+| `Refinement/DG_Local_State_Exec_Refinement.thy` | `dg_domain_exec`: soundness at the executable carrier, pulled back along the readback |
 | `Refinement/Routed_Exec_Refinement.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
 | `State/Exec_Result_Readback.thy` | `readback_result_value`: reading a solved local unknown back as an abstract state |
 
@@ -32,7 +32,7 @@ State/       the executable state: representation, algebra, classifier boundary,
              dead-code test, and the two readbacks built directly on it
 Spec/        analyses built at that carrier: the D/G pair, the ownership split,
              the Base local-state construction
-Refinement/  what relates the carrier to the mathematical one: routed_dg_domain_exec
+Refinement/  what relates the carrier to the mathematical one: dg_domain_exec
              and the routed post-solution
 ```
 

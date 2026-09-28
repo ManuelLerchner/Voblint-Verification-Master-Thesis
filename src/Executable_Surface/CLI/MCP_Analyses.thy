@@ -203,7 +203,7 @@ text \<open>
 lemma mcp_routed_dg_analysis:
   fixes gk0 :: 'k
   assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
-  shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
+  shows "dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
     (mcp_init (activation as)) gk0 seed (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
@@ -221,7 +221,7 @@ next
     using single_entryD[OF single_entry_mcp_comp[OF activation_ne],
         of as "declared_global p" p
           "mc_channel (mcp_comp (activation as) (declared_global p) p) d" ci "(d, d)"]
-    by (simp add: routed_dg_pipeline.entry_of_def)
+    by (simp add: dg_pipeline.entry_of_def)
 next
   case (EmptyRd p s) show ?case by (rule mcp_emp_rd)
 next
@@ -247,7 +247,7 @@ qed
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation mcp_rule: routed_dg_analysis
+global_interpretation mcp_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
@@ -266,7 +266,7 @@ text \<open>
   runs keys nothing.
 \<close>
 
-global_interpretation mcp_es_rule: routed_dg_analysis
+global_interpretation mcp_es_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
@@ -279,7 +279,7 @@ global_interpretation mcp_es_rule: routed_dg_analysis
 
 subsection \<open>At the call-string context\<close>
 
-global_interpretation mcp_cs_rule: routed_dg_analysis
+global_interpretation mcp_cs_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"

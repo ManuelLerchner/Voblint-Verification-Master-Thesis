@@ -182,7 +182,7 @@ qed
 
 subsection \<open>The routed equation system, solved\<close>
 
-text \<open>The entry-state registration's construction of \<^const>\<open>routed_dg_pipeline.equations\<close>
+text \<open>The entry-state registration's construction of \<^const>\<open>dg_pipeline.equations\<close>
   at the overriding specification: same generator, same route, same buffered seed
   protocol, same plain-join solver.\<close>
 

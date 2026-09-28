@@ -407,7 +407,7 @@ text \<open>
       \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
-      domain as a \<^locale>\<open>routed_dg_analysis_exec\<close> instance at the unit context, and
+      domain as a \<^locale>\<open>dg_analysis_exec\<close> instance at the unit context, and
       Interval also at entry state and call string, so each reaches
       \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>ltr_collect\<close>,
       through the locale's generic node-soundness bridge.
@@ -443,7 +443,7 @@ text \<open>
       (\<^const>\<open>fun_of_dg_st_gen\<close>), letting the executable run answer
       for the mathematical system.
     \<^item> @{theory Voblint_Exec.DG_Local_State_Exec_Refinement} ---
-      \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's
+      \<^locale>\<open>dg_domain_exec\<close> proves a registered domain's
       D/G spec sound directly at the executable carrier, without a separate
       abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Exec} --- executable Sign transfer functions.
@@ -483,7 +483,7 @@ text \<open>
       (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
       (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
-    \<^item> @{theory Voblint_Result.Routed_Live_Keys} --- the endpoints of a routed
+    \<^item> @{theory Voblint_Result.DG_Live_Keys} --- the endpoints of a routed
       analysis whose route is a function of the call site, the unit context
       among them; they are what every flagship and codegen entry point applies: one
       \<^verbatim>\<open>solve_c ... \<noteq> None\<close> fact in, source-level soundness out.
@@ -650,7 +650,7 @@ text \<open>
     \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the endpoint \<open>interval_seed_join.fun_route_source_sound\<close>
-      (@{theory Voblint_Result.Routed_Live_Keys}, the routed analysis at the unit
+      (@{theory Voblint_Result.DG_Live_Keys}, the routed analysis at the unit
       context) bundles solver correctness,
       executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one

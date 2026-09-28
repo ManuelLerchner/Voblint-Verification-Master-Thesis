@@ -124,7 +124,7 @@ definition sign_nest_gamma ::
     "sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
   "sign_nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
-interpretation sign_nest_domain: routed_dg_domain_exec
+interpretation sign_nest_domain: dg_domain_exec
   sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
   "sign_enter_st_for sign_nest_gs"
   skip_sign assign_sign special_sign branch_sign body_sign return_sign

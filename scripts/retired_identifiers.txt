@@ -3239,3 +3239,12 @@ source_sound_closure
 completed_run_sound_closure
 completed_run_sound
 gamma_state_case_eq_point
+# --- The analysis layer drops `routed`: every analysis is routed, the unit context
+# included, so the prefix distinguished nothing. The equation layer keeps its
+# routing vocabulary (2026-09-28) ---
+routed_dg_analysis_exec
+routed_dg_domain_exec
+routed_dg_pipeline
+routed_dg_analysis
+Routed_DG_Analysis
+Routed_Live_Keys

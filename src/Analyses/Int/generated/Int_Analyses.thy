@@ -4,7 +4,7 @@ theory Int_Analyses
     Int_Classify
     Int_Transfer
     Int_Exec
-    "Voblint_Result.Routed_Live_Keys"
+    "Voblint_Result.DG_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -31,7 +31,7 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation int_rule: routed_dg_analysis_exec
+global_interpretation int_rule: dg_analysis_exec
     "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
@@ -43,7 +43,7 @@ global_interpretation int_rule: routed_dg_analysis_exec
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule int_is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

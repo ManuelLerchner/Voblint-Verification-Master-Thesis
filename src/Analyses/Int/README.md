@@ -95,7 +95,7 @@ Int's own generated file registers only the context-insensitive run,
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Int is one of those
 fields whenever `Int_Analysis` is in the activation list. Neither policy has
-a pipeline of its own. Both are interpretations of `routed_dg_analysis`, which
+a pipeline of its own. Both are interpretations of `dg_analysis`, which
 owns the equation system, the solve, the covered keys, the reader, the result
 table, the contextual report and the activation-indexed soundness endpoint —
 for every active combination at every policy.

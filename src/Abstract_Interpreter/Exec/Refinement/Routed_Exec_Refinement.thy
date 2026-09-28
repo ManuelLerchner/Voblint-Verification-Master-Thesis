@@ -7,7 +7,7 @@ begin
 section \<open>Routed execution, once for every domain and context policy\<close>
 
 text \<open>
-  \<^locale>\<open>routed_dg_domain_exec\<close> already reduces a domain's obligation to the routed
+  \<^locale>\<open>dg_domain_exec\<close> already reduces a domain's obligation to the routed
   spine to three primitive commute facts. What it deliberately does not carry is the
   \<^emph>\<open>routing\<close> layer: the equation system a routed analysis actually solves, and the
   executable-to-abstract transport of its post-solution. Each domain, at each context
@@ -26,7 +26,7 @@ text \<open>
 
   Deliberately absent: the equation-system, solved-table and result \<^theory_text>\<open>definition\<close>s
   themselves. They must stay concrete per-domain constants because they carry \<open>[code]\<close>
-  equations, and \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>empty_pred_exact\<close> is not
+  equations, and \<^locale>\<open>dg_domain_exec\<close>'s own \<open>empty_pred_exact\<close> is not
   dischargeable without fixing a concrete global set, so no locale carrying it can be
   interpreted globally. The domain keeps its definitions; what it stops re-proving is
   everything below.
@@ -126,7 +126,7 @@ proof -
 qed
 
 locale routed_domain_exec =
-  routed_dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
+  dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for \<G> :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -153,7 +153,7 @@ locale routed_domain_exec =
 begin
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. \<open>spec_st\<close>
-  and \<open>spec_abs\<close> come from \<^locale>\<open>routed_dg_domain_exec\<close>; nothing here mentions a domain
+  and \<open>spec_abs\<close> come from \<^locale>\<open>dg_domain_exec\<close>; nothing here mentions a domain
   constant beyond them, so one proof serves every instance. The caller continuation needs
   no hypothesis: \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine
   sub-tree.\<close>

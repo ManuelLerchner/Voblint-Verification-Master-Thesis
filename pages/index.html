@@ -2245,7 +2245,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           out to need, and no more. Voblint always asks the same question, the end of the entry
           procedure under the root context:
         </p>
-        <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_pipeline.root_query%7Cconst">root_query</a> p = (<a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_exit%7Cconst">cfg_exit</a> (prog_cfg p), root_ctx)</code></pre>
+        <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_pipeline.root_query%7Cconst">root_query</a> p = (<a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_exit%7Cconst">cfg_exit</a> (prog_cfg p), root_ctx)</code></pre>
         <p>
           That point is the one a terminating run ends at, so asking for it drags in, one query at
           a time, every point whose value it depends on. What the vendored solver promises is
@@ -3849,7 +3849,7 @@ fun main() {
         <figcaption>
           One cell is one equation, keyed here by the entry state a call arrives with. The ringed
           cell is the only one the solver is asked for
-          (<a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_pipeline.root_query%7Cconst"><code>root_query</code></a>:
+          (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_pipeline.root_query%7Cconst"><code>root_query</code></a>:
           the program's exit at the root context); every other filled cell is there because
           something the solver already reached read it. Each call draws that as a loop: the dashed
           arrow is the seed the call publishes at the callee's entry, which is what makes
@@ -4737,7 +4737,7 @@ fun main() {
           <li class="chain-link">
             <span class="chain-rel">=</span>
             <a data-mode-link="none" href="Voblint/Voblint_Framework/Routed_Context_Unit.html#Routed_Context_Unit.activation_collect_unit_eq_ltr_collect%7Cfact"><code>activation_collect_unit_eq_ltr_collect</code></a>
-            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.entry_state_ltr_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_ltr_collect_eq_Union_of_terminates</code></a>
+            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.entry_state_ltr_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_ltr_collect_eq_Union_of_terminates</code></a>
             <span class="chain-link-note"></span>
           </li>
           <li class="chain-rung" data-rung="activation">
@@ -4772,7 +4772,7 @@ fun main() {
                   (the vendored <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact"><code>partial_post_solution</code></a>, with termination discharged by
                   <a href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.TD_side_rule_Interp.solve_dom_of_solve_c%7Cfact"><code>solve_dom_of_solve_c</code></a>),
                   read back as the result the analyzer reports
-                  (<a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.gamma_reader_eq_lookup%7Cfact"><code>gamma_reader_eq_lookup</code></a>).
+                  (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.gamma_reader_eq_lookup%7Cfact"><code>gamma_reader_eq_lookup</code></a>).
                 </p>
               </div>
             </div>
@@ -4799,9 +4799,9 @@ fun main() {
         <figcaption>
           Values at rung 4 are the analyzer's interval results for the factorial program, with the
           default Warrow. Links 2 to 4 compose into
-          <a href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>
           without context, and into
-          <a href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
           with entry-state contexts;
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>, the first
           flagship theorem below, adds link 1. On the executable side, one more step transports the solver's
@@ -4874,7 +4874,7 @@ fun main() {
           Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler; it also needs the other
           half of the simulation, which carries a source run into a valid trace. Pillars 2 and 5,
           <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_transfer_for%7Clocale"><code>sound_transfer_for</code></a>
-          and <a href="Voblint/Voblint_Result/Routed_DG_Analysis.html#Routed_DG_Analysis.routed_dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
+          and <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
           are obligations each domain discharges, pillar 3,
           <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
           one that each context policy discharges.
@@ -5276,7 +5276,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   concretization of the result there. Our run's store, <code>i = 5</code>, is in
                   <code>γ([5, 5])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.fun_route_result_node_sound%7Cfact">fun_route_result_node_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact">fun_route_result_node_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="4">
@@ -5463,7 +5463,7 @@ qed</code></pre>
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/Routed_Live_Keys.html#Routed_Live_Keys.routed_dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.Routed_Live_Keys" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Keys" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every domain, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>

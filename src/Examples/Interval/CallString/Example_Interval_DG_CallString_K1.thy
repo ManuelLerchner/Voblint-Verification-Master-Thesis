@@ -122,7 +122,7 @@ text \<open>The executable spec is sound for the concretization that reads a loc
 definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
   "nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
-interpretation nest_domain: routed_dg_domain_exec
+interpretation nest_domain: dg_domain_exec
   nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
   skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
   "enter_ivl_ci_for nest_gs" event_ivl

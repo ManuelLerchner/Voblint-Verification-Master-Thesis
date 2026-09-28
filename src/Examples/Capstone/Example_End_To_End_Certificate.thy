@@ -321,7 +321,7 @@ qed
 subsection \<open>What the solve owes\<close>
 
 text \<open>
-  The solver's own run is the first. \<^const>\<open>routed_dg_pipeline.root_query\<close> has no
+  The solver's own run is the first. \<^const>\<open>dg_pipeline.root_query\<close> has no
   code equation of its own --- its type does not mention the domain, so the
   generator cannot see its sort hypothesis --- and a call-string bound is a
   runtime argument, so no registration inlined it here. Unfolding it once is what
@@ -330,12 +330,12 @@ text \<open>
 
 lemma certificate_demo_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Join
-     (routed_dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
+     (dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
         (mcp_init (activation [Int_Analysis]))
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
         (declared_global certificate_demo_prog) certificate_demo_prog)
-     (routed_dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
-  unfolding routed_dg_pipeline.root_query_def by eval
+     (dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
+  unfolding dg_pipeline.root_query_def by eval
 
 lemma certificate_demo_terminates:
   "mcp_cs_rule.terminates [Int_Analysis] 1 Globals_Join

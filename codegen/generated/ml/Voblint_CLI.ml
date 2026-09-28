@@ -9127,6 +9127,16 @@ let rec wf_program_compile_input_exec
 let rec valid_activation
   asa = not (null asa) && distinct equal_analysis_domain asa;;
 
+let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
+
+let rec dg_result_for
+  rd emp sol =
+    Analysis_Result
+      (fst sol,
+        (fun v ctx ->
+          map_lift rd
+            (canonicalize_lift emp (locals (snd sol (Inl (v, ctx)))))));;
+
 let rec group_lookup _A
   m k = (match lookup _A m k with None -> [] | Some ys -> ys);;
 
@@ -9651,16 +9661,6 @@ let rec solution (_A1, _A2) _B
   comp init_st gk0 seed route root_ctx solve g p =
     solve (equations (_A1, _A2) _B comp init_st gk0 seed route g p)
       (cfg_exit (prog_cfg p), root_ctx);;
-
-let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
-
-let rec dg_result_for
-  rd emp sol =
-    Analysis_Result
-      (fst sol,
-        (fun v ctx ->
-          map_lift rd
-            (canonicalize_lift emp (locals (snd sol (Inl (v, ctx)))))));;
 
 let rec result_with_globals (_A1, _A2) _C
   comp emp rd init_st gk0 seed route root_ctx solve g p =

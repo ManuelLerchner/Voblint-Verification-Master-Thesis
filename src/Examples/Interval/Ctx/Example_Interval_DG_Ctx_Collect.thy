@@ -163,7 +163,7 @@ theorem twice_activation_collect_sound:
 
 subsection \<open>The context each call site selects\<close>
 
-text \<open>\<^const>\<open>routed_dg_analysis.admitted_contexts\<close> admits a routed context relationally
+text \<open>\<^const>\<open>dg_analysis.admitted_contexts\<close> admits a routed context relationally
   rather than computing one from the concrete store, so at each call site it admits
   exactly the constant the flagship computed.\<close>
 
@@ -279,7 +279,7 @@ text \<open>\<^const>\<open>ivl_context\<close> is the \<^emph>\<open>semantic\<
   (Seidl et al., \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>, FM 2026, Example 8):
   it decodes the concrete entered store's formals
   through \<^const>\<open>ivl_decode\<close>, looking its formals up from the call site via
-  \<^const>\<open>formals_at_call_site\<close>.  \<^const>\<open>routed_dg_analysis.admitted_contexts\<close>
+  \<^const>\<open>formals_at_call_site\<close>.  \<^const>\<open>dg_analysis.admitted_contexts\<close>
   instead ignores the store and
   recomputes the routed value from the caller's solved abstract state.  The two are
   distinct functions; for \<open>twice\<close>'s two constant-argument calls they agree, which is

@@ -4,7 +4,7 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec
-    "Voblint_Result.Routed_Live_Keys"
+    "Voblint_Result.DG_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -33,7 +33,7 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation interval_rule: routed_dg_analysis_exec
+global_interpretation interval_rule: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
@@ -44,7 +44,7 @@ global_interpretation interval_rule: routed_dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case
@@ -78,7 +78,7 @@ qed
 
 subsection \<open>At the entry-state context\<close>
 
-global_interpretation interval_es_rule: routed_dg_analysis_exec
+global_interpretation interval_es_rule: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
@@ -89,7 +89,7 @@ global_interpretation interval_es_rule: routed_dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case
@@ -125,7 +125,7 @@ qed
 
 subsection \<open>At the call-string context\<close>
 
-global_interpretation interval_cs_rule: routed_dg_analysis_exec
+global_interpretation interval_cs_rule: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
@@ -136,7 +136,7 @@ global_interpretation interval_cs_rule: routed_dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
     "TD_side_rule_Interp_solve_c r"
   for k r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

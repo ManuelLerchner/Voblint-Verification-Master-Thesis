@@ -4,7 +4,7 @@ theory Congruence_Analyses
     Congruence_Classify
     Congruence_Transfer
     Congruence_Exec
-    "Voblint_Result.Routed_Live_Keys"
+    "Voblint_Result.DG_Live_Keys"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -31,7 +31,7 @@ text \<open>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation congruence_rule: routed_dg_analysis_exec
+global_interpretation congruence_rule: dg_analysis_exec
     congruence_tf_st_for congruence_enter_st_for cinit_congruence_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
@@ -42,7 +42,7 @@ global_interpretation congruence_rule: routed_dg_analysis_exec
     return_congruence enter_congruence_ci_for event_congruence "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule congruence_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

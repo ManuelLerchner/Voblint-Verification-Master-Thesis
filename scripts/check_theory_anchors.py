@@ -2,9 +2,9 @@
 """Checks a site link's theory anchor against the theory source, with no build.
 
 An anchor into a rendered theory is `<Theory>.<locale>.<name>|<kind>`, and the
-locale part is the trap: a fact stated inside `context routed_dg_analysis` is
-`Routed_Live_Keys.routed_dg_analysis.entry_state_lookup_sound_of_terminates`,
-not `Routed_Live_Keys.entry_state_lookup_sound_of_terminates`. Both spellings
+locale part is the trap: a fact stated inside `context dg_analysis` is
+`DG_Live_Keys.dg_analysis.entry_state_lookup_sound_of_terminates`,
+not `DG_Live_Keys.entry_state_lookup_sound_of_terminates`. Both spellings
 name a real fact in a real file, so nothing reading the sources notices; the
 page loads and the anchor silently does nothing.
 

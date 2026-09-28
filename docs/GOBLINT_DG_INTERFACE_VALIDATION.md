@@ -123,7 +123,7 @@ avoids (E3), enlarging surface for no faithfulness gain.
 *obstruction* to expressing the effectful `side_env_ctx` spine as a DG corollary.
 The Goblint evidence settles the point the other way: **local-only routing is the
 faithful model** (E3/E4), and the effectful `side_env_ctx` path has been deleted.
-Contexts are now `routed_dg_analysis` registrations over the routed call trees.
+Contexts are now `dg_analysis` registrations over the routed call trees.
 
 ## Recommendation
 

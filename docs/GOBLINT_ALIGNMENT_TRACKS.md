@@ -2,7 +2,7 @@
 
 Index for the three remaining Goblint context-alignment migration plans. The
 `(node, context)` unknown mechanism itself is **already modeled and verified**
-(call-string and entry-state `routed_dg_analysis` registrations — see
+(call-string and entry-state `dg_analysis` registrations — see
 `docs/NEXT_STEPS.md` "Context abstractions"). These three tracks
 are the remaining breadth/fidelity/termination work, none a soundness
 prerequisite for the current pipeline.

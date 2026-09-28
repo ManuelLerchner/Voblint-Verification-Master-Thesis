@@ -1,4 +1,4 @@
-theory Routed_DG_Analysis
+theory DG_Analysis
   imports
     DG_Result_Construction
     Analysis_Surface
@@ -18,9 +18,9 @@ text \<open>
   choices and the published table is the same work at every domain and at every
   context policy. This theory does that work once.
 
-  The construction half is \<open>routed_dg_pipeline\<close>, which carries no correctness
+  The construction half is \<open>dg_pipeline\<close>, which carries no correctness
   assumptions, so its defining equations are unconditional and can be declared to
-  the code generator. The correctness half is \<open>routed_dg_analysis\<close>, which adds
+  the code generator. The correctness half is \<open>dg_analysis\<close>, which adds
   the domain and solver contracts and derives, for one program, the routed
   soundness statement every policy shares.
 
@@ -121,7 +121,7 @@ text \<open>
   here would demand an executable \<^const>\<open>bot\<close> at a function type.
 \<close>
 
-locale routed_dg_pipeline =
+locale dg_pipeline =
   fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted mcp_component"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
     and rd :: "(vname \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
@@ -337,11 +337,11 @@ text \<open>
   the emitted program.
 \<close>
 
-declare routed_dg_pipeline.analysis_spec_def [code_unfold]
-declare routed_dg_pipeline.entry_of_def [code_unfold]
+declare dg_pipeline.analysis_spec_def [code_unfold]
+declare dg_pipeline.entry_of_def [code_unfold]
 
 text \<open>
-  \<^const>\<open>routed_dg_pipeline.root_query\<close> gets its code equation restated with HOL
+  \<^const>\<open>dg_pipeline.root_query\<close> gets its code equation restated with HOL
   equality rather than declared from its defining meta-equation: a locale
   definition whose body is a pair, not a function, is not in the shape the code
   generator accepts, and the rejection is a warning rather than an error --- the
@@ -352,21 +352,21 @@ text \<open>
   does.
 \<close>
 
-declare routed_dg_pipeline.equations_def [code]
-declare routed_dg_pipeline.solution_code [code]
-declare routed_dg_pipeline.terminates_code [code]
-declare routed_dg_pipeline.sol_vars_def [code]
-declare routed_dg_pipeline.sol_env_def [code]
-declare routed_dg_pipeline.reader_def [code]
-declare routed_dg_pipeline.result_def [code]
-declare routed_dg_pipeline.ctx_succ_def [code_unfold]
-declare routed_dg_pipeline.live_succ_def [code_unfold]
-declare routed_dg_pipeline.result_with_globals_def [code]
-declare routed_dg_pipeline.check_projection_def [code]
-declare routed_dg_pipeline.verdict_report_def [code]
-declare routed_dg_pipeline.state_at_def [code]
-declare routed_dg_pipeline.report_def [code]
-declare routed_dg_pipeline.report_with_state_def [code]
+declare dg_pipeline.equations_def [code]
+declare dg_pipeline.solution_code [code]
+declare dg_pipeline.terminates_code [code]
+declare dg_pipeline.sol_vars_def [code]
+declare dg_pipeline.sol_env_def [code]
+declare dg_pipeline.reader_def [code]
+declare dg_pipeline.result_def [code]
+declare dg_pipeline.ctx_succ_def [code_unfold]
+declare dg_pipeline.live_succ_def [code_unfold]
+declare dg_pipeline.result_with_globals_def [code]
+declare dg_pipeline.check_projection_def [code]
+declare dg_pipeline.verdict_report_def [code]
+declare dg_pipeline.state_at_def [code]
+declare dg_pipeline.report_def [code]
+declare dg_pipeline.report_with_state_def [code]
 
 subsection \<open>The contracts\<close>
 
@@ -377,13 +377,13 @@ text \<open>
   global, its solver answers a post-solution over finitely many keys once it
   terminates, its classifier is correct, and its entry state describes every
   initial store. The equation system, the solve, the covered keys, the reader,
-  the result table and the report are all fixed by \<^locale>\<open>routed_dg_pipeline\<close>
+  the result table and the report are all fixed by \<^locale>\<open>dg_pipeline\<close>
   above and appear here only in conclusions. Each obligation is stated at the
   program's own declared globals, the one set the soundness statement uses.
 \<close>
 
-locale routed_dg_analysis =
-  routed_dg_pipeline comp emp rd init_st gk0 seed route root_ctx solve solve_dom
+locale dg_analysis =
+  dg_pipeline comp emp rd init_st gk0 seed route root_ctx solve solve_dom
     bot_state classify
   for comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted mcp_component"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
@@ -586,7 +586,7 @@ text \<open>
 
 text \<open>
   The specification is sound at the executable carrier: this is
-  \<^locale>\<open>routed_dg_domain_exec\<close>'s own pullback of the abstract transfer's
+  \<^locale>\<open>dg_domain_exec\<close>'s own pullback of the abstract transfer's
   soundness, so the routed statement below never re-derives it.
 \<close>
 
@@ -1095,7 +1095,7 @@ text \<open>
   for the analyses that state it; the pipeline's soundness does not use it.
 \<close>
 
-locale routed_dg_analysis_exec =
+locale dg_analysis_exec =
   fixes tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
                   \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -1154,7 +1154,7 @@ locale routed_dg_analysis_exec =
                \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
     and exec_dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
 
-sublocale routed_dg_analysis_exec \<subseteq> routed_dg_analysis
+sublocale dg_analysis_exec \<subseteq> dg_analysis
     "\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
              (tf_st \<G>) (enter_st \<G>)"
     "\<lambda>p. resolved_st_q_is_bot_for (declared_global_vars p)"
@@ -1163,7 +1163,7 @@ sublocale routed_dg_analysis_exec \<subseteq> routed_dg_analysis
 proof (unfold_locales, goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe
     SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
   case (CompSound p)
-  interpret dom: routed_dg_domain_exec "declared_global p"
+  interpret dom: dg_domain_exec "declared_global p"
       "resolved_st_q_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
       "enter_st (declared_global p)" sk asn spc br bd rt "en (declared_global p)" ev
     by unfold_locales
@@ -1173,7 +1173,7 @@ proof (unfold_locales, goal_cases CompSound EnterSingle EmptyExact EmptyVExact S
   show ?case by (rule dom.exec_component_sound[OF tf_sound])
 next
   case (EnterSingle p ci d)
-  then show ?case by (simp add: routed_dg_pipeline.entry_of_def)
+  then show ?case by (simp add: dg_pipeline.entry_of_def)
 next
   case (EmptyExact p s)
   then show ?case by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
@@ -1204,12 +1204,12 @@ text \<open>
   transfer, lifted over reachability.
 \<close>
 
-lemma (in routed_dg_analysis_exec) entry_of_exec:
-  "routed_dg_pipeline.entry_of
+lemma (in dg_analysis_exec) entry_of_exec:
+  "dg_pipeline.entry_of
      (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
         (tf_st \<G>) (enter_st \<G>))
      \<G> p ci d
    = transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
-  by (simp add: routed_dg_pipeline.entry_of_def)
+  by (simp add: dg_pipeline.entry_of_def)
 
 end

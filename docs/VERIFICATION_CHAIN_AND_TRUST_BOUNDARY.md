@@ -83,7 +83,7 @@ agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 `solve_dom_of_solve_c` (`TD_Solver_Bridge.thy`) turns a successful `solve_c`
 into `solve_dom`, and the vendored `partial_post_solution` turns `solve_dom`
 into the certificate `part_post_solution` (`Basics_side.thy`). The analysis
-locale `routed_dg_analysis` assumes both facts of its solver parameters, and
+locale `dg_analysis` assumes both facts of its solver parameters, and
 every generated domain registration discharges them with
 `TD_side_rule_Interp.solve_dom_of_solve_c` and
 `TD_side_rule_Interp.partial_post_solution`; `run_voblint`'s termination
@@ -108,7 +108,7 @@ definite verdict listed there holds for that store.
 point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:
-`live_keys_cover` (`Routed_Live_Keys.thy`) proves it from termination. The
+`live_keys_cover` (`DG_Live_Keys.thy`) proves it from termination. The
 root `README.md` states the theorem in full.
 
 ## 6. `export_code` and the code-generation trust boundary

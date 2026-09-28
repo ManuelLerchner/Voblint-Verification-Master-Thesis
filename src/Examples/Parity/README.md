@@ -3,7 +3,7 @@
 One theory, one program, one end-to-end claim. `Example_Parity_DG_Flagship.thy`
 is the evidence that the domain-registration API is reusable rather than
 Sign-shaped: it reaches source-level soundness through Parity's own unit-context
-registration, an instance of the same `routed_dg_analysis_exec` assembly Sign's
+registration, an instance of the same `dg_analysis_exec` assembly Sign's
 registration interprets, without copying a proof step out of Sign's file. Nothing
 else lives here, because nothing else has to — a second domain that needed a
 second copy of the plumbing would be the negative result.
@@ -22,7 +22,7 @@ The theory uses these as given; they are local jargon, not English.
 
 | Term | Meaning |
 | --- | --- |
-| Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. Every registration of the shared `routed_dg_analysis_exec` assembly builds its equation system in this shape. |
+| Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. Every registration of the shared `dg_analysis_exec` assembly builds its equation system in this shape. |
 | ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. No certified analysis uses it; execution-only witnesses such as `Example_Sign_DG_Custom_Combine` exercise it. |
 | classifier, `gs` | `vname => bool`, VIMP's own answer to *is this name a declared global*. `parity_gs` is `declared_global parity_program`: the program's `global` declaration decides, never the spelling of the name. |
 | placed state, `exec_dg_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot a readback sees. |
@@ -104,7 +104,7 @@ Voblint_Examples_Parity        this directory
 ```
 
 Everything else the theory imports comes from ancestors of that parent:
-`Voblint_Result` (`Routed_Live_Keys`: the routed endpoints, among them
+`Voblint_Result` (`DG_Live_Keys`: the routed endpoints, among them
 `fun_route_source_sound`), `Voblint_Compile` (`compile_prog`, `compiled_cfg`),
 `Voblint_Exec` (the placed carrier and `gamma_exec`), `Voblint_Solver` (the
 vendored always-join solver), and `Voblint_VIMP` (the `program { ... }`

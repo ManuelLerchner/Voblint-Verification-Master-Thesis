@@ -36,7 +36,7 @@ text \<open>
   constants code equations, so the readings below evaluate.
 \<close>
 
-global_interpretation interval_seed_join: routed_dg_analysis_exec
+global_interpretation interval_seed_join: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_seed_join_warrowing_Interp_solve is_activation_seed"
@@ -56,7 +56,7 @@ global_interpretation interval_seed_join: routed_dg_analysis_exec
     and interval_sj_env = interval_seed_join.sol_env
     and interval_sj_result = interval_seed_join.result
     and interval_sj_state_at = interval_seed_join.state_at
-proof (rule routed_dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_transfer_for)
 next
   case (2 \<G> a s) then show ?case

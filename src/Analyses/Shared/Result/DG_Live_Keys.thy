@@ -1,5 +1,5 @@
-theory Routed_Live_Keys
-  imports Routed_DG_Analysis "Voblint_Compile.Live_Nodes"
+theory DG_Live_Keys
+  imports DG_Analysis "Voblint_Compile.Live_Nodes"
 begin
 
 section \<open>Which solved keys a terminating solve is closed on\<close>
@@ -130,7 +130,7 @@ qed
 
 subsection \<open>Keys of a solve whose activation returned\<close>
 
-context routed_dg_analysis
+context dg_analysis
 begin
 
 lemma analysis_spec_enter:

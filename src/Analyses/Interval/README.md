@@ -19,7 +19,7 @@ Executable witnesses live under
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
-| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `routed_dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
+| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 
 ## The contextual configurations
 
@@ -31,7 +31,7 @@ the classifier and the initial-state fact carry the domain name
 (`interval_rule`, `interval_classify_check`, `interval_cinit_gamma`).
 
 Neither contextual policy has a pipeline of its own. Both are interpretations
-of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+of `dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint.
 

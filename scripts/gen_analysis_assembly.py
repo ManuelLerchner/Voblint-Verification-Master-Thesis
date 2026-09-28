@@ -9,7 +9,7 @@ One output per domain, plus one for the combined state:
 A domain is registered once per context it lists (`contexts`, default `[unit]`),
 each registration taking the global update rule as a parameter, so one
 registration serves every solver discipline. Every registration interprets
-`routed_dg_analysis_exec`; the contexts differ only in their keys and route. The
+`dg_analysis_exec`; the contexts differ only in their keys and route. The
 combined state has one lifted field per domain,
 in manifest order, and the per-domain cases the handwritten `MCP_Analyses`
 registers over.
@@ -46,7 +46,7 @@ ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 # Named explicitly rather than relied on transitively: an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
 COMMON_IMPORTS = [
-    '"Voblint_Result.Routed_Live_Keys"',
+    '"Voblint_Result.DG_Live_Keys"',
     '"Voblint_Framework.Call_String_Context"',
     '"Voblint_Framework.Routed_Context"',
     '"Voblint_Solver.TD_Solver_Bridge"',
@@ -320,7 +320,7 @@ def registration(dom, ctx):
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
     out = [
-        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: routed_dg_analysis_exec",
+        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: dg_analysis_exec",
         f"    {t['tf_st']} {t['enter_st']} {t['init_st']}",
         f"    {ctx['keys']}",
     ]
@@ -337,7 +337,7 @@ def registration(dom, ctx):
     ]
     out += pack_operands(groups)
     out.append(f"  for {ctx['params']}")
-    out.append("proof (rule routed_dg_analysis_exec.intro, goal_cases)")
+    out.append("proof (rule dg_analysis_exec.intro, goal_cases)")
     out += [
         f"  case (1 \\<G>) show ?case by (rule {r['transfer_sound']})",
         "next",

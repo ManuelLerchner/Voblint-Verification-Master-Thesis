@@ -160,17 +160,17 @@ Each domain routes its own transfer functions and executable mirror through
 the shared D/G generator, solves with the vendored `TD_side` solver, and
 exposes the result as an `analysis_result` table indexed by `(node, context)`.
 
-`Routed_DG_Analysis.thy` performs that assembly once, for every context policy.
-`routed_dg_pipeline` is the construction half — equation system, solve,
+`DG_Analysis.thy` performs that assembly once, for every context policy.
+`dg_pipeline` is the construction half — equation system, solve,
 covered keys, reader, result table, globals, the published `state_at` and
 `report` at a context — and carries no correctness assumptions;
-`routed_dg_analysis` adds the domain and solver contracts, and
-`Routed_Live_Keys.thy` derives the published soundness theorems from
+`dg_analysis` adds the domain and solver contracts, and
+`DG_Live_Keys.thy` derives the published soundness theorems from
 termination. A domain instantiates it by naming its
 executable transfer, its callee entry, the state a run starts from, the solver,
 the check classifier and the facts that make them sound. The generated
 `Sign_Analyses.thy` holds `global_interpretation sign_rule:
-routed_dg_analysis_exec ... for r` at the unit route, taking the global update
+dg_analysis_exec ... for r` at the unit route, taking the global update
 rule as a parameter; a caller reads `sign_rule.result`, `sign_rule.state_at` and
 `sign_rule.report` at a rule and the context `()`. Every
 domain, Int included, carries the same unit registration; Interval also carries
@@ -179,7 +179,7 @@ its examples use. `run_voblint` reads none of these: it runs the combined state
 (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` in `MCP_Analyses.thy`), which
 classifies checks as described below.
 
-The node-soundness bridge is generic and proved once in `Routed_Live_Keys.thy`
+The node-soundness bridge is generic and proved once in `DG_Live_Keys.thy`
 for every route that is a function of the call site, the unit route among them.
 `fun_route_result_node_sound` bounds `ltr_collect` at *any* node by the union of
 the states published there over the contexts — not only at the solver's own

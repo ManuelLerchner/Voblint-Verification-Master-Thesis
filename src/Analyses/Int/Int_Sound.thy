@@ -20,7 +20,7 @@ text \<open>
 
   Int's specification, its concretization and the soundness of the one against
   the other are not restated here. Those are constants and theorems of
-  \<^locale>\<open>routed_dg_domain_exec\<close>, which an assembly reaches by interpreting
+  \<^locale>\<open>dg_domain_exec\<close>, which an assembly reaches by interpreting
   that locale from the two lemmas below --- so a per-domain copy would only
   rename what the locale already proves.
 \<close>

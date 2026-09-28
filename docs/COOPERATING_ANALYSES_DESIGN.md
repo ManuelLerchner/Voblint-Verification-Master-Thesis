@@ -147,7 +147,7 @@ executable evidence for one program and support no general precision claim.
 
 The product is certified at the `analysis_contract` level and executed
 through the verified solver. It does not reach `run_voblint`, the result
-adapter or the CLI: `routed_dg_pipeline` is specialized to the pointwise
+adapter or the CLI: `dg_pipeline` is specialized to the pointwise
 carrier. Reaching it means generalizing that pipeline over the carrier (spec
 constructor, emptiness test for `DEAD`, readback, classifier); that step is
 not claimed to be mechanical.

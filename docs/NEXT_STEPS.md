@@ -17,7 +17,7 @@ collecting semantics to the CLI:
   `Entry_State_Routed_Context` and `Call_String_Routed_Context`
   (`Voblint_Routing`) instantiate it. `'c` carries no `finite` sort constraint:
   termination is the per-run `solve_dom` premise, as for the flat analysis.
-- **Endpoints.** `routed_dg_analysis.entry_state_activation_collect_sound` and
+- **Endpoints.** `dg_analysis.entry_state_activation_collect_sound` and
   `fun_route_activation_collect_sound` bound each bucket;
   `sound_table_of_activation` and `sound_table.source_sound` (`Analysis_Run_Sound`)
   reach a source run.
@@ -118,7 +118,7 @@ classification (`Numeric_Queries.thy`).
 No domain writes its configuration out by hand.
 `manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
 generates each domain's `<Domain>_Analyses` theory: rule-parametric
-registrations of `routed_dg_analysis_exec` (`Voblint_Result`), one per context
+registrations of `dg_analysis_exec` (`Voblint_Result`), one per context
 policy the domain lists. The equation system, solve, reader, result table, report and
 soundness endpoints come from those locales, and the generated theory only names
 a domain's own facts.

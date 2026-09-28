@@ -12,7 +12,7 @@ text \<open>
   The executable construction above computes on association-list states; the
   soundness statements are about function-valued ones. This theory is the
   bridge: it fixes a domain whose executable transfer agrees with its abstract
-  transfer after readback (\<open>routed_dg_domain_exec\<close>) and derives, from
+  transfer after readback (\<open>dg_domain_exec\<close>) and derives, from
   those three agreements alone, that a whole D/G specification is sound at the
   executable carrier -- with no separate abstract-carrier run to compare against.
 \<close>
@@ -58,7 +58,7 @@ text \<open>
   domain fact at all: \<^const>\<open>fun_of_resolved_st_q_for\<close> is already carrier-polymorphic and
   \<open>sup\<close>-homomorphic (\<open>fun_of_resolved_st_q_for_sup\<close>,
   \<open>Voblint_Exec.Exec_St_Transfer\<close>), so this
-  is a free-standing fact, not part of the \<open>routed_dg_domain_exec\<close> locale below -- keeping it
+  is a free-standing fact, not part of the \<open>dg_domain_exec\<close> locale below -- keeping it
   outside means citing it never drags in that locale's \<open>empty_pred\<close>/transfer obligations.
 \<close>
 
@@ -67,7 +67,7 @@ lemma dg_reader_commute_gen_lifted_for:
      (map_lift (fun_of_resolved_st_q_for \<G>)) (map_lift (fun_of_resolved_st_q_for \<G>))"
   by unfold_locales (simp_all add: map_lift_sup)
 
-locale routed_dg_domain_exec =
+locale dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -460,7 +460,7 @@ lemma mc_step_exec_component [simp]:
    = transfer_lift empty_pred (tf_st a) d"
   by (simp add: exec_component_def lens_component_def local_spec_step_transfer_lift_tf_st)
 
-context routed_dg_domain_exec
+context dg_domain_exec
 begin
 
 theorem exec_component_sound:

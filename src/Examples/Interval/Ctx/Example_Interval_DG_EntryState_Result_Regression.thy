@@ -8,7 +8,7 @@ section \<open>Regression: the entry-state solved-result table\<close>
 
 text \<open>
   Acceptance witnesses for the entry-state result table
-  \<^const>\<open>routed_dg_pipeline.result\<close> of \<open>interval_es_rule\<close> at
+  \<^const>\<open>dg_pipeline.result\<close> of \<open>interval_es_rule\<close> at
   \<^const>\<open>Globals_Warrow\<close>, the context-sensitive reading of the entry-state D/G
   solution as an \<^type>\<open>analysis_result\<close>. The two programs under test are the ones the
   sibling entry-state regressions already solve: \<^const>\<open>gcall_prog\<close>, whose
@@ -241,7 +241,7 @@ lemma gcall_callee_ctx_at_values:
 
 text \<open>The same three contexts the solver routed with
   (\<^const>\<open>gcall_ctx_first\<close> and its siblings, each defined through
-  \<^const>\<open>routed_dg_pipeline.ctx_succ\<close> on the raw solved state), so an edge
+  \<^const>\<open>dg_pipeline.ctx_succ\<close> on the raw solved state), so an edge
   drawn from a recomputed context reaches the key the callee was actually
   materialized under.\<close>
 

@@ -49,7 +49,7 @@ definition coop_cfg :: cfg where
 
 subsection \<open>The Interval component\<close>
 
-interpretation coop_ivl: routed_dg_domain_exec
+interpretation coop_ivl: dg_domain_exec
   coop_gs coop_bot "ivl_tf_st_for coop_gs" "ivl_enter_st_for coop_gs"
   skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
   "enter_ivl_ci_for coop_gs" event_ivl
