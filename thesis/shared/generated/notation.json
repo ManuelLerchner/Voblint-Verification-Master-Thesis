@@ -34,7 +34,7 @@
           "scope": "global",
           "pretty_printed": true,
           "theory": "Abstract_Domain",
-          "file": "src/Abstract_Interpreter/Domain/Abstract_Domain.thy",
+          "file": "src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy",
           "href": "Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst",
           "session": "Voblint_Domain"
         }
@@ -68,52 +68,26 @@
       "local": null
     },
     {
-      "id": "gamma_state",
+      "id": "gamma_S",
       "group": "operator",
       "kind": "notation",
-      "reads": "the stores _σ_ represents",
-      "meaning": "stores _s_ with {s x \\<in> \\<gamma> (\\<sigma> x)} for every variable _x_",
+      "reads": "the stores the abstract state _d_ represents",
+      "meaning": "one symbol for every kind of state, selected by the type of _d_: a pointwise state gives the stores _s_ with {s x \\<in> \\<gamma> (d x)} for every variable _x_, a relational state the stores satisfying its pairs, and a lifted state represents no store when it is Bot",
       "forms": [
         {
-          "const": "gamma_state",
+          "const": "gamma_S",
           "cite": {
             "kind": "const",
-            "name": "gamma_state"
+            "name": "gamma_S"
           },
-          "symbol": "\\<lbrakk>\\<sigma>\\<rbrakk>",
+          "symbol": "\\<lbrakk>d\\<rbrakk>",
           "mixfix": "\\<lbrakk>_\\<rbrakk>",
-          "declaration": "definition",
+          "declaration": "consts",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "Nonrelational_State",
-          "file": "src/Abstract_Interpreter/Domain/Nonrelational_State.thy",
-          "href": "Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.gamma_state%7Cconst",
-          "session": "Voblint_Domain"
-        }
-      ],
-      "local": null
-    },
-    {
-      "id": "gamma_state_lift",
-      "group": "operator",
-      "kind": "notation",
-      "reads": "the stores _d_ represents",
-      "meaning": "concretization of a lifted state; the unreachable state Bot represents no store",
-      "forms": [
-        {
-          "const": "gamma_state_lift",
-          "cite": {
-            "kind": "const",
-            "name": "gamma_state_lift"
-          },
-          "symbol": "\\<lbrakk>d\\<rbrakk>\\<^sub>\\<bottom>",
-          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sub>\\<bottom>",
-          "declaration": "abbreviation",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "Nonrelational_Reachability",
-          "file": "src/Abstract_Interpreter/Domain/Nonrelational_Reachability.thy",
-          "href": "Voblint/Voblint_Domain/Nonrelational_Reachability.html#Nonrelational_Reachability.gamma_state_lift%7Cconst",
+          "theory": "State_Concretization",
+          "file": "src/Abstract_Interpreter/Domain/State/State_Concretization.thy",
+          "href": "Voblint/Voblint_Domain/State_Concretization.html#State_Concretization.gamma_S%7Cconst",
           "session": "Voblint_Domain"
         }
       ],
@@ -480,9 +454,9 @@
           "declaration": "class widening",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "Update_rules",
-          "file": "vendor/td-verification/Update_rules.thy",
-          "href": "Unsorted/TD/Update_rules.html#Update_rules.widening_class.widen%7Cconst",
+          "theory": "Warrowing",
+          "file": "vendor/td-verification/Warrowing.thy",
+          "href": "Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst",
           "session": "TD"
         },
         {
@@ -496,9 +470,9 @@
           "declaration": "class narrowing",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "Update_rules",
-          "file": "vendor/td-verification/Update_rules.thy",
-          "href": "Unsorted/TD/Update_rules.html#Update_rules.narrowing_class.narrow%7Cconst",
+          "theory": "Warrowing",
+          "file": "vendor/td-verification/Warrowing.thy",
+          "href": "Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst",
           "session": "TD"
         }
       ],
@@ -832,11 +806,7 @@
     },
     {
       "kind": "const",
-      "name": "gamma_state"
-    },
-    {
-      "kind": "const",
-      "name": "gamma_state_lift"
+      "name": "gamma_S"
     },
     {
       "kind": "const",

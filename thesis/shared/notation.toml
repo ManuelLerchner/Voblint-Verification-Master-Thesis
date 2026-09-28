@@ -55,15 +55,9 @@ forms = [{ const = "aval", args = ["e", "s"] }]
 
 [[entry]]
 group = "operator"
-reads = "the stores _σ_ represents"
-meaning = 'stores _s_ with {s x \<in> \<gamma> (\<sigma> x)} for every variable _x_'
-forms = [{ const = "gamma_state", args = ['\<sigma>'] }]
-
-[[entry]]
-group = "operator"
-reads = "the stores _d_ represents"
-meaning = "concretization of a lifted state; the unreachable state Bot represents no store"
-forms = [{ const = "gamma_state_lift", args = ["d"] }]
+reads = "the stores the abstract state _d_ represents"
+meaning = 'one symbol for every kind of state, selected by the type of _d_: a pointwise state gives the stores _s_ with {s x \<in> \<gamma> (d x)} for every variable _x_, a relational state the stores satisfying its pairs, and a lifted state represents no store when it is Bot'
+forms = [{ const = "gamma_S", args = ["d"] }]
 
 [[entry]]
 group = "operator"
