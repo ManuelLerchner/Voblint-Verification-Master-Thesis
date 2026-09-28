@@ -228,7 +228,7 @@ when $l' <= l$ and $u <= u'$ (#isaconst("less_eq_ivl")). The join $[l, u] ljoin 
 contain values neither operand does: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
 intersects the bounds (#isaconst("meet_ivl")). Voblint's type #isatype("ivl")
 keeps raw bound pairs, whose order and join agree with this description on
-non-empty intervals (@sec:domain-contract).
+non-empty intervals (@sec:interval-domain).
 
 At the loop head both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
 as is every interval that contains $[0, 5]$. An analysis aims for the most
@@ -494,8 +494,8 @@ the callee's entry reads (@sec:eq-seed). If evaluating the right-hand side for $
 contributions $(y_i, d_i)$, a post-solution must bound all of them:
 $ d lle sol(x), quad d_i lle sol(y_i) " for every emitted contribution". $
 In the running example of @fig:program-to-equations, without contexts, the
-call nodes of `bump(5)` and `bump(4)` emit $n in [5, 5]$ and $n in [4, 4]$ to
-`bump`'s seed, which must then bound their join $n in [4, 5]$.
+call nodes of `bump(5)` and `bump(4)` emit ${n |-> [5, 5]}$ and ${n |-> [4, 4]}$ to
+`bump`'s seed, which must then bound their join ${n |-> [4, 5]}$.
 The _certificate_ property established for the solver's result,
 #isaconst("part_post_solution"), requires them only on
 the part of the system the query depends on (@sec:certificate).
@@ -584,9 +584,9 @@ right-hand sides in both forms.
       rows: (auto, auto),
       row-gutter: 5mm,
       align: center,
-      [publish $n in [5, 5]$ to the seed of `bump`, \ then answer the caller's state $q$],
+      [publish ${n |-> [5, 5]}$ to the seed of `bump`, \ then answer the caller's state $q$],
       _tree((
-        ($ctor("Side")(italic("Seed")(italic("bump")), n in [5, 5])$, none),
+        ($ctor("Side")(italic("Seed")(italic("bump")), {n |-> [5, 5]})$, none),
         ($ctor("Answer")(q)$, none),
       )),
     ),

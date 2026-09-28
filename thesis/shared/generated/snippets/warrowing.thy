@@ -1,2 +1,2 @@
-(* vendor/td-verification/Update_rules.thy *)
+(* vendor/td-verification/Warrowing.thy *)
 class warrowing = widening + narrowing

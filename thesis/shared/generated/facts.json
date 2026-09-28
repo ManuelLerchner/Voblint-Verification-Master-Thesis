@@ -18,6 +18,12 @@
       "theory": "Backward_Domain",
       "why": "Chapter 5, the guard filter drops no store that passes the guard."
     },
+    "branch_step_rel_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>s \\<in> \\<lbrakk>d\\<rbrakk>;\n truthy (\\<lbrakk>b\\<rbrakk>\\<^sub>e s) = pol\\<rbrakk>\n\\<Longrightarrow> s \\<in> \\<lbrakk>branch_step_rel b pol d\\<rbrakk>",
+      "theory": "Rel_Order_Domain",
+      "why": "Chapter 5, the relational guard refinement drops no store that passes the guard."
+    },
     "compile.simps(4)": {
       "oracles": [],
       "statement": "compile \\<Pi> p (Seq c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) =\n       compile \\<Pi> p c1.0 (Statement (n + csize c1.0)) n;\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k (n + csize c1.0)\n in (n2, en1, E1 \\<union> E2, K1 \\<union> K2))",
@@ -90,7 +96,7 @@
       "oracles": [
         "Code_Generator.holds_by_evaluation"
       ],
-      "statement": "\\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub> v\n\\<subseteq> sign_rule.cgam mf_program (mf_reader (Inl (v, ())))",
+      "statement": "\\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub> v\n\\<subseteq> \\<lbrakk>map_lift (fun_of_resolved_st_q_for mf_gs)\n                      (mf_reader (Inl (v, ())))\\<rbrakk>",
       "theory": "Example_Sign_Mixed_Flow",
       "why": "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
     },

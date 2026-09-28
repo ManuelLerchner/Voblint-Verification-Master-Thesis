@@ -256,11 +256,10 @@ where the product may reduce.
 
 == A relational carrier <sec:relational>
 
-Every domain so far is pointwise, and a pointwise state forgets relations
-between variables. The type #isatype("relc") tests whether a relational local
-state needs any change to the generic interface. A value is an explicit empty element or a set of variable pairs, where
-$(x, y)$ asserts $x <= y$; the order is reverse inclusion. No function from
-variables to abstract integers appears in the carrier.
+Every domain so far is pointwise. The relational state #isatype("relc") of
+@sec:rel-state tests whether a relational local state needs any change to the
+generic interface. No function from variables to abstract integers appears in
+it.
 
 The specification #isaconst("rel_order_spec") discharges the analysis soundness
 contract #isalocale("analysis_contract") of the numeric analyses without any
@@ -270,9 +269,9 @@ On `if (x < y) { z = 1; } else { z = 0; }` with $x$ and $y$ unconstrained,
 Interval learns nothing at the true branch (#isathm("demo_ivl_x_at_branch")),
 while the relational carrier records $(x, y)$ there
 (#isathm("demo_rel_learns_xy")); both facts are proved by evaluating the
-generated solver inside Isabelle. The carrier forgets a variable on
-assignment, forgets everything across calls and does not close its pairs under
-transitivity, so it is not a useful analysis. It only shows that the proved
+generated solver inside Isabelle. The analysis forgets a variable on
+assignment and everything across calls, and its carrier does not close its
+pairs under transitivity, so it is not a useful analysis. It only shows that the proved
 interface admits a relational local state. Its session
 #isasession("Voblint_Analysis_Relational") builds on
 #isasession("Voblint_Exec") and does not import

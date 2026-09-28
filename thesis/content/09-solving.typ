@@ -384,7 +384,9 @@ implies emptiness. The carrier uses both directions. The specification collapses
 the empty states, so only an exact test lets the executable collapse commute
 with readback. A state the test keeps is then known to be nonempty
 (#isaconst("live_resolved_st_q")), and the numeric transfer commutes with
-readback only on such states.
+readback only on such states. The proof that the branch filter commutes with
+readback assumes a reductive intersection
+(#isathm("backward_domain_reductive.bfilter_st_lift_correct")).
 
 == Why termination stays a premise <sec:termination>
 

@@ -1,35 +1,69 @@
-# Layout of the domain inheritance tree in chapter 5 (fig:domain-carrier).
+# Layout of the domain inheritance trees in chapter 5, one table per figure.
 # The nodes, members and arrows are read from the lifted declarations, starting
 # at `roots` and following each declaration's parents; the build fails when a
 # declaration reached that way has no position here, or a position names none.
+#
+# `refs` names declarations another figure introduces: they are drawn by name
+# only, and their parents are not followed.
+#
+# `bends` gives the degrees by which a node's dashed edges to its constraining
+# class bend, and `parent-bends` those of single arrows to a parent, where a
+# straight edge would cross another node.
+#
+# `rows` has one table per row, from the most general declaration down to the
+# most derived; each value is the node's horizontal centre as a fraction of the
+# text width. Row heights are measured.
 
-# The declarations a domain instantiates.
+# fig:domain-carrier: what a domain supplies for evaluation, refinement and checks.
+[carrier]
 roots = [
   "numeric_domain",
   "sound_evaluator",
   "sound_truth_test",
   "sound_intersection",
   "backward_domain",
-  "sound_numeric_queries",
+  "abstract_check_domain",
 ]
-
-# Degrees by which a node's dashed edges to its constraining class bend, where a
-# straight edge would cross another node.
-bends = { sound_numeric_queries = -7, sound_truth_test = -8 }
-
-# One table per row, from the most general declaration down to the most
-# derived; each value is the node's horizontal centre as a fraction of the text
-# width. Row heights are measured.
+refs = []
+bends = {}
+parent-bends = { abstract_check_domain = { sound_numeric_queries = -20 } }
+# Box widths as a fraction of the text width, for nodes sharing a row whose
+# statements should wrap later than the default 0.3.
+widths = { backward_ops = 0.47 }
+# The instances listed at the most derived node each reaches, as snippet
+# names: a class instantiation, or an interpretation of a final locale.
+interpreted = { executable_domain = [
+  "relc_executable_domain",
+], numeric_domain = [
+  "sign_numeric_domain",
+  "ivl_numeric_domain",
+  "parity_numeric_domain",
+  "congruence_numeric_domain",
+  "int_dom_ext_numeric_domain",
+], backward_domain = [
+  "sign_backward_domain",
+  "ivl_backward_domain",
+  "congruence_backward_domain",
+  "int_dom_backward_never",
+  "int_dom_backward_once",
+  "int_dom_backward_fixpoint",
+], abstract_check_domain = [
+  "sign_check_domain",
+  "interval_check_domain",
+  "parity_check_domain",
+  "congruence_check_domain",
+  "int_check_domain",
+] }
 rows = [
   { ord = 0.36 },
   { preorder = 0.36 },
   { bot = 0.048, top = 0.17, order = 0.37, sup = 0.6 },
   { order_bot = 0.058, order_top = 0.205, widening = 0.82 },
   { semilattice_sup = 0.42, narrowing = 0.68 },
-  { bounded_semilattice_sup_bot = 0.11, warrowing = 0.9 },
+  { bounded_semilattice_sup_bot = 0.11, warrowing = 0.8 },
   { executable_domain = 0.32 },
-  { numeric_domain = 0.18, sound_evaluator = 0.55 },
-  { sound_intersection = 0.2, sound_numeric_queries = 0.78 },
-  { backward_ops = 0.26, sound_truth_test = 0.78 },
-  { backward_domain = 0.58 },
+  { numeric_domain = 0.2, sound_truth_test = 0.52 },
+  { sound_intersection = 0.2, sound_numeric_queries = 0.77 },
+  { backward_ops = 0.26, sound_evaluator = 0.71 },
+  { abstract_check_domain = 0.9, backward_domain = 0.52 },
 ]
