@@ -37,18 +37,18 @@ global_interpretation int_rule: dg_analysis_exec
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
        TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
-    bot int_classify_check
+    bot "int_classify_check Refine_Fixpoint"
     skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"
     "branch_int_dom_for Refine_Fixpoint" body_int_dom "return_int_dom Refine_Fixpoint"
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
 proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule int_is_sound_nonrelational_transfer)
+  case (1 \<G>) show ?case by (rule int_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule int_tf_st_for_commute[unfolded int_tf_abs_def])
+    by (rule int_tf_st_for_commute[unfolded int_tf.tf_abs_def])
 next
   case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule int_dom_enter_st_for_commute)
@@ -63,9 +63,9 @@ next
   case (7 eqs x) then show ?case
     by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
-  case (8 c d s) then show ?case by (rule int_classify_check_proved)
+  case (8 c d s) then show ?case by (rule int_tf.check.classify_check_proved)
 next
-  case (9 c d s) then show ?case by (rule int_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule int_tf.check.classify_check_refuted)
 next
   case 10 show ?case by (rule refl)
 next

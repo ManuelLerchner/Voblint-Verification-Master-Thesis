@@ -79,7 +79,7 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
 ```
 
 The last one is generated from `manifests/analyses.yaml` (each domain's `generated/`
-folder); Int adds `Int_Exec_Sound` to choose its transfer by refinement mode.
+folder).
 
 Everything under a `generated/` folder is emitted by
 `scripts/gen_analysis_assembly.py`: change the yaml or the generator, never the

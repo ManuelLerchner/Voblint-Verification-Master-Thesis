@@ -10,15 +10,15 @@ Executable witnesses live under
 | `Interval_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): bounds, order, lattice, and concretization |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws, then the `numeric_domain` instance, which needs them |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
-| `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |
-| `Interval_Transfer.thy` | edge transfer record and transfer soundness |
+| `Interval_Backward.thy` | inverse operators, `ivl_refine_ops`, and the `backward_domain_mono` certificate |
+| `Interval_Transfer.thy` | the `ivl_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Interval_Domain.thy` | aggregate import façade and small domain demonstrations |
 | `Interval_Exec.thy` | executable transfer mirror + commutation |
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
 | `Interval_Numeric_Queries.thy` | Interval's instance of `sound_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
-| `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
+| `Interval_Classify.thy` | executable tests of the derived check classifier |
 | `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 
 ## The contextual configurations

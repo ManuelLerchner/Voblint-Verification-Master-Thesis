@@ -80,6 +80,8 @@ ROLES = [
     "tf_abs_def",
     "enter_commute",
     "classifier",
+    "classify_proved",
+    "classify_refuted",
     "init_gamma",
 ]
 FACT_ROLES = {
@@ -88,7 +90,8 @@ FACT_ROLES = {
     "tf_abs_def",
     "enter_commute",
     "init_gamma",
-    "classifier",
+    "classify_proved",
+    "classify_refuted",
 }
 
 # How an analysis runs as one field of the combined state. Each role is a term
@@ -216,6 +219,8 @@ class Domain:
             "tf_abs_def": f"{i}_tf.tf_abs_def",
             "enter_commute": f"{i}_enter_st_for_commute",
             "classifier": f"{self.name.lower()}_classify_check",
+            "classify_proved": f"{i}_tf.check.classify_check_proved",
+            "classify_refuted": f"{i}_tf.check.classify_check_refuted",
             "init_gamma": f"{self.name.lower()}_cinit_gamma",
         }
         roles.update(self.overrides)
@@ -255,7 +260,7 @@ class Domain:
             "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
             "single_entry": "single_entry_ask_assign[OF single_entry_exec_spec]",
             "init_sound": f"{p}_rule.init_sound",
-            "answer_sound": f"{p}_eval_answer_sound",
+            "answer_sound": f"{self.impl}_tf.check.eval_answer_sound",
         }
         roles.update(self.field_overrides)
         return roles
@@ -358,9 +363,9 @@ def registration(dom, ctx):
         "  case (7 eqs x) then show ?case",
         *rule_step(f"{INTERP}.finite_stabl_solve"),
         "next",
-        f"  case (8 c d s) then show ?case by (rule {r['classifier']}_proved)",
+        f"  case (8 c d s) then show ?case by (rule {r['classify_proved']})",
         "next",
-        f"  case (9 c d s) then show ?case by (rule {r['classifier']}_refuted)",
+        f"  case (9 c d s) then show ?case by (rule {r['classify_refuted']})",
         "next",
         "  case 10 show ?case by (rule refl)",
         "next",

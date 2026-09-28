@@ -38,8 +38,6 @@ domains:
   - name: Parity
     value_type: parity
     imports: [Parity_Sound, Parity_Classify, Parity_Transfer, Parity_Exec]
-    roles:
-      tf_commute: parity_tf_st_for_commute_if_live
 
   - name: Int
     value_type: int_dom
@@ -59,10 +57,10 @@ domains:
       return: {const: return_int_dom, args: [Refine_Fixpoint]}
       enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Fixpoint]}
       event: event_int_dom
-      transfer_sound: int_is_sound_nonrelational_transfer
-      tf_commute: int_tf_st_for_commute
-      tf_abs_def: int_tf_abs_def
       enter_commute: int_dom_enter_st_for_commute
+      classifier: {const: int_classify_check, args: [Refine_Fixpoint]}
+    field:
+      answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st $q)'
 
   - name: Congruence
     value_type: congruence

@@ -133,18 +133,20 @@ lemma checks_ivl_ex_precision_over_sign:
 corollary checks_ivl_ex_first_check_holds:
   assumes "t \<in> checks_ivl_ex_reach (Statement 2)"
   shows "truthy (\<lbrakk>Less (V (STR ''x'')) (N 11)\<rbrakk>\<^sub>e t)"
-  using assms checks_ivl_ex_node_sound interval_classify_check_proved[OF checks_ivl_ex_classify_2]
+  using assms checks_ivl_ex_node_sound
+    ivl_tf.check.classify_check_proved[OF checks_ivl_ex_classify_2]
   by blast
 
 corollary checks_ivl_ex_second_check_refuted:
   assumes "t \<in> checks_ivl_ex_reach (Statement 3)"
   shows "\<not> truthy (\<lbrakk>Less (V (STR ''x'')) (N 0)\<rbrakk>\<^sub>e t)"
-  using assms checks_ivl_ex_node_sound interval_classify_check_refuted[OF checks_ivl_ex_classify_3]
+  using assms checks_ivl_ex_node_sound
+    ivl_tf.check.classify_check_refuted[OF checks_ivl_ex_classify_3]
   by blast
 
 lemma checks_ivl_ex_proven_check_discharged:
   "interval_checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_env"
-proof (rule interval_checks_provenI)
+proof (rule ivl_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then have v_eq: "v = Statement 2" and cnd_eq: "cnd = Less (V (STR ''x'')) (N 11)" by auto
@@ -154,7 +156,7 @@ qed
 
 lemma checks_ivl_ex_proven_check_checks_proven:
   "checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_reach"
-  by (rule interval_checks_proven_sound)
+  by (rule ivl_tf.check.abstract_checks_proven_sound)
      (use checks_ivl_ex_node_sound checks_ivl_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: reading \<open>5\<close> for \<open>x\<close> satisfies the guard, so the all-zero initial store

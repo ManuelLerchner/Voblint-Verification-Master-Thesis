@@ -47,7 +47,7 @@ proof (rule dg_analysis_exec.intro, goal_cases)
 next
   case (2 \<G> a s) then show ?case
     unfolding fun_of_exec_dg_st_for_def
-    by (rule parity_tf_st_for_commute_if_live[unfolded parity_tf.tf_abs_def])
+    by (rule parity_tf_st_for_commute[unfolded parity_tf.tf_abs_def])
 next
   case (3 \<G> ci s) show ?case
     unfolding fun_of_exec_dg_st_for_def by (rule parity_enter_st_for_commute)
@@ -62,9 +62,9 @@ next
   case (7 eqs x) then show ?case
     by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
-  case (8 c d s) then show ?case by (rule parity_classify_check_proved)
+  case (8 c d s) then show ?case by (rule parity_tf.check.classify_check_proved)
 next
-  case (9 c d s) then show ?case by (rule parity_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule parity_tf.check.classify_check_refuted)
 next
   case 10 show ?case by (rule refl)
 next

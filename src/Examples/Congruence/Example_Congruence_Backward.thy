@@ -1,5 +1,5 @@
 theory Example_Congruence_Backward
-  imports Voblint_Analysis_Congruence.Congruence_Backward
+  imports Voblint_Analysis_Congruence.Congruence_Transfer
 begin
 
 text \<open>

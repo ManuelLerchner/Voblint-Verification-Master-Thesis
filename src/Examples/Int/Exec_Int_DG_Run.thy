@@ -81,7 +81,7 @@ where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
+       (int_tf_st_for Refine_Never int_ex_gs) (int_dom_enter_st_for Refine_Never int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_never_result:
@@ -96,7 +96,7 @@ where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
+       (int_tf_st_for Refine_Once int_ex_gs) (int_dom_enter_st_for Refine_Once int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_once_result:

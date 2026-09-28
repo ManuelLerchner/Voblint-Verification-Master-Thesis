@@ -1,0 +1,14 @@
+// PARAM: --analysis parity
+// x == 0 && x == 1 is self-contradictory (no integer is both), and so is
+// y == 0 && y == 1, so this branch is concretely unreachable. Parity's
+// equality inverse gives both sides of a guard that held the meet of their
+// parities: x == 1 makes x odd, then x == 0 meets odd with even and leaves
+// Bottom. The y arm empties the same way, the lifted filter canonicalizes each
+// empty arm to Bottom before the join, and the branch is proved dead.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if ((x == 0 && x == 1) || (y == 0 && y == 1)) {
+    __voblint_check(x == 5); // NOWARN (unreachable)
+  }
+}

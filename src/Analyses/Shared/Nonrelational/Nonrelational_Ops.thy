@@ -1,6 +1,7 @@
 theory Nonrelational_Ops
   imports
     Special_Ops
+    Exec_Backward
     "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Exec.Exec_St_Restriction_Refinement"
 begin
@@ -8,58 +9,63 @@ begin
 section \<open>The primitives one abstract value per variable is built from\<close>
 
 text \<open>
-  Say what an expression evaluates to, what the whole-value element is, how the
-  two special calls combine two values, and how a guard filters the executable
-  store the solver actually holds --- and every edge of a compiled graph is
-  already determined up to the guard. \<open>nonrelational_ops\<close> is that bundle, written
-  once per domain and read by both layers: the abstract transfer in
-  \<open>Nonrelational_Transfer\<close>, which fixes one such bundle, and the executable
-  mirror below.
+  Say what an expression evaluates to, which comparisons the domain decides, how
+  a guard refines its operands, how the two special calls combine two values,
+  and what the whole-value element is --- and every edge of a compiled graph is
+  determined. \<open>nonrelational_ops\<close> is that bundle of primitive choices, written
+  once per domain. Everything else is derived from it: the guard filter on the
+  executable store here, the abstract branch and the transfer in
+  \<open>Nonrelational_Transfer\<close>, which certifies one such bundle.
 
   Two constructions follow from it here. \<open>generic_enter_st_for\<close> is procedure
   entry on the executable store: evaluate the actuals in the caller's state,
   reset the callee frame to the whole-value element, bind the formals.
   \<open>generic_tf_st_for\<close> is the per-edge executable step, and
-  \<open>generic_tf_st_for_commute\<close> says it agrees with \<open>generic_tf_abs\<close> --- the
-  abstract dispatcher the same bundle determines --- once the executable store
-  is read back. Only the guard case needs anything further: \<open>n_bfilter\<close> must
-  commute with the abstract branch on the state at hand.
+  \<open>generic_tf_st_for_commute\<close> says it agrees with the abstract dispatcher
+  \<open>generic_tf_abs\<close> once the executable store is read back, provided the guard
+  filter commutes with the abstract branch on the state at hand.
 
-  The abstract branch is the one primitive the bundle does not carry, and the
-  reason is code generation. A bundle is a single value, so anything in it is
-  serialized wherever the bundle is; an abstract branch runs through
-  \<open>is_empty_state\<close>, which quantifies over \<^typ>\<open>vname\<close> and therefore has no
-  code equation by design. It is passed alongside the bundle instead --- as
-  \<open>generic_tf_abs\<close>'s second argument, and as \<open>nonrelational_transfer\<close>'s one
-  remaining loose parameter. \<open>n_bfilter\<close> is not its image either way: the
-  abstract branch works on a function from variable to value, the executable
-  one on \<^typ>\<open>'a resolved_st_q\<close>, and neither is computable from the other. A
-  domain whose branch degenerates to the identity --- Parity's does --- supplies
-  the identity for both rather than needing an option type, exactly as
-  \<^theory>\<open>Voblint_Nonrelational.Special_Ops\<close> lets a domain supply a trivial
-  primitive.
+  \<open>generic_tf_abs\<close> takes the abstract branch as a separate argument so this
+  commutation lemma needs no soundness locale. For a certified bundle the branch
+  is not an independent choice: \<open>sound_nonrelational_ops\<close> instantiates
+  it with the backward branch of \<open>n_aval\<close> and \<open>n_refine\<close> and discharges the
+  guard obligation once, generically.
 \<close>
 
 text \<open>
-  Constrained to \<open>'a::bot\<close> only -- exactly what \<^const>\<open>fun_of_resolved_st_q_for\<close>/
-  \<^const>\<open>bind_formals_resolved_q\<close>/\<^const>\<open>enter_frame_D_resolved_q\<close> actually
-  need -- rather than \<open>'a::numeric_domain\<close>. This is deliberate, not merely
-  weaker-than-necessary: \<open>numeric_domain\<close> also fixes \<open>gamma\<close> as a class
-  operation, and code generation for a \<open>'a::numeric_domain\<close>-constrained
-  definition must resolve every fixed operation's code equation for the
-  concrete type, including \<open>gamma\<close>, even though nothing here ever calls it.
-  \<open>ivl\<close>'s own \<open>gamma_ivl\<close> code equation is not actually well-sorted
-  (\<open>int\<close> is not of sort \<open>enum\<close>), so pulling in that unused obligation broke
-  unrelated \<open>by eval\<close> proofs downstream that never triggered it before.
-  This theory is purely about executable structure, not soundness, so it
-  has no reason to need \<open>gamma\<close> at all.
+  The bundle is constrained to \<open>'a::bot\<close> and the executable step to
+  \<open>'a::executable_domain\<close>, never \<open>'a::numeric_domain\<close>. \<open>numeric_domain\<close> fixes
+  \<open>gamma\<close> as a class operation, and code generation for a definition at that
+  sort must resolve \<open>gamma\<close>'s code equation for the concrete type even though
+  nothing here calls it. \<open>ivl\<close>'s \<open>gamma_ivl\<close> has no well-sorted code equation
+  (\<open>int\<close> is not of sort \<open>enum\<close>), so that unused obligation breaks unrelated
+  \<open>by eval\<close> proofs downstream.
 \<close>
+
+text \<open>
+  The comparisons a domain decides, each answering \<open>None\<close> when it cannot tell.
+\<close>
+
+record 'a query_ops =
+  q_less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
+  q_eq   :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
 
 record 'a::bot nonrelational_ops =
   n_aval    :: "exp => (vname => 'a) => 'a"
+  n_query   :: "'a query_ops"
+  n_refine  :: "'a refine_ops"
   n_special :: "'a special_ops"
-  n_bfilter :: "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
   n_top     :: "'a"
+
+text \<open>
+  The guard filter on the executable store is derived from the evaluator and the
+  refinement operations, never supplied: the bundle determines it.
+\<close>
+
+abbreviation n_bfilter ::
+  "'a::executable_domain nonrelational_ops
+   \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q" where
+  "n_bfilter ops \<equiv> branch_st_with (n_aval ops) (n_refine ops)"
 
 subsection \<open>Procedure entry\<close>
 
@@ -74,7 +80,7 @@ definition generic_enter_st_for ::
 subsection \<open>The per-edge step, on both stores\<close>
 
 fun generic_tf_st_for ::
-    "'a::bot nonrelational_ops => (vname => bool) => edge_action =>
+    "'a::executable_domain nonrelational_ops => (vname => bool) => edge_action =>
        'a resolved_st_q => 'a resolved_st_q" where
     "generic_tf_st_for ops \<G> EA_Nop s = s"
   | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
@@ -138,7 +144,7 @@ text \<open>
 \<close>
 
 theorem generic_tf_st_for_commute:
-  fixes ops :: "'a::bot nonrelational_ops"
+  fixes ops :: "'a::executable_domain nonrelational_ops"
   assumes branch:
     "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
                br b pol (fun_of_resolved_st_q_for \<G> s)"

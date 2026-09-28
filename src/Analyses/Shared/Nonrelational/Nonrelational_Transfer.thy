@@ -2,6 +2,7 @@ theory Nonrelational_Transfer
   imports
     Nonrelational_Ops
     "Voblint_Framework.DG_Local_State_Spec"
+    "Voblint_Framework.Check_Answer"
     "Voblint_VIMP.VIMP_Globals"
 begin
 
@@ -10,39 +11,49 @@ section \<open>What each kind of CFG edge does to one abstract value per variabl
 text \<open>
   A non-relational domain gives every variable one abstract value. Say what an
   expression evaluates to, what the whole-value element is, what \<open>Min\<close>/\<open>Max\<close> do,
-  and how a guard filters a store, and every remaining edge operation is already
+  and how a guard refines its operands, and every edge operation is already
   fixed: an assignment overwrites its target with the evaluated right-hand side, a
-  return writes the same into the return variable, procedure entry resets the
-  callee frame to the whole-value element and binds the formals, and skip,
+  return writes the same into the return variable, a guard runs the backward
+  branch the refinement operations determine, procedure entry resets the callee
+  frame to the whole-value element and binds the formals, and skip,
   procedure-body entry and check observation leave the store alone.
 
-  This theory states those operations once and proves each of them sound --- a
-  concrete store described by the input is still described by the output --- and
-  monotone, ending in the transfer contract the analysis framework asks a domain
-  for. A domain interprets \<open>nonrelational_transfer\<close> at the primitives its own
-  theories already own and names the results; it proves nothing here again.
-
-  The first four primitives travel as one \<^type>\<open>nonrelational_ops\<close> bundle, the same
-  value the executable mirror in \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close>
-  reads, so a domain states its evaluator and its whole-value element once
-  rather than once per layer. \<open>br\<close> stays a separate parameter: it is where a
-  domain's backward reasoning enters, and it is the one primitive the bundle
-  cannot carry, because a bundle is serialized wherever it is used and an
-  abstract branch has no code equation.
+  \<open>sound_nonrelational_ops\<close> is the certificate for one \<^type>\<open>nonrelational_ops\<close>
+  bundle: the special operations are sound, the refinement operations form a
+  reductive backward domain over the bundle's evaluator, and the queries are
+  sound checks over the same evaluator. From it this theory states every edge
+  operation once and proves each sound --- a concrete store described by the
+  input is still described by the output --- ending in the transfer contract the
+  analysis framework asks a domain for. \<open>mono_nonrelational_ops\<close> adds
+  monotonicity for a bundle whose evaluator, special operations and refinement
+  are monotone. A domain proves its capability certificates, interprets one of
+  the two locales once at its bundle, and names the results; it proves nothing
+  here again.
 
   \<open>tf_abs\<close> is the per-edge dispatcher these operations add up to, and
-  \<open>tf_abs_eq_generic\<close> identifies it with \<^const>\<open>generic_tf_abs\<close> --- the
-  dispatcher the same bundle determines --- which is what lets \<open>tf_st_for_commute\<close>
-  inherit the executable mirror's commutation instead of restating it.
+  \<open>tf_abs_eq_generic\<close> identifies it with \<^const>\<open>generic_tf_abs\<close> at the derived
+  branch, which is what lets \<open>tf_st_for_commute\<close> inherit the executable mirror's
+  commutation instead of restating it.
 \<close>
 
-locale nonrelational_transfer = mono_special_ops "n_special ops" "n_aval ops"
+locale sound_nonrelational_ops =
+  sound_special_ops "n_special ops" "n_aval ops"
+  + backward: backward_domain_reductive "r_intersect (n_refine ops)" "n_aval ops"
+      "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
+      "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
+  + check: abstract_check_domain "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
+      "n_aval ops"
   for ops :: "'a::numeric_domain nonrelational_ops" +
-  fixes br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes top_eq: "n_top ops = top"
-    and br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
-    and br_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> br b pol \<sigma>1 \<le> br b pol \<sigma>2"
 begin
+
+text \<open>The guard is the branch the refinement operations derive.\<close>
+
+abbreviation br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "br \<equiv> backward.branch"
+
+lemma br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
+  by (rule backward.branch_sound)
 
 text \<open>The whole-value element is the class \<^const>\<open>top\<close>, so its concretization is
   everything by \<open>gamma_top\<close> rather than by an assumption of its own.\<close>
@@ -91,20 +102,6 @@ lemma ret_sound:
   shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<lbrakk>ret e p \<sigma>\<rbrakk>"
   using assign_sound[OF \<G>] \<G> by (cases e) (simp_all add: ret_def)
 
-lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
-  unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
-
-lemma skip_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> skip \<sigma>1 \<le> skip \<sigma>2"
-  by (simp add: skip_def)
-
-lemma body_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> body p \<sigma>1 \<le> body p \<sigma>2"
-  by (simp add: body_def)
-
-lemma event_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> event evt \<sigma>1 \<le> event evt \<sigma>2"
-  by (simp add: event_def)
-
-lemma ret_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ret e p \<sigma>1 \<le> ret e p \<sigma>2"
-  by (cases e) (simp_all add: ret_def assign_mono)
 
 subsection \<open>Classifier-parametric procedure entry\<close>
 
@@ -143,11 +140,6 @@ lemma enter_ci_for_sound:
   using enter_for_sound[OF \<G>, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
   by (simp add: enter_ci_for_def)
 
-lemma enter_for_mono:
-  assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_for \<G> xs es \<sigma>1 \<le> enter_for \<G> xs es \<sigma>2"
-  unfolding enter_for_def
-  by (rule enter_binding_mono[OF assms]) (rule aval_abs_mono[OF assms])
 
 subsection \<open>The transfer contract, and the per-edge dispatcher\<close>
 
@@ -205,16 +197,99 @@ proof (rule ext, rule ext)
        (simp_all add: op_defs top_eq split: special_call.splits option.splits)
 qed
 
+text \<open>
+  The derived guard filter is the backward domain's executable branch, so it
+  commutes with the abstract guard on every live store, and the whole
+  executable step with it.
+\<close>
+
+lemma n_bfilter_eq: "n_bfilter ops = backward.branch_st"
+  using backward.branch_st_with_ops by simp
+
 theorem tf_st_for_commute:
-  assumes branch:
-    "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
-               br b pol (fun_of_resolved_st_q_for \<G> s)"
+  assumes "live_resolved_st_q \<G> s"
   shows
     "fun_of_resolved_st_q_for \<G> (generic_tf_st_for ops \<G> a s) =
      tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding tf_abs_eq_generic
-  by (rule generic_tf_st_for_commute) (rule branch)
+  by (rule generic_tf_st_for_commute)
+     (simp add: n_bfilter_eq backward.branch_st_commute[OF assms])
 
 end
+
+section \<open>Monotone bundles\<close>
+
+text \<open>
+  Monotonicity is a separate certificate: the transfer contract asks only for
+  soundness, and a bundle whose evaluator or refinement is not monotone (Int's
+  fixpoint refinement) is still a sound one. A monotone bundle additionally has
+  monotone special operations and a monotone backward domain, and then every
+  derived operation is monotone.
+\<close>
+
+locale mono_nonrelational_ops = sound_nonrelational_ops ops
+  + mono_special_ops "n_special ops" "n_aval ops"
+  + backward: backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+      "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
+      "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
+  for ops :: "'a::numeric_domain nonrelational_ops"
+begin
+
+lemma br_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> br b pol \<sigma>1 \<le> br b pol \<sigma>2"
+  by (rule backward.branch_mono)
+
+lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
+  unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
+
+lemma skip_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> skip \<sigma>1 \<le> skip \<sigma>2"
+  by (simp add: skip_def)
+
+lemma body_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> body p \<sigma>1 \<le> body p \<sigma>2"
+  by (simp add: body_def)
+
+lemma event_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> event evt \<sigma>1 \<le> event evt \<sigma>2"
+  by (simp add: event_def)
+
+lemma ret_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ret e p \<sigma>1 \<le> ret e p \<sigma>2"
+  by (cases e) (simp_all add: ret_def assign_mono)
+
+lemma enter_for_mono:
+  assumes "\<sigma>1 \<le> \<sigma>2"
+  shows "enter_for \<G> xs es \<sigma>1 \<le> enter_for \<G> xs es \<sigma>2"
+  unfolding enter_for_def
+  by (rule enter_binding_mono[OF assms]) (rule aval_abs_mono[OF assms])
+
+end
+
+subsection \<open>Certifying a bundle from its capability certificates\<close>
+
+lemma sound_nonrelational_opsI:
+  assumes "sound_special_ops (n_special ops) (n_aval ops)"
+    and "backward_domain_reductive (r_intersect (n_refine ops)) (n_aval ops)
+           (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
+           (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
+    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
+    and "n_top ops = top"
+  shows "sound_nonrelational_ops ops"
+  by (intro sound_nonrelational_ops.intro sound_nonrelational_ops_axioms.intro assms)
+
+lemma mono_nonrelational_opsI:
+  assumes special: "mono_special_ops (n_special ops) (n_aval ops)"
+    and backward: "backward_domain_mono (r_intersect (n_refine ops)) (n_aval ops)
+           (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
+           (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
+    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
+    and "n_top ops = top"
+  shows "mono_nonrelational_ops ops"
+proof -
+  interpret mono_special_ops "n_special ops" "n_aval ops" by (rule special)
+  interpret backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+      "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
+      "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
+    by (rule backward)
+  show ?thesis
+    by (intro mono_nonrelational_ops.intro sound_nonrelational_opsI assms)
+       unfold_locales
+qed
 
 end

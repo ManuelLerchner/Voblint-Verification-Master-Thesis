@@ -4,85 +4,24 @@ theory Int_Transfer
     Int_Warrowing
     "Voblint_Analysis_Sign.Sign_Special"
     "Voblint_Analysis_Parity.Parity_Special"
-    "Voblint_Framework.DG_Local_State_Spec"
+    "Voblint_Nonrelational.Nonrelational_Transfer"
     "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Composite integer-domain transfer functions\<close>
 
 text \<open>
-  Registers the composite Sign/Interval/Parity/Congruence domain against the
-  framework's transfer contract (\<^locale>\<open>sound_nonrelational_transfer\<close>), mirroring
-  Interval's and Sign's own registrations. One registration covers all three
-  refinement modes, since every operation already takes \<open>mode\<close> as an argument
-  and \<open>branch_int_dom_for\<close> dispatches the one whose name does not.
+  The composite Sign/Interval/Parity/Congruence domain is one
+  \<^type>\<open>nonrelational_ops\<close> bundle per refinement mode, \<open>int_dom_ops mode\<close>, and
+  one interpretation of \<^locale>\<open>sound_nonrelational_ops\<close> parametric in the mode
+  derives the filters, the branch, the check classifier and every transfer
+  function from it. This theory states only what is Int's own: the \<open>min\<close>/\<open>max\<close>
+  primitives, the special-call dispatch, and the certificates.
 
-  What stays asymmetric is monotonicity: \<open>Int_Backward\<close> put
-  \<open>Refine_Fixpoint\<close> on the weaker \<^locale>\<open>backward_domain\<close> locale (no
-  monotonicity theorem for \<open>refine_fix\<close>), so only \<open>Never\<close> and \<open>Once\<close>
-  get a monotonicity lemma below.
+  What stays asymmetric is monotonicity: \<open>refine_fix\<close> has no monotonicity theorem,
+  so the interpretation is the sound one, and \<open>int_dom_mono_ops\<close> certifies the
+  monotone bundle for \<open>Refine_Never\<close> and \<open>Refine_Once\<close> only.
 \<close>
-
-
-subsection \<open>Guard refinement\<close>
-
-text \<open>
-  Guard refinement delegates to the generic \<open>bfilter\<close> proved sound per mode
-  by \<^theory>\<open>Voblint_Analysis_Int.Int_Backward\<close>'s three interpretations.
-\<close>
-
-lemma bfilter_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_never b res \<sigma>\<rbrakk>"
-  using int_dom_backward_never.bfilter_sound by simp
-
-lemma bfilter_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_once b res \<sigma>\<rbrakk>"
-  using int_dom_backward_once.bfilter_sound by simp
-
-lemma bfilter_int_dom_fixpoint_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_fixpoint b res \<sigma>\<rbrakk>"
-  using int_dom_backward_fixpoint.bfilter_sound by simp
-
-text \<open>
-  \<open>branch_int_dom_*\<close> is the composite domain's Goblint-aligned branch
-  operation per mode: a forward \<open>int_dom_tobool\<close> feasibility check ahead of
-  \<open>bfilter_int_dom_*\<close>, proved once generically as
-  @{thm [source] backward_domain.branch_sound}.
-\<close>
-
-lemma branch_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_never b res \<sigma>\<rbrakk>"
-  using int_dom_backward_never.branch_sound by simp
-
-lemma branch_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
-  using int_dom_backward_once.branch_sound by simp
-
-text \<open>
-  \<open>branch_int_dom_fixpoint\<close>'s own soundness (\<open>branch_int_dom_fixpoint_sound\<close>)
-  is proved directly in \<open>Int_Backward.thy\<close>, next to its definition: unlike
-  \<open>Never\<close>/\<open>Once\<close>, \<open>Refine_Fixpoint\<close> names an explicitly local raw
-  feasible-gated-\<open>bfilter\<close> pair rather than the shared, pollution-fixed
-  \<open>branch\<close>, so there is no generic \<open>backward_domain.branch_sound\<close> instance
-  to reuse here.
-\<close>
-
-subsection \<open>Abstract assignment\<close>
-
-definition assign_int_dom ::
-    "refine_mode => vname => exp => (vname => int_dom) => (vname => int_dom)"
-where
-  "assign_int_dom mode x a \<sigma> = \<sigma>(x := aval_int_dom mode a \<sigma>)"
-
-lemma assign_int_dom_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign_int_dom mode x a \<sigma>\<rbrakk>"
-  by (frule aval_int_dom_sound) (auto simp: gamma_state_def assign_int_dom_def)
-
-lemma assign_int_dom_mono:
-  assumes "mode ~= Refine_Fixpoint" and "sigma1 <= sigma2"
-  shows "assign_int_dom mode x a sigma1 <= assign_int_dom mode x a sigma2"
-  using assms
-  by (simp add: assign_int_dom_def aval_int_dom_mono le_funD le_funI)
 
 subsection \<open>Min/Max special-call primitives\<close>
 
@@ -206,265 +145,102 @@ lemma gamma_int_dom_top: "gamma_int_dom (top :: int_dom) = UNIV"
   by (simp add: gamma_int_dom_def top_int_dom_ext_def top_ivl_def
         gamma_sign_top gamma_ivl_top gamma_parity_top)
 
-lemma special_int_dom_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
-  shows "s(x := v) \<in> \<lbrakk>special_int_dom mode sc x \<sigma>\<rbrakk>"
-proof (cases sc)
-  case Nondet_Int
-  show ?thesis
-    unfolding Nondet_Int gamma_state_def
-    using \<G> unfolding gamma_state_def
-    by (simp add: gamma_int_dom_top)
-next
-  case (Min a b)
-  have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using \<G> unfolding gamma_state_def by simp
-  have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
-    by (rule aval_int_dom_sound[OF \<G>])
-  have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
-    by (rule aval_int_dom_sound[OF \<G>])
-  have v: "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-    using sr unfolding Min by simp
-  have "v : gamma_int_dom (int_dom_min mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
-    unfolding v by (rule int_dom_min_sound[OF Va Vb])
-  then show ?thesis
-    unfolding Min gamma_state_def using V by (auto simp: gamma_int_dom_def)
-next
-  case (Max a b)
-  have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
-    using \<G> unfolding gamma_state_def by simp
-  have Va: "\<lbrakk>a\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode a \<sigma>)"
-    by (rule aval_int_dom_sound[OF \<G>])
-  have Vb: "\<lbrakk>b\<rbrakk>\<^sub>e s : gamma_int_dom (aval_int_dom mode b \<sigma>)"
-    by (rule aval_int_dom_sound[OF \<G>])
-  have v: "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-    using sr unfolding Max by simp
-  have "v : gamma_int_dom (int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
-    unfolding v by (rule int_dom_max_sound[OF Va Vb])
-  then show ?thesis
-    unfolding Max gamma_state_def using V by (auto simp: gamma_int_dom_def)
-qed
+definition int_dom_special_ops :: "refine_mode \<Rightarrow> int_dom special_ops" where
+  "int_dom_special_ops mode =
+     \<lparr> special_min = int_dom_min mode, special_max = int_dom_max mode \<rparr>"
 
-lemma special_int_dom_mono:
-  assumes mode: "mode ~= Refine_Fixpoint" and le: "sigma1 <= sigma2"
-  shows "special_int_dom mode sc x sigma1 <= special_int_dom mode sc x sigma2"
-proof (cases sc)
-  case Nondet_Int
-  then show ?thesis
-    using le by (auto simp: le_fun_def)
-next
-  case (Min a b)
-  have A: "aval_int_dom mode a sigma1 <= aval_int_dom mode a sigma2"
-    using mode le by (rule aval_int_dom_mono)
-  have B: "aval_int_dom mode b sigma1 <= aval_int_dom mode b sigma2"
-    using mode le by (rule aval_int_dom_mono)
-  have M: "int_dom_min mode (aval_int_dom mode a sigma1) (aval_int_dom mode b sigma1)
-          <= int_dom_min mode (aval_int_dom mode a sigma2) (aval_int_dom mode b sigma2)"
-    by (rule int_dom_min_mono[OF mode A B])
-  show ?thesis
-    unfolding Min using le M by (auto simp: le_fun_def)
-next
-  case (Max a b)
-  have A: "aval_int_dom mode a sigma1 <= aval_int_dom mode a sigma2"
-    using mode le by (rule aval_int_dom_mono)
-  have B: "aval_int_dom mode b sigma1 <= aval_int_dom mode b sigma2"
-    using mode le by (rule aval_int_dom_mono)
-  have M: "int_dom_max mode (aval_int_dom mode a sigma1) (aval_int_dom mode b sigma1)
-          <= int_dom_max mode (aval_int_dom mode a sigma2) (aval_int_dom mode b sigma2)"
-    by (rule int_dom_max_mono[OF mode A B])
-  show ?thesis
-    unfolding Max using le M by (auto simp: le_fun_def)
-qed
+lemma int_dom_special_ops_simps [simp]:
+  "special_min (int_dom_special_ops mode) = int_dom_min mode"
+  "special_max (int_dom_special_ops mode) = int_dom_max mode"
+  by (simp_all add: int_dom_special_ops_def)
 
-subsection \<open>Skip, body-entry, return, and event\<close>
+lemma int_dom_sound_special_ops: "sound_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro sound_special_ops.intro int_dom_sound_evaluator sound_special_ops_axioms.intro)
+     (simp_all add: int_dom_min_sound int_dom_max_sound)
 
-text \<open>Composite \<open>int_dom\<close> has no lifecycle-specific abstract information,
-  mirroring every other current domain: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close>/\<open>event\<^sup>#\<close> are
-  the identity, and \<open>return\<^sup>#\<close> reuses \<open>assign_int_dom\<close>.\<close>
+lemma int_dom_mono_special_ops:
+  assumes "mode \<noteq> Refine_Fixpoint"
+  shows "mono_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro mono_special_ops.intro int_dom_sound_special_ops int_dom_mono_evaluator[OF assms]
+        mono_special_ops_axioms.intro)
+     (simp_all add: int_dom_min_mono int_dom_max_mono assms)
 
-definition skip_int_dom :: "(vname => int_dom) => (vname => int_dom)" where
-  "skip_int_dom \<sigma> = \<sigma>"
+lemma special_int_dom_eq_transfer:
+  "sound_special_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
+     = special_int_dom mode sc x \<sigma>"
+  by (cases sc)
+     (simp_all add: sound_special_ops.special_transfer_def[OF int_dom_sound_special_ops])
 
-definition body_int_dom :: "pname => (vname => int_dom) => (vname => int_dom)" where
-  "body_int_dom p \<sigma> = \<sigma>"
-
-definition event_int_dom :: "analysis_event => (vname => int_dom) => (vname => int_dom)" where
-  "event_int_dom ev \<sigma> = \<sigma>"
-
-definition return_int_dom ::
-    "refine_mode => exp option => pname => (vname => int_dom) => (vname => int_dom)"
-where
-  "return_int_dom mode e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_int_dom mode ret_var a \<sigma>)"
-
-lemma skip_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_int_dom \<sigma>\<rbrakk>"
-  by (simp add: skip_int_dom_def)
-
-lemma body_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_int_dom p \<sigma>\<rbrakk>"
-  by (simp add: body_int_dom_def)
-
-lemma event_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_int_dom ev \<sigma>\<rbrakk>"
-  by (simp add: event_int_dom_def)
-
-lemma return_int_dom_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
-           \<in> \<lbrakk>return_int_dom mode e p \<sigma>\<rbrakk>"
-  using assign_int_dom_sound[OF \<G>] \<G>
-  by (cases e) (simp_all add: return_int_dom_def)
-
-lemma skip_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> skip_int_dom sigma1 <= skip_int_dom sigma2"
-  by (simp add: skip_int_dom_def)
-
-lemma body_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> body_int_dom p sigma1 <= body_int_dom p sigma2"
-  by (simp add: body_int_dom_def)
-
-lemma event_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> event_int_dom ev sigma1 <= event_int_dom ev sigma2"
-  by (simp add: event_int_dom_def)
-
-lemma return_int_dom_mono:
-  assumes "mode ~= Refine_Fixpoint" and "sigma1 <= sigma2"
-  shows "return_int_dom mode e p sigma1 <= return_int_dom mode e p sigma2"
-  using assms
-  by (cases e) (simp_all add: return_int_dom_def assign_int_dom_mono)
-
-subsection \<open>Classifier-parametric procedure entry\<close>
-
-definition enter_frame_int_dom_for ::
-    "(vname => bool) => int_dom abs_state => int_dom abs_state" where
-  "enter_frame_int_dom_for \<G> = enter_frame \<G> (top :: int_dom)"
-
-definition enter_int_dom_for ::
-    "refine_mode => (vname => bool) => vname list => exp list =>
-      int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_for mode \<G> = enter_binding \<G> (top :: int_dom) (aval_int_dom mode)"
-
-lemma enter_frame_int_dom_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state cls s \<in> \<lbrakk>enter_frame_int_dom_for cls \<sigma>\<rbrakk>"
-  unfolding enter_frame_int_dom_for_def
-proof (rule enter_frame_sound[OF \<G>])
-  show "\<gamma> (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
-qed
-
-lemma enter_int_dom_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
-           \<in> \<lbrakk>enter_int_dom_for mode cls xs es \<sigma>\<rbrakk>"
-  unfolding enter_int_dom_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF \<G>])
-  show "\<gamma> (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
-next
-  fix e
-  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_int_dom mode e \<sigma>)"
-    using aval_int_dom_sound[OF \<G>] by simp
-qed
-
-lemma enter_frame_int_dom_for_mono:
-  assumes "s1 <= s2"
-  shows "enter_frame_int_dom_for \<G> s1 <= enter_frame_int_dom_for \<G> s2"
-  unfolding enter_frame_int_dom_for_def by (rule enter_frame_mono[OF assms])
-
-lemma enter_int_dom_for_mono:
-  assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
-  shows "enter_int_dom_for mode \<G> xs es s1 <= enter_int_dom_for mode \<G> xs es s2"
-  unfolding enter_int_dom_for_def
-proof (rule enter_binding_mono[OF assms(2)])
-  fix e
-  show "aval_int_dom mode e s1 <= aval_int_dom mode e s2"
-    using assms by (simp add: aval_int_dom_mono)
-qed
-
-definition enter_int_dom_ci_for ::
-    "refine_mode => (vname => bool) => call_info => int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_ci_for mode \<G> ci = enter_int_dom_for mode \<G> (ci_formals ci) (ci_args ci)"
-
-lemma enter_int_dom_ci_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>enter_int_dom_ci_for mode cls ci \<sigma>\<rbrakk>"
-  using enter_int_dom_for_sound[OF \<G>, where xs = "ci_formals ci" and es = "ci_args ci"
-      and mode = mode]
-  by (simp add: enter_int_dom_ci_for_def)
-
-lemma enter_int_dom_ci_for_mono:
-  assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
-  shows "enter_int_dom_ci_for mode \<G> ci s1 <= enter_int_dom_ci_for mode \<G> ci s2"
-  using enter_int_dom_for_mono[OF assms, of \<G> "ci_formals ci" "ci_args ci"]
-  by (simp add: enter_int_dom_ci_for_def)
-
-subsection \<open>Registered transfer operations, one set per refinement mode\<close>
-
-text \<open>The branch operation is the only one whose name differs per mode, so it gets
-  its own dispatcher; everything else already takes \<open>mode\<close> as an argument.\<close>
-
-fun branch_int_dom_for ::
-    "refine_mode => exp => bool => int_dom abs_state => int_dom abs_state" where
-  "branch_int_dom_for Refine_Never = branch_int_dom_never"
-| "branch_int_dom_for Refine_Once = branch_int_dom_once"
-| "branch_int_dom_for Refine_Fixpoint = branch_int_dom_fixpoint"
-
-lemma int_is_sound_nonrelational_transfer:
-  "sound_nonrelational_transfer \<G> skip_int_dom (assign_int_dom mode) (special_int_dom mode)
-     (branch_int_dom_for mode) body_int_dom (return_int_dom mode)
-     (enter_int_dom_ci_for mode \<G>) event_int_dom"
-  apply unfold_locales
-  subgoal by (simp add: assign_int_dom_sound)
-  subgoal by (simp add: special_int_dom_sound)
-  subgoal by (cases mode)
-       (simp_all add: branch_int_dom_never_sound branch_int_dom_once_sound
-          branch_int_dom_fixpoint_sound)
-  subgoal by (simp add: skip_int_dom_sound)
-  subgoal by (simp add: body_int_dom_sound)
-  subgoal by (simp add: return_int_dom_sound)
-  subgoal by (simp add: enter_int_dom_ci_for_sound)
-  subgoal by (simp add: event_int_dom_sound)
-  done
-
-definition int_tf_abs ::
-    "refine_mode => edge_action => int_dom abs_state => int_dom abs_state" where
-  "int_tf_abs mode = local_spec_step skip_int_dom (assign_int_dom mode) (special_int_dom mode)
-     (branch_int_dom_for mode) body_int_dom (return_int_dom mode) event_int_dom"
-
-lemma int_tf_abs_simps [simp]:
-  "int_tf_abs mode EA_Nop = skip_int_dom"
-  "int_tf_abs mode (EA_Assign x e) = assign_int_dom mode x e"
-  "int_tf_abs mode (EA_Special sc y) = special_int_dom mode sc y"
-  "int_tf_abs mode (EA_Assume b) = branch_int_dom_for mode b True"
-  "int_tf_abs mode (EA_AssumeNot b) = branch_int_dom_for mode b False"
-  "int_tf_abs mode (EA_Body p) = body_int_dom p"
-  "int_tf_abs mode (EA_Ret eo p) = return_int_dom mode eo p"
-  "int_tf_abs mode (EA_Check l c) = event_int_dom (Check_Event l c)"
-  by (simp_all add: int_tf_abs_def)
+subsection \<open>The bundle, per refinement mode, and its certificates\<close>
 
 text \<open>
-  Monotonicity is available for \<open>Never\<close> and \<open>Once\<close>: every operation
-  behind them (\<open>assign_int_dom\<close>, \<open>special_int_dom\<close>, \<open>return_int_dom\<close>,
-  \<open>enter_int_dom_for\<close>) is monotone once \<open>mode \<noteq> Refine_Fixpoint\<close>, and
-  \<open>Int_Backward\<close>'s \<open>backward_domain_mono\<close> interpretation gives
-  \<open>bfilter_int_dom_never\<close>/\<open>bfilter_int_dom_once\<close> their own monotonicity
-  (\<open>bfilter_mono\<close>). \<open>bfilter_int_dom_fixpoint\<close> has no such theorem --
-  \<open>Int_Backward\<close> interprets \<open>Refine_Fixpoint\<close> against the weaker
-  \<^locale>\<open>backward_domain_reductive\<close> precisely because \<open>refine_fix\<close> lacks one --
-  so \<open>Refine_Fixpoint\<close> gets no matching monotonicity lemma here. Its \<open>branch\<close>
-  is still the shared, pollution-fixed one: \<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>'s
-  \<open>bfilter_st_lift_correct\<close> needs only \<^locale>\<open>backward_domain_reductive\<close>.
+  One bundle parametric in the mode: the evaluator, the special calls and the
+  refinement operations carry it, the queries and the whole-value element do
+  not. Every mode is sound; only \<open>Refine_Never\<close> and \<open>Refine_Once\<close> are monotone,
+  because \<open>refine_fix\<close> has no monotonicity theorem (\<open>Int_Refinement\<close>).
 \<close>
 
-lemma int_tf_abs_never_mono:
-  "s1 <= s2 \<Longrightarrow> int_tf_abs Refine_Never a s1 <= int_tf_abs Refine_Never a s2"
-  by (cases a)
-     (auto simp: assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_never.branch_mono skip_int_dom_mono
-                 body_int_dom_mono return_int_dom_mono
-                 event_int_dom_mono)
+definition int_dom_ops :: "refine_mode \<Rightarrow> int_dom nonrelational_ops" where
+  "int_dom_ops mode =
+     \<lparr> n_aval = aval_int_dom mode, n_query = \<lparr>q_less = int_less, q_eq = int_eq\<rparr>,
+       n_refine = int_refine_ops mode, n_special = int_dom_special_ops mode, n_top = top \<rparr>"
 
-lemma int_tf_abs_once_mono:
-  "s1 <= s2 \<Longrightarrow> int_tf_abs Refine_Once a s1 <= int_tf_abs Refine_Once a s2"
-  by (cases a)
-     (auto simp: assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_once.branch_mono skip_int_dom_mono
-                 body_int_dom_mono return_int_dom_mono
-                 event_int_dom_mono)
+lemma int_dom_ops_simps [simp]:
+  "n_aval (int_dom_ops mode) = aval_int_dom mode"
+  "q_less (n_query (int_dom_ops mode)) = int_less"
+  "q_eq (n_query (int_dom_ops mode)) = int_eq"
+  "n_refine (int_dom_ops mode) = int_refine_ops mode"
+  "n_special (int_dom_ops mode) = int_dom_special_ops mode"
+  "n_top (int_dom_ops mode) = top"
+  by (simp_all add: int_dom_ops_def)
 
+lemma int_dom_check_domain:
+  "abstract_check_domain int_less int_eq gamma_state (aval_int_dom mode)"
+  by (intro abstract_check_domain.intro int_dom_numeric_queries.sound_numeric_queries_axioms
+        int_dom_sound_evaluator)
+
+lemma int_dom_sound_ops: "sound_nonrelational_ops (int_dom_ops mode)"
+  by (rule sound_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
+     (rule int_dom_sound_special_ops int_dom_backward_domain_reductive int_dom_check_domain refl)+
+
+lemma int_dom_mono_ops:
+  assumes "mode \<noteq> Refine_Fixpoint"
+  shows "mono_nonrelational_ops (int_dom_ops mode)"
+  by (rule mono_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
+     (rule int_dom_mono_special_ops[OF assms] int_dom_backward_domain_mono[OF assms]
+        int_dom_check_domain refl)+
+
+global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
+  rewrites "n_top (int_dom_ops mode) = top"
+    and "sound_special_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
+           = special_int_dom mode"
+  defines assign_int_dom = int_tf.assign
+    and skip_int_dom = int_tf.skip
+    and body_int_dom = int_tf.body
+    and event_int_dom = int_tf.event
+    and return_int_dom = int_tf.ret
+    and enter_frame_int_dom_for = int_tf.enter_frame_for
+    and enter_int_dom_for = int_tf.enter_for
+    and enter_int_dom_ci_for = int_tf.enter_ci_for
+    and int_tf_abs = int_tf.tf_abs
+    and afilter_int_dom = int_tf.backward.afilter
+    and feasible_int_dom = int_tf.backward.feasible
+    and bfilter_int_dom = int_tf.backward.bfilter
+    and branch_int_dom_for = int_tf.backward.branch
+    and bfilter_lifted_int_dom = int_tf.backward.bfilter_lifted
+    and branch_lifted_int_dom = int_tf.backward.branch_lifted
+    and int_truthy_query = int_tf.check.truthy_query
+    and int_check_query = int_tf.check.check_query
+    and int_classify_check = int_tf.check.classify_check
+    and int_eval_answer = int_tf.check.eval_answer
+    and int_checks_proven = int_tf.check.abstract_checks_proven
+  by (rule int_dom_sound_ops) (simp_all add: special_int_dom_eq_transfer fun_eq_iff)
+
+
+text \<open>
+  The theorems stay under \<open>int_tf.\<close>: \<^const>\<open>skip_int_dom\<close>'s soundness is
+  \<open>int_tf.skip_sound\<close>, the branch's is \<open>int_tf.br_sound\<close>, and the framework's
+  transfer contract at every mode is \<open>int_tf.is_sound_nonrelational_transfer\<close>.
+\<close>
 
 end

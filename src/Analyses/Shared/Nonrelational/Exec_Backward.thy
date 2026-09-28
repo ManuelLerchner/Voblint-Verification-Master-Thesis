@@ -22,7 +22,7 @@ text \<open>
   \<^locale>\<open>backward_domain\<close>, so once exported their \<open>.simps\<close> each carry that
   locale's own soundness assumptions as a hypothesis -- a fact code generation
   cannot discharge, so a recursive \<open>fun\<close> defined that way has no usable code
-  equation, no matter how it is later aliased. \<open>backward_exec_ops\<close> packages
+  equation, no matter how it is later aliased. \<open>refine_ops\<close> packages
   the same raw operations directly, and \<open>afilter_st_lift_with\<close>/
   \<open>bfilter_st_lift_with\<close> recurse over an explicit \<open>'a::executable_domain\<close>
   value instead of interpreting the soundness locale, so their equations carry
@@ -31,132 +31,137 @@ text \<open>
   agree; \<open>branch_st\<close> calls the standalone form directly.
 \<close>
 
-record 'a backward_exec_ops =
-  be_aval      :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a"
-  be_tobool    :: "'a \<Rightarrow> bool option"
-  be_inv_less  :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
-  be_inv_eq    :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
-  be_inv_plus  :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
-  be_inv_minus :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
-  be_inv_times :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
-  be_intersect :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+record 'a refine_ops =
+  r_tobool    :: "'a \<Rightarrow> bool option"
+  r_inv_less  :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+  r_inv_eq    :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+  r_inv_plus  :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+  r_inv_minus :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+  r_inv_times :: "'a \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+  r_intersect :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+
+lemma refine_ops_eta [simp]:
+  "\<lparr>r_tobool = r_tobool R, r_inv_less = r_inv_less R, r_inv_eq = r_inv_eq R,
+    r_inv_plus = r_inv_plus R, r_inv_minus = r_inv_minus R,
+    r_inv_times = r_inv_times R, r_intersect = r_intersect R\<rparr> = R"
+  by (cases R) simp
 
 definition feasible_with ::
-  "'a::executable_domain backward_exec_ops \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> bool"
+  "(exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> 'a::executable_domain refine_ops \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> bool"
 where
-  "feasible_with ops e pol sigma =
-     (\<not> is_empty (be_aval ops e sigma) \<and> be_tobool ops (be_aval ops e sigma) \<noteq> Some (\<not> pol))"
+  "feasible_with ev ops e pol sigma =
+     (\<not> is_empty (ev e sigma) \<and> r_tobool ops (ev e sigma) \<noteq> Some (\<not> pol))"
 
 fun afilter_st_lift_with ::
-  "'a::executable_domain backward_exec_ops
+  "(exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> 'a::executable_domain refine_ops
    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> 'a \<Rightarrow> 'a resolved_st_q lifted \<Rightarrow> 'a resolved_st_q lifted"
 where
-    "afilter_st_lift_with ops \<G> (V x) a x_lift = do {
+    "afilter_st_lift_with ev ops \<G> (V x) a x_lift = do {
        s <- x_lift;
        update_resolved_st_q_lift (Lifted s) (location_of \<G> x)
-         (be_intersect ops a (fun_of_resolved_st_q_for \<G> s x))
+         (r_intersect ops a (fun_of_resolved_st_q_for \<G> s x))
      }"
-  | "afilter_st_lift_with ops \<G> (Plus e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ev ops \<G> (Plus e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_plus ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_plus ops a
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops \<G> (Minus e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ev ops \<G> (Minus e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_minus ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_minus ops a
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops \<G> (Times e1 e2) a x_lift = do {
+  | "afilter_st_lift_with ev ops \<G> (Times e1 e2) a x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_times ops a
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_times ops a
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "afilter_st_lift_with ops \<G> _ a x_lift = x_lift"
+  | "afilter_st_lift_with ev ops \<G> _ a x_lift = x_lift"
 
-lemma afilter_st_lift_with_Bot [simp]: "afilter_st_lift_with ops \<G> e a Bot = Bot"
+lemma afilter_st_lift_with_Bot [simp]: "afilter_st_lift_with ev ops \<G> e a Bot = Bot"
   by (induction e) simp_all
 
 fun bfilter_st_lift_with ::
-  "'a::executable_domain backward_exec_ops
+  "(exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> 'a::executable_domain refine_ops
    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a resolved_st_q lifted \<Rightarrow> 'a resolved_st_q lifted"
 where
-    "bfilter_st_lift_with ops \<G> (Less e1 e2) res x_lift = do {
+    "bfilter_st_lift_with ev ops \<G> (Less e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_less ops res
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_less ops res
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> (GreaterEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (GreaterEq e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_less ops (\<not> res)
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_less ops (\<not> res)
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> (Greater e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (Greater e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_less ops res
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e2 a1 (afilter_st_lift_with ops \<G> e1 a2 (Lifted s))
+       let (a1, a2) = r_inv_less ops res
+             (ev e2 (fun_of_resolved_st_q_for \<G> s))
+             (ev e1 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e2 a1 (afilter_st_lift_with ev ops \<G> e1 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> (LessEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (LessEq e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_less ops (\<not> res)
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e2 a1 (afilter_st_lift_with ops \<G> e1 a2 (Lifted s))
+       let (a1, a2) = r_inv_less ops (\<not> res)
+             (ev e2 (fun_of_resolved_st_q_for \<G> s))
+             (ev e1 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e2 a1 (afilter_st_lift_with ev ops \<G> e1 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> (Not b) res x_lift =
-       bfilter_st_lift_with ops \<G> b (\<not> res) x_lift"
-  | "bfilter_st_lift_with ops \<G> (And b1 b2) True x_lift =
-       bfilter_st_lift_with ops \<G> b1 True (bfilter_st_lift_with ops \<G> b2 True x_lift)"
-  | "bfilter_st_lift_with ops \<G> (And b1 b2) False x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (Not b) res x_lift =
+       bfilter_st_lift_with ev ops \<G> b (\<not> res) x_lift"
+  | "bfilter_st_lift_with ev ops \<G> (And b1 b2) True x_lift =
+       bfilter_st_lift_with ev ops \<G> b1 True (bfilter_st_lift_with ev ops \<G> b2 True x_lift)"
+  | "bfilter_st_lift_with ev ops \<G> (And b1 b2) False x_lift = do {
        s <- x_lift;
-       (if feasible_with ops b1 False (fun_of_resolved_st_q_for \<G> s)
-        then bfilter_st_lift_with ops \<G> b1 False (Lifted s) else Bot)
-       \<squnion> (if feasible_with ops b2 False (fun_of_resolved_st_q_for \<G> s)
-          then bfilter_st_lift_with ops \<G> b2 False (Lifted s) else Bot)
+       (if feasible_with ev ops b1 False (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st_lift_with ev ops \<G> b1 False (Lifted s) else Bot)
+       \<squnion> (if feasible_with ev ops b2 False (fun_of_resolved_st_q_for \<G> s)
+          then bfilter_st_lift_with ev ops \<G> b2 False (Lifted s) else Bot)
      }"
-  | "bfilter_st_lift_with ops \<G> (Or b1 b2) True x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (Or b1 b2) True x_lift = do {
        s <- x_lift;
-       (if feasible_with ops b1 True (fun_of_resolved_st_q_for \<G> s)
-        then bfilter_st_lift_with ops \<G> b1 True (Lifted s) else Bot)
-       \<squnion> (if feasible_with ops b2 True (fun_of_resolved_st_q_for \<G> s)
-          then bfilter_st_lift_with ops \<G> b2 True (Lifted s) else Bot)
+       (if feasible_with ev ops b1 True (fun_of_resolved_st_q_for \<G> s)
+        then bfilter_st_lift_with ev ops \<G> b1 True (Lifted s) else Bot)
+       \<squnion> (if feasible_with ev ops b2 True (fun_of_resolved_st_q_for \<G> s)
+          then bfilter_st_lift_with ev ops \<G> b2 True (Lifted s) else Bot)
      }"
-  | "bfilter_st_lift_with ops \<G> (Or b1 b2) False x_lift =
-       bfilter_st_lift_with ops \<G> b1 False (bfilter_st_lift_with ops \<G> b2 False x_lift)"
-  | "bfilter_st_lift_with ops \<G> (Eq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (Or b1 b2) False x_lift =
+       bfilter_st_lift_with ev ops \<G> b1 False (bfilter_st_lift_with ev ops \<G> b2 False x_lift)"
+  | "bfilter_st_lift_with ev ops \<G> (Eq e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_eq ops res
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_eq ops res
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> (NotEq e1 e2) res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> (NotEq e1 e2) res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_eq ops (\<not> res)
-             (be_aval ops e1 (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops e2 (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e1 a1 (afilter_st_lift_with ops \<G> e2 a2 (Lifted s))
+       let (a1, a2) = r_inv_eq ops (\<not> res)
+             (ev e1 (fun_of_resolved_st_q_for \<G> s))
+             (ev e2 (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e1 a1 (afilter_st_lift_with ev ops \<G> e2 a2 (Lifted s))
      }"
-  | "bfilter_st_lift_with ops \<G> e res x_lift = do {
+  | "bfilter_st_lift_with ev ops \<G> e res x_lift = do {
        s <- x_lift;
-       let (a1, a2) = be_inv_eq ops (\<not> res)
-             (be_aval ops e (fun_of_resolved_st_q_for \<G> s))
-             (be_aval ops (N 0) (fun_of_resolved_st_q_for \<G> s));
-       afilter_st_lift_with ops \<G> e a1 (Lifted s)
+       let (a1, a2) = r_inv_eq ops (\<not> res)
+             (ev e (fun_of_resolved_st_q_for \<G> s))
+             (ev (N 0) (fun_of_resolved_st_q_for \<G> s));
+       afilter_st_lift_with ev ops \<G> e a1 (Lifted s)
      }"
 
-lemma bfilter_st_lift_with_Bot [simp]: "bfilter_st_lift_with ops \<G> b res Bot = Bot"
+lemma bfilter_st_lift_with_Bot [simp]: "bfilter_st_lift_with ev ops \<G> b res Bot = Bot"
 proof (induction b arbitrary: res)
   case (And b1 b2) then show ?case by (cases res) simp_all
 next
@@ -176,6 +181,22 @@ lemma map_lift_fun_of_resolved_st_q_for_sup [simp]:
   "map_lift (fun_of_resolved_st_q_for \<G>) (x \<squnion> y) =
      map_lift (fun_of_resolved_st_q_for \<G>) x \<squnion> map_lift (fun_of_resolved_st_q_for \<G>) y"
   by (cases x; cases y) simp_all
+
+text \<open>
+  The executable branch, determined by the evaluator and the refinement
+  operations alone. A non-relational analysis derives its guard filter from its
+  operations through this, so no domain supplies a filter of its own;
+  \<open>branch_st_with_ops\<close> below identifies it with the locale's \<open>branch_st\<close>.
+\<close>
+
+definition branch_st_with ::
+  "(exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> 'a::executable_domain refine_ops
+   \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
+where
+  "branch_st_with ev ops \<G> e pol s =
+     (if feasible_with ev ops e pol (fun_of_resolved_st_q_for \<G> s)
+      then collapse_lift (bfilter_st_lift_with ev ops \<G> e pol (Lifted s))
+      else bot)"
 
 context backward_domain
 begin
@@ -276,7 +297,7 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>ops\<close> packages this locale's own fixed operations into a \<open>backward_exec_ops\<close>
+  \<open>ops\<close> packages this locale's own fixed operations into a \<open>refine_ops\<close>
   value, so the lifted filters below are the standalone recursion instantiated here
   rather than a second copy of it. It is an \<open>abbreviation\<close>, not a \<open>definition\<close>: it
   must inline to the record literal at every use site, including inside
@@ -286,21 +307,21 @@ text \<open>
   \<open>afilter_st_lift_with\<close>/\<open>bfilter_st_lift_with\<close> exist to avoid, one level up.
 \<close>
 
-abbreviation ops :: "'a backward_exec_ops" where
-  "ops \<equiv> \<lparr>be_aval = aval_abs, be_tobool = tobool, be_inv_less = inv_less,
-           be_inv_eq = inv_eq, be_inv_plus = inv_plus, be_inv_minus = inv_minus,
-           be_inv_times = inv_times, be_intersect = intersect\<rparr>"
+abbreviation ops :: "'a refine_ops" where
+  "ops \<equiv> \<lparr>r_tobool = tobool, r_inv_less = inv_less,
+           r_inv_eq = inv_eq, r_inv_plus = inv_plus, r_inv_minus = inv_minus,
+           r_inv_times = inv_times, r_intersect = intersect\<rparr>"
 
-lemma feasible_with_ops [simp]: "feasible_with ops = feasible"
+lemma feasible_with_ops [simp]: "feasible_with aval_abs ops = feasible"
   by (intro ext) (simp add: feasible_with_def feasible_def)
 
 definition afilter_st_lift ::
   "(vname => bool) => exp => 'a => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-  "afilter_st_lift \<G> e a x_lift = afilter_st_lift_with ops \<G> e a x_lift"
+  "afilter_st_lift \<G> e a x_lift = afilter_st_lift_with aval_abs ops \<G> e a x_lift"
 
 lemmas afilter_st_lift_simps [simp] =
-  afilter_st_lift_with.simps [of ops, folded afilter_st_lift_def]
+  afilter_st_lift_with.simps [of aval_abs ops, folded afilter_st_lift_def]
 
 lemma afilter_st_lift_Bot [simp]: "afilter_st_lift \<G> e a Bot = Bot"
   by (simp add: afilter_st_lift_def)
@@ -437,10 +458,10 @@ text \<open>
 definition bfilter_st_lift ::
   "(vname => bool) => exp => bool => 'a resolved_st_q lifted => 'a resolved_st_q lifted"
 where
-  "bfilter_st_lift \<G> b res x_lift = bfilter_st_lift_with ops \<G> b res x_lift"
+  "bfilter_st_lift \<G> b res x_lift = bfilter_st_lift_with aval_abs ops \<G> b res x_lift"
 
 lemmas bfilter_st_lift_simps [simp] =
-  bfilter_st_lift_with.simps [of ops, folded bfilter_st_lift_def afilter_st_lift_def]
+  bfilter_st_lift_with.simps [of aval_abs ops, folded bfilter_st_lift_def afilter_st_lift_def]
 
 lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift \<G> b res Bot = Bot"
   by (simp add: bfilter_st_lift_def)
@@ -556,7 +577,7 @@ next
     case (V x)
   show ?case
     unfolding afilter_st_lift_simps bind_lift_left_identity afilter.simps
-      backward_exec_ops.select_convs
+      refine_ops.select_convs
     by (rule update_resolved_st_q_lift_correct[OF V.prems])
 next
   case (Plus e1 e2)
@@ -751,9 +772,12 @@ definition branch_st ::
   "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
 where
   "branch_st \<G> e pol s =
-     (if feasible_with ops e pol (fun_of_resolved_st_q_for \<G> s)
-      then collapse_lift (bfilter_st_lift_with ops \<G> e pol (Lifted s))
+     (if feasible_with aval_abs ops e pol (fun_of_resolved_st_q_for \<G> s)
+      then collapse_lift (bfilter_st_lift_with aval_abs ops \<G> e pol (Lifted s))
       else bot)"
+
+lemma branch_st_with_ops: "branch_st_with aval_abs ops = branch_st"
+  by (simp add: fun_eq_iff branch_st_with_def branch_st_def)
 
 lemma branch_st_commute:
   assumes "live_resolved_st_q \<G> s"

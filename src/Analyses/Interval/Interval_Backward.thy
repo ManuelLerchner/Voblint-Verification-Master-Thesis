@@ -366,36 +366,50 @@ proof -
   qed
 qed
 
-subsection \<open>Backward-domain interpretation\<close>
+subsection \<open>The refinement operations and their certificate\<close>
 
 text \<open>
-  One interpretation discharges soundness, monotonicity, and reductiveness
-  together against @{locale backward_domain_mono} -- each \<open>inv_*\<close>'s
-  mono/reductive obligation is one @{const le_pair} fact, built from the
-  componentwise per-operator lemmas above.
+  Interval's refinement choices: the normalising intersection, the
+  bound-tightening comparison inverses, and the conservative identity for
+  arithmetic. The guard filters and the branch are derived from this record and
+  the evaluator in \<open>Interval_Transfer\<close>.
 
-  The \<open>intersect\<close> parameter is instantiated with \<^const>\<open>intersect_ivl\<close>, not with the
-  lattice \<^const>\<open>inf\<close>. The locale only requires \<open>intersect\<close> to preserve
-  concretizations, to be reductive in both arguments, and to be monotone --- never
-  that it is the greatest lower bound of the representation order --- and the
-  normalising variant additionally keeps every filtered state canonical, so an
-  infeasible guard stores \<^const>\<open>bot\<close> instead of a reversed bound pair.
-  \<^const>\<open>inf\<close> itself cannot be normalised without losing the greatest-lower-bound
-  law; @{thm [source] meet_ivl_normalized_breaks_greatest} is that counterexample.
+  The intersection is \<^const>\<open>intersect_ivl\<close>, not the lattice \<^const>\<open>inf\<close>. The
+  certificate only requires it to preserve concretizations, to be reductive in
+  both arguments, and to be monotone --- never that it is the greatest lower
+  bound of the representation order --- and the normalising variant additionally
+  keeps every filtered state canonical, so an infeasible guard stores
+  \<^const>\<open>bot\<close> instead of a reversed bound pair. \<^const>\<open>inf\<close> itself cannot be
+  normalised without losing the greatest-lower-bound law;
+  @{thm [source] meet_ivl_normalized_breaks_greatest} is that counterexample.
 \<close>
 
-global_interpretation ivl_backward_domain:
-    backward_domain_mono intersect_ivl aval_ivl interval_tobool
-                    inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
-  defines
-    afilter_ivl = ivl_backward_domain.afilter
-    and feasible_ivl = ivl_backward_domain.feasible
-    and bfilter_ivl = ivl_backward_domain.bfilter
-    and branch_ivl = ivl_backward_domain.branch
-    and branch_lifted_ivl = ivl_backward_domain.branch_lifted
-    and afilter_ivl_st = ivl_backward_domain.afilter_st
-    and bfilter_ivl_st = ivl_backward_domain.bfilter_st
-    and branch_ivl_st = ivl_backward_domain.branch_st
+definition ivl_refine_ops :: "ivl refine_ops" where
+  "ivl_refine_ops =
+     \<lparr>r_tobool = interval_tobool, r_inv_less = inv_less_ivl, r_inv_eq = inv_eq_ivl,
+      r_inv_plus = inv_conservative, r_inv_minus = inv_conservative,
+      r_inv_times = inv_conservative, r_intersect = intersect_ivl\<rparr>"
+
+lemma ivl_refine_ops_simps [simp]:
+  "r_tobool ivl_refine_ops = interval_tobool"
+  "r_inv_less ivl_refine_ops = inv_less_ivl"
+  "r_inv_eq ivl_refine_ops = inv_eq_ivl"
+  "r_inv_plus ivl_refine_ops = inv_conservative"
+  "r_inv_minus ivl_refine_ops = inv_conservative"
+  "r_inv_times ivl_refine_ops = inv_conservative"
+  "r_intersect ivl_refine_ops = intersect_ivl"
+  by (simp_all add: ivl_refine_ops_def)
+
+text \<open>
+  The certificate discharges soundness, monotonicity, and reductiveness together
+  against @{locale backward_domain_mono}; each \<open>inv_*\<close>'s mono/reductive obligation
+  is one @{const le_pair} fact, built from the componentwise per-operator lemmas
+  above.
+\<close>
+
+lemma ivl_backward_domain:
+  "backward_domain_mono intersect_ivl aval_ivl interval_tobool
+     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative"
 proof unfold_locales
   fix n :: int and a b :: ivl
   assume "n \<in> \<gamma> a" and "n \<in> \<gamma> b"
@@ -406,20 +420,5 @@ qed (simp_all add: inv_less_ivl_sound inv_eq_ivl_sound
        inv_less_ivl_mono inv_eq_ivl_mono inv_conservative_def
        intersect_ivl_le1 intersect_ivl_le2 interval_tobool_mono
      del: intersect_ivl_def)
-
-text \<open>
-  Executable @{typ "ivl resolved_st_q"} mirror of \<open>bfilter_ivl\<close> and of the
-  branch split, and its commutation with the abstract filters through
-  @{const fun_of_resolved_st_q_for}. Both come from the generic
-  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); the
-  arithmetic-filter commutation stays reachable as
-  \<open>ivl_backward_domain.afilter_st_commute\<close>.
-\<close>
-
-lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
-lemmas branch_ivl_st_commute = ivl_backward_domain.branch_st_commute
-
-lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
-  using ivl_backward_domain.branch_le_bfilter by (simp add: branch_ivl_def bfilter_ivl_def)
 
 end

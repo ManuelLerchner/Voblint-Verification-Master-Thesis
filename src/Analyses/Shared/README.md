@@ -22,7 +22,7 @@ the floor under it.
 
 | Term | Meaning |
 | --- | --- |
-| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `nonrelational_transfer` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle they read. |
+| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `sound_nonrelational_ops`/`mono_nonrelational_ops` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle a domain supplies: its primitive choices, from which one interpretation derives the filters, the branch, the check classifier and the transfer. |
 | non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
 | routing policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
 | context space | the candidate contexts a routing policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |

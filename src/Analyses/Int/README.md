@@ -26,12 +26,12 @@ Int_Warrowing           componentwise widen/narrow and the numeric_domain instan
 Int_Refinement          exactness of reduction steps; one refinement round
 Int_Refinement_Control  the three refine modes
   -> Int_Arithmetic / Int_Backward                   mode-aware forward and backward
-  -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
-  -> Int_Exec_Sound                                  the transfer and entry dispatchers
-                                                     over refine_mode
+  -> Int_Transfer                                    the bundle int_dom_ops mode and its
+                                                     one interpretation, parametric in mode
+  -> Int_Exec                                        executable transfer and entry, and
+                                                     their commutation, at every mode
   -> Int_Classify                                    check discharge
-  -> Int_Sound                                       mode-generic commutation and
-                                                     initial-state facts
+  -> Int_Sound                                       initial-state facts
   -> generated/Int_Analyses                          the unit-context registration at
                                                      Refine_Fixpoint (generated; see below)
 ```
@@ -41,7 +41,7 @@ update rule matters: every registration takes it as a parameter, and the CLI
 defaults to Apinis warrowing (`Globals_Warrow`).
 
 The registrations, and therefore `run_voblint`, select `Refine_Fixpoint`. The
-dispatchers in `Int_Exec_Sound` and the facts in `Int_Sound` keep the mode
+executable operations in `Int_Exec` and the facts they rest on keep the mode
 parameter for comparisons and regression witnesses.
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`
@@ -104,7 +104,7 @@ Int is the domain where two axes meet, and they stay independent in every run
 that includes it.
 
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
-discharged by one of Int's own mode-generic facts — `int_is_sound_nonrelational_transfer`,
+discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
 `int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
 manifest pins `Refine_Fixpoint` by naming the mode-taking operations as applied

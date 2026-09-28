@@ -122,7 +122,7 @@ proof -
   have "branch_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))
           = bfilter_ivl (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1))"
     using loop_head_guard_feasible bfilter_loop_head_live
-    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+    by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
   then show ?thesis
     unfolding tf bfilter_loop_head_state by simp
 qed
@@ -164,7 +164,7 @@ lemma branch_at_head_true:
    = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 19))"
   using loop_head_guard_feasible bfilter_loop_head_live
   unfolding loop_env_head[symmetric] bfilter_loop_head_state[symmetric]
-  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
 
 lemma branch_at_head_false:
   "branch_ivl (Less (V (STR ''x'')) (N 20)) False
@@ -172,7 +172,7 @@ lemma branch_at_head_false:
    = (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 20) (Fin 20))"
   using loop_head_guard_feasible_neg bfilter_loop_head_live_neg
   unfolding loop_env_head[symmetric] bfilter_loop_head_state_neg[symmetric]
-  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
 
 theorem loop_env_post_fixpoint:
   "\<forall>(u, a, v) \<in> intra loop_cfg. ivl_tf_abs a (loop_env u) \<le> loop_env v"

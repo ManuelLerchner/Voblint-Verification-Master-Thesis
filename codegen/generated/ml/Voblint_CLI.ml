@@ -4182,8 +4182,18 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 type 'a imp_prog_ext =
   Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
 
+type ('a, 'b) refine_ops_ext =
+  Refine_ops_ext of
+    ('a -> bool option) * (bool -> 'a -> 'a -> 'a * 'a) *
+      (bool -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a -> 'a * 'a) *
+      ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a -> 'a * 'a) *
+      ('a -> 'a -> 'a) * 'b;;
+
 type ('a, 'b) special_ops_ext =
   Special_ops_ext of ('a -> 'a -> 'a) * ('a -> 'a -> 'a) * 'b;;
+
+type ('a, 'b) query_ops_ext =
+  Query_ops_ext of ('a -> 'a -> bool option) * ('a -> 'a -> bool option) * 'b;;
 
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -4197,19 +4207,10 @@ type ('a, 'b, 'c, 'd) func_state =
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext))));;
 
-type ('a, 'b) backward_exec_ops_ext =
-  Backward_exec_ops_ext of
-    (exp -> (string -> 'a) -> 'a) * ('a -> bool option) *
-      (bool -> 'a -> 'a -> 'a * 'a) * (bool -> 'a -> 'a -> 'a * 'a) *
-      ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a -> 'a * 'a) *
-      ('a -> 'a -> 'a -> 'a * 'a) * ('a -> 'a -> 'a) * 'b;;
-
 type ('a, 'b) nonrelational_ops_ext =
   Nonrelational_ops_ext of
-    (exp -> (string -> 'a) -> 'a) * ('a, unit) special_ops_ext *
-      ((string -> bool) ->
-        exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
-      'a * 'b;;
+    (exp -> (string -> 'a) -> 'a) * ('a, unit) query_ops_ext *
+      ('a, unit) refine_ops_ext * ('a, unit) special_ops_ext * 'a * 'b;;
 
 let rec id x = (fun xa -> xa) x;;
 
@@ -5446,10 +5447,12 @@ let rec map_local_spec
           (fun b ci x de -> k (ls_combine_assign c b ci x de));;
 
 let rec n_aval _A
-  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_aval;;
+  (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, n_top, more)) =
+    n_aval;;
 
 let rec n_top _A
-  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) = n_top;;
+  (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, n_top, more)) =
+    n_top;;
 
 let rec location_is_global = function Local_Location x -> false
                              | Global_Location x -> true;;
@@ -5575,6 +5578,12 @@ let rec inv_eq_congruence
   x0 a b = match x0, a, b with
     true, a, b -> (inf_congruence a b, inf_congruence a b)
     | false, a, b -> (a, b);;
+
+let congruence_refine_ops : (congruence, unit) refine_ops_ext
+  = Refine_ops_ext
+      (congruence_tobool, inv_less_congruence, inv_eq_congruence,
+        inv_plus_congruence, inv_minus_congruence, inv_times_congruence,
+        inf_congruence, ());;
 
 let rec times_congruence_rep
   x0 uu = match x0, uu with None, uu -> None
@@ -5720,26 +5729,36 @@ let rec aval_congruence
                    (congruence_tobool (aval_congruence e1 sigma))
                    (congruence_tobool (aval_congruence e2 sigma))));;
 
-let rec be_inv_less
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_inv_less;;
+let congruence_ops : (congruence, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
+      (aval_congruence, Query_ops_ext (congruence_lt, congruence_eqb, ()),
+        congruence_refine_ops, congruence_special_ops, top_congruencea, ());;
 
-let rec be_inv_eq
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_inv_eq;;
+let rec congruence_enter_st_for
+  x = generic_enter_st_for bot_congruence congruence_ops x;;
 
-let rec be_aval
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_aval;;
+let rec n_special _A
+  (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, n_top, more)) =
+    n_special;;
+
+let rec n_refine _A
+  (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, n_top, more)) =
+    n_refine;;
+
+let rec special_min
+  (Special_ops_ext (special_min, special_max, more)) = special_min;;
+
+let rec special_max
+  (Special_ops_ext (special_min, special_max, more)) = special_max;;
 
 let rec update_resolved_st_q _A
   (Abs_resolved_st xb) xa x = Abs_resolved_st (update_resolved_st _A xb xa x);;
+
+let rec r_inv_less
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_inv_less;;
 
 let rec update_resolved_st_q_lift _A
   x loc a =
@@ -5751,581 +5770,587 @@ let rec update_resolved_st_q_lift _A
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    s loc a)));;
 
-let rec be_inv_times
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_inv_times;;
+let rec r_inv_times
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_inv_times;;
 
-let rec be_inv_minus
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_inv_minus;;
+let rec r_inv_minus
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_inv_minus;;
 
-let rec be_intersect
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_intersect;;
+let rec r_intersect
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_intersect;;
 
-let rec be_inv_plus
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_inv_plus;;
+let rec r_inv_plus
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_inv_plus;;
 
 let rec afilter_st_lift_with _A
-  ops g x2 a x_lift = match ops, g, x2, a, x_lift with
-    ops, g, V x, a, x_lift ->
+  ev ops g x3 a x_lift = match ev, ops, g, x3, a, x_lift with
+    ev, ops, g, V x, a, x_lift ->
       bind_lift x_lift
         (fun s ->
           update_resolved_st_q_lift _A (Lifted s) (location_of g x)
-            (be_intersect ops a
+            (r_intersect ops a
               (fun_of_resolved_st_q_for
                 _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                 g s x)))
-    | ops, g, Plus (e1, e2), a, x_lift ->
+    | ev, ops, g, Plus (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_plus ops a
-                 (be_aval ops e1
+               r_inv_plus ops a
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, Minus (e1, e2), a, x_lift ->
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, Minus (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_minus ops a
-                 (be_aval ops e1
+               r_inv_minus ops a
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, Times (e1, e2), a, x_lift ->
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, Times (e1, e2), a, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_times ops a
-                 (be_aval ops e1
+               r_inv_times ops a
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, N v, a, x_lift -> x_lift
-    | ops, g, Div (v, va), a, x_lift -> x_lift
-    | ops, g, Mod (v, va), a, x_lift -> x_lift
-    | ops, g, Less (v, va), a, x_lift -> x_lift
-    | ops, g, LessEq (v, va), a, x_lift -> x_lift
-    | ops, g, Greater (v, va), a, x_lift -> x_lift
-    | ops, g, GreaterEq (v, va), a, x_lift -> x_lift
-    | ops, g, NotEq (v, va), a, x_lift -> x_lift
-    | ops, g, Eq (v, va), a, x_lift -> x_lift
-    | ops, g, Not v, a, x_lift -> x_lift
-    | ops, g, And (v, va), a, x_lift -> x_lift
-    | ops, g, Or (v, va), a, x_lift -> x_lift;;
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, N v, a, x_lift -> x_lift
+    | ev, ops, g, Div (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Mod (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Less (v, va), a, x_lift -> x_lift
+    | ev, ops, g, LessEq (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Greater (v, va), a, x_lift -> x_lift
+    | ev, ops, g, GreaterEq (v, va), a, x_lift -> x_lift
+    | ev, ops, g, NotEq (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Eq (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Not v, a, x_lift -> x_lift
+    | ev, ops, g, And (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Or (v, va), a, x_lift -> x_lift;;
 
-let rec be_tobool
-  (Backward_exec_ops_ext
-    (be_aval, be_tobool, be_inv_less, be_inv_eq, be_inv_plus, be_inv_minus,
-      be_inv_times, be_intersect, more))
-    = be_tobool;;
+let rec r_inv_eq
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_inv_eq;;
+
+let rec r_tobool
+  (Refine_ops_ext
+    (r_tobool, r_inv_less, r_inv_eq, r_inv_plus, r_inv_minus, r_inv_times,
+      r_intersect, more))
+    = r_tobool;;
 
 let rec feasible_with _A
-  ops e pol sigma =
-    not (is_empty _A (be_aval ops e sigma)) &&
-      not (equal_option equal_bool (be_tobool ops (be_aval ops e sigma))
+  ev ops e pol sigma =
+    not (is_empty _A (ev e sigma)) &&
+      not (equal_option equal_bool (r_tobool ops (ev e sigma))
             (Some (not pol)));;
 
 let rec bfilter_st_lift_with _A
-  ops g x2 res x_lift = match ops, g, x2, res, x_lift with
-    ops, g, Less (e1, e2), res, x_lift ->
+  ev ops g x3 res x_lift = match ev, ops, g, x3, res, x_lift with
+    ev, ops, g, Less (e1, e2), res, x_lift ->
       bind_lift x_lift
         (fun s ->
           (let (a1, a2) =
-             be_inv_less ops res
-               (be_aval ops e1
+             r_inv_less ops res
+               (ev e1
                  (fun_of_resolved_st_q_for
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    g s))
-               (be_aval ops e2
+               (ev e2
                  (fun_of_resolved_st_q_for
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    g s))
              in
-            afilter_st_lift_with _A ops g e1 a1
-              (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, GreaterEq (e1, e2), res, x_lift ->
+            afilter_st_lift_with _A ev ops g e1 a1
+              (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, GreaterEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_less ops (not res)
-                 (be_aval ops e1
+               r_inv_less ops (not res)
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, Greater (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, Greater (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_less ops res
-                 (be_aval ops e2
+               r_inv_less ops res
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e1
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e2 a1
-                (afilter_st_lift_with _A ops g e1 a2 (Lifted s))))
-    | ops, g, LessEq (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ev ops g e2 a1
+                (afilter_st_lift_with _A ev ops g e1 a2 (Lifted s))))
+    | ev, ops, g, LessEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_less ops (not res)
-                 (be_aval ops e2
+               r_inv_less ops (not res)
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e1
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e2 a1
-                (afilter_st_lift_with _A ops g e1 a2 (Lifted s))))
-    | ops, g, Not b, res, x_lift ->
-        bfilter_st_lift_with _A ops g b (not res) x_lift
-    | ops, g, And (b1, b2), true, x_lift ->
-        bfilter_st_lift_with _A ops g b1 true
-          (bfilter_st_lift_with _A ops g b2 true x_lift)
-    | ops, g, And (b1, b2), false, x_lift ->
+              afilter_st_lift_with _A ev ops g e2 a1
+                (afilter_st_lift_with _A ev ops g e1 a2 (Lifted s))))
+    | ev, ops, g, Not b, res, x_lift ->
+        bfilter_st_lift_with _A ev ops g b (not res) x_lift
+    | ev, ops, g, And (b1, b2), true, x_lift ->
+        bfilter_st_lift_with _A ev ops g b1 true
+          (bfilter_st_lift_with _A ev ops g b2 true x_lift)
+    | ev, ops, g, And (b1, b2), false, x_lift ->
         bind_lift x_lift
           (fun s ->
             sup_lifteda
               (semilattice_sup_resolved_st_q
                 _A.bounded_semilattice_sup_bot_executable_domain)
-              (if feasible_with _A ops b1 false
+              (if feasible_with _A ev ops b1 false
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
-                then bfilter_st_lift_with _A ops g b1 false (Lifted s) else Bot)
-              (if feasible_with _A ops b2 false
+                then bfilter_st_lift_with _A ev ops g b1 false (Lifted s)
+                else Bot)
+              (if feasible_with _A ev ops b2 false
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
-                then bfilter_st_lift_with _A ops g b2 false (Lifted s)
+                then bfilter_st_lift_with _A ev ops g b2 false (Lifted s)
                 else Bot))
-    | ops, g, Or (b1, b2), true, x_lift ->
+    | ev, ops, g, Or (b1, b2), true, x_lift ->
         bind_lift x_lift
           (fun s ->
             sup_lifteda
               (semilattice_sup_resolved_st_q
                 _A.bounded_semilattice_sup_bot_executable_domain)
-              (if feasible_with _A ops b1 true
+              (if feasible_with _A ev ops b1 true
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
-                then bfilter_st_lift_with _A ops g b1 true (Lifted s) else Bot)
-              (if feasible_with _A ops b2 true
+                then bfilter_st_lift_with _A ev ops g b1 true (Lifted s)
+                else Bot)
+              (if feasible_with _A ev ops b2 true
                     (fun_of_resolved_st_q_for
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
-                then bfilter_st_lift_with _A ops g b2 true (Lifted s) else Bot))
-    | ops, g, Or (b1, b2), false, x_lift ->
-        bfilter_st_lift_with _A ops g b1 false
-          (bfilter_st_lift_with _A ops g b2 false x_lift)
-    | ops, g, Eq (e1, e2), res, x_lift ->
+                then bfilter_st_lift_with _A ev ops g b2 true (Lifted s)
+                else Bot))
+    | ev, ops, g, Or (b1, b2), false, x_lift ->
+        bfilter_st_lift_with _A ev ops g b1 false
+          (bfilter_st_lift_with _A ev ops g b2 false x_lift)
+    | ev, ops, g, Eq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_eq ops res
-                 (be_aval ops e1
+               r_inv_eq ops res
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, NotEq (e1, e2), res, x_lift ->
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, NotEq (e1, e2), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, a2) =
-               be_inv_eq ops (not res)
-                 (be_aval ops e1
+               r_inv_eq ops (not res)
+                 (ev e1
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops e2
+                 (ev e2
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g e1 a1
-                (afilter_st_lift_with _A ops g e2 a2 (Lifted s))))
-    | ops, g, N v, res, x_lift ->
+              afilter_st_lift_with _A ev ops g e1 a1
+                (afilter_st_lift_with _A ev ops g e2 a2 (Lifted s))))
+    | ev, ops, g, N v, res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (N v)
+               r_inv_eq ops (not res)
+                 (ev (N v)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (N v) a1 (Lifted s)))
-    | ops, g, V v, res, x_lift ->
+              afilter_st_lift_with _A ev ops g (N v) a1 (Lifted s)))
+    | ev, ops, g, V v, res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (V v)
+               r_inv_eq ops (not res)
+                 (ev (V v)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (V v) a1 (Lifted s)))
-    | ops, g, Plus (v, va), res, x_lift ->
+              afilter_st_lift_with _A ev ops g (V v) a1 (Lifted s)))
+    | ev, ops, g, Plus (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (Plus (v, va))
+               r_inv_eq ops (not res)
+                 (ev (Plus (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (Plus (v, va)) a1 (Lifted s)))
-    | ops, g, Minus (v, va), res, x_lift ->
+              afilter_st_lift_with _A ev ops g (Plus (v, va)) a1 (Lifted s)))
+    | ev, ops, g, Minus (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (Minus (v, va))
+               r_inv_eq ops (not res)
+                 (ev (Minus (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (Minus (v, va)) a1 (Lifted s)))
-    | ops, g, Times (v, va), res, x_lift ->
+              afilter_st_lift_with _A ev ops g (Minus (v, va)) a1 (Lifted s)))
+    | ev, ops, g, Times (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (Times (v, va))
+               r_inv_eq ops (not res)
+                 (ev (Times (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (Times (v, va)) a1 (Lifted s)))
-    | ops, g, Div (v, va), res, x_lift ->
+              afilter_st_lift_with _A ev ops g (Times (v, va)) a1 (Lifted s)))
+    | ev, ops, g, Div (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (Div (v, va))
+               r_inv_eq ops (not res)
+                 (ev (Div (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (Div (v, va)) a1 (Lifted s)))
-    | ops, g, Mod (v, va), res, x_lift ->
+              afilter_st_lift_with _A ev ops g (Div (v, va)) a1 (Lifted s)))
+    | ev, ops, g, Mod (v, va), res, x_lift ->
         bind_lift x_lift
           (fun s ->
             (let (a1, _) =
-               be_inv_eq ops (not res)
-                 (be_aval ops (Mod (v, va))
+               r_inv_eq ops (not res)
+                 (ev (Mod (v, va))
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
-                 (be_aval ops (N zero_inta)
+                 (ev (N zero_inta)
                    (fun_of_resolved_st_q_for
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ops g (Mod (v, va)) a1 (Lifted s)));;
+              afilter_st_lift_with _A ev ops g (Mod (v, va)) a1 (Lifted s)));;
 
 let rec collapse_lift _A = function Bot -> bot _A
                            | Lifted a -> a;;
 
-let rec branch_congruence_st
-  g e pol s =
-    (if feasible_with executable_domain_congruence
-          (Backward_exec_ops_ext
-            (aval_congruence, congruence_tobool, inv_less_congruence,
-              inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
-              inv_times_congruence, inf_congruence, ()))
-          e pol (fun_of_resolved_st_q_for bot_congruence g s)
-      then collapse_lift (bot_resolved_st_q bot_congruence)
-             (bfilter_st_lift_with executable_domain_congruence
-               (Backward_exec_ops_ext
-                 (aval_congruence, congruence_tobool, inv_less_congruence,
-                   inv_eq_congruence, inv_plus_congruence, inv_minus_congruence,
-                   inv_times_congruence, inf_congruence, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa bot_congruence);;
-
-let congruence_ops : (congruence, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_congruence, congruence_special_ops, branch_congruence_st,
-        top_congruencea, ());;
-
-let rec congruence_enter_st_for
-  x = generic_enter_st_for bot_congruence congruence_ops x;;
-
-let rec n_special _A
-  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) =
-    n_special;;
-
-let rec n_bfilter _A
-  (Nonrelational_ops_ext (n_aval, n_special, n_bfilter, n_top, more)) =
-    n_bfilter;;
-
-let rec special_min
-  (Special_ops_ext (special_min, special_max, more)) = special_min;;
-
-let rec special_max
-  (Special_ops_ext (special_min, special_max, more)) = special_max;;
+let rec branch_st_with _A
+  ev ops g e pol s =
+    (if feasible_with _A ev ops e pol
+          (fun_of_resolved_st_q_for
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            g s)
+      then collapse_lift
+             (bot_resolved_st_q
+               _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+             (bfilter_st_lift_with _A ev ops g e pol (Lifted s))
+      else bot_resolved_st_qa
+             _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
 
 let rec generic_tf_st_for _A
   ops g x2 s = match ops, g, x2, s with ops, g, EA_Nop, s -> s
     | ops, g, EA_Assign (x, a), s ->
-        update_resolved_st_q _A s (location_of g x)
-          (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+        update_resolved_st_q
+          _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          s (location_of g x)
+          (n_aval
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops a
+            (fun_of_resolved_st_q_for
+              _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+              g s))
     | ops, g, EA_Special (sc, x), s ->
-        update_resolved_st_q _A s (location_of g x)
-          (match sc with Nondet_Int -> n_top _A ops
+        update_resolved_st_q
+          _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          s (location_of g x)
+          (match sc
+            with Nondet_Int ->
+              n_top _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                ops
             | Min (a, b) ->
-              special_min (n_special _A ops)
-                (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
-                (n_aval _A ops b (fun_of_resolved_st_q_for _A g s))
+              special_min
+                (n_special
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops)
+                (n_aval
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops a
+                  (fun_of_resolved_st_q_for
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    g s))
+                (n_aval
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops b
+                  (fun_of_resolved_st_q_for
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    g s))
             | Max (a, b) ->
-              special_max (n_special _A ops)
-                (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
-                (n_aval _A ops b (fun_of_resolved_st_q_for _A g s)))
-    | ops, g, EA_Assume b, s -> n_bfilter _A ops g b true s
-    | ops, g, EA_AssumeNot b, s -> n_bfilter _A ops g b false s
+              special_max
+                (n_special
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops)
+                (n_aval
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops a
+                  (fun_of_resolved_st_q_for
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    g s))
+                (n_aval
+                  _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                  ops b
+                  (fun_of_resolved_st_q_for
+                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                    g s)))
+    | ops, g, EA_Assume b, s ->
+        branch_st_with _A
+          (n_aval
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops)
+          (n_refine
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops)
+          g b true s
+    | ops, g, EA_AssumeNot b, s ->
+        branch_st_with _A
+          (n_aval
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops)
+          (n_refine
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops)
+          g b false s
     | ops, g, EA_Body p, s -> s
     | ops, g, EA_Ret (None, p), s -> s
     | ops, g, EA_Ret (Some a, p), s ->
-        update_resolved_st_q _A s (location_of g ret_var)
-          (n_aval _A ops a (fun_of_resolved_st_q_for _A g s))
+        update_resolved_st_q
+          _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          s (location_of g ret_var)
+          (n_aval
+            _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            ops a
+            (fun_of_resolved_st_q_for
+              _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+              g s))
     | ops, g, EA_Check (l, cnd), s -> s;;
 
 let rec congruence_tf_st_for
-  x = generic_tf_st_for bot_congruence congruence_ops x;;
+  x = generic_tf_st_for executable_domain_congruence congruence_ops x;;
+
+let rec parity_vacuous a b = equal_paritya a PBot || equal_paritya b PBot;;
+
+let rec parity_less_false x = parity_vacuous x;;
+
+let rec parity_less_true x = parity_vacuous x;;
+
+let rec parity_less
+  a b = (if parity_less_true a b then Some true
+          else (if parity_less_false a b then Some false else None));;
+
+let rec parity_min x0 uu = match x0, uu with PBot, uu -> PBot
+                     | PEven, PBot -> PBot
+                     | POdd, PBot -> PBot
+                     | PTop, PBot -> PBot
+                     | PEven, PEven -> PEven
+                     | POdd, POdd -> POdd
+                     | PEven, POdd -> PTop
+                     | PEven, PTop -> PTop
+                     | POdd, PEven -> PTop
+                     | POdd, PTop -> PTop
+                     | PTop, PEven -> PTop
+                     | PTop, POdd -> PTop
+                     | PTop, PTop -> PTop;;
+
+let rec parity_max x0 uu = match x0, uu with PBot, uu -> PBot
+                     | PEven, PBot -> PBot
+                     | POdd, PBot -> PBot
+                     | PTop, PBot -> PBot
+                     | PEven, PEven -> PEven
+                     | POdd, POdd -> POdd
+                     | PEven, POdd -> PTop
+                     | PEven, PTop -> PTop
+                     | POdd, PEven -> PTop
+                     | POdd, PTop -> PTop
+                     | PTop, PEven -> PTop
+                     | PTop, POdd -> PTop
+                     | PTop, PTop -> PTop;;
+
+let parity_special_ops : (parity, unit) special_ops_ext
+  = Special_ops_ext (parity_min, parity_max, ());;
+
+let rec factor_parity = function PBot -> PBot
+                        | POdd -> POdd
+                        | PEven -> PTop
+                        | PTop -> PTop;;
+
+let rec inv_times_parity
+  r a b = (inf_parity a (factor_parity r), inf_parity b (factor_parity r));;
+
+let rec minus_parity x0 uu = match x0, uu with PBot, uu -> PBot
+                       | PEven, PBot -> PBot
+                       | POdd, PBot -> PBot
+                       | PTop, PBot -> PBot
+                       | PEven, PEven -> PEven
+                       | POdd, POdd -> PEven
+                       | PEven, POdd -> POdd
+                       | POdd, PEven -> POdd
+                       | PEven, PTop -> PTop
+                       | POdd, PTop -> PTop
+                       | PTop, PEven -> PTop
+                       | PTop, POdd -> PTop
+                       | PTop, PTop -> PTop;;
+
+let rec plus_parity x0 uu = match x0, uu with PBot, uu -> PBot
+                      | PEven, PBot -> PBot
+                      | POdd, PBot -> PBot
+                      | PTop, PBot -> PBot
+                      | PEven, PEven -> PEven
+                      | POdd, POdd -> PEven
+                      | PEven, POdd -> POdd
+                      | POdd, PEven -> POdd
+                      | PEven, PTop -> PTop
+                      | POdd, PTop -> PTop
+                      | PTop, PEven -> PTop
+                      | PTop, POdd -> PTop
+                      | PTop, PTop -> PTop;;
+
+let rec inv_minus_parity
+  r a b = (inf_parity a (plus_parity r b), inf_parity b (minus_parity a r));;
 
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
-let rec inv_times_int_dom_raw
-  r d1 d2 =
-    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
-     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
-     let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
-     let (c1, c2) =
-       inv_times_congruence (int_congruence r) (int_congruence d1)
-         (int_congruence d2)
-       in
-      (int_congruence_update (fun _ -> c1)
-         (int_parity_update (fun _ -> p1)
-           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
-        int_congruence_update (fun _ -> c2)
-          (int_parity_update (fun _ -> p2)
-            (int_ivl_update (fun _ -> i2)
-              (int_sign_update (fun _ -> s2) d2)))));;
+let rec inv_plus_parity
+  r a b = (inf_parity a (minus_parity r b), inf_parity b (minus_parity r a));;
 
-let rec inv_times_int_dom
-  mode r d1 d2 =
-    (let (r1, r2) = inv_times_int_dom_raw r d1 d2 in
-      (refine mode r1, refine mode r2));;
-
-let rec inv_minus_int_dom_raw
-  r d1 d2 =
-    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
-     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
-     let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
-     let (c1, c2) =
-       inv_minus_congruence (int_congruence r) (int_congruence d1)
-         (int_congruence d2)
-       in
-      (int_congruence_update (fun _ -> c1)
-         (int_parity_update (fun _ -> p1)
-           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
-        int_congruence_update (fun _ -> c2)
-          (int_parity_update (fun _ -> p2)
-            (int_ivl_update (fun _ -> i2)
-              (int_sign_update (fun _ -> s2) d2)))));;
-
-let rec inv_minus_int_dom
-  mode r d1 d2 =
-    (let (r1, r2) = inv_minus_int_dom_raw r d1 d2 in
-      (refine mode r1, refine mode r2));;
-
-let rec inv_plus_int_dom_raw
-  r d1 d2 =
-    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
-     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
-     let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
-     let (c1, c2) =
-       inv_plus_congruence (int_congruence r) (int_congruence d1)
-         (int_congruence d2)
-       in
-      (int_congruence_update (fun _ -> c1)
-         (int_parity_update (fun _ -> p1)
-           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
-        int_congruence_update (fun _ -> c2)
-          (int_parity_update (fun _ -> p2)
-            (int_ivl_update (fun _ -> i2)
-              (int_sign_update (fun _ -> s2) d2)))));;
-
-let rec inv_plus_int_dom
-  mode r d1 d2 =
-    (let (r1, r2) = inv_plus_int_dom_raw r d1 d2 in
-      (refine mode r1, refine mode r2));;
-
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
-
-let rec interval_tobool
-  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
-        then Some true
-        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
-               then Some false else None));;
-
-let rec first_deciding
-  xa0 x = match xa0, x with [], x -> None
-    | q :: qs, x ->
-        (match q x with None -> first_deciding qs x | Some a -> Some a);;
-
-let rec sign_tobool
-  a = (if sign_le a SNeg || sign_le a SPos then Some true
-        else (if sign_le a SZero then Some false else None));;
+let rec inv_eq_parity
+  res a b = (if res then (inf_parity a b, inf_parity a b) else (a, b));;
 
 let rec parity_tobool = function POdd -> Some true
                         | PBot -> None
                         | PEven -> None
                         | PTop -> None;;
 
-let rec int_dom_tobool
-  d = first_deciding
-        [(fun a -> interval_tobool (int_ivl a));
-          (fun a -> sign_tobool (int_sign a));
-          (fun a -> parity_tobool (int_parity a));
-          (fun a -> congruence_tobool (int_congruence a))]
-        d;;
+let parity_refine_ops : (parity, unit) refine_ops_ext
+  = Refine_ops_ext
+      (parity_tobool, inv_conservative, inv_eq_parity, inv_plus_parity,
+        inv_minus_parity, inv_times_parity, inf_parity, ());;
 
-let rec inv_eq_ivl
-  x0 a1 a2 = match x0, a1, a2 with
-    true, a1, a2 -> (inf_ivl a1 a2, inf_ivl a1 a2)
-    | false, a1, a2 -> (a1, a2);;
+let rec parity_eq_false
+  a b = match a, b with PEven, POdd -> true
+    | POdd, PEven -> true
+    | PBot, b -> equal_paritya PBot PBot || equal_paritya b PBot
+    | POdd, PBot -> equal_paritya POdd PBot || equal_paritya PBot PBot
+    | POdd, POdd -> equal_paritya POdd PBot || equal_paritya POdd PBot
+    | POdd, PTop -> equal_paritya POdd PBot || equal_paritya PTop PBot
+    | PTop, b -> equal_paritya PTop PBot || equal_paritya b PBot
+    | a, PBot -> equal_paritya a PBot || equal_paritya PBot PBot
+    | PEven, PEven -> equal_paritya PEven PBot || equal_paritya PEven PBot
+    | a, PTop -> equal_paritya a PBot || equal_paritya PTop PBot;;
 
-let rec inv_eq_sign
-  x0 a1 a2 = match x0, a1, a2 with
-    true, a1, a2 -> (inf_sign a1 a2, inf_sign a1 a2)
-    | false, a1, a2 ->
-        (let a1a =
-           (if sign_le a1 SZero && sign_le a2 SZero then SBot
-             else (if sign_le a2 SZero && sign_le a1 SNonNeg
-                    then inf_sign a1 SPos
-                    else (if sign_le a2 SZero && sign_le a1 SNonPos
-                           then inf_sign a1 SNeg else a1)))
-           in
-         let a =
-           (if sign_le a1 SZero && sign_le a2 SZero then SBot
-             else (if sign_le a1 SZero && sign_le a2 SNonNeg
-                    then inf_sign a2 SPos
-                    else (if sign_le a1 SZero && sign_le a2 SNonPos
-                           then inf_sign a2 SNeg else a2)))
-           in
-          (a1a, a));;
+let rec parity_eq_true x = parity_vacuous x;;
 
-let rec inv_eq_int_dom_raw
-  res d1 d2 =
-    (if res then (intersect_int_dom d1 d2, intersect_int_dom d1 d2)
-      else (let (s1, s2) = inv_eq_sign false (int_sign d1) (int_sign d2) in
-            let (i1, i2) = inv_eq_ivl false (int_ivl d1) (int_ivl d2) in
-            let (c1, c2) =
-              inv_eq_congruence false (int_congruence d1) (int_congruence d2) in
-             (int_congruence_update (fun _ -> c1)
-                (int_ivl_update (fun _ -> i1)
-                  (int_sign_update (fun _ -> s1) d1)),
-               int_congruence_update (fun _ -> c2)
-                 (int_ivl_update (fun _ -> i2)
-                   (int_sign_update (fun _ -> s2) d2)))));;
-
-let rec inv_eq_int_dom
-  mode res d1 d2 =
-    (let (r1, r2) = inv_eq_int_dom_raw res d1 d2 in
-      (refine mode r1, refine mode r2));;
+let rec parity_eq
+  a b = (if parity_eq_true a b then Some true
+          else (if parity_eq_false a b then Some false else None));;
 
 let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
                        | PEven, PBot -> PBot
@@ -6341,7 +6366,162 @@ let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
                        | PTop, POdd -> PTop
                        | PTop, PTop -> PTop;;
 
+let rec parity_mod
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
+          else (if equal_paritya b PEven then a else PTop));;
+
+let rec parity_eqb uu uv = match uu, uv with PEven, POdd -> Some false
+                     | POdd, PEven -> Some false
+                     | PBot, uv -> None
+                     | POdd, PBot -> None
+                     | POdd, POdd -> None
+                     | POdd, PTop -> None
+                     | PTop, uv -> None
+                     | uu, PBot -> None
+                     | PEven, PEven -> None
+                     | uu, PTop -> None;;
+
+let rec parity_div
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
+
+let rec parity_lt uu uv = None;;
+
+let rec aval_parity
+  x0 sigma = match x0, sigma with N n, sigma -> parity_of_int n
+    | V v, sigma -> sigma v
+    | Plus (a, b), sigma ->
+        plus_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Minus (a, b), sigma ->
+        minus_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Times (a, b), sigma ->
+        times_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Div (a, b), sigma ->
+        parity_div (aval_parity a sigma) (aval_parity b sigma)
+    | Mod (a, b), sigma ->
+        parity_mod (aval_parity a sigma) (aval_parity b sigma)
+    | Less (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (parity_lt (aval_parity a sigma) (aval_parity b sigma)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_lt (aval_parity b sigma) (aval_parity a sigma))))
+    | Greater (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (parity_lt (aval_parity b sigma) (aval_parity a sigma)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_lt (aval_parity a sigma) (aval_parity b sigma))))
+    | NotEq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not
+                   (parity_eqb (aval_parity a sigma) (aval_parity b sigma))))
+    | Eq (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (parity_eqb (aval_parity a sigma) (aval_parity b sigma)))
+    | Not a, sigma ->
+        (if is_empty_parity (aval_parity a sigma) then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not (parity_tobool (aval_parity a sigma))))
+    | And (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (bin_log (fun aa ba -> aa && ba) false
+                   (parity_tobool (aval_parity a sigma))
+                   (parity_tobool (aval_parity b sigma))))
+    | Or (a, b), sigma ->
+        (if is_empty_parity (aval_parity a sigma) ||
+              is_empty_parity (aval_parity b sigma)
+          then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (bin_log (fun aa ba -> aa || ba) true
+                   (parity_tobool (aval_parity a sigma))
+                   (parity_tobool (aval_parity b sigma))));;
+
+let parity_ops : (parity, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
+      (aval_parity, Query_ops_ext (parity_less, parity_eq, ()),
+        parity_refine_ops, parity_special_ops, PTop, ());;
+
+let rec parity_enter_st_for x = generic_enter_st_for bot_parity parity_ops x;;
+
+let rec interval_less_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
+
+let rec interval_less_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
+
+let rec interval_less
+  a b = (if interval_less_true a b then Some true
+          else (if interval_less_false a b then Some false else None));;
+
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
+
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
+
+let rec interval_eq
+  a b = (if interval_eq_true a b then Some true
+          else (if interval_eq_false a b then Some false else None));;
+
 let rec min _A a b = (if less_eq _A a b then a else b);;
+
+let rec ivl_min
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
+
+let rec ivl_max
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
+
+let ivl_special_ops : (ivl, unit) special_ops_ext
+  = Special_ops_ext (ivl_min, ivl_max, ());;
+
+let rec interval_tobool
+  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
+        then Some true
+        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
+               then Some false else None));;
+
+let rec inv_eq_ivl
+  x0 a1 a2 = match x0, a1, a2 with
+    true, a1, a2 -> (inf_ivl a1 a2, inf_ivl a1 a2)
+    | false, a1, a2 -> (a1, a2);;
+
+let ivl_refine_ops : (ivl, unit) refine_ops_ext
+  = Refine_ops_ext
+      (interval_tobool, inv_less_ivl, inv_eq_ivl, inv_conservative,
+        inv_conservative, inv_conservative, intersect_ivl, ());;
 
 let rec ivl_times_core
   uu uv = match uu, uv with
@@ -6370,149 +6550,11 @@ let rec times_ivl
   a b = (if ivl_nonempty a && ivl_nonempty b then ivl_times_core a b
           else bot_ivla);;
 
-let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                     | SNeg, SBot -> SBot
-                     | SNonPos, SBot -> SBot
-                     | SZero, SBot -> SBot
-                     | SNonNeg, SBot -> SBot
-                     | SPos, SBot -> SBot
-                     | STop, SBot -> SBot
-                     | SZero, SNeg -> SZero
-                     | SZero, SNonPos -> SZero
-                     | SZero, SZero -> SZero
-                     | SZero, SNonNeg -> SZero
-                     | SZero, SPos -> SZero
-                     | SZero, STop -> SZero
-                     | SNeg, SZero -> SZero
-                     | SNonPos, SZero -> SZero
-                     | SNonNeg, SZero -> SZero
-                     | SPos, SZero -> SZero
-                     | STop, SZero -> SZero
-                     | SNeg, SNeg -> SPos
-                     | SPos, SPos -> SPos
-                     | SNeg, SPos -> SNeg
-                     | SPos, SNeg -> SNeg
-                     | SNeg, SNonPos -> SNonNeg
-                     | SNonPos, SNeg -> SNonNeg
-                     | SNeg, SNonNeg -> SNonPos
-                     | SNonNeg, SNeg -> SNonPos
-                     | SPos, SNonNeg -> SNonNeg
-                     | SNonNeg, SPos -> SNonNeg
-                     | SPos, SNonPos -> SNonPos
-                     | SNonPos, SPos -> SNonPos
-                     | SNonNeg, SNonNeg -> SNonNeg
-                     | SNonNeg, SNonPos -> SNonPos
-                     | SNonPos, SNonNeg -> SNonPos
-                     | SNonPos, SNonPos -> SNonNeg
-                     | SNeg, STop -> STop
-                     | SNonPos, STop -> STop
-                     | SNonNeg, STop -> STop
-                     | SPos, STop -> STop
-                     | STop, SNeg -> STop
-                     | STop, SNonPos -> STop
-                     | STop, SNonNeg -> STop
-                     | STop, SPos -> STop
-                     | STop, STop -> STop;;
-
-let rec times_int_dom_raw
-  a b = int_congruence_update
-          (fun _ -> times_congruence (int_congruence a) (int_congruence b))
-          (int_parity_update
-            (fun _ -> times_parity (int_parity a) (int_parity b))
-            (int_ivl_update (fun _ -> times_ivl (int_ivl a) (int_ivl b))
-              (int_sign_update (fun _ -> times_sign (int_sign a) (int_sign b))
-                (top_int_dom_exta bounded_lattice_unit))));;
-
-let rec times_int_dom mode a b = refine mode (times_int_dom_raw a b);;
-
-let rec minus_parity x0 uu = match x0, uu with PBot, uu -> PBot
-                       | PEven, PBot -> PBot
-                       | POdd, PBot -> PBot
-                       | PTop, PBot -> PBot
-                       | PEven, PEven -> PEven
-                       | POdd, POdd -> PEven
-                       | PEven, POdd -> POdd
-                       | POdd, PEven -> POdd
-                       | PEven, PTop -> PTop
-                       | POdd, PTop -> PTop
-                       | PTop, PEven -> PTop
-                       | PTop, POdd -> PTop
-                       | PTop, PTop -> PTop;;
-
 let rec minus_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     (let (Ivl (a, b), Ivl (c, d)) =
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (minus_eint a d, minus_eint b c)));;
-
-let rec minus_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                     | SNeg, SBot -> SBot
-                     | SNonPos, SBot -> SBot
-                     | SZero, SBot -> SBot
-                     | SNonNeg, SBot -> SBot
-                     | SPos, SBot -> SBot
-                     | STop, SBot -> SBot
-                     | SNeg, SPos -> SNeg
-                     | SNeg, SNonNeg -> SNeg
-                     | SPos, SNeg -> SPos
-                     | SPos, SNonPos -> SPos
-                     | SNeg, SZero -> SNeg
-                     | SPos, SZero -> SPos
-                     | SZero, SZero -> SZero
-                     | SZero, SNeg -> SPos
-                     | SZero, SPos -> SNeg
-                     | SZero, SNonNeg -> SNonPos
-                     | SZero, SNonPos -> SNonNeg
-                     | SNonNeg, SZero -> SNonNeg
-                     | SNonNeg, SNeg -> SPos
-                     | SNonNeg, SNonPos -> SNonNeg
-                     | SNonPos, SZero -> SNonPos
-                     | SNonPos, SPos -> SNeg
-                     | SNonPos, SNonNeg -> SNonPos
-                     | SNeg, SNeg -> STop
-                     | SNeg, SNonPos -> STop
-                     | SNeg, STop -> STop
-                     | SNonPos, SNeg -> STop
-                     | SNonPos, SNonPos -> STop
-                     | SNonPos, STop -> STop
-                     | SZero, STop -> STop
-                     | SNonNeg, SNonNeg -> STop
-                     | SNonNeg, SPos -> STop
-                     | SNonNeg, STop -> STop
-                     | SPos, SNonNeg -> STop
-                     | SPos, SPos -> STop
-                     | SPos, STop -> STop
-                     | STop, SNeg -> STop
-                     | STop, SNonPos -> STop
-                     | STop, SZero -> STop
-                     | STop, SNonNeg -> STop
-                     | STop, SPos -> STop
-                     | STop, STop -> STop;;
-
-let rec minus_int_dom_raw
-  a b = int_congruence_update
-          (fun _ -> minus_congruence (int_congruence a) (int_congruence b))
-          (int_parity_update
-            (fun _ -> minus_parity (int_parity a) (int_parity b))
-            (int_ivl_update (fun _ -> minus_ivl (int_ivl a) (int_ivl b))
-              (int_sign_update (fun _ -> minus_sign (int_sign a) (int_sign b))
-                (top_int_dom_exta bounded_lattice_unit))));;
-
-let rec minus_int_dom mode a b = refine mode (minus_int_dom_raw a b);;
-
-let rec plus_parity x0 uu = match x0, uu with PBot, uu -> PBot
-                      | PEven, PBot -> PBot
-                      | POdd, PBot -> PBot
-                      | PTop, PBot -> PBot
-                      | PEven, PEven -> PEven
-                      | POdd, POdd -> PEven
-                      | PEven, POdd -> POdd
-                      | POdd, PEven -> POdd
-                      | PEven, PTop -> PTop
-                      | POdd, PTop -> PTop
-                      | PTop, PEven -> PTop
-                      | PTop, POdd -> PTop
-                      | PTop, PTop -> PTop;;
 
 let rec plus_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -6520,60 +6562,15 @@ let rec plus_ivl
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
 
-let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                    | SNeg, SBot -> SBot
-                    | SNonPos, SBot -> SBot
-                    | SZero, SBot -> SBot
-                    | SNonNeg, SBot -> SBot
-                    | SPos, SBot -> SBot
-                    | STop, SBot -> SBot
-                    | SNeg, SNeg -> SNeg
-                    | SNeg, SNonPos -> SNeg
-                    | SNonPos, SNeg -> SNeg
-                    | SNonPos, SNonPos -> SNonPos
-                    | SPos, SPos -> SPos
-                    | SPos, SNonNeg -> SPos
-                    | SNonNeg, SPos -> SPos
-                    | SNonNeg, SNonNeg -> SNonNeg
-                    | SZero, SNeg -> SNeg
-                    | SZero, SNonPos -> SNonPos
-                    | SZero, SZero -> SZero
-                    | SZero, SNonNeg -> SNonNeg
-                    | SZero, SPos -> SPos
-                    | SZero, STop -> STop
-                    | SNeg, SZero -> SNeg
-                    | SNonPos, SZero -> SNonPos
-                    | SNonNeg, SZero -> SNonNeg
-                    | SPos, SZero -> SPos
-                    | STop, SZero -> STop
-                    | SNeg, SNonNeg -> STop
-                    | SNeg, SPos -> STop
-                    | SNeg, STop -> STop
-                    | SNonPos, SNonNeg -> STop
-                    | SNonPos, SPos -> STop
-                    | SNonPos, STop -> STop
-                    | SNonNeg, SNeg -> STop
-                    | SNonNeg, SNonPos -> STop
-                    | SNonNeg, STop -> STop
-                    | SPos, SNeg -> STop
-                    | SPos, SNonPos -> STop
-                    | SPos, STop -> STop
-                    | STop, SNeg -> STop
-                    | STop, SNonPos -> STop
-                    | STop, SNonNeg -> STop
-                    | STop, SPos -> STop
-                    | STop, STop -> STop;;
+let rec interval_eqb
+  a b = (if interval_eq_true a b then Some true
+          else (if interval_eq_false a b then Some false else None));;
 
-let rec plus_int_dom_raw
-  a b = int_congruence_update
-          (fun _ -> plus_congruence (int_congruence a) (int_congruence b))
-          (int_parity_update
-            (fun _ -> plus_parity (int_parity a) (int_parity b))
-            (int_ivl_update (fun _ -> plus_ivl (int_ivl a) (int_ivl b))
-              (int_sign_update (fun _ -> plus_sign (int_sign a) (int_sign b))
-                (top_int_dom_exta bounded_lattice_unit))));;
+let rec interval_lt
+  a b = (if interval_less_true a b then Some true
+          else (if interval_less_false a b then Some false else None));;
 
-let rec plus_int_dom mode a b = refine mode (plus_int_dom_raw a b);;
+let rec ivl_of_int n = Ivl (Fin n, Fin n);;
 
 let rec ivl_mod_bound
   = function
@@ -6648,13 +6645,480 @@ let rec ivl_mod
                    (ivl_mod_bound b))
           else bot_ivla);;
 
+let rec aval_ivl
+  x0 sigma = match x0, sigma with N n, sigma -> ivl_of_int n
+    | V x, sigma -> sigma x
+    | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Div (a, b), sigma -> ivl_div (aval_ivl a sigma) (aval_ivl b sigma)
+    | Mod (a, b), sigma -> ivl_mod (aval_ivl a sigma) (aval_ivl b sigma)
+    | Less (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_lt (aval_ivl a sigma) (aval_ivl b sigma)))
+    | LessEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))))
+    | Greater (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_lt (aval_ivl b sigma) (aval_ivl a sigma)))
+    | GreaterEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))))
+    | NotEq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not
+                   (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))))
+    | Eq (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma)))
+    | Not a, sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (map_option not (interval_tobool (aval_ivl a sigma))))
+    | And (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (bin_log (fun aa ba -> aa && ba) false
+                   (interval_tobool (aval_ivl a sigma))
+                   (interval_tobool (aval_ivl b sigma))))
+    | Or (a, b), sigma ->
+        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else of_bool_option sup_ivl ivl_of_int
+                 (bin_log (fun aa ba -> aa || ba) true
+                   (interval_tobool (aval_ivl a sigma))
+                   (interval_tobool (aval_ivl b sigma))));;
+
+let ivl_ops : (ivl, unit) nonrelational_ops_ext
+  = Nonrelational_ops_ext
+      (aval_ivl, Query_ops_ext (interval_less, interval_eq, ()), ivl_refine_ops,
+        ivl_special_ops, ivl_top, ());;
+
+let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
+
+let rec sign_min x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | SNeg, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SZero, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SPos, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, SNonPos -> SNeg
+                   | SNonPos, SNeg -> SNeg
+                   | SNeg, SZero -> SNeg
+                   | SZero, SNeg -> SNeg
+                   | SNeg, SNonNeg -> SNeg
+                   | SNonNeg, SNeg -> SNeg
+                   | SNeg, SPos -> SNeg
+                   | SPos, SNeg -> SNeg
+                   | SNeg, STop -> SNeg
+                   | STop, SNeg -> SNeg
+                   | SNonPos, SZero -> SNonPos
+                   | SZero, SNonPos -> SNonPos
+                   | SNonPos, SNonNeg -> SNonPos
+                   | SNonNeg, SNonPos -> SNonPos
+                   | SNonPos, SPos -> SNonPos
+                   | SPos, SNonPos -> SNonPos
+                   | SNonPos, STop -> SNonPos
+                   | STop, SNonPos -> SNonPos
+                   | SZero, SNonNeg -> SZero
+                   | SNonNeg, SZero -> SZero
+                   | SZero, SPos -> SZero
+                   | SPos, SZero -> SZero
+                   | SZero, STop -> SNonPos
+                   | STop, SZero -> SNonPos
+                   | SNonNeg, SPos -> SNonNeg
+                   | SPos, SNonNeg -> SNonNeg
+                   | SNonNeg, STop -> STop
+                   | STop, SNonNeg -> STop
+                   | SPos, STop -> STop
+                   | STop, SPos -> STop;;
+
+let rec int_dom_min_raw
+  a b = int_parity_update (fun _ -> parity_min (int_parity a) (int_parity b))
+          (int_ivl_update (fun _ -> ivl_min (int_ivl a) (int_ivl b))
+            (int_sign_update (fun _ -> sign_min (int_sign a) (int_sign b))
+              (top_int_dom_exta bounded_lattice_unit)));;
+
+let rec int_dom_min mode a b = refine mode (int_dom_min_raw a b);;
+
+let rec sign_max x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | SNeg, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SZero, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SPos, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, SNonPos -> SNonPos
+                   | SNonPos, SNeg -> SNonPos
+                   | SNeg, SZero -> SZero
+                   | SZero, SNeg -> SZero
+                   | SNeg, SNonNeg -> SNonNeg
+                   | SNonNeg, SNeg -> SNonNeg
+                   | SNeg, SPos -> SPos
+                   | SPos, SNeg -> SPos
+                   | SNeg, STop -> STop
+                   | STop, SNeg -> STop
+                   | SNonPos, SZero -> SZero
+                   | SZero, SNonPos -> SZero
+                   | SNonPos, SNonNeg -> SNonNeg
+                   | SNonNeg, SNonPos -> SNonNeg
+                   | SNonPos, SPos -> SPos
+                   | SPos, SNonPos -> SPos
+                   | SNonPos, STop -> STop
+                   | STop, SNonPos -> STop
+                   | SZero, SNonNeg -> SNonNeg
+                   | SNonNeg, SZero -> SNonNeg
+                   | SZero, SPos -> SPos
+                   | SPos, SZero -> SPos
+                   | SZero, STop -> SNonNeg
+                   | STop, SZero -> SNonNeg
+                   | SNonNeg, SPos -> SPos
+                   | SPos, SNonNeg -> SPos
+                   | SNonNeg, STop -> SNonNeg
+                   | STop, SNonNeg -> SNonNeg
+                   | SPos, STop -> SPos
+                   | STop, SPos -> SPos;;
+
+let rec int_dom_max_raw
+  a b = int_parity_update (fun _ -> parity_max (int_parity a) (int_parity b))
+          (int_ivl_update (fun _ -> ivl_max (int_ivl a) (int_ivl b))
+            (int_sign_update (fun _ -> sign_max (int_sign a) (int_sign b))
+              (top_int_dom_exta bounded_lattice_unit)));;
+
+let rec int_dom_max mode a b = refine mode (int_dom_max_raw a b);;
+
+let rec int_dom_special_ops
+  mode = Special_ops_ext (int_dom_min mode, int_dom_max mode, ());;
+
+let rec inv_times_int_dom_raw
+  r d1 d2 =
+    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
+     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
+     let (p1, p2) =
+       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+     let (c1, c2) =
+       inv_times_congruence (int_congruence r) (int_congruence d1)
+         (int_congruence d2)
+       in
+      (int_congruence_update (fun _ -> c1)
+         (int_parity_update (fun _ -> p1)
+           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
+        int_congruence_update (fun _ -> c2)
+          (int_parity_update (fun _ -> p2)
+            (int_ivl_update (fun _ -> i2)
+              (int_sign_update (fun _ -> s2) d2)))));;
+
+let rec inv_times_int_dom
+  mode r d1 d2 =
+    (let (r1, r2) = inv_times_int_dom_raw r d1 d2 in
+      (refine mode r1, refine mode r2));;
+
+let rec inv_minus_int_dom_raw
+  r d1 d2 =
+    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
+     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
+     let (p1, p2) =
+       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+     let (c1, c2) =
+       inv_minus_congruence (int_congruence r) (int_congruence d1)
+         (int_congruence d2)
+       in
+      (int_congruence_update (fun _ -> c1)
+         (int_parity_update (fun _ -> p1)
+           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
+        int_congruence_update (fun _ -> c2)
+          (int_parity_update (fun _ -> p2)
+            (int_ivl_update (fun _ -> i2)
+              (int_sign_update (fun _ -> s2) d2)))));;
+
+let rec inv_minus_int_dom
+  mode r d1 d2 =
+    (let (r1, r2) = inv_minus_int_dom_raw r d1 d2 in
+      (refine mode r1, refine mode r2));;
+
+let rec inv_plus_int_dom_raw
+  r d1 d2 =
+    (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
+     let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
+     let (p1, p2) =
+       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+     let (c1, c2) =
+       inv_plus_congruence (int_congruence r) (int_congruence d1)
+         (int_congruence d2)
+       in
+      (int_congruence_update (fun _ -> c1)
+         (int_parity_update (fun _ -> p1)
+           (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1))),
+        int_congruence_update (fun _ -> c2)
+          (int_parity_update (fun _ -> p2)
+            (int_ivl_update (fun _ -> i2)
+              (int_sign_update (fun _ -> s2) d2)))));;
+
+let rec inv_plus_int_dom
+  mode r d1 d2 =
+    (let (r1, r2) = inv_plus_int_dom_raw r d1 d2 in
+      (refine mode r1, refine mode r2));;
+
+let rec first_deciding
+  xa0 x = match xa0, x with [], x -> None
+    | q :: qs, x ->
+        (match q x with None -> first_deciding qs x | Some a -> Some a);;
+
+let rec sign_tobool
+  a = (if sign_le a SNeg || sign_le a SPos then Some true
+        else (if sign_le a SZero then Some false else None));;
+
+let rec int_dom_tobool
+  d = first_deciding
+        [(fun a -> interval_tobool (int_ivl a));
+          (fun a -> sign_tobool (int_sign a));
+          (fun a -> parity_tobool (int_parity a));
+          (fun a -> congruence_tobool (int_congruence a))]
+        d;;
+
+let rec inv_eq_sign
+  x0 a1 a2 = match x0, a1, a2 with
+    true, a1, a2 -> (inf_sign a1 a2, inf_sign a1 a2)
+    | false, a1, a2 ->
+        (let a1a =
+           (if sign_le a1 SZero && sign_le a2 SZero then SBot
+             else (if sign_le a2 SZero && sign_le a1 SNonNeg
+                    then inf_sign a1 SPos
+                    else (if sign_le a2 SZero && sign_le a1 SNonPos
+                           then inf_sign a1 SNeg else a1)))
+           in
+         let a =
+           (if sign_le a1 SZero && sign_le a2 SZero then SBot
+             else (if sign_le a1 SZero && sign_le a2 SNonNeg
+                    then inf_sign a2 SPos
+                    else (if sign_le a1 SZero && sign_le a2 SNonPos
+                           then inf_sign a2 SNeg else a2)))
+           in
+          (a1a, a));;
+
+let rec inv_eq_int_dom_raw
+  res d1 d2 =
+    (if res then (intersect_int_dom d1 d2, intersect_int_dom d1 d2)
+      else (let (s1, s2) = inv_eq_sign false (int_sign d1) (int_sign d2) in
+            let (i1, i2) = inv_eq_ivl false (int_ivl d1) (int_ivl d2) in
+            let (c1, c2) =
+              inv_eq_congruence false (int_congruence d1) (int_congruence d2) in
+             (int_congruence_update (fun _ -> c1)
+                (int_ivl_update (fun _ -> i1)
+                  (int_sign_update (fun _ -> s1) d1)),
+               int_congruence_update (fun _ -> c2)
+                 (int_ivl_update (fun _ -> i2)
+                   (int_sign_update (fun _ -> s2) d2)))));;
+
+let rec inv_eq_int_dom
+  mode res d1 d2 =
+    (let (r1, r2) = inv_eq_int_dom_raw res d1 d2 in
+      (refine mode r1, refine mode r2));;
+
+let rec int_refine_ops
+  mode =
+    Refine_ops_ext
+      (int_dom_tobool, inv_less_int_dom mode, inv_eq_int_dom mode,
+        inv_plus_int_dom mode, inv_minus_int_dom mode, inv_times_int_dom mode,
+        intersect_int_dom_mode mode, ());;
+
+let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                     | SNeg, SBot -> SBot
+                     | SNonPos, SBot -> SBot
+                     | SZero, SBot -> SBot
+                     | SNonNeg, SBot -> SBot
+                     | SPos, SBot -> SBot
+                     | STop, SBot -> SBot
+                     | SZero, SNeg -> SZero
+                     | SZero, SNonPos -> SZero
+                     | SZero, SZero -> SZero
+                     | SZero, SNonNeg -> SZero
+                     | SZero, SPos -> SZero
+                     | SZero, STop -> SZero
+                     | SNeg, SZero -> SZero
+                     | SNonPos, SZero -> SZero
+                     | SNonNeg, SZero -> SZero
+                     | SPos, SZero -> SZero
+                     | STop, SZero -> SZero
+                     | SNeg, SNeg -> SPos
+                     | SPos, SPos -> SPos
+                     | SNeg, SPos -> SNeg
+                     | SPos, SNeg -> SNeg
+                     | SNeg, SNonPos -> SNonNeg
+                     | SNonPos, SNeg -> SNonNeg
+                     | SNeg, SNonNeg -> SNonPos
+                     | SNonNeg, SNeg -> SNonPos
+                     | SPos, SNonNeg -> SNonNeg
+                     | SNonNeg, SPos -> SNonNeg
+                     | SPos, SNonPos -> SNonPos
+                     | SNonPos, SPos -> SNonPos
+                     | SNonNeg, SNonNeg -> SNonNeg
+                     | SNonNeg, SNonPos -> SNonPos
+                     | SNonPos, SNonNeg -> SNonPos
+                     | SNonPos, SNonPos -> SNonNeg
+                     | SNeg, STop -> STop
+                     | SNonPos, STop -> STop
+                     | SNonNeg, STop -> STop
+                     | SPos, STop -> STop
+                     | STop, SNeg -> STop
+                     | STop, SNonPos -> STop
+                     | STop, SNonNeg -> STop
+                     | STop, SPos -> STop
+                     | STop, STop -> STop;;
+
+let rec times_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> times_congruence (int_congruence a) (int_congruence b))
+          (int_parity_update
+            (fun _ -> times_parity (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> times_ivl (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> times_sign (int_sign a) (int_sign b))
+                (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec times_int_dom mode a b = refine mode (times_int_dom_raw a b);;
+
+let rec minus_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                     | SNeg, SBot -> SBot
+                     | SNonPos, SBot -> SBot
+                     | SZero, SBot -> SBot
+                     | SNonNeg, SBot -> SBot
+                     | SPos, SBot -> SBot
+                     | STop, SBot -> SBot
+                     | SNeg, SPos -> SNeg
+                     | SNeg, SNonNeg -> SNeg
+                     | SPos, SNeg -> SPos
+                     | SPos, SNonPos -> SPos
+                     | SNeg, SZero -> SNeg
+                     | SPos, SZero -> SPos
+                     | SZero, SZero -> SZero
+                     | SZero, SNeg -> SPos
+                     | SZero, SPos -> SNeg
+                     | SZero, SNonNeg -> SNonPos
+                     | SZero, SNonPos -> SNonNeg
+                     | SNonNeg, SZero -> SNonNeg
+                     | SNonNeg, SNeg -> SPos
+                     | SNonNeg, SNonPos -> SNonNeg
+                     | SNonPos, SZero -> SNonPos
+                     | SNonPos, SPos -> SNeg
+                     | SNonPos, SNonNeg -> SNonPos
+                     | SNeg, SNeg -> STop
+                     | SNeg, SNonPos -> STop
+                     | SNeg, STop -> STop
+                     | SNonPos, SNeg -> STop
+                     | SNonPos, SNonPos -> STop
+                     | SNonPos, STop -> STop
+                     | SZero, STop -> STop
+                     | SNonNeg, SNonNeg -> STop
+                     | SNonNeg, SPos -> STop
+                     | SNonNeg, STop -> STop
+                     | SPos, SNonNeg -> STop
+                     | SPos, SPos -> STop
+                     | SPos, STop -> STop
+                     | STop, SNeg -> STop
+                     | STop, SNonPos -> STop
+                     | STop, SZero -> STop
+                     | STop, SNonNeg -> STop
+                     | STop, SPos -> STop
+                     | STop, STop -> STop;;
+
+let rec minus_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> minus_congruence (int_congruence a) (int_congruence b))
+          (int_parity_update
+            (fun _ -> minus_parity (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> minus_ivl (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> minus_sign (int_sign a) (int_sign b))
+                (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec minus_int_dom mode a b = refine mode (minus_int_dom_raw a b);;
+
+let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                    | SNeg, SBot -> SBot
+                    | SNonPos, SBot -> SBot
+                    | SZero, SBot -> SBot
+                    | SNonNeg, SBot -> SBot
+                    | SPos, SBot -> SBot
+                    | STop, SBot -> SBot
+                    | SNeg, SNeg -> SNeg
+                    | SNeg, SNonPos -> SNeg
+                    | SNonPos, SNeg -> SNeg
+                    | SNonPos, SNonPos -> SNonPos
+                    | SPos, SPos -> SPos
+                    | SPos, SNonNeg -> SPos
+                    | SNonNeg, SPos -> SPos
+                    | SNonNeg, SNonNeg -> SNonNeg
+                    | SZero, SNeg -> SNeg
+                    | SZero, SNonPos -> SNonPos
+                    | SZero, SZero -> SZero
+                    | SZero, SNonNeg -> SNonNeg
+                    | SZero, SPos -> SPos
+                    | SZero, STop -> STop
+                    | SNeg, SZero -> SNeg
+                    | SNonPos, SZero -> SNonPos
+                    | SNonNeg, SZero -> SNonNeg
+                    | SPos, SZero -> SPos
+                    | STop, SZero -> STop
+                    | SNeg, SNonNeg -> STop
+                    | SNeg, SPos -> STop
+                    | SNeg, STop -> STop
+                    | SNonPos, SNonNeg -> STop
+                    | SNonPos, SPos -> STop
+                    | SNonPos, STop -> STop
+                    | SNonNeg, SNeg -> STop
+                    | SNonNeg, SNonPos -> STop
+                    | SNonNeg, STop -> STop
+                    | SPos, SNeg -> STop
+                    | SPos, SNonPos -> STop
+                    | SPos, STop -> STop
+                    | STop, SNeg -> STop
+                    | STop, SNonPos -> STop
+                    | STop, SNonNeg -> STop
+                    | STop, SPos -> STop
+                    | STop, STop -> STop;;
+
+let rec plus_int_dom_raw
+  a b = int_congruence_update
+          (fun _ -> plus_congruence (int_congruence a) (int_congruence b))
+          (int_parity_update
+            (fun _ -> plus_parity (int_parity a) (int_parity b))
+            (int_ivl_update (fun _ -> plus_ivl (int_ivl a) (int_ivl b))
+              (int_sign_update (fun _ -> plus_sign (int_sign a) (int_sign b))
+                (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec plus_int_dom mode a b = refine mode (plus_int_dom_raw a b);;
+
 let rec sign_mod
   a b = (if equal_signa a SBot || equal_signa b SBot then SBot
           else (if equal_signa b SZero then a else sup_signa a SZero));;
-
-let rec parity_mod
-  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
-          else (if equal_paritya b PEven then a else PTop));;
 
 let rec mod_int_dom_raw
   a b = int_congruence_update
@@ -6665,10 +7129,6 @@ let rec mod_int_dom_raw
                 (top_int_dom_exta bounded_lattice_unit))));;
 
 let rec mod_int_dom mode a b = refine mode (mod_int_dom_raw a b);;
-
-let rec interval_eqb
-  a b = (if interval_eq_true a b then Some true
-          else (if interval_eq_false a b then Some false else None));;
 
 let rec first_deciding2
   xa0 x y = match xa0, x, y with [], x, y -> None
@@ -6683,17 +7143,6 @@ let rec sign_eqb
                          sign_le b SPos && sign_le a SNonPos))
                  then Some false else None));;
 
-let rec parity_eqb uu uv = match uu, uv with PEven, POdd -> Some false
-                     | POdd, PEven -> Some false
-                     | PBot, uv -> None
-                     | POdd, PBot -> None
-                     | POdd, POdd -> None
-                     | POdd, PTop -> None
-                     | PTop, uv -> None
-                     | uu, PBot -> None
-                     | PEven, PEven -> None
-                     | uu, PTop -> None;;
-
 let rec int_dom_eqb
   d1 d2 =
     first_deciding2
@@ -6707,9 +7156,6 @@ let rec sign_div
   a b = (if equal_signa a SBot || equal_signa b SBot then SBot
           else sup_signa (times_sign a b) SZero);;
 
-let rec parity_div
-  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
-
 let rec div_int_dom_raw
   a b = int_congruence_update
           (fun _ -> congruence_div (int_congruence a) (int_congruence b))
@@ -6720,27 +7166,12 @@ let rec div_int_dom_raw
 
 let rec div_int_dom mode a b = refine mode (div_int_dom_raw a b);;
 
-let rec interval_less_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
-
-let rec interval_less_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
-
-let rec interval_lt
-  a b = (if interval_less_true a b then Some true
-          else (if interval_less_false a b then Some false else None));;
-
 let rec sign_lt
   a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
           else (if sign_le a SNonPos && sign_le b SPos then Some true
                  else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
                         else (if sign_le b SNeg && sign_le a SPos
                                then Some false else None))));;
-
-let rec parity_lt uu uv = None;;
 
 let rec int_dom_lt
   d1 d2 =
@@ -6845,432 +7276,17 @@ let rec aval_int_dom
                    (bin_log (fun aa ba -> aa || ba) true (int_dom_tobool a)
                      (int_dom_tobool b))));;
 
-let rec branch_int_dom_fixpoint_st
-  g e pol s =
-    (if feasible_with
-          (executable_domain_int_dom_ext (bounded_lattice_unit, warrowing_unit))
-          (Backward_exec_ops_ext
-            (aval_int_dom Refine_Fixpoint, int_dom_tobool,
-              inv_less_int_dom Refine_Fixpoint, inv_eq_int_dom Refine_Fixpoint,
-              inv_plus_int_dom Refine_Fixpoint,
-              inv_minus_int_dom Refine_Fixpoint,
-              inv_times_int_dom Refine_Fixpoint,
-              intersect_int_dom_mode Refine_Fixpoint, ()))
-          e pol
-          (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit) g s)
-      then collapse_lift
-             (bot_resolved_st_q (bot_int_dom_ext bounded_lattice_unit))
-             (bfilter_st_lift_with
-               (executable_domain_int_dom_ext
-                 (bounded_lattice_unit, warrowing_unit))
-               (Backward_exec_ops_ext
-                 (aval_int_dom Refine_Fixpoint, int_dom_tobool,
-                   inv_less_int_dom Refine_Fixpoint,
-                   inv_eq_int_dom Refine_Fixpoint,
-                   inv_plus_int_dom Refine_Fixpoint,
-                   inv_minus_int_dom Refine_Fixpoint,
-                   inv_times_int_dom Refine_Fixpoint,
-                   intersect_int_dom_mode Refine_Fixpoint, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa (bot_int_dom_ext bounded_lattice_unit));;
-
-let rec ivl_min
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
-
-let rec parity_min x0 uu = match x0, uu with PBot, uu -> PBot
-                     | PEven, PBot -> PBot
-                     | POdd, PBot -> PBot
-                     | PTop, PBot -> PBot
-                     | PEven, PEven -> PEven
-                     | POdd, POdd -> POdd
-                     | PEven, POdd -> PTop
-                     | PEven, PTop -> PTop
-                     | POdd, PEven -> PTop
-                     | POdd, PTop -> PTop
-                     | PTop, PEven -> PTop
-                     | PTop, POdd -> PTop
-                     | PTop, PTop -> PTop;;
-
-let rec sign_min x0 uu = match x0, uu with SBot, uu -> SBot
-                   | SNeg, SBot -> SBot
-                   | SNonPos, SBot -> SBot
-                   | SZero, SBot -> SBot
-                   | SNonNeg, SBot -> SBot
-                   | SPos, SBot -> SBot
-                   | STop, SBot -> SBot
-                   | SNeg, SNeg -> SNeg
-                   | SNonPos, SNonPos -> SNonPos
-                   | SZero, SZero -> SZero
-                   | SNonNeg, SNonNeg -> SNonNeg
-                   | SPos, SPos -> SPos
-                   | STop, STop -> STop
-                   | SNeg, SNonPos -> SNeg
-                   | SNonPos, SNeg -> SNeg
-                   | SNeg, SZero -> SNeg
-                   | SZero, SNeg -> SNeg
-                   | SNeg, SNonNeg -> SNeg
-                   | SNonNeg, SNeg -> SNeg
-                   | SNeg, SPos -> SNeg
-                   | SPos, SNeg -> SNeg
-                   | SNeg, STop -> SNeg
-                   | STop, SNeg -> SNeg
-                   | SNonPos, SZero -> SNonPos
-                   | SZero, SNonPos -> SNonPos
-                   | SNonPos, SNonNeg -> SNonPos
-                   | SNonNeg, SNonPos -> SNonPos
-                   | SNonPos, SPos -> SNonPos
-                   | SPos, SNonPos -> SNonPos
-                   | SNonPos, STop -> SNonPos
-                   | STop, SNonPos -> SNonPos
-                   | SZero, SNonNeg -> SZero
-                   | SNonNeg, SZero -> SZero
-                   | SZero, SPos -> SZero
-                   | SPos, SZero -> SZero
-                   | SZero, STop -> SNonPos
-                   | STop, SZero -> SNonPos
-                   | SNonNeg, SPos -> SNonNeg
-                   | SPos, SNonNeg -> SNonNeg
-                   | SNonNeg, STop -> STop
-                   | STop, SNonNeg -> STop
-                   | SPos, STop -> STop
-                   | STop, SPos -> STop;;
-
-let rec int_dom_min_raw
-  a b = int_parity_update (fun _ -> parity_min (int_parity a) (int_parity b))
-          (int_ivl_update (fun _ -> ivl_min (int_ivl a) (int_ivl b))
-            (int_sign_update (fun _ -> sign_min (int_sign a) (int_sign b))
-              (top_int_dom_exta bounded_lattice_unit)));;
-
-let rec int_dom_min mode a b = refine mode (int_dom_min_raw a b);;
-
-let rec ivl_max
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
-
-let rec parity_max x0 uu = match x0, uu with PBot, uu -> PBot
-                     | PEven, PBot -> PBot
-                     | POdd, PBot -> PBot
-                     | PTop, PBot -> PBot
-                     | PEven, PEven -> PEven
-                     | POdd, POdd -> POdd
-                     | PEven, POdd -> PTop
-                     | PEven, PTop -> PTop
-                     | POdd, PEven -> PTop
-                     | POdd, PTop -> PTop
-                     | PTop, PEven -> PTop
-                     | PTop, POdd -> PTop
-                     | PTop, PTop -> PTop;;
-
-let rec sign_max x0 uu = match x0, uu with SBot, uu -> SBot
-                   | SNeg, SBot -> SBot
-                   | SNonPos, SBot -> SBot
-                   | SZero, SBot -> SBot
-                   | SNonNeg, SBot -> SBot
-                   | SPos, SBot -> SBot
-                   | STop, SBot -> SBot
-                   | SNeg, SNeg -> SNeg
-                   | SNonPos, SNonPos -> SNonPos
-                   | SZero, SZero -> SZero
-                   | SNonNeg, SNonNeg -> SNonNeg
-                   | SPos, SPos -> SPos
-                   | STop, STop -> STop
-                   | SNeg, SNonPos -> SNonPos
-                   | SNonPos, SNeg -> SNonPos
-                   | SNeg, SZero -> SZero
-                   | SZero, SNeg -> SZero
-                   | SNeg, SNonNeg -> SNonNeg
-                   | SNonNeg, SNeg -> SNonNeg
-                   | SNeg, SPos -> SPos
-                   | SPos, SNeg -> SPos
-                   | SNeg, STop -> STop
-                   | STop, SNeg -> STop
-                   | SNonPos, SZero -> SZero
-                   | SZero, SNonPos -> SZero
-                   | SNonPos, SNonNeg -> SNonNeg
-                   | SNonNeg, SNonPos -> SNonNeg
-                   | SNonPos, SPos -> SPos
-                   | SPos, SNonPos -> SPos
-                   | SNonPos, STop -> STop
-                   | STop, SNonPos -> STop
-                   | SZero, SNonNeg -> SNonNeg
-                   | SNonNeg, SZero -> SNonNeg
-                   | SZero, SPos -> SPos
-                   | SPos, SZero -> SPos
-                   | SZero, STop -> SNonNeg
-                   | STop, SZero -> SNonNeg
-                   | SNonNeg, SPos -> SPos
-                   | SPos, SNonNeg -> SPos
-                   | SNonNeg, STop -> SNonNeg
-                   | STop, SNonNeg -> SNonNeg
-                   | SPos, STop -> SPos
-                   | STop, SPos -> SPos;;
-
-let rec int_dom_max_raw
-  a b = int_parity_update (fun _ -> parity_max (int_parity a) (int_parity b))
-          (int_ivl_update (fun _ -> ivl_max (int_ivl a) (int_ivl b))
-            (int_sign_update (fun _ -> sign_max (int_sign a) (int_sign b))
-              (top_int_dom_exta bounded_lattice_unit)));;
-
-let rec int_dom_max mode a b = refine mode (int_dom_max_raw a b);;
-
-let rec int_dom_special_ops
-  mode = Special_ops_ext (int_dom_min mode, int_dom_max mode, ());;
-
-let int_dom_ops_fixpoint : (unit int_dom_ext, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_int_dom Refine_Fixpoint, int_dom_special_ops Refine_Fixpoint,
-        branch_int_dom_fixpoint_st, top_int_dom_exta bounded_lattice_unit, ());;
-
-let rec int_dom_enter_fixpoint_st_for
-  x = generic_enter_st_for (bot_int_dom_ext bounded_lattice_unit)
-        int_dom_ops_fixpoint x;;
-
-let rec branch_int_dom_never_st
-  g e pol s =
-    (if feasible_with
-          (executable_domain_int_dom_ext (bounded_lattice_unit, warrowing_unit))
-          (Backward_exec_ops_ext
-            (aval_int_dom Refine_Never, int_dom_tobool,
-              inv_less_int_dom Refine_Never, inv_eq_int_dom Refine_Never,
-              inv_plus_int_dom Refine_Never, inv_minus_int_dom Refine_Never,
-              inv_times_int_dom Refine_Never,
-              intersect_int_dom_mode Refine_Never, ()))
-          e pol
-          (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit) g s)
-      then collapse_lift
-             (bot_resolved_st_q (bot_int_dom_ext bounded_lattice_unit))
-             (bfilter_st_lift_with
-               (executable_domain_int_dom_ext
-                 (bounded_lattice_unit, warrowing_unit))
-               (Backward_exec_ops_ext
-                 (aval_int_dom Refine_Never, int_dom_tobool,
-                   inv_less_int_dom Refine_Never, inv_eq_int_dom Refine_Never,
-                   inv_plus_int_dom Refine_Never,
-                   inv_minus_int_dom Refine_Never,
-                   inv_times_int_dom Refine_Never,
-                   intersect_int_dom_mode Refine_Never, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa (bot_int_dom_ext bounded_lattice_unit));;
-
-let int_dom_ops_never : (unit int_dom_ext, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_int_dom Refine_Never, int_dom_special_ops Refine_Never,
-        branch_int_dom_never_st, top_int_dom_exta bounded_lattice_unit, ());;
-
-let rec int_dom_enter_never_st_for
-  x = generic_enter_st_for (bot_int_dom_ext bounded_lattice_unit)
-        int_dom_ops_never x;;
-
-let rec branch_int_dom_once_st
-  g e pol s =
-    (if feasible_with
-          (executable_domain_int_dom_ext (bounded_lattice_unit, warrowing_unit))
-          (Backward_exec_ops_ext
-            (aval_int_dom Refine_Once, int_dom_tobool,
-              inv_less_int_dom Refine_Once, inv_eq_int_dom Refine_Once,
-              inv_plus_int_dom Refine_Once, inv_minus_int_dom Refine_Once,
-              inv_times_int_dom Refine_Once, intersect_int_dom_mode Refine_Once,
-              ()))
-          e pol
-          (fun_of_resolved_st_q_for (bot_int_dom_ext bounded_lattice_unit) g s)
-      then collapse_lift
-             (bot_resolved_st_q (bot_int_dom_ext bounded_lattice_unit))
-             (bfilter_st_lift_with
-               (executable_domain_int_dom_ext
-                 (bounded_lattice_unit, warrowing_unit))
-               (Backward_exec_ops_ext
-                 (aval_int_dom Refine_Once, int_dom_tobool,
-                   inv_less_int_dom Refine_Once, inv_eq_int_dom Refine_Once,
-                   inv_plus_int_dom Refine_Once, inv_minus_int_dom Refine_Once,
-                   inv_times_int_dom Refine_Once,
-                   intersect_int_dom_mode Refine_Once, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa (bot_int_dom_ext bounded_lattice_unit));;
-
-let int_dom_ops_once : (unit int_dom_ext, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_int_dom Refine_Once, int_dom_special_ops Refine_Once,
-        branch_int_dom_once_st, top_int_dom_exta bounded_lattice_unit, ());;
-
-let rec int_dom_enter_once_st_for
-  x = generic_enter_st_for (bot_int_dom_ext bounded_lattice_unit)
-        int_dom_ops_once x;;
+let rec int_dom_ops
+  mode =
+    Nonrelational_ops_ext
+      (aval_int_dom mode, Query_ops_ext (int_less, int_eq, ()),
+        int_refine_ops mode, int_dom_special_ops mode,
+        top_int_dom_exta bounded_lattice_unit, ());;
 
 let rec int_dom_enter_st_for
-  x0 g = match x0, g with Refine_Never, g -> int_dom_enter_never_st_for g
-    | Refine_Once, g -> int_dom_enter_once_st_for g
-    | Refine_Fixpoint, g -> int_dom_enter_fixpoint_st_for g;;
-
-let parity_special_ops : (parity, unit) special_ops_ext
-  = Special_ops_ext (parity_min, parity_max, ());;
-
-let rec aval_parity
-  x0 sigma = match x0, sigma with N n, sigma -> parity_of_int n
-    | V v, sigma -> sigma v
-    | Plus (a, b), sigma ->
-        plus_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Minus (a, b), sigma ->
-        minus_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Times (a, b), sigma ->
-        times_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Div (a, b), sigma ->
-        parity_div (aval_parity a sigma) (aval_parity b sigma)
-    | Mod (a, b), sigma ->
-        parity_mod (aval_parity a sigma) (aval_parity b sigma)
-    | Less (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (parity_lt (aval_parity a sigma) (aval_parity b sigma)))
-    | LessEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (map_option not
-                   (parity_lt (aval_parity b sigma) (aval_parity a sigma))))
-    | Greater (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (parity_lt (aval_parity b sigma) (aval_parity a sigma)))
-    | GreaterEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (map_option not
-                   (parity_lt (aval_parity a sigma) (aval_parity b sigma))))
-    | NotEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (map_option not
-                   (parity_eqb (aval_parity a sigma) (aval_parity b sigma))))
-    | Eq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (parity_eqb (aval_parity a sigma) (aval_parity b sigma)))
-    | Not a, sigma ->
-        (if is_empty_parity (aval_parity a sigma) then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (map_option not (parity_tobool (aval_parity a sigma))))
-    | And (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (bin_log (fun aa ba -> aa && ba) false
-                   (parity_tobool (aval_parity a sigma))
-                   (parity_tobool (aval_parity b sigma))))
-    | Or (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (bin_log (fun aa ba -> aa || ba) true
-                   (parity_tobool (aval_parity a sigma))
-                   (parity_tobool (aval_parity b sigma))));;
-
-let parity_ops : (parity, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_parity, parity_special_ops, (fun _ _ _ s -> s), PTop, ());;
-
-let rec parity_enter_st_for x = generic_enter_st_for bot_parity parity_ops x;;
-
-let ivl_special_ops : (ivl, unit) special_ops_ext
-  = Special_ops_ext (ivl_min, ivl_max, ());;
-
-let rec ivl_of_int n = Ivl (Fin n, Fin n);;
-
-let rec aval_ivl
-  x0 sigma = match x0, sigma with N n, sigma -> ivl_of_int n
-    | V x, sigma -> sigma x
-    | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Div (a, b), sigma -> ivl_div (aval_ivl a sigma) (aval_ivl b sigma)
-    | Mod (a, b), sigma -> ivl_mod (aval_ivl a sigma) (aval_ivl b sigma)
-    | Less (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (interval_lt (aval_ivl a sigma) (aval_ivl b sigma)))
-    | LessEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))))
-    | Greater (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (interval_lt (aval_ivl b sigma) (aval_ivl a sigma)))
-    | GreaterEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))))
-    | NotEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))))
-    | Eq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma)))
-    | Not a, sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (map_option not (interval_tobool (aval_ivl a sigma))))
-    | And (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (bin_log (fun aa ba -> aa && ba) false
-                   (interval_tobool (aval_ivl a sigma))
-                   (interval_tobool (aval_ivl b sigma))))
-    | Or (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
-          then bot_ivla
-          else of_bool_option sup_ivl ivl_of_int
-                 (bin_log (fun aa ba -> aa || ba) true
-                   (interval_tobool (aval_ivl a sigma))
-                   (interval_tobool (aval_ivl b sigma))));;
-
-let rec branch_ivl_st
-  g e pol s =
-    (if feasible_with executable_domain_ivl
-          (Backward_exec_ops_ext
-            (aval_ivl, interval_tobool, inv_less_ivl, inv_eq_ivl,
-              inv_conservative, inv_conservative, inv_conservative,
-              intersect_ivl, ()))
-          e pol (fun_of_resolved_st_q_for bot_ivl g s)
-      then collapse_lift (bot_resolved_st_q bot_ivl)
-             (bfilter_st_lift_with executable_domain_ivl
-               (Backward_exec_ops_ext
-                 (aval_ivl, interval_tobool, inv_less_ivl, inv_eq_ivl,
-                   inv_conservative, inv_conservative, inv_conservative,
-                   intersect_ivl, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa bot_ivl);;
-
-let ivl_ops : (ivl, unit) nonrelational_ops_ext
-  = Nonrelational_ops_ext
-      (aval_ivl, ivl_special_ops, branch_ivl_st, ivl_top, ());;
-
-let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
+  mode =
+    generic_enter_st_for (bot_int_dom_ext bounded_lattice_unit)
+      (int_dom_ops mode);;
 
 let rec combine_assign_resolved _A
   g dst v s =
@@ -7339,27 +7355,36 @@ let rec exec_spec _A
                 (location_of g ret_var))
               env0));;
 
-let rec parity_tf_st_for x = generic_tf_st_for bot_parity parity_ops x;;
+let rec parity_tf_st_for
+  x = generic_tf_st_for executable_domain_parity parity_ops x;;
 
-let rec int_tf_st_fixpoint_for
-  x = generic_tf_st_for (bot_int_dom_ext bounded_lattice_unit)
-        int_dom_ops_fixpoint x;;
+let rec sign_less_false
+  a b = equal_signa (fst (inv_less_sign true a b)) SBot ||
+          equal_signa (snd (inv_less_sign true a b)) SBot;;
 
-let rec int_tf_st_never_for
-  x = generic_tf_st_for (bot_int_dom_ext bounded_lattice_unit) int_dom_ops_never
-        x;;
+let rec sign_less_true
+  a b = equal_signa (fst (inv_less_sign false a b)) SBot ||
+          equal_signa (snd (inv_less_sign false a b)) SBot;;
 
-let rec int_tf_st_once_for
-  x = generic_tf_st_for (bot_int_dom_ext bounded_lattice_unit) int_dom_ops_once
-        x;;
-
-let rec int_tf_st_for
-  x0 g = match x0, g with Refine_Never, g -> int_tf_st_never_for g
-    | Refine_Once, g -> int_tf_st_once_for g
-    | Refine_Fixpoint, g -> int_tf_st_fixpoint_for g;;
+let rec sign_less
+  a b = (if sign_less_true a b then Some true
+          else (if sign_less_false a b then Some false else None));;
 
 let sign_special_ops : (sign, unit) special_ops_ext
   = Special_ops_ext (sign_min, sign_max, ());;
+
+let sign_refine_ops : (sign, unit) refine_ops_ext
+  = Refine_ops_ext
+      (sign_tobool, inv_less_sign, inv_eq_sign, inv_conservative,
+        inv_conservative, inv_conservative, inf_sign, ());;
+
+let rec sign_eq_false a b = equal_signa (inf_sign a b) SBot;;
+
+let rec sign_eq_true a b = sign_less_false a b && sign_less_false b a;;
+
+let rec sign_eq
+  a b = (if sign_eq_true a b then Some true
+          else (if sign_eq_false a b then Some false else None));;
 
 let rec aval_sign
   x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
@@ -7429,30 +7454,14 @@ let rec aval_sign
                    (sign_tobool (aval_sign a sigma))
                    (sign_tobool (aval_sign b sigma))));;
 
-let rec branch_sign_st
-  g e pol s =
-    (if feasible_with executable_domain_sign
-          (Backward_exec_ops_ext
-            (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
-              inv_conservative, inv_conservative, inv_conservative, inf_sign,
-              ()))
-          e pol (fun_of_resolved_st_q_for bot_sign g s)
-      then collapse_lift (bot_resolved_st_q bot_sign)
-             (bfilter_st_lift_with executable_domain_sign
-               (Backward_exec_ops_ext
-                 (aval_sign, sign_tobool, inv_less_sign, inv_eq_sign,
-                   inv_conservative, inv_conservative, inv_conservative,
-                   inf_sign, ()))
-               g e pol (Lifted s))
-      else bot_resolved_st_qa bot_sign);;
-
 let sign_ops : (sign, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
-      (aval_sign, sign_special_ops, branch_sign_st, STop, ());;
+      (aval_sign, Query_ops_ext (sign_less, sign_eq, ()), sign_refine_ops,
+        sign_special_ops, STop, ());;
 
 let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
-let rec ivl_tf_st_for x = generic_tf_st_for bot_ivl ivl_ops x;;
+let rec ivl_tf_st_for x = generic_tf_st_for executable_domain_ivl ivl_ops x;;
 
 let rec ls_branch_update
   ls_brancha
@@ -7973,7 +7982,13 @@ let rec program_vars
   p = remdups equal_literal
         (maps (scope_vnames_list p) (prog_main_name :: prog_procs p));;
 
-let rec sign_tf_st_for x = generic_tf_st_for bot_sign sign_ops x;;
+let rec sign_tf_st_for x = generic_tf_st_for executable_domain_sign sign_ops x;;
+
+let rec int_tf_st_for
+  mode =
+    generic_tf_st_for
+      (executable_domain_int_dom_ext (bounded_lattice_unit, warrowing_unit))
+      (int_dom_ops mode);;
 
 let rec set_slot6
   r v = Product
@@ -8265,10 +8280,19 @@ let rec local_spec_of
             (equal_relc, bot_relc) set_slot6)
           (order_spec (program_vars p));;
 
+let rec n_query _A
+  (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, n_top, more)) =
+    n_query;;
+
+let rec q_eq (Query_ops_ext (q_less, q_eq, more)) = q_eq;;
+
 let rec congruence_truthy_query
   e d = map_option not
-          (congruence_eqb (aval_congruence e d)
-            (aval_congruence (N zero_inta) d));;
+          (q_eq (n_query bot_congruence congruence_ops)
+            (n_aval bot_congruence congruence_ops e d)
+            (n_aval bot_congruence congruence_ops (N zero_inta) d));;
+
+let rec q_less (Query_ops_ext (q_less, q_eq, more)) = q_less;;
 
 let rec congruence_check_query
   x0 d = match x0, d with
@@ -8280,19 +8304,32 @@ let rec congruence_check_query
         bin_log (fun a b -> a || b) true (congruence_check_query b1 d)
           (congruence_check_query b2 d)
     | Less (a, b), d ->
-        congruence_lt (aval_congruence a d) (aval_congruence b d)
+        q_less (n_query bot_congruence congruence_ops)
+          (n_aval bot_congruence congruence_ops a d)
+          (n_aval bot_congruence congruence_ops b d)
     | LessEq (a, b), d ->
         map_option not
-          (congruence_lt (aval_congruence b d) (aval_congruence a d))
+          (q_less (n_query bot_congruence congruence_ops)
+            (n_aval bot_congruence congruence_ops b d)
+            (n_aval bot_congruence congruence_ops a d))
     | Greater (a, b), d ->
-        congruence_lt (aval_congruence b d) (aval_congruence a d)
+        q_less (n_query bot_congruence congruence_ops)
+          (n_aval bot_congruence congruence_ops b d)
+          (n_aval bot_congruence congruence_ops a d)
     | GreaterEq (a, b), d ->
         map_option not
-          (congruence_lt (aval_congruence a d) (aval_congruence b d))
-    | Eq (a, b), d -> congruence_eqb (aval_congruence a d) (aval_congruence b d)
+          (q_less (n_query bot_congruence congruence_ops)
+            (n_aval bot_congruence congruence_ops a d)
+            (n_aval bot_congruence congruence_ops b d))
+    | Eq (a, b), d ->
+        q_eq (n_query bot_congruence congruence_ops)
+          (n_aval bot_congruence congruence_ops a d)
+          (n_aval bot_congruence congruence_ops b d)
     | NotEq (a, b), d ->
         map_option not
-          (congruence_eqb (aval_congruence a d) (aval_congruence b d))
+          (q_eq (n_query bot_congruence congruence_ops)
+            (n_aval bot_congruence congruence_ops a d)
+            (n_aval bot_congruence congruence_ops b d))
     | N v, d -> congruence_truthy_query (N v) d
     | V v, d -> congruence_truthy_query (V v) d
     | Plus (v, va), d -> congruence_truthy_query (Plus (v, va)) d
@@ -8331,16 +8368,10 @@ let rec congruence_eval_answer
     (if bool_valued e then bool_answer (congruence_check_query e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec interval_eq
-  a b = (if interval_eq_true a b then Some true
-          else (if interval_eq_false a b then Some false else None));;
-
 let rec interval_truthy_query
-  e d = map_option not (interval_eq (aval_ivl e d) (aval_ivl (N zero_inta) d));;
-
-let rec interval_less
-  a b = (if interval_less_true a b then Some true
-          else (if interval_less_false a b then Some false else None));;
+  e d = map_option not
+          (q_eq (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops e d)
+            (n_aval bot_ivl ivl_ops (N zero_inta) d));;
 
 let rec interval_check_query
   x0 d = match x0, d with Not b, d -> map_option not (interval_check_query b d)
@@ -8350,15 +8381,27 @@ let rec interval_check_query
     | Or (b1, b2), d ->
         bin_log (fun a b -> a || b) true (interval_check_query b1 d)
           (interval_check_query b2 d)
-    | Less (a, b), d -> interval_less (aval_ivl a d) (aval_ivl b d)
+    | Less (a, b), d ->
+        q_less (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops a d)
+          (n_aval bot_ivl ivl_ops b d)
     | LessEq (a, b), d ->
-        map_option not (interval_less (aval_ivl b d) (aval_ivl a d))
-    | Greater (a, b), d -> interval_less (aval_ivl b d) (aval_ivl a d)
+        map_option not
+          (q_less (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops b d)
+            (n_aval bot_ivl ivl_ops a d))
+    | Greater (a, b), d ->
+        q_less (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops b d)
+          (n_aval bot_ivl ivl_ops a d)
     | GreaterEq (a, b), d ->
-        map_option not (interval_less (aval_ivl a d) (aval_ivl b d))
-    | Eq (a, b), d -> interval_eq (aval_ivl a d) (aval_ivl b d)
+        map_option not
+          (q_less (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops a d)
+            (n_aval bot_ivl ivl_ops b d))
+    | Eq (a, b), d ->
+        q_eq (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops a d)
+          (n_aval bot_ivl ivl_ops b d)
     | NotEq (a, b), d ->
-        map_option not (interval_eq (aval_ivl a d) (aval_ivl b d))
+        map_option not
+          (q_eq (n_query bot_ivl ivl_ops) (n_aval bot_ivl ivl_ops a d)
+            (n_aval bot_ivl ivl_ops b d))
     | N v, d -> interval_truthy_query (N v) d
     | V v, d -> interval_truthy_query (V v) d
     | Plus (v, va), d -> interval_truthy_query (Plus (v, va)) d
@@ -8372,37 +8415,11 @@ let rec interval_eval_answer
     (if bool_valued e then bool_answer (interval_check_query e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec parity_eq_false
-  a b = match a, b with PEven, POdd -> true
-    | POdd, PEven -> true
-    | PBot, b -> equal_paritya PBot PBot || equal_paritya b PBot
-    | POdd, PBot -> equal_paritya POdd PBot || equal_paritya PBot PBot
-    | POdd, POdd -> equal_paritya POdd PBot || equal_paritya POdd PBot
-    | POdd, PTop -> equal_paritya POdd PBot || equal_paritya PTop PBot
-    | PTop, b -> equal_paritya PTop PBot || equal_paritya b PBot
-    | a, PBot -> equal_paritya a PBot || equal_paritya PBot PBot
-    | PEven, PEven -> equal_paritya PEven PBot || equal_paritya PEven PBot
-    | a, PTop -> equal_paritya a PBot || equal_paritya PTop PBot;;
-
-let rec parity_vacuous a b = equal_paritya a PBot || equal_paritya b PBot;;
-
-let rec parity_eq_true x = parity_vacuous x;;
-
-let rec parity_eq
-  a b = (if parity_eq_true a b then Some true
-          else (if parity_eq_false a b then Some false else None));;
-
 let rec parity_truthy_query
   e d = map_option not
-          (parity_eq (aval_parity e d) (aval_parity (N zero_inta) d));;
-
-let rec parity_less_false x = parity_vacuous x;;
-
-let rec parity_less_true x = parity_vacuous x;;
-
-let rec parity_less
-  a b = (if parity_less_true a b then Some true
-          else (if parity_less_false a b then Some false else None));;
+          (q_eq (n_query bot_parity parity_ops)
+            (n_aval bot_parity parity_ops e d)
+            (n_aval bot_parity parity_ops (N zero_inta) d));;
 
 let rec parity_check_query
   x0 d = match x0, d with Not b, d -> map_option not (parity_check_query b d)
@@ -8412,15 +8429,30 @@ let rec parity_check_query
     | Or (b1, b2), d ->
         bin_log (fun a b -> a || b) true (parity_check_query b1 d)
           (parity_check_query b2 d)
-    | Less (a, b), d -> parity_less (aval_parity a d) (aval_parity b d)
+    | Less (a, b), d ->
+        q_less (n_query bot_parity parity_ops)
+          (n_aval bot_parity parity_ops a d) (n_aval bot_parity parity_ops b d)
     | LessEq (a, b), d ->
-        map_option not (parity_less (aval_parity b d) (aval_parity a d))
-    | Greater (a, b), d -> parity_less (aval_parity b d) (aval_parity a d)
+        map_option not
+          (q_less (n_query bot_parity parity_ops)
+            (n_aval bot_parity parity_ops b d)
+            (n_aval bot_parity parity_ops a d))
+    | Greater (a, b), d ->
+        q_less (n_query bot_parity parity_ops)
+          (n_aval bot_parity parity_ops b d) (n_aval bot_parity parity_ops a d)
     | GreaterEq (a, b), d ->
-        map_option not (parity_less (aval_parity a d) (aval_parity b d))
-    | Eq (a, b), d -> parity_eq (aval_parity a d) (aval_parity b d)
+        map_option not
+          (q_less (n_query bot_parity parity_ops)
+            (n_aval bot_parity parity_ops a d)
+            (n_aval bot_parity parity_ops b d))
+    | Eq (a, b), d ->
+        q_eq (n_query bot_parity parity_ops) (n_aval bot_parity parity_ops a d)
+          (n_aval bot_parity parity_ops b d)
     | NotEq (a, b), d ->
-        map_option not (parity_eq (aval_parity a d) (aval_parity b d))
+        map_option not
+          (q_eq (n_query bot_parity parity_ops)
+            (n_aval bot_parity parity_ops a d)
+            (n_aval bot_parity parity_ops b d))
     | N v, d -> parity_truthy_query (N v) d
     | V v, d -> parity_truthy_query (V v) d
     | Plus (v, va), d -> parity_truthy_query (Plus (v, va)) d
@@ -8434,37 +8466,10 @@ let rec parity_eval_answer
     (if bool_valued e then bool_answer (parity_check_query e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec sign_eq_false_of_intersection a b = is_empty_sign (inf_sign a b);;
-
-let rec sign_eq_false x = sign_eq_false_of_intersection x;;
-
-let rec sign_less_false_of_inv
-  a b = is_empty_sign (fst (inv_less_sign true a b)) ||
-          is_empty_sign (snd (inv_less_sign true a b));;
-
-let rec sign_eq_true_of_less
-  a b = sign_less_false_of_inv a b && sign_less_false_of_inv b a;;
-
-let rec sign_eq_true x = sign_eq_true_of_less x;;
-
-let rec sign_eq
-  a b = (if sign_eq_true a b then Some true
-          else (if sign_eq_false a b then Some false else None));;
-
 let rec sign_truthy_query
-  e d = map_option not (sign_eq (aval_sign e d) (aval_sign (N zero_inta) d));;
-
-let rec sign_less_false x = sign_less_false_of_inv x;;
-
-let rec sign_less_true_of_inv
-  a b = is_empty_sign (fst (inv_less_sign false a b)) ||
-          is_empty_sign (snd (inv_less_sign false a b));;
-
-let rec sign_less_true x = sign_less_true_of_inv x;;
-
-let rec sign_less
-  a b = (if sign_less_true a b then Some true
-          else (if sign_less_false a b then Some false else None));;
+  e d = map_option not
+          (q_eq (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops e d)
+            (n_aval bot_sign sign_ops (N zero_inta) d));;
 
 let rec sign_check_query
   x0 d = match x0, d with Not b, d -> map_option not (sign_check_query b d)
@@ -8474,15 +8479,27 @@ let rec sign_check_query
     | Or (b1, b2), d ->
         bin_log (fun a b -> a || b) true (sign_check_query b1 d)
           (sign_check_query b2 d)
-    | Less (a, b), d -> sign_less (aval_sign a d) (aval_sign b d)
+    | Less (a, b), d ->
+        q_less (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops a d)
+          (n_aval bot_sign sign_ops b d)
     | LessEq (a, b), d ->
-        map_option not (sign_less (aval_sign b d) (aval_sign a d))
-    | Greater (a, b), d -> sign_less (aval_sign b d) (aval_sign a d)
+        map_option not
+          (q_less (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops b d)
+            (n_aval bot_sign sign_ops a d))
+    | Greater (a, b), d ->
+        q_less (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops b d)
+          (n_aval bot_sign sign_ops a d)
     | GreaterEq (a, b), d ->
-        map_option not (sign_less (aval_sign a d) (aval_sign b d))
-    | Eq (a, b), d -> sign_eq (aval_sign a d) (aval_sign b d)
+        map_option not
+          (q_less (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops a d)
+            (n_aval bot_sign sign_ops b d))
+    | Eq (a, b), d ->
+        q_eq (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops a d)
+          (n_aval bot_sign sign_ops b d)
     | NotEq (a, b), d ->
-        map_option not (sign_eq (aval_sign a d) (aval_sign b d))
+        map_option not
+          (q_eq (n_query bot_sign sign_ops) (n_aval bot_sign sign_ops a d)
+            (n_aval bot_sign sign_ops b d))
     | N v, d -> sign_truthy_query (N v) d
     | V v, d -> sign_truthy_query (V v) d
     | Plus (v, va), d -> sign_truthy_query (Plus (v, va)) d
@@ -8497,50 +8514,71 @@ let rec sign_eval_answer
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
 let rec int_truthy_query
-  e d = map_option not
-          (int_eq (aval_int_dom Refine_Fixpoint e d)
-            (aval_int_dom Refine_Fixpoint (N zero_inta) d));;
+  mode e d =
+    map_option not
+      (q_eq (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+        (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) e d)
+        (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode)
+          (N zero_inta) d));;
 
 let rec int_check_query
-  x0 d = match x0, d with Not b, d -> map_option not (int_check_query b d)
-    | And (b1, b2), d ->
-        bin_log (fun a b -> a && b) false (int_check_query b1 d)
-          (int_check_query b2 d)
-    | Or (b1, b2), d ->
-        bin_log (fun a b -> a || b) true (int_check_query b1 d)
-          (int_check_query b2 d)
-    | Less (a, b), d ->
-        int_less (aval_int_dom Refine_Fixpoint a d)
-          (aval_int_dom Refine_Fixpoint b d)
-    | LessEq (a, b), d ->
+  mode x1 d = match mode, x1, d with
+    mode, Not b, d -> map_option not (int_check_query mode b d)
+    | mode, And (b1, b2), d ->
+        bin_log (fun a b -> a && b) false (int_check_query mode b1 d)
+          (int_check_query mode b2 d)
+    | mode, Or (b1, b2), d ->
+        bin_log (fun a b -> a || b) true (int_check_query mode b1 d)
+          (int_check_query mode b2 d)
+    | mode, Less (a, b), d ->
+        q_less
+          (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a d)
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b d)
+    | mode, LessEq (a, b), d ->
         map_option not
-          (int_less (aval_int_dom Refine_Fixpoint b d)
-            (aval_int_dom Refine_Fixpoint a d))
-    | Greater (a, b), d ->
-        int_less (aval_int_dom Refine_Fixpoint b d)
-          (aval_int_dom Refine_Fixpoint a d)
-    | GreaterEq (a, b), d ->
+          (q_less
+            (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b
+              d)
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a
+              d))
+    | mode, Greater (a, b), d ->
+        q_less
+          (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b d)
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a d)
+    | mode, GreaterEq (a, b), d ->
         map_option not
-          (int_less (aval_int_dom Refine_Fixpoint a d)
-            (aval_int_dom Refine_Fixpoint b d))
-    | Eq (a, b), d ->
-        int_eq (aval_int_dom Refine_Fixpoint a d)
-          (aval_int_dom Refine_Fixpoint b d)
-    | NotEq (a, b), d ->
+          (q_less
+            (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a
+              d)
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b
+              d))
+    | mode, Eq (a, b), d ->
+        q_eq (n_query (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode))
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a d)
+          (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b d)
+    | mode, NotEq (a, b), d ->
         map_option not
-          (int_eq (aval_int_dom Refine_Fixpoint a d)
-            (aval_int_dom Refine_Fixpoint b d))
-    | N v, d -> int_truthy_query (N v) d
-    | V v, d -> int_truthy_query (V v) d
-    | Plus (v, va), d -> int_truthy_query (Plus (v, va)) d
-    | Minus (v, va), d -> int_truthy_query (Minus (v, va)) d
-    | Times (v, va), d -> int_truthy_query (Times (v, va)) d
-    | Div (v, va), d -> int_truthy_query (Div (v, va)) d
-    | Mod (v, va), d -> int_truthy_query (Mod (v, va)) d;;
+          (q_eq (n_query (bot_int_dom_ext bounded_lattice_unit)
+                  (int_dom_ops mode))
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) a
+              d)
+            (n_aval (bot_int_dom_ext bounded_lattice_unit) (int_dom_ops mode) b
+              d))
+    | mode, N v, d -> int_truthy_query mode (N v) d
+    | mode, V v, d -> int_truthy_query mode (V v) d
+    | mode, Plus (v, va), d -> int_truthy_query mode (Plus (v, va)) d
+    | mode, Minus (v, va), d -> int_truthy_query mode (Minus (v, va)) d
+    | mode, Times (v, va), d -> int_truthy_query mode (Times (v, va)) d
+    | mode, Div (v, va), d -> int_truthy_query mode (Div (v, va)) d
+    | mode, Mod (v, va), d -> int_truthy_query mode (Mod (v, va)) d;;
 
 let rec int_eval_answer
-  d (EvalInt e) =
-    (if bool_valued e then bool_answer (int_check_query e d)
+  mode d (EvalInt e) =
+    (if bool_valued e then bool_answer (int_check_query mode e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
 let rec val_answer
@@ -8560,7 +8598,7 @@ let rec val_answer
     | Int_Analysis, v, q ->
         (match slot4 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-          | Lifted st -> int_eval_answer st q)
+          | Lifted st -> int_eval_answer Refine_Fixpoint st q)
     | Congruence_Analysis, v, q ->
         (match slot5 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)

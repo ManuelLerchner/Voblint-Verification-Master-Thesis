@@ -128,12 +128,14 @@ text \<open>The proved check's condition holds at every reaching store and the r
 corollary checks_ex_first_check_holds:
   assumes "t \<in> checks_ex_reach (Statement 1)"
   shows "truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
-  using assms checks_ex_node_sound sign_classify_check_proved[OF checks_ex_classify_1] by blast
+  using assms checks_ex_node_sound sign_tf.check.classify_check_proved[OF checks_ex_classify_1]
+  by blast
 
 corollary checks_ex_second_check_refuted:
   assumes "t \<in> checks_ex_reach (Statement 3)"
   shows "\<not> truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
-  using assms checks_ex_node_sound sign_classify_check_refuted[OF checks_ex_classify_3] by blast
+  using assms checks_ex_node_sound sign_tf.check.classify_check_refuted[OF checks_ex_classify_3]
+  by blast
 
 text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the checks that are actually true: the compiler's own
@@ -143,7 +145,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 
 lemma checks_ex_proven_check_discharged:
   "sign_checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_env"
-proof (rule sign_checks_provenI)
+proof (rule sign_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
@@ -153,7 +155,7 @@ qed
 
 lemma checks_ex_proven_check_checks_proven:
   "checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_reach"
-  by (rule sign_checks_proven_sound)
+  by (rule sign_tf.check.abstract_checks_proven_sound)
      (use checks_ex_node_sound checks_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: stores do reach the check nodes.  The all-zero initial store runs the

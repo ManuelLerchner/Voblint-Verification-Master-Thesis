@@ -122,13 +122,13 @@ lemma parity_ex_classify_6:
 corollary parity_ex_first_check_holds:
   assumes "t \<in> parity_ex_reach (Statement 3)"
   shows "truthy (\<lbrakk>NotEq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
-  using assms parity_ex_node_sound parity_classify_check_proved[OF parity_ex_classify_3]
+  using assms parity_ex_node_sound parity_tf.check.classify_check_proved[OF parity_ex_classify_3]
   by blast
 
 corollary parity_ex_second_check_refuted:
   assumes "t \<in> parity_ex_reach (Statement 4)"
   shows "\<not> truthy (\<lbrakk>Eq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
-  using assms parity_ex_node_sound parity_classify_check_refuted[OF parity_ex_classify_4]
+  using assms parity_ex_node_sound parity_tf.check.classify_check_refuted[OF parity_ex_classify_4]
   by blast
 
 text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
@@ -137,7 +137,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 
 lemma parity_ex_proven_check_discharged:
   "parity_checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_env"
-proof (rule parity_checks_provenI)
+proof (rule parity_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))}"
   then have v_eq: "v = Statement 3"
@@ -149,7 +149,7 @@ qed
 
 lemma parity_ex_proven_check_checks_proven:
   "checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_reach"
-  by (rule parity_checks_proven_sound)
+  by (rule parity_tf.check.abstract_checks_proven_sound)
      (use parity_ex_node_sound parity_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: reading \<open>7\<close> for \<open>x\<close> and \<open>99\<close> for \<open>w\<close>, the all-zero initial store reaches

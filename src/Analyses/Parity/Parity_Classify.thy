@@ -7,46 +7,14 @@ begin
 section \<open>Parity instance of the generic check-discharge interface\<close>
 
 text \<open>
-  Only composition lives here, exactly as in \<open>Voblint_Analysis_Sign.Sign_Classify\<close>
-  and \<open>Voblint_Analysis_Interval.Interval_Classify\<close>: the Parity lattice comparison
-  tables (\<open>parity_less_true\<close>/\<open>parity_less_false\<close>/\<open>parity_eq_true\<close>/
-  \<open>parity_eq_false\<close>) and their
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Numeric_Queries\<close> interpretation of
-  \<open>sound_numeric_queries\<close> live in that theory. The Parity expression
-  evaluator \<open>aval_parity\<close> lives in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Domain\<close>. The
-  Boolean recursion over \<^typ>\<open>exp\<close>, the three-way classification, and the
-  node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
-  \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Framework.Abstract_Checks\<close>) once, below,
-  reusing the numeric-query facts already proved sound in
-  \<open>parity_numeric_queries\<close> --- no Boolean recursion or classification logic
-  is restated.
+  The check classifier is derived from Parity's bundle, exactly as in
+  \<open>Voblint_Analysis_Sign.Sign_Classify\<close>: the Boolean recursion over \<^typ>\<open>exp\<close>,
+  the three-way classification, and the node-indexed bridge to
+  \<^const>\<open>checks_proven\<close> come from the comparison queries
+  \<^const>\<open>parity_less\<close>/\<^const>\<open>parity_eq\<close> and the evaluator, through the
+  \<open>parity_tf\<close> interpretation in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Transfer\<close>.
+  Their facts stay under \<open>parity_tf.check.\<close>.
 \<close>
-
-global_interpretation parity_check_domain:
-  abstract_check_domain parity_less parity_eq gamma_state aval_parity
-  defines
-    parity_truthy_query = parity_check_domain.truthy_query
-    and parity_check_query = parity_check_domain.check_query
-    and parity_classify_check = parity_check_domain.classify_check
-    and parity_eval_answer = parity_check_domain.eval_answer
-    and parity_checks_proven = parity_check_domain.abstract_checks_proven
-  by unfold_locales (rule parity_arith.aval_abs_sound)
-
-text \<open>
-  Only the consumer-facing aliases get a short Parity-prefixed name, matching
-  \<open>Voblint_Analysis_Sign.Sign_Classify\<close>'s naming convention:
-  \<open>classify_check\<close>'s two directions and the \<open>checks_proven\<close> bridge, both
-  exercised below and by the worked check-discharge example. The lower-level
-  facts \<open>classify_check\<close>'s own soundness is built from stay reachable under
-  the qualified \<open>parity_check_domain.\<close> name.
-\<close>
-
-lemmas parity_eval_answer_sound = parity_check_domain.eval_answer_sound
-lemmas parity_answer_check = parity_check_domain.answer_check_eval_answer
-lemmas parity_classify_check_proved = parity_check_domain.classify_check_proved
-lemmas parity_classify_check_refuted = parity_check_domain.classify_check_refuted
-lemmas parity_checks_provenI = parity_check_domain.abstract_checks_provenI
-lemmas parity_checks_proven_sound = parity_check_domain.abstract_checks_proven_sound
 
 subsection \<open>Executable classification tests\<close>
 

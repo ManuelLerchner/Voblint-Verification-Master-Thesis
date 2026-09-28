@@ -426,156 +426,102 @@ qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_
        inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
        inv_plus_int_dom_raw_mono inv_minus_int_dom_raw_mono inv_times_int_dom_raw_mono)
 
-abbreviation intersect_int_dom_never :: "int_dom => int_dom => int_dom" where
-  "intersect_int_dom_never == intersect_int_dom_mode Refine_Never"
+subsection \<open>The refinement operations, per mode\<close>
 
-abbreviation aval_int_dom_never :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_never == aval_int_dom Refine_Never"
+text \<open>
+  The three refinement modes differ only in how often the four components are
+  reduced against each other, so one record parametric in the mode carries all
+  three. The guard filters and the branch are derived from it in \<open>Int_Transfer\<close>.
+\<close>
 
-abbreviation tobool_int_dom_never :: "int_dom => bool option" where
-  "tobool_int_dom_never == int_dom_tobool"
+definition int_refine_ops :: "refine_mode \<Rightarrow> int_dom refine_ops" where
+  "int_refine_ops mode =
+     \<lparr>r_tobool = int_dom_tobool, r_inv_less = inv_less_int_dom mode,
+      r_inv_eq = inv_eq_int_dom mode, r_inv_plus = inv_plus_int_dom mode,
+      r_inv_minus = inv_minus_int_dom mode, r_inv_times = inv_times_int_dom mode,
+      r_intersect = intersect_int_dom_mode mode\<rparr>"
 
-abbreviation inv_less_int_dom_never ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_less_int_dom_never == inv_less_int_dom Refine_Never"
+lemma int_refine_ops_simps [simp]:
+  "r_tobool (int_refine_ops mode) = int_dom_tobool"
+  "r_inv_less (int_refine_ops mode) = inv_less_int_dom mode"
+  "r_inv_eq (int_refine_ops mode) = inv_eq_int_dom mode"
+  "r_inv_plus (int_refine_ops mode) = inv_plus_int_dom mode"
+  "r_inv_minus (int_refine_ops mode) = inv_minus_int_dom mode"
+  "r_inv_times (int_refine_ops mode) = inv_times_int_dom mode"
+  "r_intersect (int_refine_ops mode) = intersect_int_dom_mode mode"
+  by (simp_all add: int_refine_ops_def)
 
-abbreviation inv_eq_int_dom_never ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_eq_int_dom_never == inv_eq_int_dom Refine_Never"
+subsection \<open>Comparison queries\<close>
 
-abbreviation inv_plus_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_plus_int_dom_never == inv_plus_int_dom Refine_Never"
+text \<open>
+  The four comparison judgments are the generic derivations of
+  \<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close> at the most precise mode's
+  inverses. They are stated as plain definitions over those inverses so that they
+  carry code equations; each is definitionally the \<^locale>\<open>backward_ops\<close> judgment,
+  whose soundness therefore transfers in one line. A sharper composite table,
+  reduced through all four components at once, is future precision work.
+\<close>
 
-abbreviation inv_minus_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_minus_int_dom_never == inv_minus_int_dom Refine_Never"
+definition int_less_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
+  "int_less_true a b =
+     (is_empty (fst (inv_less_int_dom Refine_Fixpoint False a b))
+      \<or> is_empty (snd (inv_less_int_dom Refine_Fixpoint False a b)))"
 
-abbreviation inv_times_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_times_int_dom_never == inv_times_int_dom Refine_Never"
+definition int_less_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
+  "int_less_false a b =
+     (is_empty (fst (inv_less_int_dom Refine_Fixpoint True a b))
+      \<or> is_empty (snd (inv_less_int_dom Refine_Fixpoint True a b)))"
 
-global_interpretation int_dom_backward_never:
-    backward_domain_mono
-      intersect_int_dom_never aval_int_dom_never tobool_int_dom_never
-      inv_less_int_dom_never inv_eq_int_dom_never
-      inv_plus_int_dom_never inv_minus_int_dom_never inv_times_int_dom_never
-  defines
-    afilter_int_dom_never = int_dom_backward_never.afilter
-    and feasible_int_dom_never = int_dom_backward_never.feasible
-    and bfilter_int_dom_never = int_dom_backward_never.bfilter
-    and branch_int_dom_never = int_dom_backward_never.branch
-    and branch_lifted_int_dom_never = int_dom_backward_never.branch_lifted
-    and afilter_int_dom_never_st = int_dom_backward_never.afilter_st
-    and bfilter_int_dom_never_st = int_dom_backward_never.bfilter_st
-    and branch_int_dom_never_st = int_dom_backward_never.branch_st
-  by (rule int_dom_backward_domain_mono) simp
+definition int_eq_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
+  "int_eq_true a b = (int_less_false a b \<and> int_less_false b a)"
 
-abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
-  "intersect_int_dom_once == intersect_int_dom_mode Refine_Once"
+definition int_eq_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
+  "int_eq_false a b = is_empty (intersect_int_dom_mode Refine_Fixpoint a b)"
 
-abbreviation aval_int_dom_once :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_once == aval_int_dom Refine_Once"
+lemma int_backward_ops:
+  "backward_ops (intersect_int_dom_mode Refine_Fixpoint) (inv_less_int_dom Refine_Fixpoint)
+     (inv_eq_int_dom Refine_Fixpoint) (inv_plus_int_dom Refine_Fixpoint)
+     (inv_minus_int_dom Refine_Fixpoint) (inv_times_int_dom Refine_Fixpoint)"
+proof -
+  interpret backward_domain_reductive "intersect_int_dom_mode Refine_Fixpoint"
+      "aval_int_dom Refine_Fixpoint" int_dom_tobool
+      "inv_less_int_dom Refine_Fixpoint" "inv_eq_int_dom Refine_Fixpoint"
+      "inv_plus_int_dom Refine_Fixpoint" "inv_minus_int_dom Refine_Fixpoint"
+      "inv_times_int_dom Refine_Fixpoint"
+    by (rule int_dom_backward_domain_reductive)
+  show ?thesis by unfold_locales
+qed
 
-abbreviation tobool_int_dom_once :: "int_dom => bool option" where
-  "tobool_int_dom_once == int_dom_tobool"
+lemma int_less_true_sound:
+  assumes "int_less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  shows "i < j"
+  using assms backward_ops.less_true_sound[OF int_backward_ops, of a b i j]
+  by (simp add: int_less_true_def backward_ops.less_true_def[OF int_backward_ops])
 
-abbreviation inv_less_int_dom_once ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_less_int_dom_once == inv_less_int_dom Refine_Once"
+lemma int_less_false_sound:
+  assumes "int_less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  shows "\<not> i < j"
+  using assms backward_ops.less_false_sound[OF int_backward_ops, of a b i j]
+  by (simp add: int_less_false_def backward_ops.less_false_def[OF int_backward_ops])
 
-abbreviation inv_eq_int_dom_once ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_eq_int_dom_once == inv_eq_int_dom Refine_Once"
+lemma int_eq_true_sound:
+  assumes "int_eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  shows "i = j"
+  using assms int_less_false_sound[of a b i j] int_less_false_sound[of b a j i]
+  by (fastforce simp: int_eq_true_def)
 
-abbreviation inv_plus_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_plus_int_dom_once == inv_plus_int_dom Refine_Once"
+lemma int_eq_false_sound:
+  assumes "int_eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  shows "i \<noteq> j"
+  using assms backward_ops.eq_false_sound[OF int_backward_ops, of a b i j]
+  by (simp add: int_eq_false_def backward_ops.eq_false_def[OF int_backward_ops])
 
-abbreviation inv_minus_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_minus_int_dom_once == inv_minus_int_dom Refine_Once"
-
-abbreviation inv_times_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_times_int_dom_once == inv_times_int_dom Refine_Once"
-
-global_interpretation int_dom_backward_once:
-    backward_domain_mono
-      intersect_int_dom_once aval_int_dom_once tobool_int_dom_once
-      inv_less_int_dom_once inv_eq_int_dom_once
-      inv_plus_int_dom_once inv_minus_int_dom_once inv_times_int_dom_once
-  defines
-    afilter_int_dom_once = int_dom_backward_once.afilter
-    and feasible_int_dom_once = int_dom_backward_once.feasible
-    and bfilter_int_dom_once = int_dom_backward_once.bfilter
-    and branch_int_dom_once = int_dom_backward_once.branch
-    and branch_lifted_int_dom_once = int_dom_backward_once.branch_lifted
-    and afilter_int_dom_once_st = int_dom_backward_once.afilter_st
-    and bfilter_int_dom_once_st = int_dom_backward_once.bfilter_st
-    and branch_int_dom_once_st = int_dom_backward_once.branch_st
-  by (rule int_dom_backward_domain_mono) simp
-
-abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
-  "intersect_int_dom_fixpoint == intersect_int_dom_mode Refine_Fixpoint"
-
-abbreviation aval_int_dom_fixpoint :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_fixpoint == aval_int_dom Refine_Fixpoint"
-
-abbreviation tobool_int_dom_fixpoint :: "int_dom => bool option" where
-  "tobool_int_dom_fixpoint == int_dom_tobool"
-
-abbreviation inv_less_int_dom_fixpoint ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_less_int_dom_fixpoint == inv_less_int_dom Refine_Fixpoint"
-
-abbreviation inv_eq_int_dom_fixpoint ::
-    "bool => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_eq_int_dom_fixpoint == inv_eq_int_dom Refine_Fixpoint"
-
-abbreviation inv_plus_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_plus_int_dom_fixpoint == inv_plus_int_dom Refine_Fixpoint"
-
-abbreviation inv_minus_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_minus_int_dom_fixpoint == inv_minus_int_dom Refine_Fixpoint"
-
-abbreviation inv_times_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_times_int_dom_fixpoint == inv_times_int_dom Refine_Fixpoint"
-
-global_interpretation int_dom_backward_fixpoint:
-    backward_domain_reductive
-      intersect_int_dom_fixpoint aval_int_dom_fixpoint tobool_int_dom_fixpoint
-      inv_less_int_dom_fixpoint inv_eq_int_dom_fixpoint
-      inv_plus_int_dom_fixpoint inv_minus_int_dom_fixpoint inv_times_int_dom_fixpoint
-  defines
-    afilter_int_dom_fixpoint = int_dom_backward_fixpoint.afilter
-    and feasible_int_dom_fixpoint = int_dom_backward_fixpoint.feasible
-    and bfilter_int_dom_fixpoint = int_dom_backward_fixpoint.bfilter
-    and branch_lifted_int_dom_fixpoint = int_dom_backward_fixpoint.branch_lifted
-    and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
-    and afilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.afilter_st
-    and bfilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.bfilter_st
-    and branch_int_dom_fixpoint_st = int_dom_backward_fixpoint.branch_st
-  by (rule int_dom_backward_domain_reductive)
-
-lemmas branch_int_dom_fixpoint_sound = int_dom_backward_fixpoint.branch_sound
+global_interpretation int_dom_numeric_queries:
+  numeric_query_judgments int_less_true int_less_false int_eq_true int_eq_false
+  defines int_less = int_dom_numeric_queries.less
+    and int_eq = int_dom_numeric_queries.eq
+  by unfold_locales
+     (fact int_less_true_sound, fact int_less_false_sound,
+      fact int_eq_true_sound, fact int_eq_false_sound)
 
 end

@@ -217,92 +217,54 @@ next
     by (simp only: inv_less_sign.simps Let_def sign_le_iff prod.sel)
 qed
 
-subsection \<open>Backward-domain interpretation\<close>
+subsection \<open>The refinement operations and their certificate\<close>
 
 text \<open>
-  One interpretation discharges soundness, monotonicity, and reductiveness
-  together against @{locale backward_domain_mono} -- each \<open>inv_*\<close>'s
-  mono/reductive obligation is one @{const le_pair} fact, transparent notation for
-  the componentwise \<open>\<and>\<close> the per-operator lemmas above already prove, so no
-  bridging step is needed at any of these call sites.
+  Sign's refinement choices: the lattice meet, the sign-specific comparison
+  inverses, and the conservative identity for arithmetic. The guard filters and
+  the branch are not stated here; \<open>Sign_Transfer\<close> derives them from this record
+  and the evaluator.
 \<close>
 
-global_interpretation sign_backward_domain:
-    backward_domain_mono inf aval_sign sign_tobool
-                    inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
-  defines
-    afilter_sign = sign_backward_domain.afilter
-    and feasible_sign = sign_backward_domain.feasible
-    and bfilter_sign = sign_backward_domain.bfilter
-    and branch_sign = sign_backward_domain.branch
-    and branch_lifted_sign = sign_backward_domain.branch_lifted
-    and afilter_sign_st = sign_backward_domain.afilter_st
-    and bfilter_sign_st = sign_backward_domain.bfilter_st
-    and branch_sign_st = sign_backward_domain.branch_st
-    and afilter_sign_st_lift = sign_backward_domain.afilter_st_lift
-    and bfilter_sign_st_lift = sign_backward_domain.bfilter_st_lift
-    and sign_less_true_of_inv = sign_backward_domain.less_true
-    and sign_less_false_of_inv = sign_backward_domain.less_false
-    and sign_eq_true_of_less = sign_backward_domain.eq_true
-    and sign_eq_false_of_intersection = sign_backward_domain.eq_false
+definition sign_refine_ops :: "sign refine_ops" where
+  "sign_refine_ops =
+     \<lparr>r_tobool = sign_tobool, r_inv_less = inv_less_sign, r_inv_eq = inv_eq_sign,
+      r_inv_plus = inv_conservative, r_inv_minus = inv_conservative,
+      r_inv_times = inv_conservative, r_intersect = inf\<rparr>"
+
+lemma sign_refine_ops_simps [simp]:
+  "r_tobool sign_refine_ops = sign_tobool"
+  "r_inv_less sign_refine_ops = inv_less_sign"
+  "r_inv_eq sign_refine_ops = inv_eq_sign"
+  "r_inv_plus sign_refine_ops = inv_conservative"
+  "r_inv_minus sign_refine_ops = inv_conservative"
+  "r_inv_times sign_refine_ops = inv_conservative"
+  "r_intersect sign_refine_ops = inf"
+  by (simp_all add: sign_refine_ops_def)
+
+text \<open>
+  The certificate discharges soundness, monotonicity, and reductiveness together
+  against @{locale backward_domain_mono}. Each \<open>inv_*\<close>'s mono/reductive obligation
+  is one @{const le_pair} fact, transparent notation for the componentwise \<open>\<and>\<close> the
+  per-operator lemmas above already prove.
+\<close>
+
+lemma sign_backward_domain:
+  "backward_domain_mono inf aval_sign sign_tobool
+     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
 proof unfold_locales
 qed (use sign_tobool_mono in \<open>simp_all add: inf_sign_sound inv_less_sign_sound
        inv_eq_sign_sound inv_conservative_def sign_tobool_sound inf_mono aval_sign_mono
        inv_less_sign_mono inv_eq_sign_mono le_infI1 le_infI2\<close>)
 
-text \<open>
-  Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
-  \<open>bfilter_sign\<close>, and \<open>bfilter_sign\<close>'s commutation with the abstract filter
-  through @{const fun_of_resolved_st_q_for}. Both come from the generic
-  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); no Sign-level
-  caller needs the \<open>afilter_st\<close> commutation on its own (only \<open>bfilter_st\<close>'s
-  is used, to discharge the guard hypothesis of
-  \<open>generic_tf_st_for\<close>'s commutation), so it stays reachable
-  as \<open>sign_backward_domain.afilter_st_commute\<close> without a short alias here.
-\<close>
-
-lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
-lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
-
-text \<open>
-  \<open>sign_eq_true_of_less\<close> is \<open>sign_backward_domain.eq_true\<close>, defined in
-  \<^locale>\<open>backward_domain\<close>'s own context off \<open>less_false\<close> in both directions
-  (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>). The automatic
-  code-equation chain the \<open>defines\<close> clause above sets up does not unfold that
-  definition, so this restates it explicitly in terms of the already-executable
-  \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.
-\<close>
-
-lemma sign_eq_true_of_less_code [code]:
-  "sign_eq_true_of_less a b = (sign_less_false_of_inv a b \<and> sign_less_false_of_inv b a)"
-  using sign_backward_domain.eq_true_def sign_eq_true_of_less_def sign_less_false_of_inv_def
-  by auto
-
-subsection \<open>Abstract branch\<close>
-
-text \<open>
-  Guard refinement via backward evaluation. @{const bfilter_sign} narrows the
-  abstract state on the branch selected by its boolean polarity argument
-  (@{text True} for the then-branch, @{text False} for the else-branch),
-  delegating to the generic @{text bfilter} proved sound in @{locale backward_domain}.
-  This is what the domain's registered branch operation delegates to,
-  matching Goblint's single polarity-parametrized @{text Spec.branch}.
-\<close>
-
-text \<open>
-  @{const branch_sign} is Sign's registered branch operation: a forward
-  @{const sign_tobool} feasibility check ahead of @{const bfilter_sign},
-  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
-  @{thm [source] backward_domain.branch_sound}.
-\<close>
-
-lemma branch_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
-  using sign_backward_domain.branch_sound by simp
-
-lemma branch_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> branch_sign b res sigma1 \<le> branch_sign b res sigma2"
-  using sign_backward_domain.branch_mono by (simp add: branch_sign_def)
+lemma sign_backward_ops:
+  "backward_ops inf inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
+proof -
+  interpret backward_domain_mono inf aval_sign sign_tobool
+      inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
+    by (rule sign_backward_domain)
+  show ?thesis by unfold_locales
+qed
 
 subsection \<open>Executable equality-narrowing tests\<close>
 
@@ -345,22 +307,5 @@ text \<open>@{term SBot} on either side stays bottom-consistent.\<close>
 lemma inv_eq_sign_false_bot_consistent:
   "inv_eq_sign False SBot SZero = (SBot, SBot)"
   by eval
-
-subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
-
-definition test_env_nonneg_eq :: "sign abs_state" where
-  "test_env_nonneg_eq = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
-
-text \<open>@{text \<open>x = 0\<close>} known true meets \<open>x\<close>'s bound with @{term SZero}.\<close>
-lemma bfilter_sign_eq_true_narrows:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) True test_env_nonneg_eq (STR ''x'') = SZero"
-  unfolding test_env_nonneg_eq_def by eval
-
-text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false) on
-  @{term SNonNeg} narrows to @{term SPos}: the disequality-narrowing gain
-  \<open>bfilter\<close>'s old identity-only \<open>Eq\<close> \<open>False\<close> case could never produce.\<close>
-lemma bfilter_sign_eq_false_narrows_to_pos:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) False test_env_nonneg_eq (STR ''x'') = SPos"
-  unfolding test_env_nonneg_eq_def by eval
 
 end

@@ -265,7 +265,7 @@ fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<R
 | "val_answer Parity_Analysis v q =
      (case (slot3 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> parity_eval_answer st q)"
 | "val_answer Int_Analysis v q =
-     (case (slot4 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer st q)"
+     (case (slot4 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st q)"
 | "val_answer Congruence_Analysis v q =
      (case (slot5 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)"
 | "val_answer Order_Analysis v q =
@@ -377,8 +377,8 @@ qed
 
 lemma val_answer_sound: "s \<in> val_gamma a v \<Longrightarrow> eval_holds q (val_answer a v q) s"
   by (cases a)
-     (auto split: lifted.splits intro: sign_eval_answer_sound interval_eval_answer_sound
-       parity_eval_answer_sound int_eval_answer_sound congruence_eval_answer_sound
-       rel_qry_sound)
+     (auto split: lifted.splits intro: sign_tf.check.eval_answer_sound
+       ivl_tf.check.eval_answer_sound parity_tf.check.eval_answer_sound
+       int_tf.check.eval_answer_sound congruence_tf.check.eval_answer_sound rel_qry_sound)
 
 end

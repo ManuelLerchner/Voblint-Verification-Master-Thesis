@@ -62,9 +62,9 @@ next
   case (7 eqs x) then show ?case
     by (rule TD_side_rule_Interp.finite_stabl_solve)
 next
-  case (8 c d s) then show ?case by (rule sign_classify_check_proved)
+  case (8 c d s) then show ?case by (rule sign_tf.check.classify_check_proved)
 next
-  case (9 c d s) then show ?case by (rule sign_classify_check_refuted)
+  case (9 c d s) then show ?case by (rule sign_tf.check.classify_check_refuted)
 next
   case 10 show ?case by (rule refl)
 next

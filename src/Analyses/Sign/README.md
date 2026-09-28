@@ -9,13 +9,13 @@ they demonstrate the domain, they are not part of the reusable instance.
 | --- | --- |
 | `Sign_Warrowing.thy` | widening (join), narrowing (left argument), and the `numeric_domain` instance; the lattice itself is `Voblint_Domain.Sign_Lattice` |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
-| `Sign_Backward.thy` | backward guard/filter operators; names the sign `afilter_sign_st`/`bfilter_sign_st` executable mirror via `Exec_Backward` |
+| `Sign_Backward.thy` | inverse operators, `sign_refine_ops`, and the `backward_domain_mono` certificate `sign_backward_domain` |
 | `Sign_Special.thy` | `sign_min`/`sign_max`, the abstract implementation of the `Min`/`Max` special calls |
-| `Sign_Numeric_Queries.thy` | Sign's instance of `sound_numeric_queries` |
-| `Sign_Transfer.thy` | edge transfer record and transfer soundness |
+| `Sign_Numeric_Queries.thy` | Sign's comparison queries, derived from the inverse operators |
+| `Sign_Transfer.thy` | the `sign_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `analysis_contract` — no context, no solver |
-| `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
+| `Sign_Classify.thy` | consumer-facing names for the derived check classifier, and its executable tests |
 | `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
 
 `generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`

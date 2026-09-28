@@ -688,15 +688,16 @@ end
 subsection \<open>Conservative inverse operator\<close>
 
 text \<open>
-  A domain that is too coarse for useful arithmetic inversion (e.g. sign,
-  which cannot narrow either operand of a plus/minus/times from its result)
-  instantiates @{term inv_plus} / @{term inv_minus} / @{term inv_times} with
-  this shared no-op: both operands pass through unchanged. Any
+  A domain too coarse to invert an operator (e.g. sign, which cannot narrow
+  either operand of a plus/minus/times from its result) instantiates that
+  inverse with this shared no-op: both operands pass through unchanged. The
+  first argument is the known result or truth value, so the same no-op serves
+  the arithmetic inverses and the comparison inverses. Any
   @{class numeric_domain} discharges its soundness for free, so domains share
   one proof instead of each restating the same trivial obligation.
 \<close>
 
-definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
+definition inv_conservative :: "'r => 'a => 'a => 'a * 'a" where
   "inv_conservative r a1 a2 = (a1, a2)"
 
 lemma inv_conservative_sound:

@@ -1,5 +1,5 @@
 theory Example_Int_Backward
-  imports Voblint_Analysis_Int.Int_Backward
+  imports Voblint_Analysis_Int.Int_Transfer
 begin
 
 section \<open>What a guard, read backwards, tells the four components\<close>
@@ -8,8 +8,8 @@ text \<open>
   A backward filter runs a boolean guard in reverse: given an abstract state and
   the truth value the guard is assumed to take, it returns what each variable
   must have been for the guard to come out that way. The three lemma families
-  below run one guard through \<open>bfilter_int_dom_never\<close>, \<open>bfilter_int_dom_once\<close>
-  and \<open>bfilter_int_dom_fixpoint\<close> and pin the results by \<open>eval\<close>, so the
+  below run one guard through \<^const>\<open>bfilter_int_dom\<close> at \<open>Refine_Never\<close>, \<open>Refine_Once\<close>
+  and \<open>Refine_Fixpoint\<close> and pin the results by \<open>eval\<close>, so the
   difference between them is exactly what cross-component refinement buys.
   Vocabulary: \<open>int_dom_sipc s i p c\<close> overwrites \<open>top\<close> in the order sign,
   interval, parity, congruence; \<open>congruence_of_int n\<close> is the class containing
@@ -35,20 +35,20 @@ text \<open>
   and again at the \<open>V\<close> leaf's \<open>intersect_int_dom_mode\<close>, so two refinement
   rounds run along this single path even under \<open>Once\<close>. A caller who only
   knows \<open>refine Refine_Once d\<close> is one round should not expect
-  \<open>bfilter_int_dom_once\<close> to match that bound -- a recursive backward
+  \<open>bfilter_int_dom Refine_Once\<close> to match that bound -- a recursive backward
   filter can invoke refinement at multiple nodes. Here it already reaches
   the exact singleton, so \<open>Refine_Fixpoint\<close> finds nothing further to do.
 \<close>
 
 lemma bfilter_int_dom_once_plus_eq_exact:
-  "bfilter_int_dom_once
+  "bfilter_int_dom Refine_Once
      (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
   by eval
 
 lemma bfilter_int_dom_fixpoint_plus_eq_exact:
-  "bfilter_int_dom_fixpoint
+  "bfilter_int_dom Refine_Fixpoint
      (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
@@ -63,7 +63,7 @@ text \<open>
 \<close>
 
 lemma bfilter_int_dom_never_plus_eq_congruence_only:
-  "bfilter_int_dom_never
+  "bfilter_int_dom Refine_Never
      (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
    int_dom_sipc STop top PTop (congruence_of_int 2)"
@@ -88,7 +88,7 @@ text \<open>
 \<close>
 
 lemma bfilter_int_dom_once_self_refine_exact:
-  "bfilter_int_dom_once
+  "bfilter_int_dom Refine_Once
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
      ((\<lambda>_. top)((STR ''x'') := int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven top))
@@ -99,7 +99,7 @@ lemma bfilter_int_dom_once_self_refine_exact:
 subsection \<open>Congruence precision unavailable from Sign/Interval alone\<close>
 
 lemma bfilter_int_dom_once_congruence_tightens_interval:
-  "bfilter_int_dom_once
+  "bfilter_int_dom Refine_Once
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
      ((\<lambda>_. top)
@@ -116,7 +116,7 @@ text \<open>
 \<close>
 
 lemma bfilter_int_dom_never_congruence_unused:
-  "bfilter_int_dom_never
+  "bfilter_int_dom Refine_Never
      (Eq (V (STR ''x'')) (V (STR ''x'')))
      True
      ((\<lambda>_. top)
@@ -135,7 +135,7 @@ lemma int_direct_comparisons_all_modes:
   by eval
 
 lemma int_false_disequality_refines:
-  "bfilter_int_dom_once (NotEq (Plus (V (STR ''x'')) (N 1)) (N 3))
+  "bfilter_int_dom Refine_Once (NotEq (Plus (V (STR ''x'')) (N 1)) (N 3))
     False test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
   by eval

@@ -7,21 +7,19 @@ section \<open>Sign interpretation of the generic numeric-query interface\<close
 text \<open>
   \<open>sound_numeric_queries\<close> (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>) is
   the reusable interface; this theory supplies its Sign instance. None of the
-  four query functions is a hand-built table any more: all four are Sign's
-  instance of generic derivations defined directly in \<open>backward_domain\<close>'s own
-  context --- \<open>sign_less_true\<close>/\<open>sign_less_false\<close> read off \<open>inv_less_sign\<close>,
-  \<open>sign_eq_true\<close> reads off \<open>sign_less_false\<close> in both directions, and
-  \<open>sign_eq_false\<close> reads off \<open>(\<sqinter>)\<close> collapsing to \<open>SBot\<close> --- with no extra
-  proof obligation beyond \<open>backward_domain\<close>'s own assumptions. Exhaustive case
-  analysis over the seven-element lattice confirms each derived pair
-  classifies exactly the pairs a hand-written table would.
+  four query functions is a hand-built table: all four are Sign's instance of
+  the generic derivations in \<^locale>\<open>backward_ops\<close>'s own context ---
+  \<open>sign_less_true\<close>/\<open>sign_less_false\<close> read off \<open>inv_less_sign\<close>, \<open>sign_eq_true\<close>
+  reads off \<open>sign_less_false\<close> in both directions, and \<open>sign_eq_false\<close> reads off
+  \<open>(\<sqinter>)\<close> collapsing to \<open>SBot\<close> --- so their soundness is \<^locale>\<open>backward_ops\<close>'s,
+  instantiated by @{thm [source] sign_backward_ops}.
 \<close>
 
 text \<open>
   \<open>sign_less_true_eq\<close>/\<open>sign_less_false_eq\<close>/\<open>sign_eq_true_eq\<close>/\<open>sign_eq_false_eq\<close>
   below restate each derived predicate as an explicit truth table over
-  \<open>inv_less_sign\<close>/\<open>(\<sqinter>)\<close>. No downstream proof cites them: they exist as
-  regression and precision-equivalence guards, so a future change to
+  \<open>inv_less_sign\<close>/\<open>(\<sqinter>)\<close>. They are the code equations of the four predicates, and
+  they guard precision: a future change to
   \<open>inv_less_sign\<close>/\<open>inv_eq_sign\<close>/\<open>(\<sqinter>)\<close> that silently narrows or widens
   what these four predicates classify breaks one of these four proofs, at the
   seven-element lattice, rather than surfacing only as a precision regression
@@ -39,41 +37,33 @@ text \<open>
 \<close>
 
 definition sign_less_true :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
-  "sign_less_true = sign_less_true_of_inv"
+  "sign_less_true = backward_ops.less_true inv_less_sign"
 
 lemma sign_less_true_sound:
   assumes "sign_less_true a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "i < j"
-proof -
-  have "i \<in> \<gamma> a" and "j \<in> \<gamma> b" using assms by simp_all
-  then show ?thesis
-    using assms(1) unfolding sign_less_true_def
-    by (blast intro: sign_backward_domain.less_true_sound)
-qed
+  using assms backward_ops.less_true_sound[OF sign_backward_ops, of a b i j]
+  by (simp add: sign_less_true_def)
 
 definition sign_less_false :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
-  "sign_less_false = sign_less_false_of_inv"
+  "sign_less_false = backward_ops.less_false inv_less_sign"
 
 lemma sign_less_false_sound:
   assumes "sign_less_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "\<not> i < j"
-proof -
-  have "i \<in> \<gamma> a" and "j \<in> \<gamma> b" using assms by simp_all
-  then show ?thesis
-    using assms(1) unfolding sign_less_false_def
-    using sign_backward_domain.less_false_sound by blast
-qed
+  using assms backward_ops.less_false_sound[OF sign_backward_ops, of a b i j]
+  by (simp add: sign_less_false_def)
 
-lemma sign_less_true_eq: "sign_less_true a b \<longleftrightarrow>
+lemma sign_less_true_eq [code]: "sign_less_true a b \<longleftrightarrow>
   (fst (inv_less_sign False a b) = SBot \<or> snd (inv_less_sign False a b) = SBot)"
   by (cases a; cases b;
-      simp add: sign_less_true_def sign_backward_domain.less_true_def
+      simp add: sign_less_true_def backward_ops.less_true_def[OF sign_backward_ops]
                 bot_sign_def is_bottom_sign_def)
 
-lemma sign_less_false_eq: "sign_less_false a b \<longleftrightarrow>
+lemma sign_less_false_eq [code]: "sign_less_false a b \<longleftrightarrow>
   (fst (inv_less_sign True a b) = SBot \<or> snd (inv_less_sign True a b) = SBot)"
   by (cases a; cases b;
-      simp add: sign_less_false_def sign_backward_domain.less_false_def
+      simp add: sign_less_false_def backward_ops.less_false_def[OF sign_backward_ops]
                 bot_sign_def is_bottom_sign_def)
 
 subsection \<open>Equality judgments\<close>
@@ -84,48 +74,37 @@ text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is
   is Sign's instance of the \<open>eq_true\<close> derivation off \<open>less_false\<close> in both
   directions (integer trichotomy), and \<open>sign_eq_false\<close> is Sign's instance of
   the \<open>eq_false\<close> derivation off \<open>(\<sqinter>)\<close> collapsing to \<open>SBot\<close> (disjoint
-  concretizations) --- both defined directly in \<open>backward_domain\<close>'s own
-  context (\<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close>) with no extra
-  proof obligation, and exhaustive case analysis over the seven-element
-  lattice confirms each classifies exactly the pairs a hand-written table
-  would.\<close>
+  concretizations).\<close>
 
 definition sign_eq_true :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
-  "sign_eq_true = sign_eq_true_of_less"
+  "sign_eq_true = backward_ops.eq_true inv_less_sign"
 
-lemma sign_eq_true_eq: "sign_eq_true a b \<longleftrightarrow> (sign_less_false a b \<and> sign_less_false b a)"
-  using sign_backward_domain.eq_true_def sign_eq_true_def sign_eq_true_of_less_def
-    sign_less_false_def sign_less_false_of_inv_def by auto
+text \<open>The derived definition unfolds through \<open>less_false\<close>'s global constant, so
+  the code equation is stated over the Sign-level name directly.\<close>
+
+lemma sign_eq_true_eq [code]:
+  "sign_eq_true a b \<longleftrightarrow> (sign_less_false a b \<and> sign_less_false b a)"
+  by (simp add: sign_eq_true_def sign_less_false_def backward_ops.eq_true_def[OF sign_backward_ops])
 
 lemma sign_eq_true_sound:
   assumes "sign_eq_true a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "i = j"
-proof -
-  have lf1: "sign_less_false a b" and lf2: "sign_less_false b a"
-    using assms(1) unfolding sign_eq_true_eq by auto
-  have n1: "\<not> i < j" using sign_less_false_sound[OF lf1 assms(2) assms(3)] .
-  have n2: "\<not> j < i" using sign_less_false_sound[OF lf2 assms(3) assms(2)] .
-  from n1 n2 show ?thesis by linarith
-qed
+  using assms backward_ops.eq_true_sound[OF sign_backward_ops, of a b i j]
+  by (simp add: sign_eq_true_def)
 
 definition sign_eq_false :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
-  "sign_eq_false = sign_eq_false_of_intersection"
+  "sign_eq_false = backward_ops.eq_false inf"
 
-lemma sign_eq_false_eq: "sign_eq_false a b \<longleftrightarrow> a \<sqinter> b = SBot"
+lemma sign_eq_false_eq [code]: "sign_eq_false a b \<longleftrightarrow> a \<sqinter> b = SBot"
   by (cases a; cases b;
-      simp add: sign_eq_false_def sign_backward_domain.eq_false_def bot_sign_def is_bottom_sign_def)
+      simp add: sign_eq_false_def backward_ops.eq_false_def[OF sign_backward_ops] bot_sign_def
+        is_bottom_sign_def)
 
 lemma sign_eq_false_sound:
   assumes "sign_eq_false a b" and "i \<in> gamma_sign a" and "j \<in> gamma_sign b"
   shows "i \<noteq> j"
-proof
-  assume heq: "i = j"
-  have hia: "i \<in> gamma_sign a" using assms(2) .
-  have hib: "i \<in> gamma_sign b" using assms(3) heq by simp
-  have "i \<in> gamma_sign (a \<sqinter> b)" using inf_sign_sound[OF hia hib] .
-  moreover have "a \<sqinter> b = SBot" using assms(1) sign_eq_false_eq by blast
-  ultimately show False by simp
-qed
+  using assms backward_ops.eq_false_sound[OF sign_backward_ops, of a b i j]
+  by (simp add: sign_eq_false_def)
 
 
 subsection \<open>Goblint-style optional-Boolean queries\<close>

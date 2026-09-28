@@ -93,7 +93,7 @@ subsection \<open>An infeasible guard refines to canonical bottom\<close>
 text \<open>
   A guard no state can satisfy empties the filtered interval.  The stored value
   is the canonical \<^const>\<open>bot\<close>, not one of the many reversed bound pairs that
-  denote the empty set just as well: \<open>ivl_backward_domain\<close> is interpreted with
+  denote the empty set just as well: Interval's refinement operations use
   \<^const>\<open>intersect_ivl\<close>, which normalises its result.
 
   The raw lattice \<^const>\<open>inf\<close> keeps the reversed pair, and has to --- dropping it
@@ -154,7 +154,7 @@ lemma guard_cmp_eq_one_infeasible:
 lemma branch_kills_infeasible_operand_guard:
   "branch_ivl guard_cmp_eq_one True (sigma_x (Ivl (Fin 5) (Fin 5))) (STR ''x'') = bot"
   using guard_cmp_eq_one_infeasible
-  by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+  by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
 
 subsection \<open>An infeasible disjunct is dropped from the join\<close>
 
@@ -228,8 +228,8 @@ lemma branch_disj_is_feasible_disjunct:
      = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
   using feasible_disj_guard feasible_first_disjunct infeasible_second_disjunct
         not_empty_feasible_disjunct_state
-  by (simp add: guard_disj_def ivl_backward_domain.branch_def
-      ivl_backward_domain.branch_lifted_def)
+  by (simp add: guard_disj_def ivl_tf.backward.branch_def
+      ivl_tf.backward.branch_lifted_def)
 
 lemma branch_or_drops_infeasible_disjunct:
   "branch_ivl guard_disj True sigma_x5_y_unknown (STR ''y'') = Ivl (Fin 1) PlusInf"
@@ -243,10 +243,10 @@ proof -
   have first: "branch_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown
                  = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
     using feasible_first_disjunct not_empty_feasible_disjunct_state
-    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+    by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
   have second: "branch_ivl guard_cmp_eq_one True sigma_x5_y_unknown = bot"
     using infeasible_second_disjunct
-    by (simp add: ivl_backward_domain.branch_def ivl_backward_domain.branch_lifted_def)
+    by (simp add: ivl_tf.backward.branch_def ivl_tf.backward.branch_lifted_def)
   have join: "(bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown \<squnion> bot)
                 = bfilter_ivl (Less (N 0) (V (STR ''y''))) True sigma_x5_y_unknown"
     by simp

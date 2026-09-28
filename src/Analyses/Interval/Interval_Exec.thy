@@ -16,12 +16,10 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>afilter_ivl_st\<close> / \<open>bfilter_ivl_st\<close> and their commutation with
-  @{const afilter_ivl} / @{const bfilter_ivl} through
-  @{const fun_of_resolved_st_q_for} come from \<open>Interval_Backward\<close> -- the
-  interval specialization of the generic @{locale backward_domain} executable
-  mirror (\<open>Exec_Backward\<close>). The commutation induction is proved once
-  there, not per domain.
+  The executable guard filter is derived from the bundle's evaluator and
+  refinement operations (\<^const>\<open>n_bfilter\<close>), and its commutation with
+  @{const branch_ivl} through @{const fun_of_resolved_st_q_for} is proved once
+  for every certified bundle, not per domain.
 \<close>
 
 subsection \<open>Executable transfer function and seeds, generic in the classifier\<close>
@@ -29,18 +27,10 @@ subsection \<open>Executable transfer function and seeds, generic in the classif
 text \<open>
   \<open>ivl_ops\<close>, Interval's primitive bundle, is defined beside the abstract transfer
   in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Transfer\<close>, so both layers read one
-  value. The three constants below are the generic constructions of
+  value. The two constants below are the generic constructions of
   \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not independent
   definitions.
 \<close>
-
-definition branch_ivl_st_for ::
-  "(vname => bool) => exp => bool => ivl resolved_st_q => ivl resolved_st_q" where
-  "branch_ivl_st_for = n_bfilter ivl_ops"
-
-lemma branch_ivl_st_for_eq [simp]:
-  "branch_ivl_st_for \<G> b pol s = branch_ivl_st \<G> b pol s"
-  by (simp add: branch_ivl_st_for_def)
 
 definition ivl_enter_st_for ::
   "(vname => bool) => call_info =>
@@ -89,8 +79,8 @@ qed
 
 subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
 
-text \<open>Only the guard is Interval's to discharge: every other action is settled
-  once for any bundle by \<open>ivl_tf.tf_st_for_commute\<close>.\<close>
+text \<open>Nothing here is Interval's to discharge: \<open>ivl_tf.tf_st_for_commute\<close>
+  settles every action, the guard included, on a live state.\<close>
 
 lemma ivl_tf_st_for_commute:
   assumes live: "live_resolved_st_q \<G> s"
@@ -98,8 +88,7 @@ lemma ivl_tf_st_for_commute:
     "fun_of_resolved_st_q_for \<G> (ivl_tf_st_for \<G> a s) =
      ivl_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding ivl_tf_st_for_def
-  by (rule ivl_tf.tf_st_for_commute)
-     (simp add: branch_ivl_st_commute[OF live])
+  by (rule ivl_tf.tf_st_for_commute[OF live])
 
 lemma ivl_enter_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (ivl_enter_st_for \<G> ci s) =
