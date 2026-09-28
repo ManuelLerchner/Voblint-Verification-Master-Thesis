@@ -42,8 +42,8 @@ least-upper-bound requirement of @ch:domains.
 
 == What an instance supplies <sec:instances-supply>
 
-A domain instance proves the laws of #isalocale("numeric_domain") and of
-@tab:domain-contract for its carrier and supplies its operations: an evaluator,
+A domain instance proves the laws of @ch:domains (@fig:domain-carrier) for its
+carrier and supplies its operations: an evaluator,
 the comparison queries, the inverse operators with an intersection, and the
 abstract `min` and `max`. The branch transfer is not among them; it is derived
 from the inverse operators by the filter of #isalocale("backward_domain").

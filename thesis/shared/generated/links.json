@@ -85,7 +85,6 @@
     "const:checks": "Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg.checks%7Cconst",
     "const:checks_sound_at": "Voblint/Voblint_CLI/Analysis_Run_Sound.html#Analysis_Run_Sound.checks_sound_at%7Cconst",
     "const:cinit_stores": "Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores%7Cconst",
-    "const:classify_check": "Voblint/Voblint_Framework/Abstract_Checks.html#Abstract_Checks.abstract_check_domain.classify_check%7Cconst",
     "const:combine_assign": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst",
     "const:combine_collect": "Voblint/Voblint_CFG/CFG_Transfer.html#CFG_Transfer.combine_collect%7Cconst",
     "const:combine_collect_abs": "Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst",
