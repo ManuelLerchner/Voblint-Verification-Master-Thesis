@@ -14,7 +14,8 @@ hand-written copies would drift from each other and from the theories, so
   * the rendered-theory link, from the anchor index `check_thesis_links` builds.
 
 It recognizes only the declaration shapes the table uses: a mixfix on a
-top-level `definition`/`fun`/`inductive`/`inductive_set`/`abbreviation`, a
+top-level `consts`/`definition`/`fun`/`inductive`/`inductive_set`/`abbreviation`
+(`consts` for a symbol overloaded with `adhoc_overloading`), a
 mixfix or infix on a class parameter (also in the vendored solver), a mixfix on
 a record field, a mixfix on a locale parameter, and an `abbreviation` inside a
 named locale. Any other shape fails with the file and line instead of being
@@ -56,7 +57,7 @@ README = REPO / "README.md"
 PAGE = REPO / "pages" / "index.html"
 THESIS_APPENDIX = "appendix B"
 
-GLOBAL_COMMANDS = "definition|fun|inductive|inductive_set|abbreviation"
+GLOBAL_COMMANDS = "consts|definition|fun|inductive|inductive_set|abbreviation"
 TYPE = r'::\s*"[^"]*"'
 # `("mixfix")` or `("mixfix" [51, 51] 50)`.
 MIXFIX = r'\(\s*"([^"]*)"[^)"]*\)'
