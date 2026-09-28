@@ -172,8 +172,8 @@ Isabelle2025-2 @td12. The second removes the well-foundedness assumptions from t
 solver's #isalocale("widening") and #isalocale("narrowing") classes @td13 and keeps them only in the
 locales that prove termination. Those assumptions say that widening and
 narrowing stabilize, which only termination proofs use. Partial correctness
-needs the four order laws alone, and this is why @tab:domain-contract lists a
-stabilizing widening among the requirements a domain does not have to meet.
+needs the four order laws alone, and this is why a domain need not provide a
+stabilizing widening (@sec:domain-contract).
 Without the change, every domain instance would have to prove a
 stabilization property that no soundness theorem of this thesis uses
 (@sec:termination). The vendored submodule carries both changes, and both

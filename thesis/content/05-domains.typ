@@ -900,7 +900,8 @@ values of $x$ make it hold.
 
 In this program $y$ ends up as $|x|$, so the check always holds. With forward
 evaluation only, `0 < x` is unknown for $x = signval(top)$, both arms keep
-$x = signval(top)$, $y$ becomes #signval($top$), and the check is `UNKNOWN`.
+$x = signval(top)$, $y$ becomes #signval($top$), and the state cannot show that
+the check holds.
 Backward refinement instead runs the condition in reverse, as in the backward
 analysis of Nipkow and Klein @nipkow14[Sect. 13.7.2]. Given the truth value the
 branch requires, the inverse operators of #isalocale("backward_domain") refine
@@ -909,8 +910,8 @@ meet of the old value with what the guard implies. Sign refines $x$ to
 $signval(top) lmeet signval("+") = signval("+")$ on the true arm and to
 $signval(top) lmeet signval("≤0") = signval("≤0")$ on the false arm
 (@fig:guard-meet). Both arms
-then give $y$ a non-negative value, the join yields $y = signval("≥0")$, and the
-analyzer reports #raw(_g.verdict) with #raw(_g.state).
+then give $y$ a non-negative value, and the join yields $y = signval("≥0")$
+(#raw(_g.state)). @sec:queries answers the check from this state.
 
 The function #isaconst("bfilter") performs this refinement. It takes a
 condition, the required truth value and a state, and returns the refined state.
@@ -1001,13 +1002,13 @@ interval $h$ at the guard `i < 5`.
 == Answering queries <sec:queries>
 
 An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
-reaches its program point. The analysis has to answer from the abstract state
-at that point alone. Filtering does not answer it: a filter may keep stores
-that fail the condition, so the filtered state does not show that the
-condition held. Voblint therefore asks the domain directly. Goblint decides
-its checks the same way: its
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/assert.ml")[`assert`] analysis asks the query system for the truth value of the
-condition, and a plain `__goblint_check` leaves the state unrefined.
+reaches its program point, and the analysis must answer from the abstract state
+there. Filtering by $c$ does not answer this, since a filter may keep stores that
+violate $c$. Voblint therefore asks the domain, as Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/assert.ml",
+)[`assert`]
+analysis asks its query system.
 
 #definition(name: [Query], isa: "check_query", cmd: "fun")[
   A query asks whether a condition $c$ holds in the stores an abstract state
@@ -1015,74 +1016,33 @@ condition, and a plain `__goblint_check` leaves the state unrefined.
   store, _false_ that it holds in none, and _unknown_ makes no claim.
 ]
 
-The framework answers queries generically, so that a domain only has to
-answer the two queries $"less"$ and $"eq"$ of @sec:domain-contract
-(@fig:domain-carrier), where _unknown_ is #isai("None"). These two decide
-every condition. Write $hat(a)$ for the abstract value
-the forward evaluator of @sec:domain-contract computes for an operand $a$ in
-$d$. The other comparisons swap the operands or negate the answer, where
-negation keeps _unknown_:
+A domain answers only two queries on abstract values, $"less"$ and $"eq"$
+(@sec:domain-contract). #isaconst("check_query") answers every condition from
+these two, by recursion on the condition. A comparison first evaluates its
+operands forward to abstract values $hat(a)$ and $hat(b)$ (@sec:domain-contract)
+and then asks one of the two queries, with the operands swapped or the answer
+negated where needed:
 $
-  a <= b & ~> not "less"(hat(b), hat(a)), &  quad a > b & ~> "less"(hat(b), hat(a)), \
-  a >= b & ~> not "less"(hat(a), hat(b)), & quad a != b & ~> not "eq"(hat(a), hat(b)).
+  a < b & ~> "less"(hat(a), hat(b)), & quad a > b & ~> "less"(hat(b), hat(a)), & quad
+  a == b & ~> "eq"(hat(a), hat(b)), \
+  a <= b & ~> not "less"(hat(b), hat(a)), & quad a >= b & ~> not "less"(hat(a), hat(b)), & quad
+  a != b & ~> not "eq"(hat(a), hat(b)).
 $
-The connectives `!`, `&&` and `||` combine the answers for their operands in
-three-valued logic: a definite _false_ decides `&&` and a definite _true_
-decides `||`, whatever the other operand answers. Goblint combines them with
-the same tables
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml#L181-L186")[`id_binary_log`]). Any other expression $e$ is read as the condition
-$e != 0$. #isaconst("check_query") is this case distinction.
+Negation keeps _unknown_. The connectives `!`, `&&` and `||` combine the answers
+of their operands in three-valued logic: a definite _false_ decides `&&` and a
+definite _true_ decides `||`, whatever the other operand answers. Any other
+expression $e$ is read as $e != 0$, its truth value in VIMP. So
+`x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
+$"eq"(hat(y), hat(0))$ alone, and a new domain gets checks on arbitrary
+conditions by providing these two queries.
 
-One proof covers every domain: when
-#isaconst("check_query") answers true or false, the condition has that truth
-value in every store the state describes (#isathm("check_query_sound")). #isaconst("classify_check") maps the answers true, false and unknown to
-`PROVED`, `REFUTED` and `UNKNOWN`. @sec:verdicts combines this classification
-with reachability to obtain the published verdict, which is `DEAD` at an
-unreachable check.
+In the program of @sec:branches, the state at the check has
+$y = signval("≥0")$, and `y >= 0` becomes
+$not "less"(signval("≥0"), signval("0"))$. No non-negative integer is below $0$,
+so Sign's $"less"$ answers a definite _false_, and the check is answered _true_.
+Without the refinement of @sec:branches, $y = signval(top)$, and
+$"less"(signval(top), signval("0"))$ is _unknown_.
 
-Because _unknown_ carries no obligation, queries may be incomplete, and a
-domain can answer _unknown_ whenever it cannot decide. Congruence
-#let _c = claim-row("dom-even-odd-congruence", "20:3")
-stores the disjoint classes #raw(_c.state) for `x = 2 * n; y = 2 * n + 1`, yet
-its equality query decides only between single integers, so #box[`x != y`]
-stays #raw(_c.verdict).
-
-#figure(
-  table(
-    columns: (auto, auto),
-    align: (left, center),
-    stroke: none,
-    inset: (x: 4pt, y: 3pt),
-    table.hline(),
-    [*requirement*], [*what the proofs use it for*],
-    table.hline(stroke: 0.5pt),
-    [#isaconst("is_empty") $a ==> conc(a) = emptyset$],
-    [sound state-emptiness test (@sec:nonrel-state)],
-    [$conc(a) = emptyset ==>$ #isaconst("is_empty") $a$],
-    [exact state-emptiness test, readback (@sec:readback)],
-    [least upper bounds], [the solver's order class],
-    [#isalocale("warrowing")], [the solver's update rule],
-    [sound inverse operators], [#isathm("bfilter_sound") (@sec:branches)],
-    [sound comparison queries], [check verdicts (@sec:verdicts)],
-    [reductive intersection], [executable branch filter, readback (@sec:readback)],
-    table.hline(stroke: 0.5pt),
-    [_not required:_ abstraction function], [no optimality claim],
-    [_not required:_ lattice meet], [#isalocale("sound_intersection") suffices],
-    [_not required:_ monotone transfers], [imposed only by some instances],
-    [_not required:_ stabilizing widening], [termination is a premise],
-    table.hline(),
-  ),
-  placement: auto,
-  caption: [The requirements this chapter adds to the laws of $conc$ from
-    @sec:abs-int, each with the proof step that uses it. The last rows name
-    what a domain does not need to provide.],
-) <tab:domain-contract>
-
-A domain contributes to the composition by proving the laws of
-#isalocale("numeric_domain") and the requirements of @tab:domain-contract. These
-requirements are independent of the context policy and of the generated
-equation system. A domain proves them once per domain instance (and, where
-applicable, refinement mode), and the later assembly reuses them across context
-policies and solver configurations. @ch:analysis-interface turns these per-value laws
-into the per-edge form of #oblig("INTRA") and asks what else an analysis must
-supply at calls.
+One proof covers every domain: a definite answer holds in every store the state
+describes (#isathm("check_query_sound")), and @sec:verdicts turns the answers into
+the analyzer's verdicts.
