@@ -17,7 +17,6 @@ digraph locales {
   "routed_dg_analysis" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_dg_pipeline" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_domain_exec" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
-  "unit_dg_analysis" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_context_base_hetero" -> "dg_analysis_adapter";
   "analysis_contract" -> "dg_ctx_activation_base";
   "sound_local_dg_spec" -> "sound_transfer_for";
@@ -27,5 +26,4 @@ digraph locales {
   "dg_ctx_activation_base" -> "routed_context_base_hetero";
   "routed_dg_pipeline" -> "routed_dg_analysis";
   "routed_dg_domain_exec" -> "routed_domain_exec";
-  "routed_dg_analysis" -> "unit_dg_analysis";
 }
