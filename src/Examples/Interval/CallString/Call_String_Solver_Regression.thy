@@ -4,7 +4,7 @@ begin
 
 section \<open>Exact equation snapshots\<close>
 
-text \<open>Regression coverage for the shape \<^const>\<open>DG_Keyed_Generator.routed_node_rhs\<close>
+text \<open>Regression coverage for the shape \<^const>\<open>DG_Indexed_Generator.routed_node_rhs\<close>
   generates at a genuine \<^const>\<open>routed_call_program\<close> continuation, at both k=1 and k=2: this locks
   in that the whole call boundary --- the routed context (\<open>cs_route k\<close>), the seed
   publication and the callee-exit read, all packaged by
@@ -51,9 +51,9 @@ lemma nest_2_eqs_statement3:
                  (\<lambda>x. x = Bot) ctx
                  (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
                  (Statement 2) (STR ''g'')
-                 (locals d,
-                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (locals d))
-                 (\<lambda>res. Answer (DG (locals res) Bot)))"
+                 (dg_local d,
+                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (dg_local d))
+                 (\<lambda>res. Answer (DG (dg_local res) Bot)))"
   unfolding nest_2_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
     routed_call_program_def routed_callee_call_program_def nest_S_st_def
@@ -70,9 +70,9 @@ lemma nest_1_eqs_statement3:
                  (\<lambda>x. x = Bot) ctx
                  (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
                  (Statement 2) (STR ''g'')
-                 (locals d,
-                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (locals d))
-                 (\<lambda>res. Answer (DG (locals res) Bot)))"
+                 (dg_local d,
+                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (dg_local d))
+                 (\<lambda>res. Answer (DG (dg_local res) Bot)))"
   unfolding nest_1_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
     routed_call_program_def routed_callee_call_program_def nest_S_st_def

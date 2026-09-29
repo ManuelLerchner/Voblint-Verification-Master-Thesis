@@ -46,7 +46,7 @@ ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 # Named explicitly rather than relied on transitively: an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
 COMMON_IMPORTS = [
-    '"Voblint_Result.DG_Live_Keys"',
+    '"Voblint_Result.DG_Live_Unknowns"',
     '"Voblint_Framework.Call_String_Context"',
     '"Voblint_Framework.Routed_Context"',
     '"Voblint_Solver.TD_Solver_Bridge"',
@@ -115,7 +115,7 @@ CONTEXTS = [
         "key": "unit",
         "suffix": "",
         "title": "the unit context",
-        "gk": lambda vt: "(unit, unit) routed_gk",
+        "gk": lambda vt: "(unit, unit) global_unknown",
         "keys": '"Analysis_Global ()" Activation_Seed "\\<lambda>_. route_unit" "()"',
         "route_abs": '"\\<lambda>_. route_unit"',
         "params": "r",
@@ -125,7 +125,7 @@ CONTEXTS = [
         "key": "entry-state",
         "suffix": "_es",
         "title": "the entry-state context",
-        "gk": lambda vt: f"(unit, {vt} list) routed_gk",
+        "gk": lambda vt: f"(unit, {vt} list) global_unknown",
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",

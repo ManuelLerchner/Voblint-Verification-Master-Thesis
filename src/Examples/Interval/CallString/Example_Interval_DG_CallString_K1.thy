@@ -187,27 +187,27 @@ definition nest_1_snapshot :: "(pp \<times> cfg_node list) set \<times> ivl list
      (let sol = nest_1_sol in
       (fst sol,
        [nest_lookup
-          (locals (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+          (dg_local (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+          (dg_local (snd sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+          (dg_local (snd sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
+          (dg_local (snd sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
           (STR ''#ret''),
-        nest_lookup (locals (snd sol (Inl (Statement 3, [Statement 5]))))
+        nest_lookup (dg_local (snd sol (Inl (Statement 3, [Statement 5]))))
           (STR ''t''),
-        nest_lookup (locals (snd sol (Inl (Statement 6, [])))) (STR ''x''),
-        nest_lookup (locals (snd sol (Inl (Statement 7, [])))) (STR ''y''),
+        nest_lookup (dg_local (snd sol (Inl (Statement 6, [])))) (STR ''x''),
+        nest_lookup (dg_local (snd sol (Inl (Statement 7, [])))) (STR ''y''),
         nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6]))))
           (STR ''p'')]))"
 
@@ -335,8 +335,8 @@ next
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (snd nest_1_sol (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (globs (snd nest_1_sol (Inr Global)))) s
+  let ?caller = "dg_local (snd nest_1_sol (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (dg_global (snd nest_1_sol (Inr Global)))) s
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
@@ -409,56 +409,56 @@ text \<open>\<open>f\<close>'s two activations are kept apart by their own call 
 
 lemma nest_1_f_entry_first:
   "nest_lookup
-     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+     (dg_local (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
      (STR ''p'') = Ivl (Fin 3) (Fin 3)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_f_entry_second:
   "nest_lookup
-     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+     (dg_local (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
      (STR ''p'') = Ivl (Fin 10) (Fin 10)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_g_entry_merged:
   "nest_lookup
-     (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+     (dg_local (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
      (STR ''p'') = Ivl (Fin 3) PlusInf"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_g_result_merged:
   "nest_lookup
-     (locals (snd nest_1_sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
+     (dg_local (snd nest_1_sol (Inl (FunctionResult (STR ''g''), [Statement 2]))))
      (STR ''#ret'') = Ivl (Fin 6) PlusInf"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_t_after_inner_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 3, [Statement 5]))))
+  "nest_lookup (dg_local (snd nest_1_sol (Inl (Statement 3, [Statement 5]))))
      (STR ''t'') = Ivl (Fin 6) PlusInf"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_x_after_first_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')
+  "nest_lookup (dg_local (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')
      = Ivl (Fin 6) PlusInf"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_y_after_second_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')
+  "nest_lookup (dg_local (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')
      = Ivl (Fin 6) PlusInf"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 text \<open>Each call publishes the entered store into its own context's seed slot, on the
-  \<^const>\<open>locals\<close> half the callee entry reads it back from.\<close>
+  \<^const>\<open>dg_local\<close> half the callee entry reads it back from.\<close>
 
 lemma nest_1_seed_f_first:
   "nest_lookup
-     (locals (snd nest_1_sol
+     (dg_local (snd nest_1_sol
        (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5]))))
      (STR ''p'') = Ivl (Fin 3) (Fin 3)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 lemma nest_1_seed_f_second:
   "nest_lookup
-     (locals (snd nest_1_sol
+     (dg_local (snd nest_1_sol
        (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6]))))
      (STR ''p'') = Ivl (Fin 10) (Fin 10)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)

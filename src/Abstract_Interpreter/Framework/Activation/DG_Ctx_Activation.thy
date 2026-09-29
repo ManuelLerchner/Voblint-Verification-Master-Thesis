@@ -1,5 +1,5 @@
 theory DG_Ctx_Activation
-  imports DG_Spec_Sound DG_Keyed_Generator
+  imports DG_Spec_Sound DG_Indexed_Generator
     "Voblint_Domain.Nonrelational_State" "Voblint_Solver.Strategy_Tree_Post_Solution"
 begin
 
@@ -18,7 +18,7 @@ text \<open>
   Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
   \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
   \<open>abs_state\<close> therefore instantiates this locale directly. Solutions carry one
-  shared global slot \<open>Inr gk0\<close>, and \<open>sg_cov\<close> ties the reader at a covered key
+  shared global slot \<open>Inr analysis_global\<close>, and \<open>sg_cov\<close> ties the reader at a covered key
   to \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against that global.
 \<close>
 
@@ -27,7 +27,7 @@ locale dg_ctx_activation_base = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool" +
-  fixes g :: cfg and gk0 :: 'k
+  fixes g :: cfg and analysis_global :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
@@ -43,23 +43,23 @@ locale dg_ctx_activation_base = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G
     and extra_wf: "\<And>c v q. q \<in> set (extra route c v) \<Longrightarrow> sp_wf q"
     and finE: "finite (intra g)"
     and pp: "post_bounded
-               (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
-                  route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g)
+               (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global)
+                  route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global)) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> \<gamma>\<^sub>M (sg (Inl (v, c))) =
-          \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
+          \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, c)))) (dg_global (sigma (Inr analysis_global)))"
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
         \<Longrightarrow> \<gamma>\<^sub>M (sg (Inl (v, c))) = {}"
     and fwd: "\<And>u a v c. (u, c) \<in> vars
-        \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (u, c)))) (globs (sigma (Inr gk0))) \<noteq> {}
+        \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, c)))) (dg_global (sigma (Inr analysis_global))) \<noteq> {}
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
-  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0)
-           route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g bot0 s0d s0g"
+  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global)
+           route (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global)) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
   "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
@@ -68,16 +68,16 @@ abbreviation contribs :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list" where
   "contribs v ctx \<equiv>
      routed_contribution_programs intra_predecessor_addr_list call_site_list route
-       (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. gk0)) cmb extra g ctx v"
+       (\<lambda>c src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global)) cmb extra g ctx v"
 
 text \<open>The reader's claim at a covered point (\<open>sg_cov\<close>) and the manager its call
   programs run under. Input-only, so facts of theory-level interpretations keep printing
   the explicit terms.\<close>
 abbreviation (input) gamma_at :: "pp \<Rightarrow> 'c \<Rightarrow> store set" where
-  "gamma_at v ctx \<equiv> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
+  "gamma_at v ctx \<equiv> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, ctx)))) (dg_global (sigma (Inr analysis_global)))"
 
 abbreviation (input) man_at where
-  "man_at v ctx \<equiv> mk_dg_man (locals (sigma (Inl (v, ctx)))) (\<lambda>_. gk0)"
+  "man_at v ctx \<equiv> mk_dg_man (dg_local (sigma (Inl (v, ctx)))) (\<lambda>_. analysis_global)"
 
 text \<open>Every contribution the routed generator folds here runs its continuation
   once: the edge hook is a compiled specification step, and the call and extra
@@ -103,13 +103,13 @@ lemma pp_sides_bound:
 
 lemma pp_entry_s0g_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0g \<le> globs (sigma (Inr gk0))"
+  shows "s0g \<le> dg_global (sigma (Inr analysis_global))"
 proof -
-  have "s0g \<le> globs (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr gk0))"
+  have "s0g \<le> dg_global (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr analysis_global))"
     unfolding routed_node_rhs_def Let_def
     by (simp add: Let_def sup_dg_state_def)
-  also have "\<dots> \<le> globs (sigma (Inr gk0))"
-    using pp_sides_bound[OF cov, THEN le_funD, of "Inr gk0"]
+  also have "\<dots> \<le> dg_global (sigma (Inr analysis_global))"
+    using pp_sides_bound[OF cov, THEN le_funD, of "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -120,12 +120,12 @@ text \<open>The local-carrier twin, proved the same way: \<open>Gen\<close>'s en
 
 lemma pp_entry_s0d_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0d \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+  shows "s0d \<le> dg_local (sigma (Inl (cfg_entry g, ctx)))"
 proof -
-  have "s0d \<le> locals (eq Gen (cfg_entry g, ctx) sigma)"
+  have "s0d \<le> dg_local (eq Gen (cfg_entry g, ctx) sigma)"
     by (simp add: eq_routed_node_rhs[OF contribs_wf])
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sigma (Inl (cfg_entry g, ctx)))"
+  also have "\<dots> \<le> dg_local (sigma (Inl (cfg_entry g, ctx)))"
     using pp_eq_bound[OF cov] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -149,7 +149,7 @@ text \<open>Every intra predecessor of \<open>v\<close> contributes its edge pro
 
 lemma edge_program_mem_contribs:
   assumes e: "(u, a, v) \<in> intra g"
-  shows "dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0) \<in> set (contribs v ctx)"
+  shows "dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global) \<in> set (contribs v ctx)"
 proof -
   have "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
     using e by (force simp: intra_predecessor_addr_list_def
@@ -160,15 +160,15 @@ qed
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
-           \<le> locals (sigma (Inl (v, ctx)))"
+  shows "dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global)) sigma)
+           \<le> dg_local (sigma (Inl (v, ctx)))"
 proof -
-  have "locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma)
+  have "dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global)) sigma)
       \<le> side_acc_dg (acc0 v) sigma (contribs v ctx)"
-    using locals_traverse_le_side_acc_dg[OF edge_program_mem_contribs[OF e]] .
-  also have "\<dots> = locals (eq Gen (v, ctx) sigma)"
+    using dg_local_traverse_le_side_acc_dg[OF edge_program_mem_contribs[OF e]] .
+  also have "\<dots> = dg_local (eq Gen (v, ctx) sigma)"
     by (simp add: eq_routed_node_rhs[OF contribs_wf])
-  also have "\<dots> \<le> locals (sigma (Inl (v, ctx)))"
+  also have "\<dots> \<le> dg_local (sigma (Inl (v, ctx)))"
     using pp_eq_bound[OF cov_v] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -176,22 +176,22 @@ qed
 lemma edge_bound_global:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
-                  sigma (Inr gk0))
-           \<le> globs (sigma (Inr gk0))"
+  shows "dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
+                  sigma (Inr analysis_global))
+           \<le> dg_global (sigma (Inr analysis_global))"
 proof -
-  have "globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
-                 sigma (Inr gk0))
-      \<le> globs (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx)))
-                   sigma (Inr gk0))"
+  have "dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
+                 sigma (Inr analysis_global))
+      \<le> dg_global (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx)))
+                   sigma (Inr analysis_global))"
     using sides_le_side_rhs_fold_dg[OF contribs_wf edge_program_mem_contribs[OF e],
-        where k = "Inr gk0"]
+        where k = "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sides_of_rhs (Gen (v, ctx)) sigma (Inr gk0))"
-    using sides_fold_le_Gen[where k = "Inr gk0"]
+  also have "\<dots> \<le> dg_global (sides_of_rhs (Gen (v, ctx)) sigma (Inr analysis_global))"
+    using sides_fold_le_Gen[where k = "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)
-  also have "\<dots> \<le> globs (sigma (Inr gk0))"
-    using pp_sides_bound[OF cov_v, THEN le_funD, of "Inr gk0"]
+  also have "\<dots> \<le> dg_global (sigma (Inr analysis_global))"
+    using pp_sides_bound[OF cov_v, THEN le_funD, of "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
@@ -206,8 +206,8 @@ proof (cases "(u, ctx) \<in> vars")
   thus ?thesis using sin by simp
 next
   case True
-  let ?d = "locals (sigma (Inl (u, ctx)))"
-  let ?g = "globs (sigma (Inr gk0))"
+  let ?d = "dg_local (sigma (Inl (u, ctx)))"
+  let ?g = "dg_global (sigma (Inr analysis_global))"
   have sin': "s \<in> \<gamma>\<^sub>D\<^sub>G ?d ?g"
     using sin True by simp
   have cov_v: "(v, ctx) \<in> vars"
@@ -217,10 +217,10 @@ next
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
   ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
   hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
-      (locals (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0)) sigma))
-      (globs (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. gk0))
-                sigma (Inr gk0)))"
-    using step_sound[of a sigma "Inl (u, ctx)" gk0] by blast
+      (dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global)) sigma))
+      (dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
+                sigma (Inr analysis_global)))"
+    using step_sound[of a sigma "Inl (u, ctx)" analysis_global] by blast
   also have "\<dots> \<subseteq> gamma_at v ctx"
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
   also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
@@ -242,33 +242,33 @@ lemma dg_ctx_act_comb_covered:
     and s: "s \<in> \<gamma>\<^sub>M (sg (Inl (cl, c1)))"
     and t: "t \<in> \<gamma>\<^sub>M (sg (Inl (ex, c2)))"
     and bound_local:
-      "locals (traverse_program
-                 (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma)
-       \<le> locals (sigma (Inl (v, cv)))"
+      "dg_local (traverse_program
+                 (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma)
+       \<le> dg_local (sigma (Inl (v, cv)))"
     and bound_global:
-      "globs (sides_of_program
-                (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
-                (Inr gk0))
-       \<le> globs (sigma (Inr gk0))"
+      "dg_global (sides_of_program
+                (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma
+                (Inr analysis_global))
+       \<le> dg_global (sigma (Inr analysis_global))"
   shows "combine_collect \<G> (ci_dst ci) s t \<in> \<gamma>\<^sub>M (sg (Inl (v, cv)))"
 proof -
-  let ?Dc = "locals (sigma (Inl (cl, c1)))"
-  let ?De = "locals (sigma (Inl (ex, c2)))"
-  let ?G = "globs (sigma (Inr gk0))"
+  let ?Dc = "dg_local (sigma (Inl (cl, c1)))"
+  let ?De = "dg_local (sigma (Inl (ex, c2)))"
+  let ?G = "dg_global (sigma (Inr analysis_global))"
   have sin: "s \<in> \<gamma>\<^sub>D\<^sub>G ?Dc ?G"
     using s covCl by simp
   have tin: "t \<in> \<gamma>\<^sub>D\<^sub>G ?De ?G"
     using t covEx by simp
   have "combine_collect \<G> (ci_dst ci) s t
         \<in> \<gamma>\<^sub>D\<^sub>G
-            (locals (traverse_program
-               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma))
-            (globs (sides_of_program
-               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. gk0)) sigma
-               (Inr gk0)))"
+            (dg_local (traverse_program
+               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma))
+            (dg_global (sides_of_program
+               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma
+               (Inr analysis_global)))"
     using combine_sound_program[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
-        and src_ex = "Inl (ex, c2)" and gk = gk0 and ci = ci, OF sin tin] .
-  also have "\<dots> \<subseteq> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, cv)))) ?G"
+        and src_ex = "Inl (ex, c2)" and gk = analysis_global and ci = ci, OF sin tin] .
+  also have "\<dots> \<subseteq> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, cv)))) ?G"
     by (rule gammaDG_mono[OF bound_local bound_global])
   also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, cv)))"
     using covV by simp

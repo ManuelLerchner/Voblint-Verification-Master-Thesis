@@ -4,7 +4,7 @@ theory Interval_Analyses
     Interval_Classify
     Interval_Transfer
     Interval_Exec
-    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -37,7 +37,7 @@ global_interpretation interval_rule: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
@@ -68,7 +68,7 @@ global_interpretation interval_es_rule: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) global_unknown)
        TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl

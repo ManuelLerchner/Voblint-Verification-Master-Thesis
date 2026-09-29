@@ -72,8 +72,8 @@ where
      (do {
        d \<leftarrow> sp_read_at src;
        g \<leftarrow> sp_read_global gk;
-       _ \<leftarrow> sp_publish gk (DG bot (fst (step (locals d) (globs g))));
-       sp_return (DG (snd (step (locals d) (globs g))) bot)
+       _ \<leftarrow> sp_publish gk (DG bot (fst (step (dg_local d) (dg_global g))));
+       sp_return (DG (snd (step (dg_local d) (dg_global g))) bot)
      })"
 
 definition dg_edge_contribution_program_at ::
@@ -85,7 +85,7 @@ where
      (do {
        d \<leftarrow> sp_read_at src;
        g \<leftarrow> sp_read_global gk;
-       sp_return (DG (snd (step (locals d) (globs g))) (fst (step (locals d) (globs g))))
+       sp_return (DG (snd (step (dg_local d) (dg_global g))) (fst (step (dg_local d) (dg_global g))))
      })"
 
 lemma dep_dg_edge_program_at:
@@ -147,7 +147,7 @@ text \<open>
   fold, \<^const>\<open>fold_rhs_program_projected\<close>, and the choice of specialization is the
   whole direct/buffered split. The identity specialization accumulates
   complete answers, so a contribution's global half joins into the node's
-  answer; this one accumulates only \<^const>\<open>locals\<close> and embeds the result as
+  answer; this one accumulates only \<^const>\<open>dg_local\<close> and embeds the result as
   \<open>DG d bot\<close>, so a global half never reaches the answer and each program
   publishes its own \<^const>\<open>Side\<close> as it runs. The buffered generator wants the
   first --- it gathers every global contribution into the answer precisely so
@@ -157,7 +157,7 @@ text \<open>
 
   The narrow definitions here exist to keep the D/G vocabulary the generators
   and the routed soundness development actually reason in, rather than
-  spelling out \<open>fold_rhs_program_projected locals (\<lambda>d. DG d bot)\<close> in every statement.
+  spelling out \<open>fold_rhs_program_projected dg_local (\<lambda>d. DG d bot)\<close> in every statement.
   Their algebra is inherited: each observation and monotonicity fact below is
   a specialization of the generic one.
 \<close>
@@ -168,21 +168,21 @@ definition side_rhs_fold_dg ::
         ('d, 'h) dg_state) strategy_program list
    \<Rightarrow> ('x, 'g, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program"
 where
-  "side_rhs_fold_dg acc ps = fold_rhs_program_projected locals (\<lambda>d. DG d bot) acc ps"
+  "side_rhs_fold_dg acc ps = fold_rhs_program_projected dg_local (\<lambda>d. DG d bot) acc ps"
 
 lemma side_rhs_fold_dg_simps [simp, code]:
   "side_rhs_fold_dg acc [] = sp_return (DG acc bot)"
   "side_rhs_fold_dg acc (p # ps) =
      do {
        res \<leftarrow> p;
-       side_rhs_fold_dg (acc \<squnion> locals res) ps
+       side_rhs_fold_dg (acc \<squnion> dg_local res) ps
      }"
   by (simp_all add: side_rhs_fold_dg_def)
 
 lemma sp_compile_side_rhs_fold_dg_Cons:
   assumes "sp_wf p"
   shows "sp_compile (side_rhs_fold_dg acc (p # ps))
-     = sp_lift_tree (sp_compile p) (\<lambda>v. sp_compile (side_rhs_fold_dg (acc \<squnion> locals v) ps))"
+     = sp_lift_tree (sp_compile p) (\<lambda>v. sp_compile (side_rhs_fold_dg (acc \<squnion> dg_local v) ps))"
   by (simp add: sp_compile_bind sp_wfD[OF assms])
 
 lemma sp_wf_side_rhs_fold_dg [intro]:
@@ -194,12 +194,12 @@ definition side_acc_dg ::
    \<Rightarrow> ('x + 'g \<Rightarrow> ('d, 'h::bounded_semilattice_sup_bot) dg_state)
    \<Rightarrow> ('x, 'g, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program list \<Rightarrow> 'd"
 where
-  "side_acc_dg acc \<tau> ps = fold_acc_projected locals acc \<tau> ps"
+  "side_acc_dg acc \<tau> ps = fold_acc_projected dg_local acc \<tau> ps"
 
 lemma side_acc_dg_simps [simp, code]:
   "side_acc_dg acc \<tau> [] = acc"
   "side_acc_dg acc \<tau> (p # ps) =
-     side_acc_dg (acc \<squnion> locals (traverse_program p \<tau>)) \<tau> ps"
+     side_acc_dg (acc \<squnion> dg_local (traverse_program p \<tau>)) \<tau> ps"
   by (simp_all add: side_acc_dg_def)
 
 lemma traverse_side_rhs_fold_dg:
@@ -243,7 +243,7 @@ text \<open>
   projection and its embedding.
 \<close>
 
-lemma mono_locals: "mono (locals :: ('d::order, 'h::order) dg_state \<Rightarrow> 'd)"
+lemma mono_dg_local: "mono (dg_local :: ('d::order, 'h::order) dg_state \<Rightarrow> 'd)"
   by (rule monoI) (simp add: less_eq_dg_state_def)
 
 lemma mono_DG_bot:
@@ -265,7 +265,7 @@ lemma side_rhs_fold_dg_mono:
              \<le> traverse_program (side_rhs_fold_dg acc ps) s2"
   using prog_mono
   unfolding side_rhs_fold_dg_def
-  by (auto intro!: traverse_fold_rhs_program_projected_mono[OF wf mono_locals mono_DG_bot])
+  by (auto intro!: traverse_fold_rhs_program_projected_mono[OF wf mono_dg_local mono_DG_bot])
 
 text \<open>
   Static dependencies of the fold, given every folded contribution has static
@@ -343,21 +343,21 @@ text \<open>
 \<close>
 
 lemma side_acc_dg_as_foldr:
-  "side_acc_dg acc \<tau> ps = acc \<squnion> foldr (\<lambda>p a. locals (traverse_program p \<tau>) \<squnion> a) ps bot"
+  "side_acc_dg acc \<tau> ps = acc \<squnion> foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps bot"
   by (simp add: side_acc_dg_def fold_acc_projected_as_foldr)
 
 text \<open>The same equation with the accumulator left as the fold's seed, which is
   how a proof that already has a right fold in hand meets it.\<close>
 
 lemma side_acc_dg_as_foldr_seeded:
-  "side_acc_dg acc \<tau> ps = foldr (\<lambda>p a. locals (traverse_program p \<tau>) \<squnion> a) ps acc"
+  "side_acc_dg acc \<tau> ps = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps acc"
   by (simp only: side_acc_dg_as_foldr foldr_join_seed_out[symmetric])
 
-lemma foldr_sup_locals_map_fold:
+lemma foldr_sup_dg_local_map_fold:
   assumes wf: "\<forall>ps \<in> set pss. \<forall>p \<in> set ps. sp_wf p"
-  shows "foldr (\<lambda>p a. locals (traverse_program p \<tau>) \<squnion> a)
+  shows "foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a)
        (map (\<lambda>ps. side_rhs_fold_dg bot ps) pss) b
-     = foldr (\<lambda>p a. locals (traverse_program p \<tau>) \<squnion> a) (concat pss) b"
+     = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) (concat pss) b"
   using wf
   by (induction pss arbitrary: b)
      (simp_all add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr foldr_sup_acc)
@@ -391,7 +391,7 @@ lemma side_rhs_fold_dg_flat_cong:
 proof -
   show ?T
     by (simp add: traverse_side_rhs_fold_dg[OF wf_all] traverse_side_rhs_fold_dg[OF wf_us]
-          side_acc_dg_as_foldr foldr_sup_locals_map_fold[OF wf] foldr_sup_set_cong[OF eq])
+          side_acc_dg_as_foldr foldr_sup_dg_local_map_fold[OF wf] foldr_sup_set_cong[OF eq])
 next
   show ?S
     by (simp add: sides_of_program_side_rhs_fold_dg_char[OF wf_all]
@@ -424,32 +424,32 @@ text \<open>
   off one component afterwards, rather than carrying two folds along.
 \<close>
 
-lemma locals_foldr_generic:
-  "locals (foldr (\<lambda>t acc'. h t \<squnion> acc') L
+lemma dg_local_foldr_generic:
+  "dg_local (foldr (\<lambda>t acc'. h t \<squnion> acc') L
       (acc::('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state))
-     = foldr (\<lambda>t acc'. locals (h t) \<squnion> acc') L (locals acc)"
+     = foldr (\<lambda>t acc'. dg_local (h t) \<squnion> acc') L (dg_local acc)"
   by (induction L) simp_all
 
-lemma globs_foldr_generic:
-  "globs (foldr (\<lambda>t acc'. h t \<squnion> acc') L
+lemma dg_global_foldr_generic:
+  "dg_global (foldr (\<lambda>t acc'. h t \<squnion> acc') L
       (acc::('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state))
-     = foldr (\<lambda>t acc'. globs (h t) \<squnion> acc') L (globs acc)"
+     = foldr (\<lambda>t acc'. dg_global (h t) \<squnion> acc') L (dg_global acc)"
   by (induction L) simp_all
 
-lemma foldr_globs_sides_char:
+lemma foldr_dg_global_sides_char:
   fixes L :: "('x, 'k, ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state,
                 ('d, 'h) dg_state) strategy_program list"
-  shows "foldr (\<lambda>t acc'. globs (sides_of_program t \<tau> z) \<squnion> acc') L bot
-       = globs (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot)"
-  by (simp add: globs_foldr_generic)
+  shows "foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> z) \<squnion> acc') L bot
+       = dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot)"
+  by (simp add: dg_global_foldr_generic)
 
-lemma foldr_sides_locals_bot:
+lemma foldr_sides_dg_local_bot:
   fixes L :: "('x, 'k, ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state,
                 ('d, 'h) dg_state) strategy_program list"
-  assumes "\<And>t. t \<in> set L \<Longrightarrow> locals (sides_of_program t \<tau> z) = bot"
-  shows "locals (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot) = bot"
+  assumes "\<And>t. t \<in> set L \<Longrightarrow> dg_local (sides_of_program t \<tau> z) = bot"
+  shows "dg_local (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot) = bot"
   using assms
-  by (simp add: locals_foldr_generic foldr_sup_bot_of_all_bot)
+  by (simp add: dg_local_foldr_generic foldr_sup_bot_of_all_bot)
 
 lemma DG_sup_bot_left:
   "DG (bot::'d::bounded_semilattice_sup_bot) a \<squnion> DG bot b = DG bot (a \<squnion> b)"
@@ -472,11 +472,11 @@ lemma side_acc_dg_ge_acc:
   "acc \<le> side_acc_dg acc \<sigma> ts"
   by (simp add: side_acc_dg_as_foldr)
 
-lemma locals_traverse_le_side_acc_dg:
+lemma dg_local_traverse_le_side_acc_dg:
   assumes "p \<in> set ps"
-  shows "locals (traverse_program p \<sigma>) \<le> side_acc_dg acc \<sigma> ps"
+  shows "dg_local (traverse_program p \<sigma>) \<le> side_acc_dg acc \<sigma> ps"
   unfolding side_acc_dg_as_foldr
-  using foldr_sup_member_le[where h = "\<lambda>p. locals (traverse_program p \<sigma>)", OF assms]
+  using foldr_sup_member_le[where h = "\<lambda>p. dg_local (traverse_program p \<sigma>)", OF assms]
   by (rule le_supI2)
 
 lemma sides_le_side_rhs_fold_dg:

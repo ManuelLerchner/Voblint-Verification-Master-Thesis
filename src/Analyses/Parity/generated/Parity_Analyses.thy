@@ -4,7 +4,7 @@ theory Parity_Analyses
     Parity_Classify
     Parity_Transfer
     Parity_Exec
-    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -35,7 +35,7 @@ global_interpretation parity_rule: dg_analysis_exec
     parity_tf_st_for parity_enter_st_for cinit_parity_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) r"
     bot parity_classify_check
     skip_parity assign_parity special_parity branch_parity body_parity return_parity

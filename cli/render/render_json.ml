@@ -534,7 +534,7 @@ let result_check_json c =
       ("check_verdict", lifted_json check_result_json (C.check_verdict c));
     ]
 
-let result_global_key_json = function
+let result_global_unknown_json = function
   | C.Global_Shared -> tagged "Global_Shared" []
   | C.Global_Seed (f, i) ->
       tagged "Global_Seed" [ json_string f; json_option nat_json i ]
@@ -542,7 +542,7 @@ let result_global_key_json = function
 let result_global_json g =
   json_object
     [
-      ("global_key", result_global_key_json (C.global_key g));
+      ("global_unknown", result_global_unknown_json (C.global_unknown g));
       ("global_state", lifted_json view_json (C.global_state g));
     ]
 
@@ -660,7 +660,7 @@ let seeds_json program result (graph : G.t) =
     List.mem name formals || List.mem name globals
   in
   let seed (g, (key, _)) =
-    match C.global_key g with
+    match C.global_unknown g with
     | C.Global_Shared -> None
     | C.Global_Seed (f, i) ->
         let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in

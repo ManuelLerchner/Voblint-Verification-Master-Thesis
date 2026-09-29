@@ -25,11 +25,11 @@ definition solved_local_reader ::
    \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> 'D"
 where
   "solved_local_reader vars sigma k =
-     (case k of Inl vc \<Rightarrow> (if vc \<in> vars then locals (sigma (Inl vc)) else bot)
+     (case k of Inl vc \<Rightarrow> (if vc \<in> vars then dg_local (sigma (Inl vc)) else bot)
               | Inr _ \<Rightarrow> bot)"
 
 lemma solved_local_reader_covered [simp]:
-  "vc \<in> vars \<Longrightarrow> solved_local_reader vars sigma (Inl vc) = locals (sigma (Inl vc))"
+  "vc \<in> vars \<Longrightarrow> solved_local_reader vars sigma (Inl vc) = dg_local (sigma (Inl vc))"
   by (simp add: solved_local_reader_def)
 
 lemma solved_local_reader_uncovered [simp]:
@@ -53,7 +53,7 @@ subsection \<open>The composition locale\<close>
 text \<open>
   Everything a routed analysis needs above its solved system, in one place: the
   domain enters through \<open>S\<close> and \<open>\<gamma>\<^sub>D\<^sub>G\<close>, the context policy through \<open>route\<close>,
-  \<open>R\<close> and \<open>seed_key\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
+  \<open>R\<close> and \<open>seed_unknown\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
   fixed reader is \<^const>\<open>solved_local_reader\<close>, so its two coverage
   obligations are the one-line lemmas above.
 
@@ -63,20 +63,20 @@ text \<open>
 \<close>
 
 locale routed_analysis_sound =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g gk0 route bot0 s0d s0g sigma vars x0
-    "solved_local_reader vars sigma" seed_key is_bot "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d)"
+  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0
+    "solved_local_reader vars sigma" seed_unknown is_bot "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d)"
     R rd \<gamma>\<^sub>V empty\<^sub>V classify
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g gk0
+    and g analysis_global
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
-    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and R :: "'c call_context_rel"
     and rd :: "'D \<Rightarrow> 'v lifted"

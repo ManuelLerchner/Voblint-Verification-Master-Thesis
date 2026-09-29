@@ -41,10 +41,10 @@ definition dg_result_for ::
      \<Rightarrow> ('c, 'v) analysis_result" where
   "dg_result_for rd emp sol =
      Analysis_Result (fst sol)
-       (\<lambda>v ctx. map_lift rd (canonicalize_lift emp (locals (snd sol (Inl (v, ctx))))))"
+       (\<lambda>v ctx. map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx))))))"
 
-lemma result_keys_dg_result_for [simp]:
-  "result_keys (dg_result_for rd emp sol) = fst sol"
+lemma result_unknowns_dg_result_for [simp]:
+  "result_unknowns (dg_result_for rd emp sol) = fst sol"
   unfolding dg_result_for_def by simp
 
 text \<open>
@@ -55,7 +55,7 @@ text \<open>
 lemma lookup_context_dg_result_for [simp]:
   "lookup_context (dg_result_for rd emp sol) v ctx
      = (if (v, ctx) \<in> fst sol
-        then map_lift rd (canonicalize_lift emp (locals (snd sol (Inl (v, ctx)))))
+        then map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx)))))
         else Bot)"
   unfolding dg_result_for_def lookup_context_def by simp
 
@@ -74,7 +74,7 @@ lemma lookup_context_dg_result_for_projected:
   assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
   shows "lookup_context (dg_result_for rd emp sol) v ctx =
     (if (v, ctx) \<in> fst sol
-     then canonicalize_lift empty\<^sub>V (map_lift rd (locals (snd sol (Inl (v, ctx)))))
+     then canonicalize_lift empty\<^sub>V (map_lift rd (dg_local (snd sol (Inl (v, ctx)))))
      else Bot)"
   using map_lift_canonicalize_lift[of emp "empty\<^sub>V" rd] assms by simp
 

@@ -44,7 +44,7 @@ text \<open>
   The buffered generator a domain actually solves, reconciled with the unbuffered one
   the framework is stated over, for every component run as a specification. Both
   reshaping hooks are the identity: the buffered generator only asks a hook to hoist
-  what it publishes at the buffered key \<open>gk0\<close>, and a component publishes nothing
+  what it publishes at the buffered key \<open>analysis_global\<close>, and a component publishes nothing
   there, since its edge transfers, its entry and its return all read and write the
   local unknown only. Its queries do not change that: its channel is a pure function
   of the local value, so an asking transfer is still a local one.
@@ -52,75 +52,76 @@ text \<open>
 
 theorem pp_dg_spec_of:
   assumes S: "S = dg_spec_of c"
-    and ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and ne: "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global"
     and pp: "part_post_solution
-     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
-        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
-        (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed_key)
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+        (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_unknown)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
-        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
-        (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed_key)
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+        (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_unknown)
         g bot0 s0d s0g)
      x0 sigma_st vars"
 proof -
   have wf: "dg_spec_wf S" by (simp add: S)
-  have intra_free: "sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau> z = bot"
+  have intra_free: "sides_of_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau> z = bot"
     for a src \<tau> z
     by (simp add: S dg_spec_edge_program_def)
   have cmb_free: "sides_of_program
-      (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route' ctx' ca cc ex)
-      \<tau> (Inr gk0) = bot" for route' ctx' ca cc ex \<tau>
-    by (rule routed_call_program_side_free_at_gk0[OF wf])
+      (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route' ctx' ca cc ex)
+      \<tau> (Inr analysis_global) = bot" for route' ctx' ca cc ex \<tau>
+    by (rule routed_call_program_side_free_at_analysis_global[OF wf])
        (auto simp: S local_transfer_def local_combine_transfer_def ne
          dest!: enter_runs_local_pub_bot)
   show ?thesis
   proof (rule part_post_solution_routed_node_rhs_buffered
-      [where cmb_c = "routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
-         and it_c = "\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0)"])
+      [where cmb_c =
+        "routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot)"
+         and it_c = "\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global)"])
     show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
-             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
-             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-             (routed_entry_seed_programs seed_key) g c' w). sp_wf p"
+             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+             (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_entry_seed_programs seed_unknown) g c' w). sp_wf p"
       by (rule routed_contribution_programs_wf)
          (auto intro: sp_wf_dg_spec_edge_program[OF wf] sp_wf_routed_call_program[OF wf])
     then show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
-             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. gk0))
-             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-             (routed_entry_seed_programs seed_key) g c' w). sp_wf p" .
-    show "\<And>c' src a \<tau>. locals (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
-             (Inr ((\<lambda>_. gk0) c'))) = bot"
+             call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+             (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_entry_seed_programs seed_unknown) g c' w). sp_wf p" .
+    show "\<And>c' src a \<tau>. dg_local (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau>
+             (Inr ((\<lambda>_. analysis_global) c'))) = bot"
       by (simp add: intra_free bot_dg_state_def)
-    show "\<And>c' src a \<tau>. globs (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>)
-           = globs (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
-               (Inr ((\<lambda>_. gk0) c')))"
+    show "\<And>c' src a \<tau>. dg_global (traverse_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau>)
+           = dg_global (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau>
+               (Inr ((\<lambda>_. analysis_global) c')))"
       by (simp add: S dg_spec_edge_program_def bot_dg_state_def)
-    show "\<And>c' src a \<tau>. sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk0)) \<tau>
-             (Inr ((\<lambda>_. gk0) c')) = bot"
+    show "\<And>c' src a \<tau>. sides_of_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau>
+             (Inr ((\<lambda>_. analysis_global) c')) = bot"
       by (rule intra_free)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_program
-             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
-             \<tau> (Inr ((\<lambda>_. gk0) c'))) = bot"
+    show "\<And>c' ca cc ex \<tau>. dg_local (sides_of_program
+             (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             \<tau> (Inr ((\<lambda>_. analysis_global) c'))) = bot"
       by (simp add: cmb_free bot_dg_state_def)
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_program
-             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex) \<tau>)
-           = globs (sides_of_program
-               (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
-               \<tau> (Inr ((\<lambda>_. gk0) c')))"
+    show "\<And>c' ca cc ex \<tau>. dg_global (traverse_program
+             (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex) \<tau>)
+           = dg_global (sides_of_program
+               (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+               \<tau> (Inr ((\<lambda>_. analysis_global) c')))"
       by (simp add: routed_call_program_global_free[OF wf] cmb_free bot_dg_state_def)
     show "\<And>c' ca cc ex \<tau>. sides_of_program
-             (routed_call_program S gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
-             \<tau> (Inr ((\<lambda>_. gk0) c')) = bot"
+             (routed_call_program S analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             \<tau> (Inr ((\<lambda>_. analysis_global) c')) = bot"
       by (rule cmb_free)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
+    show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs seed_unknown route_st c' w)
            \<Longrightarrow> sides_of_program x \<tau> z = bot"
       by (rule routed_entry_seed_programs_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_programs seed_key route_st c' w)
-           \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
+    show "\<And>c' w \<tau> x. x \<in> set (routed_entry_seed_programs seed_unknown route_st c' w)
+           \<Longrightarrow> dg_global (traverse_program x \<tau>) = bot"
       by (rule routed_entry_seed_programs_local_only)
   qed (simp_all add: pp)
 qed
@@ -139,13 +140,13 @@ locale routed_domain_exec =
     and rt :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" +
-  fixes gk0 :: 'k
-    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+  fixes analysis_global :: 'k
+    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and route_abs :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and resolve_st :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> pname list"
     and resolve_abs :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a abs_state lifted \<Rightarrow> pname list"
-  assumes seed_key_ne_gk0 [simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+  assumes seed_unknown_ne_analysis_global [simp]: "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global"
       and route_agree: "\<And>u c' d ca. route_st u c' d ca
                           = route_abs u c' (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
       and resolve_agree: "\<And>g w cc ca d. resolve_st g w cc ca d
@@ -161,13 +162,13 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 lemma dg_prog_st_commute_routed_call_program:
   "dg_reader_commute_gen.dg_prog_st_commute
      (map_lift (fun_of_resolved_st_q_for \<G>)) (map_lift (fun_of_resolved_st_q_for \<G>)) env
-     (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
-     (routed_call_program spec_abs gk0 seed_key (resolve_abs g) (\<lambda>d. d = Bot)
+     (routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
+     (routed_call_program spec_abs analysis_global seed_unknown (resolve_abs g) (\<lambda>d. d = Bot)
         route_abs ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_prog_st_commute_routed_call_program
         [where Floc = "map_lift (fun_of_resolved_st_q_for \<G>)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for \<G>)"])
-     (rule dg_reader_commute_gen_lifted_for seed_key_ne_gk0
+     (rule dg_reader_commute_gen_lifted_for seed_unknown_ne_analysis_global
            dg_spec_wf_local_state_dg_spec_st_for_lifted
            dg_spec_wf_local_state_dg_spec_for_lifted
            Henter_lifted_for Hcomb_lifted_for
@@ -180,13 +181,13 @@ text \<open>
   the framework is stated over --- at the executable spec, before any readback.
 
   Both reshaping hooks are the identity here. The buffered generator only ever asks a
-  hook to hoist what it publishes at the buffered key \<open>gk0\<close>; this spec is local-only,
+  hook to hoist what it publishes at the buffered key \<open>analysis_global\<close>; this spec is local-only,
   so its intra tree and its routed combine publish nothing there, and each tree is
   already its own contribution analogue. That is a property of the trees --- read off
-  \<open>routed_call_program_side_free_at_gk0\<close> and the local-only compile-down facts --- not of any
-  analysis family: a spec whose transfers do publish at \<open>gk0\<close> would have to supply
+  \<open>routed_call_program_side_free_at_analysis_global\<close> and the local-only compile-down facts --- not of any
+  analysis family: a spec whose transfers do publish at \<open>analysis_global\<close> would have to supply
   reshaped hooks instead, with the same generic bridge unchanged. The routed seed
-  survives untouched, because a seed key is never \<open>gk0\<close> and the bridge requires
+  survives untouched, because a seed key is never \<open>analysis_global\<close> and the bridge requires
   off-key sides to be preserved, not removed.
 
   An instance that interprets the spine at \<open>spec_st\<close> hands this post-solution to
@@ -197,24 +198,25 @@ abbreviation intra_st :: "'c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edg
    \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state,
         ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_program"
 where
-  "intra_st ctx' src a \<equiv> dg_spec_edge_program spec_st a src (\<lambda>_. gk0)"
+  "intra_st ctx' src a \<equiv> dg_spec_edge_program spec_st a src (\<lambda>_. analysis_global)"
 
 abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state,
         ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_program"
 where
-  "cmb_st g \<equiv> routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot)"
+  "cmb_st g \<equiv> routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot)"
 
 text \<open>The two tree properties that make the identity hooks legitimate: neither the
-  compiled intra edge nor the routed combine publishes at \<open>gk0\<close>, and both answer with
+  compiled intra edge nor the routed combine publishes at \<open>analysis_global\<close>, and both answer with
   \<open>bot\<close> on the globals half.\<close>
 
 lemma intra_st_side_free: "sides_of_program (intra_st ctx' src a) \<tau> z = bot"
   by (simp add: dg_spec_edge_program_def dg_spec_step_local_state_st_for_lifted)
 
-lemma cmb_st_side_free_at_gk0: "sides_of_program (cmb_st g route' ctx' ca cc ex) \<tau> (Inr gk0) = bot"
-  by (rule routed_call_program_side_free_at_gk0
+lemma cmb_st_side_free_at_analysis_global:
+  "sides_of_program (cmb_st g route' ctx' ca cc ex) \<tau> (Inr analysis_global) = bot"
+  by (rule routed_call_program_side_free_at_analysis_global
         [OF dg_spec_wf_local_state_dg_spec_st_for_lifted])
      (auto simp: dgs_enter_local_state_st_for_lifted
         dg_spec_combine_transfer_local_state_st_for_lifted
@@ -223,19 +225,19 @@ lemma cmb_st_side_free_at_gk0: "sides_of_program (cmb_st g route' ctx' ca cc ex)
 
 theorem pp_st:
   assumes pp: "part_post_solution
-     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
-        intra_st (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed_key)
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
+        intra_st (routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_unknown)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
-        intra_st (routed_call_program spec_st gk0 seed_key (resolve_st g) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed_key)
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
+        intra_st (routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed_unknown)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   by (rule pp_dg_spec_of[where S = spec_st])
-     (rule local_state_dg_spec_st_for_lifted_def, rule seed_key_ne_gk0, rule pp)
+     (rule local_state_dg_spec_st_for_lifted_def, rule seed_unknown_ne_analysis_global, rule pp)
 
 end
 

@@ -80,12 +80,12 @@ text \<open>
   without a context belongs to a procedure the solve never entered.
 \<close>
 
-datatype result_global_key =
+datatype result_global_unknown =
     Global_Shared
   | Global_Seed pname "nat option"
 
 record 'v result_global =
-  global_key :: result_global_key
+  global_unknown :: result_global_unknown
   global_state :: "'v analysis_view lifted"
 
 record 'v run_result =
@@ -123,7 +123,7 @@ definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_st
 
 definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
   "map_result_global f g =
-     \<lparr> global_key = global_key g,
+     \<lparr> global_unknown = global_unknown g,
        global_state = map_lift (map_analysis_view f) (global_state g) \<rparr>"
 
 definition map_run_result :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v run_result \<Rightarrow> 'w run_result" where
@@ -243,7 +243,7 @@ definition run_result_of ::
      (let g = prog_cfg p;
           vars = program_vars p;
           view = map_lift (render vars);
-          ctxs = ordered_by_key ctx_key (snd ` result_keys r);
+          ctxs = ordered_by_key ctx_key (snd ` result_unknowns r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g;
           intra = cfg_intra_list g;
@@ -274,10 +274,10 @@ definition run_result_of ::
                      remdups (concat (map (context_indices indexed)
                        (targets u ctx ca (callee_of_entry ce))))) \<rparr>);
           seeds_of = (\<lambda>f.
-            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> result_keys r) indexed of
-               [] \<Rightarrow> [\<lparr> global_key = Global_Seed f None, global_state = Bot \<rparr>]
+            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> result_unknowns r) indexed of
+               [] \<Rightarrow> [\<lparr> global_unknown = Global_Seed f None, global_state = Bot \<rparr>]
              | entered \<Rightarrow>
-                 map (\<lambda>(i, ctx). \<lparr> global_key = Global_Seed f (Some i),
+                 map (\<lambda>(i, ctx). \<lparr> global_unknown = Global_Seed f (Some i),
                                    global_state = view (seed_at f ctx) \<rparr>)
                    entered))
       in \<lparr> res_cfg = g,
@@ -285,16 +285,16 @@ definition run_result_of ::
            res_states =
              concat (map (\<lambda>(i, ctx).
                             map (state_at i ctx)
-                              (filter (\<lambda>v. (v, ctx) \<in> result_keys r) nodes))
+                              (filter (\<lambda>v. (v, ctx) \<in> result_unknowns r) nodes))
                        indexed),
            res_routes =
              concat (map (\<lambda>(u, ca, ce, after).
                             map (\<lambda>(i, ctx). route_at u ca ce i ctx)
-                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_keys r) indexed))
+                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_unknowns r) indexed))
                        (cfg_calls_list g)),
            res_checks = result_checks_of g r classify,
            res_globals =
-             \<lparr> global_key = Global_Shared, global_state = view shared \<rparr>
+             \<lparr> global_unknown = Global_Shared, global_state = view shared \<rparr>
                # concat (map seeds_of (prog_main_name # prog_procs p)),
            res_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
 

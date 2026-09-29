@@ -19,7 +19,7 @@ text \<open>
     \<^item> \<open>finC\<close> holds for every \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_finite\<close>);
     \<^item> \<open>calls_unique\<close> is call-source uniqueness for every \<^const>\<open>compile_prog\<close>
       output (\<open>compile_prog_calls_source_unique\<close>);
-    \<^item> \<open>seed_key_ne_gk0\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
+    \<^item> \<open>seed_unknown_ne_analysis_global\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
     \<^item> \<open>routed_entry_cover\<close>'s routing conjunct is \<^const>\<open>cs_route\<close> and
       \<^const>\<open>cs_context\<close> being the same closed term (\<open>cs_route_context_agree\<close>),
       independently of the entered value, so every context the relation admits is the
@@ -72,13 +72,13 @@ locale call_string_routed_context =
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
              \<in> calls (compile_prog Pi ps)
-       \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr Global)))
+       \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (dg_global (sigma (Inr Global)))
        \<Longrightarrow> \<exists>pairs pub deps.
              enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
+               (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
            \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
-               (mk_dg_man (locals (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
-           \<and> entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (globs (sigma (Inr Global)))) s
+               (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
+           \<and> entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
                (call_enter \<G> (CallEdge dst pars args) s) pairs"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
@@ -86,7 +86,7 @@ locale call_string_routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> (FunctionEntry p,
-              cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+              cs_route k u ctx (dg_local (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -117,7 +117,7 @@ next
             \<in> calls (compile_prog Pi ps)"
     and "s \<in> gamma_at u ctx"
   then show "p \<in> set (static_resolve (compile_prog Pi ps) cont u
-                        (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
+                        (CallEdge dst pars args) (dg_local (sigma (Inl (u, ctx)))))"
     by (simp add: compile_prog_finite)
 next
   fix u ctx dst pars args p cont s ctx'
@@ -134,14 +134,14 @@ next
                 (man_at u ctx) sigma pairs pub"
       and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
-      and P: "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (globs (sigma (Inr Global)))) s
+      and P: "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
                 (call_enter \<G> (CallEdge dst pars args) s) pairs"
     using enter_complete[OF covV ce sin] by blast
   from P obtain cont' entry
     where mem: "(cont', entry) \<in> set pairs"
-      and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (globs (sigma (Inr Global)))"
+      and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr Global)))"
       and ecov: "call_enter \<G> (CallEdge dst pars args) s
-                   \<in> \<gamma>\<^sub>D\<^sub>G entry (globs (sigma (Inr Global)))"
+                   \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr Global)))"
     by (rule entry_pairs_coverE)
   have req: "cs_route k u ctx entry (CallEdge dst pars args) = ctx'"
     unfolding ctx' by (rule cs_route_context_agree)
@@ -153,9 +153,9 @@ next
            \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (man_at u ctx) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
-           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (globs (sigma (Inr Global)))
+           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr Global)))
            \<and> call_enter \<G> (CallEdge dst pars args) s
-               \<in> \<gamma>\<^sub>D\<^sub>G entry (globs (sigma (Inr Global)))
+               \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr Global)))
            \<and> cs_route k u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
     using R D mem ccov ecov req covE by blast

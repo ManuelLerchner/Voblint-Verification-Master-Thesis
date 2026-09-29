@@ -336,16 +336,16 @@ proof -
 qed
 
 text \<open>Recursion: two nested activations of \<open>pr\<close> are distinct structural traces; under the
-  discriminating context \<open>key (\<lambda>_ c _. Suc c) 0\<close> (call depth) they receive distinct context
+  discriminating context \<open>activation_context (\<lambda>_ c _. Suc c) 0\<close> (call depth) they receive distinct context
   keys.  The two activations are the ones \<open>recursion_nesting\<close> already builds, and their keys
-  separate by \<open>key_entry_invariant_eq\<close> from
+  separate by \<open>activation_context_entry_invariant_eq\<close> from
   \<^theory>\<open>Voblint_CFG.LTR_Activation_Context\<close>, which reads a callee's context off its
   caller's: one more call means one more \<^const>\<open>Suc\<close>.\<close>
 lemma ltr_collect_recursion_distinct_ctx:
   "\<exists>outer inner.
       outer \<in> \<T>\<^bsub>demo_gs,rec_cfg,UNIV\<^esub> \<and> inner \<in> \<T>\<^bsub>demo_gs,rec_cfg,UNIV\<^esub>
     \<and> outer \<noteq> inner
-    \<and> key (\<lambda>_ c _. Suc c) 0 outer \<noteq> key (\<lambda>_ c _. Suc c) 0 inner"
+    \<and> activation_context (\<lambda>_ c _. Suc c) 0 outer \<noteq> activation_context (\<lambda>_ c _. Suc c) 0 inner"
 proof -
   from recursion_nesting obtain outer inner where
       OUTER: "outer \<in> \<T>\<^bsub>demo_gs,rec_cfg,UNIV\<^esub>"
@@ -353,11 +353,12 @@ proof -
     and neq: "outer \<noteq> inner"
     and ci: "caller_of inner = Some outer"
     by blast
-  have depth: "key (\<lambda>_ c _. Suc c) 0 inner = Suc (key (\<lambda>_ c _. Suc c) 0 outer)"
-    using key_entry_invariant_eq[OF INNER ci,
+  have depth:
+    "activation_context (\<lambda>_ c _. Suc c) 0 inner = Suc (activation_context (\<lambda>_ c _. Suc c) 0 outer)"
+    using activation_context_entry_invariant_eq[OF INNER ci,
         where enterc = "\<lambda>_ c _. Suc c" and initial_ctx = 0]
     by simp
-  have "key (\<lambda>_ c _. Suc c) 0 outer \<noteq> key (\<lambda>_ c _. Suc c) 0 inner"
+  have "activation_context (\<lambda>_ c _. Suc c) 0 outer \<noteq> activation_context (\<lambda>_ c _. Suc c) 0 inner"
     unfolding depth by (rule n_not_Suc_n)
   then show ?thesis using OUTER INNER neq by blast
 qed

@@ -58,25 +58,25 @@ abbreviation sj_lookup :: "ivl exec_dg_st \<Rightarrow> vname \<Rightarrow> ivl"
   "sj_lookup s x \<equiv> lookup_resolved_st_q s (location_of sj_gs x)"
 
 abbreviation sj_seed :: "(pp \<times> unit) set \<times>
-    (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
+    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
   \<Rightarrow> vname \<Rightarrow> ivl" where
   "sj_seed sol x \<equiv>
-     sj_lookup (locals (snd sol (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) x"
+     sj_lookup (dg_local (snd sol (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) x"
 
 abbreviation sj_at :: "(pp \<times> unit) set \<times>
-    (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
+    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
   \<Rightarrow> pp \<Rightarrow> vname \<Rightarrow> ivl" where
-  "sj_at sol u x \<equiv> sj_lookup (locals (snd sol (Inl (u, ())))) x"
+  "sj_at sol u x \<equiv> sj_lookup (dg_local (snd sol (Inl (u, ())))) x"
 
 definition sj_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
 where
   "sj_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for sj_gs (ivl_tf_st_for sj_gs) (ivl_enter_st_for sj_gs))
      sj_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition sj_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
     where
   "sj_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed sj_eqs (cfg_exit sj_cfg, ())"
 
@@ -130,7 +130,7 @@ text \<open>
 \<close>
 
 lemma sj_warrowed_seed_agrees:
-  "sj_lookup (locals (snd (TD_side_seed_join_warrowing_Interp_solve (\<lambda>_. False) sj_eqs
+  "sj_lookup (dg_local (snd (TD_side_seed_join_warrowing_Interp_solve (\<lambda>_. False) sj_eqs
        (cfg_exit sj_cfg, ())) (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ()))))
      (STR ''n'') = Ivl (Fin 0) (Fin 5)"
   by eval

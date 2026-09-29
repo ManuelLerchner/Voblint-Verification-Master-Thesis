@@ -3521,3 +3521,59 @@ int_dom_narrow_ge
 int_dom_narrow_le
 eval_holds_top
 entry_state_routed_context_comb
+
+# --- Solver keys renamed to global unknowns (2026-09-29) ---
+# "Key" named three things at once: any unknown, a global unknown, and a routing
+# tag. The solver-level ones now say what they are.
+routed_gk
+gk0
+gkey
+seed_key
+SeedKey
+seed_key_ne_gk0
+seed_ne_gk0
+exec_seed_ne_gk0
+routed_call_program_side_free_at_gk0
+routed_callee_call_program_side_free_at_gk0
+ov_cmb_side_free_at_gk0
+cmb_st_side_free_at_gk0
+live_keys
+live_keys_cover
+live_keys_of_result
+live_keys_sub
+routed_analysis_sound_live_keys
+entry_state_routed_analysis_sound_live_keys
+activation_collect_sound_live_keys
+result_keys
+result_keys_dg_result_for
+result_keys_analyse_result
+global_key
+result_global_key
+DG_Live_Keys
+DG_Keyed_Generator
+# The trace's activation context is a context, not a key.
+key_extend_nonempty
+key_entry_invariant
+key_entry_invariant_eq
+# The two halves of a D/G unknown's value, named like the manager's fields.
+le_dg_state_localsD
+le_dg_state_globsD
+mono_locals
+locals_sup
+locals_bot
+globs_sup
+globs_bot
+locals_foldr_generic
+globs_foldr_generic
+globs_new_char
+foldr_sup_locals_map_fold
+foldr_sides_locals_bot
+foldr_globs_sides_char
+locals_traverse_le_side_acc_dg
+locals_traverse_ownership_split_transfer_gen
+locals_traverse_ownership_split_combine_transfer_gen
+globs_sides_ownership_split_transfer_gen
+globs_sides_ownership_split_combine_transfer_gen
+ov_entry1_locals_exact
+ov_call_site_locals_probe
+ov_cont2_locals_probe

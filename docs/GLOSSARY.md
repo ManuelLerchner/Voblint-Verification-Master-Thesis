@@ -72,7 +72,7 @@ layer without embedding line numbers that drift.
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `analysis_contract` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | resume value (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume value. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Keyed_Generator.thy` |
+| `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Indexed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
 
@@ -142,7 +142,7 @@ different objects, not naming duplication:
 
 The locale assumption `sg_cov` ties them: at a covered key,
 `gammaM (sg (Inl (v, c)))` is `gammaDG` of `sigma`'s local slot against its one
-shared global slot `Inr gk0`, and `sg_uncov` makes it empty off the solved keys.
+shared global slot `Inr analysis_global`, and `sg_uncov` makes it empty off the solved keys.
 Unifying the two names would make a proof step that needs both
 indistinguishable.
 
@@ -173,4 +173,4 @@ the table.
 | --- | --- | --- |
 | `config_terminates` | The termination premise of the `run_voblint` theorems: `solve_dom` of the configured solve at the program's root query. A per-program fact. Inside Isabelle it is discharged by evaluating `solve_c` with `eval` (itself a code-generator oracle) and `terminates_of_solve_c`, which the repository does for its witness programs. A CLI or browser run that returns has computed `solve_c` and so establishes it through `solve_dom_of_solve_c`, but that step runs outside Isabelle's theorem check and relies on the trusted code generator and toolchain. | `src/Executable_Surface/CLI/Analysis_Certified.thy` |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
-| `fun_route_source_sound` | The routed endpoints for a route that is a function of the call site, the unit route among them: a terminating solve bounds every store a source run reaches by the state published at its point under one of its contexts (`fun_route_source_sound`, `fun_route_result_node_sound`, `fun_route_report_proved_sound`). Every domain's unit registration is an instance. | `src/Analyses/Shared/Result/DG_Live_Keys.thy` |
+| `fun_route_source_sound` | The routed endpoints for a route that is a function of the call site, the unit route among them: a terminating solve bounds every store a source run reaches by the state published at its point under one of its contexts (`fun_route_source_sound`, `fun_route_result_node_sound`, `fun_route_report_proved_sound`). Every domain's unit registration is an instance. | `src/Analyses/Shared/Result/DG_Live_Unknowns.thy` |

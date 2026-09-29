@@ -52,7 +52,7 @@ abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" wher
 abbreviation int_ex_result where
   "int_ex_result eqs ==
      map_option
-       (\<lambda>(_, sol). int_ex_read (locals (sol (Inl (Statement 1, ())))) (STR ''y''))
+       (\<lambda>(_, sol). int_ex_read (dg_local (sol (Inl (Statement 1, ())))) (STR ''y''))
        (TD_side_always_join_Interp_solve_c eqs (cfg_exit gExI, ()))"
 
 subsection \<open>Computed post-solutions for the non-CLI modes\<close>
@@ -75,7 +75,7 @@ text \<open>
 \<close>
 
 definition dgExI_never_eqs ::
-    "pp * unit => (pp * unit, (unit, unit) routed_gk,
+    "pp * unit => (pp * unit, (unit, unit) global_unknown,
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
@@ -90,7 +90,7 @@ lemma dgExI_never_result:
   by eval
 
 definition dgExI_once_eqs ::
-    "pp * unit => (pp * unit, (unit, unit) routed_gk,
+    "pp * unit => (pp * unit, (unit, unit) global_unknown,
        (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
 where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit

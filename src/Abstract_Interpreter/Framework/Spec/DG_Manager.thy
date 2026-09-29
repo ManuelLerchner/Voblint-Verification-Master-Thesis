@@ -48,7 +48,7 @@ text \<open>
 
   \<open>dg_read_global\<close> and \<open>dg_sideg\<close> are what interpret those capabilities
   against the packed \<open>('dl,'dg) dg_state\<close> carrier; \<open>mk_dg_man\<close> is where the
-  embedding \<open>key\<close> is closed into them, so it is the only place a name becomes a
+  embedding \<open>unknown_of\<close> is closed into them, so it is the only place a name becomes a
   key. Either way a transfer written against \<open>man\<close>'s fields sees neither the
   packed carrier nor a key.
 \<close>
@@ -66,8 +66,8 @@ subsection \<open>Packed-carrier primitives\<close>
 text \<open>
   A solver unknown holds a whole \<^type>\<open>dg_state\<close>, so reading one yields both
   halves and only one of them is ever wanted. \<open>dg_read_at\<close> reads any unknown
-  and keeps \<^const>\<open>locals\<close>; \<open>dg_read_global\<close> reads a global key and keeps
-  \<^const>\<open>globs\<close>; \<open>dg_sideg\<close> publishes a global contribution, padding the local
+  and keeps \<^const>\<open>dg_local\<close>; \<open>dg_read_global\<close> reads a global key and keeps
+  \<^const>\<open>dg_global\<close>; \<open>dg_sideg\<close> publishes a global contribution, padding the local
   half it does not write with \<open>bot\<close>.
 
   These three are where the packed carrier is taken apart and put back
@@ -79,10 +79,10 @@ text \<open>
 \<close>
 
 definition dg_read_at :: "'x + 'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program" where
-  "dg_read_at src = sp_read_at src \<bind> (sp_return o locals)"
+  "dg_read_at src = sp_read_at src \<bind> (sp_return o dg_local)"
 
 definition dg_read_global :: "'k \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program" where
-  "dg_read_global gk = sp_read_global gk \<bind> (sp_return o globs)"
+  "dg_read_global gk = sp_read_global gk \<bind> (sp_return o dg_global)"
 
 definition dg_sideg :: "'k \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,unit) strategy_program" where
   "dg_sideg gk gd = sp_publish gk (DG bot gd)"
@@ -104,31 +104,31 @@ text \<open>
 \<close>
 
 lemma traverse_dg_read_at [simp]:
-  "traverse_rhs (dg_read_at src K) \<tau> = traverse_rhs (K (locals (\<tau> src))) \<tau>"
+  "traverse_rhs (dg_read_at src K) \<tau> = traverse_rhs (K (dg_local (\<tau> src))) \<tau>"
   by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
       sp_read_global_def sp_return_def)
 
 lemma sides_dg_read_at [simp]:
-  "sides_of_rhs (dg_read_at src K) \<tau> = sides_of_rhs (K (locals (\<tau> src))) \<tau>"
+  "sides_of_rhs (dg_read_at src K) \<tau> = sides_of_rhs (K (dg_local (\<tau> src))) \<tau>"
   by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
       sp_read_global_def sp_return_def)
 
 lemma dep_aux_dg_read_at [simp]:
-  "dep_aux \<tau> (dg_read_at src K) = insert src (dep_aux \<tau> (K (locals (\<tau> src))))"
+  "dep_aux \<tau> (dg_read_at src K) = insert src (dep_aux \<tau> (K (dg_local (\<tau> src))))"
   by (cases src) (simp_all add: dg_read_at_def sp_bind_def sp_read_local_def
       sp_read_global_def sp_return_def)
 
 lemma traverse_dg_read_global [simp]:
-  "traverse_rhs (dg_read_global gk K) \<tau> = traverse_rhs (K (globs (\<tau> (Inr gk)))) \<tau>"
+  "traverse_rhs (dg_read_global gk K) \<tau> = traverse_rhs (K (dg_global (\<tau> (Inr gk)))) \<tau>"
   by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
 
 lemma sides_dg_read_global [simp]:
-  "sides_of_rhs (dg_read_global gk K) \<tau> = sides_of_rhs (K (globs (\<tau> (Inr gk)))) \<tau>"
+  "sides_of_rhs (dg_read_global gk K) \<tau> = sides_of_rhs (K (dg_global (\<tau> (Inr gk)))) \<tau>"
   by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
 
 lemma dep_aux_dg_read_global [simp]:
   "dep_aux \<tau> (dg_read_global gk K)
-     = insert (Inr gk) (dep_aux \<tau> (K (globs (\<tau> (Inr gk)))))"
+     = insert (Inr gk) (dep_aux \<tau> (K (dg_global (\<tau> (Inr gk)))))"
   by (simp add: dg_read_global_def sp_bind_def sp_read_global_def sp_return_def)
 
 lemma traverse_dg_sideg [simp]:
@@ -186,10 +186,10 @@ text \<open>
 \<close>
 
 definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
-  "mk_dg_man d key = \<lparr>
+  "mk_dg_man d unknown_of = \<lparr>
      man_local = d,
-     man_global = (\<lambda>v. dg_read_global (key v)),
-     man_sideg = (\<lambda>v. dg_sideg (key v)),
+     man_global = (\<lambda>v. dg_read_global (unknown_of v)),
+     man_sideg = (\<lambda>v. dg_sideg (unknown_of v)),
      man_ask = (\<lambda>_. sp_return \<top>) \<rparr>"
 
 text \<open>
@@ -209,15 +209,15 @@ text \<open>
 \<close>
 
 lemma mk_dg_man_simps [simp]:
-  "man_local (mk_dg_man d key) = d"
-  "man_global (mk_dg_man d key) = (\<lambda>v. dg_read_global (key v))"
-  "man_sideg (mk_dg_man d key) = (\<lambda>v. dg_sideg (key v))"
-  "man_ask (mk_dg_man d key) = (\<lambda>_. sp_return \<top>)"
+  "man_local (mk_dg_man d unknown_of) = d"
+  "man_global (mk_dg_man d unknown_of) = (\<lambda>v. dg_read_global (unknown_of v))"
+  "man_sideg (mk_dg_man d unknown_of) = (\<lambda>v. dg_sideg (unknown_of v))"
+  "man_ask (mk_dg_man d unknown_of) = (\<lambda>_. sp_return \<top>)"
   by (simp_all add: mk_dg_man_def)
 
 lemma mk_dg_man_local_update [simp]:
-  "mk_dg_man d key\<lparr>man_local := e\<rparr> = mk_dg_man e key"
-  "mk_dg_man d key\<lparr>man_ask := A, man_local := e\<rparr> = mk_dg_man e key\<lparr>man_ask := A\<rparr>"
+  "mk_dg_man d unknown_of\<lparr>man_local := e\<rparr> = mk_dg_man e unknown_of"
+  "mk_dg_man d unknown_of\<lparr>man_ask := A, man_local := e\<rparr> = mk_dg_man e unknown_of\<lparr>man_ask := A\<rparr>"
   by (simp_all add: mk_dg_man_def)
 
 type_synonym ('x,'k,'v,'dl,'dg) man_transfer =

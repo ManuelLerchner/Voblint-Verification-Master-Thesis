@@ -373,7 +373,7 @@ L4  WHAT AN ANALYSIS SUPPLIES
              │
              v
 L5  EQUATIONS
-    routed_node_rhs / routed_node_rhs_buffered     DG_Keyed_Generator
+    routed_node_rhs / routed_node_rhs_buffered     DG_Indexed_Generator
     routed_call_program, routed_entry_seed_programs Routed_Call_Programs
     compiled_routed_eqs_for                        Compiled_Routed_Equations
              │
@@ -408,7 +408,7 @@ L9  PUBLICATION
     analysis_result, lookup_context, wf_analysis_result  Analysis_Result
     dg_analysis_adapter                                  DG_Analysis_Adapter
     routed_dg_pipeline / routed_dg_analysis              Routed_DG_Analysis
-    live_keys, live_keys_cover                           Routed_Live_Keys
+    live_unknowns, live_unknowns_cover                           Routed_Live_Keys
     unit_dg_analysis: source_sound, completed_run_sound,
                       result_node_sound                  Unit_DG_Analysis
     source_activation_sound,
@@ -465,7 +465,7 @@ records the structural match; `ltr_collect` picks the reachable witness.
 admitted at several contexts; under call strings at exactly one. A statement
 over *every* solved context would be false.
 
-*Coverage is not a premise.* `live_keys_cover` derives it from termination
+*Coverage is not a premise.* `live_unknowns_cover` derives it from termination
 plus well-formedness, by reading what the generated equations actually query.
 
 *Well-formedness is not a premise either.* A malformed program answers
@@ -1205,7 +1205,7 @@ one worked fragment (the `while` loop), state `csim` with its three
 constructors and the picture of nested `Restore` wrappers against the frame
 stack, state `csim_step` and `csim_star`, and push the residual-edge machinery
 (`control_at`, `Residual_Edges`) to a two-paragraph proof sketch. *Omit*
-`Live_Nodes` here; it is needed only in Ch. 9 for `live_keys`, so introduce it
+`Live_Nodes` here; it is needed only in Ch. 9 for `live_unknowns`, so introduce it
 there.
 
 **Ch. 4.** The pivot. Prerequisite: Ch. 3. Build in this order: the design law
@@ -1250,7 +1250,7 @@ choice. *Omit* the vendored solver's internals entirely; cite the NFM paper.
 
 **Ch. 9.** Prerequisite: everything. This chapter is mostly assembly, and its
 job is to be precise about the statement rather than to introduce ideas. The
-one genuinely new idea here is `live_keys`: the solved key set is not closed,
+one genuinely new idea here is `live_unknowns`: the solved key set is not closed,
 and closing it is derived from termination rather than assumed. The four
 existential/premise subtleties in §9.8 are what a careful examiner will probe.
 
@@ -1333,14 +1333,14 @@ thesis section → theories → central definitions → central theorems.
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
 | 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `sound_local_dg_spec`, `sound_transfer_for`, `local_state_dg_spec_for`, `_lifted`, `combine_collect_abs` | `local_state_dg_spec_for_contract`, `combine_sound_program` |
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
-| 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Keyed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
-| 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `routed_gk` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
+| 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Indexed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
+| 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `global_unknown` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
 | 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context_base_hetero`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
 | 8.4–8.6 | `Voblint_Exec.Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer`, `Exec_St_Reachability`, `Exec_DG_State` | `resolved_st`, `resolved_st_q` (quotient), `location`, `location_of`, `fun_of_resolved_st_q_for`, `resolved_st_is_bot`, `canonical_location`, `exec_dg_st`, `fun_of_dg_st_for` | `resolved_st_q_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
-| 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_keys`, `lookup_context`, `wf_analysis_result`, `live_keys`, `cfg_succ_rel` | `live_keys_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
+| 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_unknowns`, `lookup_context`, `wf_analysis_result`, `live_unknowns`, `cfg_succ_rel` | `live_unknowns_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Unit_DG_Analysis`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `unit_dg_analysis`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `unit_dg_analysis.source_sound`, `result_node_sound` |
 | 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
@@ -1509,7 +1509,7 @@ what would be defended in a presentation — remain open.
 analyzer-side premise, and it is discharged per program by evaluation. Options:
 state it in the abstract (maximally honest, slightly deflating), state it in
 §1.3 and Ch. 9 only, or give it its own short section in Ch. 9 with the
-`live_keys_cover` result that shows how much *else* follows from it.
+`live_unknowns_cover` result that shows how much *else* follows from it.
 Recommendation: the third, and mention it in the abstract in one clause.
 
 **U5 — Artifact reproducibility.** The vendored solver is pinned to a *private*

@@ -34,25 +34,26 @@ text \<open>
   reads both components --- an ownership split, say --- does not interpret this
   locale as it stands; admitting one means widening \<open>rd\<close> to
   \<^typ>\<open>'D \<Rightarrow> 'G \<Rightarrow> 'v lifted\<close> and reading the global unknown at
-  \<open>Inr gk0\<close> alongside the local one, which every present instance would
+  \<open>Inr analysis_global\<close> alongside the local one, which every present instance would
   instantiate at a constant function.
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
+  routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0 sg
+    seed_unknown
     "static_resolve g" is_bot \<gamma>\<^sub>M R
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g gk0
+    and g analysis_global
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
-    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and R :: "'c call_context_rel" +
@@ -86,12 +87,12 @@ text \<open>
 
 definition analyse_result :: "('c, 'v) analysis_result" where
   "analyse_result = Analysis_Result vars
-     (\<lambda>v ctx. canonicalize_lift empty\<^sub>V (rd (locals (sigma (Inl (v, ctx))))))"
+     (\<lambda>v ctx. canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx))))))"
 
 lemma lookup_context_analyse_result:
   "lookup_context analyse_result v ctx =
      (if (v, ctx) \<in> vars
-      then canonicalize_lift empty\<^sub>V (rd (locals (sigma (Inl (v, ctx)))))
+      then canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))
       else Bot)"
   unfolding lookup_context_def analyse_result_def by simp
 
@@ -115,7 +116,7 @@ lemma analyse_result_canonical:
   assumes "lookup_context analyse_result v ctx = Lifted st"  shows "\<not> empty\<^sub>V st"
   using assms
   unfolding lookup_context_analyse_result
-  by (cases "rd (locals (sigma (Inl (v, ctx))))")
+  by (cases "rd (dg_local (sigma (Inl (v, ctx))))")
      (auto simp: normalize_lift_def split: if_splits)
 
 theorem wf_analyse_result: "wf_analysis_result empty\<^sub>V analyse_result"
@@ -141,10 +142,10 @@ lemma gammaM_sg_eq_lookup_context:
   assumes cov: "(v, ctx) \<in> vars"
   shows "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
 proof -
-  have "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = \<gamma>\<^sub>D\<^sub>G (locals (sigma (Inl (v, ctx))))
-          (globs (sigma (Inr gk0)))"
+  have "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, ctx))))
+          (dg_global (sigma (Inr analysis_global)))"
     using cov by simp
-  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (rd (locals (sigma (Inl (v, ctx)))))"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))"
     by (rule gammaDG_rd)
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
     using cov unfolding lookup_context_analyse_result by simp
@@ -222,7 +223,7 @@ lemma analyse_result_covered_unreachable:
   by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
 
-lemma result_keys_analyse_result [simp]: "result_keys analyse_result = vars"
+lemma result_unknowns_analyse_result [simp]: "result_unknowns analyse_result = vars"
   unfolding analyse_result_def by simp
 
 text \<open>

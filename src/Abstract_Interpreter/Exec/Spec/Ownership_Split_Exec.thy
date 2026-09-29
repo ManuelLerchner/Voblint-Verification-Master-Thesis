@@ -3,7 +3,7 @@ theory Ownership_Split_Exec
     Exec_DG_State
     "Voblint_Framework.DG_Ownership_Split_Spec"
     "Voblint_Framework.DG_Spec_Sound"
-    "Voblint_Framework.DG_Keyed_Generator"
+    "Voblint_Framework.DG_Indexed_Generator"
     "Voblint_Framework.Routed_Context"
 begin
 

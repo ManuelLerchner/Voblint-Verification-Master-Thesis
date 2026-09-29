@@ -75,7 +75,7 @@ lemma twice_route_at_call1:
         (ivl_enter_st_for twice_gs
            (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
              (STR ''twice'')))
-        (locals (snd twice_ctx_sol (Inl (Statement 2, [])))))
+        (dg_local (snd twice_ctx_sol (Inl (Statement 2, [])))))
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def interval_es_rule.ctx_succ_def
@@ -88,7 +88,7 @@ lemma twice_route_at_call2:
         (ivl_enter_st_for twice_gs
            (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
              (STR ''twice'')))
-        (locals (snd twice_ctx_sol (Inl (Statement 3, [])))))
+        (dg_local (snd twice_ctx_sol (Inl (Statement 3, [])))))
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def interval_es_rule.ctx_succ_def
@@ -102,7 +102,7 @@ lemma twice_call_fwd_ok:
             exec_formals_route twice_gs u ctx
               (transfer_lift twice_empty_pred
                  (ivl_enter_st_for twice_gs (call_info_of (CallEdge dst pars args) p))
-                 (locals (snd twice_ctx_sol (Inl (u, ctx)))))
+                 (dg_local (snd twice_ctx_sol (Inl (u, ctx)))))
               (CallEdge dst pars args))
          \<in> fst twice_ctx_sol"
 proof -
@@ -195,8 +195,8 @@ text \<open>The admitted-context relation is a relation, not a function: it admi
   membership under any store the call site actually covers.\<close>
 
 lemma twice_context_at_call1:
-  assumes sin: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
-                  (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+  assumes sin: "s \<in> interval_gamma twice_gs (dg_local (snd twice_ctx_sol (Inl (Statement 2, []))))
+                  (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) []
            (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
@@ -206,16 +206,16 @@ lemma twice_context_at_call1:
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
                (STR ''twice'')"
-  let ?d = "locals (snd twice_ctx_sol (Inl (Statement 2, [])))"
+  let ?d = "dg_local (snd twice_ctx_sol (Inl (Statement 2, [])))"
   let ?entry = "transfer_lift twice_empty_pred (ivl_enter_st_for twice_gs ?ci) ?d"
   have cov: "entry_pairs_cover
-      (\<lambda>d'. interval_gamma twice_gs d' (globs (snd twice_ctx_sol (Inr (Analysis_Global ())))))
+      (\<lambda>d'. interval_gamma twice_gs d' (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ())))))
       s (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)
       [(?d, ?entry)]"
     using interval_entry_cover_exec[OF twice_exact sin, where ci = ?ci] by simp
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s
                 \<in> interval_gamma twice_gs ?entry
-                    (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+                    (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
     using cov unfolding entry_pairs_cover_def by simp
   have base: "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 2) [] ?ci s
@@ -232,8 +232,8 @@ proof -
 qed
 
 lemma twice_context_at_call2:
-  assumes sin: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
-                  (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+  assumes sin: "s \<in> interval_gamma twice_gs (dg_local (snd twice_ctx_sol (Inl (Statement 3, []))))
+                  (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
@@ -244,16 +244,16 @@ lemma twice_context_at_call2:
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
                (STR ''twice'')"
-  let ?d = "locals (snd twice_ctx_sol (Inl (Statement 3, [])))"
+  let ?d = "dg_local (snd twice_ctx_sol (Inl (Statement 3, [])))"
   let ?entry = "transfer_lift twice_empty_pred (ivl_enter_st_for twice_gs ?ci) ?d"
   have cov: "entry_pairs_cover
-      (\<lambda>d'. interval_gamma twice_gs d' (globs (snd twice_ctx_sol (Inr (Analysis_Global ())))))
+      (\<lambda>d'. interval_gamma twice_gs d' (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ())))))
       s (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)
       [(?d, ?entry)]"
     using interval_entry_cover_exec[OF twice_exact sin, where ci = ?ci] by simp
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s
                 \<in> interval_gamma twice_gs ?entry
-                    (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+                    (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
     using cov unfolding entry_pairs_cover_def by simp
   have base: "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 3) [] ?ci s
@@ -324,8 +324,8 @@ text \<open>The semantic store-decode and the routed relation agree: the value \
   statement fixes \<open>dst\<close> to that edge.\<close>
 
 theorem ivl_context_is_entry_state_context_call1:
-  assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
-                  (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+  assumes cov: "s \<in> interval_gamma twice_gs (dg_local (snd twice_ctx_sol (Inl (Statement 2, []))))
+                  (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
@@ -338,8 +338,8 @@ proof -
 qed
 
 theorem ivl_context_is_entry_state_context_call2:
-  assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
-                  (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
+  assumes cov: "s \<in> interval_gamma twice_gs (dg_local (snd twice_ctx_sol (Inl (Statement 3, []))))
+                  (dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
@@ -363,15 +363,15 @@ text \<open>The local unknown carries the whole abstract state, so a variable th
   callee contexts: no name-based \<open>is_global\<close> convention gives it a separate,
   context-indexed slot.\<close>
 lemma global_slot_shared:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')
-     = twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''Gx'')"
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')
+     = twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''Gx'')"
   unfolding ctx_call1_val ctx_call2_val twice_ctx_sol_def twice_empty_pred_def by eval
 
 text \<open>The solver-global carrier stays inert: every field of the Base-style specification
   threads its incoming \<open>g\<close> through unchanged, so the shared \<^const>\<open>Global\<close> unknown is
   never used to reconstruct program state.\<close>
 lemma twice_ctx_global_slot_inert:
-  "globs (snd twice_ctx_sol (Inr (Analysis_Global ()))) = Bot"
+  "dg_global (snd twice_ctx_sol (Inr (Analysis_Global ()))) = Bot"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 end

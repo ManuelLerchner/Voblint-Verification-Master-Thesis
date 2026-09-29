@@ -23,7 +23,7 @@ text \<open>
   states may grow under recursion and widening.
 
   Nothing solver-shaped is owned here: the equation system, its routing hook, the
-  solver-global key type \<^type>\<open>routed_gk\<close>, and the solved projection all come from the
+  solver-global key type \<^type>\<open>global_unknown\<close>, and the solved projection all come from the
   production analysis.  The local unknown carries the whole abstract state on the
   lifted carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read where a local is
   and there is no separate solver-global slot holding program state.
@@ -55,7 +55,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
-     \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+     \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "twice_ctx_sol = interval_es_rule.solution Globals_Warrow twice_gs twice_program"
 
 lemma twice_ctx_terminates_c:
@@ -98,46 +98,46 @@ subsection \<open>Per-context exact results\<close>
 
 text \<open>Callee entry parameter, per context --- against the monovariant \<open>p = [3,10]\<close>.\<close>
 lemma call1_p_at_entry:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma call2_p_at_entry:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged into the monovariant
   \<open>#ret = [6,20]\<close>.\<close>
 lemma call1_ret_at_exit:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
      = Ivl (Fin 6) (Fin 6)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call1_def by eval
 
 lemma call2_ret_at_exit:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
      = Ivl (Fin 20) (Fin 20)"
   unfolding twice_ctx_sol_def twice_empty_pred_def ctx_call2_def by eval
 
 text \<open>Caller destinations after each return, where the monovariant baseline reports
   \<open>x = y = [6,20]\<close>.\<close>
 lemma x_computed:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 lemma y_computed:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
+  "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.  The
   heterogeneous seed channel (\<^const>\<open>routed_call_program\<close> / \<^const>\<open>routed_entry_seed_programs\<close>)
-  carries that store in the seed unknown's \<^const>\<open>locals\<close> half, the same carrier the
+  carries that store in the seed unknown's \<^const>\<open>dg_local\<close> half, the same carrier the
   callee entry reads it back on.\<close>
 lemma seed_call1:
   "twice_ctx_lookup
-     (locals (snd twice_ctx_sol
+     (dg_local (snd twice_ctx_sol
        (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call1))))
      (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
@@ -145,7 +145,7 @@ lemma seed_call1:
 
 lemma seed_call2:
   "twice_ctx_lookup
-     (locals (snd twice_ctx_sol
+     (dg_local (snd twice_ctx_sol
        (Inr (Activation_Seed (FunctionEntry (STR ''twice'')) ctx_call2))))
      (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"

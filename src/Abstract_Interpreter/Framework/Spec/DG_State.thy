@@ -25,13 +25,13 @@ text \<open>
   orders can coexist.
 \<close>
 
-datatype ('l, 'g) dg_state = DG (locals: 'l) (globs: 'g)
+datatype ('l, 'g) dg_state = DG (dg_local: 'l) (dg_global: 'g)
 
 instantiation dg_state :: (ord, ord) ord
 begin
 
 definition less_eq_dg_state :: "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> bool" where
-  "less_eq_dg_state d1 d2 = (locals d1 \<le> locals d2 \<and> globs d1 \<le> globs d2)"
+  "less_eq_dg_state d1 d2 = (dg_local d1 \<le> dg_local d2 \<and> dg_global d1 \<le> dg_global d2)"
 
 definition less_dg_state :: "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> bool" where
   "less_dg_state d1 d2 = (d1 \<le> d2 \<and> \<not> d2 \<le> d1)"
@@ -55,7 +55,7 @@ instantiation dg_state :: (semilattice_sup, semilattice_sup) semilattice_sup
 begin
 
 definition sup_dg_state :: "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state" where
-  "sup_dg_state d1 d2 = DG (locals d1 \<squnion> locals d2) (globs d1 \<squnion> globs d2)"
+  "sup_dg_state d1 d2 = DG (dg_local d1 \<squnion> dg_local d2) (dg_global d1 \<squnion> dg_global d2)"
 
 instance
   by standard (auto simp: less_eq_dg_state_def sup_dg_state_def)
@@ -85,22 +85,22 @@ text \<open>Every construction above this theory projects and repacks, so the fo
   between two values that are not both constructor terms reads better as one
   \<open>\<le>\<close> than as a conjunction of two.\<close>
 
-lemma locals_sup [simp]:
+lemma dg_local_sup [simp]:
   fixes x y :: "('a::semilattice_sup, 'b::semilattice_sup) dg_state"
-  shows "locals (x \<squnion> y) = locals x \<squnion> locals y"
+  shows "dg_local (x \<squnion> y) = dg_local x \<squnion> dg_local y"
   by (simp add: sup_dg_state_def)
 
-lemma globs_sup [simp]:
+lemma dg_global_sup [simp]:
   fixes x y :: "('a::semilattice_sup, 'b::semilattice_sup) dg_state"
-  shows "globs (x \<squnion> y) = globs x \<squnion> globs y"
+  shows "dg_global (x \<squnion> y) = dg_global x \<squnion> dg_global y"
   by (simp add: sup_dg_state_def)
 
-lemma locals_bot [simp]:
-  "locals (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
+lemma dg_local_bot [simp]:
+  "dg_local (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 
-lemma globs_bot [simp]:
-  "globs (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
+lemma dg_global_bot [simp]:
+  "dg_global (bot :: ('a::order_bot, 'b::order_bot) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 
 lemma DG_le_DG [simp]:
@@ -115,12 +115,12 @@ begin
 definition widen_dg_state ::
   "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
 where
-  "widen_dg_state a b = DG (widen (locals a) (locals b)) (widen (globs a) (globs b))"
+  "widen_dg_state a b = DG (widen (dg_local a) (dg_local b)) (widen (dg_global a) (dg_global b))"
 
 definition narrow_dg_state ::
   "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
 where
-  "narrow_dg_state a b = DG (narrow (locals a) (locals b)) (narrow (globs a) (globs b))"
+  "narrow_dg_state a b = DG (narrow (dg_local a) (dg_local b)) (narrow (dg_global a) (dg_global b))"
 
 instance
   by standard

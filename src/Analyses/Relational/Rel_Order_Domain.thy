@@ -1,5 +1,5 @@
 theory Rel_Order_Domain
-  imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Framework.DG_Keyed_Generator"
+  imports "Voblint_Framework.DG_Spec_Sound" "Voblint_Framework.DG_Indexed_Generator"
     "Voblint_Framework.State_Restriction" "Voblint_Domain.Order_Lattice"
 begin
 
@@ -201,16 +201,16 @@ text \<open>The observations of a compiled \<open>rel_transfer\<close>: its answ
   what \<^locale>\<open>analysis_contract\<close> is stated against.\<close>
 
 lemma traverse_rel_transfer [simp]:
-  "locals (traverse_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
-     = snd (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
+  "dg_local (traverse_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau>)
+     = snd (f (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))"
   by (cases src)
      (simp_all add: transfer_program_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
         Let_def)
 
 lemma sides_rel_transfer [simp]:
-  "globs (sides_of_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
-     = fst (f (locals (\<tau> src)) (globs (\<tau> (Inr gk))))"
+  "dg_global (sides_of_program (transfer_program (rel_transfer f) src (\<lambda>_. gk)) \<tau> (Inr gk))
+     = fst (f (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))"
   by (cases src)
      (simp_all add: transfer_program_def transfer_program_at_def rel_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc
@@ -247,20 +247,20 @@ text \<open>Every field reads the shared slot, publishes once and answers, so th
 
 lemma dg_spec_wf_rel_order_spec [intro, simp]: "dg_spec_wf rel_order_spec"
 proof (unfold dg_spec_wf_def, intro conjI allI impI)
-  fix a :: edge_action and d :: relc and key :: "unit \<Rightarrow> 'b" and A
-  show "sp_wf (dg_spec_step rel_order_spec a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
+  fix a :: edge_action and d :: relc and unknown_of :: "unit \<Rightarrow> 'b" and A
+  show "sp_wf (dg_spec_step rel_order_spec a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>))"
     by (cases a) (auto simp: rel_order_spec_def rel_transfer_def Let_def mk_dg_man_def)
 next
-  fix d :: relc and key :: "unit \<Rightarrow> 'b" and A q
-  show "sp_wf (dgs_query rel_order_spec ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+  fix d :: relc and unknown_of :: "unit \<Rightarrow> 'b" and A q
+  show "sp_wf (dgs_query rel_order_spec ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q)"
     by (simp add: rel_order_spec_def)
 next
-  fix ci and d :: relc and key :: "unit \<Rightarrow> 'b"
-  show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d key))"
+  fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b"
+  show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d unknown_of))"
     by (auto simp: rel_order_spec_def rel_enter_transfer_def Let_def)
 next
-  fix ci and d :: relc and key :: "unit \<Rightarrow> 'b" and ex :: relc
-  show "sp_wf (dg_spec_combine_transfer rel_order_spec ci (mk_dg_man d key) ex)"
+  fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b" and ex :: relc
+  show "sp_wf (dg_spec_combine_transfer rel_order_spec ci (mk_dg_man d unknown_of) ex)"
     by (auto simp: rel_order_spec_def dg_spec_combine_transfer_def rel_combine_transfer_def
         local_combine_transfer_def Let_def)
 qed
@@ -396,18 +396,18 @@ lemma dg_spec_combine_transfer_rel_order_spec [simp]:
      (simp add: local_transfer_def local_combine_transfer_def rel_combine_transfer_def)
 
 lemma traverse_rel_combine [simp]:
-  "locals (traverse_program
+  "dg_local (traverse_program
              (combine_transfer_program (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk)) \<tau>)
-     = snd (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
+     = snd (f (dg_local (\<tau> src_cc)) (dg_local (\<tau> src_ex)) (dg_global (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_program_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 lemma sides_rel_combine [simp]:
-  "globs (sides_of_program
+  "dg_global (sides_of_program
             (combine_transfer_program (rel_combine_transfer f) src_cc src_ex (\<lambda>_. gk))
             \<tau> (Inr gk))
-     = fst (f (locals (\<tau> src_cc)) (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk))))"
+     = fst (f (dg_local (\<tau> src_cc)) (dg_local (\<tau> src_ex)) (dg_global (\<tau> (Inr gk))))"
   by (cases src_cc; cases src_ex)
      (simp_all add: combine_transfer_program_def combine_program_at_def rel_combine_transfer_def
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
@@ -423,23 +423,23 @@ next
     by (rule gammaDG_rel_mono)
 next
   fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
-  show "edge_collect a (gammaDG_rel (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
+  show "edge_collect a (gammaDG_rel (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
           \<subseteq> gammaDG_rel
-              (locals (traverse_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk)) \<tau>))
-              (globs (sides_of_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk))
+              (dg_local (traverse_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk)) \<tau>))
+              (dg_global (sides_of_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk))
                         \<tau> (Inr gk)))"
-    using step_sound_rel[of a "locals (\<tau> src)" "globs (\<tau> (Inr gk))"]
+    using step_sound_rel[of a "dg_local (\<tau> src)" "dg_global (\<tau> (Inr gk))"]
     by (simp add: dg_spec_edge_program_def split: prod.splits)
 next
   fix s t dc de and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and gk ci
-  show "\<lbrakk>s \<in> gammaDG_rel dc (globs (\<tau> (Inr gk)));
-         t \<in> gammaDG_rel de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+  show "\<lbrakk>s \<in> gammaDG_rel dc (dg_global (\<tau> (Inr gk)));
+         t \<in> gammaDG_rel de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
           combine_collect \<G> (ci_dst ci) s t
             \<in> gammaDG_rel
-                (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer rel_order_spec ci
                       (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
-                (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+                (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer rel_order_spec ci
                       (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
     by (simp add: rel_combine_transfer_def mk_dg_man_def dg_read_global_def

@@ -167,39 +167,39 @@ text \<open>
   the routed key is its global projection.
 \<close>
 
-lemma locals_traverse_ownership_split_transfer_gen [simp]:
-  "locals (traverse_program
+lemma dg_local_traverse_ownership_split_transfer_gen [simp]:
+  "dg_local (traverse_program
              (transfer_program (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                 src (\<lambda>_. gk)) \<tau>)
-     = rl (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
+     = rl (f (cmb (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk)))))"
   by (simp add: traverse_transfer_program ownership_split_transfer_gen_def
       local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma globs_sides_ownership_split_transfer_gen [simp]:
-  "globs (sides_of_program
+lemma dg_global_sides_ownership_split_transfer_gen [simp]:
+  "dg_global (sides_of_program
             (transfer_program (ownership_split_transfer_gen cmb rg rl (local_transfer f))
                src (\<lambda>_. gk)) \<tau> (Inr gk))
-     = rg (f (cmb (locals (\<tau> src)) (globs (\<tau> (Inr gk)))))"
+     = rg (f (cmb (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk)))))"
   by (simp add: sides_transfer_program ownership_split_transfer_gen_def
       local_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma locals_traverse_ownership_split_combine_transfer_gen [simp]:
-  "locals (traverse_program
+lemma dg_local_traverse_ownership_split_combine_transfer_gen [simp]:
+  "dg_local (traverse_program
              (combine_transfer_program
                 (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                 src_cc src_ex (\<lambda>_. gk)) \<tau>)
-     = rl (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
-             (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
+     = rl (h (cmb (dg_local (\<tau> src_cc)) (dg_global (\<tau> (Inr gk))))
+             (cmb (dg_local (\<tau> src_ex)) (dg_global (\<tau> (Inr gk)))))"
   by (simp add: traverse_combine_transfer_program ownership_split_combine_transfer_gen_def
       local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
-lemma globs_sides_ownership_split_combine_transfer_gen [simp]:
-  "globs (sides_of_program
+lemma dg_global_sides_ownership_split_combine_transfer_gen [simp]:
+  "dg_global (sides_of_program
             (combine_transfer_program
                (ownership_split_combine_transfer_gen cmb rg rl (local_combine_transfer h))
                src_cc src_ex (\<lambda>_. gk)) \<tau> (Inr gk))
-     = rg (h (cmb (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk))))
-             (cmb (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))))"
+     = rg (h (cmb (dg_local (\<tau> src_cc)) (dg_global (\<tau> (Inr gk))))
+             (cmb (dg_local (\<tau> src_ex)) (dg_global (\<tau> (Inr gk)))))"
   by (simp add: sides_combine_transfer_program ownership_split_combine_transfer_gen_def
       local_combine_transfer_def sp_compile_with_def sp_bind_def sp_return_def)
 
@@ -236,16 +236,16 @@ text \<open>
 
 lemma enter_deps_ownership_split_enter_transfer_gen [intro]:
   fixes sigma :: "'x + 'k \<Rightarrow> ('d::bounded_semilattice_sup_bot,'d) dg_state"
-  assumes T: "enter_deps T (mk_dg_man (cmb d (globs (sigma (Inr (key ()))))) key)
+  assumes T: "enter_deps T (mk_dg_man (cmb d (dg_global (sigma (Inr (unknown_of ()))))) unknown_of)
                 sigma pairs deps"
-  shows "enter_deps (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d key) sigma
+  shows "enter_deps (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d unknown_of) sigma
            (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)
-           ({Inr (key ())} \<union> deps)"
+           ({Inr (unknown_of ())} \<union> deps)"
   unfolding enter_deps_def
 proof (intro allI)
   fix K
-  show "dep_aux sigma (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K)
-          = ({Inr (key ())} \<union> deps)
+  show "dep_aux sigma (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d unknown_of) K)
+          = ({Inr (unknown_of ())} \<union> deps)
             \<union> dep_aux sigma (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs))"
     by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_depsD[OF T] Un_assoc)
@@ -275,22 +275,22 @@ text \<open>
 
 lemma enter_runs_ownership_split_enter_transfer_gen [intro]:
   fixes sigma :: "'x + 'k \<Rightarrow> ('d::bounded_semilattice_sup_bot,'d) dg_state"
-  assumes T: "enter_runs T (mk_dg_man (cmb d (globs (sigma (Inr (key ()))))) key)
+  assumes T: "enter_runs T (mk_dg_man (cmb d (dg_global (sigma (Inr (unknown_of ()))))) unknown_of)
                 sigma pairs pub"
-  shows "enter_runs (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d key) sigma
+  shows "enter_runs (ownership_split_enter_transfer_gen cmb rg rl T) (mk_dg_man d unknown_of) sigma
            (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)
-           (pub \<squnion> (bot(Inr (key ()) := DG bot (ownership_split_enter_sides rg pairs))))"
+           (pub \<squnion> (bot(Inr (unknown_of ()) := DG bot (ownership_split_enter_sides rg pairs))))"
   unfolding enter_runs_def
 proof (intro allI conjI)
   fix K
-  show "traverse_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K) sigma
+  show "traverse_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d unknown_of) K) sigma
           = traverse_rhs (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)) sigma"
     by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_runsD_traverse[OF T])
 next
   fix K
-  show "sides_of_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d key) K) sigma
-          = (pub \<squnion> (bot(Inr (key ()) := DG bot (ownership_split_enter_sides rg pairs))))
+  show "sides_of_rhs (ownership_split_enter_transfer_gen cmb rg rl T (mk_dg_man d unknown_of) K) sigma
+          = (pub \<squnion> (bot(Inr (unknown_of ()) := DG bot (ownership_split_enter_sides rg pairs))))
             \<squnion> sides_of_rhs (K (map (\<lambda>(cont, entry). (rl cont, rl entry)) pairs)) sigma"
     by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_runsD_sides[OF T] sup_fun_def fun_upd_def)
@@ -367,7 +367,7 @@ text \<open>The lifter preserves well-formedness: it reads the shared slot, runs
 
 lemma sp_wf_dgs_combine_assign_ownership_split_lift [intro]:
   assumes "dg_spec_wf S"
-  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift \<G> S) ci (mk_dg_man d key) ex)"
+  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift \<G> S) ci (mk_dg_man d unknown_of) ex)"
   unfolding ownership_split_lift_def
   by (auto simp: ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
       intro!: sp_wf_bind dg_spec_wf_combine[OF assms])

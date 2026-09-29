@@ -110,7 +110,7 @@ definite verdict listed there holds for that store.
 point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:
-`live_keys_cover` (`DG_Live_Keys.thy`) proves it from termination. The
+`live_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination. The
 root `README.md` states the theorem in full.
 
 ## 6. `export_code` and the code-generation trust boundary

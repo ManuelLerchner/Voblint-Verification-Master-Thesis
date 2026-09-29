@@ -130,7 +130,7 @@ text \<open>The equation system is \<open>parity_rule.equations\<close> at this 
 
 definition parity_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
         (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
   "parity_eqs = parity_rule.equations parity_gs parity_program"
 
@@ -145,7 +145,7 @@ lemma parity_terminates: "parity_rule.terminates Globals_Join parity_gs parity_p
 
 definition parity_sol ::
   "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
+   \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
   "parity_sol = TD_side_rule_Interp_solve Globals_Join parity_eqs (cfg_exit parity_cfg, ())"
 
@@ -161,19 +161,19 @@ text \<open>Four readings of the solved table, all through the same local unknow
   \<open>PEven\<close> there because the loop never writes it.\<close>
 
 lemma parity_head_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 2, ())))) (STR ''x'') = PEven"
+  "parity_lookup (dg_local (snd parity_sol (Inl (Statement 2, ())))) (STR ''x'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_head_gcount_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 2, ())))) (STR ''Gcount'') = PTop"
+  "parity_lookup (dg_local (snd parity_sol (Inl (Statement 2, ())))) (STR ''Gcount'') = PTop"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_exit_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 5, ())))) (STR ''x'') = PEven"
+  "parity_lookup (dg_local (snd parity_sol (Inl (Statement 5, ())))) (STR ''x'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_exit_total_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 5, ())))) (STR ''total'') = PEven"
+  "parity_lookup (dg_local (snd parity_sol (Inl (Statement 5, ())))) (STR ''total'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 subsection \<open>Source-level soundness through the production assembly\<close>
@@ -219,13 +219,13 @@ text \<open>
 \<close>
 
 lemma parity_head_proper:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 2, ())))) (STR ''x'') \<noteq> PTop"
+  "parity_lookup (dg_local (snd parity_sol (Inl (Statement 2, ())))) (STR ''x'') \<noteq> PTop"
   by (simp add: parity_head_computed)
 
 lemma parity_head_excludes_odd:
   fixes n :: int
   assumes "n \<in> gamma_parity
-     (parity_lookup (locals (snd parity_sol (Inl (Statement 2, ())))) (STR ''x''))"
+     (parity_lookup (dg_local (snd parity_sol (Inl (Statement 2, ())))) (STR ''x''))"
   shows "even n"
   using assms by (simp add: parity_head_computed)
 

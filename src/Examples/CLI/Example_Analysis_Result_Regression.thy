@@ -115,7 +115,7 @@ text \<open>The unit-context equation system at this program, with the bottom te
 definition result_demo_ivl_sol ::
     "(ivl exec_dg_st \<Rightarrow> bool)
      \<Rightarrow> (pp \<times> unit) set
-       \<times> (pp \<times> unit + (unit, unit) routed_gk
+       \<times> (pp \<times> unit + (unit, unit) global_unknown
             \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "result_demo_ivl_sol empty_pred =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed
@@ -133,10 +133,10 @@ definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" w
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. readback_result_value (declared_global result_demo_prog)
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
-                        (locals (snd sol (Inl (v, ctx)))))))"
+                        (dg_local (snd sol (Inl (v, ctx)))))))"
 
 lemma result_demo_unnormalized_stmt2_stored_lifted_bottom:
-  "(case locals (snd (result_demo_ivl_sol (\<lambda>_. False)) (Inl (Statement 2, ()))) of
+  "(case dg_local (snd (result_demo_ivl_sol (\<lambda>_. False)) (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> False
     | Lifted s \<Rightarrow> resolved_st_q_is_bot_for (declared_global_vars result_demo_prog) s)"
   by eval
@@ -167,7 +167,7 @@ text \<open>
 \<close>
 
 lemma result_demo_interval_stmt2_stored_bot:
-  "(case locals (snd (result_demo_ivl_sol
+  "(case dg_local (snd (result_demo_ivl_sol
                         (resolved_st_q_is_bot_for (declared_global_vars result_demo_prog)))
                   (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False)"
@@ -192,13 +192,13 @@ lemma result_demo_interval_stmt2_not_live:
 
 text \<open>
   Case D --- a key the solver never covered. \<^const>\<open>Statement\<close> \<open>99\<close> is not a
-  node of this program's CFG at all, so it is absent from \<^const>\<open>result_keys\<close>
+  node of this program's CFG at all, so it is absent from \<^const>\<open>result_unknowns\<close>
   rather than present with a bottom value. \<^const>\<open>lookup_context\<close>'s membership
   guard, not \<^const>\<open>result_at\<close>, is what answers here.
 \<close>
 
 lemma result_demo_interval_absent_key:
-  "(Statement 99, ()) \<notin> result_keys result_demo_interval"
+  "(Statement 99, ()) \<notin> result_unknowns result_demo_interval"
   by eval
 
 lemma result_demo_interval_absent_unreachable:
@@ -219,7 +219,7 @@ lemma result_demo_interval_absent_not_live:
 
 text \<open>
   Together the two cases separate solver coverage from the value stored at a
-  covered key. Case C's node is present in \<^const>\<open>result_keys\<close> because the
+  covered key. Case C's node is present in \<^const>\<open>result_unknowns\<close> because the
   solver covered it, and reports \<^const>\<open>Bot\<close> because that is what the solver
   stored there -- coverage and reachability are independent. Case D's
   \<^const>\<open>Statement\<close> \<open>99\<close> is absent because no key for it is ever covered; that

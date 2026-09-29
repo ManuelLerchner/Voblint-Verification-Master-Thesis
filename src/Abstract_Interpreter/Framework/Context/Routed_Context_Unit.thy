@@ -51,7 +51,7 @@ text \<open>
   the same solved local/global contributions as the Base route's own call and seed
   hooks --- is not attempted: the two programs have different shapes (Base reads the
   callee entry directly;
-  here the entry is published through \<open>seed_key\<close> and read back), so any such equivalence
+  here the entry is published through \<open>seed_unknown\<close> and read back), so any such equivalence
   is a solved-system/solver argument, not a local rewrite.
 \<close>
 

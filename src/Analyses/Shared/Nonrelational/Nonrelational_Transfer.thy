@@ -218,7 +218,7 @@ theorem dg_analysis_execI:
   assumes route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
          = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
-    and seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
+    and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and solve_pp:
       "\<And>eqs x. solve_dom eqs x
          \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
@@ -227,7 +227,7 @@ theorem dg_analysis_execI:
       "\<And>\<G>. cinit_stores \<G>
                \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
     and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
-  shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st gk0 seed
+  shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st analysis_global seed
            route solve solve_dom bot check.classify_check
            skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"
 proof (rule dg_analysis_exec.intro, goal_cases)
@@ -238,7 +238,7 @@ next
 next
   case (3 \<G> ci s) show ?case
     by (rule enter_st_for_commute)
-qed (fact route_agree seed_ne_gk0 solve_pp solve_fin init_sound dom_of_solve_c
+qed (fact route_agree seed_ne_analysis_global solve_pp solve_fin init_sound dom_of_solve_c
        check.classify_check_proved check.classify_check_refuted refl)+
 
 end

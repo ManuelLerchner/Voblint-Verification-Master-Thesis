@@ -92,7 +92,7 @@ text \<open>The analysis is \<open>interval_seed_join\<close> from \<open>Exampl
 
 definition twice_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
        (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "twice_eqs = interval_sj_equations twice_gs twice_program"
 

@@ -150,17 +150,17 @@ definition transfer_program_at ::
   "('x,'k,'v,'dl,'dg) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
-  "transfer_program_at transfer src key =
+  "transfer_program_at transfer src unknown_of =
      do {
        d \<leftarrow> dg_read_at src;
-       transfer (mk_dg_man d key)
+       transfer (mk_dg_man d unknown_of)
      }"
 
 definition transfer_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_transfer \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "transfer_program T src key = sp_map (\<lambda>d. DG d bot) (transfer_program_at T src key)"
+  "transfer_program T src unknown_of = sp_map (\<lambda>d. DG d bot) (transfer_program_at T src unknown_of)"
 
 text \<open>
   Before the specification's edge transfer runs, its query channel is set to
@@ -211,8 +211,8 @@ definition dg_spec_edge_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "dg_spec_edge_program S a src key =
-     transfer_program (\<lambda>m. dg_spec_step S a (outer_man (dgs_query S) m)) src key"
+  "dg_spec_edge_program S a src unknown_of =
+     transfer_program (\<lambda>m. dg_spec_step S a (outer_man (dgs_query S) m)) src unknown_of"
 
 text \<open>
   What compilation costs an observation: exactly the source read, and then the
@@ -228,19 +228,19 @@ text \<open>
 \<close>
 
 lemma traverse_transfer_program:
-  "traverse_program (transfer_program T src key) \<tau>
-     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
+  "traverse_program (transfer_program T src unknown_of) \<tau>
+     = traverse_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (dg_local (\<tau> src)) unknown_of))) \<tau>"
   by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
 
 lemma sides_transfer_program:
-  "sides_of_program (transfer_program T src key) \<tau>
-     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))) \<tau>"
+  "sides_of_program (transfer_program T src unknown_of) \<tau>
+     = sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (dg_local (\<tau> src)) unknown_of))) \<tau>"
   by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
 
 lemma dep_transfer_program:
-  "dep_program \<tau> (transfer_program T src key)
+  "dep_program \<tau> (transfer_program T src unknown_of)
      = insert src
-         (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (locals (\<tau> src)) key))))"
+         (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d bot) (T (mk_dg_man (dg_local (\<tau> src)) unknown_of))))"
   by (simp add: transfer_program_def transfer_program_at_def sp_compile_with_def sp_bind_def)
 
 subsection \<open>Specifications whose transfers run their continuation once\<close>
@@ -267,26 +267,26 @@ text \<open>
 
 definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" where
   "dg_spec_wf S \<longleftrightarrow>
-     (\<forall>a d key A. (\<forall>q. sp_wf (A q))
-          \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>)))
-     \<and> (\<forall>d key A q. (\<forall>q'. sp_wf (A q'))
-          \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q))
-     \<and> (\<forall>ci d key. sp_wf (enter\<^sup># S ci (mk_dg_man d key)))
-     \<and> (\<forall>ci d key ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d key) ex))"
+     (\<forall>a d unknown_of A. (\<forall>q. sp_wf (A q))
+          \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>)))
+     \<and> (\<forall>d unknown_of A q. (\<forall>q'. sp_wf (A q'))
+          \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q))
+     \<and> (\<forall>ci d unknown_of. sp_wf (enter\<^sup># S ci (mk_dg_man d unknown_of)))
+     \<and> (\<forall>ci d unknown_of ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d unknown_of) ex))"
 
 lemma dg_spec_wf_step_ask:
   "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
-   \<Longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
+   \<Longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>))"
   by (simp add: dg_spec_wf_def)
 
 lemma dg_spec_wf_query:
   "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
-   \<Longrightarrow> sp_wf (dgs_query S ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
+   \<Longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q)"
   by (simp add: dg_spec_wf_def)
 
 lemma sp_wf_ask_with:
   assumes "dg_spec_wf S"
-  shows "sp_wf (ask_with (dgs_query S) n asked (mk_dg_man d key) q)"
+  shows "sp_wf (ask_with (dgs_query S) n asked (mk_dg_man d unknown_of) q)"
 proof (induction n arbitrary: asked q)
   case (Suc n)
   then show ?case
@@ -294,25 +294,25 @@ proof (induction n arbitrary: asked q)
 qed simp
 
 lemma dg_spec_wf_step:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_step S a (outer_man (dgs_query S) (mk_dg_man d key)))"
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_step S a (outer_man (dgs_query S) (mk_dg_man d unknown_of)))"
   unfolding outer_man_def by (intro dg_spec_wf_step_ask sp_wf_ask_with)
 
 lemma dg_spec_wf_enter:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup># S ci (mk_dg_man d key))"
+  "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup># S ci (mk_dg_man d unknown_of))"
   by (simp add: dg_spec_wf_def)
 
 lemma dg_spec_wf_combine:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d key) ex)"
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d unknown_of) ex)"
   by (simp add: dg_spec_wf_def)
 
 lemma sp_wf_transfer_program [intro]:
-  assumes "\<And>d. sp_wf (T (mk_dg_man d key))"
-  shows "sp_wf (transfer_program T src key)"
+  assumes "\<And>d. sp_wf (T (mk_dg_man d unknown_of))"
+  shows "sp_wf (transfer_program T src unknown_of)"
   unfolding transfer_program_def transfer_program_at_def
   by (intro sp_wf_map sp_wf_bind sp_wf_dg_read_at assms)
 
 lemma sp_wf_dg_spec_edge_program [intro]:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_edge_program S a src key)"
+  "dg_spec_wf S \<Longrightarrow> sp_wf (dg_spec_edge_program S a src unknown_of)"
   unfolding dg_spec_edge_program_def
   by (intro sp_wf_transfer_program) (rule dg_spec_wf_step)
 
@@ -410,24 +410,24 @@ where
   "local_enter_transfer f m = sp_return (f (man_local m))"
 
 lemma sp_compile_transfer_program_local_transfer:
-  "sp_compile (transfer_program (local_transfer f) (Inl x) key)
-     = QueryL x (\<lambda>a. Answer (DG (f (locals a)) bot))"
-  "sp_compile (transfer_program (local_transfer f) (Inr g) key)
-     = QueryG g (\<lambda>a. Answer (DG (f (locals a)) bot))"
+  "sp_compile (transfer_program (local_transfer f) (Inl x) unknown_of)
+     = QueryL x (\<lambda>a. Answer (DG (f (dg_local a)) bot))"
+  "sp_compile (transfer_program (local_transfer f) (Inr g) unknown_of)
+     = QueryG g (\<lambda>a. Answer (DG (f (dg_local a)) bot))"
   by (simp_all add: transfer_program_def transfer_program_at_def local_transfer_def
       dg_read_at_def sp_bind_assoc sp_compile_def sp_compile_with_def
       sp_bind_def sp_return_def sp_read_local_def sp_read_global_def)
 
 lemma traverse_local_transfer_program [simp]:
-  "traverse_program (transfer_program (local_transfer f) src key) \<tau> = DG (f (locals (\<tau> src))) bot"
+  "traverse_program (transfer_program (local_transfer f) src unknown_of) \<tau> = DG (f (dg_local (\<tau> src))) bot"
   by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
 lemma sides_local_transfer_program [simp]:
-  "sides_of_program (transfer_program (local_transfer f) src key) \<tau> k = bot"
+  "sides_of_program (transfer_program (local_transfer f) src unknown_of) \<tau> k = bot"
   by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
 lemma dep_local_transfer_program [simp]:
-  "dep_program \<tau> (transfer_program (local_transfer f) src key) = {src}"
+  "dep_program \<tau> (transfer_program (local_transfer f) src unknown_of) = {src}"
   by (cases src) (simp_all add: sp_compile_transfer_program_local_transfer)
 
 subsection \<open>Local-only combine\<close>

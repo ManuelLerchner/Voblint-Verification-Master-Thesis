@@ -37,14 +37,14 @@ definition fo_cfg :: cfg where
   "fo_cfg = compile_prog (prog_table fo_program) (prog_procs fo_program)"
 
 definition fo_spec ::
-  "(pp \<times> unit, (unit, unit) routed_gk, unit, ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
+  "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
   "fo_spec = ownership_split_dg_spec_st_for fo_gs (ivl_tf_st_for fo_gs) (ivl_enter_st_for fo_gs)"
 
 text \<open>The direct encoding is spelled as the unbuffered routed generator itself, at
   the unit context; the buffered one is the constructor every analysis solves.\<close>
 
 definition fo_direct ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
     where
   "fo_direct =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ()) route_unit
@@ -55,7 +55,7 @@ definition fo_direct ::
        fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition fo_buffered ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
     where
   "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
      fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
@@ -78,27 +78,27 @@ text \<open>The analysis global is the observation a different flush order would
   evaluation, so which key the flush reaches first is exactly what differs.\<close>
 
 lemma fo_ivl_global_agrees:
-  "fo_look (globs (fo_sol fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
-     = fo_look (globs (fo_sol fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
+  "fo_look (dg_global (fo_sol fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+     = fo_look (dg_global (fo_sol fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
   by eval
 
 lemma fo_ivl_global_value:
-  "fo_look (globs (fo_sol fo_direct (Inr (Analysis_Global ())))) (STR ''g'') = Ivl (Fin 0) PlusInf"
+  "fo_look (dg_global (fo_sol fo_direct (Inr (Analysis_Global ())))) (STR ''g'') = Ivl (Fin 0) PlusInf"
   by eval
 
 lemma fo_ivl_seed_agrees:
-  "fo_look (locals (fo_sol fo_direct (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
-     = fo_look (locals (fo_sol fo_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
+  "fo_look (dg_local (fo_sol fo_direct (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
+     = fo_look (dg_local (fo_sol fo_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
   by eval
 
 lemma fo_ivl_entry_agrees:
-  "fo_look (locals (fo_sol fo_direct (Inl (FunctionEntry (STR ''up''), ())))) (STR ''n'')
-     = fo_look (locals (fo_sol fo_buffered (Inl (FunctionEntry (STR ''up''), ())))) (STR ''n'')"
+  "fo_look (dg_local (fo_sol fo_direct (Inl (FunctionEntry (STR ''up''), ())))) (STR ''n'')
+     = fo_look (dg_local (fo_sol fo_buffered (Inl (FunctionEntry (STR ''up''), ())))) (STR ''n'')"
   by eval
 
 lemma fo_ivl_exit_agrees:
-  "fo_look (locals (fo_sol fo_direct (Inl (cfg_exit fo_cfg, ())))) (STR ''z'')
-     = fo_look (locals (fo_sol fo_buffered (Inl (cfg_exit fo_cfg, ())))) (STR ''z'')"
+  "fo_look (dg_local (fo_sol fo_direct (Inl (cfg_exit fo_cfg, ())))) (STR ''z'')
+     = fo_look (dg_local (fo_sol fo_buffered (Inl (cfg_exit fo_cfg, ())))) (STR ''z'')"
   by eval
 
 subsection \<open>The same comparison under the per-origin update rule\<close>
@@ -117,17 +117,17 @@ lemma fo_per_origin_terminates:
   by eval+
 
 lemma fo_per_origin_global_agrees:
-  "fo_look (globs (fo_sol_po fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
-     = fo_look (globs (fo_sol_po fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
+  "fo_look (dg_global (fo_sol_po fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+     = fo_look (dg_global (fo_sol_po fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
   by eval
 
 lemma fo_per_origin_global_value:
-  "fo_look (globs (fo_sol_po fo_direct (Inr (Analysis_Global ())))) (STR ''g'') = Ivl (Fin 0) (Fin 2)"
+  "fo_look (dg_global (fo_sol_po fo_direct (Inr (Analysis_Global ())))) (STR ''g'') = Ivl (Fin 0) (Fin 2)"
   by eval
 
 lemma fo_per_origin_seed_agrees:
-  "fo_look (locals (fo_sol_po fo_direct (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
-     = fo_look (locals (fo_sol_po fo_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
+  "fo_look (dg_local (fo_sol_po fo_direct (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
+     = fo_look (dg_local (fo_sol_po fo_buffered (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
   by eval
 
 subsection \<open>The same comparison under plain join\<close>
@@ -141,19 +141,19 @@ lemma fo_join_terminates:
   by eval+
 
 lemma fo_join_global_agrees:
-  "fo_look (globs (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
-     = fo_look (globs (fo_sol_join fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
+  "fo_look (dg_global (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+     = fo_look (dg_global (fo_sol_join fo_buffered (Inr (Analysis_Global ())))) (STR ''g'')"
   by eval
 
 lemma fo_join_global_value:
-  "fo_look (globs (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
+  "fo_look (dg_global (fo_sol_join fo_direct (Inr (Analysis_Global ())))) (STR ''g'')
      = Ivl (Fin 0) (Fin 2)"
   by eval
 
 lemma fo_join_seed_agrees:
-  "fo_look (locals (fo_sol_join fo_direct
+  "fo_look (dg_local (fo_sol_join fo_direct
        (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')
-     = fo_look (locals (fo_sol_join fo_buffered
+     = fo_look (dg_local (fo_sol_join fo_buffered
        (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) (STR ''n'')"
   by eval
 
