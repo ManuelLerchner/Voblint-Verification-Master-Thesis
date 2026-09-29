@@ -1,7 +1,7 @@
 // PARAM: --analysis int --int-refinement fixpoint
-// Int answers every check by refining at its fixpoint, whatever
-// --int-refinement says, so the mode never decides a check directly. It
-// decides what the stored states know, and a join shows the difference.
+// Int answers a check component by component, as Goblint's IntDomTuple
+// does, so the mode reaches a check through what the stored states know. A
+// join shows the difference.
 //
 // On the true arm of y + 1 == 3, the inverses of == and + teach Parity and
 // Congruence that y = 2, and Interval and Sign learn nothing. A refinement

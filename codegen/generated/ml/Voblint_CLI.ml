@@ -4819,185 +4819,51 @@ let rec man_local
 
 let rec local_query h m q = sp_return (h (man_local m) q);;
 
-let rec intersect_int_dom
-  d1 d2 =
-    int_congruence_update
-      (fun _ -> inf_congruence (int_congruence d1) (int_congruence d2))
-      (int_parity_update (fun _ -> inf_parity (int_parity d1) (int_parity d2))
-        (int_ivl_update (fun _ -> intersect_ivl (int_ivl d1) (int_ivl d2))
-          (int_sign_update (fun _ -> inf_sign (int_sign d1) (int_sign d2))
-            d1)));;
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
 
-let rec apply_reduction_steps
-  x0 d = match x0, d with [], d -> d
-    | step :: steps, d -> apply_reduction_steps steps (step d);;
+let rec parity_eq_false
+  a b = match a, b with PEven, POdd -> true
+    | POdd, PEven -> true
+    | PBot, b -> equal_paritya PBot PBot || equal_paritya b PBot
+    | POdd, PBot -> equal_paritya POdd PBot || equal_paritya PBot PBot
+    | POdd, POdd -> equal_paritya POdd PBot || equal_paritya POdd PBot
+    | POdd, PTop -> equal_paritya POdd PBot || equal_paritya PTop PBot
+    | PTop, b -> equal_paritya PTop PBot || equal_paritya b PBot
+    | a, PBot -> equal_paritya a PBot || equal_paritya PBot PBot
+    | PEven, PEven -> equal_paritya PEven PBot || equal_paritya PEven PBot
+    | a, PTop -> equal_paritya a PBot || equal_paritya PTop PBot;;
 
-let rec refine_congruence_with_congruence fct c = fct;;
+let rec congruence_singleton
+  a = (match rep_congruence a with None -> None
+        | Some (c, m) -> (if equal_inta m zero_inta then Some c else None));;
 
-let rec parity_fact_of_congruence_rep
-  = function None -> PBot
-    | Some (c, m) ->
-        (if equal_inta m zero_inta ||
-              dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2))
-                m
-          then (if dvd (equal_int, semidom_modulo_int)
-                     (Int_of_integer (Z.of_int 2)) c
-                 then PEven else POdd)
-          else PTop);;
+let rec congruence_eqb
+  a b = (match (congruence_singleton a, congruence_singleton b)
+          with (None, _) -> None | (Some _, None) -> None
+          | (Some c1, Some c2) -> Some (equal_inta c1 c2));;
 
-let rec parity_fact_of_congruence
-  fct = parity_fact_of_congruence_rep (rep_congruence fct);;
-
-let rec refine_parity_with_congruence
-  fct p = inf_parity (parity_fact_of_congruence fct) p;;
-
-let rec congruence_upper_bound
-  c m x2 = match c, m, x2 with c, m, MinInf -> MinInf
-    | c, m, Fin u -> Fin (minus_inta u (modulo_inta (minus_inta u c) m))
-    | c, m, PlusInf -> PlusInf;;
-
-let rec congruence_lower_bound
-  c m x2 = match c, m, x2 with c, m, MinInf -> MinInf
-    | c, m, Fin l -> Fin (plus_inta l (modulo_inta (minus_inta c l) m))
-    | c, m, PlusInf -> PlusInf;;
-
-let rec mk_ivl l u = normalize_ivl (Ivl (l, u));;
-
-let rec refine_ivl_with_congruence_rep
-  x0 i = match x0, i with None, i -> bot_ivla
-    | Some (c, m), Ivl (l, u) ->
-        (if equal_inta m zero_inta
-          then intersect_ivl (Ivl (Fin c, Fin c)) (Ivl (l, u))
-          else intersect_ivl
-                 (mk_ivl (congruence_lower_bound c m l)
-                   (congruence_upper_bound c m u))
-                 (Ivl (l, u)));;
-
-let rec refine_ivl_with_congruence
-  fct i = refine_ivl_with_congruence_rep (rep_congruence fct) i;;
-
-let rec congruence_fact_of_congruence c = c;;
-
-let rec congruence_fact_of_int_dom
-  d = restrict_congruence_by_parity (int_parity d)
-        (congruence_fact_of_congruence (int_congruence d));;
-
-let rec refine_congruence
-  d = (let fct = congruence_fact_of_int_dom d in
-        int_congruence_update
-          (fun _ -> refine_congruence_with_congruence fct (int_congruence d))
-          (int_parity_update
-            (fun _ -> refine_parity_with_congruence fct (int_parity d))
-            (int_ivl_update
-              (fun _ -> refine_ivl_with_congruence fct (int_ivl d)) d)));;
-
-let rec interval_parity_fact
-  i = (if is_bottom_ivl i then PBot
-        else (match i with Ivl (MinInf, _) -> PTop | Ivl (Fin _, MinInf) -> PTop
-               | Ivl (Fin l, Fin u) ->
-                 (if equal_inta l u
-                   then (if dvd (equal_int, semidom_modulo_int)
-                              (Int_of_integer (Z.of_int 2)) l
-                          then PEven else POdd)
-                   else PTop)
-               | Ivl (Fin _, PlusInf) -> PTop | Ivl (PlusInf, _) -> PTop));;
-
-let rec refine_parity_with_interval
-  fct p = inf_parity (interval_parity_fact fct) p;;
-
-let rec interval_sign_fact
-  i = (if is_bottom_ivl i then SBot
-        else (let Ivl (l, u) = i in
-               (if less_eint u (Fin zero_inta) then SNeg
-                 else (if equal_eint u (Fin zero_inta)
-                        then (if equal_eint l (Fin zero_inta) then SZero
-                               else SNonPos)
-                        else (if less_eint (Fin zero_inta) l then SPos
-                               else (if equal_eint l (Fin zero_inta)
-                                      then SNonNeg else STop))))));;
-
-let rec refine_sign_with_interval fct s = inf_sign (interval_sign_fact fct) s;;
-
-let rec refine_ivl_with_interval fct i = intersect_ivl fct i;;
-
-let rec interval_fact_of_ivl i = i;;
-
-let rec interval_fact_of_int_dom
-  d = intersect_ivl (interval_fact_of_sign (int_sign d))
-        (interval_fact_of_ivl (int_ivl d));;
-
-let rec refine_interval
-  d = (let fct = interval_fact_of_int_dom d in
-        int_parity_update
-          (fun _ -> refine_parity_with_interval fct (int_parity d))
-          (int_ivl_update (fun _ -> refine_ivl_with_interval fct (int_ivl d))
-            (int_sign_update
-              (fun _ -> refine_sign_with_interval fct (int_sign d)) d)));;
-
-let refinement_steps : (unit int_dom_ext -> unit int_dom_ext) list
-  = [refine_interval; refine_congruence];;
-
-let rec refine_round x = apply_reduction_steps refinement_steps x;;
-
-let rec canonical_refine_step
-  d = (let da = refine_round d in
-        (if is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit) da
-          then bot_int_dom_exta bounded_lattice_unit else da));;
-
-let rec while_option b c s = (if b s then while_option b c (c s) else Some s);;
-
-let rec refine_fix_option
-  d = while_option
-        (fun x ->
-          not (equal_int_dom_exta equal_unit (canonical_refine_step x) x))
-        canonical_refine_step d;;
-
-let rec refine_fix
-  d = (match refine_fix_option d with None -> d | Some r -> r);;
-
-let rec refine
-  mode d =
-    (match mode with Refine_Never -> d | Refine_Once -> refine_round d
-      | Refine_Fixpoint -> refine_fix d);;
-
-let rec intersect_int_dom_mode mode a b = refine mode (intersect_int_dom a b);;
+let rec sign_eq_false a b = equal_signa (inf_sign a b) SBot;;
 
 let rec int_eq_false
-  a b = is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
-          (intersect_int_dom_mode Refine_Fixpoint a b);;
+  a b = sign_eq_false (int_sign a) (int_sign b) ||
+          (interval_eq_false (int_ivl a) (int_ivl b) ||
+            (parity_eq_false (int_parity a) (int_parity b) ||
+              equal_option equal_bool
+                (congruence_eqb (int_congruence a) (int_congruence b))
+                (Some false)));;
 
-let rec inv_less_congruence result a b = (a, b);;
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
 
-let rec minus_eint
-  x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (minus_inta n m)
-    | Fin uu, MinInf -> PlusInf
-    | Fin uv, PlusInf -> MinInf
-    | MinInf, MinInf -> MinInf
-    | MinInf, Fin uw -> MinInf
-    | MinInf, PlusInf -> MinInf
-    | PlusInf, MinInf -> PlusInf
-    | PlusInf, Fin ux -> PlusInf
-    | PlusInf, PlusInf -> PlusInf;;
+let rec parity_vacuous a b = equal_paritya a PBot || equal_paritya b PBot;;
 
-let rec plus_eint
-  x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (plus_inta n m)
-    | Fin uu, MinInf -> MinInf
-    | Fin uv, PlusInf -> PlusInf
-    | MinInf, MinInf -> MinInf
-    | MinInf, Fin uw -> MinInf
-    | MinInf, PlusInf -> MinInf
-    | PlusInf, MinInf -> PlusInf
-    | PlusInf, Fin ux -> PlusInf
-    | PlusInf, PlusInf -> PlusInf;;
-
-let rec inv_less_ivl
-  x0 x1 x2 = match x0, x1, x2 with
-    true, Ivl (l1, u1), Ivl (l2, u2) ->
-      (inf_ivl (Ivl (l1, u1)) (Ivl (MinInf, minus_eint u2 (Fin one_inta))),
-        inf_ivl (Ivl (l2, u2)) (Ivl (plus_eint l1 (Fin one_inta), PlusInf)))
-    | false, Ivl (l1, u1), Ivl (l2, u2) ->
-        (inf_ivl (Ivl (l1, u1)) (Ivl (l2, PlusInf)),
-          inf_ivl (Ivl (l2, u2)) (Ivl (MinInf, u1)));;
+let rec parity_eq_true x = parity_vacuous x;;
 
 let rec inv_less_sign
   x0 a1 a2 = match x0, a1, a2 with
@@ -5016,29 +4882,19 @@ let rec inv_less_sign
            in
           (a1a, a));;
 
-let rec inv_less_int_dom_raw
-  res d1 d2 =
-    (let (s1, s2) = inv_less_sign res (int_sign d1) (int_sign d2) in
-     let (i1, i2) = inv_less_ivl res (int_ivl d1) (int_ivl d2) in
-     let (c1, c2) =
-       inv_less_congruence res (int_congruence d1) (int_congruence d2) in
-      (int_congruence_update (fun _ -> c1)
-         (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1)),
-        int_congruence_update (fun _ -> c2)
-          (int_ivl_update (fun _ -> i2) (int_sign_update (fun _ -> s2) d2))));;
+let rec sign_less_false
+  a b = equal_signa (fst (inv_less_sign true a b)) SBot ||
+          equal_signa (snd (inv_less_sign true a b)) SBot;;
 
-let rec inv_less_int_dom
-  mode res d1 d2 =
-    (let (r1, r2) = inv_less_int_dom_raw res d1 d2 in
-      (refine mode r1, refine mode r2));;
+let rec sign_eq_true a b = sign_less_false a b && sign_less_false b a;;
 
-let rec int_less_false
-  a b = is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
-          (fst (inv_less_int_dom Refine_Fixpoint true a b)) ||
-          is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
-            (snd (inv_less_int_dom Refine_Fixpoint true a b));;
-
-let rec int_eq_true a b = int_less_false a b && int_less_false b a;;
+let rec int_eq_true
+  a b = sign_eq_true (int_sign a) (int_sign b) ||
+          (interval_eq_true (int_ivl a) (int_ivl b) ||
+            (parity_eq_true (int_parity a) (int_parity b) ||
+              equal_option equal_bool
+                (congruence_eqb (int_congruence a) (int_congruence b))
+                (Some true)));;
 
 let rec int_eq
   a b = (if int_eq_true a b then Some true
@@ -5534,11 +5390,43 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return dg_local);;
 
+let rec interval_less_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
+
+let rec parity_less_false x = parity_vacuous x;;
+
+let rec congruence_lt
+  a b = (match (congruence_singleton a, congruence_singleton b)
+          with (None, _) -> None | (Some _, None) -> None
+          | (Some c1, Some c2) -> Some (less_int c1 c2));;
+
+let rec int_less_false
+  a b = sign_less_false (int_sign a) (int_sign b) ||
+          (interval_less_false (int_ivl a) (int_ivl b) ||
+            (parity_less_false (int_parity a) (int_parity b) ||
+              equal_option equal_bool
+                (congruence_lt (int_congruence a) (int_congruence b))
+                (Some false)));;
+
+let rec interval_less_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
+
+let rec parity_less_true x = parity_vacuous x;;
+
+let rec sign_less_true
+  a b = equal_signa (fst (inv_less_sign false a b)) SBot ||
+          equal_signa (snd (inv_less_sign false a b)) SBot;;
+
 let rec int_less_true
-  a b = is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
-          (fst (inv_less_int_dom Refine_Fixpoint false a b)) ||
-          is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit)
-            (snd (inv_less_int_dom Refine_Fixpoint false a b));;
+  a b = sign_less_true (int_sign a) (int_sign b) ||
+          (interval_less_true (int_ivl a) (int_ivl b) ||
+            (parity_less_true (int_parity a) (int_parity b) ||
+              equal_option equal_bool
+                (congruence_lt (int_congruence a) (int_congruence b))
+                (Some true)));;
 
 let rec int_less
   a b = (if int_less_true a b then Some true
@@ -5666,9 +5554,7 @@ let rec inv_plus_congruence
     (inf_congruence a (minus_congruence r b),
       inf_congruence b (minus_congruence r a));;
 
-let rec congruence_singleton
-  a = (match rep_congruence a with None -> None
-        | Some (c, m) -> (if equal_inta m zero_inta then Some c else None));;
+let rec inv_less_congruence result a b = (a, b);;
 
 let rec congruence_tobool
   a = (match congruence_singleton a with None -> None
@@ -5710,11 +5596,6 @@ let rec congruence_mod
   x = congruence_exact_binop c_mod
         (fun a b -> minus_congruence a (times_congruence top_congruencea b)) x;;
 
-let rec congruence_eqb
-  a b = (match (congruence_singleton a, congruence_singleton b)
-          with (None, _) -> None | (Some _, None) -> None
-          | (Some c1, Some c2) -> Some (equal_inta c1 c2));;
-
 let rec congruence_divides
   d a = (match rep_congruence a with None -> true
           | Some (c, m) ->
@@ -5736,11 +5617,6 @@ let rec congruence_div_fallback
 
 let rec congruence_div
   x = congruence_exact_binop c_div congruence_div_fallback x;;
-
-let rec congruence_lt
-  a b = (match (congruence_singleton a, congruence_singleton b)
-          with (None, _) -> None | (Some _, None) -> None
-          | (Some c1, Some c2) -> Some (less_int c1 c2));;
 
 let rec of_bool_option _A
   lit x1 = match lit, x1 with
@@ -6346,12 +6222,6 @@ let rec generic_tf_st_for _A
 let rec congruence_tf_st_for
   x = generic_tf_st_for executable_domain_congruence congruence_ops x;;
 
-let rec parity_vacuous a b = equal_paritya a PBot || equal_paritya b PBot;;
-
-let rec parity_less_false x = parity_vacuous x;;
-
-let rec parity_less_true x = parity_vacuous x;;
-
 let rec parity_less
   a b = (if parity_less_true a b then Some true
           else (if parity_less_false a b then Some false else None));;
@@ -6443,20 +6313,6 @@ let parity_refine_ops : (parity, unit) refine_ops_ext
   = Refine_ops_ext
       (parity_tobool, inv_conservative, inv_eq_parity, inv_plus_parity,
         inv_minus_parity, inv_times_parity, inf_parity, ());;
-
-let rec parity_eq_false
-  a b = match a, b with PEven, POdd -> true
-    | POdd, PEven -> true
-    | PBot, b -> equal_paritya PBot PBot || equal_paritya b PBot
-    | POdd, PBot -> equal_paritya POdd PBot || equal_paritya PBot PBot
-    | POdd, POdd -> equal_paritya POdd PBot || equal_paritya POdd PBot
-    | POdd, PTop -> equal_paritya POdd PBot || equal_paritya PTop PBot
-    | PTop, b -> equal_paritya PTop PBot || equal_paritya b PBot
-    | a, PBot -> equal_paritya a PBot || equal_paritya PBot PBot
-    | PEven, PEven -> equal_paritya PEven PBot || equal_paritya PEven PBot
-    | a, PTop -> equal_paritya a PBot || equal_paritya PTop PBot;;
-
-let rec parity_eq_true x = parity_vacuous x;;
 
 let rec parity_eq
   a b = (if parity_eq_true a b then Some true
@@ -6577,29 +6433,9 @@ let parity_ops : (parity, unit) nonrelational_ops_ext
 let rec parity_enter_st_for
   x = generic_enter_st_for (bot_parity, top_parity) parity_ops x;;
 
-let rec interval_less_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
-
-let rec interval_less_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
-
 let rec interval_less
   a b = (if interval_less_true a b then Some true
           else (if interval_less_false a b then Some false else None));;
-
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
 
 let rec interval_eq
   a b = (if interval_eq_true a b then Some true
@@ -6623,6 +6459,37 @@ let rec interval_tobool
         then Some true
         else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
                then Some false else None));;
+
+let rec minus_eint
+  x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (minus_inta n m)
+    | Fin uu, MinInf -> PlusInf
+    | Fin uv, PlusInf -> MinInf
+    | MinInf, MinInf -> MinInf
+    | MinInf, Fin uw -> MinInf
+    | MinInf, PlusInf -> MinInf
+    | PlusInf, MinInf -> PlusInf
+    | PlusInf, Fin ux -> PlusInf
+    | PlusInf, PlusInf -> PlusInf;;
+
+let rec plus_eint
+  x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (plus_inta n m)
+    | Fin uu, MinInf -> MinInf
+    | Fin uv, PlusInf -> PlusInf
+    | MinInf, MinInf -> MinInf
+    | MinInf, Fin uw -> MinInf
+    | MinInf, PlusInf -> MinInf
+    | PlusInf, MinInf -> PlusInf
+    | PlusInf, Fin ux -> PlusInf
+    | PlusInf, PlusInf -> PlusInf;;
+
+let rec inv_less_ivl
+  x0 x1 x2 = match x0, x1, x2 with
+    true, Ivl (l1, u1), Ivl (l2, u2) ->
+      (inf_ivl (Ivl (l1, u1)) (Ivl (MinInf, minus_eint u2 (Fin one_inta))),
+        inf_ivl (Ivl (l2, u2)) (Ivl (plus_eint l1 (Fin one_inta), PlusInf)))
+    | false, Ivl (l1, u1), Ivl (l2, u2) ->
+        (inf_ivl (Ivl (l1, u1)) (Ivl (l2, PlusInf)),
+          inf_ivl (Ivl (l2, u2)) (Ivl (MinInf, u1)));;
 
 let rec inv_eq_ivl
   x0 a1 a2 = match x0, a1, a2 with
@@ -6823,6 +6690,138 @@ let ivl_ops : (ivl, unit) nonrelational_ops_ext
 
 let rec ivl_enter_st_for x = generic_enter_st_for (bot_ivl, top_ivl) ivl_ops x;;
 
+let rec apply_reduction_steps
+  x0 d = match x0, d with [], d -> d
+    | step :: steps, d -> apply_reduction_steps steps (step d);;
+
+let rec refine_congruence_with_congruence fct c = fct;;
+
+let rec parity_fact_of_congruence_rep
+  = function None -> PBot
+    | Some (c, m) ->
+        (if equal_inta m zero_inta ||
+              dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2))
+                m
+          then (if dvd (equal_int, semidom_modulo_int)
+                     (Int_of_integer (Z.of_int 2)) c
+                 then PEven else POdd)
+          else PTop);;
+
+let rec parity_fact_of_congruence
+  fct = parity_fact_of_congruence_rep (rep_congruence fct);;
+
+let rec refine_parity_with_congruence
+  fct p = inf_parity (parity_fact_of_congruence fct) p;;
+
+let rec congruence_upper_bound
+  c m x2 = match c, m, x2 with c, m, MinInf -> MinInf
+    | c, m, Fin u -> Fin (minus_inta u (modulo_inta (minus_inta u c) m))
+    | c, m, PlusInf -> PlusInf;;
+
+let rec congruence_lower_bound
+  c m x2 = match c, m, x2 with c, m, MinInf -> MinInf
+    | c, m, Fin l -> Fin (plus_inta l (modulo_inta (minus_inta c l) m))
+    | c, m, PlusInf -> PlusInf;;
+
+let rec mk_ivl l u = normalize_ivl (Ivl (l, u));;
+
+let rec refine_ivl_with_congruence_rep
+  x0 i = match x0, i with None, i -> bot_ivla
+    | Some (c, m), Ivl (l, u) ->
+        (if equal_inta m zero_inta
+          then intersect_ivl (Ivl (Fin c, Fin c)) (Ivl (l, u))
+          else intersect_ivl
+                 (mk_ivl (congruence_lower_bound c m l)
+                   (congruence_upper_bound c m u))
+                 (Ivl (l, u)));;
+
+let rec refine_ivl_with_congruence
+  fct i = refine_ivl_with_congruence_rep (rep_congruence fct) i;;
+
+let rec congruence_fact_of_congruence c = c;;
+
+let rec congruence_fact_of_int_dom
+  d = restrict_congruence_by_parity (int_parity d)
+        (congruence_fact_of_congruence (int_congruence d));;
+
+let rec refine_congruence
+  d = (let fct = congruence_fact_of_int_dom d in
+        int_congruence_update
+          (fun _ -> refine_congruence_with_congruence fct (int_congruence d))
+          (int_parity_update
+            (fun _ -> refine_parity_with_congruence fct (int_parity d))
+            (int_ivl_update
+              (fun _ -> refine_ivl_with_congruence fct (int_ivl d)) d)));;
+
+let rec interval_parity_fact
+  i = (if is_bottom_ivl i then PBot
+        else (match i with Ivl (MinInf, _) -> PTop | Ivl (Fin _, MinInf) -> PTop
+               | Ivl (Fin l, Fin u) ->
+                 (if equal_inta l u
+                   then (if dvd (equal_int, semidom_modulo_int)
+                              (Int_of_integer (Z.of_int 2)) l
+                          then PEven else POdd)
+                   else PTop)
+               | Ivl (Fin _, PlusInf) -> PTop | Ivl (PlusInf, _) -> PTop));;
+
+let rec refine_parity_with_interval
+  fct p = inf_parity (interval_parity_fact fct) p;;
+
+let rec interval_sign_fact
+  i = (if is_bottom_ivl i then SBot
+        else (let Ivl (l, u) = i in
+               (if less_eint u (Fin zero_inta) then SNeg
+                 else (if equal_eint u (Fin zero_inta)
+                        then (if equal_eint l (Fin zero_inta) then SZero
+                               else SNonPos)
+                        else (if less_eint (Fin zero_inta) l then SPos
+                               else (if equal_eint l (Fin zero_inta)
+                                      then SNonNeg else STop))))));;
+
+let rec refine_sign_with_interval fct s = inf_sign (interval_sign_fact fct) s;;
+
+let rec refine_ivl_with_interval fct i = intersect_ivl fct i;;
+
+let rec interval_fact_of_ivl i = i;;
+
+let rec interval_fact_of_int_dom
+  d = intersect_ivl (interval_fact_of_sign (int_sign d))
+        (interval_fact_of_ivl (int_ivl d));;
+
+let rec refine_interval
+  d = (let fct = interval_fact_of_int_dom d in
+        int_parity_update
+          (fun _ -> refine_parity_with_interval fct (int_parity d))
+          (int_ivl_update (fun _ -> refine_ivl_with_interval fct (int_ivl d))
+            (int_sign_update
+              (fun _ -> refine_sign_with_interval fct (int_sign d)) d)));;
+
+let refinement_steps : (unit int_dom_ext -> unit int_dom_ext) list
+  = [refine_interval; refine_congruence];;
+
+let rec refine_round x = apply_reduction_steps refinement_steps x;;
+
+let rec canonical_refine_step
+  d = (let da = refine_round d in
+        (if is_empty_int_dom_ext (bounded_lattice_unit, warrowing_unit) da
+          then bot_int_dom_exta bounded_lattice_unit else da));;
+
+let rec while_option b c s = (if b s then while_option b c (c s) else Some s);;
+
+let rec refine_fix_option
+  d = while_option
+        (fun x ->
+          not (equal_int_dom_exta equal_unit (canonical_refine_step x) x))
+        canonical_refine_step d;;
+
+let rec refine_fix
+  d = (match refine_fix_option d with None -> d | Some r -> r);;
+
+let rec refine
+  mode d =
+    (match mode with Refine_Never -> d | Refine_Once -> refine_round d
+      | Refine_Fixpoint -> refine_fix d);;
+
 let rec sign_min x0 uu = match x0, uu with SBot, uu -> SBot
                    | SNeg, SBot -> SBot
                    | SNonPos, SBot -> SBot
@@ -6930,6 +6929,17 @@ let rec int_dom_max mode a b = refine mode (int_dom_max_raw a b);;
 let rec int_dom_special_ops
   mode = Special_ops_ext (int_dom_min mode, int_dom_max mode, ());;
 
+let rec intersect_int_dom
+  d1 d2 =
+    int_congruence_update
+      (fun _ -> inf_congruence (int_congruence d1) (int_congruence d2))
+      (int_parity_update (fun _ -> inf_parity (int_parity d1) (int_parity d2))
+        (int_ivl_update (fun _ -> intersect_ivl (int_ivl d1) (int_ivl d2))
+          (int_sign_update (fun _ -> inf_sign (int_sign d1) (int_sign d2))
+            d1)));;
+
+let rec intersect_int_dom_mode mode a b = refine mode (intersect_int_dom a b);;
+
 let rec inv_times_int_dom_raw
   r d1 d2 =
     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
@@ -6997,6 +7007,22 @@ let rec inv_plus_int_dom_raw
 let rec inv_plus_int_dom
   mode r d1 d2 =
     (let (r1, r2) = inv_plus_int_dom_raw r d1 d2 in
+      (refine mode r1, refine mode r2));;
+
+let rec inv_less_int_dom_raw
+  res d1 d2 =
+    (let (s1, s2) = inv_less_sign res (int_sign d1) (int_sign d2) in
+     let (i1, i2) = inv_less_ivl res (int_ivl d1) (int_ivl d2) in
+     let (c1, c2) =
+       inv_less_congruence res (int_congruence d1) (int_congruence d2) in
+      (int_congruence_update (fun _ -> c1)
+         (int_ivl_update (fun _ -> i1) (int_sign_update (fun _ -> s1) d1)),
+        int_congruence_update (fun _ -> c2)
+          (int_ivl_update (fun _ -> i2) (int_sign_update (fun _ -> s2) d2))));;
+
+let rec inv_less_int_dom
+  mode res d1 d2 =
+    (let (r1, r2) = inv_less_int_dom_raw res d1 d2 in
       (refine mode r1, refine mode r2));;
 
 let rec first_deciding
@@ -7470,14 +7496,6 @@ let rec exec_spec _A
 let rec parity_tf_st_for
   x = generic_tf_st_for executable_domain_parity parity_ops x;;
 
-let rec sign_less_false
-  a b = equal_signa (fst (inv_less_sign true a b)) SBot ||
-          equal_signa (snd (inv_less_sign true a b)) SBot;;
-
-let rec sign_less_true
-  a b = equal_signa (fst (inv_less_sign false a b)) SBot ||
-          equal_signa (snd (inv_less_sign false a b)) SBot;;
-
 let rec sign_less
   a b = (if sign_less_true a b then Some true
           else (if sign_less_false a b then Some false else None));;
@@ -7489,10 +7507,6 @@ let sign_refine_ops : (sign, unit) refine_ops_ext
   = Refine_ops_ext
       (sign_tobool, inv_less_sign, inv_eq_sign, inv_conservative,
         inv_conservative, inv_conservative, inf_sign, ());;
-
-let rec sign_eq_false a b = equal_signa (inf_sign a b) SBot;;
-
-let rec sign_eq_true a b = sign_less_false a b && sign_less_false b a;;
 
 let rec sign_eq
   a b = (if sign_eq_true a b then Some true
