@@ -20,7 +20,7 @@ subsection \<open>Local and global state together\<close>
 definition gammaDG_rel :: "relc \<Rightarrow> relc \<Rightarrow> store set" where
   "gammaDG_rel d g = \<lbrakk>d\<rbrakk> \<inter> \<lbrakk>g\<rbrakk>"
 
-lemma gammaDG_rel_top [simp]: "gammaDG_rel top_relc top_relc = UNIV"
+lemma gammaDG_rel_top [simp]: "gammaDG_rel \<top> \<top> = UNIV"
   unfolding gammaDG_rel_def by simp
 
 lemma gammaDG_rel_mono:
@@ -126,13 +126,13 @@ definition dgs_branch_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Righta
   "dgs_branch_rel b pol d g = (g, branch_step_rel b pol d)"
 
 definition dgs_enter_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_enter_rel ci dc g = (top_relc, top_relc)"
+  "dgs_enter_rel ci dc g = (\<top>, \<top>)"
 
 text \<open>
   The caller continuation is the identity.  This carrier discards every caller
   relation at its environment merge anyway, so there is no call-side
   invalidation for a continuation to express: filtering before a merge that
-  already returns \<^const>\<open>top_relc\<close> would be indistinguishable from not filtering.
+  already returns \<^term>\<open>\<top> :: relc\<close> would be indistinguishable from not filtering.
   Keeping it identity leaves this instance the least interesting sound one, which
   is its purpose.
 \<close>
@@ -140,7 +140,7 @@ definition dgs_caller_cont_rel :: "call_info \<Rightarrow> relc \<Rightarrow> re
   "dgs_caller_cont_rel ci dc g = dc"
 
 definition dgs_combine_env_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_combine_env_rel ci dc de g = (top_relc, top_relc)"
+  "dgs_combine_env_rel ci dc de g = (\<top>, \<top>)"
 
 definition dgs_combine_assign_rel ::
   "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc \<Rightarrow> relc \<times> relc"
@@ -150,7 +150,7 @@ where
 text \<open>
   Unlike the local-only domains, this one really uses the global channel:
   \<^const>\<open>dgs_special_rel\<close> forgets the assigned name on both halves, and entry
-  and the environment merge reset the shared relation to \<^const>\<open>top_relc\<close>.
+  and the environment merge reset the shared relation to \<^term>\<open>\<top> :: relc\<close>.
   Its transfers are therefore written as a read-compute-publish sequence.
 
   \<open>rel_transfer\<close> is the adapter that turns one of this file's
@@ -383,11 +383,11 @@ lemma step_sound_rel:
      (case rel_step_for a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   by (cases a) (auto simp add: rel_order_simps split: option.splits)
 
-subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>top_relc\<close>\<close>
+subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>\<top>\<close>\<close>
 
 text \<open>The composed return pipeline: \<open>caller_cont\<close> and \<open>combine_assign\<close> are the
   defaults, so the whole combine is the environment merge, which resets both halves
-  to \<^const>\<open>top_relc\<close>.\<close>
+  to \<^term>\<open>\<top> :: relc\<close>.\<close>
 
 lemma dg_spec_combine_transfer_rel_order_spec [simp]:
   "dg_spec_combine_transfer rel_order_spec ci = rel_combine_transfer (dgs_combine_env_rel ci)"

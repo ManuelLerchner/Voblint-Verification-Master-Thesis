@@ -126,8 +126,8 @@ definition order_spec :: "vname list \<Rightarrow> relc local_spec" where
        (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
        (\<lambda>A sc x d. forget_relc x d)
        (\<lambda>A eo p d. rel_ret eo d)
-       (\<lambda>A ci p. [(fst p, top_relc)])
-       (\<lambda>B ci d de. top_relc))
+       (\<lambda>A ci p. [(fst p, \<top>)])
+       (\<lambda>B ci d de. \<top>))
      \<lparr>ls_query := (\<lambda>A. rel_qry), ls_branch := (\<lambda>A b pol d. branch_step_rel b pol d)\<rparr>"
 
 theorem order_spec_sound: "sound_local_spec \<G> gamma_rel (order_spec ys)"
@@ -141,7 +141,7 @@ proof -
   qed
   have base: "sound_local_spec \<G> gamma_rel (conservative_local_spec
        (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)) (\<lambda>A sc x d. forget_relc x d)
-       (\<lambda>A eo p d. rel_ret eo d) (\<lambda>A ci p. [(fst p, top_relc)]) (\<lambda>B ci d de. top_relc))"
+       (\<lambda>A eo p d. rel_ret eo d) (\<lambda>A ci p. [(fst p, \<top>)]) (\<lambda>B ci d de. \<top>))"
     by (rule sound_conservative_local_spec[OF gamma_rel_mono _ special])
        (auto simp: sound_assign_def sound_return_def sound_enter_def rel_ret_def
           sound_combine_env_identity split: option.splits intro!: rel_learn_sound)

@@ -104,7 +104,7 @@ text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<op
 definition demo_rel_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (relc, relc) dg_state) strategy_tree" where
   "demo_rel_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
-     rel_order_spec demo_cfg top_relc top_relc"
+     rel_order_spec demo_cfg \<top> \<top>"
 
 definition demo_rel_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (relc, relc) dg_state)" where

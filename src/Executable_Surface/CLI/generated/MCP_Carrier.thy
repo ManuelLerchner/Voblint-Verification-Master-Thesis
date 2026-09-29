@@ -386,7 +386,7 @@ definition mcp_init :: "analysis_domain list \<Rightarrow> mcp_st" where
     Int_Once_Analysis \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>) (Product (if
     Int_Never_Analysis \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>) (Product (if
     Congruence_Analysis \<in> set as then (Lifted cinit_congruence_st) else \<bottom>) (if
-    Order_Analysis \<in> set as then top_relc else \<bottom>)))))))"
+    Order_Analysis \<in> set as then (\<top> :: relc) else \<bottom>)))))))"
 
 definition mcp_formals_route ::
   "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> mcp_ctx \<Rightarrow> mcp_st lifted

@@ -86,9 +86,6 @@ instance by intro_classes (case_tac a; simp add: top_relc_def)
 
 end
 
-abbreviation (input) top_relc :: relc where
-  "top_relc \<equiv> \<top>"
-
 text \<open>The vendored TD solver's \<open>TD_side_upd_rule\<close> locale fixes its equation
   value type at sort \<open>{bounded_semilattice_sup_bot, warrowing}\<close> uniformly --
   every update rule in the solver menu needs it, not only the \<open>warrow\<close>
@@ -126,7 +123,7 @@ fun gamma_rel :: "relc \<Rightarrow> store set" where
 
 adhoc_overloading gamma_S == gamma_rel
 
-lemma gamma_rel_top [simp]: "\<lbrakk>top_relc\<rbrakk> = UNIV"
+lemma gamma_rel_top [simp]: "\<lbrakk>\<top> :: relc\<rbrakk> = UNIV"
   unfolding top_relc_def by simp
 
 lemma gamma_rel_mono:

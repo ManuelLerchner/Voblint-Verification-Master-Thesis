@@ -138,7 +138,7 @@ domains:
       published_empty: ($v = RelBot)
       answer: rel_qry $v $q
       display: Field_Whole (OrderValue (order_pairs $v))
-      init: top_relc
+      init: '(\<top> :: relc)'
       route: "[]"
       context_values: "[]"
       component_sound: order_spec_sound
