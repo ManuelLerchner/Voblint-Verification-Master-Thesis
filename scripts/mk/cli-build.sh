@@ -37,6 +37,23 @@ if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current_hash" ]; then
   echo "Run 'pixi run codegen' to refresh it; building with the checked-in copy anyway." >&2
 fi
 
+# Parallel callers (the pre-push thesis group runs several tasks that each
+# depend on cli-build) would race on dune's own `_build/.lock`, which dune
+# reports as an unexpected empty lock file instead of waiting. Serialize here
+# with mkdir, the atomic primitive macOS and Linux share; a lock whose holder
+# died is reclaimed.
+lock="$REPO_ROOT/_build/.cli-build.lock"
+mkdir -p "$REPO_ROOT/_build"
+until mkdir "$lock" 2>/dev/null; do
+  holder="$(cat "$lock/pid" 2>/dev/null || true)"
+  if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+    rm -rf "$lock"
+    continue
+  fi
+  sleep 0.2
+done
+echo "$$" >"$lock/pid"
+
 # Dune owns generated OCaml, parser, and lexer outputs in `_build/`.
 rm -f "$CLI_DIR/vimp_parser.ml" "$CLI_DIR/vimp_parser.mli" "$CLI_DIR/vimp_lexer.ml"
 
@@ -50,7 +67,7 @@ rm -f "$CLI_DIR/vimp_parser.ml" "$CLI_DIR/vimp_parser.mli" "$CLI_DIR/vimp_lexer.
 # here fails loudly at the source instead of corrupting output elsewhere.
 build_out="$(mktemp)"
 publish_tmp="$(mktemp "$CLI_DIR/.voblint.XXXXXX")"
-trap 'rm -f "$build_out" "$publish_tmp"' EXIT
+trap 'rm -f "$build_out" "$publish_tmp"; rm -rf "$lock"' EXIT
 (
   cd "$CLI_DIR"
   dune build ./voblint.exe
