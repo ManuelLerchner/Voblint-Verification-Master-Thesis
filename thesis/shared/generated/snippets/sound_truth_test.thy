@@ -1,4 +1,4 @@
-(* src/Abstract_Interpreter/Domain/Forward_Domain.thy *)
+(* src/Abstract_Interpreter/Domain/Eval/Forward_Domain.thy *)
 locale sound_truth_test =
   fixes tobool :: "'a::numeric_domain \<Rightarrow> bool option"
   assumes tobool_sound:
