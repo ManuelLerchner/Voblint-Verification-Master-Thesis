@@ -95,7 +95,7 @@
     "thm:source_activation_sound": "Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_activation_sound%7Cfact",
     "thm:source_completes_ltr_collect_exit": "Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_completes_ltr_collect_exit%7Cfact",
     "thm:source_run_has_ltr": "Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_ltr%7Cfact",
-    "thm:source_sound": "Voblint/Voblint_Analysis_Congruence/Congruence_Analyses.html#Congruence_Analyses.congruence_rule.source_sound%7Cfact",
+    "thm:source_sound": "Voblint/Voblint_CLI/Analysis_Run_Sound.html#Analysis_Run_Sound.sound_table.source_sound%7Cfact",
     "thm:trace_context_caller_entry": "Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.trace_context_caller_entry%7Cfact",
     "type:call_context_rel": "Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.call_context_rel%7Ctype",
     "type:com": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.com%7Ctype",
