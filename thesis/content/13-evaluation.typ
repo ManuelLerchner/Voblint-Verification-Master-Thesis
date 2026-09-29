@@ -410,7 +410,7 @@ timeout alone does not show this (@sec:trust-boundary).
 decides a check that none of its components decides alone.
 
 *Cooperation.* _Evidence: machine-checked by evaluation, and executable._
-Two programs of @sec:coop-catalogue separate the combination from its parts in
+Two programs of @sec:coop-examples separate the combination from its parts in
 each direction. On the first, Interval and the order analysis alone leave
 `z == 1` `UNKNOWN`, and together they prove it, because the order analysis
 answers Interval's query at `z = (x == y)` (#isathm("coop_demo_needs_both")).
@@ -584,97 +584,25 @@ configuration flags per test.
 
 == Evidence not supplied <sec:eval-absent>
 
-No measurement of analysis time or memory is reported. The only performance
-statement the thesis makes is whether a solve finishes within a fixed limit,
-as in @fig:rules-programs. Timings of the executable would mostly measure the
-data representations it inherits from the proofs, whose cost grows faster than
-linearly already on straight-line programs. Efficiency was outside the scope
-of this work.
+No time or memory measurement is reported. The executable keeps the data
+representations the proofs use: finite sets are unordered lists and the
+solver's value table is a function, so membership, insertion and lookup take
+linear time @haftmann10. _Evidence: measured once on one machine, not a
+benchmark._ On a chain of assignments, each doubling of its length multiplied
+the running time by about 7, close to the cubic factor of 8, mostly from the
+list unions in #isaconst("compile"). A data refinement to red-black trees
+would remove these costs. Isabelle's library and the Isabelle Collections
+Framework provide such implementations with proofs that they refine the
+abstract types @lammich26collections[§1.1]. The refinement would change the
+state of the vendored solver, so its proof would have to be redone, while the
+rest of the chain uses the solver only through its certificate
+(@sec:certificate). It is not done.
 
-_Evidence: source inspection of the generated code._ The code generator turns
-each defining equation into one target function and keeps the data
-representation of the theories @haftmann10, so the asymptotic cost of the
-equations carries over. Isabelle's default code setup represents a finite set
-as an unordered list, so membership, insertion and removal take time linear in
-its size. This affects four places. For $n$ statements, $N$ unknowns and
-$v$ variables with an override:
-
-- *Compilation.* #isaconst("compile") unites the edge sets of the two halves of
-  a sequence, and the parser nests a statement list to the left. Each union
-  inserts the edges of the prefix one by one into a growing set, testing
-  membership each time, so compiling a straight-line program costs $O(n^3)$;
-  #isaconst("csize") also recomputes the size of the prefix at every level. One
-  run compiles the program three times, once for the equations, once for the
-  root unknown and once for the readback.
-- *Solver.* The vendored solver keeps the called and the stable unknowns as
-  such lists and the influence map as an association list
-  (#isaconst("fminsert")), so each step costs $O(N)$. Its value table is a
-  function, and every update wraps the previous function in one more test, so
-  a lookup costs time linear in the number of updates made so far.
-- *States.* #isatype("resolved_st_q") keeps its overrides as a list
-  (@ch:solving). Join, widening, narrowing and the order test each traverse
-  the union of both supports with a lookup per location, $O(v^2)$ per
-  operation; equality is two order tests.
-- *Readback.* The solved keys form a list, #isaconst("lookup_context") tests
-  membership in it, and the report does so for every node and context, which
-  costs $O(n dot N)$ per context. No read value is cached, so every lookup
-  reruns the readback through the value table.
-
-The edge indexes of the equations are the exception: #isaconst("group_by_key")
-files the edges of each node in a red-black tree from Isabelle's library, so a
-predecessor lookup is logarithmic.
-
-_Evidence: executable, measured once on one machine with scripts outside the
-repository; an observation, not a benchmark._ On a chain of assignments to one
-variable, each doubling of the chain from 500 to 2,000 multiplied the
-wall-clock time of the analyzer by about 7, near the cubic factor of 8. One compilation
-took about a third of the run at 2,000 assignments. The same chain built as a
-syntax tree nested to the right, which avoids the cubic union, grew by a
-factor of about 4 per doubling up to 4,000 assignments, the quadratic factor.
-A chain of procedures, each calling the next, grew by a factor between 2.6 and
-4.3 per doubling from 100 to 1,600 procedures.
-
-Removing these costs amounts to a data refinement. Sets and maps keyed by unknowns
-would become red-black trees, through the code setups for sets and mappings
-that Isabelle's library provides. These need a linear order on unknowns, and
-for entry-state contexts that means an order on abstract values. The solver's
-value table would become a finite map with a default. That changes the state
-of the vendored solver, so its partial-correctness proof would have to be
-redone for the map or related to the function by a refinement proof. The rest
-of the chain consumes the solver only through the post-solution certificate
-(@sec:certificate) and would not change. #isaconst("compile") could accumulate
-edges in a list with a proof that the list denotes the same set, and a run
-could compile the program once. The readback and the state operations allow
-the same treatment: the carrier layer of @ch:solving already proves executable
-operations equal to their specifications under readback, and
-#isathm("group_lookup_group_by_key") does so for the one tree the equations
-use today. None of this is implemented in this work, and more generally this
-work did no research into efficient code generation: the exported analyzer is
-what Isabelle's code generator produces from the definitions the proofs use.
-Existing Isabelle infrastructure addresses exactly this step. The Isabelle
-Collections Framework provides set and map implementations based on lists,
-red-black trees, hashing and tries behind uniform interfaces, relates each to
-the corresponding HOL type by an abstraction function, and lets the user
-choose the data structure for each use, so that correctness is proved on the
-abstract level and transferred to the implementation
-@lammich26collections[§1.1, §1.4.1].
-
-The fixtures are small, #stat("corpus.lines") lines over
-#stat("corpus.cases") programs, so timing them would not support a claim about
-larger programs even after such a refinement, and a throughput comparison with
-Goblint would compare different input languages, configurations and checked
-properties. The effort the development took is not recorded either: the line
-counts above measure size, not person-time or build time.
-
-The adequacy of #isaconst("pstep") rests on the comparison with C11 in
-@sec:vimp-vs-c and on the concrete behaviour that fixture headers state. The
-development contains no executable form of #isaconst("pstep"), and no test
-runs VIMP programs concretely or compares them with a compiled C program, so
-a departure from C11 missing from @tab:vimp-vs-c would go unnoticed by every
-check in the repository.
-
-The playground (@sec:playground) is illustrative evidence only. No study
-measures whether it helps a reader understand a result.
+No test runs VIMP programs concretely. The development contains no executable
+form of #isaconst("pstep"), so the adequacy of the source semantics rests on
+the comparison with C11 in @sec:vimp-vs-c alone. The playground
+(@sec:playground) is illustrative, and no study measures whether it helps a
+reader.
 
 == Threats to validity <sec:eval-threats>
 

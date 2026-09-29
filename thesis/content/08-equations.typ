@@ -3,7 +3,9 @@
 #import "../lib/code.typ": fixture, isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
-#import "../lib/figures.typ": snapshot-var
+#import "../lib/figures.typ": (
+  dep-edge, global-unk, intra-edge, ppoint, side-edge, snapshot-var, subfigures, unk,
+)
 #import "../lib/claims.typ": claim-snapshot, snapshot-cluster-of, snapshot-verdict
 #import "../lib/sources.typ": proved
 
@@ -524,7 +526,7 @@ Such a fact is a flow-insensitive unknown written by side effects
 contributed to it, from anywhere and in any context. The entry seeds of
 @sec:eq-seed are one use of such unknowns, and program globals are the second.
 
-The lifter #isaconst("ownership_split_lift") adds one key
+The lifter #isaconst("ownership_split_lift") adds one global unknown
 $kappa = #isaconst("Analysis_Global") thin ()$ whose value is an abstract
 store for all VIMP globals together. This realizes the flow-insensitive
 system of Apinis et al. with one global unknown for all globals, where the paper and
@@ -646,15 +648,85 @@ flow-insensitive `Gx` leaves, and no theorem produces a verdict for this
 analysis. It is not selectable in #isaconst("run_voblint"), and no theorem
 discharges its routed obligations for every program.
 
-The shipped analyzer therefore makes little use of the global unknowns. In
-#isaconst("run_voblint") side effects write only to the entry seeds: every
-run of #isaconst("run_voblint") instantiates #isaconst("analysis_spec") with the
-combined component of @ch:cooperation, which never writes
-$kappa$ and whose concretization ignores it. One unknown per program global, as
-in Seidl et al. @seidl26, needs a concretization that reads an environment of
-analysis-global values, since #isalocale("analysis_contract") admits a single global
-name. The manager is already generic in the name type. @ch:related compares
-the instance with earlier mechanizations of mixed flow sensitivity.
+All program globals share $kappa$ because #isalocale("analysis_contract")
+fixes the type of analysis-global names to `unit` (@sec:sound-core). Several
+names would need a concretization over an environment that maps each name to
+its value. The values of different globals stay apart inside $kappa$, since
+joins and widening act on each entry of the store, but the solver sees one
+unknown (@fig:shared-deps). A write to `g` therefore re-evaluates a node that
+reads only `h`. The update rule also decides between widening and narrowing
+for the whole store (@sec:update-rules): while `g` still grows, $kappa$ is
+widened, and `h` cannot be narrowed until `g` has stabilized. Seidl et al. and
+Goblint keep one unknown per global @seidl26. The manager is already generic
+in the name type.
+
+// A straight-line procedure over two flow-insensitive globals g and h: which
+// right-hand sides read (grey) and publish to (double tip) the global unknowns,
+// and which nodes the solver re-evaluates when g = g + 1 publishes (orange).
+// (a) Voblint keeps all analysis globals in one global unknown; (b) one global
+// unknown per global, as Goblint does.
+#let _deps(split) = {
+  set text(size: 8pt)
+  let hot = if split { (2,) } else { (2, 3) }
+  let pt(i) = if i in hot {
+    unk((0, i), $u_#i$, state: "unstable", name: label("u" + str(i)))
+  } else { ppoint((0, i), $u_#i$, name: label("u" + str(i))) }
+  let edges = (
+    intra-edge(<u0>, <u1>, label: "x = x + 1", label-side: right),
+    intra-edge(<u1>, <u2>, label: "g = g + 1", label-side: right),
+    intra-edge(<u2>, <u3>, label: "y = h", label-side: right),
+  )
+  if split {
+    diagram(
+      spacing: (10mm, 9mm),
+      ..range(4).map(pt),
+      global-unk((1.5, 1.6), $kappa_g$, name: <kg>),
+      global-unk((1.5, 3), $kappa_h$, name: <kh>),
+      ..edges,
+      dep-edge(<kg>, <u2>, bend: 18deg),
+      side-edge(<u2>, <kg>, bend: 18deg),
+      dep-edge(<kh>, <u3>, bend: 18deg),
+    )
+  } else {
+    diagram(
+      spacing: (10mm, 9mm),
+      ..range(4).map(pt),
+      global-unk((1.5, 2), $kappa$, name: <k>),
+      ..range(4).map(i => node((-0.75, i), text(fill: vb.muted, $(d_#i, bot)$))),
+      node((2.1, 2), text(fill: vb.muted, $(bot, v)$)),
+      ..edges,
+      dep-edge(<k>, <u2>, bend: 18deg),
+      side-edge(<u2>, <k>, bend: 18deg),
+      dep-edge(<k>, <u3>, bend: 18deg),
+    )
+  }
+}
+
+#subfigures(
+  figure(_deps(false), caption: [one global unknown $kappa$ for `g` and `h`]),
+  <fig:shared-deps-one>,
+  figure(_deps(true), caption: [one global unknown per global]),
+  <fig:shared-deps-per>,
+  columns: (1.2fr, 1fr),
+  placement: auto,
+  caption: [The right-hand sides that depend on the global unknowns of two
+    flow-insensitive globals `g` and `h` (schematic). Grey arrows are reads
+    (#ctor("QueryG")), purple double-tipped arrows publications (#ctor("Side")),
+    and orange nodes are re-evaluated when `g = g + 1` enlarges the value of
+    `g`; $u_1$, after `x = x + 1`, depends on no global. Voblint keeps all
+    analysis globals in one global unknown (a), so the write to `g` also
+    re-evaluates $u_3$, which reads only `h`. With one global unknown per global
+    (b), as in Goblint, it does not. In (a) each unknown holds a
+    #isatype("dg_state") (grey).],
+  label: <fig:shared-deps>,
+)
+
+The shipped analyzer makes little use of the global unknowns. In
+#isaconst("run_voblint") side effects write only to the activation seeds:
+every run of #isaconst("run_voblint") instantiates #isaconst("analysis_spec")
+with the combined component of @ch:cooperation, which never writes $kappa$ and
+whose concretization ignores it. @ch:related compares the instance with
+earlier mechanizations of mixed flow sensitivity.
 
 == Finite context spaces <sec:eq-finite>
 

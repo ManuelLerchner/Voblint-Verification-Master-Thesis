@@ -273,7 +273,7 @@ does not enter its statement.
 
 A check has one verdict per node, while the table may hold several contexts
 there. Each context whose state is not #ctor("Bot") is classified as proved,
-refuted or unknown from the answers of @sec:coop-queries: the check asks the
+refuted or unknown from the answers of @sec:coop-mcp: the check asks the
 truth value of its condition, every active analysis answers from its
 #isaconst("check_query") on its field, and #isaconst("answer_check") reads the
 meet of these answers. An exact $1$ proves the check, an exact $0$ refutes it,

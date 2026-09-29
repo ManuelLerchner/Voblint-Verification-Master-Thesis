@@ -34,7 +34,7 @@ discharges the coverage contract once for all policies and domains
 (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
 source-level theorem covers every configuration #isaconst("run_voblint")
 offers. A relational carrier meets the same contract without framework
-changes, as a specification with a shared state (#isaconst("rel_order_spec"))
+changes, as a specification with an analysis global (#isaconst("rel_order_spec"))
 and as the local order analysis the analyzer runs
 (#isathm("order_spec_sound"), @sec:relational). Analyses that exchange facts
 through queries are verified separately as well: each proves its operations
@@ -63,7 +63,7 @@ as a relation (#isaconst("call_context_rel_of_fun")) and satisfies totality
 directly, so the generality adds no cost for call strings.
 
 Keeping program globals in the flow-sensitive local state lets the analysis
-soundness contract name a single global and leaves the global unknowns with entry seeds only. Every unknown then carries every global. The flow-insensitive
+soundness contract name a single global and leaves the global unknowns to the activation seeds. Every unknown then carries every global. The flow-insensitive
 placement, which Seidl et al. present as a choice for efficiency @seidl26,
 loses precision on the `set`/`get` program (@sec:mixed-flow). We measured
 neither placement's cost, so the choice is based on proof effort and precision.
@@ -81,12 +81,10 @@ Exporting one dispatcher makes the constant the theorem mentions the one the
 tools run, so no entry point needs an agreement lemma (@sec:codegen). On the
 other hand, a configuration reaches users only through the assembly behind
 #isaconst("run_voblint"). Since the analyzer runs every configuration as a
-combination of components, a new analysis becomes selectable once it proves its
-component obligation (@sec:coop-catalogue) and is entered in the analysis
-manifest. The entry names the domain, its value type, its constant prefix and
-its theories, and the registrations and the combined state are generated from
-it. The command-line interface's name tables and display key are still edited
-by hand. An analysis that needs globals of its own is not selectable
+combination of components, a new analysis becomes selectable once it proves the
+laws of its local specification (@sec:coop-catalogue) and is entered in the
+analysis manifest, from which its registration and its field of the combined
+state are generated (@ch:tooling). An analysis that needs globals of its own is not selectable
 (@sec:coop-limits). @sec:outlook-agents returns to this division as a basis
 for development with AI agents.
 
@@ -122,7 +120,7 @@ rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
 boundary unless verified.
 
-*For a verified analyzer.* The development suggests an order of work. State
+*Lessons for verified analyzers.* The development suggests an order of work. State
 soundness against a context-free trace semantics and read contexts off traces,
 so that policies are proved against one fixed semantics. Consume the solver
 through a certificate that also bounds side contributions and closes the
@@ -151,8 +149,8 @@ arises. @sec:eval-threats collects the threats to the evaluation.
   generator (@tab:oracles-audit).
 + *Running time.* The executable keeps the data representations of the
   proofs: finite sets and maps are lists, and the solver's value table is a
-  function. Its cost grows faster than linearly, cubically in the length of a
-  straight-line program through compilation. No benchmark exists, and the data
+  function. On one chain of assignments, the measured running time grew
+  roughly cubically with its length. No benchmark exists, and the data
   refinement to red-black trees that would remove these costs is not done
   (@sec:eval-absent).
 + *Analysis globals.* The analysis soundness contract admits a single global

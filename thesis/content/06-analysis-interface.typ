@@ -4,9 +4,7 @@
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": definition, theorem
 #import "../lib/sources.typ": proved, thy
-#import "../lib/figures.typ": (
-  call-edge, dep-edge, entry-node, global-unk, intra-edge, ppoint, side-edge, subfigures, unk,
-)
+#import "../lib/figures.typ": call-edge, entry-node, intra-edge, ppoint
 
 = What an Analysis Supplies <ch:analysis-interface>
 
@@ -32,9 +30,8 @@ cannot be handled as an ordinary edge transfer: after it returns, the caller's
 own variables are the ones from before the call, and only the globals and the
 result come from the callee, so the return must see both sides (@sec:calls).
 
-
 The plug-in follows Goblint's analysis specification, with one method for each
-operation of the record in @fig:dg-spec. The correspondence is one of structure only.
+operation (@sec:spec-record). The correspondence is one of structure only.
 What each operation means comes from the VIMP and CFG semantics of
 @ch:program-model, and Goblint's OCaml code plays no part in it. @ch:equations
 turns the plug-in's guarantees into the five obligations of @ch:traces.
@@ -57,12 +54,10 @@ transfer is sound if it loses no successor: every $s in conc_(D)(d)$ and every
 $s' in$ #isai("edge_step a s") satisfy $s' in conc_(D)(sh(f)_a (d))$. For a
 transfer that uses only the local value, this is the obligation
 #oblig("INTRA") of @ch:traces, stated for one edge. A transfer that also reads
-and publishes analysis globals, introduced below, owes the same with the value
-of the analysis global added on both sides (@sec:sound-core). The kinds of
-action give an analysis seven edge transfers, named after the methods of
-Goblint's `Spec` with the same role: skip, assign, special, branch, body,
-return and event. They become the first fields of the record #isatype("dg_spec")
-(@sec:sound-core).
+and publishes analysis globals, introduced below, owes the same with their
+values added on both sides (@sec:sound-core). The kinds of action give an
+analysis seven edge transfers, named after the methods of Goblint's `Spec`
+with the same role: skip, assign, special, branch, body, return and event.
 
 === Analysis globals <sec:analysis-globals>
 
@@ -73,34 +68,34 @@ context, a set of _analysis globals_ with a domain $D_G$ of their values,
 transfer functions for the basic statements, and `enter` and `combine` for
 calls. An analysis global is an unknown of its own, without a program point.
 If the range of a global variable `g` is analyzed flow-insensitively, an
-assignment to `g` contributes its value to the unknown of `g` as a side effect
+assignment to `g` publishes its value to the unknown of `g` as a side effect
 (@sec:side-effects), and an edge that reads `g` depends on that unknown.
 Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168",
 )[`Spec`]
 accordingly declares a local
-lattice `D` and a global lattice `G`. The word _global_ thus has two meanings. A _program global_ is a variable of
-the VIMP program, like a global variable in C. An analysis global is an unknown
-of the solver without a program point. The two are independent: an analysis
-may track a program global flow-sensitively in its local value, and an analysis
-global need not stand for any program variable. The numeric analyses of this
-thesis track program globals in the local value, as Goblint's base analysis
-does for single-threaded programs, and need no analysis global.
+lattice `D` and a global lattice `G`. The word _global_ thus has two meanings.
+A _program global_ is a variable of the VIMP program, like a global variable in
+C. An analysis global is a fact the analysis keeps flow-insensitively. The two
+are independent: an analysis may track a program global flow-sensitively in its
+local value, and an analysis global need not stand for any program variable.
+The numeric analyses of this thesis keep program globals in the local value and
+need no analysis global (@sec:mixed-flow).
 
 === Side-effecting transfers and the manager <sec:manager>
 
 A transfer of a mixed flow-sensitive analysis still returns the next local
-value, but it may also read analysis globals and contribute new values to them:
+value, but it may also read analysis globals and publish new values to them:
 it is _side-effecting_. In Goblint, a transfer does this through a
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L142")[_manager_]: an argument that gives it the current local value
-and operations to read an analysis global and to contribute to one, among
-others. For example, `man.sideg g d` contributes `d` to the analysis global
-`g`, and the framework collects such contributions and passes them to the
-solver @seidl26[§6]. Voblint adopts this design with the manager's local value,
-reads, contributions and queries. Its transfer receives a manager instead of a
-local value, and returns a program that computes the next local value and may
-read and contribute to analysis globals on the way:
+and operations to read an analysis global and to publish to one, among
+others. For example, `man.sideg g d` publishes `d` to the analysis global
+`g`, and the framework passes such publications to the solver @seidl26[§6].
+Voblint adopts this design with the manager's local value, reads, publications
+and queries. Its transfer receives a manager instead of a local value, and
+returns a program that computes the next local value and may read and publish
+analysis globals on the way:
 #{
   show raw.where(block: true): set text(size: 6.5pt)
   thy("man_transfer")
@@ -110,100 +105,49 @@ The manager is a record of type #isatype("man"):
   show raw.where(block: true): set text(size: 6.5pt)
   thy("man")
 }
-Here `'dl` and `'dg` are the local and the global lattice, $D_L$ and $D_G$, `'v` names the
-analysis globals, and `'x` and `'k` name the solver's local and global unknowns. #isaconst("man_local") is the current local value. The program is a
-#isatype("strategy_program"), which compiles to a strategy tree
-(@sec:side-effects). The record fixes only the types of the fields. The
-framework hands every transfer the manager #isaconst("mk_dg_man") builds, in
-which #isaconst("man_global") $v$ reads the global $v$ and compiles to a
-#ctor("QueryG"), #isaconst("man_sideg") $v$ $g$ publishes $g$ to it and
-compiles to a #ctor("Side"), and #isaconst("man_ask") poses a query to
-the other analyses, which answer it through their query handlers (@ch:cooperation). The manager thus separates what an analysis asks for from how the solver tracks it.
+Here `'dl` and `'dg` are the local and the global lattice, $D_L$ and $D_G$, `'v`
+names the analysis globals, and `'x` and `'k` name the solver's local and
+global unknowns. #isaconst("man_local") is the current local value. A
+#isatype("strategy_program") is a strategy tree (@sec:side-effects) written in
+continuation-passing style: it receives the rest of the computation, its
+_continuation_, and hands it its result, so programs compose in sequence.
+Applied to the continuation that just answers, it yields the strategy tree the
+solver runs. Every unknown holds a #isatype("dg_state"), a pair of a local and
+a global value (@sec:global-unknowns).
+
+The record fixes only the types of the fields. The framework hands every
+transfer the manager #isaconst("mk_dg_man") builds, in which
+#isaconst("man_global") $v$ reads the global $v$ and compiles to a
+#ctor("QueryG"), and #isaconst("man_sideg") $v$ $g$ publishes $g$ to it and
+compiles to a #ctor("Side"). Its #isaconst("man_ask") answers every query with
+$ltop$, and the framework installs the analysis's own query handler over it
+(@ch:cooperation). The manager thus separates what an analysis asks for from
+how the solver tracks it.
 
 Dependencies therefore follow what a transfer actually does. The right-hand
-side of an edge depends on an analysis global only if its transfer reads it, so
-when a write enlarges the global, the solver re-evaluates exactly those
-right-hand sides (@fig:shared-deps, @sec:eq-seed). A transfer that neither
-reads nor contributes to an analysis global compiles to an equation that reads
-only the value at the edge's source and publishes nothing
-(#isathm("sp_compile_transfer_program_local_transfer")). The numeric analyses
-are of this kind, so for them the manager changes nothing about the equations.
-
-// A straight-line procedure over two flow-insensitive globals g and h: which
-// right-hand sides read (grey) and publish to (double tip) the global unknowns,
-// and which nodes the solver re-evaluates when g = g + 1 publishes (orange).
-// (a) Voblint keeps all analysis globals in one global unknown; (b) one global
-// unknown per global, as Goblint does.
-#let _deps(split) = {
-  set text(size: 8pt)
-  let hot = if split { (2,) } else { (2, 3) }
-  let pt(i) = if i in hot {
-    unk((0, i), $u_#i$, state: "unstable", name: label("u" + str(i)))
-  } else { ppoint((0, i), $u_#i$, name: label("u" + str(i))) }
-  let edges = (
-    intra-edge(<u0>, <u1>, label: "x = x + 1", label-side: right),
-    intra-edge(<u1>, <u2>, label: "g = g + 1", label-side: right),
-    intra-edge(<u2>, <u3>, label: "y = h", label-side: right),
-  )
-  if split {
-    diagram(
-      spacing: (10mm, 9mm),
-      ..range(4).map(pt),
-      global-unk((1.5, 1.6), $kappa_g$, name: <kg>),
-      global-unk((1.5, 3), $kappa_h$, name: <kh>),
-      ..edges,
-      dep-edge(<kg>, <u2>, bend: 18deg),
-      side-edge(<u2>, <kg>, bend: 18deg),
-      dep-edge(<kh>, <u3>, bend: 18deg),
-    )
-  } else {
-    diagram(
-      spacing: (10mm, 9mm),
-      ..range(4).map(pt),
-      global-unk((1.5, 2), $kappa$, name: <k>),
-      ..range(4).map(i => node((-0.75, i), text(fill: vb.muted, $(d_#i, bot)$))),
-      node((2.1, 2), text(fill: vb.muted, $(bot, v)$)),
-      ..edges,
-      dep-edge(<k>, <u2>, bend: 18deg),
-      side-edge(<u2>, <k>, bend: 18deg),
-      dep-edge(<k>, <u3>, bend: 18deg),
-    )
-  }
-}
-
-#subfigures(
-  figure(_deps(false), caption: [one global unknown $kappa$ for `g` and `h`]),
-  <fig:shared-deps-one>,
-  figure(_deps(true), caption: [one global unknown per global]),
-  <fig:shared-deps-per>,
-  columns: (1.2fr, 1fr),
-  placement: auto,
-  caption: [The right-hand sides that depend on the global unknowns of two
-    flow-insensitive globals `g` and `h` (schematic). Grey arrows are reads
-    (#ctor("QueryG")), purple double-tipped arrows side effects (#ctor("Side")),
-    and orange nodes are re-evaluated when `g = g + 1` enlarges the value of
-    `g`; $u_1$, after `x = x + 1`, depends on no global. Voblint keeps all
-    analysis globals in one global unknown (a), so the write to `g` also
-    re-evaluates $u_3$, which reads only `h`. With one global unknown per global
-    (b), as in Goblint, it does not. In (a) each unknown holds a #isatype("dg_state") (grey).],
-  label: <fig:shared-deps>,
-)
+side of an edge depends on an analysis global only if its transfer reads it.
+When a write enlarges the global, the solver re-evaluates the right-hand sides
+that read it, and from there whatever depends on their values (@sec:td). A
+transfer built with #isaconst("local_transfer") from a function on local values
+compiles to an equation that reads only the value at the edge's source and
+publishes nothing (#isathm("sp_compile_transfer_program_local_transfer")). The
+numeric analyses are built this way, so for them the manager changes nothing
+about the equations.
 
 === Global unknowns in the solver <sec:global-unknowns>
 
-In the solver, an analysis global is a _global unknown_: an unknown without a right-hand side, which only receives side contributions (@sec:side-effects).
-Analysis globals are not the only global unknowns. The framework adds its own, as
+In the solver, an analysis global is a global unknown (@sec:td). Analysis
+globals are not the only global unknowns. The framework adds its own, as
 Goblint's does with #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L55")[one global unknown per function] for the contexts it
 is called in. The global unknowns of Voblint are named by the datatype
 #isatype("global_unknown"): #isaconst("Analysis_Global") wraps the name of an
-analysis global, and #isaconst("Activation_Seed") is a callee-entry seed. A
-seed carries a local value and stands in for Goblint's side effect into the
-callee's entry unknown, since the vendored solver allows side effects only to global unknowns (@sec:eq-seed).
+analysis global, and #isaconst("Activation_Seed") is an _activation seed_,
+which carries the value a callee starts from in one context (@sec:eq-seed).
 
 The vendored solver requires all unknowns to share one value type, whereas
 local unknowns and analysis globals range over different domains. Every unknown
 therefore holds a pair #isatype("dg_state") of a local and a global component,
-#isaconst("dg_local") and #isaconst("dg_global") (@fig:shared-deps). A local unknown
+#isaconst("dg_local") and #isaconst("dg_global"). A local unknown
 or a seed uses the local half, an analysis global the global half, and the
 unused half is $lbot$. Transfers never see the pair: #isaconst("man_local") and
 #isaconst("man_global") hand them the half they need. Goblint's solvers also
@@ -224,16 +168,26 @@ At a call, an analysis supplies two operations, as Goblint's `Spec` does:
 _entry_, which gives the abstract value the callee starts from, and _return_,
 which gives the caller's value after the call. The solver analyzes the callee
 in between. The concrete semantics of @ch:program-model fixes what the two
-must approximate: #isaconst("call_enter") keeps the globals and binds the
-formals, and #isaconst("combine_collect") gives the caller its own locals, the
-callee's globals and the result (#oblig("RETURN")). @fig:return-stores shows
-the stores of one call:
+must approximate: #isaconst("call_enter") keeps the globals, resets the
+callee's locals to $0$ and binds the formals, and #isaconst("combine_collect")
+gives the caller its own locals, the callee's globals and the result
+(#oblig("RETURN")). Take one call:
 
 #listing(lang: "c", ```
 global g;
 fun inc(a) { g = g + a; return a - 1; }
 fun main() { g = 1; x = 5; y = inc(x); }
 ```)
+
+Entry describes the two stores that exist at the call `y = inc(x)`, each by an
+abstract value, an element of the local domain $D_L$. The _entry value_ $e$
+describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
+value_ $q$ describes the caller's store (`x = 5`, `g = 1`), which the return
+later combines with the callee's exit (the theories call $q$ the
+continuation). Usually $q$ is the caller's own abstract value at the call, but
+an analysis may weaken it there, for example by forgetting facts the callee
+may invalidate. @fig:return-stores shows both values and what the return makes
+of them.
 
 // The call `y = inc(x)` on the control-flow graph, as the playground draws it,
 // with the store at each of the four nodes around the call. The continuation
@@ -291,16 +245,6 @@ starting from the local value the first stage produced. Only their composition
 carries an obligation, so a specification may do the whole return in either
 stage.
 
-Entry describes the two stores of @fig:return-stores that exist at the call,
-each by an abstract value, an element of the local domain $D_L$. The _entry
-value_ $e$ describes the store the callee starts with (in the figure `g = 1`,
-`a = 5`). The _resume value_ $q$ describes the caller's store $s$, which the
-return later combines with the callee's exit (the theories call $q$ the
-continuation). Usually $q$ is the caller's own abstract
-value at the call, but an analysis may weaken it there, for example by
-forgetting facts the callee may invalidate.
-
-
 The callee is analyzed from $e$, and its result is combined with $q$. Entry
 must describe both stores: its resume value must cover the caller's store and
 its entry value the entered store (#isaconst("entry_pairs_cover")). The
@@ -308,16 +252,16 @@ formalization, like Goblint's `enter`, lets entry answer a list of such pairs,
 each analyzed in a context of its own; every analysis in this thesis answers
 one, and we describe that case.
 
-== The analysis soundness contract <sec:sound-core>
-
-=== The specification record <sec:spec-record>
+== The specification record <sec:spec-record>
 
 An analysis bundles its operations into one record, #isatype("dg_spec"),
 with one field per operation (@fig:dg-spec). The seven edge transfers of
-@sec:dg have type #isatype("man_transfer"). The entry of @sec:calls answers the pair $(q, e)$, and the two return stages also receive the callee's exit value.
-The query handler is the subject of @ch:cooperation. Every field has the role of
-the Goblint method it is named after, except the event transfer: Goblint
-handles its check function in `special`.
+@sec:dg have type #isatype("man_transfer"). The entry of @sec:calls answers the
+pair $(q, e)$, and the two return stages also receive the callee's exit value.
+The query handler is the subject of @ch:cooperation. Every field has the role
+of the Goblint method it is named after. A check `__voblint_check(c)` becomes
+an edge whose action is an event (#isatype("analysis_event")), so the event
+transfer sees it; Goblint handles `__goblint_check` in `special` instead.
 
 #figure(
   {
@@ -327,15 +271,18 @@ handles its check function in `special`.
   kind: image,
   placement: none,
   caption: [The declaration of #isatype("dg_spec"), lifted from the theory.
-    Each field carries, marked $sharp$, the name of the method of Goblint's
-    `Spec` with the same role.],
+    Every field except the query handler carries, marked $sharp$, the name of
+    the method of Goblint's `Spec` with the same role. A #isatype("call_info")
+    names the callee, its formals, the arguments and the destination of a call.
+    Entry, return stages and query handler have their own transfer types over
+    the same manager.],
 ) <fig:dg-spec>
 
-=== The contract <sec:contract-locale>
+== The analysis soundness contract <sec:sound-core>
 
 @ch:equations proves the obligations of @ch:traces once, for every analysis.
-What it needs from an analysis is collected in one locale, the _analysis
-soundness contract_ #isalocale("analysis_contract"). The contract speaks only
+Most of what it needs from an analysis is collected in one locale, the
+_analysis soundness contract_ #isalocale("analysis_contract"). The contract speaks only
 about the analysis's own objects: its record of operations, and a
 concretization $conc_(D G)(d, g)$ that says which stores a local value $d$
 describes, given the value $g$ of the analysis global. It mentions no context
@@ -345,9 +292,9 @@ and no solver. It asks for four things:
   monotone in both arguments. This turns the solver's inequalities between
   values into inclusions between sets of stores, as $conc$ does for a domain
   (@ch:domains).
-+ _Well-formed programs._ Every transfer runs its continuation exactly once
-  (#isaconst("dg_spec_wf")), so what a compiled transfer publishes is well
-  defined.
++ _Well-formed programs._ Every transfer hands its result to its continuation
+  exactly once (#isaconst("dg_spec_wf")), so what a compiled transfer
+  publishes is well defined.
 + _Sound edges_ (#oblig("INTRA")). Take a store before an edge that the
   source's value covers, together with the current value of the analysis
   global. Every store the edge can produce must be covered by the value the
@@ -359,64 +306,44 @@ and no solver. It asks for four things:
   resume value for the solver to bound.
 
 A transfer is thus judged by what its compiled program answers and publishes,
-however its reads and publications are arranged. A program that loses a
-store, answers too little or publishes too little cannot discharge the
-contract, and no soundness theorem exists for its analysis. For one that does,
-the solver's certificate bounds each analysis global by every contribution to
-it (@sec:certificate), and the solved values inherit the coverage.
+however its reads and publications are arranged. The solver's certificate
+bounds each analysis global by every publication to it (@sec:certificate), and
+the solved values inherit the coverage.
 
 The contract covers #oblig("INTRA") and #oblig("RETURN"), the two obligations
-of @ch:traces that involve no context; @ch:equations derives the other three.
-#oblig("CALL"), that the callee's entry covers the entered store in the
-context the call is routed to, combines the analysis's entry coverage
-(@sec:calls) with the routing policy. #oblig("TOTAL"), that every covered call
-reaches some context, comes from the policy alone, and #oblig("INIT") from the
-initial state (#isathm("dg_analysis.init_sound")).
+of @ch:traces that involve no context. @ch:equations derives the other three
+from further premises. #oblig("CALL"), that the callee's entry covers the
+entered store in the context the call is routed to, combines the analysis's
+entry coverage (@sec:calls), a premise outside the locale, with the routing
+policy. #oblig("TOTAL"), that every covered call reaches some context, comes
+from the policy alone. #oblig("INIT") needs the initial abstract state to
+cover the initial stores, an assumption the analysis's registration discharges
+(#isathm("dg_analysis.init_sound")).
 
-The analysis global has a single slot. The locale fixes the type of
-analysis-global names to `unit`, so an analysis has exactly one global unknown,
-and $conc_(D G)(d, g)$ takes one value $g$. Several names would need a
-concretization over an environment that maps each name to its value; the
-single slot keeps the contract about two values. When an analysis tracks two
-program globals `g` and `h` flow-insensitively, the slot holds one abstract
-store for both. Their values stay apart, since joins and widening act on each
-entry, but the solver sees one unknown (@fig:shared-deps-one). A write to `g`
-therefore re-evaluates a node that reads only `h`. The update rule also decides
-between widening and narrowing for the whole store (@sec:update-rules): while
-`g` still grows, the store is widened, and `h` cannot be narrowed until `g` has
-stabilized. Goblint gives each name its own global unknown (@fig:shared-deps-per). None of this affects the shipped analyses, which
-keep program globals flow-sensitively in the local value and need no analysis
-global; the slot matters for the flow-insensitive globals of @sec:mixed-flow
-and the relational witness.
-
-The contract asks the carriers only for a
-bounded join semilattice and $conc_(D G)$ only for monotonicity; it never
-requires a map from variables to abstract values. For this reason the
-relational carrier of @sec:relational (#isaconst("rel_order_spec")) satisfies
-the same contract without a change to the framework.
+The locale fixes the type of analysis-global names to `unit`, so an analysis
+has exactly one global unknown, and $conc_(D G)(d, g)$ takes one value $g$.
+@sec:mixed-flow shows what this single slot costs when several program globals
+share it. Otherwise the contract asks the carriers only for a join semilattice
+with a least element and $conc_(D G)$ only for monotonicity. It never requires
+a map from variables to abstract values, so the order analysis with an
+analysis global, #isaconst("rel_order_spec"), meets it over the relational
+carrier of @sec:relational without a change to the framework.
 
 === Local specifications <sec:whole-state>
 
 Most analyses use no analysis global. For them the framework offers a simpler
-interface, the _local specification_ #isatype("local_spec"): the same
-operations as #isatype("dg_spec"), each a pure function of local values, with
-the soundness laws stated directly over stores
+interface, the _local specification_ #isatype("local_spec"), whose operations
+work on local values and on the answers of other analyses (@ch:cooperation),
+with soundness laws stated directly over stores
 (#isaconst("sound_local_spec")). #isaconst("dg_spec_of") turns a local
 specification into a #isatype("dg_spec") that never touches the analysis
-global, and by #isathm("dg_spec_of_contract") a sound local specification then
-meets the contract. The analyzer runs local specifications only
-(@ch:executable).
-
-A numeric domain gets its local specification from a builder,
-#isaconst("local_state_dg_spec_for"), which takes the seven edge operations and
-the entry. The caller resumes from its unchanged value. That is sound although
-the value may describe stale globals, because the return takes every global
-from the callee's exit. Soundness then reduces to one rule per operation, the
-eight assumptions of the locale #isalocale("sound_nonrelational_transfer"). The
-executed analyses run the local specification #isaconst("exec_spec") over the
-executable carrier of @ch:solving. It is proved sound from the same rules
-(#isathm("dg_domain_exec.exec_spec_sound")) and runs as one field of the
-combined state of @ch:cooperation. @fig:contract-routes shows these routes.
+global, and a sound local specification meets the contract
+(#isathm("dg_spec_of_contract")). The analyzer runs local specifications only
+(@ch:executable). @fig:contract-routes shows how the analyses of this thesis
+reach the contract. A numeric domain certifies its primitive operations once,
+which yields one rule per operation (#isalocale("sound_nonrelational_transfer"))
+and makes its executed local specification #isaconst("exec_spec") sound
+(#isathm("dg_domain_exec.exec_spec_sound")).
 
 #let _cbox(pos, name, body) = node(
   pos,
