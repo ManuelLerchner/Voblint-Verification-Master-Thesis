@@ -436,7 +436,7 @@
     "numeric-queries",
     "comparison queries",
     _dom,
-    isa: isalocale("abstract_numeric_queries"),
+    isa: isalocale("sound_numeric_queries"),
     see: <ch:domains>,
   )[
     Three-valued comparisons of abstract operands. A definite answer holds for

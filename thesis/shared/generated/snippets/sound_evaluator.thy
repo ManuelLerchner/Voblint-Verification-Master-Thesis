@@ -1,4 +1,4 @@
-(* src/Abstract_Interpreter/Domain/Forward_Domain.thy *)
+(* src/Abstract_Interpreter/Domain/Eval/Forward_Domain.thy *)
 locale sound_evaluator =
   fixes \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain"
