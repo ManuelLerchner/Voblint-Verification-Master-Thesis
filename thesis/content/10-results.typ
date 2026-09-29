@@ -29,8 +29,8 @@
 @sec:headline states one theorem about the answers of the exported analyzer
 #isaconst("run_voblint"), from source executions to verdicts. Chaining the preceding results does not yet give it. Equation
 soundness bounds only the unknowns the solver certified, and the certificate
-is closed backward from the query, while an execution moves forward into unknowns the query need not depend on (@sec:live-keys). The client reads a table and a
-verdict per check, not a solver valuation per context (@sec:table). A verdict
+is closed backward from the query, while an execution moves forward into unknowns the query need not depend on. The client reads a table and a
+verdict per check, not a solver valuation per context (@sec:live-keys). A verdict
 also needs a precise meaning: a check that no execution reaches makes every
 condition true there (@sec:verdicts).
 
@@ -80,25 +80,17 @@ component of @ch:cooperation, and a single analysis is the list of length one.
 
 Four features of the statement are forced. The node is existential because a
 source configuration does not determine its CFG node (@ch:traces), the context
-because a store is covered in some context only (@sec:table), and coverage of
-the solved unknowns is absent because @sec:live-keys derives it. Termination is a
+because a store is covered in some context only, and coverage of
+the solved unknowns is absent because it is derived (@sec:live-keys). Termination is a
 premise of its own, separate from the answer, because #isaconst("run_voblint")
 is a total HOL function that denotes an unspecified answer where the solve does
 not terminate (@sec:termination).
 
-Termination is the one premise not discharged in general, so the theorem is a
-partial-correctness result. The premise concerns the abstract solve. The
-analyzed program need not terminate, since its finite prefixes are covered
-(@tab:headline).
-@sec:termination shows configurations under which the solve diverges
-and explains why no vendored termination theorem applies.
-#isathm("certificate_demo_config_terminates") discharges the premise by
-evaluation, trusting the code generator, for one program at one configuration:
-the Int product, the join rule and call strings of length one.
-#isathm("certificate_demo_source_certified") then instantiates the theorem
-with every premise discharged. A solve that
-does not finish gives no answer from the delivered tool, and the theorem makes
-no claim about it.
+Termination of the abstract solve is the one premise not discharged in
+general, so the theorem is a partial-correctness result, and the analyzed
+program need not terminate (@sec:termination).
+#isathm("certificate_demo_source_certified") instantiates the theorem with
+every premise discharged, by evaluation, for one program and configuration.
 
 The theorem is about the HOL constant #isaconst("run_voblint"). The delivered
 tool also relies on the parser, Isabelle's code generator, the OCaml toolchain
@@ -220,7 +212,7 @@ solver's valuation, given the certificate of @ch:solving. Two steps remain:
 coverage of every unknown an execution visits, and the passage from the solver's
 valuation to the table a client reads.
 
-== From certified unknowns to executions <sec:live-keys>
+== From certified unknowns to the published table <sec:live-keys>
 
 Equation soundness bounds only the unknowns in the certified set $V$. A
 concrete execution may visit any node in any admitted context, so the proof
@@ -249,8 +241,6 @@ the call enters with a store that this state describes, so the state is not
 #ctor("Bot") in the cases the proof needs. #isathm("live_unknowns_cover")
 derives the forward closure from well-formedness and termination alone, so
 coverage is not a premise of the final theorem.
-
-== Reading the published table <sec:table>
 
 The solver returns a valuation over its unknowns, but the client reads a table
 indexed by node and context through #isaconst("lookup_context"). The theorem
@@ -283,7 +273,7 @@ a definite answer holds in every store the state describes
 unknown, so the classification never yields `DEAD`.
 
 The per-context verdicts are joined in the flat order in which unknown is the
-top. The join follows from the existential context of @sec:table: the theorem
+top. The join follows from the existential context of @sec:live-keys: the theorem
 does not say which context covers a store, so the node verdict may claim only
 what every contributing context claims, and a proved and a refuted context
 give unknown. A context whose state is #ctor("Bot") denotes no store and
@@ -432,8 +422,7 @@ could not exclude a zero divisor.
 The theorem of @sec:headline is the end-to-end soundness result. Each of its conclusions
 rests on one step of this chapter: collection at a simulating node on the
 compiler simulation and the trace construction (@sec:chain), coverage by the
-published table on the live unknowns and the readback (@sec:live-keys,
-@sec:table), and the verdict conclusions on the join over contexts
+published table on the live unknowns and the readback (@sec:live-keys), and the verdict conclusions on the join over contexts
 (@sec:verdicts). Well-formedness and the closure of the certified unknowns are
 derived. Termination of the abstract solve stays a per-program premise, so the
 result is partial correctness, and the delivered tool adds the trusted

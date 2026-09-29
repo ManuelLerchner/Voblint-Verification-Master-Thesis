@@ -4,89 +4,49 @@
 
 == Answers to the questions
 
-*Can soundness be machine-checked end to end?* Yes, for a scalar language with recursive procedures and under a
-per-program termination premise. Fix a list of activated analyses, a global
-update rule and a context policy. If the solve terminates on an accepted program and
-#isaconst("run_voblint") returns a result, then every store that a finite source
-execution reaches from a store whose declared globals are zero is collected at
-a graph node that simulates the source configuration, the returned result
-covers it there, and every definite verdict listed at that node holds for it
-(#isathm("run_voblint_certified_source_sound"), @sec:headline). The theorem is
-about the function exported to the command-line and browser analyzers. The
-premises that remain are an initial store, an answer of the analyzer and
-termination of the abstract solve. Termination of the analyzed program is not
-required. The delivered artifacts additionally trust the parser, code
-generator, compilers, runtimes and presentation code (@sec:trust-boundary).
+*Can soundness be machine-checked end to end?* Yes, as partial correctness for
+a scalar language with recursive procedures. For every configuration the
+analyzer offers, if the solve terminates and #isaconst("run_voblint") returns a
+result, then every store that a finite source execution reaches from a store
+whose declared globals are zero is covered by the result at a graph node that
+simulates the source configuration, and every definite verdict listed there
+holds for it (#isathm("run_voblint_certified_source_sound"), @sec:headline).
+Termination of the solve is a per-program premise, and termination of the
+analyzed program is not required. The delivered tools additionally trust the
+parser, code generator, compilers, runtimes and presentation code
+(@sec:trust-boundary).
 
-*What does a calling context denote?* A calling context is a property of an activation-local trace, read off
-how the activation was entered (@sec:contexts). Under entry-state routing, the relation reads the context off the analysis's result. When every covered call admits some callee context (totality,
-#isaconst("call_context_total_on")), the context buckets jointly equal the context-free trace collection
-(#isathm("ltr_collect_eq_Union_activation_collect")).
+*What does a calling context denote?* A property of an activation-local trace,
+read off how the activation was entered (@sec:contexts). When every covered
+call admits some callee context (#isaconst("call_context_total_on")), the
+context buckets jointly equal the context-free trace collection
+(#isathm("ltr_collect_eq_Union_activation_collect"), @sec:eval-rq2).
 
-*Can the ingredients be verified separately?* Yes. A non-relational domain
-proves certificates about its primitive operations
-(#isatype("nonrelational_ops")) without contexts or solver, and
-#isalocale("sound_nonrelational_ops") derives its transfer, branch, entry and
-check classifier, with their executable counterparts, and proves them sound
-once. A context policy proves its obligations without a domain, and the solver
-enters only through #isaconst("part_post_solution"). The routed locale
-discharges the coverage contract once for all policies and domains
-(#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
-source-level theorem covers every configuration #isaconst("run_voblint")
-offers. A relational carrier meets the same contract without framework
-changes, as a specification with an analysis global (#isaconst("rel_order_spec"))
-and as the local order analysis the analyzer runs
-(#isathm("order_spec_sound"), @sec:relational). Analyses that exchange facts
-through queries are verified separately as well: each proves its operations
-against every sound query channel, and any list of independent analyses
-combines into one that meets the analysis soundness contract
-(#isathm("mcp_combine_sound"), @ch:cooperation).
+*Can the ingredients be verified separately?* Yes. Domains, context policies
+and the solver prove their obligations without each other, and one theorem
+discharges the coverage contract for all policies and domains
+(#isathm("activation_collect_dg_sound"), @sec:eval-rq3). Cooperating analyses
+each prove obligations that name no partner (#isathm("mcp_combine_sound")).
 
-*Is the theorem informative?* Partly. Counterexample theorems show that reading a callee's result in the caller's own context (#isathm("return_at_caller_context_unsound")) admits unsound claims, that a claim meeting every obligation except #oblig("TOTAL")
-misses a store of the context-indexed collection
-(#isathm("total_dropped_unsound")), and that Goblint's congruence remainder
-before #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] violates the domain obligation (#isathm("prefix_congruence_mod_unsound")).
-Evaluation inside Isabelle, trusting the code generator, discharges every
-premise of the main theorem for named programs, which then yields `PROVED`
-verdicts (#isathm("nv_source_certified"),
-#isathm("certificate_demo_full_certificate")), and a strict precision
-separation between call strings of length 1 and 2 holds on one program
-(#isathm("sign_k2_strictly_more_precise_than_k1_at_g")). @sec:eval-rq4
-collects this evidence.
+*Is the theorem informative?* Partly. Counterexample theorems show that
+dropping selected obligations admits unsound claims, evaluation discharges
+every premise of the main theorem for named programs, and one strict precision
+separation between call strings holds on one program. No general precision
+result is proved (@sec:eval-rq4).
 
 == Discussion <sec:discussion>
 
-*Design trade-offs.* Relational context admission lets the context of a call depend on the analysis's result, as entry-state routing needs (@sec:contexts). A function always yields a context, while a relation may yield none. The contract
-therefore needs #oblig("TOTAL"), and under entry-state routing it must be
-discharged against the computed result (@sec:contexts). A functional policy embeds
-as a relation (#isaconst("call_context_rel_of_fun")) and satisfies totality
-directly, so the generality adds no cost for call strings.
-
-Keeping program globals in the flow-sensitive local state lets the analysis
-soundness contract name a single global and leaves the global unknowns to the activation seeds. Every unknown then carries every global. The flow-insensitive
-placement, which Seidl et al. present as a choice for efficiency @seidl26,
-loses precision on the `set`/`get` program (@sec:mixed-flow). We measured
-neither placement's cost, so the choice is based on proof effort and precision.
-
-Consuming the solver only through #isaconst("part_post_solution") lets one
-proof cover four update rules (@sec:update-rules), and a solver meeting the
-same certificate could replace the vendored one. The certificate says nothing
-about termination or about which post-solution the solver returns. Termination
-therefore stays a premise, and each precision statement concerns one evaluated
-result (@sec:eval-rq4). Widening goes above the least solution by design
-(@sec:certificate), so we expect any stronger characterization of the result
-to depend on the solver's iteration strategy and to tie the proof to it.
-
-Exporting one dispatcher makes the constant the theorem mentions the one the
-tools run, so no entry point needs an agreement lemma (@sec:codegen). On the
-other hand, a configuration reaches users only through the assembly behind
-#isaconst("run_voblint"). Since the analyzer runs every configuration as a
-combination of components, a new analysis becomes selectable once it proves the
-laws of its local specification (@sec:coop-catalogue) and is entered in the
-analysis manifest, from which its registration and its field of the combined
-state are generated (@ch:tooling). An analysis that needs globals of its own is not selectable
-(@sec:coop-limits). @sec:outlook-agents returns to this division as a basis
-for development with AI agents.
+*Design trade-offs.* A context relation lets entry-state routing read contexts
+off the analysis's result, at the price of the obligation #oblig("TOTAL").
+Functional policies embed as relations and satisfy it directly
+(#isaconst("call_context_rel_of_fun")). Keeping program globals in the
+flow-sensitive local state lets the contract name a single global. The
+flow-insensitive placement loses precision on the `set`/`get` program
+(@sec:mixed-flow), and the cost of neither placement was measured. Consuming
+the solver only through #isaconst("part_post_solution") lets one proof cover
+four update rules, but says nothing about termination or about which
+post-solution is returned (@sec:certificate). Exporting one dispatcher makes
+the constant of the theorem the one the tools run (@sec:codegen).
 
 *Generalizability.* Goblint analyzes C after CIL normalization, with pointers,
 a heap, threads, machine integers and further update rules. The certificate is
@@ -128,14 +88,16 @@ reached set (@sec:certificate). Export the constant the theorem is about.
 Counterexample theorems for weakened obligations are easy to state, and two
 of them determined the shape of the call interface (@sec:revealed).
 
-== Limitations
+== Limitations <sec:limitations>
 
 The answers above hold within the following limits, each also stated where it
-arises. @sec:eval-threats collects the threats to the evaluation.
+arises.
 
 + *Partial correctness.* Solver termination is a per-program premise.
   Regression programs exist whose solves do not finish, under entry-state
   contexts on intervals and under the joining update rules (@sec:termination).
+  That the Int product's reduction stops in the executable is not proved
+  either (@sec:reduced-product).
 + *Source language.* VIMP is scalar, without pointers, heap or memory model.
   Its integers are unbounded, division by zero is defined, and a callee's
   locals start at zero, so a verdict about a VIMP program does not transfer
@@ -165,6 +127,11 @@ arises. @sec:eval-threats collects the threats to the evaluation.
 + *Precision.* No general precision, optimality or completeness theorem is
   proved. Each precision witness concerns one program at fixed configurations
   (@sec:eval-rq4).
++ *Evaluation.* The corpus is small and written for this work, and its
+  expected behaviour is the author's reading of each program
+  (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run, and
+  the comparison with prior work rests on a targeted search rather than a
+  systematic review (@ch:related).
 + *Goblint.* The correspondence is architectural (@app:goblint-alignment).
   No theorem transfers to Goblint's OCaml implementation, and no agreement
   rate between the two analyzers is measured (@sec:eval-goblint).
@@ -198,18 +165,12 @@ history abstractions over activation-local traces would allow path- or
 history-sensitive unknowns. Each abstraction would need its own admissibility
 conditions in place of the context clauses of the coverage contract.
 
-*Guarantees.* A termination theorem would remove the per-program premise. The total
-correctness result of #cite(<tilscher26jar>, form: "prose") covers the top-down
-solver without side effects and assumes finitely many unknowns, a precise
-widening and monotonic right-hand sides with monotonic dependencies
-(@sec:rel-solvers). Voblint's systems have side effects, and its unknowns pair
-nodes with contexts. Bounding the contexts does not suffice on its own. For call strings over a compiled program the candidate space is
-finite, but that the solved unknowns stay inside it is a hypothesis of
-#isathm("compiled_call_string_vars_finite"), not a theorem about the routed
-solve. Entry-state contexts over infinite domains need a bound such as the
-context lifters of #cite(<erhard25>, form: "prose"). Even a finite space of unknowns
-admits values that increase forever, because stabilization is not a law of #isalocale("warrowing")
-(@sec:eq-finite, @sec:termination).
+*Guarantees.* A termination theorem would remove the per-program premise. The
+total-correctness result of #cite(<tilscher26jar>, form: "prose") covers the
+top-down solver without side effects and with finitely many unknowns, and even
+finitely many unknowns admit values that increase forever, because
+stabilization is not a law of #isalocale("warrowing") (@sec:termination,
+@sec:eq-finite).
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
@@ -225,10 +186,7 @@ rest of the chain, which sees the solver only through its certificate.
 
 === Voblint and Goblint <sec:outlook-goblint>
 
-Voblint shares Goblint's split into local and global unknowns, its unknowns
-indexed by node and context, and its enter/combine protocol at calls. Only this
-architectural correspondence is established (@app:goblint-alignment). Within
-that limit, Voblint can serve as an executable specification of the
+Within the architectural correspondence of @app:goblint-alignment, Voblint can serve as an executable specification of the
 architecture with proved soundness obligations. From Goblint to Voblint, a
 Goblint feature gives the design that an extension follows, as the query
 mechanism did for @ch:cooperation, and the feature often has an obvious place in the formalization. A
@@ -250,34 +208,17 @@ component's proofs assume VIMP's unbounded ones (@sec:vimp-vs-c).
 
 === Agent-assisted development <sec:outlook-agents>
 
-A new analysis enters Voblint at one of two levels. A non-relational value
-domain proves the certificate #isalocale("sound_nonrelational_ops") for its
-operation bundle, and #isathm("sound_nonrelational_ops.dg_analysis_execI")
-discharges every obligation about the domain. Any other analysis supplies a
-component meeting the obligations of @sec:coop-catalogue. Neither names a
-partner or mentions a context, solver or equation. This division suits
-development with AI agents (see #link(<ai-use>)[the statement on the use of
-  generative AI]), because it fixes the parts of an agent's task that a test
-harness would. The certificate or the catalogue is the specification. The
-batch build and the drift checks of @ch:tooling are the oracle, and a change
-counts as done only when they pass. Counterexample theorems for weakened
-obligations (@sec:falsification, @sec:revealed) act as negative tests of the
-catalogue: each shows on one program that dropping a selected condition admits
-an unsound claim, so the conditions they cover cannot be dropped as
-unnecessary. The order analysis and the query layer of @ch:cooperation were
-written this way: agents read Goblint's MCP for the architecture, and the batch
-build and the checks of @ch:tooling held them to the obligations. This is the
-experience of one author on one extension, not a measured result.
-
-In the long run, an agent asked for an analysis of a given property would have
-to deliver it together with its modular soundness proof against the fixed
-catalogue. Isabelle checks the proof, so the guarantee would not depend on
-trusting the agent. It would still rest on the adequacy of the catalogue and on
-the trusted base of @sec:trust-boundary. The catalogue constrains soundness
-only, so precision would still need fixtures that demand definite verdicts
-(@sec:eval-corpus). Other
-analyzers that separate the abstract domain from a fixpoint engine proved sound
-once against a fixed interface could adopt the same pattern.
+A new analysis enters Voblint through obligations that name no partner,
+context, solver or equation (@sec:coop-catalogue). This suits development with
+AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
+The obligations are the specification, and the batch build and the drift
+checks of @ch:tooling are the oracle. Counterexample theorems for weakened
+obligations (@sec:falsification, @sec:revealed) act as negative tests. The
+order analysis and the query layer of @ch:cooperation were written this way.
+This is the experience of one author on one extension, not a measured result.
+An agent that delivers an analysis with its proof against these obligations
+need not be trusted. The guarantee still rests on the adequacy of the
+obligations and on the trusted base of @sec:trust-boundary.
 
 == Summary
 

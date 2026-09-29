@@ -341,7 +341,7 @@ the four vendored interpretations.
     from no program.],
 ) <fig:update-rules>
 
-== A finite state with two defaults
+== An executable state with two defaults <sec:readback>
 
 The pointwise numeric analyses state soundness over states $"Var" -> A$,
 functions on an infinite set of names whose equality is not executable, while
@@ -369,8 +369,6 @@ is invisible. The start state is $(lbot, lbot, [])$, the initial state
 $(ltop, 0^sharp, [])$, and a published global half $(lbot, d_g,
   italic("ps")_g)$. The type is a quotient that identifies representations with
 equal lookups.
-
-== Computing on one state, proving on the other <sec:readback>
 
 Instead of reproving the transfer soundness of @ch:analysis-interface for the
 carrier, we show that each carrier operation commutes with readback $rho$:
@@ -437,21 +435,8 @@ that kind for the vendored solver, relative to the unknowns a program creates, i
 future work. The end-to-end theorem is therefore a partial-correctness result
 with a per-program premise (@sec:headline).
 
-The solver enters the argument only through three contracts of
-#isalocale("dg_analysis"): #isaconst("part_post_solution") on the stabilized
-set, which the vendored #isathm("partial_post_solution") derives from the
-premise that the solver's recursion is defined on the query, the finite set of unknowns
-of #isathm("finite_stabl_solve"), and domain membership after a finished run
-(#isathm("solve_dom_of_solve_c")). One interpretation of the solver locale,
-parameterized by the rule, makes all three hold for all four update rules at
-once (#isathm("update_rule_update_global_of")), and each registration
-discharges the contracts from it. The certificate idea itself is established
-practice, as in CompCert's dataflow-solver interface @compcertKildall, and
-Tilscher et al. already prove it for side-effecting systems @tilscher26. Voblint
-adds its consumption for context-indexed D/G systems, down to source-level
-soundness. The executable carrier transports every soundness fact by commuting
-with readback (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and its
-finite emptiness test is exact (#isathm("resolved_st_q_is_bot_for_iff")).
-Termination is the one solver fact that is not proved. We expect it to fail for
-some configurations, so the source-level theorem of @ch:results assumes it per
-program, and #isathm("solve_dom_of_solve_c") lets a finished run discharge it.
+The solver thus enters the argument through three contracts of
+#isalocale("dg_analysis"), the certificate, the finite stabilized set and
+domain membership after a finished run, which one interpretation of the solver
+locale discharges for all four update rules at once
+(#isathm("update_rule_update_global_of")).

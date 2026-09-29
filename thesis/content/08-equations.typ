@@ -28,7 +28,7 @@ and @ch:cooperation showed that several analyses combine into one
 specification with the same contract, so the equations below need not know how
 many analyses run. Computing the claim raises three problems. One unknown per node, the intraprocedural recipe, merges the
 calls of a procedure and loses facts that every execution satisfies
-(@sec:eq-coarse). A callee's entry cannot list the calls that reach it,
+(@sec:eq-unknowns). A callee's entry cannot list the calls that reach it,
 because which calls route to a context is known only once their callers are
 solved (@sec:eq-seed). The equations compute contexts from abstract entry
 values, while the obligations speak about contexts that the relation $R$
@@ -44,7 +44,7 @@ for all policies. The running example is
 `bump(5); bump(4)` of @fig:program-to-equations, with call nodes $u_1$, $u_2$
 (`pp2`, `pp3`) and continuations $k_1 = u_2$, $k_2$ (`pp4`).
 
-== One unknown per node is too coarse <sec:eq-coarse>
+== Unknowns indexed by node and context <sec:eq-unknowns>
 
 The intraprocedural recipe of @ch:background keeps one unknown per CFG node.
 Extended naively to calls, the entry of `bump` joins both call sites and holds
@@ -57,8 +57,6 @@ the analyzer without contexts reports exactly this,
 widening the shared entry value (@sec:eq-seed). The collecting semantics
 already assigns the two activations to different contexts
 (@sec:contexts), and the fix gives the unknowns the same index.
-
-== Unknowns indexed by node and context <sec:eq-unknowns>
 
 A local unknown is a pair $(v, c)$, and $sol(v, c)$ is the state claimed for
 activations of context $c$ at node $v$. Contexts are activation-stable
@@ -215,7 +213,7 @@ The seed adds one global unknown per callee entry and context and one update
 per call, and it changes where widening happens. A
 seed has no equation of its own, and #isaconst("run_voblint") merges
 contributions into it with the update rule selected for global unknowns, so under
-a warrowing rule a seed can be widened. In @sec:eq-coarse the first call
+a warrowing rule a seed can be widened. In @sec:eq-unknowns the first call
 contributes ${n |-> [5, 5]}$ to the one seed of `bump` and the second
 ${n |-> [4, 4]}$. Their join ${n |-> [4, 5]}$ is not below ${n |-> [5, 5]}$, so the rule widens
 the lower bound to $-infinity$. Neither contribution changes afterwards, and the
@@ -505,148 +503,41 @@ fun get() { return Gx; }
 fun main() { x = 1; set(); y = get(); }
 ```)
 
-Flow-sensitively, the value of `Gx` belongs to the state at every node of every
-procedure. It enters `set` with the caller's state, comes back through the
-return combination, and enters `get` from `main`'s continuation. Every
-procedure's unknowns carry every global, whether or not the procedure mentions
-it. With the full entry state as context @apinis12, two calls that differ only
-in a global would even analyze the callee twice. Voblint's entry-state
-contexts project to the formal parameters (@sec:eq-routing) and avoid that. An
-analysis may instead keep one fact per global that holds throughout the run.
-The write in `set` then reaches the read in `get` through that fact instead of
-along the call chain. This loses precision, because the fact must cover the initial `Gx = 0`
-as well as the written 1, so Sign can only claim #signval("≥0") for `Gx` and
-for `y` after `y = get()`, although every run ends with `y = 1`. A
-flow-sensitive analysis carries #signval("+") from `set`'s exit into `get`'s
-entry and derives #signval(_mf("y")) for `y` (claim `mixed-flow-sign`). The
-local `x` is #signval(_mf("x")) under both placements.
-
-Such a fact is a flow-insensitive unknown written by side effects
-(@ch:background); the certificate (@sec:certificate) makes it bound everything
-contributed to it, from anywhere and in any context. The entry seeds of
-@sec:eq-seed are one use of such unknowns, and program globals are the second.
+Flow-sensitively, the value of `Gx` travels with the state. It enters `set`
+with the caller's state, comes back through the return combination and enters
+`get` from `main`'s continuation, so every procedure's unknowns carry every
+global. An analysis may instead keep one fact per global that holds throughout
+the run: a flow-insensitive unknown written by side effects (@ch:background),
+which the certificate (@sec:certificate) makes bound everything published to
+it. The write in `set` then reaches the read in `get` through that fact. This
+loses precision, because the fact must cover the initial `Gx = 0` as well as
+the written 1. Sign can only claim #signval("≥0") for `Gx` and for `y` after
+`y = get()`, although every run ends with `y = 1`. A flow-sensitive analysis
+carries #signval("+") from `set`'s exit into `get`'s entry and derives
+#signval(_mf("y")) for `y` (claim `mixed-flow-sign`).
 
 The lifter #isaconst("ownership_split_lift") adds one global unknown
 $kappa = #isaconst("Analysis_Global") thin ()$ whose value is an abstract
-store for all VIMP globals together. This realizes the flow-insensitive
-system of Apinis et al. with one global unknown for all globals, where the paper and
-Goblint keep one unknown per global @apinis12 (@app:goblint-alignment). For an
-edge $(u, a, v)$ with whole-state transfer $sh(f)_a$, the edge's lifted
-contribution to $(v, c)$ computes
-$ s = sh(f)_a (#isaconst("combine_env") cal(G) thin sol(u, c) thin sol(kappa)), $
-answers #isaconst("restrict_local_for") $cal(G) thin s$ and publishes
-#isaconst("restrict_global_for") $cal(G) thin s$ at $kappa$. Here $cal(G)$
-classifies the declared globals, #isaconst("combine_env") takes
-each global name from its second argument and every other name from its first,
-and the two restrictions set the other half to #lbot. The program entry
-publishes the global half of the initial state, a call publishes the global
-halves of both components of every entry pair, and a return reassembles
-caller and callee exit with the same $sol(kappa)$. @fig:mixed-flow shows the
-unknowns of the program.
+store for all VIMP globals together. Apinis et al. and Goblint keep one
+unknown per global instead @apinis12 (@app:goblint-alignment). Every lifted
+transfer reads the globals from $kappa$ and publishes the global half of its
+result there, so $sol(kappa)$ describes the globals of every store reached
+anywhere (#isaconst("gamma_ownership_split")).
 
-// A publication routed around the lanes it would otherwise cross.
-#let _pubvia(pts, lab, side: left) = edge(
-  ..pts,
-  "-|>",
-  stroke: (paint: vb.called, thickness: 0.7pt, dash: "dashed"),
-  label: text(7.5pt, fill: vb.called, lab),
-  label-side: side,
-  label-pos: 0.5,
-)
-
-#figure(
-  placement: auto,
-  {
-    set text(size: 10pt)
-    show raw: set text(size: 8pt)
-    let two(top, bottom) = stack(spacing: 2.5pt, top, text(size: 8pt, bottom))
-    diagram(
-      spacing: (6.5mm, 9mm),
-      _seed((0, 0), $italic("Seed")(italic("set"))$),
-      _loc((1, 0), raw("entry_set")),
-      _loc((2, 0), `pp0`),
-      _loc((3, 0), `pp1`),
-      _loc((4, 0), raw("exit_set")),
-      _loc((1, 1), raw("entry_main")),
-      _loc((2, 1), `pp4`),
-      _loc((3, 1), `pp5`),
-      _loc((4, 1), `pp6`),
-      _loc((5, 1), two(`pp7`, [`x` #signval("+"), `y` #signval("≥0")])),
-      _seed((6, 1), two($kappa$, [`Gx` #signval("≥0")])),
-      _seed((2, 2), $italic("Seed")(italic("get"))$),
-      _loc((3, 2), raw("entry_get")),
-      _loc((4, 2), `pp2`),
-      _loc((5, 2), raw("exit_get")),
-      _read((0, 0), (1, 0), []),
-      _read((1, 0), (2, 0), []),
-      _read((2, 0), (3, 0), []),
-      _read((3, 0), (4, 0), []),
-      _read((1, 1), (2, 1), []),
-      _read((2, 1), (3, 1), []),
-      _read((3, 1), (4, 1), []),
-      _read((4, 1), (5, 1), []),
-      _read((2, 2), (3, 2), []),
-      _read((3, 2), (4, 2), []),
-      _read((4, 2), (5, 2), []),
-      _read((4, 0), (4, 1), []),
-      _read((5, 2), (5, 1), []),
-      _read((6, 1), (5, 2), [`Gx`], side: left),
-      _pubvia(((4, 1), (3.6, 0.5), (0, 0.5), (0, 0)), []),
-      _pubvia(((5, 1), (4.6, 1.5), (2, 1.5), (2, 2)), []),
-      _pubvia(((3, 0), (3, -0.6), (6, -0.6), (6, 1)), [`Gx` #signval("+")]),
-      _pubvia(((1, 1), (1, 2.6), (6.3, 2.6), (6.3, 1)), [`Gx` #signval("0")], side: right),
-    )
-  },
-  caption: [Unknowns of the `set`/`get` program for the ownership-split Sign
-    analysis under the unit context (omitted). Solid arrows are reads, dashed
-    arrows publications, as in @fig:eq-unknowns. Every lifted right-hand side
-    also reads $kappa$ and publishes its global half. The figure draws only the
-    initial contribution from `main`'s entry, the write in `set`, and the read
-    of `Gx` in `return Gx`. The values at `pp7` and $kappa$ are evaluated in Isabelle
-    (#isathm("mf_snapshot")); the edge labels are derived by hand.],
-) <fig:mixed-flow>
-
-A mixed state $(d, g)$ denotes
-$
-  #isaconst("gamma_ownership_split") cal(G) thin d thin g
-  = sem(#isaconst("combine_env") cal(G) thin d thin g),
-$
-the stores whose locals $d$ describes and whose globals $g$ describes, and the
-claim at $(v, c)$ pairs $sol(v, c)$ with the one value $sol(kappa)$. The
-invariant behind soundness is that $sol(kappa)$ describes the globals of every
-store reached anywhere, because every transfer publishes the global half of its
-result. The return then needs nothing new from the callee except its result: a
-concrete return keeps the caller's locals and takes the callee's globals
-(@sec:calls), and both sides are described under the same $g$
-(#isathm("gamma_ownership_split_combine_env")). The call cannot publish only
-the entry: splitting the resume value discards its global half, and a proof
-that this half adds nothing would be a further obligation.
-
-The results come at three levels. For every classifier and every
-non-relational transfer bundle that satisfies
+For every non-relational transfer bundle that satisfies
 #isalocale("sound_nonrelational_transfer"),
-#isathm("ownership_split_lift_contract") establishes
-#isalocale("analysis_contract") for the lifted specification and
-#isaconst("gamma_ownership_split"). The proof reduces each obligation to the
-wrapped transfer's soundness, since restricting and reassembling rebuilds the
-state the transfer ran on. At the executable carrier,
-#isathm("analysis_contract_mf") proves the same for Sign. The routed
-obligations of @sec:eq-routing are discharged for the program above only,
-under the unit context and the join update rule, from facts evaluated on its
-solved table: the solve terminates, the solved unknowns are closed, and no formal
-parameter is global. The evaluations use Isabelle's code-generator oracle,
-the trust boundary of @ch:executable. From these,
-#isathm("mf_activation_collect_sound") and #isathm("mf_ltr_collect_sound")
-bound the collecting semantics at every node,
-#isathm("mf_source_sound") extends the bound to source runs, and at `pp7`,
-the node #isai("Statement 7") after both calls:
+#isathm("ownership_split_lift_contract") establishes the analysis soundness
+contract for the lifted specification. The routed obligations of
+@sec:eq-routing are discharged only for the program above, under the unit
+context and the join update rule, from facts evaluated on its solved table
+with the code-generator oracle (@ch:executable). They bound the stores at
+`pp7`, the node after both calls:
 
 #proved("mf_after_calls")
 
-The statement mentions only `x` and `y`: the bound on `y` is what the
-flow-insensitive `Gx` leaves, and no theorem produces a verdict for this
-analysis. It is not selectable in #isaconst("run_voblint"), and no theorem
-discharges its routed obligations for every program.
+The bound on `y` is what the flow-insensitive `Gx` leaves. The analysis is not
+selectable in #isaconst("run_voblint"), and no theorem discharges its routed
+obligations for every program.
 
 All program globals share $kappa$ because #isalocale("analysis_contract")
 fixes the type of analysis-global names to `unit` (@sec:sound-core). Several
@@ -733,17 +624,13 @@ earlier mechanizations of mixed flow sensitivity.
 A terminating solve visits finitely many unknowns, but a finite context space
 does not force termination: values can ascend forever inside a finite space of unknowns. Under the unit context the solved unknowns are finite as soon as their
 nodes belong to the compiled program (#isathm("compiled_unit_vars_finite")).
-For call strings of length at most $k$ over the nodes of a compiled
-program, the candidate space is finite (#isathm("compiled_call_strings_finite")).
-This bounds the solved unknowns only if they lie in that space, which truncation
-alone does not ensure: a start context built from foreign nodes stays short
-without entering it. #isathm("compiled_call_string_vars_finite") therefore takes
-the containment as a hypothesis. An entry-state context is a list of abstract
+Call strings of length at most $k$ over a compiled program form a finite space
+(#isathm("compiled_call_strings_finite")), which bounds the solved unknowns
+if they lie in it, a hypothesis of #isathm("compiled_call_string_vars_finite").
+An entry-state context is a list of abstract
 values at the callee's arity. For Sign and Parity that space is finite. For
 Interval, Congruence and the Int product it is not, and widening bounds the
-values of existing unknowns without bounding how many are created: the
-regression
-#fixture(
+values of existing unknowns without bounding how many are created: the regression #fixture(
   "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
   label: "01-unbounded_context_chain_diverges",
 )
@@ -751,16 +638,7 @@ recurses with a fresh argument per level and does not finish within its time
 limit. The end-to-end theorem therefore keeps a per-program termination premise
 (@sec:termination).
 
-#isathm("activation_collect_dg_sound") discharges the five
-obligations of @ch:traces once for every domain, context policy and
-specification: any post-solution on a set of unknowns that contains the program entry
-and is closed under local edges and call continuations bounds every context
-bucket, given the analysis soundness contract, a complete callee list and
-adequate, total routing, where entry coverage supplies the covering half
-of adequacy. For functional policies totality and the context half of adequacy
-hold by construction. For entry-state policies the
-relation is read off the solved table (#isaconst("routed_entry_context_rel")),
-which makes the covering and routing parts of adequacy definitional and
-totality entry coverage.
-@ch:solving must supply the post-solution and its unknowns, and @ch:results must derive the
-closure of that set, which the solver does not provide directly.
+With the obligations discharged once for every domain and policy
+(@sec:eq-discharge), @ch:solving must supply the post-solution and its
+unknowns, and @ch:results must derive the closure of that set, which the
+solver does not provide directly.

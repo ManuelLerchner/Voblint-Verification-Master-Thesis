@@ -112,37 +112,27 @@ state, exact emptiness tests, a single entry pair, seeds distinct from the analy
 premise by a finished executable run, and correctness of the check classifier.
 
 For a numeric domain, #isalocale("dg_analysis_exec") derives the component
-contracts from the domain's per-operation transfer rules
-(#isalocale("sound_nonrelational_transfer")) and from two commutations with
-readback, one for its executable transfer and one for its executable entry. It
-takes the routing, solver and initial-state contracts as assumptions. A
-certified operation bundle (@sec:instances-supply) discharges the domain's half
-at once, together with a sound classifier
-(#isathm("sound_nonrelational_ops.dg_analysis_execI")). Its executable transfer
-#isaconst("generic_tf_st_for") and entry #isaconst("generic_enter_st_for") are
-computed from the same primitives as the abstract ones.
-#isathm("sound_nonrelational_ops.tf_st_for_commute") and
-#isathm("sound_nonrelational_ops.enter_st_for_commute") prove that they
-commute with readback, the transfer on states the emptiness test keeps
-(@sec:readback). The code that
-runs is thus derived from the primitives the soundness proof is about, and
-no separately written implementation needs an agreement proof. Each numeric
-domain has a generated registration at the unit context, which proves only the
-six obligations that depend on the routing policy, the solver and the initial
-state. The analyzer does not run these registrations. The combined state
-writes each numeric field's component itself and cites the registration's
-soundness facts for the component and the initial state of that field.
+contracts from the domain's certified operations (@sec:instances-supply), and
+#isathm("sound_nonrelational_ops.dg_analysis_execI") discharges all of them at
+once. Six obligations remain: the routing agreement, that the seeds differ from
+the analysis global, three facts about the solver (its result is a partial
+post-solution, its solved domain is finite, and a successful executable run
+lies in that domain), and soundness of the initial state. Only the last is a
+fact about the domain's values (for Parity, #isathm("parity_cinit_gamma")).
+Each numeric domain has a generated registration that discharges them at the
+unit context. Interval is also registered at the entry-state and call-string
+contexts. The analyzer does not run these registrations. The combined state
+runs each numeric field's component #isaconst("exec_spec") itself and cites
+the registration's soundness facts for that component and its initial state.
 
 The analyzer interprets #isalocale("dg_analysis") once per context family for
-the combination #isaconst("mcp_comp") of any activation list (@fig:assembly).
-Every run inherits the argument of @ch:results from these three
-interpretations and the field facts they cite. The order analysis has no
-registration. It supplies its local specification #isaconst("order_spec")
-directly, and #isathm("order_spec_sound") is its field's soundness fact. A new
-analysis is one entry in the analysis manifest, from which its registration,
-for a numeric domain, and its field of the combined state
-(#isaconst("local_spec_of")) are generated (@ch:tooling). The command-line
-tool's tables of analysis names are still edited by hand.
+the combination #isaconst("mcp_comp") of any activation list (@fig:assembly),
+and every run inherits the argument of @ch:results from these interpretations.
+The order analysis has no registration: it supplies its local specification
+#isaconst("order_spec") directly, with #isathm("order_spec_sound"). A new
+analysis is one entry in the analysis manifest, from which its registration
+and its field of the combined state (#isaconst("local_spec_of")) are generated
+(@ch:tooling).
 
 #figure(
   {
@@ -243,14 +233,10 @@ Integers in the export are arbitrary-precision Zarith integers, matching VIMP's
 mathematical integers and not C11's finite ones (@sec:vimp-vs-c).
 
 The command-line tool and the browser adapter link the same generated module
-and frontend. The command-line tool runs the analysis in a child process with a
-wall-clock budget and reports a run that exceeds it as unfinished, with no
-verdicts. For the browser, #raw("wasm_of_ocaml", lang: "sh") compiles the
-adapter into a WebAssembly module that runs in a Web Worker the user can
-cancel. Its only exported function calls #isaconst("run_voblint") once and
-returns the report, the graph, and the raw typed answer as one JSON string.
-No theorem states that the graph and the report come from the same answer. We
-establish this by reading the adapter.
+and frontend (@sec:pipeline). The browser adapter's only exported function
+calls #isaconst("run_voblint") once and returns the report, the graph, and the
+raw typed answer as one JSON string. No theorem states that the graph and the
+report come from the same answer. We establish this by reading the adapter.
 
 == An interactive analyzer artifact <sec:playground>
 
@@ -261,41 +247,15 @@ toolbar selects exactly the arguments of #isaconst("run_voblint"), so every
 selectable run lies within the configurations covered by
 #isathm("run_voblint_certified_source_sound"), subject to its input and
 termination premises. Verdicts and value hints appear in the source, a state
-inspector shows the abstract state under the cursor in every context it was
-solved at, and the graph draws one box per procedure and context, the unknown
-space of @ch:equations.
-
-The figures below are captured runs of the page, each linked to the run it
-shows. They are illustrative evidence (@ch:evaluation): the build checks each
-screenshot and program against the captured copy, not against the analyzer.
-Verdicts, states and diagnostics quoted in the prose come from command-line
-runs of the same generated core, registered as claims `pg-*` and re-executed by
-the build.
-
-#let _wl = cli-row("pg-while-loop", "0 < x")
-
-*One run, three views.* @fig:pg-while-loop relates the source of one run to
-the graph the theorems are about. The check after the loop is
-#raw(_wl.at(3)), the inspector shows the state #raw(_wl.at(4)) at the check's
-node #raw(_wl.at(1)), and the graph names the same node.
-
-#playground-program("while-loop")
-
-#playground-figure(
-  "while-loop",
-  width: 88%,
-  [A counted loop: the proved check and the inline values in the source, the
-    state inspector at the check's node, and the solved graph. Settings #playground-settings("while-loop")],
-) <fig:pg-while-loop>
-
-*Every kind of answer.* @fig:pg-overview shows in the editor what
-@fig:intro-answers tabulates, for the default program under call strings of
-depth one: a #cli-verdict("pg-overview", "i == 5") check, a
+inspector shows the abstract state at the cursor in every context, and the
+graph draws one box per procedure and context. @fig:pg-overview shows every
+kind of answer for the default program under call strings of depth one: a
+#cli-verdict("pg-overview", "i == 5") check, a
 #cli-verdict("pg-overview", "i < 5") check, an
 #cli-verdict("pg-overview", "a == 2") check, a possible division by zero, and a
-`DEAD` statement whose solved state is empty in every context. At this depth the
-two calls of `wrap` share one context of `scale`, so `a == 2` stays undecided
-although it holds in every execution.
+`DEAD` statement. The screenshot is illustrative evidence (@ch:evaluation).
+The verdicts quoted here come from command-line runs of the same generated
+core, registered as claims and re-executed by the build.
 
 #playground-figure(
   "overview",
@@ -308,82 +268,6 @@ although it holds in every execution.
     The run's graph pane and panels are omitted. Settings
     #playground-settings("overview")],
 ) <fig:pg-overview>
-
-*Diagnostics and verdicts are separate claims.* In @fig:pg-division-definite
-the divisor is zero in every live context. Both operations carry the
-diagnostic #raw(check-row("pg-division-definite", cond: "ERROR").cond), and
-both checks are
-#cli-same(("pg-division-definite", "quotient == 0"), ("pg-division-definite", "remainder == 7")),
-because VIMP defines `7 / 0` as $0$ and `7 % 0` as $7$ (@sec:vimp-vs-c). Only
-the absence of a diagnostic excludes a zero divisor
-(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). In
-@fig:pg-division-possible the divisor is a nondeterministic input, so the
-division carries a #raw(check-row("pg-division-possible", cond: "WARNING").cond)
-and `divisor != 0` is #cli-verdict("pg-division-possible", "divisor != 0"), the
-only sound answer, because runs with a zero and with a nonzero divisor both
-exist.
-
-#playground-program("division-definite")
-
-#playground-figure(
-  "division-definite",
-  crop: (0, 0, 0.52, 0.53),
-  width: 72%,
-  [The editor pane for a divisor that is zero in every live context: two
-    errors, and both checks proved; the diagnostics panel is omitted. Settings
-    #playground-settings("division-definite")],
-) <fig:pg-division-definite>
-
-#playground-program("division-possible")
-
-#playground-figure(
-  "division-possible",
-  crop: (0, 0, 0.505, 0.47),
-  width: 72%,
-  [The editor pane for a divisor the state cannot exclude from being zero: a
-    warning and an `UNKNOWN` check. Settings #playground-settings("division-possible")],
-) <fig:pg-division-possible>
-
-*Contexts in the result.* @fig:pg-contexts runs the program of
-@fig:program-to-equations without and with entry-state contexts; the verdicts
-are those of @sec:eq-coarse and @sec:eq-call. The inline values list the
-callee's state once per context (`#0` for the argument 4, `#1` for 5), and the
-graph draws one box of `bump` per context, with the call and return edges
-between them.
-
-#playground-figure(
-  "contexts",
-  width: 100%,
-  placement: auto,
-  [The running example without contexts, where both checks are `UNKNOWN`, and
-    with entry-state contexts, where both are `PROVED`, with the per-context
-    values in the source and one graph box per context of `bump`. Settings of
-    the lower run and the graph #playground-settings("contexts")],
-) <fig:pg-contexts>
-
-*Which component inverts a guard.* In @fig:pg-int-refinement the check
-`y == 2` follows from the guard `y + 1 == 3`. Sign, Interval and Parity each
-answer #cli-same(
-  ("pg-int-refinement-sign", "y == 2"),
-  ("pg-int-refinement-interval", "y == 2"),
-  ("pg-int-refinement-parity", "y == 2"),
-): Sign and Interval invert `+` with the identity, and Parity's inverse
-recovers only that `y` is even (@ch:instances). Congruence inverts the addition, and the product Int, which
-contains it, answers #cli-verdict("pg-int-refinement-int", "y == 2").
-Congruence alone also answers
-#cli-verdict("pg-int-refinement-congruence", "y == 2")\; the screenshot omits
-that run.
-
-#playground-program("int-refinement")
-
-#playground-figure(
-  "int-refinement",
-  width: 88%,
-  [The product domain proving `y == 2`, and Sign, Interval and Parity, each run
-    alone, answering `UNKNOWN`. Settings
-    #playground-settings("int-refinement") for the product; the other panes
-    change only the domain.],
-) <fig:pg-int-refinement>
 
 == What remains outside the proof <sec:trust-boundary>
 
@@ -402,11 +286,8 @@ context (#isaconst("analysis_result_covers")), and at which no listed check is
 #isathm("run_voblint_arithmetic_safe") give `DEAD` and the absence of an
 arithmetic diagnostic their meaning. The proved side includes the compiler,
 the well-formedness test, the vendored solver with its executable refinement,
-and the finite carrier. The vendored solver is a local fork of the development of @tilscher26
-with two changes: a port to Isabelle2025 and the removal of an unused
-assumption from its widening and narrowing classes. Isabelle checks the
-modified theories like every other theory, so the changes are recorded for
-provenance and add nothing to what is trusted. It ends at three points: the syntax tree
+and the finite carrier. The vendored solver's changes (@sec:upstream-td) are
+checked by Isabelle like every other theory. The proved side ends at three points: the syntax tree
 #isaconst("run_voblint") receives, the typed result before its abstract values
 are printed by #isaconst("string_of_abstract_value") (@sec:codegen), and the
 termination premise, which only a finished run discharges (@sec:termination).

@@ -329,7 +329,7 @@ a map from variables to abstract values, so the order analysis with an
 analysis global, #isaconst("rel_order_spec"), meets it over the relational
 carrier of @sec:relational without a change to the framework.
 
-=== Local specifications <sec:whole-state>
+== Local specifications <sec:whole-state>
 
 Most analyses use no analysis global. For them the framework offers a simpler
 interface, the _local specification_ #isatype("local_spec"), whose operations

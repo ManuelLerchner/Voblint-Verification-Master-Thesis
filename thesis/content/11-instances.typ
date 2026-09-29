@@ -99,56 +99,26 @@ The domain proves one certificate about its record,
 the refinement operations form a backward domain whose intersection lies below
 both operands (#isalocale("sound_refinement")), the queries are sound checks
 over the evaluator (#isalocale("sound_check_query")), and the abstract `min`
-and `max` are sound (#isalocale("sound_minmax_ops")). The whole-value element
-is the top of the carrier. Everything else is derived
-once, inside the locale, from the record: the guard filters and the branch transfer, the check
-classifier, the transfer of every edge, procedure entry, and executable
-versions of the transfer and entry over the store representation of
-@ch:solving. The abstract and the executable versions are computed from the
-same primitives and agree on every live store
+and `max` are sound (#isalocale("sound_minmax_ops")). Everything else is
+derived once from the record: the guard filters, the branch transfer, the
+check classifier, the transfer of every edge, procedure entry, and executable
+versions of the transfer and entry. The abstract and executable versions are
+computed from the same primitives and agree on every live store
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
-#isathm("sound_nonrelational_ops.enter_st_for_commute")), so no second
-implementation needs its own agreement proof. Deriving forward and backward
-transfer from certified value operations follows the generic abstract
-interpreter of Nipkow and Klein @nipkow14[Sect. 13.5, 13.7]. The executable
-counterpart, its commutation and the registration described next are
-Voblint's. @fig:instance-pipeline shows the chain.
+#isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
+transfers from certified value operations follows Nipkow and Klein
+@nipkow14[Sect. 13.5, 13.7]. The executable counterpart and its commutation
+are Voblint's. @fig:instance-pipeline shows the chain, and @sec:engineering
+describes how each domain's generated registration turns the certificate into
+a sound field of the combined state of @ch:cooperation.
 
-The certificate asks for soundness alone.
-#isalocale("mono_nonrelational_ops") adds that the evaluator, `min`, `max` and
-the refinement operations are monotone (#isalocale("mono_minmax_ops"),
-#isalocale("mono_refinement")), and derives monotone transfer functions
+The certificate asks for soundness alone. #isalocale("mono_nonrelational_ops")
+adds monotone operations and derives monotone transfers
 (#isathm("mono_refinement.branch_mono")). Sign, Interval, Parity and
-Congruence interpret the monotone locale. Int interprets the sound one once,
-parametric in its refinement mode. Monotonicity is proved for the two modes
-without fixpoint iteration (#isathm("int_dom_mono_ops")) and not for the
-fixpoint mode (@sec:reduced-product). No soundness theorem uses these
-monotonicity facts. They match the hypotheses of
-#isathm("routed_node_rhs_mono_eq"), which prepares the vendored least-solution
-theorem for the solver without widening, and the analyzer does not use that
-solver.
-
-Registering a certified domain with the pipeline of @sec:engineering is one
-rule. #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges every
-obligation of #isalocale("dg_analysis_exec") that concerns the domain:
-soundness of the transfer, the two commutations with the readback, and
-correctness of the check classifier. Six obligations remain, and each domain's
-generated registration discharges them: the routing agreement, that the seeds differ from the analysis global, three facts about the solver (its
-result is a partial post-solution, its solved domain is finite, and a
-successful executable run lies in that domain), and soundness of the initial
-state. Only the last is a fact about the domain's values (for Parity,
-#isathm("parity_cinit_gamma")). Each numeric domain is registered once, at the
-unit context. Interval is also registered at the entry-state and call-string
-contexts. The registration's component is the executable local specification
-#isaconst("exec_spec"), and the registration proves it sound
-(#isaconst("sound_local_spec")). That component becomes one field of the
-combined state of @ch:cooperation. The order analysis of @sec:relational enters
-the combined state at the same level, as a local specification with its own
-soundness theorem (#isathm("order_spec_sound")). The analyzer interprets
-#isalocale("dg_analysis") once per context family for the combination of any
-activation list (#isathm("mcp_comp_sound"), @fig:assembly), and the
-source-level theorem about #isaconst("run_voblint") is proved from these
-interpretations.
+Congruence interpret it. For Int, monotonicity is proved in the two modes
+without fixpoint iteration (#isathm("int_dom_mono_ops"), @sec:reduced-product). No soundness
+theorem uses these facts. They serve only the vendored least-solution theorem
+for the solver without widening, which the analyzer does not run.
 
 #figure(
   {
@@ -208,11 +178,9 @@ interpretations.
   },
   kind: image,
   placement: auto,
-  caption: [How a numeric domain becomes a field of the combined state. Solid
-    arrows lead from what is supplied to what is derived from it; the dotted
-    arrow is the commutation of the abstract and executable operations. Green
-    boxes are the two proofs a domain passes through. The order analysis
-    supplies its local specification directly. Schematic.],
+  caption: [How a numeric domain becomes a field of the combined state
+    (schematic). The dotted arrow is the commutation of abstract and executable
+    operations. The order analysis supplies its local specification directly.],
 ) <fig:instance-pipeline>
 
 Every domain refines guards with the same generic filter, so the domains'
@@ -334,7 +302,7 @@ through the generic filter (@fig:refine-profile). On `x + 1 == y` with `y` even,
 the inverse of `+` (#isaconst("inv_plus_parity")) makes `x` odd, which
 #isathm("bfilter_parity_plus_narrows") checks by evaluation. Interval, whose
 inverse of `+` is the identity, learns nothing about `x` there. Under the guard
-`y + 1 == 3` of @fig:pg-int-refinement, Parity derives
+`y + 1 == 3`, Parity derives
 #state("pg-int-refinement-parity", "4:5"). On the contradictory guard of
 @fig:domain-reachability, `x == 1` makes `x` odd and `x == 0` then empties it,
 so Parity reports the branch #verdict("dom-disjunct-parity", "12:5"), as Sign

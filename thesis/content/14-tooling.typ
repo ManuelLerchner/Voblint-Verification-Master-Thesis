@@ -288,6 +288,13 @@ that map an analysis name to its constructor, and the test that lists the
 analyses independently of the manifest. A new analysis therefore needs its own
 theories, a manifest entry and these edits.
 
+The command-line tool and the browser adapter link the same exported module
+and frontend. The command-line tool runs the analysis in a child process with a
+wall-clock budget and reports a run that exceeds it as unfinished, with no
+verdicts. For the browser, #raw("wasm_of_ocaml", lang: "sh") compiles the
+adapter into a WebAssembly module that runs in a Web Worker the user can
+cancel.
+
 Everything a reader sees is derived in the same way. The website and this
 document take their repository figures from the sources, their Isabelle names,
 definitions and theorem statements from the theories and a built session, and

@@ -173,8 +173,7 @@ that the buckets together are the context-free collection. The link to the
 executable analyzer is #isathm("activation_collect_dg_sound"), which
 discharges all five obligations for every routing policy and domain
 (@sec:eq-discharge). _Evidence: executable and illustrative._ The two calls of
-`bump` show what indexing changes on one program (@sec:eq-call,
-@fig:pg-contexts).
+`bump` show what indexing changes on one program (@sec:eq-call).
 
 _Limits._ That #oblig("TOTAL") is needed is machine-checked on
 one program (#isathm("total_dropped_unsound"), @sec:falsification); an
@@ -317,7 +316,7 @@ mechanism keeps or loses, and supports a claim about its program only.
 #let _k100 = claim-snapshot("cost-down-k100")
 
 *Contexts.* _Evidence: executable, and evaluated._ The two calls of `bump` are
-decided under entry-state contexts but not without them (@sec:eq-coarse,
+decided under entry-state contexts but not without them (@sec:eq-unknowns,
 @sec:eq-call). #isathm("sign_k2_strictly_more_precise_than_k1_at_g") proves a
 strict separation on one program: the Sign value of a parameter at a procedure
 entry is strictly lower under call strings of length 2 than under length 1,
@@ -410,20 +409,11 @@ timeout alone does not show this (@sec:trust-boundary).
 decides a check that none of its components decides alone.
 
 *Cooperation.* _Evidence: machine-checked by evaluation, and executable._
-Two programs of @sec:coop-examples separate the combination from its parts in
-each direction. On the first, Interval and the order analysis alone leave
-`z == 1` `UNKNOWN`, and together they prove it, because the order analysis
-answers Interval's query at `z = (x == y)` (#isathm("coop_demo_needs_both")).
-On the second, the order analysis asks Interval at two assignments and proves
-`x <= y`, which neither proves alone (#isathm("order_asks_interval_alone"),
-#isathm("order_asks_order_alone"), #isathm("order_asks_needs_both")). These
-lemmas state the verdicts of #isaconst("run_voblint") for all three activation
-lists and are proved by `eval`. Two further fixtures show a combination of
-numeric domains without a relational partner: Congruence makes a branch dead
-that Interval enters
-(#fixture("25-cooperation/precision/01-dead_by_one_component.vimp", label: "01-dead_by_one_component")),
-and Interval removes a division warning that Parity raises
-(#fixture("25-cooperation/precision/02-divisor_bounded_by_another.vimp", label: "02-divisor_bounded_by_another")).
+The two programs of @sec:coop-examples separate the combination from its parts
+in each direction. #isathm("coop_demo_needs_both") and
+#isathm("order_asks_needs_both") (with #isathm("order_asks_interval_alone") and
+#isathm("order_asks_order_alone")) state the verdicts of #isaconst("run_voblint")
+for all three activation lists and are proved by `eval`.
 
 === Known imprecision, with mechanisms named
 
@@ -436,14 +426,9 @@ the check `total < 100` Sign reports #raw(_sign.at(4)) and the verdict
 verdict, because Sign's comparison query decides nothing for a positive value
 against 100, which may lie on either side of it. Intervals lose nonconvex
 information, as the multiples of three of @fig:verdict-regions show. Pointwise
-stores lose relations between variables: on `if (x < y)`, Interval learns
-nothing at the true branch, evaluated in #isathm("demo_ivl_x_at_branch")
-(@sec:relational), and a product of per-variable domains cannot recover the
-relation. The order analysis recovers the relation from the guard, but keeps no
-facts across calls, and Interval learns from it only at assignments, where it
-asks
-(#fixture("25-cooperation/known-imprecision/04-order_forgotten_at_return.vimp", label: "04-order_forgotten_at_return")). A call string of length $k$ merges paths deeper than $k$, as in
-`down` above.
+stores lose relations between variables (@sec:relational). The order analysis
+recovers some of them, within the limits of @sec:coop-limits. A call string of
+length $k$ merges paths deeper than $k$, as in `down` above.
 
 === A real unsoundness, replayed: Goblint pull request 1161 <sec:eval-1161>
 
@@ -603,28 +588,6 @@ form of #isaconst("pstep"), so the adequacy of the source semantics rests on
 the comparison with C11 in @sec:vimp-vs-c alone. The playground
 (@sec:playground) is illustrative, and no study measures whether it helps a
 reader.
-
-== Threats to validity <sec:eval-threats>
-
-The main threat to construct validity is definitional adequacy: whether
-#isaconst("pstep") models the intended language is argued through its
-departures from C11 (@sec:vimp-vs-c), and no concrete executor tests the
-argument (@sec:eval-absent). The delivered guarantee trusts the parser, the
-code generator, the compilers, runtimes and renderer (@sec:trust-boundary), and
-every witness proved by `eval` also trusts the code generator's evaluation
-oracle (@tab:oracles-audit, @sec:nonvacuity). The theorem is partial
-correctness under a per-program termination premise (@sec:termination), and
-termination of the Int product's reduction in the executable is not proved
-(@sec:reduced-product). The empirical evidence has limited reach. The corpus is small, written for this
-work, and its expected concrete behaviour is the author's reading of each
-program (@sec:eval-corpus). Every precision witness and example concerns one
-program at fixed configurations (the limits of @sec:eval-rq4), and the
-playground is illustrative (@sec:playground). No agreement data with Goblint
-exists, and the Goblint defect of @sec:eval-1161 was not re-run
-(@sec:eval-goblint). No running time is measured (@sec:eval-absent). The
-comparison with prior work rests on a targeted search rather than a
-systematic review, so a missed work could narrow the scoped novelty claims
-(@ch:related).
 
 == What the mechanization revealed <sec:revealed>
 
