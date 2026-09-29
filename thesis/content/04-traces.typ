@@ -378,7 +378,7 @@ The node is existential because #isaconst("csim") is not functional
 
 == Calling contexts, as a relation <sec:contexts>
 
-A _context_ is the key under which an activation is analyzed. At a fixed node,
+A _context_ is the index under which an activation is analyzed. At a fixed node,
 activations with the same context contribute to the same abstract unknown
 $[v, c]$. The classical designs differ in what a context records @sharir81 @rival20[§8.4.1] @seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records the call history, and practical variants bound it to the $k$ most recent call sites, since a recursive procedure otherwise has infinitely many contexts. The functional approach computes a procedure summary independent of callers, which each call site instantiates. Goblint computes the callee context after its entry operation, by passing each
 resulting callee entry state to the analysis's `context` operation
@@ -494,7 +494,7 @@ the final store of `bump(4)` to the bucket of context $4$.
 Unlike the classes of a partition, buckets may overlap: one trace may carry
 several contexts, as the call of `h` with $x = 4$ does (@fig:buckets, right).
 Under a functional policy the bucket of $c$ contains the final stores of the
-traces whose key, computed by the context function, is $c$
+traces whose context, computed by the context function, is $c$
 (#isathm("activation_collect_of_fun")). Each valid trace then carries exactly
 one context, so the traces fall into disjoint classes. The buckets may still
 overlap, because two traces in different contexts may end in the same store.

@@ -8,20 +8,20 @@ locale analysis_contract =
     and gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d g \<subseteq> \<gamma>\<^sub>D\<^sub>G d' g'"
     and step_sound:
-      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
+      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G
-           (locals (traverse_program
+           (dg_local (traverse_program
               (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
-           (globs (sides_of_program
+           (dg_global (sides_of_program
               (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and combine_sound:
-      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (globs (\<tau> (Inr gk)));
-        t \<in> \<gamma>\<^sub>D\<^sub>G de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (dg_global (\<tau> (Inr gk)));
+        t \<in> \<gamma>\<^sub>D\<^sub>G de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G
-            (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+            (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
                (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
                \<tau>))
-            (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+            (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
                (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
                \<tau> (Inr gk)))"

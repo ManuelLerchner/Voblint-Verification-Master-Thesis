@@ -39,7 +39,7 @@ Write $T(u)$ for the right-hand side of an unknown $u$: the strategy tree of
 @sec:eq-call, which reads unknowns, emits side contributions and returns a
 local result $"eval"(T(u), sol)$. Bounding only that result,
 $"eval"(T(u), sol) lle sol(u)$, fails at the first call. The caller publishes
-the callee's entry state as a side contribution to the seed key of
+the callee's entry state as a side contribution to the seed of
 @ch:equations, and the callee's entry equation reads that seed back. A
 valuation that sets the seed and every unknown of the callee $f$ to #lbot, and
 everything else to #ltop, satisfies every local bound: $f$'s entry reads #lbot,
@@ -57,8 +57,7 @@ their predecessors, so a demand-driven solve evaluates the unknowns its query
 transitively reads. From the exit of `main` these include every node from which
 the exit can be reached, in each context the solve discovers for it. A single
 solve therefore takes the place of one query per program point. Apinis
-et al. start local solving from the same unknown @apinis12. Keys that cannot
-reach the exit, such as code after a `return`, are the subject of
+et al. start local solving from the same unknown @apinis12. Unknowns that cannot reach the exit, such as code after a `return`, are the subject of
 @sec:live-keys. The certificate names the set $V$ of local unknowns the solve
 reached:
 
@@ -70,8 +69,7 @@ every value a certified equation reads is itself certified. Without this
 conjunct a certified equation could read an unknown outside $V$ whose value is
 arbitrary, for instance #lbot, and the bound on its result would say nothing
 about the executions that pass through the unknown it read. The local result of
-$T(u)$ is bounded by $sol(u)$. The side contributions of $T(u)$, joined per
-target key, are bounded by #sol pointwise. Global unknowns are constrained only
+$T(u)$ is bounded by $sol(u)$. The side contributions of $T(u)$, joined per target global unknown, are bounded by #sol pointwise. Global unknowns are constrained only
 in this way.
 
 @fig:td-trace shows where $V$ comes from. The solver starts from the query,
@@ -227,7 +225,7 @@ therefore takes the solver as a parameter and states three contracts about it.
 First, a solve whose recursion is defined on the query returns a
 post-solution on its stabilized set. The vendored theorem
 #isathm("partial_post_solution") provides this. Second, such a solve returns a
-finite key set. Voblint proves this once for the solver locale from its
+finite set of unknowns. Voblint proves this once for the solver locale from its
 stable-set invariant (#isathm("finite_stabl_solve")). The `DEAD` verdict of
 @sec:verdicts aggregates over all contexts of a node and relies on it. Third, a
 run of the executable solver that returns a result lies in that domain
@@ -435,14 +433,14 @@ carries any natural number. This already excludes the finite domains and
 finite context spaces, where a restricted theorem would be plausible. Seidl
 and Vogler prove termination of their side-effecting variant on paper whenever
 only finitely many unknowns are encountered @seidl21[Thm. 5]. Mechanizing a result of
-that kind for the vendored solver, relative to the keys a program creates, is
+that kind for the vendored solver, relative to the unknowns a program creates, is
 future work. The end-to-end theorem is therefore a partial-correctness result
 with a per-program premise (@sec:headline).
 
 The solver enters the argument only through three contracts of
 #isalocale("dg_analysis"): #isaconst("part_post_solution") on the stabilized
 set, which the vendored #isathm("partial_post_solution") derives from the
-premise that the solver's recursion is defined on the query, the finite key set
+premise that the solver's recursion is defined on the query, the finite set of unknowns
 of #isathm("finite_stabl_solve"), and domain membership after a finished run
 (#isathm("solve_dom_of_solve_c")). One interpretation of the solver locale,
 parameterized by the rule, makes all three hold for all four update rules at

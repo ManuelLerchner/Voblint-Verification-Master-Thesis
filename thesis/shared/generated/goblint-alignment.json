@@ -68,7 +68,7 @@
         "refs": [
           {
             "kind": "type",
-            "name": "routed_gk"
+            "name": "global_unknown"
           }
         ]
       },
@@ -327,7 +327,7 @@
     },
     {
       "kind": "type",
-      "name": "routed_gk"
+      "name": "global_unknown"
     },
     {
       "kind": "const",

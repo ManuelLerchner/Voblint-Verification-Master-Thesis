@@ -539,9 +539,7 @@ discovered dependency closure of the query is stable, and it returns the set $S$
 with the valuation $sol$.
 
 The formalization splits the unknowns into _local_ unknowns $Unk$, which have a
-right-hand side, and _globals_ $G$, which receive only side contributions. Later chapters call
-them _shared keys_. The term does not mean the program's globals, although
-@sec:mixed-flow stores those at one shared key. A
+right-hand side, and _global unknowns_ $G$, which receive only side contributions. A global unknown is not a global variable of the program, although @sec:mixed-flow stores the program's globals in one global unknown. A
 right-hand side is a _strategy tree_ (#isatype("strategy_tree")), which
 exposes every read and every side effect to the solver:
 $

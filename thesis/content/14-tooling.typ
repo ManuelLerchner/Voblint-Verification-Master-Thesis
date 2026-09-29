@@ -278,7 +278,7 @@ prefix its constants and facts share, and the theories that prove it sound. From
 an entry the generator writes the registrations of a numeric domain
 (@sec:engineering). Each proof applies the certificate of the domain's operation
 bundle (#isathm("sound_nonrelational_ops.dg_analysis_execI")) and discharges the
-remaining obligations for routing, the seed key, the solver and the initial
+remaining obligations for routing, the seeds, the solver and the initial
 state by citing the domain's facts under names the prefix determines. The
 generator also writes the combined state of @ch:cooperation with its dispatch
 equations. It only places names, and Isabelle checks every generated proof. Some

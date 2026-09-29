@@ -133,8 +133,7 @@ rule. #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges every
 obligation of #isalocale("dg_analysis_exec") that concerns the domain:
 soundness of the transfer, the two commutations with the readback, and
 correctness of the check classifier. Six obligations remain, and each domain's
-generated registration discharges them: the routing agreement, that the seed
-key differs from the shared global key, three facts about the solver (its
+generated registration discharges them: the routing agreement, that the seeds differ from the analysis global, three facts about the solver (its
 result is a partial post-solution, its solved domain is finite, and a
 successful executable run lies in that domain), and soundness of the initial
 state. Only the last is a fact about the domain's values (for Parity,

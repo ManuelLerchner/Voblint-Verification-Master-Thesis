@@ -156,9 +156,9 @@ name = "analysis_contract"
 
 [[anchor]]
 chapter = "ch:equations"
-concept = "Solver global keys"
+concept = "Global unknowns"
 kind = "type"
-name = "routed_gk"
+name = "global_unknown"
 
 [[anchor]]
 chapter = "ch:equations"

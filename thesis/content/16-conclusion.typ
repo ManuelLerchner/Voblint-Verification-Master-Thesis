@@ -71,8 +71,7 @@ directly, so the generality adds no cost for call strings. Only one specificatio
 (#isathm("ov_two_contexts_admitted")).
 
 Keeping program globals in the flow-sensitive local state lets the analysis
-soundness contract name a single global and leaves the shared unknowns with
-entry seeds only. Every unknown then carries every global. The flow-insensitive
+soundness contract name a single global and leaves the global unknowns with entry seeds only. Every unknown then carries every global. The flow-insensitive
 placement, which Seidl et al. present as a choice for efficiency @seidl26,
 loses precision on the `set`/`get` program (@sec:mixed-flow). We measured
 neither placement's cost, so the choice is based on proof effort and precision.
@@ -164,7 +163,7 @@ arises. @sec:eval-threats collects the threats to the evaluation.
   straight-line program through compilation. No benchmark exists, and the data
   refinement to red-black trees that would remove these costs is not done
   (@sec:eval-absent).
-+ *Shared unknowns.* The analysis soundness contract admits a single global
++ *Analysis globals.* The analysis soundness contract admits a single global
   name (@sec:sound-core). The selectable analyses keep program globals in the
   flow-sensitive local state, and the flow-insensitive placement is proved sound for every program at the level of the analysis soundness contract (#isathm("ownership_split_lift_contract")), but end to end only for one program, whose routing obligations are evaluated (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
 + *Coverage of the configuration space.* Every shipped entry operation
@@ -197,10 +196,9 @@ through the query channel it could answer the numeric analyses at branches as
 well as at assignments (@sec:relational). The combined state admits one query
 kind and components without globals (@sec:coop-limits). Further query kinds
 need their own truth relation, and a component with globals needs the
-combination to route each analysis's shared unknowns, as Goblint's MCP tags
-them with the analysis they belong to. In the shipped analyzer the shared
-unknowns carry only callee-entry seeds. One unknown per program global needs a
-concretization over an environment of shared values in place of the single
+combination to route each analysis's analysis globals, as Goblint's MCP tags
+them with the analysis they belong to. In the shipped analyzer the global unknowns carry only callee-entry seeds. One unknown per program global needs a
+concretization over an environment of analysis-global values in place of the single
 global name of the analysis soundness contract. Threads and locks with a
 thread-local trace semantics would then allow the thread-modular uses of
 globals discussed in @sec:mixed-flow.
@@ -209,7 +207,7 @@ The context relation reads only how an activation was entered. Digests refine
 unknowns by other abstractions of a local trace, such as held locks or thread
 identifiers @schwarz24digest. Generalizing #isaconst("trace_context") to such
 history abstractions over activation-local traces would allow path- or
-history-sensitive keys. Each abstraction would need its own admissibility
+history-sensitive unknowns. Each abstraction would need its own admissibility
 conditions in place of the context clauses of the coverage contract.
 
 *Guarantees.* A termination theorem would remove the per-program premise. The total
@@ -218,10 +216,10 @@ solver without side effects and assumes finitely many unknowns, a precise
 widening and monotonic right-hand sides with monotonic dependencies
 (@sec:rel-solvers). Voblint's systems have side effects, and its unknowns pair
 nodes with contexts. Bounding the contexts does not suffice on its own. For call strings over a compiled program the candidate space is
-finite, but that the solved keys stay inside it is a hypothesis of
+finite, but that the solved unknowns stay inside it is a hypothesis of
 #isathm("compiled_call_string_vars_finite"), not a theorem about the routed
 solve. Entry-state contexts over infinite domains need a bound such as the
-context lifters of #cite(<erhard25>, form: "prose"). Even a finite key space
+context lifters of #cite(<erhard25>, form: "prose"). Even a finite space of unknowns
 admits values that increase forever, because stabilization is not a law of #isalocale("warrowing")
 (@sec:eq-finite, @sec:termination).
 

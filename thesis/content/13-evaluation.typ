@@ -249,8 +249,7 @@ a call-string depth decides the `down` recursion below depends on widening. In
 every selectable analysis the shared component carries only entry seeds;
 program globals in a flow-insensitive unknown are proved sound for one program
 only (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow). A component of the
-combined state cannot read or publish globals, so an analysis with its own
-shared unknowns cannot join it (@sec:coop-limits).
+combined state cannot read or publish globals, so an analysis with its own analysis globals cannot join it (@sec:coop-limits).
 
 == Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
 
@@ -731,7 +730,7 @@ names the kind of its evidence and the section that argues it.
   _Evaluated_ for one call (#isathm("w0_seed_at_entered_frame"),
   #isathm("w0_no_seed_at_caller_frame")). @sec:eq-seed.
 
-+ *A right-hand side may publish to a key only once per evaluation*, because
++ *A right-hand side may publish to a global unknown only once per evaluation*, because
   the update rules record one contribution per origin. _Evaluated_ for the
   buffered system (#isathm("keyed_multiwrite_buffered_terminates")); the
   non-termination of the unbuffered one is expected, neither proved nor

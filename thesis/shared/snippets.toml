@@ -143,6 +143,14 @@ why = "Chapter 6, shared facts: the manager a transfer receives, its reads, publ
 file = "src/Abstract_Interpreter/Framework/Spec/DG_Manager.thy"
 why = "Chapter 6, shared facts: a transfer maps a manager to a program yielding the next local value."
 
+[snippets.entry_pairs_cover]
+file = "src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy"
+why = "Chapter 6, paired entry coverage: one pair covers caller and callee together."
+
+[snippets.unpaired_entry_cover_unsound]
+file = "src/Examples/Capstone/Example_Non_Vacuity.thy"
+why = "Chapter 6, the counterexample to unpaired entry coverage."
+
 [snippets.part_post_solution]
 file = "vendor/td-verification/Basics_side.thy"
 why = "The certificate between the vendored solver and the semantic proof (solving chapter)."

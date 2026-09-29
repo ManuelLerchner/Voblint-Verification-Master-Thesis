@@ -29,8 +29,7 @@
 @sec:headline states one theorem about the answers of the exported analyzer
 #isaconst("run_voblint"), from source executions to verdicts. Chaining the preceding results does not yet give it. Equation
 soundness bounds only the unknowns the solver certified, and the certificate
-is closed backward from the query, while an execution moves forward into keys
-the query need not depend on (@sec:live-keys). The client reads a table and a
+is closed backward from the query, while an execution moves forward into unknowns the query need not depend on (@sec:live-keys). The client reads a table and a
 verdict per check, not a solver valuation per context (@sec:table). A verdict
 also needs a precise meaning: a check that no execution reaches makes every
 condition true there (@sec:verdicts).
@@ -82,7 +81,7 @@ component of @ch:cooperation, and a single analysis is the list of length one.
 Four features of the statement are forced. The node is existential because a
 source configuration does not determine its CFG node (@ch:traces), the context
 because a store is covered in some context only (@sec:table), and coverage of
-the solved keys is absent because @sec:live-keys derives it. Termination is a
+the solved unknowns is absent because @sec:live-keys derives it. Termination is a
 premise of its own, separate from the answer, because #isaconst("run_voblint")
 is a total HOL function that denotes an unspecified answer where the solve does
 not terminate (@sec:termination).
@@ -218,10 +217,10 @@ the trace construction of @ch:traces. The split of the collection into context
 buckets is #isathm("ltr_collect_eq_Union_activation_collect"), which rests on
 #oblig("TOTAL"). Equation soundness (@ch:equations) bounds each bucket by the
 solver's valuation, given the certificate of @ch:solving. Two steps remain:
-coverage of every key an execution visits, and the passage from the solver's
+coverage of every unknown an execution visits, and the passage from the solver's
 valuation to the table a client reads.
 
-== From certified keys to executions <sec:live-keys>
+== From certified unknowns to executions <sec:live-keys>
 
 Equation soundness bounds only the unknowns in the certified set $V$. A
 concrete execution may visit any node in any admitted context, so the proof
@@ -232,8 +231,7 @@ predecessors, so $V$ is closed _backward_ from the query at the exit of `main`.
 A statement compiled after a `return` shows that the two differ: it can be
 solved, yet nothing the query depends on reads its successors.
 
-The fix restricts attention to _live_ keys (#isaconst("live_keys")): solved
-keys whose node is live in a procedure whose result is solved in the same
+The fix restricts attention to _live_ unknowns (#isaconst("live_unknowns")): solved unknowns whose node is live in a procedure whose result is solved in the same
 context. Liveness (#isaconst("prog_live")) is defined on the program text: a
 statement is live if no command before it in its sequence cannot fall through.
 The semantic alternative, that the node can still reach its procedure's result,
@@ -241,14 +239,14 @@ is not preserved along the edges of an arbitrary graph, and control after a
 `return` can run into a node with no way out. The syntactic notion has the two
 properties the argument needs. Every live node reaches the procedure's result
 along the steps an equation reads backwards, and every edge out of a live node
-lands on a live node. A successor of a live key therefore reaches a solved
+lands on a live node. A successor of a live unknown therefore reaches a solved
 result, and backward closure from that result puts the successor into $V$.
 
 The call case has one more condition. The callee's entry is covered only when
 the state the call enters is not #ctor("Bot"), because only then does the
 solve select a callee context and demand its result. An execution that makes
 the call enters with a store that this state describes, so the state is not
-#ctor("Bot") in the cases the proof needs. #isathm("live_keys_cover")
+#ctor("Bot") in the cases the proof needs. #isathm("live_unknowns_cover")
 derives the forward closure from well-formedness and termination alone, so
 coverage is not a premise of the final theorem.
 
@@ -257,8 +255,8 @@ coverage is not a premise of the final theorem.
 The solver returns a valuation over its unknowns, but the client reads a table
 indexed by node and context through #isaconst("lookup_context"). The theorem
 #isathm("gamma_reader_eq_lookup") states that both describe the same stores at
-every node and context. Unsolved keys read as unreachable. This is sound
-because every key an execution visits is live, and live keys are solved.
+every node and context. Unsolved unknowns read as unreachable. This is sound
+because every unknown an execution visits is live, and live unknowns are solved.
 
 A reached store is covered at its node _in some context_:
 $ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A). $
@@ -294,7 +292,7 @@ true of every store it denotes. The type #isatype("contextual_verdict") is the
 verdict type lifted by a bottom element, and that bottom is `DEAD`, the unit of
 the join. A node is `DEAD` exactly when every context the table holds there is
 #ctor("Bot"). The join ranges over the contexts solved at the node, a finite
-set because a terminating solve returns a finite key set
+set because a terminating solve returns a finite set of unknowns
 (#isathm("finite_stabl_solve"), @sec:termination).
 
 Each verdict below has a meaning only under the premises of the theorem
@@ -434,15 +432,12 @@ could not exclude a zero divisor.
 The theorem of @sec:headline is the end-to-end soundness result. Each of its conclusions
 rests on one step of this chapter: collection at a simulating node on the
 compiler simulation and the trace construction (@sec:chain), coverage by the
-published table on the live keys and the readback (@sec:live-keys,
+published table on the live unknowns and the readback (@sec:live-keys,
 @sec:table), and the verdict conclusions on the join over contexts
-(@sec:verdicts). Well-formedness and the closure of the certified keys are
+(@sec:verdicts). Well-formedness and the closure of the certified unknowns are
 derived. Termination of the abstract solve stays a per-program premise, so the
 result is partial correctness, and the delivered tool adds the trusted
-components of @sec:trust-boundary. The companion theorems
-#isathm("run_voblint_dead_check_unreached") and
-#isathm("run_voblint_arithmetic_safe") give `DEAD` and the arithmetic
-diagnostic their meaning, and #isathm("certificate_demo_source_certified")
+components of @sec:trust-boundary. #isathm("certificate_demo_source_certified")
 shows for one program and configuration that the premises can be met, a
 non-vacuity witness. @ch:instances compares what the shipped
 domains can prove under this theorem, and @ch:executable draws the boundary
