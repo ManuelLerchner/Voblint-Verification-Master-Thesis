@@ -39,7 +39,7 @@ lemma sign_check_domain: "sound_check_query sign_less sign_eq gamma_state aval_s
 
 definition sign_ops :: "sign nonrelational_ops" where
   "sign_ops = \<lparr> n_aval = aval_sign, n_query = \<lparr>q_less = sign_less, q_eq = sign_eq\<rparr>,
-                n_refine = sign_refine_ops, n_special = sign_special_ops, n_top = STop \<rparr>"
+                n_refine = sign_refine_ops, n_special = sign_special_ops \<rparr>"
 
 lemma sign_ops_simps [simp]:
   "n_aval sign_ops = aval_sign"
@@ -47,11 +47,10 @@ lemma sign_ops_simps [simp]:
   "q_eq (n_query sign_ops) = sign_eq"
   "n_refine sign_ops = sign_refine_ops"
   "n_special sign_ops = sign_special_ops"
-  "n_top sign_ops = STop"
   by (simp_all add: sign_ops_def)
 
 global_interpretation sign_tf: mono_nonrelational_ops sign_ops
-  rewrites "n_top sign_ops = STop"
+  rewrites "(top :: sign) = STop"
     and "sound_minmax_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
   defines assign_sign = sign_tf.assign
     and skip_sign = sign_tf.skip
@@ -84,10 +83,8 @@ proof -
       by (rule sign_backward_domain)
     show "sound_check_query sign_less sign_eq gamma_state aval_sign"
       by (rule sign_check_domain)
-    show "STop = top"
-      by (simp add: top_sign_def)
   qed
-qed (simp_all add: special_sign_eq_transfer fun_eq_iff)
+qed (simp_all add: special_sign_eq_transfer fun_eq_iff top_sign_def)
 
 text \<open>
   No fact is renamed here. The transfer functions get Sign-prefixed names above

@@ -31,7 +31,7 @@ lemma parity_check_domain: "sound_check_query parity_less parity_eq gamma_state 
 
 definition parity_ops :: "parity nonrelational_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_query = \<lparr>q_less = parity_less, q_eq = parity_eq\<rparr>,
-                  n_refine = parity_refine_ops, n_special = parity_special_ops, n_top = PTop \<rparr>"
+                  n_refine = parity_refine_ops, n_special = parity_special_ops \<rparr>"
 
 lemma parity_ops_simps [simp]:
   "n_aval parity_ops = aval_parity"
@@ -39,11 +39,10 @@ lemma parity_ops_simps [simp]:
   "q_eq (n_query parity_ops) = parity_eq"
   "n_refine parity_ops = parity_refine_ops"
   "n_special parity_ops = parity_special_ops"
-  "n_top parity_ops = PTop"
   by (simp_all add: parity_ops_def)
 
 global_interpretation parity_tf: mono_nonrelational_ops parity_ops
-  rewrites "n_top parity_ops = PTop"
+  rewrites "(top :: parity) = PTop"
     and "sound_minmax_ops.special_transfer (n_special parity_ops) (n_aval parity_ops)
            = special_parity"
   defines assign_parity = parity_tf.assign
@@ -74,10 +73,8 @@ proof -
       by (rule parity_backward_domain)
     show "sound_check_query parity_less parity_eq gamma_state aval_parity"
       by (rule parity_check_domain)
-    show "PTop = top"
-      by (simp add: top_parity_def)
   qed
-qed (simp_all add: special_parity_eq_transfer fun_eq_iff)
+qed (simp_all add: special_parity_eq_transfer fun_eq_iff top_parity_def)
 
 text \<open>
   No fact is renamed. The transfer functions get Parity-prefixed names above

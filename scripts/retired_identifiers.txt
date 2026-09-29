@@ -3470,3 +3470,10 @@ expression_domain_mono
 sound_special_ops
 mono_special_ops
 abstract_check_domain
+
+# --- The whole-value element is the class top (2026-09-29) ---
+# The non-relational bundle carried it as a field that every certificate pinned
+# to top; its sort now includes top, and gamma_top states its concretization.
+n_top
+top_eq
+top_gamma

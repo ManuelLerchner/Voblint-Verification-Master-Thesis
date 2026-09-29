@@ -43,7 +43,7 @@ lemma ivl_enter_st_for_eq [simp]:
       (map (\<lambda>e. aval_ivl e
         (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q ivl_top s)"
-  by (simp add: ivl_enter_st_for_def generic_enter_st_for_def)
+  by (simp add: ivl_enter_st_for_def generic_enter_st_for_def top_ivl_def)
 
 definition ivl_tf_st_for ::
   "(vname => bool) => edge_action =>

@@ -44,8 +44,7 @@ locale sound_nonrelational_ops =
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
   + check: sound_check_query "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
       "n_aval ops"
-  for ops :: "'a::numeric_domain nonrelational_ops" +
-  assumes top_eq: "n_top ops = top"
+  for ops :: "'a::numeric_domain nonrelational_ops"
 begin
 
 text \<open>The guard is the branch the refinement operations derive.\<close>
@@ -55,12 +54,6 @@ abbreviation br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarr
 
 lemma br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
   by (rule backward.branch_sound)
-
-text \<open>The whole-value element is the class \<^const>\<open>top\<close>, so its concretization is
-  everything by \<open>gamma_top\<close> rather than by an assumption of its own.\<close>
-
-lemma top_gamma: "\<gamma> (n_top ops) = UNIV"
-  by (simp add: top_eq)
 
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
 
@@ -113,11 +106,11 @@ text \<open>
 \<close>
 
 definition enter_frame_for :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_frame_for \<G> = enter_frame \<G> (n_top ops)"
+  "enter_frame_for \<G> = enter_frame \<G> top"
 
 definition enter_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_for \<G> = enter_binding \<G> (n_top ops) (n_aval ops)"
+  "enter_for \<G> = enter_binding \<G> top (n_aval ops)"
 
 definition enter_ci_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -128,7 +121,7 @@ lemma enter_for_sound:
   shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF \<G> top_gamma])
+proof (rule enter_binding_sound[OF \<G> gamma_top])
   fix e
   show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (n_aval ops e \<sigma>)"
     using gamma_stateD[OF \<G>] by blast
@@ -184,7 +177,7 @@ subsection \<open>Agreement with the executable mirror\<close>
 
 text \<open>
   Each operation above is the one the bundle determines --- \<open>Nondet_Int\<close>'s
-  \<^const>\<open>top\<close> is \<open>n_top ops\<close> by \<open>top_eq\<close>, and every other case is definitional ---
+  \<^const>\<open>top\<close>, and every other case is definitional ---
   so this domain's dispatcher is \<^const>\<open>generic_tf_abs\<close> at its own bundle and
   branch. That identification is the whole content: the executable mirror's
   commutation is already proved once against \<^const>\<open>generic_tf_abs\<close>.
@@ -195,7 +188,7 @@ proof (rule ext, rule ext)
   fix a :: edge_action and \<sigma> :: "'a abs_state"
   show "tf_abs a \<sigma> = generic_tf_abs ops br a \<sigma>"
     by (cases a)
-       (simp_all add: op_defs top_eq split: special_call.splits option.splits)
+       (simp_all add: op_defs split: special_call.splits option.splits)
 qed
 
 text \<open>
@@ -313,9 +306,8 @@ lemma sound_nonrelational_opsI:
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
     and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
-    and "n_top ops = top"
   shows "sound_nonrelational_ops ops"
-  by (intro sound_nonrelational_ops.intro sound_nonrelational_ops_axioms.intro assms)
+  by (intro sound_nonrelational_ops.intro assms)
 
 lemma mono_nonrelational_opsI:
   assumes special: "mono_minmax_ops (n_special ops) (n_aval ops)"
@@ -323,7 +315,6 @@ lemma mono_nonrelational_opsI:
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
     and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
-    and "n_top ops = top"
   shows "mono_nonrelational_ops ops"
 proof -
   interpret mono_minmax_ops "n_special ops" "n_aval ops" by (rule special)

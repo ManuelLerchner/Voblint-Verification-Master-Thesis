@@ -11,8 +11,8 @@ section \<open>The primitives one abstract value per variable is built from\<clo
 text \<open>
   Say what an expression evaluates to, which comparisons the domain decides, how
   a guard refines its operands, how the two special calls combine two values,
-  and what the whole-value element is --- and every edge of a compiled graph is
-  determined. \<open>nonrelational_ops\<close> is that bundle of primitive choices, written
+  and every edge of a compiled graph is determined; the whole-value element is
+  the class \<^const>\<open>top\<close>. \<open>nonrelational_ops\<close> is that bundle of primitive choices, written
   once per domain. Everything else is derived from it: the guard filter on the
   executable store here, the abstract branch and the transfer in
   \<open>Nonrelational_Transfer\<close>, which certifies one such bundle.
@@ -33,7 +33,7 @@ text \<open>
 \<close>
 
 text \<open>
-  The bundle is constrained to \<open>'a::bot\<close> and the executable step to
+  The bundle is constrained to \<open>'a::{bot, top}\<close> and the executable step to
   \<open>'a::executable_domain\<close>, never \<open>'a::numeric_domain\<close>. \<open>numeric_domain\<close> fixes
   \<open>gamma\<close> as a class operation, and code generation for a definition at that
   sort must resolve \<open>gamma\<close>'s code equation for the concrete type even though
@@ -50,12 +50,11 @@ record 'a query_ops =
   q_less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
   q_eq   :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
 
-record 'a::bot nonrelational_ops =
+record ('a::"{bot, top}") nonrelational_ops =
   n_aval    :: "exp => (vname => 'a) => 'a"
   n_query   :: "'a query_ops"
   n_refine  :: "'a refine_ops"
   n_special :: "'a special_ops"
-  n_top     :: "'a"
 
 text \<open>
   The guard filter on the executable store is derived from the evaluator and the
@@ -70,12 +69,12 @@ abbreviation n_bfilter ::
 subsection \<open>Procedure entry\<close>
 
 definition generic_enter_st_for ::
-    "'a::bot nonrelational_ops => (vname => bool) => call_info =>
+    "'a::{bot, top} nonrelational_ops => (vname => bool) => call_info =>
        'a resolved_st_q => 'a resolved_st_q" where
   "generic_enter_st_for ops \<G> ci s =
      bind_formals_resolved_q \<G> (ci_formals ci)
        (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
-       (enter_frame_D_resolved_q (n_top ops) s)"
+       (enter_frame_D_resolved_q top s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
 
@@ -89,7 +88,7 @@ fun generic_tf_st_for ::
   | "generic_tf_st_for ops \<G> (EA_Special sc x) s =
        update_resolved_st_q s (location_of \<G> x)
          (case sc of
-            Nondet_Int => n_top ops
+            Nondet_Int => top
           | Min a b => special_min (n_special ops)
                          (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
                          (n_aval ops b (fun_of_resolved_st_q_for \<G> s))
@@ -106,14 +105,14 @@ fun generic_tf_st_for ::
   | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
-    "'a::bot nonrelational_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
+    "'a::{bot, top} nonrelational_ops => (exp => bool => 'a abs_state => 'a abs_state) =>
        edge_action => 'a abs_state => 'a abs_state" where
   "generic_tf_abs ops br =
      local_spec_step
        (\<lambda>sigma. sigma)
        (\<lambda>x a sigma. sigma(x := n_aval ops a sigma))
        (\<lambda>sc x sigma. sigma(x := (case sc of
-            Nondet_Int => n_top ops
+            Nondet_Int => top
           | Min a b => special_min (n_special ops) (n_aval ops a sigma) (n_aval ops b sigma)
           | Max a b => special_max (n_special ops) (n_aval ops a sigma) (n_aval ops b sigma))))
        br
@@ -126,7 +125,7 @@ lemma generic_tf_abs_simps [simp]:
   "generic_tf_abs ops br (EA_Assign x a) sigma = sigma(x := n_aval ops a sigma)"
   "generic_tf_abs ops br (EA_Special sc x) sigma =
      sigma(x := (case sc of
-        Nondet_Int => n_top ops
+        Nondet_Int => top
       | Min a b => special_min (n_special ops) (n_aval ops a sigma) (n_aval ops b sigma)
       | Max a b => special_max (n_special ops) (n_aval ops a sigma) (n_aval ops b sigma)))"
   "generic_tf_abs ops br (EA_Assume b) = br b True"

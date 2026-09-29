@@ -183,7 +183,7 @@ text \<open>
 definition int_dom_ops :: "refine_mode \<Rightarrow> int_dom nonrelational_ops" where
   "int_dom_ops mode =
      \<lparr> n_aval = aval_int_dom mode, n_query = \<lparr>q_less = int_less, q_eq = int_eq\<rparr>,
-       n_refine = int_refine_ops mode, n_special = int_dom_special_ops mode, n_top = top \<rparr>"
+       n_refine = int_refine_ops mode, n_special = int_dom_special_ops mode \<rparr>"
 
 lemma int_dom_ops_simps [simp]:
   "n_aval (int_dom_ops mode) = aval_int_dom mode"
@@ -191,7 +191,6 @@ lemma int_dom_ops_simps [simp]:
   "q_eq (n_query (int_dom_ops mode)) = int_eq"
   "n_refine (int_dom_ops mode) = int_refine_ops mode"
   "n_special (int_dom_ops mode) = int_dom_special_ops mode"
-  "n_top (int_dom_ops mode) = top"
   by (simp_all add: int_dom_ops_def)
 
 lemma int_check_domain:
@@ -201,18 +200,17 @@ lemma int_check_domain:
 
 lemma int_dom_sound_ops: "sound_nonrelational_ops (int_dom_ops mode)"
   by (rule sound_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
-     (rule int_dom_sound_special_ops int_backward_domain int_check_domain refl)+
+     (rule int_dom_sound_special_ops int_backward_domain int_check_domain)+
 
 lemma int_dom_mono_ops:
   assumes "mode \<noteq> Refine_Fixpoint"
   shows "mono_nonrelational_ops (int_dom_ops mode)"
   by (rule mono_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
      (rule int_dom_mono_special_ops[OF assms] int_dom_backward_domain_mono[OF assms]
-        int_check_domain refl)+
+        int_check_domain)+
 
 global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
-  rewrites "n_top (int_dom_ops mode) = top"
-    and "sound_minmax_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
+  rewrites "sound_minmax_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
            = special_int_dom mode"
   defines assign_int_dom = int_tf.assign
     and skip_int_dom = int_tf.skip
