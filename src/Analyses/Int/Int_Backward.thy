@@ -3,6 +3,7 @@ theory Int_Backward
     Int_Arithmetic
     "Voblint_Analysis_Sign.Sign_Backward"
     "Voblint_Analysis_Interval.Interval_Backward"
+    "Voblint_Analysis_Parity.Parity_Backward"
     "Voblint_Analysis_Congruence.Congruence_Backward"
     "Voblint_Nonrelational.Exec_Backward"
 begin
@@ -20,15 +21,15 @@ text \<open>
   \<open>+\<close>/\<open>-\<close>/\<open>*\<close> in their own theories (\<open>Sign_Backward\<close>,
   \<open>Interval_Backward\<close>); this composite reuses that same choice rather
   than inventing per-component arithmetic inversion the domains themselves
-  do not have. Parity has no backward-inversion theory in the codebase at
-  all, so its raw \<open>+\<close>/\<open>-\<close>/\<open>*\<close>/\<open>less\<close> candidates are likewise
-  \<open>inv_conservative\<close>; its equality candidate still narrows, through the
-  composite \<open>intersect_int_dom\<close> on the true branch below. Congruence
-  contributes the only real arithmetic inversion (\<open>inv_plus_congruence\<close>,
-  \<open>inv_minus_congruence\<close>, \<open>inv_times_congruence\<close>), matching
-  \<open>Congruence_Backward\<close>.
+  do not have. Parity and Congruence invert arithmetic in their own theories,
+  and the composite reuses both: \<open>inv_plus_parity\<close>, \<open>inv_minus_parity\<close>,
+  \<open>inv_times_parity\<close> (\<open>Parity_Backward\<close>) and \<open>inv_plus_congruence\<close>,
+  \<open>inv_minus_congruence\<close>, \<open>inv_times_congruence\<close> (\<open>Congruence_Backward\<close>).
+  A comparison leaves the Parity component unchanged, as Parity's own \<open>less\<close>
+  inverse does; an equality narrows it through the composite
+  \<open>intersect_int_dom\<close> on the true branch below.
 
-  Precision Sign/Interval/Parity cannot recover directly at inversion time
+  Precision Sign and Interval cannot recover directly at inversion time
   is not lost: the mode-aware wrapper's \<open>refine mode\<close> step re-derives
   their bounds from the (possibly Congruence-tightened) returned operand,
   exactly as \<open>refine_interval\<close>/\<open>refine_congruence\<close> already do for
@@ -189,7 +190,7 @@ where
   "inv_plus_int_dom_raw r d1 d2 =
      (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
           (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
+          (p1, p2) = inv_plus_parity (int_parity r) (int_parity d1) (int_parity d2);
           (c1, c2) =
             inv_plus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
       in
@@ -202,7 +203,7 @@ where
   "inv_minus_int_dom_raw r d1 d2 =
      (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
           (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
+          (p1, p2) = inv_minus_parity (int_parity r) (int_parity d1) (int_parity d2);
           (c1, c2) =
             inv_minus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
       in
@@ -215,7 +216,7 @@ where
   "inv_times_int_dom_raw r d1 d2 =
      (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
           (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
+          (p1, p2) = inv_times_parity (int_parity r) (int_parity d1) (int_parity d2);
           (c1, c2) =
             inv_times_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
       in
@@ -258,6 +259,7 @@ lemma inv_plus_int_dom_raw_sound:
     "x \<in> gamma_int_dom (fst (inv_plus_int_dom_raw r d1 d2)) \<and>
      y \<in> gamma_int_dom (snd (inv_plus_int_dom_raw r d1 d2))"
   using assms inv_plus_congruence_sound[of x _ y _ "int_congruence r"]
+    inv_plus_parity_sound[of x _ y _ "int_parity r"]
   by (simp add: inv_plus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
       inv_conservative_def)
 
@@ -267,6 +269,7 @@ lemma inv_minus_int_dom_raw_sound:
     "x \<in> gamma_int_dom (fst (inv_minus_int_dom_raw r d1 d2)) \<and>
      y \<in> gamma_int_dom (snd (inv_minus_int_dom_raw r d1 d2))"
   using assms inv_minus_congruence_sound[of x _ y _ "int_congruence r"]
+    inv_minus_parity_sound[of x _ y _ "int_parity r"]
   by (simp add: inv_minus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
       inv_conservative_def)
 
@@ -276,6 +279,7 @@ lemma inv_times_int_dom_raw_sound:
     "x \<in> gamma_int_dom (fst (inv_times_int_dom_raw r d1 d2)) \<and>
      y \<in> gamma_int_dom (snd (inv_times_int_dom_raw r d1 d2))"
   using assms inv_times_congruence_sound[of x _ y _ "int_congruence r"]
+    inv_times_parity_sound[of x _ y _ "int_parity r"]
   by (simp add: inv_times_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
       inv_conservative_def)
 
@@ -309,21 +313,21 @@ lemma inv_plus_int_dom_raw_mono:
   shows "le_pair (inv_plus_int_dom_raw r1 d1 e1) (inv_plus_int_dom_raw r2 d2 e2)"
   using assms
   by (simp add: inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-      inv_conservative_def inv_plus_congruence_mono)
+      inv_conservative_def inv_plus_congruence_mono inv_plus_parity_mono)
 
 lemma inv_minus_int_dom_raw_mono:
   assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
   shows "le_pair (inv_minus_int_dom_raw r1 d1 e1) (inv_minus_int_dom_raw r2 d2 e2)"
   using assms
   by (simp add: inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-      inv_conservative_def inv_minus_congruence_mono)
+      inv_conservative_def inv_minus_congruence_mono inv_minus_parity_mono)
 
 lemma inv_times_int_dom_raw_mono:
   assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
   shows "le_pair (inv_times_int_dom_raw r1 d1 e1) (inv_times_int_dom_raw r2 d2 e2)"
   using assms
   by (simp add: inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-      inv_conservative_def inv_times_congruence_mono)
+      inv_conservative_def inv_times_congruence_mono inv_times_parity_mono)
 
 
 subsection \<open>Mode-aware wrappers\<close>

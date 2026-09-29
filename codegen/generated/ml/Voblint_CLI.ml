@@ -6824,7 +6824,7 @@ let rec inv_times_int_dom_raw
     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
      let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
      let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+       inv_times_parity (int_parity r) (int_parity d1) (int_parity d2) in
      let (c1, c2) =
        inv_times_congruence (int_congruence r) (int_congruence d1)
          (int_congruence d2)
@@ -6847,7 +6847,7 @@ let rec inv_minus_int_dom_raw
     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
      let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
      let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+       inv_minus_parity (int_parity r) (int_parity d1) (int_parity d2) in
      let (c1, c2) =
        inv_minus_congruence (int_congruence r) (int_congruence d1)
          (int_congruence d2)
@@ -6870,7 +6870,7 @@ let rec inv_plus_int_dom_raw
     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2) in
      let (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2) in
      let (p1, p2) =
-       inv_conservative (int_parity r) (int_parity d1) (int_parity d2) in
+       inv_plus_parity (int_parity r) (int_parity d1) (int_parity d2) in
      let (c1, c2) =
        inv_plus_congruence (int_congruence r) (int_congruence d1)
          (int_congruence d2)

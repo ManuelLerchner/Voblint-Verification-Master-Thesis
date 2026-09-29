@@ -3451,3 +3451,7 @@ routed_activation_collect_sound
 sign_nest_finE
 twice_finC
 twice_finE
+
+# --- Unused Interval evaluator alias (2026-09-29) ---
+aval_ivl_sound
+bfilter_int_dom_never_plus_eq_congruence_only

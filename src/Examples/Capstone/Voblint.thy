@@ -161,7 +161,7 @@ text \<open>
     classes at the exit of a straight-line program.
   \<^item> \<^theory>\<open>Voblint_Examples_Int.Exec_Int_DG_Run\<close> runs the reduced product of Sign,
     Interval, Parity and Congruence.  @{thm [source] dgExI_never_ne_once} separates
-    \<^const>\<open>Refine_Never\<close>, which narrows only the Congruence component, from
+    \<^const>\<open>Refine_Never\<close>, which narrows only the Parity and Congruence components, from
     \<^const>\<open>Refine_Once\<close>, whose one reduction round reaches the exact singleton.  Refinement
     is legal because \<^const>\<open>int_reduction_step\<close> preserves the concretization while
     descending the order.

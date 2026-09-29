@@ -265,8 +265,8 @@ section \<open>Monotone bundles\<close>
 
 text \<open>
   Monotonicity is a separate certificate: the transfer contract asks only for
-  soundness, and a bundle whose evaluator or refinement is not monotone (Int's
-  fixpoint refinement) is still a sound one. A monotone bundle additionally has
+  soundness, and a bundle whose evaluator or refinement has no monotonicity
+  proof (Int's fixpoint refinement) is still a sound one. A monotone bundle additionally has
   monotone special operations and a monotone backward domain, and then every
   derived operation is monotone.
 \<close>

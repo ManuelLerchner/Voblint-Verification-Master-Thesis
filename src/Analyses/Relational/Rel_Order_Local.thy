@@ -6,7 +6,7 @@ section \<open>The order carrier as a component that asks\<close>
 
 text \<open>
   \<^const>\<open>rel_order_spec\<close> reads and publishes the global channel, so it is not a
-  local specification and cannot join a product of cooperating analyses. This
+  local specification and cannot join the combination of cooperating analyses. This
   theory gives the same carrier a local-only form. Intraprocedurally it is the
   order analysis of \<^theory>\<open>Voblint_Analysis_Relational.Rel_Order_Domain\<close>, with
   one addition: after an assignment it asks the oracle how the assigned value

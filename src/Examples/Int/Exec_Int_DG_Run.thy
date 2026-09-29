@@ -86,7 +86,7 @@ where
 
 lemma dgExI_never_result:
   "int_ex_result dgExI_never_eqs =
-   Some (int_dom_sipc STop top PTop (congruence_of_int 2))"
+   Some (int_dom_sipc STop top PEven (congruence_of_int 2))"
   by eval
 
 definition dgExI_once_eqs ::
@@ -106,9 +106,9 @@ lemma dgExI_once_result:
 
 text \<open>
   The retained mode contrast comes from two real solver runs on the same
-  compiled program. \<open>Refine_Never\<close> narrows only the Congruence component
-  through its own inverse. \<open>Refine_Once\<close> propagates that information to
-  Sign, Interval, and Parity and reaches the exact singleton.
+  compiled program. \<open>Refine_Never\<close> narrows only the Parity and Congruence
+  components, through their own inverses of \<open>+\<close>. \<open>Refine_Once\<close> propagates
+  that information to Sign and Interval and reaches the exact singleton.
 \<close>
 
 corollary dgExI_never_ne_once:

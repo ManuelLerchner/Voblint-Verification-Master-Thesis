@@ -196,8 +196,6 @@ interpretation ivl_arith: expression_domain_mono
                      interval_lt_mono interval_eqb_mono interval_tobool_mono
                      sup_ivl_def)
 
-lemmas aval_ivl_sound = ivl_arith.aval_abs_sound[unfolded gamma_abs_ivl]
-
 
 subsection \<open>Backward inverse operators\<close>
 

@@ -157,9 +157,9 @@ text \<open>
   \<open>Exec_Int_DG_Run\<close> carries the two non-CLI refinement modes through a compiled
   VIMP program and the real D/G solver. On
   \<open>if (y + 1 == 3) {x := 1} else {x := 0}\<close>, \<open>dgExI_never_result\<close> leaves \<open>y\<close>
-  at \<open>STop\<close>/top/\<open>PTop\<close> and narrows only Congruence to \<open>y \<equiv> 0 (mod 2)\<close>.
-  \<open>dgExI_once_result\<close> reaches the exact singleton
-  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>y \<equiv> 0 (mod 2)\<close>. The corollary
+  at \<open>STop\<close>/top and narrows only Parity, to \<open>PEven\<close>, and Congruence, to the
+  singleton class of \<open>2\<close>. \<open>dgExI_once_result\<close> reaches the exact singleton
+  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>2\<close>. The corollary
   \<open>dgExI_never_ne_once\<close> pins the mode-sensitive difference.
 
   The CLI composite-domain regression group covers the production

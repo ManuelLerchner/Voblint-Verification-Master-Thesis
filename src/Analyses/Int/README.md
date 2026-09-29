@@ -49,8 +49,8 @@ parameter for comparisons and regression witnesses.
 The guard gives `y + 1 = 3`. Backward filtering inverts `+` and hands the leaf `y` a
 candidate. What each mode then does with it:
 
-- `Refine_Never` — Congruence narrows `y` to `2 (mod 0)` on its own; Sign, Interval and
-  Parity learn nothing, so `y` stays `STop`/`top`/`PTop`.
+- `Refine_Never` — Congruence narrows `y` to `2 (mod 0)` and Parity to `PEven`, each through
+  its own inverse of `+`; Sign and Interval learn nothing, so `y` stays `STop`/`top` there.
 - `Refine_Once` — one round pushes the congruence singleton into the other three, and
   `y` becomes `SPos`/`[2,2]`/`PEven`/`2 (mod 0)`: exact.
 - `Refine_Fixpoint` — the same, here. One round already sufficed *for this guard*.

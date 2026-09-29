@@ -55,18 +55,19 @@ lemma bfilter_int_dom_fixpoint_plus_eq_exact:
   by eval
 
 text \<open>
-  \<open>Refine_Never\<close> applies no cross-component refinement at all. Congruence's
-  own real inverse (\<open>Congruence_Backward.inv_plus_congruence\<close>) still
-  narrows the congruence component directly -- that is the component's own
-  inversion, not refinement -- but Sign, Interval, and Parity never learn
-  about it.
+  \<open>Refine_Never\<close> applies no cross-component refinement at all. Parity's and
+  Congruence's own inverses (\<open>Parity_Backward.inv_plus_parity\<close>,
+  \<open>Congruence_Backward.inv_plus_congruence\<close>) still narrow their components
+  directly -- that is each component's own inversion, not refinement: since
+  \<open>1\<close> and \<open>3\<close> are odd, \<open>x\<close> is even, and Congruence pins \<open>x\<close> to \<open>2\<close>. Sign and
+  Interval invert \<open>+\<close> with the identity and never learn about it.
 \<close>
 
-lemma bfilter_int_dom_never_plus_eq_congruence_only:
+lemma bfilter_int_dom_never_plus_eq_own_inverses:
   "bfilter_int_dom Refine_Never
      (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
      test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PEven (congruence_of_int 2)"
   by eval
 
 subsection \<open>Distributed information, exact after refinement\<close>
