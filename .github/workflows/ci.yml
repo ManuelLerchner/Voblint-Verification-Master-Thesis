@@ -749,6 +749,18 @@ jobs:
       - name: Thesis domain trees list every implementation (no build needed)
         run: pixi run thesis-domain-tree
 
+      # Figures lifted from the explainer and the README playground, the solver
+      # sketch the background chapter prints, and the stored link targets of every
+      # citation. Text checks only; the anchors themselves are checked against the
+      # deployed pages after deployment.
+      - name: Thesis figures, sketches and stored link targets (no build needed)
+        run: |
+          pixi run thesis-figures
+          pixi run thesis-playground
+          pixi run thesis-sketches
+          pixi run thesis-links
+          pixi run thesis-links-coverage
+
       # The notation table is derived from the theories and rendered in the
       # thesis, the README and the explainer; all three must be current.
       # Needs td-verification: widen and narrow are declared there.
