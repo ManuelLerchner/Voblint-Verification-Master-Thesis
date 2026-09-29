@@ -5,8 +5,9 @@
 # checking it out (a split-off PR, a cherry-pick onto another base) is then
 # never checked itself, and a check fixed only in the checkout passes there
 # while the branch still fails CI. This exports <ref> into a temporary
-# directory and runs the checks from that copy; each script locates the
-# repository from its own path, so it reads the exported tree.
+# directory and runs the checks from inside that copy, so each script (which
+# locates the repository from its own path) and isar-tools (which reads
+# isar.toml from the working directory) see the exported tree.
 #
 # Usage: scripts/mk/check-ref.sh <ref>   (e.g. origin/isabelle/some-branch)
 set -euo pipefail
@@ -33,20 +34,20 @@ else
 fi
 
 checks=(
-  "scripts/check_theory_anchors.py"
-  "scripts/check_pages_links.py --sources"
-  "scripts/check_retired_identifiers.py"
-  "scripts/check_thy_prose_refs.py"
-  "scripts/check_locale_parameters.py"
-  "scripts/check_isabelle_ascii.py"
-  "scripts/check_thesis_refs.py"
+  "python3 scripts/check_theory_anchors.py"
+  "python3 scripts/check_pages_links.py --sources"
+  "python3 scripts/check_retired_identifiers.py"
+  "python3 scripts/check_thy_prose_refs.py"
+  "isar check locales src"
+  "python3 scripts/check_isabelle_ascii.py"
+  "python3 scripts/check_thesis_refs.py"
 )
 
 failed=()
 for check in "${checks[@]}"; do
   echo "== $check"
   # shellcheck disable=SC2086 # the entry carries its own arguments
-  if ! python3 "$tree"/$check; then
+  if ! (cd "$tree" && $check); then
     failed+=("$check")
   fi
 done
