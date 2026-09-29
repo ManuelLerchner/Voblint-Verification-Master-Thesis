@@ -2,7 +2,6 @@
 #import "../lib/stats.typ": stat, stat-percent, stat-sum
 #import "../lib/alignment.typ": alignment, alignment-count
 #import "../lib/claims.typ": claim-check, claim-snapshot, claim-timed-out, snapshot-verdict
-#import "../lib/math.typ": signval
 #import "../lib/theme.typ": vb
 
 = Evaluation <ch:evaluation>
@@ -50,7 +49,10 @@ _Limits._ The result is partial correctness. #isaconst("config_terminates") is
 a per-program premise, discharged by evaluation where it is discharged at all:
 #isathm("certificate_demo_full_certificate") does so for one program at one
 configuration, and regression programs exist whose solves do not finish
-(@sec:termination). The delivered guarantee also trusts the parser, the code
+(@sec:termination). The reduction of the Int product is a second place where
+the executable may fail to return: in the fixpoint mode, which the analyzer
+uses, the generated code iterates until the value stops changing, and that it
+stops is not proved (@sec:reduced-product). The delivered guarantee also trusts the parser, the code
 generator, the compilers, runtimes and renderer of @sec:trust-boundary, which
 are tested below and proved nowhere. Whether #isaconst("pstep") models the
 intended language is argued in @sec:vimp-vs-c and cannot be proved from the
@@ -62,12 +64,15 @@ program with the same text.
 _Evidence: repository measurement._ The theories under `src/` contain
 #stat("isabelle.lines") physical lines in #stat("isabelle.theories") files:
 semantics and compiler #stat("isabelle.directories.Program_Model")\; framework
-#stat("isabelle.directories.Abstract_Interpreter")\; concrete analyses
+and value lattices #stat("isabelle.directories.Abstract_Interpreter")\; the
+analyses, with the generic transfer, routing and result theories they share,
 #stat("isabelle.directories.Analyses")\; examples and witnesses
 #stat("isabelle.directories.Examples")\; executable surface
 #stat("isabelle.directories.Executable_Surface"). The count includes comments,
 document text (about #stat-percent("isabelle.doc", "isabelle.lines")), and the
-generated per-domain assembly theories. It excludes the vendored solver, of
+generated per-domain assembly theories. The framework figure includes the
+lattice of every value domain, including the relational one, because these
+theories live beside the generic lattice constructions. It excludes the vendored solver, of
 which Voblint's sessions import #stat("solver.used.theories") of
 the #stat("solver.theories") theories of its `TD` session. The analyzer that runs is the
 #stat("generated_ocaml")-line generated OCaml module. Around it lie
@@ -172,9 +177,9 @@ discharges all five obligations for every routing policy and domain
 `bump` show what indexing changes on one program (@sec:eq-call,
 @fig:pg-contexts).
 
-_Limits._ The shipped numeric analyses answer each call with a single
-alternative (#isathm("dgs_enter_local_state_st_for_lifted")), so admission at
-several contexts is exercised only by a Sign specification outside
+_Limits._ Every combination that #isaconst("run_voblint") runs answers each
+call with a single alternative (#isathm("single_entry_mcp_comp")), so admission
+at several contexts is exercised only by a Sign specification outside
 #isaconst("run_voblint"). That #oblig("TOTAL") is needed is machine-checked on
 one program (#isathm("total_dropped_unsound"), @sec:falsification); an
 evaluated analyzer run shows the same failure at the executable level
@@ -188,10 +193,21 @@ The claim is that the abstract domain, the context policy and the solver
 discharge their obligations independently, and that one composition theorem
 covers every configuration.
 
-_Evidence: machine-checked._ A domain instance proves facts about integers,
-none of which mentions a context, a routing policy or a solver, and generic
-results lift them to the analysis soundness contract #isalocale("analysis_contract")
-(@ch:instances). The routing
+_Evidence: machine-checked._ A non-relational domain supplies one record of
+primitive operations, #isatype("nonrelational_ops"): its evaluator, comparison
+queries, refinement operations, `min` and `max`, and whole-value element
+(@sec:instances-supply). Its certificate #isalocale("sound_nonrelational_ops")
+states facts about integers and stores, none of which mentions a context, a
+routing policy or a solver. The guard, the check classifier, the transfer
+functions and procedure entry are derived from the record once for every
+domain, and #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges
+every obligation the executed pipeline places on the domain. A domain's
+generated registration adds only the premises that belong to the routing
+policy, the solver and the initial state. The numeric domains therefore differ
+in their primitive records and certificates alone. A relational analysis enters
+at the next boundary, as a local specification that satisfies
+#isaconst("sound_local_spec"), from which generic results derive the analysis
+soundness contract #isalocale("analysis_contract") (@ch:cooperation). The routing
 obligations are discharged once for all domains
 (#isathm("activation_collect_dg_sound")). The solver is consumed only through
 the post-solution certificate #isaconst("part_post_solution")
@@ -205,18 +221,27 @@ update rule and the call-string depth as parameters (@fig:assembly), and
 #isathm("run_voblint_certified_source_sound") covers every resulting
 configuration.
 
-_Evidence: source inspection._ Adding a relational local state needed no
-change to the framework. The relational carrier of @sec:relational
-lives in sessions of its own:
-#isasession("Voblint_Analysis_Relational") builds on #isasession("Voblint_Exec")
-and does not import #isasession("Voblint_Nonrelational"), and
-#isasession("Voblint_Examples_Relational") runs it through the generator. No
-framework session imports either; the framework theories mention the carrier
-only in document text. Making it selectable as the order analysis needed its
-component proof (#isathm("order_spec_sound")) and an entry in the
-analysis manifest, from which the combined state and its registration are
-generated; no theorem of the framework or of the numeric domains changed. The statistics tooling measures directories, not
-sessions, so we give no line count for the extension.
+_Evidence: source inspection._ The lattice of the relational carrier
+#isatype("relc") lies beside the numeric value lattices in
+#isasession("Voblint_Domain") (@sec:rel-state). The analyses over it
+(@sec:relational) live in #isasession("Voblint_Analysis_Relational"), which
+builds on #isasession("Voblint_Exec") and does not import
+#isasession("Voblint_Nonrelational"), and
+#isasession("Voblint_Examples_Relational") runs them through the generator.
+No theory of the framework or of the numeric domains refers to these analyses
+outside document text.
+Making the carrier selectable as the order analysis took three proofs about
+its local specification, soundness (#isathm("order_spec_sound")), a single
+entry alternative (#isathm("single_entry_order_spec")) and sound query answers
+(#isathm("rel_qry_sound")), and an entry in the analysis manifest. An entry
+names the analysis, its value type, its constant prefix and its theories, and
+the generator derives the registrations and the combined state from it. The
+command-line tool's name tables and the display of an order value are still
+written by hand. On the non-relational side, Parity's refinement operations
+(#isaconst("parity_refine_ops")) reach the analyzer only as a field of its
+record #isaconst("parity_ops"), and no theory outside Parity's own names them.
+The statistics tooling measures
+directories, not sessions, so we give no line count for either extension.
 
 _Limits._ Precision depends on how the ingredients combine. Which update
 rule decides a check depends on the program (@fig:rules-programs), and whether
@@ -397,7 +422,8 @@ each direction. On the first, Interval and the order analysis alone leave
 `z == 1` `UNKNOWN`, and together they prove it, because the order analysis
 answers Interval's query at `z = (x == y)` (#isathm("coop_demo_needs_both")).
 On the second, the order analysis asks Interval at two assignments and proves
-`x <= y`, which neither proves alone (#isathm("order_asks_needs_both")). Both
+`x <= y`, which neither proves alone (#isathm("order_asks_interval_alone"),
+#isathm("order_asks_order_alone"), #isathm("order_asks_needs_both")). These
 lemmas state the verdicts of #isaconst("run_voblint") for all three activation
 lists and are proved by `eval`. Two further fixtures show a combination of
 numeric domains without a relational partner: Congruence makes a branch dead
@@ -408,11 +434,14 @@ and Interval removes a division warning that Parity raises
 
 === Known imprecision, with mechanisms named
 
+#let _sign = claim-check("sign-cannot-bound-magnitude", "total < 100")
+
 _Evidence: executable, except where marked._ Sign has no magnitude: in the
-claim `sign-cannot-bound-magnitude`, `total` is 7 and Sign reports it as
-#signval("+"), yet `total < 100` stays `UNKNOWN`. No context policy or update rule
-can change this, because Sign's comparison has no case for a nonzero constant:
-a positive value may lie on either side of 100. Intervals lose nonconvex
+claim `sign-cannot-bound-magnitude`, `total` is 7 in every execution, and at
+the check `total < 100` Sign reports #raw(_sign.at(4)) and the verdict
+#raw(_sign.at(3)). _Argument:_ no context policy or update rule can change this
+verdict, because Sign's comparison query decides nothing for a positive value
+against 100, which may lie on either side of it. Intervals lose nonconvex
 information, as the multiples of three of @fig:verdict-regions show. Pointwise
 stores lose relations between variables: on `if (x < y)`, Interval learns
 nothing at the true branch, evaluated in #isathm("demo_ivl_x_at_branch")
@@ -663,8 +692,9 @@ argument (@sec:eval-absent). The delivered guarantee trusts the parser, the
 code generator, the compilers, runtimes and renderer (@sec:trust-boundary), and
 every witness proved by `eval` also trusts the code generator's evaluation
 oracle (@tab:oracles-audit, @sec:nonvacuity). The theorem is partial
-correctness under a per-program termination premise (@sec:termination). The
-empirical evidence has limited reach. The corpus is small, written for this
+correctness under a per-program termination premise (@sec:termination), and
+termination of the Int product's reduction in the executable is not proved
+(@sec:reduced-product). The empirical evidence has limited reach. The corpus is small, written for this
 work, and its expected concrete behaviour is the author's reading of each
 program (@sec:eval-corpus). Every precision witness and example concerns one
 program at fixed configurations (the limits of @sec:eval-rq4), and the

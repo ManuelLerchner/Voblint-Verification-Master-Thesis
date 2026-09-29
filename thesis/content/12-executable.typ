@@ -100,24 +100,51 @@ vary over one carrier. They are therefore locale parameters.
 
 Second, code generation needs unconditional equations, and theorems about the
 result need semantic premises. #isalocale("dg_pipeline") fixes the
-executable ingredients (an MCP component, its readback, the initial state,
-routing, solver and check classifier) and assumes nothing, so its definitions
-become code equations directly. Even the bottom state is a parameter, because a
-least element taken from a type class would have to be executable at a
-function type. #isalocale("dg_analysis") imports it and adds the
-contracts: soundness of the component (#isaconst("sound_local_spec")) and of
-the initial state, a single entry alternative, the solver certificate,
-discharge of the termination premise by a finished executable run, and
-correctness of the check classifier. #isalocale("dg_analysis_exec")
-derives these contracts for a numeric domain from its per-operation rules and
-its readback. Each numeric domain interprets it, which gives the component and
-its soundness proof for the domain's field. The analyzer interprets
-#isalocale("dg_analysis") once per context family for the combination
-of any activation list (#isaconst("mcp_comp"), @fig:assembly), and every run
-inherits the argument of @ch:results from these three interpretations. The
-order analysis has no interpretation of its own. It enters as a field, with
-the soundness of #isathm("order_spec_sound"), and a new analysis enters
-the same way through the generated registration of #isaconst("local_spec_of").
+executable ingredients and assumes nothing, so its definitions become code
+equations directly. The ingredients are a component, which is one analysis's
+local specification or a combination of several, its emptiness test and
+readback, the initial state, the keys of the shared global and of the entry
+seeds, the routing policy with its root context, the solver and the check
+classifier. Even the bottom state is a parameter, because a least element
+taken from a type class would have to be executable at a function type.
+#isalocale("dg_analysis") imports it and adds the contracts, among them
+soundness of the component (#isaconst("sound_local_spec")) and of the initial
+state, exact emptiness tests, a single entry alternative, seed keys distinct
+from the shared global, the solver certificate, discharge of the termination
+premise by a finished executable run, and correctness of the check classifier.
+
+For a numeric domain, #isalocale("dg_analysis_exec") derives the component
+contracts from the domain's per-operation transfer rules
+(#isalocale("sound_nonrelational_transfer")) and from two commutations with
+readback, one for its executable transfer and one for its executable entry. It
+takes the routing, solver and initial-state contracts as assumptions. A
+certified operation bundle (@sec:instances-supply) discharges the domain's half
+at once, together with a sound classifier
+(#isathm("sound_nonrelational_ops.dg_analysis_execI")). Its executable transfer
+#isaconst("generic_tf_st_for") and entry #isaconst("generic_enter_st_for") are
+computed from the same primitives as the abstract ones.
+#isathm("sound_nonrelational_ops.tf_st_for_commute") and
+#isathm("sound_nonrelational_ops.enter_st_for_commute") prove that they
+commute with readback, the transfer on states the emptiness test keeps
+(@sec:readback). The code that
+runs is thus derived from the primitives the soundness proof is about, and
+no separately written implementation needs an agreement proof. Each numeric
+domain has a generated registration at the unit context, which proves only the
+six obligations that depend on the routing policy, the solver and the initial
+state. The analyzer does not run these registrations. The combined state
+writes each numeric field's component itself and cites the registration's
+soundness facts for the component and the initial state of that field.
+
+The analyzer interprets #isalocale("dg_analysis") once per context family for
+the combination #isaconst("mcp_comp") of any activation list (@fig:assembly).
+Every run inherits the argument of @ch:results from these three
+interpretations and the field facts they cite. The order analysis has no
+registration. It supplies its local specification #isaconst("order_spec")
+directly, and #isathm("order_spec_sound") is its field's soundness fact. A new
+analysis is one entry in the analysis manifest, from which its registration,
+for a numeric domain, and its field of the combined state
+(#isaconst("local_spec_of")) are generated (@ch:tooling). The command-line
+tool's tables of analysis names are still edited by hand.
 
 #figure(
   {
@@ -141,7 +168,7 @@ the same way through the generated registration of #isaconst("local_spec_of").
     let lab(body) = text(size: 7pt, fill: vb.muted, body)
     diagram(
       spacing: (9mm, 8mm),
-      loc((1, 0), isalocale("dg_pipeline"), [an MCP component and the other \
+      loc((1, 0), isalocale("dg_pipeline"), [a component and the other \
         executable ingredients; no assumptions]),
       loc(
         (1, 1),
@@ -153,26 +180,54 @@ the same way through the generated registration of #isaconst("local_spec_of").
       loc(
         (2.4, 1),
         isalocale("dg_analysis_exec"),
-        [derives them from a numeric \
-          domain's per-operation rules],
+        [derives the component contracts \
+          of a numeric domain],
         color: vb.proved,
       ),
       inst((0.4, 2), [#isaconst("mcp_comp") of any activation list \ three context families]),
-      inst((2.4, 2), [each numeric domain \ one field component]),
+      inst((2.4, 2), [one registration per numeric \ domain, at the unit context]),
+      loc(
+        (2.4, 3),
+        isalocale("sound_nonrelational_ops"),
+        [a domain's certified \ operation bundle],
+        color: vb.proved,
+      ),
+      loc((0.4, 3), isaconst("order_spec"), [the order analysis's \ local specification]),
       import-edge((1, 0), (1, 1), label: lab[extends], label-side: left),
-      import-edge((2.4, 1), (1, 1), label: lab[sublocale]),
+      sublocale-edge((2.4, 1), (1, 1), label: lab[sublocale]),
       interp-edge((1, 1), (0.4, 2)),
       interp-edge((2.4, 1), (2.4, 2)),
-      edge((2.4, 2), (0.4, 2), "->", stroke: 0.6pt + vb.muted, label: lab[fields of]),
+      edge((2.4, 2), (0.4, 2), "->", stroke: 0.6pt + vb.muted, label: lab[field soundness]),
+      edge(
+        (2.4, 3),
+        (2.4, 2),
+        "->",
+        stroke: 0.6pt + vb.muted,
+        label: lab(isathm(
+          "sound_nonrelational_ops.dg_analysis_execI",
+          display: "dg_analysis_execI",
+        )),
+        label-side: right,
+      ),
+      edge(
+        (0.4, 3),
+        (0.4, 2),
+        "->",
+        stroke: 0.6pt + vb.muted,
+        label: lab[field, #isathm("order_spec_sound")],
+        label-side: left,
+      ),
     )
   },
   kind: image,
-  caption: [The analysis assembly. Solid arrows are locale extension, dotted
-    ones global interpretations. The analyzer interprets
+  caption: [The analysis assembly. Solid arrows are locale extension, the dashed
+    arrow a sublocale proof, dotted arrows global interpretations, and thin grey
+    arrows name what one object supplies to another. The analyzer interprets
     #isalocale("dg_analysis") once per context family for the combined
     component, with the activation list, the global update rule and, for call
-    strings, the depth $k$ as parameters. The numeric domains' own
-    interpretations supply the components the combination is built from.],
+    strings, the depth $k$ as parameters. The numeric registrations supply the
+    soundness facts of their fields. The order analysis supplies its field
+    directly.],
 ) <fig:assembly>
 
 == The OCaml and browser boundary <sec:ocaml-boundary>

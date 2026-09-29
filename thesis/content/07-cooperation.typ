@@ -1,6 +1,8 @@
-#import "../lib/code.typ": fixture, isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "@preview/fletcher:0.5.8": diagram, edge, node
+#import "../lib/theme.typ": vb
+#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, oblig
 #import "../lib/math.typ": *
-#import "../lib/sources.typ": proved, thy
+#import "../lib/sources.typ": proved
 #import "../lib/theorems.typ": definition, theorem
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
@@ -18,7 +20,8 @@
 
 = Cooperating Analyses <ch:cooperation>
 
-@ch:analysis-interface fixed what one analysis supplies. Some facts need two
+@ch:analysis-interface fixed what one analysis supplies: a local
+specification whose operations are proved sound one by one. Some facts need two
 analyses: one that knows the fact and one whose transfer can use it. In the
 program below both guards hold at the assignment, so $x = y$ and `z` is $1$.
 
@@ -88,8 +91,9 @@ comparison $c$ with its check query from @sec:queries: a definite answer
 becomes the exact integer $1$ or $0$, and an undecided one becomes
 $ivl(0, 1)$ (#isaconst("abstract_check_domain.eval_answer")). A check is
 decided from the meet of the answers of all active analyses
-(#isaconst("answer_check")), as Goblint's `assert` analysis reads the answer
-to its value query. With one analysis this gives the verdicts of
+(#isaconst("mcp_answer")): #isaconst("mcp_classify") reads the verdict off
+that answer with #isaconst("answer_check"), as Goblint's `assert` analysis
+reads the answer to its value query. With one analysis this gives the verdicts of
 @sec:queries again (#isathm("abstract_check_domain.classify_eval_answer")).
 
 == One obligation per operation, against every sound channel <sec:coop-oracle>
@@ -111,7 +115,10 @@ for the stores the answer is true of. The framework will supply a channel that
 holds at every store of $conc(x)$, so the intersection removes nothing at run
 time. The proof never needs to know who produced the answers.
 
-The idea is not new. Verasco's numerical domains communicate through
+The idea is not new. In Astrée a domain asks the others for constraints
+through an input channel, and an abstract transfer need only be sound for
+arguments that also satisfy the channel's constraints @cousot07astree[§§5.3, 6].
+Verasco's numerical domains communicate through
 _channels_, records of query functions with a concretization that holds at an
 environment when every answer is valid there, and each transfer function is
 proved under the hypothesis that the channels it receives are correct
@@ -121,51 +128,51 @@ predecessor state as in Goblint, a handler may ask in turn
 (@sec:coop-channel), and the obligations cover calls, returns and the routed
 equations of @ch:equations.
 
-An analysis in this form supplies a _local specification_
-(#isatype("local_spec")): a record of its operations, each receiving a channel
-(@tab:local-spec). The handler answers queries about a state. The record holds
-one transfer per kind of edge, as Goblint's `Spec` has `assign`, `branch`,
-`return` and the others, and the step on an arbitrary edge is derived from
-them. Entry returns the pairs of @sec:calls. The return has Goblint's two stages, and both also receive
-the callee's channel, which describes the stores at the callee's exit. Goblint's
-two return functions receive the callee's `ask` function as an extra argument
-in the same way.
+The local specification of @sec:sound-core (#isatype("local_spec")) has
+this form: every operation receives a channel as an argument
+(@tab:local-spec). The handler #isaconst("ls_query") answers queries about a
+state. Seven fields, #isaconst("ls_skip") to #isaconst("ls_event"), hold one
+transfer per kind of edge, as Goblint's `Spec` has `assign`, `branch`,
+`return` and the others, and the step #isaconst("ls_step") on an arbitrary
+edge is derived from them. Entry returns the pairs of @sec:calls. The return
+has Goblint's two stages, and both also receive the callee's channel, which
+describes the stores at the callee's exit. Goblint's two return functions
+receive the callee's `ask` function as an extra argument in the same way. We
+call a local specification that runs inside the combined state of
+@sec:coop-mcp a _component_.
 
 #figure(
   table(
     columns: (auto, auto, auto),
-    align: (left, center, left),
+    align: (left, center, center),
     stroke: none,
     table.hline(),
-    [*operation*], [*Goblint*], [*answers it receives*],
+    [*field*], [*Goblint*], [*channels it receives*],
     table.hline(stroke: 0.5pt),
-    [#isaconst("ls_query")], [`query`], [the channel of the state it answers for],
-    [#isaconst("ls_step")], [edge transfers], [the channel of the predecessor state],
-    [#isaconst("ls_enter")], [`enter`], [the channel of the caller state],
-    [#isaconst("ls_combine_env")], [first return stage], [the caller's and the callee's channel],
-    [#isaconst("ls_combine_assign")], [second return stage], [the callee's channel],
+    [#isaconst("ls_query")], [`query`], [the state's own],
+    [#isaconst("ls_skip") to #isaconst("ls_event")], [edge transfers], [the predecessor's],
+    [#isaconst("ls_enter")], [`enter`], [the caller's],
+    [#isaconst("ls_combine_env")], [first return stage], [the caller's and the callee's],
+    [#isaconst("ls_combine_assign")], [second return stage], [the callee's],
     table.hline(),
   ),
   placement: auto,
-  caption: [The operations of a local specification, with the edge
-    transfers collected in the derived step. Each receives the answers as an
-    argument; the framework, not the analysis, decides where they come from.],
+  caption: [The fields of a local specification and the channels each
+    receives. The framework, not the analysis, decides where the answers come
+    from.],
 ) <tab:local-spec>
 
-#definition(name: [Sound local specification], isa: "sound_local_spec", cmd: "definition")[
-  A local specification $c$ is sound for a concretization $conc$ if $conc$ is monotone
-  and, for every channel that holds at the stores involved, the step satisfies
-  the inclusion above, some entry pair covers the caller and the entered
-  store (@sec:calls), the composed return covers #isaconst("combine_collect"),
-  and every answer of the handler holds at every store of $conc(x)$.
-]
-
-#thy("sound_local_spec")
-
-The obligation matches #oblig("INTRA"), paired entry coverage and
-#oblig("RETURN") of @ch:analysis-interface, each weakened by the assumption
-that the channel holds. The handler obligation is new. It is the analysis's
-promise to its partners, and it is the only one the partners rely on.
+The soundness predicate #isaconst("sound_local_spec") is one law per field
+(#isathm("sound_local_spec_iff")), with the two return stages sharing one law
+for their composition. Each law is quantified over every channel that holds at
+the stores involved: the caller's store for a step, an entry, a query and the
+first return stage, and the callee's exit store for the callee's channel. The
+seven edge laws together are the inclusion displayed above. The laws match
+#oblig("INTRA"), paired entry coverage and #oblig("RETURN") of
+@ch:analysis-interface, each weakened by the assumption that the channel holds.
+The handler law says that every answer holds at every store of $conc(x)$. It
+is the analysis's promise to its partners, and it is the only law the partners
+rely on.
 
 Two transfers from the development show the shape. The wrapper
 #isaconst("ask_assign") lets any component use the channel at an assignment
@@ -204,20 +211,22 @@ from, so its answers describe the predecessor state, as in Goblint. That is
 also why the theorem discharges the assumption of the step obligation: the
 stores in $conc(x)$ are those at which the closed channel holds.
 
-The closed channel turns a component into a specification of
-@ch:analysis-interface. #isaconst("dg_spec_of") runs every operation with
-the channel of the state it is applied to, and
-#isathm("dg_spec_of_contract") proves the analysis soundness contract
+This theorem is what #isaconst("dg_spec_of") of @sec:sound-core relies on. It
+runs every operation of a local specification with the closed channel of the
+state it is applied to, so the channel hypotheses of the laws hold, and
+#isathm("dg_spec_of_contract") obtains the analysis soundness contract
 #isalocale("analysis_contract") from #isaconst("sound_local_spec"). The
 record #isatype("dg_spec") has a matching field #isaconst("dgs_query") for a
 handler that may read globals, and the generator installs it through the same
-recursion (#isaconst("ask_with")). The components below do not use globals.
+recursion (#isaconst("ask_with")). A local specification uses no globals.
 
 == Many analyses over one state <sec:coop-mcp>
 
 The activated analyses must run in one solve, since each needs the other's
-facts at the same program point and context. The combined state is a record
-with one field per analysis under one reachability lift. A _lens_, a pair of a
+facts at the same program point and context. The combined state
+#isatype("mcp_st") nests one field per registered analysis in pairs of type
+#isatype("analysis_product"). Each numeric field carries its own reachability
+lift, and the whole state is lifted once more. A _lens_, a pair of a
 getter and a setter for one field, runs a component on its field and writes
 back only that field (#isaconst("lens_of")). Goblint's MCP hands each
 analysis its own part of the combined state in the same way. A lens preserves soundness
@@ -258,20 +267,119 @@ The combined state becomes unreachable as soon as one active field is, as
 Goblint's MCP raises `Deadcode` when one analysis does. The normalization
 #isaconst("mcp_norm") keeps the concretization, because an empty field already
 empties the intersection, and #isathm("map_local_spec_sound") carries soundness
-across it. #isathm("mcp_contract") then gives the analysis soundness contract
-for the combination. @ch:equations consumes that contract and does not need to
-know how many analyses produced it.
+across it.
+
+The analyzer assembles its combination from these parts
+(@fig:mcp-assembly). The fields of #isatype("mcp_st") and the constants below
+are generated from the analysis manifest (@ch:tooling). #isaconst("local_spec_of")
+puts each registered analysis on its field through a lens. A numeric field
+runs #isaconst("exec_spec"), the executable analysis of @sec:whole-state,
+wrapped in #isaconst("ask_assign"). The order field runs #isaconst("order_spec")
+unwrapped. #isaconst("mcp_field") replaces each field's handler by one that
+answers from the field's readback (#isaconst("part_answer")), which is sound
+because a handler may be replaced by any sound one (#isathm("with_qry_sound")).
+The combined handler meets these answers, and #isaconst("ls_channel") closes
+it over the combined state. #isaconst("mcp_comp") combines the fields of an
+activation list and normalizes the result. #isathm("mcp_comp_sound") proves it
+a sound local specification for every distinct, non-empty activation list,
+from #isathm("mcp_combine_sound") and the independence of distinct fields. The
+analyzer interprets #isalocale("dg_analysis") once per context family with
+this component (#isathm("mcp_routed_dg_analysis")), and inside the locale
+#isathm("dg_spec_of_contract") gives the analysis soundness contract.
+@ch:equations consumes that contract and does not need to know how many
+analyses produced it. For an arbitrary independent list without normalization,
+#isathm("mcp_contract") states the same contract directly.
+
+#figure(
+  {
+    set text(size: 8pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let mnode(pos, name, body, color: vb.neutral) = node(
+      pos,
+      align(center, body),
+      name: name,
+      stroke: 0.7pt + color,
+      fill: color.lighten(93%),
+      corner-radius: 2pt,
+      inset: 5pt,
+    )
+    let lab(body) = text(size: 7pt, fill: vb.muted, body)
+    let query(from, to, side) = edge(
+      from,
+      to,
+      "<->",
+      stroke: 0.6pt + vb.accent,
+      label: lab[asks, answers],
+      label-side: side,
+    )
+    let flow(from, to, ..args) = edge(from, to, "->", stroke: 0.6pt + vb.neutral, ..args)
+    diagram(
+      spacing: (10mm, 11mm),
+      mnode(
+        (0, 0),
+        <m-num>,
+        [numeric field \ #isaconst("ask_assign") around #isaconst("exec_spec")],
+      ),
+      mnode((1, 0), <m-chan>, [combined handler \ meets every answer]),
+      mnode((2, 0), <m-ord>, [order field \ #isaconst("order_spec")]),
+      mnode(
+        (1, 1),
+        <m-comp>,
+        [#isaconst("mcp_comp") of the activation list \ #isathm("mcp_comp_sound")],
+        color: vb.proved,
+      ),
+      mnode(
+        (1, 2),
+        <m-dg>,
+        [#isalocale("dg_analysis"), one interpretation \ per context family],
+        color: vb.proved,
+      ),
+      query(<m-num>, <m-chan>, left),
+      query(<m-ord>, <m-chan>, right),
+      flow(<m-num>, <m-comp>, label: lab(isaconst("mcp_field")), label-side: right),
+      flow(<m-ord>, <m-comp>, label: lab(isaconst("mcp_field")), label-side: left),
+      flow(<m-comp>, <m-dg>),
+    )
+  },
+  kind: image,
+  placement: auto,
+  caption: [The combined state of the analyzer, schematic. Each registered
+    analysis runs on its own field through #isaconst("mcp_field"). Blue arrows
+    are queries through the closed channel, whose handler meets the answers of
+    all active fields. The combination is proved sound once and consumed by the
+    three interpretations of #isalocale("dg_analysis").],
+) <fig:mcp-assembly>
 
 == What a new analysis has to prove <sec:coop-catalogue>
 
-The obligations of a new analysis are now a fixed list, and none of them
-mentions another analysis. @tab:mcp-catalogue lists them next to what the
-framework proves once.
+A new analysis enters the combined state by one of two routes. On both, its
+obligations are a fixed list that mentions no other analysis
+(@tab:mcp-catalogue), and the framework proves the rest once.
+
+A non-relational numeric domain supplies its primitive operations as one
+record (#isatype("nonrelational_ops")) and certifies them once
+(#isalocale("sound_nonrelational_ops"), @sec:instances-supply). From that
+certificate #isathm("sound_nonrelational_ops.dg_analysis_execI") derives every
+obligation of #isalocale("dg_analysis_exec") that concerns the domain: sound
+transfers, agreement of the executable steps with the abstract ones, and a
+sound check classifier. The domain's generated registration discharges the six
+that remain, which concern the context policy, the solver and the initial
+state. The soundness of its field component #isaconst("exec_spec") follows,
+and the domain never states a law of #isaconst("sound_local_spec") itself.
+
+Any other analysis proves a local specification sound directly. It may start
+from the conservative defaults (#isaconst("conservative_local_spec")): the
+handler answers $ltop$, skip, branch, body and event keep the state, and the
+first return stage keeps the caller's state. Each default is sound for every
+concretization, so the analysis supplies only assignment, special calls,
+return, entry and the second return stage
+(#isathm("sound_conservative_local_spec")). A field it overrides later needs
+only that field's law again (#isathm("sound_local_spec_update")).
 
 #figure(
   table(
     columns: (auto, auto),
-    align: (left, left),
+    align: (left, center),
     stroke: none,
     table.hline(),
     [*the analysis proves*], [*the framework derives*],
@@ -279,36 +387,43 @@ framework proves once.
     [carrier: join semilattice with $lbot$, widening, narrowing],
     [independence of fields (@sec:coop-mcp)],
     [$conc$ monotone], [soundness of the combination],
-    [each step, under any channel that holds], [the closed channel holds],
-    [paired entry coverage, under any channel that holds], [the analysis soundness contract],
+    [each edge field's law, under any channel that holds], [the closed channel holds],
+    [paired entry coverage and a single entry], [the analysis soundness contract],
     [the composed return, under both channels], [coverage for every context policy (@ch:equations)],
     [the handler's answers hold], [the solved result and the verdicts (@ch:results)],
     table.hline(),
   ),
   placement: auto,
   caption: [The obligations of an analysis that joins the combined state,
-    and what the framework proves once from them. The left column is
-    #isaconst("sound_local_spec"); the right column holds for every list of
-    distinct analyses whose components satisfy it.],
+    and what the framework proves once from them. Apart from the carrier's
+    classes, the left column is #isaconst("sound_local_spec") with
+    #isaconst("single_entry"). A numeric domain obtains it from its certified
+    operations. The right column holds for every distinct, non-empty
+    activation list.],
 ) <tab:mcp-catalogue>
 
-The routed pipeline of @ch:equations asks for one more property of the
-component it runs: entry answers a single alternative whose resume value is
-the caller's state (#isaconst("single_entry")). Lenses, combination and
-normalization preserve it, so it too is proved once per analysis.
+The routed pipeline of @ch:equations asks for the single entry: entry answers
+one alternative whose resume value is the caller's state
+(#isaconst("single_entry")). Lenses, combination and normalization preserve
+it, so every activation list has it once each analysis does
+(#isathm("single_entry_mcp_comp")).
 
-The order analysis shows the size of such an addition. Its state is a set of
-pairs $(x, y)$ with $x lt.eq y$ (#isatype("relc")). It answers comparisons
+On either route the analysis then needs an entry in the analysis manifest.
+The generator derives from it the registration and the analysis's field of the
+combined state. The command-line tool's table of analysis names is still
+edited by hand (@ch:tooling).
+
+The order analysis takes the second route. Its state is a set of pairs
+$(x, y)$ with $x lt.eq y$ (#isatype("relc")). It starts from the conservative
+defaults and overrides the handler and the branch. It answers comparisons
 between variables it has ordered (#isathm("rel_qry_sound")), learns pairs at
-assignments by asking, and enters and returns with no facts. It proves its
-obligations as a component in #isathm("order_spec_sound"), and the
-generated registration of
-@ch:executable puts it into the combined state. No theorem of the framework
-changed. For the executed numeric analyses, #isaconst("exec_spec")
-presents the executable analysis of @sec:whole-state as a component, and a
-handler that answers from the field's readback replaces its own
-(#isathm("with_qry_sound")). Every numeric analysis therefore answers
-#isaconst("EvalInt") and asks at assignments through #isaconst("ask_assign").
+assignments by asking, and enters and returns with no facts
+(#isathm("order_spec_sound")). No theorem of the framework changed to admit
+it. The numeric fields answer through #isaconst("part_answer") and ask at
+assignments through #isaconst("ask_assign"). A numeric field answers
+#isaconst("EvalInt") only for comparisons and logical operators and declines
+every other expression with $ltop$, so a numeric assignment gains from asking
+when another field decides the right-hand side.
 
 The check at the start of this chapter is decided by the combination.
 Interval's assignment asks #isaconst("EvalInt") $(x == y)$, the order analysis
@@ -333,18 +448,23 @@ fun main() {
 Interval joins the branches to #state("coop-le-interval", "21:3") and reports
 #verdict("coop-le-interval", "21:3"). The order analysis alone cannot compare a
 variable with a constant and reports #verdict("coop-le-order", "21:3").
-Together, the order analysis asks at `y = 10` and `y = 30` how the new value
-compares with `x`, Interval answers $x lt.eq y$ with $1$ on both branches, and
-the pair survives the join: #verdict("coop-le-both", "21:3"). Both runs are
-also proved by evaluation of #isaconst("run_voblint")
-(#isathm("coop_demo_needs_both"), #isathm("order_asks_needs_both")).
+Together, at `y = 10` the order analysis asks about the state before the
+assignment whether $x lt.eq 10$. Interval knows $x = 0$ there and answers $1$,
+so the order analysis records the pair $(x, y)$. At `y = 30` it asks whether
+$x lt.eq 30$ and records the same pair, which therefore survives the join:
+#verdict("coop-le-both", "21:3"). Variants of both programs, without the
+`__voblint_nondet_int` initializations, are also proved by evaluation of
+#isaconst("run_voblint") (#isathm("coop_demo_needs_both"),
+#isathm("order_asks_needs_both")).
 
 == What the combination leaves out <sec:coop-limits>
 
 A component is a pure function of its state and its channels. It neither reads
-nor publishes globals, so an analysis that needs its own global unknowns runs
-as a specification of its own and cannot join the combined state; Goblint tags
-each analysis's globals with its index instead. The second return stage
+nor publishes globals, so an analysis that needs its own global unknowns, such
+as #isaconst("rel_order_spec"), cannot join the combined state. It enters the
+proof at the analysis soundness contract of @sec:sound-core directly, and
+#isaconst("run_voblint") does not select it. Goblint tags each analysis's
+globals with its index instead. The second return stage
 receives only the callee's channel. Goblint's second stage asks about the
 state its first stage produced, which describes no concrete store here, because
 soundness is stated only for the composed return. There is one query kind, and

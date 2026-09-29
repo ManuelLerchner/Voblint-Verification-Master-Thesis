@@ -165,8 +165,9 @@ mechanisms the formalization uses. We use the counting loop of
 
 A _control-flow graph_ represents a program by its program points, the nodes,
 and edges between them, each labelled with the assignment or condition executed
-when control passes along it. @ch:program-model compiles VIMP programs to such
-graphs. The _loop head_ $h$ in @fig:counting-loop is the program point at which
+when control passes along it. Allen expresses the control-flow relationships
+of a program as a directed graph for global analysis @allen70.
+@ch:program-model compiles VIMP programs to such graphs. The _loop head_ $h$ in @fig:counting-loop is the program point at which
 the condition `i < 5` is tested. An execution is a path through the graph from its entry. The
 counting loop runs from `start` to $h$, around the cycle through $b$ and $t$
 back to $h$ five times, and then to $e$. A loop thus becomes a cycle, and the
@@ -290,7 +291,9 @@ convex polyhedron @mine17[Ex. 2.11]. For Coq, Jourdan et al. add a further reaso
 concrete type is infinite, and a specification through $conc$ alone states
 soundness conditions and removes the obligation to prove optimality
 @jourdan15[§2]. Nipkow likewise drops $abstr$ and proves given abstract
-interpreters correct @nipkow12[§5.2]. Voblint follows this style, in which each domain supplies its own operations
+interpreters correct @nipkow12[§5.2]. A correspondence given by a
+concretization function alone is one of the frameworks Cousot and Cousot obtain
+by relaxing the Galois-connection hypotheses @cousot92jlc[§§7, 9]. Voblint follows this style, in which each domain supplies its own operations
 and proves them sound against $conc$ @mine17[§2.4]. Its soundness theorem
 claims coverage and says nothing about optimal precision, so no proof needs a
 best abstraction. The concretization of an integer domain is in general infinite, so
@@ -350,8 +353,16 @@ $ rhs(x)(sol) lle sol(x) quad "for every unknown" x. $
 For the loop head, $rhs(h)(sol) = [0, 0] ljoin sol(t)$. The argument of
 @sec:abs-int applies to all unknowns at once, so a post-solution bounds the
 reachable states at every program point. Such systems are often called
-equation systems, although soundness only requires these inequalities. A
-solver receives the analysis in this form, and the verified solver certifies a
+equation systems, although soundness only requires these inequalities.
+Kildall's data-flow framework attaches a value of a finite semilattice to each
+node of a program graph and computes it by iteration, which yields the
+combination over all paths when the transfer functions distribute over the
+semilattice operation @kildall73[§3]. Kam and Ullman require only monotone
+transfer functions. Kildall's algorithm then still computes the maximal fixed
+point of their order, which can be less precise than the combination over all
+paths @kam77. Nielson et al. present data-flow analysis,
+constraint-based analysis and abstract interpretation side by side
+@nielson99[Chs. 2--4]. A solver receives the analysis in this form, and the verified solver certifies a
 partial post-solution, #isaconst("part_post_solution"), which holds on the
 unknowns it has solved (@sec:td).
 

@@ -20,7 +20,8 @@ avoids all four. It follows the
 #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml")[pinned Goblint specification],
 one method per program construct (@tab:dg-spec-fields), and its obligations
 mention neither contexts nor the solver: #oblig("INTRA") and #oblig("RETURN")
-become one soundness rule per operation, and @ch:equations derives
+become obligations on each edge transfer and on the return, which for a
+whole-state analysis are one soundness rule per operation, and @ch:equations derives
 #oblig("CALL") and #oblig("TOTAL") from paired entry coverage and the routing
 policy. The correspondence with Goblint is architectural. The meaning of each
 operation comes from the VIMP and CFG semantics of @ch:program-model, and
@@ -286,8 +287,34 @@ nothing is checked against $lbot$. The contract asks the carriers only for a
 bounded join semilattice and $conc_(D G)$ only for monotonicity; it never
 requires a map from variables to abstract values. For this reason the
 relational carrier of @sec:relational (#isaconst("rel_order_spec")) satisfies
-the same contract without a change to the framework. @fig:contract-routes
-shows both routes to the contract.
+the same contract without a change to the framework.
+
+Most analyses use neither capability of the manager. For them the framework
+has a narrower interface, the _local specification_ #isatype("local_spec"). It
+has one field per row of @tab:dg-spec-fields, and each field is a pure function
+of local values. Each field also receives a query channel, which
+@ch:cooperation introduces. A local specification cannot read or publish an
+analysis global. Its soundness #isaconst("sound_local_spec") asks for a
+monotone concretization and one law per field: an edge field covers the
+concrete successors of its edge, entry satisfies paired entry coverage, the
+composed return covers #isaconst("combine_collect"), and the query handler
+answers only what holds. #isaconst("dg_spec_of") runs a local specification as
+a #isatype("dg_spec") whose transfers use neither capability, and
+#isathm("dg_spec_of_contract") derives the analysis soundness contract from
+#isaconst("sound_local_spec"). The proof layer thus has two entry points.
+Equations, routing and the solver are proved over #isatype("dg_spec") and
+#isalocale("analysis_contract"), and an analysis with a shared value such as
+#isaconst("rel_order_spec") interprets the contract directly. The analyzer runs
+local specifications only (@ch:executable).
+
+@fig:contract-routes shows how the analyses of this thesis reach the contract.
+A numeric domain supplies its primitive operations as one record
+#isatype("nonrelational_ops") and certifies them once by interpreting
+#isalocale("sound_nonrelational_ops") (@sec:instances-supply). The certificate
+yields one soundness rule per operation (@sec:whole-state), and these rules
+prove the executed local specification #isaconst("exec_spec") sound. The order
+analysis of @sec:relational is a local specification over the relational
+carrier (#isaconst("order_spec")) and proves its field laws directly.
 
 #let _cbox(pos, name, body) = node(
   pos,
@@ -301,54 +328,52 @@ shows both routes to the contract.
 #let _clab(body) = text(size: 7pt, body)
 #figure(
   diagram(
-    spacing: (14mm, 9mm),
-    _cbox((0, 0), <c-num>, [numeric domain \ #isalocale("numeric_domain")]),
-    _cbox((2, 0), <c-rel>, [relational state \ #isatype("relc")]),
-    _cbox((0, 1), <c-pw>, [primitive operations \ #isatype("nonrelational_ops")]),
-    _cbox((0, 2), <c-tf>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
-    _cbox((1, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
-    _cbox((2, 2), <c-relspec>, [local and shared state \ #isaconst("rel_order_spec")]),
-    _cbox((1, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
+    spacing: (26mm, 10mm),
+    _cbox((0, 0), <c-prim>, [primitive operations \ #isatype("nonrelational_ops")]),
+    _cbox((0, 1), <c-cert>, [certificate, once per domain \ #isalocale("sound_nonrelational_ops")]),
+    _cbox((0, 2), <c-rules>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
+    _cbox((0, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
+    _cbox((0, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
+    _cbox((1, 3), <c-order>, [order analysis \ #isaconst("order_spec")]),
+    _cbox((1, 4), <c-relspec>, [order analysis with shared state \ #isaconst("rel_order_spec")]),
     edge(
-      <c-num>,
-      <c-pw>,
+      <c-prim>,
+      <c-cert>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab[values per variable],
+      label: _clab[one interpretation per domain],
       label-side: left,
     ),
     edge(
-      <c-pw>,
-      <c-tf>,
+      <c-cert>,
+      <c-rules>,
       "->",
       stroke: 0.6pt + vb.neutral,
       label: _clab(isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer")),
       label-side: left,
     ),
     edge(
-      <c-tf>,
+      <c-rules>,
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("sound_nonrelational_transfer.state_spec_sound")),
-      label-side: right,
-    ),
-    edge(
-      <c-rel>,
-      <c-local>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("order_spec_sound")),
+      label: _clab[#isathm("dg_domain_exec.exec_spec_sound"), at #isaconst("exec_spec")],
       label-side: left,
-      bend: -25deg,
     ),
-    edge(<c-rel>, <c-relspec>, "->", stroke: 0.6pt + vb.neutral),
     edge(
       <c-local>,
       <c-contract>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("dg_spec_of_contract")),
+      label: _clab[#isathm("dg_spec_of_contract"), through #isaconst("dg_spec_of")],
+      label-side: left,
+    ),
+    edge(
+      <c-order>,
+      <c-local>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("order_spec_sound")),
       label-side: right,
     ),
     edge(
@@ -365,54 +390,63 @@ shows both routes to the contract.
   caption: [How the analyses of this thesis reach the analysis soundness
     contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
-    supplies a record of primitive operations over pointwise states, and
-    interpreting #isalocale("sound_nonrelational_ops") at it derives one rule
-    per operation. These rules make a sound component, from which the analysis
-    soundness contract follows. The relational carrier is a sound component directly, without
-    per-value laws, and its variant with a shared state interprets the
-    contract itself.],
+    certifies its record of primitive operations once, which yields one rule
+    per operation; these rules make its executed local specification sound.
+    The order analysis is a sound local specification by its own proof. Every
+    sound local specification meets the contract through
+    #isaconst("dg_spec_of"). The order analysis with a shared state is not a local
+    specification and interprets the contract itself.],
 ) <fig:contract-routes>
 
 == Whole-state analyses <sec:whole-state>
 
 Most analyses use neither the shared component nor case splits at calls, and
 for them the contract should reduce to one rule per operation. The builder
-#isaconst("local_state_dg_spec_for") turns seven pure edge
-operations and a callee-entry operation into a specification with a fixed call
-boundary: entry answers the single pair whose resume value is the unchanged
-caller value, and the return is #isaconst("combine_collect_abs"), the abstract
-counterpart of #isaconst("combine_collect"). The
+#isaconst("local_state_dg_spec_for") takes seven pure edge operations and a
+callee-entry operation, forms a local specification with a fixed call boundary
+and runs it through #isaconst("dg_spec_of"). Entry answers the single pair
+whose resume value is the unchanged caller value, and the return is
+#isaconst("combine_collect_abs"), the abstract counterpart of
+#isaconst("combine_collect"). The
 unchanged resume value is sound although it may describe stale globals, as in
 the `inc` program, because the return takes every global from the callee's
 exit. This builder leaves #isaconst("dgs_combine_env") the identity and does
-the whole return in #isaconst("dgs_combine_assign"). The analysis proves one
-rule per operation in #isalocale("sound_nonrelational_transfer"), and
-#isathm("local_state_dg_spec_for_contract") derives the analysis soundness
-contract. A non-relational domain does not prove these rules one by one. It
-supplies its primitive operations as one record, and the rules follow from
-certificates about those operations alone (@sec:instances-supply).
+the whole return in #isaconst("dgs_combine_assign"). The rules are the eight
+assumptions of #isalocale("sound_nonrelational_transfer"), one per operation,
+and #isathm("sound_nonrelational_transfer.local_state_dg_spec_for_contract")
+derives the analysis soundness contract from them through
+#isathm("dg_spec_of_contract"). A non-relational domain does not prove these
+rules one by one. It supplies its primitive operations as one record and
+certifies them once, and
+#isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer") derives the
+rules (@sec:instances-supply).
 
-The executed analyses use a variant, #isaconst("local_state_dg_spec_st_for_lifted"),
-over the executable carrier of @ch:solving. It splits the return as Goblint
-does: the environment stage takes caller locals and callee globals, and the
-assign stage writes the result. #isathm("analysis_contract_st") derives its
-analysis soundness contract from the same per-operation rules, pulled back
-along the readback of @ch:solving. The analyzer runs this specification as one
-component of the combined state of @ch:cooperation (#isaconst("exec_spec")).
+The executed analyses use the local specification #isaconst("exec_spec") over
+the executable carrier of @ch:solving. It splits the return as Goblint does:
+the environment stage takes caller locals and callee globals, and the assign
+stage writes the result. #isathm("dg_domain_exec.exec_spec_sound") proves it
+sound from the same per-operation rules, pulled back along the readback of
+@ch:solving. #isathm("dg_domain_exec.analysis_contract_st") derives the
+analysis soundness contract for its image under #isaconst("dg_spec_of"),
+#isaconst("local_state_dg_spec_st_for_lifted"). The analyzer runs
+#isaconst("exec_spec") as one field of the combined state of @ch:cooperation.
 
 == What the interface leaves out <sec:omissions>
 
 There is no synchronization and no analysis-supplied initial state. Each would
 need its own concrete semantics and obligation. The context of a call is not a
-field either: the routing policy of @ch:equations chooses it. The query field
-#isaconst("dgs_query") has no obligation in this chapter. A transfer may ask
+field either: the routing policy of @ch:equations chooses it. The contract
+places no soundness obligation on the query field #isaconst("dgs_query"). A transfer may ask
 through the manager, but what an answer means, and how several analyses answer
 one another, is the subject of @ch:cooperation.
 
-An analysis proves one
-soundness rule per operation, and #isathm("local_state_dg_spec_for_contract")
-derives the analysis soundness contract #isalocale("analysis_contract") from
-these rules, as #isathm("analysis_contract_st") does for the executed variant.
+An analysis meets the analysis soundness contract
+#isalocale("analysis_contract") either directly or as a sound local
+specification through #isathm("dg_spec_of_contract"). A whole-state analysis
+proves one soundness rule per operation, and
+#isathm("sound_nonrelational_transfer.local_state_dg_spec_for_contract")
+derives the contract from these rules, as
+#isathm("dg_domain_exec.analysis_contract_st") does for the executed variant.
 The contract states #oblig("INTRA") per edge and #oblig("RETURN") for the
 composed combine, over a monotone concretization and well-formed transfers,
 for analyses with a single analysis global. It mentions no context policy, no

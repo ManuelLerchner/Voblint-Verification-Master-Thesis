@@ -328,7 +328,9 @@ starts from this parsed program. The parser lies outside the theorem
 A small-step semantics over commands has to say where the remaining work of a
 caller waits while its callee runs. It also has to say how a #keyw("return")
 skips the rest of the callee's body. VIMP keeps the remaining work inside the command and saves
-only data on a stack.
+only data on a stack. The residual command follows Plotkin's structural
+operational semantics, in which a step from $(c, s)$ leaves a command that
+represents the remainder of the execution of $c$ @plotkin04[§3.2].
 
 #definition(name: [Source execution], isa: "pstep", cmd: "inductive")[
   A source configuration is a triple $(c, s, italic("frs"))$ of the command that

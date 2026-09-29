@@ -1,3 +1,5 @@
+#import "@preview/fletcher:0.5.8": diagram, edge, node
+#import "../lib/theme.typ": vb
 #import "../lib/code.typ": fixture, isaconst, isalocale, isasession, isathm, isatype, listing
 #import "../lib/figures.typ": int-axis, int-strip, printed-set
 #import "../lib/math.typ": *
@@ -42,12 +44,12 @@ least-upper-bound requirement of @ch:domains.
 
 == What an instance supplies <sec:instances-supply>
 
-A domain instance proves the laws of @ch:domains (@fig:domain-carrier) for its
-carrier and supplies its operations: an evaluator,
-the comparison queries, the inverse operators with an intersection, and the
-abstract `min` and `max`. The branch transfer is not among them; it is derived
-from the inverse operators by the filter of #isalocale("backward_domain").
-@fig:gamma shows one value of each carrier and the integers it denotes.
+A numeric domain supplies its operations as one record of primitive choices,
+#isatype("nonrelational_ops"): the evaluator, the two comparison queries, the
+refinement operations of @ch:domains (a truth test, one inverse each for `<`,
+`==`, `+`, `-` and `*`, and an intersection), the abstract `min` and `max`, and
+the whole-value element. @fig:gamma shows one value of each carrier and the
+integers it denotes.
 
 #figure(
   {
@@ -92,28 +94,168 @@ from the inverse operators by the filter of #isalocale("backward_domain").
     of its components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
-Every domain supplies its operations as one record of primitive choices,
-#isatype("nonrelational_ops"): the evaluator, the comparison queries, the
-refinement operations of @ch:domains, the abstract `min` and `max`, and the
-whole-value element. Interpreting #isalocale("sound_nonrelational_ops") at that
-record derives the guard filters, the branch transfer, the check classifier and
-every transfer function, and proves them sound once. The domain proves only the
-certificates of @fig:domain-carrier. The locale asks for soundness alone;
-#isalocale("mono_nonrelational_ops") adds that the evaluator, `min`, `max` and the
-refinement operations are monotone, and derives monotone transfer functions
+The domain proves one certificate about its record,
+#isalocale("sound_nonrelational_ops"). Two parts are laws of
+@fig:domain-carrier, in their reductive form: the refinement operations form a backward domain whose
+intersection lies below both operands (#isalocale("backward_domain_reductive")),
+and the queries are sound checks over the evaluator
+(#isalocale("abstract_check_domain")). The figure does not draw the other two: the abstract
+`min` and `max` are sound (#isalocale("sound_special_ops")), and the
+whole-value element is the top of the carrier. Everything else is derived
+once, inside the locale, from the record: the guard filters and the branch transfer, the check
+classifier, the transfer of every edge, procedure entry, and executable
+versions of the transfer and entry over the store representation of
+@ch:solving. The abstract and the executable versions are computed from the
+same primitives and agree on every live store
+(#isathm("sound_nonrelational_ops.tf_st_for_commute"),
+#isathm("sound_nonrelational_ops.enter_st_for_commute")), so no second
+implementation needs its own agreement proof. Deriving forward and backward
+transfer from certified value operations follows the generic abstract
+interpreter of Nipkow and Klein @nipkow14[Sect. 13.5, 13.7]. The executable
+counterpart, its commutation and the registration described next are
+Voblint's. @fig:instance-pipeline shows the chain.
+
+The certificate asks for soundness alone.
+#isalocale("mono_nonrelational_ops") adds that the evaluator, `min`, `max` and
+the refinement operations are monotone (#isalocale("mono_special_ops"),
+#isalocale("backward_domain_mono")), and derives monotone transfer functions
 (#isathm("mono_nonrelational_ops.br_mono")). Sign, Interval, Parity and
 Congruence interpret the monotone locale. Int interprets the sound one once,
-parametric in its refinement mode, because for the fixpoint mode no
-monotonicity is proved (@sec:reduced-product). No soundness theorem uses
-these monotonicity facts. They match the hypotheses of
+parametric in its refinement mode. Monotonicity is proved for the two modes
+without fixpoint iteration (#isathm("int_dom_mono_ops")) and not for the
+fixpoint mode (@sec:reduced-product). No soundness theorem uses these
+monotonicity facts. They match the hypotheses of
 #isathm("routed_node_rhs_mono_eq"), which prepares the vendored least-solution
 theorem for the solver without widening, and the analyzer does not use that
-solver. The step from generic to concrete is an interpretation. Each domain
-becomes one field of the combined state of @ch:cooperation, and one
-interpretation per context family discharges the contracts of
-#isalocale("dg_analysis") for the combination of any activation list
-(#isathm("mcp_comp_sound"), @fig:assembly). The source-level theorem about
-#isaconst("run_voblint") is proved from these interpretations.
+solver.
+
+Registering a certified domain with the pipeline of @sec:engineering is one
+rule. #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges every
+obligation of #isalocale("dg_analysis_exec") that concerns the domain:
+soundness of the transfer, the two commutations with the readback, and
+correctness of the check classifier. Six obligations remain, and each domain's
+generated registration discharges them: the routing agreement, that the seed
+key differs from the shared global key, three facts about the solver (its
+result is a partial post-solution, its solved domain is finite, and a
+successful executable run lies in that domain), and soundness of the initial
+state. Only the last is a fact about the domain's values (for Parity,
+#isathm("parity_cinit_gamma")). Each numeric domain is registered once, at the
+unit context. Interval is also registered at the entry-state and call-string
+contexts. The registration's component is the executable local specification
+#isaconst("exec_spec"), and the registration proves it sound
+(#isaconst("sound_local_spec")). That component becomes one field of the
+combined state of @ch:cooperation. The order analysis of @sec:relational enters
+the combined state at the same level, as a local specification with its own
+soundness theorem (#isathm("order_spec_sound")). The analyzer interprets
+#isalocale("dg_analysis") once per context family for the combination of any
+activation list (#isathm("mcp_comp_sound"), @fig:assembly), and the
+source-level theorem about #isaconst("run_voblint") is proved from these
+interpretations.
+
+#figure(
+  {
+    set text(size: 7.5pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let step(pos, name, body, color: vb.neutral) = node(
+      pos,
+      align(center, body),
+      name: name,
+      stroke: 0.7pt + color,
+      fill: color.lighten(93%),
+      corner-radius: 2pt,
+      inset: 4pt,
+    )
+    let note(body) = text(size: 7pt, fill: vb.muted, body)
+    let lab(body) = text(size: 7pt, fill: vb.muted, body)
+    let arrow(from, to, ..args) = edge(from, to, "->", stroke: 0.6pt + vb.neutral, ..args)
+    diagram(
+      spacing: (8mm, 7mm),
+      step((1, 0), <ip-ops>, [primitives #isatype("nonrelational_ops") \
+        #note[evaluator, queries, refinement operations, `min`, `max`, top]]),
+      step(
+        (1, 1),
+        <ip-cert>,
+        [certificate #isalocale("sound_nonrelational_ops") \
+          #note[optionally #isalocale("mono_nonrelational_ops")]],
+        color: vb.proved,
+      ),
+      step((0, 2), <ip-abs>, [abstract operations \ #note[branch, checks, transfer, entry]]),
+      step((2, 2), <ip-exec>, [executable operations \ #note[transfer, entry]]),
+      step(
+        (1, 3),
+        <ip-reg>,
+        [registration #isalocale("dg_analysis_exec") \
+          #note[by #isathm("sound_nonrelational_ops.dg_analysis_execI") and six obligations]],
+        color: vb.proved,
+      ),
+      step((1, 4), <ip-field>, [sound local specification \
+        #note[one field of the combined state]]),
+      step((2.6, 4), <ip-order>, [order analysis \ #isaconst("order_spec")]),
+      arrow(<ip-ops>, <ip-cert>),
+      arrow(<ip-cert>, <ip-abs>, label: lab[derives], label-side: right),
+      arrow(<ip-cert>, <ip-exec>, label: lab[derives], label-side: left),
+      edge(
+        <ip-abs>,
+        <ip-exec>,
+        "<->",
+        stroke: (paint: vb.proved, thickness: 0.6pt, dash: "dotted"),
+        label: lab[agree on live stores],
+        label-side: left,
+      ),
+      arrow(<ip-abs>, <ip-reg>),
+      arrow(<ip-exec>, <ip-reg>),
+      arrow(<ip-reg>, <ip-field>, label: lab(isaconst("exec_spec")), label-side: left),
+      arrow(<ip-order>, <ip-field>, label: lab(isathm("order_spec_sound")), label-side: right),
+    )
+  },
+  kind: image,
+  placement: auto,
+  caption: [How a numeric domain becomes a field of the combined state. Solid
+    arrows lead from what is supplied to what is derived from it; the dotted
+    arrow is the commutation of the abstract and executable operations. Green
+    boxes are the two proofs a domain passes through. The order analysis
+    supplies its local specification directly. Schematic.],
+) <fig:instance-pipeline>
+
+Every domain refines guards with the same generic filter, so the domains'
+guard precision differs only in which refinement operations are precise
+(@fig:refine-profile). An inverse that a domain cannot sharpen returns its
+operands unchanged, as #isaconst("inv_conservative") does, and the interface
+admits this for every operator.
+Sign and Interval refine comparisons and equalities and leave the operands of
+arithmetic unchanged (#isaconst("ivl_refine_ops")). Parity and Congruence do
+the reverse: a comparison says nothing about a residue class, while an
+equality, a sum, a difference or a product can fix one operand's class from the
+other's (#isaconst("parity_refine_ops")). In both, an equality refines only
+when it held. Parity refines a product only when it is odd, since then both
+factors are odd (#isaconst("inv_times_parity")). Int refines through its
+components; its arithmetic inverses are those of its Parity and Congruence components.
+
+#figure(
+  {
+    set text(size: 8.5pt)
+    let r = [refines]
+    let i = [identity]
+    table(
+      columns: 6,
+      align: (left,) + (center,) * 5,
+      stroke: none,
+      table.hline(),
+      [*domain*], [`<`], [`==`], [`+`], [`-`], [`*`],
+      table.hline(stroke: 0.5pt),
+      [Sign], r, r, i, i, i,
+      [Interval], r, r, i, i, i,
+      [Parity], i, r, r, r, r,
+      [Congruence], i, r, r, r, r,
+      [Int], r, r, r, r, r,
+      table.hline(),
+    )
+  },
+  placement: auto,
+  caption: [Which inverse operator of each domain can shrink an operand
+    ("refines") and which returns its operands unchanged ("identity"). Read
+    from the refinement operations in the theories.],
+) <fig:refine-profile>
 
 == One loop, five answers <sec:stride2>
 
@@ -189,15 +331,16 @@ interval is convex, so it cannot say "odd".
 Parity records only evenness. For `x = 2 * n; y = 2 * n + 1` with `n`
 unconstrained, Interval answers #verdict("dom-even-odd-interval", "20:3") on
 `x != y`, while Parity derives #state("dom-even-odd-parity", "20:3") and
-answers #verdict("dom-even-odd-parity", "20:3"). Parity also refines guards: an
-equality that held gives both sides the meet of their parities, and a known sum
-or difference fixes one operand's parity from the other's
-(#isaconst("inv_plus_parity")). On the contradictory guard of
+answers #verdict("dom-even-odd-parity", "20:3"). Parity also refines guards
+through the generic filter (@fig:refine-profile). On `x + 1 == y` with `y` even,
+the inverse of `+` (#isaconst("inv_plus_parity")) makes `x` odd, which
+#isathm("bfilter_parity_plus_narrows") checks by evaluation. Interval, whose
+inverse of `+` is the identity, learns nothing about `x` there. Under the guard
+`y + 1 == 3` of @fig:pg-int-refinement, Parity derives
+#state("pg-int-refinement-parity", "4:5"). On the contradictory guard of
 @fig:domain-reachability, `x == 1` makes `x` odd and `x == 0` then empties it,
 so Parity reports the branch #verdict("dom-disjunct-parity", "12:5"), as Sign
-does (#verdict("dom-disjunct-sign", "13:5")). An order comparison says nothing
-about parity, and Parity refines it with the identity
-#isaconst("inv_conservative"), which the interface admits for every operator.
+does (#verdict("dom-disjunct-sign", "13:5")).
 
 Congruence analysis goes back to Granger @granger89. A value denotes
 $setcomp(n, n equiv c med (mod m))$, with $m = 0$ meaning the single integer
@@ -291,7 +434,10 @@ The specification #isaconst("rel_order_spec") reads and publishes the shared
 component, so it cannot join the combined state of @ch:cooperation, whose
 components are pure. The same carrier therefore has a second, local form, the
 order analysis (#isaconst("order_spec")), which the analyzer runs as
-`order`. It answers comparisons between variables it has ordered, and at an
+`order`. It is a local specification directly, built from the conservative
+defaults of #isaconst("conservative_local_spec"), with its own soundness
+theorem (#isathm("order_spec_sound")); it has no operation record and no
+registration of its own (@fig:instance-pipeline). It answers comparisons between variables it has ordered, and at an
 assignment $x := e$ it asks the other active analyses how $e$ compares with
 each variable and records the pairs the answers confirm (@sec:coop-catalogue).
 At calls it keeps no facts, so that it isolates cooperation from relational
@@ -299,12 +445,14 @@ call boundaries. Alone it proves little: it cannot compare a variable with a
 constant. Its use is as a partner of Interval, in both directions
 (#isathm("coop_demo_needs_both"), #isathm("order_asks_needs_both")).
 
-Five domains prove the
-laws of @ch:domains with facts about integers alone, and one interpretation per
-domain and context family makes the source-level theorem hold for each. The
-instances show that the interface asks for no backward filter (Parity), no
-monotone reduction (Int in the fixpoint mode) and no pointwise store
-(#isaconst("rel_order_spec"), #isaconst("order_spec")). The solver's narrowing law restricts where the
+Five domains prove the laws of @ch:domains with facts about integers alone.
+Each supplies one operation record, proves one certificate about it and is
+registered once; the source-level theorem covers it as a field of the combined
+state under every context policy. The instances show that the interface admits
+the identity for any inverse operator (Sign and Interval for arithmetic, Parity
+and Congruence for comparisons), needs no monotone reduction (Int in the
+fixpoint mode) and needs no pointwise store (#isaconst("rel_order_spec"),
+#isaconst("order_spec")). The solver's narrowing law restricts where the
 product may reduce. The precision differences of this chapter are
 executable evidence about single programs; @ch:evaluation collects them with
 the machine-checked precision witnesses.

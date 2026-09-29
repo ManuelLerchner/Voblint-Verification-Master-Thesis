@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isaconst, isalocale, isathm, oblig
+#import "../lib/code.typ": isaconst, isalocale, isathm, isatype, oblig
 
 = Conclusion <ch:conclusion>
 
@@ -25,14 +25,20 @@ such a call. When every covered call admits some callee context (totality,
 #isaconst("call_context_total_on")), the context buckets jointly equal the context-free trace collection
 (#isathm("ltr_collect_eq_Union_activation_collect")).
 
-*Can the ingredients be verified separately?* Yes. A domain proves transfer soundness without contexts or solver, a
-context policy proves its obligations without a domain, and the solver enters
-only through #isaconst("part_post_solution"). The routed locale discharges the
-coverage contract once for all policies and domains
+*Can the ingredients be verified separately?* Yes. A non-relational domain
+proves certificates about its primitive operations
+(#isatype("nonrelational_ops")) without contexts or solver, and
+#isalocale("sound_nonrelational_ops") derives its transfer, branch, entry and
+check classifier, with their executable counterparts, and proves them sound
+once. A context policy proves its obligations without a domain, and the solver
+enters only through #isaconst("part_post_solution"). The routed locale
+discharges the coverage contract once for all policies and domains
 (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
 source-level theorem covers every configuration #isaconst("run_voblint")
-offers. A relational carrier meets the same contract without framework changes
-(#isaconst("rel_order_spec"), @sec:relational). Analyses that exchange facts
+offers. A relational carrier meets the same contract without framework
+changes, as a specification with a shared state (#isaconst("rel_order_spec"))
+and as the local order analysis the analyzer runs
+(#isathm("order_spec_sound"), @sec:relational). Analyses that exchange facts
 through queries are verified separately as well: each proves its operations
 against every sound query channel, and any list of independent analyses
 combines into one that meets the analysis soundness contract
@@ -84,32 +90,14 @@ Exporting one dispatcher makes the constant the theorem mentions the one the
 tools run, so no entry point needs an agreement lemma (@sec:codegen). On the
 other hand, a configuration reaches users only through the assembly behind
 #isaconst("run_voblint"). Since the analyzer runs every configuration as a
-combination of components, a new analysis is selectable once it proves its
-component obligation and is entered in the analysis manifest
-(@sec:coop-catalogue); an analysis that needs globals of its own is not
-(@sec:coop-limits).
-
-*Extending the analyzer with assistance.* The obligations of
-@tab:mcp-catalogue fix what a new analysis must prove, name no partner and
-mention no context, solver or equation. This division suits development with
-AI agents (see #link(<ai-use>)[the statement on the use of generative AI]). The order analysis and the query layer of
-@ch:cooperation were written this way: agents read Goblint's MCP for the
-architecture, and the batch build and the checks of @ch:tooling held them to the obligations. Since the
-formalization follows Goblint's structure, a Goblint feature often has an
-obvious place in it. This is the experience of one author on one extension,
-not a measured result. In the long run, this division could let AI add new
-domains and refinements automatically without weakening the soundness
-guarantee: asked for an analysis of a given property, an agent would also
-have to supply a modular soundness proof against a fixed catalogue of
-requirements, such as @tab:mcp-catalogue for the analyses of this thesis. The
-transfer could also run in both directions. From Goblint to Voblint, a
-Goblint feature gives the design that an extension of the formalization
-follows, as the query mechanism did for @ch:cooperation. From Voblint to
-Goblint, a verified component exported as OCaml could replace its unverified
-counterpart in Goblint. That direction needs more than the export: the
-generated code uses the data representations of the proofs
-(@sec:eval-absent), and only an architectural correspondence to Goblint's
-interfaces is established (@app:goblint-alignment).
+combination of components, a new analysis becomes selectable once it proves its
+component obligation (@sec:coop-catalogue) and is entered in the analysis
+manifest. The entry names the domain, its value type, its constant prefix and
+its theories, and the registrations and the combined state are generated from
+it. The command-line interface's name tables and display key are still edited
+by hand. An analysis that needs globals of its own is not selectable
+(@sec:coop-limits). @sec:outlook-agents returns to this division as a basis
+for development with AI agents.
 
 *Generalizability.* Goblint analyzes C after CIL normalization, with pointers,
 a heap, threads, machine integers and further update rules. The certificate is
@@ -121,8 +109,9 @@ refers to VIMP only through the graph, its stores and three step functions,
 the bucket theorem and the composition of @sec:eq-discharge to carry over to a
 language whose activations do not interfere, with the step
 functions and every proof that unfolds them redone. Machine integers fit this
-case: they change the step functions and each domain's transfer proofs, while
-routing and certificate do not mention arithmetic. The numeric domains
+case: they change the step functions, the generic derivation in
+#isalocale("sound_nonrelational_ops") and each domain's certificates for its
+primitive operations, while routing and certificate do not mention arithmetic. The numeric domains
 themselves would need wrap-around-aware variants, since classical numeric
 domains describe ideal integers @mine13. A possible overflow could then be
 reported like the arithmetic diagnostics of @sec:verdicts. A C-like treatment of
@@ -193,9 +182,37 @@ arises. @sec:eval-threats collects the threats to the evaluation.
   No theorem transfers to Goblint's OCaml implementation, and no agreement
   rate between the two analyzers is measured (@sec:eval-goblint).
 
-== Future work
+== Outlook and future work <sec:outlook>
 
-A termination theorem would remove the per-program premise. The total
+=== Extending Voblint <sec:outlook-extending>
+
+*Semantics.* A richer source language, up to a subset of C, needs the new
+obligations that @sec:discussion names for machine integers, pointers, a heap
+and threads, and a semantics and a preservation argument per construct at
+every layer.
+
+*Analyses.* The order analysis forgets a variable on assignment and everything
+across calls. A useful relational domain needs its own transfer proofs, and
+through the query channel it could answer the numeric analyses at branches as
+well as at assignments (@sec:relational). The combined state admits one query
+kind and components without globals (@sec:coop-limits). Further query kinds
+need their own truth relation, and a component with globals needs the
+combination to route each analysis's shared unknowns, as Goblint's MCP tags
+them with the analysis they belong to. In the shipped analyzer the shared
+unknowns carry only callee-entry seeds. One unknown per program global needs a
+concretization over an environment of shared values in place of the single
+global name of the analysis soundness contract. Threads and locks with a
+thread-local trace semantics would then allow the thread-modular uses of
+globals discussed in @sec:mixed-flow.
+
+The context relation reads only how an activation was entered. Digests refine
+unknowns by other abstractions of a local trace, such as held locks or thread
+identifiers @schwarz24digest. Generalizing #isaconst("trace_context") to such
+history abstractions over activation-local traces would allow path- or
+history-sensitive keys. Each abstraction would need its own admissibility
+conditions in place of the context clauses of the coverage contract.
+
+*Guarantees.* A termination theorem would remove the per-program premise. The total
 correctness result of #cite(<tilscher26jar>, form: "prose") covers the top-down
 solver without side effects and assumes finitely many unknowns, a precise
 widening and monotonic right-hand sides with monotonic dependencies
@@ -216,29 +233,65 @@ trusted base: the code generator, the target toolchain or the handwritten
 OCaml, and the parser if the evaluator reads the source independently. Comparing its runs with a
 C compiler on the common subset would test the adequacy argument itself.
 
-The order analysis forgets a variable on assignment and everything across
-calls. A useful relational domain needs its own transfer proofs, and through
-the query channel it could answer the numeric analyses at branches as well as
-at assignments (@sec:relational). A richer source language needs
-the new obligations @sec:discussion names, a semantics and a preservation
-argument per construct at every layer. The combined state admits one query
-kind and components without globals (@sec:coop-limits). Further query kinds
-need their own truth relation, and a component with globals needs the
-combination to route each analysis's shared unknowns, as Goblint's MCP tags
-them with the analysis they belong to.
+A faster executable needs the data refinement outlined in @sec:eval-absent,
+which changes the vendored solver's state and hence its proof but leaves the
+rest of the chain, which sees the solver only through its certificate.
 
-The context relation reads only how an activation was entered. Digests refine
-unknowns by other abstractions of a local trace, such as held locks or thread
-identifiers @schwarz24digest. Generalizing #isaconst("trace_context") to such
-history abstractions over activation-local traces would allow path- or
-history-sensitive keys. Each abstraction would need its own admissibility
-conditions in place of the context clauses of the coverage contract.
+=== Voblint and Goblint <sec:outlook-goblint>
 
-In the shipped analyzer the shared unknowns carry only callee-entry seeds. One
-unknown per program global needs a concretization over an environment of
-shared values in place of the single global name of the analysis soundness
-contract. Threads and locks with a thread-local trace semantics would then
-allow the thread-modular uses of globals discussed in @sec:mixed-flow.
+Voblint shares Goblint's split into local and global unknowns, its unknowns
+indexed by node and context, and its enter/combine protocol at calls. Only this
+architectural correspondence is established (@app:goblint-alignment). Within
+that limit, Voblint can serve as an executable specification of the
+architecture with proved soundness obligations. From Goblint to Voblint, a
+Goblint feature gives the design that an extension follows, as the query
+mechanism did for @ch:cooperation, and the feature often has an obvious place in the formalization. A
+documented Goblint defect can be replayed as a regression fixture and as a
+counterexample theorem that shows the defective operation violating an
+obligation. The congruence remainder of @sec:eval-1161 was replayed in both
+forms (#isathm("prefix_congruence_mod_unsound")). The same obligations could
+be consulted before a change to Goblint lands: a proposed domain operation with
+a counterpart in Voblint would be transliterated by hand and checked against
+the obligation that counterpart meets, as #isathm("congruence_mod_sound")
+states it for the remainder. Operations on pointers or threads have no such
+counterpart.
+
+From Voblint to Goblint, a verified component exported as OCaml could replace
+its unverified counterpart in Goblint. That needs more than the export: the
+data refinement above (@sec:eval-absent), a correspondence between the
+component's interface and Goblint's, and soundness for C's integers, since the
+component's proofs assume VIMP's unbounded ones (@sec:vimp-vs-c).
+
+=== Agent-assisted development <sec:outlook-agents>
+
+A new analysis enters Voblint at one of two levels. A non-relational value
+domain proves the certificate #isalocale("sound_nonrelational_ops") for its
+operation bundle, and #isathm("sound_nonrelational_ops.dg_analysis_execI")
+discharges every obligation about the domain. Any other analysis supplies a
+component meeting the obligations of @tab:mcp-catalogue. Neither names a
+partner or mentions a context, solver or equation. This division suits
+development with AI agents (see #link(<ai-use>)[the statement on the use of
+  generative AI]), because it fixes the parts of an agent's task that a test
+harness would. The certificate or the catalogue is the specification. The
+batch build and the drift checks of @ch:tooling are the oracle, and a change
+counts as done only when they pass. Counterexample theorems for weakened
+obligations (@sec:falsification, @sec:revealed) act as negative tests of the
+catalogue: each shows on one program that dropping a selected condition admits
+an unsound claim, so the conditions they cover cannot be dropped as
+unnecessary. The order analysis and the query layer of @ch:cooperation were
+written this way: agents read Goblint's MCP for the architecture, and the batch
+build and the checks of @ch:tooling held them to the obligations. This is the
+experience of one author on one extension, not a measured result.
+
+In the long run, an agent asked for an analysis of a given property would have
+to deliver it together with its modular soundness proof against the fixed
+catalogue. Isabelle checks the proof, so the guarantee would not depend on
+trusting the agent. It would still rest on the adequacy of the catalogue and on
+the trusted base of @sec:trust-boundary. The catalogue constrains soundness
+only, so precision would still need fixtures that demand definite verdicts
+(@sec:eval-corpus). Other
+analyzers that separate the abstract domain from a fixpoint engine proved sound
+once against a fixed interface could adopt the same pattern.
 
 == Summary
 
@@ -247,7 +300,9 @@ side effects and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function, for a scalar language
 with recursive procedures and under a per-program termination premise. The
 proof factors into a trace semantics with contexts read off activations, a
-coverage contract that domain, context policy and solver discharge separately,
-and a certificate through which the solver enters. Analyses that answer one
+coverage contract that one theorem discharges from separate obligations of
+analysis and context policy, and a certificate through which the solver enters.
+A non-relational domain supplies only certified primitive operations, from
+which a generic builder in the style of Nipkow and Klein derives its analysis. Analyses that answer one
 another's queries combine under the same theorem, each proving one obligation
 that names no partner.

@@ -213,7 +213,7 @@ unknowns the solver stabilized form $V$.
     @fig:counting-loop, where #raw("pp0") is the start and #raw("pp1"),
     #raw("pp2"), #raw("pp3") are $h$, $b$, $e$, simplified to four local unknowns without contexts or side effects. Each row
     is one evaluation of a right-hand side, numbered in run order (six
-    bookkeeping evaluations are omitted), with the values $sigma$ after it,
+    intermediate evaluations are omitted), with the values $sigma$ after it,
     the unknowns being computed ($c$, in call order) and the loop points, as in
     the vendored solver. A loop point is warrowed: widened while it
     grows, narrowed once it shrinks. Transcribed by hand; the final values are
@@ -222,15 +222,19 @@ unknowns the solver stabilized form $V$.
 
 The collecting-soundness argument uses no other fact about the solver. It
 assumes the bounds on any set containing the query, so replacing the solver
-leaves that argument unchanged. The vendored theorem
-#isathm("partial_post_solution") derives the certificate for the stabilized set
-from membership of the query in the domain of definition of the solver's
-recursion. Publishing a result needs one further fact, proved once for the
-solver locale from its stable-set invariant: by #isathm("finite_stabl_solve") a
-terminating solve returns a finite key set. The `DEAD` verdict of
-@sec:verdicts aggregates over all contexts of a node and relies on it. Domain
-membership for the program's query is the termination premise, and
-@sec:termination explains why it stays a premise.
+leaves that argument unchanged. The pipeline locale #isalocale("dg_analysis")
+therefore takes the solver as a parameter and states three contracts about it.
+First, a solve whose recursion is defined on the query returns a
+post-solution on its stabilized set. The vendored theorem
+#isathm("partial_post_solution") provides this. Second, such a solve returns a
+finite key set. Voblint proves this once for the solver locale from its
+stable-set invariant (#isathm("finite_stabl_solve")). The `DEAD` verdict of
+@sec:verdicts aggregates over all contexts of a node and relies on it. Third, a
+run of the executable solver that returns a result lies in that domain
+(#isathm("solve_dom_of_solve_c"), @sec:termination). Every registration of an
+analysis with the pipeline discharges the three contracts by citing these
+facts at its update rule. Domain membership for the program's query is the
+termination premise, and @sec:termination explains why it stays a premise.
 
 == One proof for four update rules <sec:update-rules>
 
@@ -247,6 +251,8 @@ the new value of the global. Voblint exposes four of them: join the
 contribution into the value, join the recorded contributions, warrow the value
 toward that join, or warrow the origin's own record and then join the records.
 The fifth vendored rule, which bounds narrowing by a counter, is not selectable.
+Voblint also proves sound a keyed combination that joins at entry seeds and
+warrows elsewhere; only examples use it.
 In #isaconst("run_voblint") the entry seeds are the only global unknowns that
 receive contributions (@sec:mixed-flow), so the rule decides how a callee's
 entry state accumulates across call sites (@fig:update-rules).
@@ -256,8 +262,10 @@ several locations. Seidl et al. show on such a global that widening the
 accumulated interval loses both bounds, while per origin each record holds a
 single value and nothing is widened @seidl26. The gain is limited to the case where
 several origins feed one unknown. A recursive call that feeds a growing value back
-into the seed it reads is a single origin, and warrowing one origin separately
-from itself changes nothing.
+into the seed it reads is a single origin, so per-origin warrowing gains nothing
+there. It can lose precision instead: widening the recursive call's own record
+ignores the other contributions that plain warrowing joins in first, as the last
+row of @fig:rules-programs shows.
 
 The choice of rule also affects termination. The two joining rules never widen
 a seed. On the interval domain, the recursion `f(x) { f(x + 1) }` entered with
@@ -337,9 +345,11 @@ the four vendored interpretations.
 
 == A finite state with two defaults
 
-Soundness is stated over states $"Var" -> A$, functions on an infinite set of
-names whose equality is not executable, while the solver compares values at
-every update. A sparse map that reads every unlisted variable as #ltop is the
+The pointwise numeric analyses state soundness over states $"Var" -> A$,
+functions on an infinite set of names whose equality is not executable, while
+the solver compares values at every update. The relational order analysis keeps
+its own state type, a set of variable pairs (#isatype("relc")), and this
+section does not apply to it. A sparse map that reads every unlisted variable as #ltop is the
 smaller representation, but three states the analysis uses do not fit it. The
 solver starts every unknown at the everywhere-#lbot state, which such a map
 cannot represent at all. The initial state maps every global to the abstraction
@@ -367,11 +377,14 @@ equal lookups.
 Instead of reproving the transfer soundness of @ch:analysis-interface for the
 carrier, we show that each carrier operation commutes with readback $rho$:
 $ rho("op"_"exec" (s)) = "op"_"abs" (rho(s)). $
-For the generic numeric transfer this is #isathm("generic_tf_st_for_commute"),
-with the branch filter as the one per-domain premise, and concretizing a
-carrier state as $sem(rho(s))$ transports every soundness fact. A
-carrier-level proof per domain would repeat every transfer argument for each
-representation.
+Concretizing a carrier state as $sem(rho(s))$ then transports every soundness
+fact. A carrier-level proof per domain would repeat every transfer argument for
+each representation. The locale #isalocale("dg_analysis_exec") states the
+commutation as its readback contract, for the transfer on nonempty states and
+for procedure entry. For a certified operation bundle both hold without a
+per-domain proof: the abstract and executable steps are derived from the same
+operations (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
+@sec:instances-supply).
 
 Emptiness, on which `DEAD` rests, is a condition over all names (@ch:domains)
 and needs a finite test: it inspects the local default, the overrides at the
@@ -384,9 +397,7 @@ implies emptiness. The carrier uses both directions. The specification collapses
 the empty states, so only an exact test lets the executable collapse commute
 with readback. A state the test keeps is then known to be nonempty
 (#isaconst("live_resolved_st_q")), and the numeric transfer commutes with
-readback only on such states. The proof that the branch filter commutes with
-readback assumes a reductive intersection
-(#isathm("backward_domain_reductive.bfilter_st_lift_correct")).
+readback only on such states.
 
 == Why termination stays a premise <sec:termination>
 
@@ -404,8 +415,8 @@ recursion finishes, and #isathm("solve_dom_of_solve_c") turns a finished run
 into domain membership. A premise of this shape can therefore be discharged by
 evaluating the solve for one program.
 
-A theorem that discharges the premise for every program cannot hold in the
-present design, because termination fails for some configurations. Under
+We do not expect a theorem that discharges the premise for every program,
+because we expect termination to fail for some configurations. Under
 entry-state contexts on the interval domain, a recursion that changes its
 argument at every level meets a fresh context at every level, and widening
 bounds the values of existing unknowns without bounding how many are created
@@ -428,17 +439,21 @@ that kind for the vendored solver, relative to the keys a program creates, is
 future work. The end-to-end theorem is therefore a partial-correctness result
 with a per-program premise (@sec:headline).
 
-The solver enters the argument only through #isaconst("part_post_solution") on the stabilized set,
-which the vendored #isathm("partial_post_solution") derives from the premise
-that the solver's recursion is defined on the query, and through the finite key
-set of #isathm("finite_stabl_solve"). One interpretation of the solver locale,
-parameterized by the rule, makes both hold for all four update rules at once
-(#isathm("update_rule_update_global_of")). The certificate idea itself is
-established practice, as in CompCert's dataflow-solver interface @compcertKildall.
-Its use for side-effecting, context-indexed systems is new. The executable
-carrier transports every soundness fact by commuting with readback
-(#isathm("generic_tf_st_for_commute")), and its finite emptiness test is exact
-(#isathm("resolved_st_q_is_bot_for_iff")). Termination is the one solver fact
-that is not proved: it fails for some configurations, so the source-level
-theorem of @ch:results assumes it per program, and
-#isathm("solve_dom_of_solve_c") lets a finished run discharge it.
+The solver enters the argument only through three contracts of
+#isalocale("dg_analysis"): #isaconst("part_post_solution") on the stabilized
+set, which the vendored #isathm("partial_post_solution") derives from the
+premise that the solver's recursion is defined on the query, the finite key set
+of #isathm("finite_stabl_solve"), and domain membership after a finished run
+(#isathm("solve_dom_of_solve_c")). One interpretation of the solver locale,
+parameterized by the rule, makes all three hold for all four update rules at
+once (#isathm("update_rule_update_global_of")), and each registration
+discharges the contracts from it. The certificate idea itself is established
+practice, as in CompCert's dataflow-solver interface @compcertKildall, and
+Tilscher et al. already prove it for side-effecting systems @tilscher26. Voblint
+adds its consumption for context-indexed D/G systems, down to source-level
+soundness. The executable carrier transports every soundness fact by commuting
+with readback (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and its
+finite emptiness test is exact (#isathm("resolved_st_q_is_bot_for_iff")).
+Termination is the one solver fact that is not proved. We expect it to fail for
+some configurations, so the source-level theorem of @ch:results assumes it per
+program, and #isathm("solve_dom_of_solve_c") lets a finished run discharge it.

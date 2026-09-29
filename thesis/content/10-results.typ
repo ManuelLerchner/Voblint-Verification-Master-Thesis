@@ -93,9 +93,11 @@ analyzed program need not terminate, since its finite prefixes are covered
 (@tab:headline).
 @sec:termination shows configurations under which the solve diverges
 and explains why no vendored termination theorem applies.
-#isathm("certificate_demo_full_certificate") discharges the premise by
+#isathm("certificate_demo_config_terminates") discharges the premise by
 evaluation, trusting the code generator, for one program at one configuration:
-the Int product, the join rule and call strings of length one. A solve that
+the Int product, the join rule and call strings of length one.
+#isathm("certificate_demo_source_certified") then instantiates the theorem
+with every premise discharged. A solve that
 does not finish gives no answer from the delivered tool, and the theorem makes
 no claim about it.
 
@@ -207,9 +209,8 @@ how far the abstract rows exceed row 2.
 Without contexts, the two activations of `f` share one entry and one exit. The
 combine after the recursive call reads the returned value from that same exit,
 so the value `f` returns is computed from itself, and the analysis loses it.
-Widening the entry is not the cause: under the joining update rules the entry
-stays at ${n |-> [1, 2]}$, and the check is still #raw(chain-join.at(3)) with
-#raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
+Widening the entry is not the cause: under the joining update rule the check
+is still #raw(chain-join.at(3)) with #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
 its own entry and exit, and the result stays exact.
 
 The first link is the compiler simulation of @ch:program-model composed with
@@ -273,16 +274,28 @@ does not enter its statement.
 == Verdicts <sec:verdicts>
 
 A check has one verdict per node, while the table may hold several contexts
-there. Each context's state is classified as proved, refuted or unknown, and
-the verdicts are joined in the flat order in which unknown is the top. The
-join follows from the existential context of @sec:table: the theorem does not
-say which context covers a store, so the node verdict may claim only what
-every contributing context claims, and a proved and a refuted context give
-unknown. A context whose state denotes no store contributes nothing:
-classifying an empty state is vacuous, since every verdict is true of every
-store it denotes. The type #isatype("contextual_verdict") keeps that case
-apart as `DEAD`, the verdict of a node where no context holds a reachable
-state.
+there. Each context whose state is not #ctor("Bot") is classified as proved,
+refuted or unknown from the answers of @sec:coop-queries: the check asks the
+truth value of its condition, every active analysis answers from its
+#isaconst("check_query") on its field, and #isaconst("answer_check") reads the
+meet of these answers. An exact $1$ proves the check, an exact $0$ refutes it,
+and every other answer leaves it unknown. Proved and refuted are sound because
+a definite answer holds in every store the state describes
+(#isathm("check_query_sound")). An answer that admits no value also gives
+unknown, so the classification never yields `DEAD`.
+
+The per-context verdicts are joined in the flat order in which unknown is the
+top. The join follows from the existential context of @sec:table: the theorem
+does not say which context covers a store, so the node verdict may claim only
+what every contributing context claims, and a proved and a refuted context
+give unknown. A context whose state is #ctor("Bot") denotes no store and
+contributes nothing: classifying it would be vacuous, since every verdict is
+true of every store it denotes. The type #isatype("contextual_verdict") is the
+verdict type lifted by a bottom element, and that bottom is `DEAD`, the unit of
+the join. A node is `DEAD` exactly when every context the table holds there is
+#ctor("Bot"). The join ranges over the contexts solved at the node, a finite
+set because a terminating solve returns a finite key set
+(#isathm("finite_stabl_solve"), @sec:termination).
 
 Each verdict below has a meaning only under the premises of the theorem
 (@tab:headline): the abstract solve terminates, and #isaconst("run_voblint")
@@ -429,7 +442,7 @@ result is partial correctness, and the delivered tool adds the trusted
 components of @sec:trust-boundary. The companion theorems
 #isathm("run_voblint_dead_check_unreached") and
 #isathm("run_voblint_arithmetic_safe") give `DEAD` and the arithmetic
-diagnostic their meaning, and #isathm("certificate_demo_full_certificate")
+diagnostic their meaning, and #isathm("certificate_demo_source_certified")
 shows for one program and configuration that the premises can be met, a
 non-vacuity witness. @ch:instances compares what the shipped
 domains can prove under this theorem, and @ch:executable draws the boundary

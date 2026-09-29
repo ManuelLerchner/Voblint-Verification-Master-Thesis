@@ -258,7 +258,7 @@
   } else { display })
   if href == none { body } else { link(href, body) }
 }
-#let isathm(name) = entity(name, vb.thm, kind: "thm")
+#let isathm(name, display: none) = entity(name, vb.thm, kind: "thm", display: display)
 #let isaconst(name) = entity(name, vb.const, kind: "const")
 #let isatype(name) = entity(name, vb.type, kind: "type")
 #let isalocale(name) = entity(name, vb.locale, kind: "locale")

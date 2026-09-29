@@ -219,15 +219,6 @@
       "globals": "warrow"
     }
   },
-  "dom-even-odd-congruence": {
-    "fixture": "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 2 * n;\n  y = 2 * n + 1;\n  __voblint_check(x != y);\n}",
-    "settings": {
-      "analysis": "congruence",
-      "context": "none",
-      "globals": "warrow"
-    }
-  },
   "dom-even-odd-interval": {
     "fixture": "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
     "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 2 * n;\n  y = 2 * n + 1;\n  __voblint_check(x != y);\n}",

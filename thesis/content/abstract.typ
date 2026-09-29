@@ -53,11 +53,13 @@ condition requires every reachable call to be admitted at some context, so the
 per-context sets of stores together contain every reachable store.
 
 Each domain, each context policy and the solver prove their own obligations,
-and one theorem combines them for every configuration. The formalization
-is modular: a new analysis proves its operations sound against every sound
-answer to its queries, a list of obligations that names no other analysis,
-context policy or solver. Its registration in the combined state is
-generated, and the main theorem then covers it. This fixed list of obligations
+and one theorem combines them for every configuration. A numeric domain
+supplies only certified primitive operations, from which its transfer
+functions are derived generically, following Nipkow and Klein @nipkow14. Any
+other analysis proves its operations sound against every sound answer to its
+queries, obligations that name no other analysis, context policy or solver.
+Its registration in the combined state is generated from a manifest entry, and
+the main theorem then covers it. This fixed list of obligations
 also makes the framework a practical target for extension with AI agents,
 which we used to add the order analysis and the query layer.
 

@@ -100,9 +100,13 @@ requires. It also names the laws it omits on purpose.
 == The domain interface <sec:domain-contract>
 
 A domain is a type $A$ of abstract values, operations on $A$, and laws that
-relate these operations to $conc$. @fig:domain-carrier shows all of them, read
-from the declarations. They fall into three groups: what the solver needs,
-forward evaluation, and backward refinement.
+relate these operations to $conc$. A non-relational domain hands its
+operations to the analysis as one record, #isatype("nonrelational_ops"), and
+one interpretation of #isalocale("sound_nonrelational_ops") certifies the record
+from these laws and derives the transfer functions and the check classifier
+from it (@sec:instances-supply). @fig:domain-carrier shows the laws, read from
+the declarations. They fall into three groups: what the solver needs, forward
+evaluation, and backward refinement.
 
 // What a domain supplies, as UML inheritance trees. Each node is a class or
 // locale read from its lifted declaration and lists only the members it
@@ -197,7 +201,7 @@ forward evaluation, and backward refinement.
   // Each instance is listed at the most derived node it reaches: a type at the
   // class it instantiates, a lemma proving a final locale, one nothing else
   // extends. The lemma may prove a strengthening the figure leaves out
-  // (`backward_domain_mono`).
+  // (backward_domain_mono).
   let interpreted = (:)
   for (n, instances) in cfg.at("interpreted", default: (:)) {
     assert(n in names, message: "domain tree " + key + ": interpreted " + n + " is not drawn")
@@ -277,7 +281,7 @@ forward evaluation, and backward refinement.
           rows.push(code(if fill == vb.const { ":: " + rhs } else { rhs }))
         }
       }
-      // A pure combination such as `backward_domain` or `warrowing` declares
+      // A pure combination such as backward_domain or warrowing declares
       // nothing itself; an empty box would read as a rendering fault.
       let instances = tree.interpreted.at(d.name, default: ())
       if d.fixes == () and d.laws == () and not d.ref and instances == () {
@@ -380,17 +384,17 @@ forward evaluation, and backward refinement.
   kind: image,
   placement: top,
   caption: [What a domain supplies over its carrier type #raw("'a") for
-    sound evaluation, refinement and checks; the reductive and monotone strengthenings
-    are not drawn. Each
+    sound evaluation, refinement and checks; the laws of `min` and `max` and the
+    reductive and monotone strengthenings are not drawn. Each
     class (solid) or locale (dashed) lists the operations and laws it declares.
     Solid arrows point to what a declaration extends, dashed ones to the class
     its type variable is constrained to. An interface an analysis implements
     lists the instances or lemmas establishing it. The backward lemmas prove the monotone strengthening
     #isalocale("backward_domain_mono"), except Int's, which proves the
-    reductive one. Colour gives where a node is
+    reductive one at every refinement mode. Colour gives where a node is
     declared:
     #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
-    #swatch(vb.voblint) Voblint. Read from the declarations.],
+    #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
 The solver compares abstract values, joins them where control flow merges, and
@@ -446,15 +450,16 @@ conc(a_2)$; one inclusion holds in every lattice, and the other is all that
 soundness needs @nipkow14[Sect. 13.7]. The interface keeps that inclusion and
 drops the lattice. The intersection is any operation with
 $ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
-not necessarily a meet of the order, and the carrier classes require a join
-but no meet.
+that lies below both operands, a lower bound that need not be the greatest one
+(#isalocale("reductive_intersection")). The carrier classes require a join but
+no meet.
 
 The interface also asks for no monotone operations. Nipkow and Klein need them
 because their narrowing keeps a post-fixpoint only for a monotone step function
 @nipkow14[Lemma 13.39]. Voblint's solver stops only when every unknown it reached
 is stable, so a terminated solve satisfies each inequality whatever the
-operations are (#isathm("partial_post_solution")). Monotonicity would help precision and termination, which
-Voblint does not prove: precision is not a theorem, termination a premise.
+operations are (#isathm("partial_post_solution")). A monotone domain certifies
+monotonicity separately (#isalocale("mono_nonrelational_ops")).
 
 == Intervals as a numeric domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
 
@@ -535,8 +540,8 @@ $ivl(5, 9)$, but not below the normalized meet $lbot$, so a normalizing meet
 would not be a greatest lower bound
 (#isathm("meet_ivl_normalized_breaks_greatest")). The intersection of the
 interface is therefore a separate operation, the normalized meet
-#isaconst("intersect_ivl"). It preserves the denoted set exactly, and it is
-reductive and monotone. The inverse of $<$ refines $x = ivl(0, +infinity)$
+#isaconst("intersect_ivl"). It preserves the denoted set exactly, lies below
+both operands as the interface requires, and is monotone. The inverse of $<$ refines $x = ivl(0, +infinity)$
 against $ivl(10, 10)$, with $x < 10$ required true, to $x = ivl(0, 9)$
 (#isaconst("inv_less_ivl")). Only comparisons refine. The inverses of
 addition, subtraction and multiplication return their operands unchanged,
@@ -545,8 +550,9 @@ which the law allows.
 Every operation above is proved to satisfy its law, so the interval domain is
 sound. It is however not as precise as it could be. The inverse of addition, for
 example, could refine $x_1$ in $x_1 + x_2 = r$ to $x_1 lmeet (r - x_2)$, as
-the interval analysis of Nipkow and Klein does @nipkow14[Sect. 13.8.3]. Such
-refinements would only add precision, which this thesis does not pursue.
+the interval analysis of Nipkow and Klein does @nipkow14[Sect. 13.8.3].
+Voblint's Interval keeps this inverse conservative. Parity and Congruence do
+invert arithmetic (@sec:branches).
 
 === A carrier without least upper bounds <sec:no-defexc>
 
@@ -748,8 +754,8 @@ unreachable.
     Sign refines the left disjunct to
     ${x |-> signval(bot), y |-> signval(top)}$ and the right one to
     ${x |-> signval(top), y |-> signval(bot)}$. Both are empty, but their
-    pointwise join is ${x |-> signval(top), y |-> signval(top)}$. With the
-    lifted states below, both arms become #ctor("Bot"), and the
+    pointwise join is ${x |-> signval(top), y |-> signval(top)}$. The branch
+    turns each empty arm into #ctor("Bot") before the join, and the
     analyzer reports the check in the branch as unreachable (claim
     `dom-disjunct-sign`).],
 ) <fig:domain-reachability>
@@ -764,9 +770,12 @@ so, replaces it by #ctor("Bot") (#isaconst("normalize_lift")). From then on
 short-circuits: a transfer applied to #ctor("Bot") is skipped and returns
 #ctor("Bot"), and a join with #ctor("Bot") returns the other operand. An unreachable program point thus keeps the value #ctor("Bot"), and the
 analysis can report it as unreachable. In the program of
-@fig:domain-reachability, the two arms of the disjunction join as follows,
-written as pairs $(sigma(x), sigma(y))$ as in @fig:pointwise, first without
-and then with lifting:
+@fig:domain-reachability, both arms are joined inside one branch transfer, so
+the test after the transfer would come too late. The branch therefore also
+replaces each empty arm of a disjunction by #ctor("Bot") before the join
+(@sec:branches). The two arms join as follows, written as pairs
+$(sigma(x), sigma(y))$ as in @fig:pointwise, first without and then with
+lifting:
 $ (signval(bot), signval(top)) ljoin (signval(top), signval(bot)) & = (signval(top), signval(top)), \
                                   ctor("Bot") ljoin ctor("Bot") & = ctor("Bot"). $ Goblint separates reachability in the same way, but outside the
 lattice: a transfer function that finds its path unreachable raises the
@@ -870,7 +879,8 @@ concretization yields sets of stores rather than sets of integers, and a
 relational transfer acts on the whole state, so its laws are stated per
 transfer in the analysis interface. @fig:contract-routes in @ch:analysis-interface shows how
 both kinds of state reach that interface, and @sec:relational turns #isatype("relc")
-into an analysis.
+into an analysis that supplies its transfer functions directly
+(#isaconst("order_spec")).
 
 == Learning from a guard <sec:branches>
 
@@ -905,22 +915,79 @@ the check holds.
 Backward refinement instead runs the condition in reverse, as in the backward
 analysis of Nipkow and Klein @nipkow14[Sect. 13.7.2]. Given the truth value the
 branch requires, the inverse operators of #isalocale("backward_domain") refine
-the operands so that they retain every concrete pair that can produce it. The refined value is the
-meet of the old value with what the guard implies. Sign refines $x$ to
+the operands so that they retain every concrete pair that can produce it. In
+Sign, the refined value is the meet of the old value with what the guard
+implies. Sign refines $x$ to
 $signval(top) lmeet signval("+") = signval("+")$ on the true arm and to
 $signval(top) lmeet signval("≤0") = signval("≤0")$ on the false arm
 (@fig:guard-meet). Both arms
 then give $y$ a non-negative value, and the join yields $y = signval("≥0")$
 (#raw(_g.state)). @sec:queries answers the check from this state.
 
-The function #isaconst("bfilter") performs this refinement. It takes a
-condition, the required truth value and a state, and returns the refined state.
-It follows the structure of the condition, as the backward analysis of boolean
+The branch transfer #isaconst("backward_domain.branch") performs this
+refinement in two stages. A feasibility gate first evaluates the condition
+forward. If its value is empty, or the truth test decides it with the other
+truth value, no store takes the arm, and the result is unreachable. Otherwise
+the filter #isaconst("bfilter") refines the state. It takes a condition, the
+required truth value and a state, and returns the refined state. It follows
+the structure of the condition, as the backward analysis of boolean
 expressions of Nipkow and Klein does @nipkow14[Sect. 13.7.2], and hands
 arithmetic operands to #isaconst("afilter"), which refines a state so that an
 expression evaluates within a required abstract value
-@nipkow14[Sect. 13.7.1]. Both are defined once, generically for every
-backward domain.
+@nipkow14[Sect. 13.7.1]. Where a disjunction joins two refined arms, the
+branch uses the variant #isaconst("bfilter_lifted"), which replaces an empty
+arm by #ctor("Bot") before the join. All of these are defined once,
+generically for every backward domain.
+
+The inverse operators decide how much the filter learns. @fig:inverse-trace
+follows the true arm of `x + 1 == y`, with $y$ even and $x$ unknown, in Parity
+and in Interval. The inverse of equality gives both sides the meet of their
+values, so $x + 1$ must be even. The parity of a sum is determined by the
+parities of its operands, so Parity's inverse of addition
+(#isaconst("inv_plus_parity")) makes $x$ odd
+(#isathm("bfilter_parity_plus_narrows")). Interval's inverse of addition
+returns its operands unchanged, and the same filter learns nothing about $x$.
+Congruence also inverts arithmetic. Sign and Interval invert only comparisons.
+
+#let _tv(body) = text(size: 7.5pt, body)
+#figure(
+  table(
+    columns: 3,
+    stroke: none,
+    inset: (x: 6pt, y: 3pt),
+    align: (left + horizon, center + horizon, center + horizon),
+    table.hline(stroke: 0.5pt),
+    [*step*], [*Parity*], [*Interval (illustrative)*],
+    table.hline(stroke: 0.4pt),
+    _tv[state before],
+    _tv($x |-> top, thin y |-> "even"$),
+    _tv($x |-> ivl(-infinity, +infinity), thin y |-> ivl(0, 10)$),
+    _tv[evaluate operands (#isaconst("n_aval"))],
+    _tv($x + 1 |-> top, thin y |-> "even"$),
+    _tv($x + 1 |-> ivl(-infinity, +infinity), thin y |-> ivl(0, 10)$),
+    _tv[feasibility gate (#isaconst("r_tobool"))],
+    _tv[undecided, arm kept],
+    _tv[undecided, arm kept],
+    _tv[invert `==` (#isaconst("r_inv_eq"))],
+    _tv($x + 1 : "even", thin y : "even"$),
+    _tv($x + 1 : ivl(0, 10), thin y : ivl(0, 10)$),
+    _tv[invert `+` (#isaconst("r_inv_plus"))],
+    _tv($x : top lmeet ("even" - "odd") = "odd"$),
+    _tv($x : ivl(-infinity, +infinity)$),
+    _tv[intersect (#isaconst("r_intersect"))],
+    _tv($x |-> "odd", thin y |-> "even"$),
+    _tv($x |-> ivl(-infinity, +infinity), thin y |-> ivl(0, 10)$),
+    table.hline(stroke: 0.5pt),
+  ),
+  kind: image,
+  placement: auto,
+  caption: [The generic branch refinement on the true arm of `x + 1 == y`,
+    one row per step, each naming the primitive it calls; $e : a$ is the
+    target value an operand must evaluate within. Parity's inverse of `+` makes
+    $x$ odd, which #isathm("bfilter_parity_plus_narrows") checks by
+    evaluation. Interval's inverse of `+` is the conservative identity, so $x$
+    keeps its value; this column is illustrative.],
+) <fig:inverse-trace>
 
 A relational state learns from a guard in the same way, but what it learns is
 a relation. On the true arm of `if (x < y)`, the relational state of
@@ -989,6 +1056,10 @@ condition. It may keep stores that fail it.
 
   #proved("bfilter_sound")
 ]
+
+The branch inherits this law. Its gate drops only arms that no store takes,
+and replacing an empty arm by #ctor("Bot") keeps the stores it describes
+(#isathm("backward_domain.branch_sound")).
 
 The relational state satisfies the same statement for its own refinement
 #isaconst("branch_step_rel"), with the polarity `pol` selecting the arm:

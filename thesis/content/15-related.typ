@@ -86,7 +86,15 @@ Nipkow and Klein develop abstract interpretation in Isabelle/HOL over annotated
 commands of the While language IMP @nipkow12 @nipkow14. A collecting semantics
 annotates each program point with a set of states, and an abstract interpreter
 annotates it with an abstract state. The development is syntax-directed and
-intraprocedural. Voblint keeps the separation between collecting semantics and
+intraprocedural. Its interpreter is parametric in a domain of abstract values:
+the domain supplies abstract operations and inverse operations with their
+soundness laws, and the interpreter derives forward evaluation, the backward
+filtering of guards and the step of each command generically
+@nipkow14[Sects. 13.5--13.7]. Voblint's non-relational domains follow this
+pattern. Each supplies one record of primitive operations
+(#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
+derives the transfer, branch, entry and check classifier from it and proves
+them sound once (@sec:instances-supply). Voblint keeps the separation between collecting semantics and
 abstraction. Its collecting semantics ranges over activation-local traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
 which caller resumes. Their executable abstract state reads every variable it
@@ -115,9 +123,10 @@ the abstract semantics, parameterized over an arrow-based interface, and reduce
 its soundness to lemmas about the two instances of that interface.
 #cite(<darais15>, form: "prose") make context, path and heap sensitivity monad
 transformers that are proved sound once, on paper, and composed into an
-analyzer. Voblint's per-domain obligations play a similar role. The shared
-structure they instantiate is the equation generator of @ch:equations, and the
-solver is a third, separately verified component.
+analyzer. In Voblint, the certificates of a non-relational domain play a
+similar role for the generic transfer builder of Nipkow and Klein. The analysis
+specification it yields instantiates the equation generator of @ch:equations,
+and the solver is a third, separately verified component.
 
 #cite(<cachera10>, form: "prose") program and prove in Coq an abstract
 interpreter for a While language without procedures. It iterates over the
@@ -165,8 +174,10 @@ For the context semantics, the Isabelle semantics above model whole executions o
 None of them represents one activation with its caller chain, the object Voblint's
 context relation reads. For compositionality, the factorings above share an interpreter, a
 handler stack or a monad stack between the concrete and the abstract
-semantics. Voblint mechanizes a three-way split between domain, context policy
-and solver for a constraint-based analyzer, and its one composition theorem,
+semantics. Voblint mechanizes a three-way split between analysis, context policy
+and solver for a constraint-based analyzer, in which a non-relational domain
+reaches the analysis interface through one generic builder, and its one
+composition theorem,
 #isathm("activation_collect_dg_sound"), is instantiated for every shipped
 configuration. For precision, Lammich and Müller-Olm prove precision of their
 analysis for every program. Voblint's precision statements compare two
@@ -235,12 +246,14 @@ reduced product @cousot79 @rival20[§5.1.2] combines domains through a reduction
 on the product carrier, as the Int domain of @sec:reduced-product does. The
 combined state keeps separate carriers and exchanges facts only through
 answers, so no reduction operator has to be defined or proved for a pair of
-analyses.
+analyses. The open product of #cite(<cortesi94>, form: "prose"), designed for
+logic programs, also lets each combined domain use information from the others
+through queries.
 
 Verasco uses the same idea, for the same reason: reduced products tend to be
 specific to the two domains combined and scale poorly beyond two, so its
 numerical domains exchange information through channels, a design its
-authors attribute to Astrée @jourdan15[§7]. A channel is a record of query
+authors attribute to Astrée @jourdan15[§7] @cousot07astree[§5.2]. A channel is a record of query
 functions, its concretization holds at an environment when every answer is
 valid there, and a transfer function is proved under the hypothesis that its
 channels are correct. A generic combinator builds the product of two domains
@@ -369,6 +382,124 @@ point, which is equivalent to inlining since the programs do not use recursion
 whole-program analyses purposely make unsound choices and ask authors to state
 the nature and extent of the unsoundness explicitly.
 
+#figure(
+  {
+    set text(size: 8pt)
+    set par(justify: false, leading: 0.45em)
+    table(
+      columns: (auto, auto, auto, auto, auto, auto, auto, auto),
+      align: (col, _) => (if col == 0 { left } else { center }) + horizon,
+      stroke: none,
+      inset: (x: 3pt, y: 2.6pt),
+      table.hline(stroke: 0.5pt),
+      [*Tool*], [*Language*], [*Stance*], [*Calls*], [*Recursion*], [*Relational*],
+      [*Combination*], [*Mechanized*],
+      table.hline(stroke: 0.4pt),
+      [Astrée @cousot07astree], [C subset], [sound], [inlining], [not used], [octagons],
+      [channels], [none],
+      [Eva @eva-manual], [C], [sound], [inlining], [contract], [Apron], [via values],
+      [none],
+      [MOPSA @journault19], [C, Python], [sound], [inlining], [unsupported], [Apron],
+      [products, queries], [none],
+      [IKOS @brat14], [C/C++], [sound], [inlining], [assumptions], [Apron],
+      [fixed products], [none],
+      [Pulse-X @le22], [C/C++], [bug finding], [summaries], [unrolled], [pure conditions],
+      [one domain], [none],
+      [Goblint @saan23], [C], [sound], [per context], [analyzed], [Apron], [queries],
+      [TD algorithm],
+      table.hline(stroke: 0.4pt),
+      [*Voblint*], [VIMP], [proved sound], [per context], [covered], [order analysis],
+      [queries], [end to end],
+      table.hline(stroke: 0.5pt),
+    )
+  },
+  kind: table,
+  placement: top,
+  caption: [Unverified analyzers and Voblint, as described by each tool's papers
+    and documentation. The text explains the entries.],
+) <tab:production-analyzers>
+
+@tab:production-analyzers compares Voblint with six analyzers that have no
+machine-checked soundness proof. The _stance_ is the tool's own claim. Astrée
+aims at proving the absence of run-time errors in programs written in a subset
+of C @cousot07astree[§1]. Eva, the value analysis of Frama-C, computes over-approximated sets of values and
+therefore cannot stay silent on a program that contains a run-time error
+@eva-manual[§1.2]. MOPSA's analyses are designed to be sound and terminating
+but not complete @monat23, IKOS aims at proving the absence of run-time errors
+in C and C++ programs @ikos-readme, and Goblint focuses on sound analysis and
+answers "unknown" whenever it flags a potential violation @saan23[§3]. Pulse-X
+represents Infer. It starts from Infer's inference of procedure specifications
+and replaces the over-approximate separation logic underneath by incorrectness
+separation logic, whose specifications under-approximate. Its soundness
+theorem, proved on paper for a formal model, says that reported errors are
+real within that model @le22[pp. 81:2--81:3]. A relaxed version of its
+reporting criterion was incorporated into Infer's Pulse analysis
+@le22[p. 81:4], which reports an error only when all conditions on the
+erroneous path hold regardless of the input @infer-pulse. Voblint's stance
+is the theorem of @sec:headline. Under _calls_,
+inlining analyzes the callee's body anew at every call in the caller's abstract
+state, so a call is distinguished by its whole call stack. Astrée, Eva, MOPSA
+and IKOS work this way @blanchet03[§5.4] @eva-manual[§5.3]
+@journault19[§5.1] @brat14[§3]. Pulse-X computes one summary per procedure,
+independently of its callers, and applies it at every call site
+@le22[pp. 81:2, 81:5]. Goblint and Voblint solve for one unknown per program
+point and context, and a context policy decides what a context records.
+In Goblint, each analysis supplies its context type and the function that
+computes a callee's context @seidl26[§6], and full entry states, call strings
+and bounds such as context gas are implemented as instances
+@erhard25[§§4, 8, 12].
+Voblint offers no contexts, entry-state contexts and call strings of bounded
+length (@ch:equations). Under _recursion_, the programs Astrée targets do not
+recurse @blanchet03[§5.4]. Eva interprets a recursive call through the
+contract the user writes for the function in ACSL, Frama-C's specification
+language, on which soundness then relies, or
+unrolls recursive calls up to a given depth @eva-manual[§6.3.9]. MOPSA's
+manual lists recursive functions as unsupported for C and Python
+@mopsa-manual[Limitations]. IKOS assumes that a recursive call may update any
+value in memory and returns well-initialized values
+@ikos-readme[Analysis Assumptions]. The formal model of Pulse-X assumes
+non-recursive procedures, and its implementation implicitly unrolls recursion
+to a bound @le22[p. 81:9]. Goblint analyzes recursive programs, but its
+documentation warns that the default configuration may not terminate on them
+and recommends context gas
+(#link("https://github.com/goblint/analyzer/blob/0dc12d355e01b0d374ab0646360a8bab00cad656/docs/user-guide/running.md")[`running.md`]
+at revision `0dc12d35`). Voblint's theorem covers recursive procedures under
+each policy, with the termination of the solve as a premise.
+
+A _relational_ domain tracks relations between variables. Astrée uses octagons,
+constraints $plus.minus x plus.minus y lt.eq c$, over small packs of variables
+@blanchet03[§§6.2.2, 7.2.1]. "Apron" marks a binding to the Apron library,
+whose domains include octagons and convex polyhedra. Eva's binding is
+experimental and sits beside its own octagon and gauge domains
+@eva-manual[§6.7]. MOPSA selects affine equalities, octagons or polyhedra
+@mopsa-manual[Universal options] @monat23[§§1--2], IKOS offers the Apron domains
+beside difference-bound matrices and gauges
+@ikos-readme[Numerical abstract domains], and Goblint selects octagons,
+intervals, polyhedra or affine equalities
+(#link("https://github.com/goblint/analyzer/blob/0dc12d355e01b0d374ab0646360a8bab00cad656/src/config/options.schema.json")[`options.schema.json`],
+option `ana.apron.domain`) @saan23[§1]. Pulse-X has no numeric domain: its
+states are symbolic heaps with pure Boolean conditions, and it decides
+arithmetic with a prover for rationals @le22[pp. 81:16, 81:19]. Voblint's only
+relational analysis is the order analysis of @ch:cooperation. _Combination_
+names how domains or analyses exchange facts. Astrée approximates the reduced
+product through a network of input and output channels
+@cousot07astree[§§4.3, 5]. In Eva, the domains exchange information through
+abstractions of the values of the expressions a statement evaluates
+@buhler17phd[§7.1]. MOPSA's domains ask queries through a manager that
+combines the answers of all domains, and reduction rules refine the
+independently computed results of a reduced product @journault19[§4]. IKOS
+offers a fixed list of reduced products, such as intervals with congruences
+@ikos-readme[Numerical abstract domains], and Pulse-X uses one abstract domain
+@le22[p. 81:16]. Goblint's MCP and Voblint's combination exchange facts through
+queries (@sec:rel-goblint). The last column, _mechanized_, records what a
+proof assistant has checked about the tool. None of the sources for the first
+five rows reports such a proof, and the full proof of the Pulse-X theorem is given in
+supplementary material @le22[p. 81:10]. For Goblint, the partial correctness
+of the top-down (TD) solver is proved in Isabelle/HOL @stade24 @tilscher26
+for a formulation of the algorithm, not for the OCaml solver Goblint runs.
+Voblint's theorem holds end to end: it is about the function its executable
+runs, with the trusted components of @sec:trust-boundary.
+
 Testing checks such tools against executions. #cite(<cuoq12>, form: "prose")
 run Frama-C on programs generated by Csmith, compare the value analysis used as
 an interpreter with compiled execution and check printed invariants at run
@@ -382,8 +513,14 @@ is testing of this kind (@sec:eval-corpus), and the Goblint defect replayed in
 @sec:eval-1161 is the kind of transfer-function error that a per-operation
 soundness obligation excludes inside the proof boundary.
 
-For end-to-end soundness, these works show that a mature analyzer can pass
-testing and still contain soundness defects. The proof
+@tab:production-analyzers also shows the price of the proof. The unverified
+analyzers accept C, C++ or Python, and Astrée and IKOS have been applied to
+safety-critical control software @blanchet03 @brat14[§3]. Their soundness
+rests on design, documentation and testing. Voblint's theorem covers VIMP
+(@sec:vimp), which has integer variables, procedures and recursion but no
+pointers, heap or machine integers, and Voblint has one relational analysis.
+For end-to-end soundness, these works show that a
+mature analyzer can pass testing and still contain soundness defects. The proof
 covers only the definitions it is about, and #cite(<cuoq12>, form: "prose")
 note that such approaches assume a formal semantics of the analyzed language
 @cuoq12[§1], which is the adequacy question of @sec:vimp-vs-c.
@@ -395,7 +532,9 @@ rules come from #cite(<tilscher26>, form: "prose"), the rules from
 #cite(<stemmler25>, form: "prose"), side-effecting constraint systems from
 #cite(<apinis12>, form: "prose"), and the local/global analysis architecture
 from Goblint. Widening, narrowing and the reduced product are standard
-@cousot77 @cousot79. The activation-local traces adapt the local traces of
+@cousot77 @cousot79. Deriving forward and backward transfer from certified
+value operations follows the generic abstract interpreter of Nipkow and Klein
+@nipkow14[Sects. 13.5--13.7]. The activation-local traces adapt the local traces of
 @schwarz21 to procedure activations, and the context-indexed collecting
 semantics is a relational covering in the sense of @rival07. Compared with
 the works above, the scoped claims of @sec:contributions are the following.
@@ -411,7 +550,12 @@ the works above, the scoped claims of @sec:contributions are the following.
   paper.
 - *Composition.* The certificate-based solver interface follows CompCert's. The
   three-way composition mechanizes a modular separation of the kind that
-  @darais15 prove on paper for monadic interpreters.
+  @darais15 prove on paper for monadic interpreters. From one certified
+  operation bundle, the abstract transfer and the executable transfer the
+  analyzer runs are derived together and proved to agree on every live store
+  (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and one rule
+  registers the bundle with the context-indexed pipeline
+  (#isathm("sound_nonrelational_ops.dg_analysis_execI")).
 - *Precision.* We found no machine-checked strict precision separation between
   configurations of one analyzer.
 

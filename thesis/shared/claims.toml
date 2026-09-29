@@ -283,14 +283,6 @@ argv = [
 ]
 why = "x = 2n, y = 2n + 1: Parity proves x != y."
 
-[claims.dom-even-odd-congruence]
-argv = [
-  "--analysis",
-  "congruence",
-  "tests/regression/18-parity/precision/01-even_odd_distinct.vimp",
-]
-why = "x = 2n, y = 2n + 1: Congruence holds x=2ℤ, y=1+2ℤ but its equality query answers only for singletons, so x != y is UNKNOWN."
-
 [claims.dom-crt-parity]
 argv = [
   "--analysis",
@@ -382,7 +374,7 @@ argv = [
   "interval",
   "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "Section 9.5, a PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
+why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
 
 [claims.verdicts-mult3-interval]
 argv = [

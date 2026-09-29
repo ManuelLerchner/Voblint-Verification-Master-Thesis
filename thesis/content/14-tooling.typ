@@ -25,27 +25,29 @@ extension of @ch:cooperation followed this pattern.
 
 This chapter describes the tools and upstream changes made for this thesis
 and published separately. They are engineering contributions: nothing in them
-is proved, and their evidence is that the repository uses them in its
-continuous integration.
+is proved. The source tooling and the solver changes are in use: the
+repository's continuous integration runs them. The packaging work is evidenced
+by its pull requests, since the recipes still await review.
 
 == Source tooling for Isabelle <sec:isar-tools>
 
 `isar-tools` @isartools is a command-line tool for Isabelle/Isar projects. It
 reads `.thy` and `ROOT` files as text and never runs Isabelle, so its checks
 finish before the batch build has loaded its first session. It replaces
-shell scripts this repository used before, and it is published under the MIT
+Python scripts this repository used before, and it is published under the MIT
 license on PyPI, with a conda-forge recipe under review.
 
-It has four parts. The formatter changes only layout: it indents proofs,
-removes trailing whitespace and optionally wraps long lines, but it never
-changes a token, a string, a cartouche or embedded ML. The checks report
-problems a batch build either misses or reports late: unfinished proofs,
-theories no session reaches, malformed `ROOT` files, and non-ASCII symbols.
-The project commands read sessions, the theory import graph, the class and
-locale hierarchy and every named declaration the way `isabelle build -D`
-finds them. The statistics report sizes and proof counts, and from a verbose
-build log they report which theories were elaborated more than once, which
-this repository bounds per session in CI.
+The formatter changes only layout: it indents proofs, removes trailing
+whitespace and optionally wraps long lines, but it never changes a token, a
+string, a cartouche or embedded ML. The checks report problems a batch build
+either misses or reports late. This repository runs the groups for projects,
+proofs and syntax, which report unfinished, abandoned and unclosed proofs,
+theories no session reaches, malformed `ROOT` files and lexical errors, and the
+locale check described below. The project commands read sessions, the theory
+import graph, the class and locale hierarchy and every named declaration the way
+`isabelle build -D` finds them. The statistics report sizes and proof counts,
+and from a verbose build log they report which theories were elaborated more
+than once, which this repository bounds per session in CI.
 
 One check addresses a silent failure mode of Isabelle. Inside the header of a
 `locale`, an identifier Isabelle does not know is read as a free variable and
@@ -62,20 +64,21 @@ lexically and is therefore a heuristic.
 
 The repository needs Isabelle, the vendored solver, Python for its checks and
 generators, and an OCaml toolchain for the exported analyzer and its browser
-build. Pixi @pixi installs the Python side from conda-forge and runs every
-task, but the OCaml toolchain still comes from opam and Isabelle is installed
-by hand, so a contributor uses three package managers. The goal is a single
+build. Pixi @pixi installs the Python side from conda-forge and PyPI and runs
+every task, but the OCaml toolchain still comes from opam and Isabelle is
+installed by hand. The goal is a single
 `pixi install`. For the OCaml side this means that every package the analyzer
 builds with must exist on conda-forge for the three platforms the repository
 supports.
 
 @fig:conda-forge shows what that takes. The native analyzer needs only the
-compiler, Dune, Menhir and Zarith. The browser build adds `js_of_ocaml` and
+compiler, Dune, Menhir and Zarith. The browser build adds `js_of_ocaml` and // thesis-refs: ignore
 `wasm_of_ocaml` with a chain of libraries below them, and the formatter
 `ocamlformat` needs a few more. Most of these libraries were not on
 conda-forge, and two of the existing packages were outdated or missing on
-Apple Silicon. We submitted the ten libraries at the bottom of the graph as
-one recipe @cfstaged34872 and `isar-tools` as another @cfstaged34960; both
+Apple Silicon. We submitted the missing libraries `csexp`, `re`, `cmdliner`,
+`yojson`, `seq`, `gen`, `sexplib0`, `stdlib-shims`, `ppx-derivers` and
+`compiler-libs` as one recipe @cfstaged34872 and `isar-tools` as another @cfstaged34960; both
 await review.
 
 #let _cf = json("/shared/generated/conda-forge.json")
@@ -229,8 +232,9 @@ of them. @fig:pipeline shows how they depend on one another.
       gen((2, 2), [batch build], <b>),
       gen((3, 1), [OCaml export], <o>),
       gen((4, 1), [CLI and \ WebAssembly], <c>),
-      gen((3, 3), [theory HTML, \ link map], <h>),
-      gen((1, 3), [statistics \ (`isar-tools`)], <s>),
+      src((5, 1), [explainer page \ (HTML)], <p>),
+      gen((3, 3), [theory HTML, link map, \ theorem statements], <h>),
+      gen((1, 3), [statistics, \ snippets], <s>),
       out((5, 0), [website and \ playground], <w>),
       out((5, 2), [thesis], <th>),
       e(<g>, <gg>),
@@ -239,12 +243,15 @@ of them. @fig:pipeline shows how they depend on one another.
       e(<mg>, <b>),
       e(<t>, <b>),
       e(<t>, <s>),
+      e(<r>, <s>, bend: -15deg),
       e(<b>, <o>),
       e(<o>, <c>),
       e(<b>, <h>),
       e(<c>, <w>),
-      e(<c>, <th>, label: [claims], label-side: left),
-      e(<r>, <c>, label: [tests], label-side: right),
+      e(<c>, <th>, label: [claims], label-side: right),
+      e(<r>, <c>, label: [tests], label-side: left),
+      e(<p>, <w>),
+      e(<p>, <th>),
       e(<h>, <w>),
       e(<h>, <th>),
       e(<s>, <w>, bend: -35deg),
@@ -256,27 +263,44 @@ of them. @fig:pipeline shows how they depend on one another.
   placement: auto,
   caption: [How the repository derives its artifacts. Grey nodes are
     handwritten sources, blue nodes derived artifacts, green nodes what readers
-    see. Schematic: the tasks that implement each arrow are
+    see. Theorem statements are read from the built session, snippets and
+    statistics from the source files. Schematic: the tasks that implement each arrow are
     listed in `pixi.toml`.],
 ) <fig:pipeline>
 
-Two manifests carry facts that would otherwise be repeated by hand. The VIMP
+Three manifests carry facts that would otherwise be repeated by hand. The
+conda-forge manifest lists the OCaml packages of @fig:conda-forge. The VIMP
 grammar is one file from which the Isabelle syntax, the analyzer's parser and
 its source printer are generated, so the parser the proof trusts
-(@sec:trust-boundary) and the syntax the theories use describe one language.
-The analysis manifest lists each analysis with the Isabelle constants that
-implement it; the registrations and the combined state of @ch:cooperation are
-generated from it, so a new analysis needs one entry beside its own theories.
+(@sec:trust-boundary) and the syntax the theories use describe one language. The
+analysis manifest names each analysis, the type of its abstract values, the
+prefix its constants and facts share, and the theories that prove it sound. From
+an entry the generator writes the registrations of a numeric domain
+(@sec:engineering). Each proof applies the certificate of the domain's operation
+bundle (#isathm("sound_nonrelational_ops.dg_analysis_execI")) and discharges the
+remaining obligations for routing, the seed key, the solver and the initial
+state by citing the domain's facts under names the prefix determines. The
+generator also writes the combined state of @ch:cooperation with its dispatch
+equations. It only places names, and Isabelle checks every generated proof. Some
+parts are still written by hand: the key that orders an analysis's values for
+display, the export list of code generation, the command-line and browser tables
+that map an analysis name to its constructor, and the test that lists the
+analyses independently of the manifest. A new analysis therefore needs its own
+theories, a manifest entry and these edits.
 
 Everything a reader sees is derived in the same way. The website and this
 document take their repository figures from the sources, their Isabelle names,
 definitions and theorem statements from the theories and a built session, and
-their analyzer output from the exported analyzer. Each such artifact is either
-produced during the build or committed together with a check that regenerates
-it and fails on a difference, and every check runs in continuous integration
-next to the batch build. A stale sentence therefore fails the build instead of
-reaching the reader. The checks found such material while this thesis was
-written, and typesetting it turned up a layout bug in Typst that we reported
-upstream @typst8890. The pattern of a manifest, its generators and a
+their analyzer output from the exported analyzer. The thesis also takes figures
+and the Goblint comparison from the explainer page. Each such artifact is either
+produced during the build or committed together with a check that regenerates it
+and fails on a difference. Every check runs in continuous integration next to
+the batch build, and the links into the rendered theories are checked again
+against the published pages after each deployment. A stale name, statement,
+figure or quoted output therefore fails the build instead of reaching the
+reader. Prose that describes the repository in words is not checked. The checks
+caught stale names, statements and figures while this thesis was written, and
+typesetting it turned up a layout bug in Typst that we reported upstream
+@typst8890. The pattern of a manifest, its generators and a
 regenerate-and-compare check is not specific to Voblint; it applies to any
 Isabelle development that shares facts with code, a website or a document.

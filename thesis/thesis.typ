@@ -125,5 +125,5 @@
 // #print-thesis-glossary(print-glossary)
 
 #pagebreak(weak: true)
-#bibliography("literature.bib", style: "assets/plain-numeric.csl")
+#bibliography("literature.bib", style: "ieee")
 

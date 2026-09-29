@@ -1,6 +1,6 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": fixture, isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": snapshot-var
@@ -47,9 +47,11 @@ for all policies. The running example is
 The intraprocedural recipe of @ch:background keeps one unknown per CFG node.
 Extended naively to calls, the entry of `bump` joins both call sites and holds
 $n in {4, 5}$ at best, the return at $k_1$ assigns $a in {5, 6}$, and the check
-`a == 6` fails although every execution satisfies it: the analyzer without
-contexts reports #_cli("pg-contexts-none", "a == 6", 3) with
-#_cli("pg-contexts-none", "a == 6", 4). The lower bound $-infinity$ comes from
+`a == 6` fails although every execution satisfies it. With the join update rule
+the analyzer without contexts reports exactly this,
+#_cli("pg-contexts-none-join", "a == 6", 3) with
+#_cli("pg-contexts-none-join", "a == 6", 4). The default rule reports
+#_cli("pg-contexts-none", "a == 6", 4); its lower bound $-infinity$ comes from
 widening the shared entry value (@sec:eq-seed). The collecting semantics
 already assigns the two activations to different contexts
 (@sec:contexts), and the fix gives the unknowns the same index.
@@ -235,18 +237,25 @@ every covered call admits some context. Taking the context from the covering
 pair keeps a proof from reading one pair's callee result into another pair's
 resume value.
 
-For a functional policy totality is immediate, and so is the part of adequacy
-that fixes the context. The unit policy sends every call to $()$. A call
-string of length $k$ is updated by #isaconst("cs_route") from the call site and
-the caller's context alone, and the concrete side applies the same term
-(#isathm("cs_route_context_agree")), so every alternative routes to the
+A functional policy computes the callee context from the call site and the
+caller's context alone, and $R$ is the graph of the corresponding function on
+concrete calls (#isaconst("call_context_rel_of_fun")). Totality is then
+immediate, and so is the part of adequacy that fixes the context. The unit
+policy #isaconst("route_unit") sends every call to $()$, and so does its
+concrete counterpart #isaconst("enterc_unit"). A call string of length $k$ is
+updated by #isaconst("cs_route") from the call site and the caller's context,
+and the concrete context function #isaconst("cs_context") applies the same
+term (#isathm("cs_route_context_agree")), so every alternative routes to the
 admitted context. The rest of adequacy still needs a proof: some alternative
-must cover
-the caller store and the entered store, which is the paired entry coverage of
-@ch:analysis-interface, and the routed entry key must lie in the key set.
+must cover the caller store and the entered store, which is the paired entry
+coverage of @ch:analysis-interface, and the routed entry key must lie in the
+key set. Both functional policies reach the analyzer through one theorem,
+#isathm("fun_route_activation_collect_sound"), whose only policy-specific
+premise is that the route ignores the abstract state it is given.
 
 An entry-state context is the list of abstract values of the callee's formal
-parameters in the entered state (#isaconst("exec_formals_route")). Globals and
+parameters in the entered state (#isaconst("formals_context"), applied at the
+executable carrier by #isaconst("exec_formals_route")). Globals and
 other locals do not take part. This is an instance of the partial contexts of
 Apinis et al., where calls are distinguished by one component of the reaching
 abstract state and merged on the others @apinis12. Such a context cannot be a
@@ -264,12 +273,67 @@ caller's solved value covers the call and routes to $c'$. No decoder of
 concrete stores is needed, and a seed exists at every admitted context because
 the analyzer published one there. The covering and routing parts of adequacy
 hold by definition, the key-set part follows from closure of the key set, and
-totality is paired entry coverage. The shipped relation
-#isaconst("admitted_contexts") instantiates it with the one-alternative entry
-of every selectable analysis. For entry-state policies the context-indexed
+totality is paired entry coverage. For the entry-state policy, the shipped
+relation #isaconst("admitted_contexts") instantiates it with the single entry
+alternative that every selectable analysis answers (#isaconst("single_entry"),
+@ch:cooperation), and #isathm("entry_state_activation_collect_sound") is the
+corresponding endpoint (@fig:eq-routes). For entry-state policies the context-indexed
 collecting semantics that the theorem below bounds is thus indexed by the
 analyzer's own solution. The source-level theorem of @ch:results is stated over
 the context-free collecting semantics, so this dependence does not reach it.
+
+#let _rbox(pos, name, body) = node(
+  pos,
+  text(size: 7pt, body),
+  name: name,
+  inset: 4pt,
+  stroke: 0.6pt + vb.neutral,
+  shape: rect,
+  corner-radius: 2pt,
+)
+#let _rlab(body) = text(size: 6.5pt, body)
+#let _redge(a, b, lab, side: left) = edge(
+  a,
+  b,
+  "->",
+  stroke: 0.6pt + vb.neutral,
+  label: _rlab(lab),
+  label-side: side,
+)
+
+#figure(
+  diagram(
+    spacing: (6mm, 9mm),
+    _rbox((0, 0), <r-unit>, [unit context \ #isaconst("route_unit")]),
+    _rbox((1, 0), <r-cs>, [call strings \ #isaconst("cs_route")]),
+    _rbox((2, 0), <r-es>, [entry states \ #isaconst("formals_context")]),
+    _rbox((0, 1), <r-fun>, [graph of a function \ #isaconst("call_context_rel_of_fun")]),
+    _rbox((2, 1), <r-adm>, [read off the solution \ #isaconst("admitted_contexts")]),
+    _rbox((1, 2), <r-dg>, [post-solutions of #isaconst("routed_node_rhs") \
+      #isathm("activation_collect_dg_sound")]),
+    _rbox((0, 3), <r-funend>, [functional policies \
+      #isathm("fun_route_activation_collect_sound")]),
+    _rbox((1, 3), <r-ltr>, [coverage contract \ #isalocale("ltr_coverage")]),
+    _rbox((2, 3), <r-esend>, [entry-state policy \
+      #isathm("entry_state_activation_collect_sound")]),
+    _redge(<r-unit>, <r-fun>, isaconst("enterc_unit"), side: right),
+    _redge(<r-cs>, <r-fun>, isaconst("cs_context"), side: right),
+    _redge(<r-es>, <r-adm>, [solved table], side: right),
+    _redge(<r-fun>, <r-dg>, $R$),
+    _redge(<r-adm>, <r-dg>, $R$, side: right),
+    _redge(<r-dg>, <r-funend>, [instance], side: right),
+    _redge(<r-dg>, <r-ltr>, [discharges]),
+    _redge(<r-dg>, <r-esend>, [instance]),
+  ),
+  kind: image,
+  placement: auto,
+  caption: [How the three context policies reach the coverage contract. Top:
+    the route of each policy. Middle: the call-context relation $R$ it induces
+    and the routed soundness theorem of @sec:eq-discharge, which discharges
+    #isalocale("ltr_coverage") at that $R$. Bottom left and right: its instances
+    for the analyzer. Arrow labels name the concrete context function or the
+    role of the arrow.],
+) <fig:eq-routes>
 
 The policy decides which calls share an unknown, and with it what the analysis
 can prove (@fig:eq-policies). A call string of length one keeps the two calls
@@ -390,11 +454,16 @@ coverage contract, discharging the five obligations once for all policies and do
 
 The statement paraphrases the lemma together with the assumptions of its
 locale #isalocale("routed_context_base_hetero"). It omits the soundness of the
-bottom test of @sec:eq-call and three assumptions that every compiled program
-and routed key type satisfy: finitely many call edges, one call edge per call
-node (#isaconst("calls_source_unique")), and seed keys distinct from the key
-of the analysis's own globals. Closure under local edges is required only from
-keys whose claim is nonempty.
+bottom test of @sec:eq-call, well-formedness of the generated call and seed
+programs, and assumptions that every compiled program and routed key type
+satisfy: finitely many local and call edges, one call edge per call node
+(#isaconst("calls_source_unique")), and seed keys distinct from the key of the
+analysis's own globals. Closure under local edges is required only from keys
+whose claim is nonempty. The analyzer's specification is
+#isaconst("dg_spec_of") applied to the combined local specification of
+@ch:cooperation, and #isathm("dg_spec_of_contract") derives
+#isalocale("analysis_contract") for it from #isaconst("sound_local_spec"). The
+theorem uses nothing else about the analysis.
 
 #oblig("INIT") comes from the initial state at the entry, #oblig("INTRA") from
 edge-transfer soundness at a fixed context (@sec:eq-unknowns), and
@@ -571,8 +640,9 @@ concrete return keeps the caller's locals and takes the callee's globals
 the entry: splitting the resume value discards its global half, and a proof
 that this half adds nothing would be a further obligation.
 
-The results come at three levels. For every classifier and every whole-state
-specification built from sound transfers,
+The results come at three levels. For every classifier and every
+non-relational transfer bundle that satisfies
+#isalocale("sound_nonrelational_transfer"),
 #isathm("ownership_split_lift_contract") establishes
 #isalocale("analysis_contract") for the lifted specification and
 #isaconst("gamma_ownership_split"). The proof reduces each obligation to the
@@ -610,7 +680,9 @@ the instance with earlier mechanizations of mixed flow sensitivity.
 
 A terminating solve visits finitely many unknowns, but a finite context space
 does not force termination: values can ascend forever inside a finite key
-space. For call strings of length at most $k$ over the nodes of a compiled
+space. Under the unit context the solved keys are finite as soon as their
+nodes belong to the compiled program (#isathm("compiled_unit_vars_finite")).
+For call strings of length at most $k$ over the nodes of a compiled
 program, the candidate space is finite (#isathm("compiled_call_strings_finite")).
 This bounds the solved keys only if they lie in that space, which truncation
 alone does not ensure: a start context built from foreign nodes stays short
@@ -619,7 +691,11 @@ the containment as a hypothesis. An entry-state context is a list of abstract
 values at the callee's arity. For Sign and Parity that space is finite. For
 Interval, Congruence and the Int product it is not, and widening bounds the
 values of existing unknowns without bounding how many are created: the
-regression `21-context-sensitivity/01`
+regression
+#fixture(
+  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
+  label: "01-unbounded_context_chain_diverges",
+)
 recurses with a fresh argument per level and does not finish within its time
 limit. The end-to-end theorem therefore keeps a per-program termination premise
 (@sec:termination).
@@ -628,9 +704,10 @@ limit. The end-to-end theorem therefore keeps a per-program termination premise
 obligations of @ch:traces once for every domain, context policy and
 specification: any post-solution on a key set that contains the program entry
 and is closed under local edges and call continuations bounds every context
-bucket, given the analysis soundness contract, paired entry coverage, a complete
-callee list and adequate, total routing. For functional policies totality and
-the context half of adequacy hold by construction. For entry-state policies the
+bucket, given the analysis soundness contract, a complete callee list and
+adequate, total routing, where paired entry coverage supplies the covering half
+of adequacy. For functional policies totality and the context half of adequacy
+hold by construction. For entry-state policies the
 relation is read off the solved table (#isaconst("routed_entry_context_rel")),
 which makes the covering and routing parts of adequacy definitional and
 totality paired entry coverage.

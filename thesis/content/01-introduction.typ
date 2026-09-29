@@ -445,7 +445,10 @@ answers one of the questions of @sec:rqs.
   collections together equal the context-free collection
   (#isathm("ltr_collect_eq_Union_activation_collect"), @sec:consequences).
 - _Compositional soundness._ Domain, context policy and solver are verified
-  separately. One theorem discharges the coverage contract for every policy
+  separately. A numeric domain proves certificates about its primitive
+  operations only, and its transfer functions, with the executable versions
+  the analyzer runs, are derived from them and proved sound once
+  (#isalocale("sound_nonrelational_ops")). One theorem discharges the coverage contract for every policy
   that proves its routing adequacy and totality, in every domain
   (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
   source-level theorem covers every configuration. Analyses that exchange facts
@@ -460,8 +463,9 @@ answers one of the questions of @sec:rqs.
   a strict precision separation on a concrete program
   (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-rq4).
 
-The solver, side-effecting constraint systems, local traces and Goblint's
-analysis architecture come from prior work. @sec:where-voblint-sits lists what
+The solver, side-effecting constraint systems, local traces, Goblint's
+analysis architecture and the derivation of transfer functions from certified
+value operations @nipkow14 come from prior work. @sec:where-voblint-sits lists what
 is new and compares each claim with the closest existing result. The thesis
 claims no verified C frontend, heap analysis, completeness, general termination
 of the solve, or general precision ordering between configurations. VIMP's integers are unbounded and division by

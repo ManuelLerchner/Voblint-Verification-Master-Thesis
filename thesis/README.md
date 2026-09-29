@@ -7,7 +7,7 @@ thesis/
   thesis.typ      the document
   lib/            style: palette, notation, figures, code, theorems, sources
   content/        chapters
-  assets/         fonts, bibliography style, Isabelle syntax definition, logo
+  assets/         fonts, Isabelle syntax definition, logo
   shared/         inputs and generated material both the tools and the text read
   tools/          the generators that keep the text honest
 ```
@@ -93,7 +93,7 @@ misses. Unresolved names come with a spelling suggestion.
 ### `pixi run thesis-snippets` -- is this still what the theory says?
 
 Declarations are cited by **name** in `shared/snippets.toml`, never by line
-range, and `isar project extract` (isar-tools) lifts each one's source text into
+range, and `tools/snippets.py` lifts each one's source text into
 `shared/generated/snippets/`. The name has to resolve, and the extracted text
 is committed, so a rename fails and an edit to a shown definition surfaces as a
 diff.
