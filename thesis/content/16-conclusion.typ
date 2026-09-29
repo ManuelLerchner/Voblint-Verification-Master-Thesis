@@ -256,7 +256,7 @@ A new analysis enters Voblint at one of two levels. A non-relational value
 domain proves the certificate #isalocale("sound_nonrelational_ops") for its
 operation bundle, and #isathm("sound_nonrelational_ops.dg_analysis_execI")
 discharges every obligation about the domain. Any other analysis supplies a
-component meeting the obligations of @tab:mcp-catalogue. Neither names a
+component meeting the obligations of @sec:coop-catalogue. Neither names a
 partner or mentions a context, solver or equation. This division suits
 development with AI agents (see #link(<ai-use>)[the statement on the use of
   generative AI]), because it fixes the parts of an agent's task that a test

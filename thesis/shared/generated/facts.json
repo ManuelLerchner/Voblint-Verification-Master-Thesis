@@ -66,6 +66,12 @@
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
     },
+    "ls_channel_sound": {
+      "oracles": [],
+      "statement": "\\<lbrakk>sound_local_spec \\<G> gm c; s \\<in> gm x\\<rbrakk>\n\\<Longrightarrow> eval_query.oracle_holds (ls_channel c x) s",
+      "theory": "MCP_Spec",
+      "why": "Cooperation chapter: the channel the framework supplies holds at every store of the state."
+    },
     "ltr_collect_eq_Union_activation_collect": {
       "oracles": [],
       "statement": "ltr_coverage g S cover R startcontext \\<G> \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<G>,R,startcontext,g,S\\<^esub> v))",

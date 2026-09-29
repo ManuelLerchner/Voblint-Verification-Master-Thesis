@@ -534,6 +534,9 @@ why = "Chapter 5, the truth test every expression-level interface of a domain sh
 [snippets.sound_local_spec]
 why = "Chapter 7, the obligation of one cooperating analysis, stated against every sound channel."
 
+[snippets.ls_channel_sound]
+why = "Chapter 7, the channel the framework supplies holds at every store of the state."
+
 [snippets.mcp_combine_sound]
 why = "Chapter 7, soundness of the combination of independent components."
 
