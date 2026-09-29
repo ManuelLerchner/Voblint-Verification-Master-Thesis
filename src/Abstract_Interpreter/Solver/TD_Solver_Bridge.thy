@@ -123,7 +123,8 @@ lemma (in TD_side_upd_rule) finite_stabl_solve:
 proof -
   obtain d state ug_state where iterate: "(d, state, ug_state) =
       iterate x (init_state \<lparr> called := insert x (called init_state) \<rparr>) init_ug_state"
-    by (cases "iterate x (init_state \<lparr> called := insert x (called init_state) \<rparr>) init_ug_state") auto
+    by (cases "iterate x (init_state \<lparr> called := insert x (called init_state) \<rparr>) init_ug_state")
+      auto
   have "fst (solve x) = stabl state"
     using iterate unfolding solve_def by (auto split: prod.splits)
   moreover have "finite (stabl state)"
