@@ -165,8 +165,7 @@ several contexts.
 _Evidence: machine-checked._ The meaning is the relation
 #isaconst("trace_context") of @sec:contexts, which reads a context off an
 activation-local trace at the call that created the activation;
-#isathm("ov_two_contexts_admitted") gives one concrete call admitted under
-two distinct contexts. The condition is #oblig("TOTAL")
+The condition is #oblig("TOTAL")
 (#isaconst("call_context_total_on")), stated relative to the claim: under the
 five coverage obligations, #isathm("activation_collect_sound") bounds each
 context's bucket, and #isathm("ltr_collect_eq_Union_activation_collect") shows
@@ -177,10 +176,7 @@ discharges all five obligations for every routing policy and domain
 `bump` show what indexing changes on one program (@sec:eq-call,
 @fig:pg-contexts).
 
-_Limits._ Every combination that #isaconst("run_voblint") runs answers each
-call with a single alternative (#isathm("single_entry_mcp_comp")), so admission
-at several contexts is exercised only by a Sign specification outside
-#isaconst("run_voblint"). That #oblig("TOTAL") is needed is machine-checked on
+_Limits._ That #oblig("TOTAL") is needed is machine-checked on
 one program (#isathm("total_dropped_unsound"), @sec:falsification); an
 evaluated analyzer run shows the same failure at the executable level
 (#isathm("ov_empty_continuation_bot")). The buckets are defined over valid traces, and that every
@@ -231,8 +227,7 @@ builds on #isasession("Voblint_Exec") and does not import
 No theory of the framework or of the numeric domains refers to these analyses
 outside document text.
 Making the carrier selectable as the order analysis took three proofs about
-its local specification, soundness (#isathm("order_spec_sound")), a single
-entry alternative (#isathm("single_entry_order_spec")) and sound query answers
+its local specification, soundness (#isathm("order_spec_sound")), a single entry pair (#isathm("single_entry_order_spec")) and sound query answers
 (#isathm("rel_qry_sound")), and an entry in the analysis manifest. An entry
 names the analysis, its value type, its constant prefix and its theories, and
 the generator derives the registrations and the combined state from it. The
@@ -277,14 +272,13 @@ returns the constant 1 for $(1 + 2ZZ) mod 2$ violates the statement of
 result at the caller's own context meets #oblig("INIT"), #oblig("INTRA"),
 #oblig("CALL"), #oblig("TOTAL") and a weakened #oblig("RETURN") and still
 misses a store a run reaches (#isathm("return_at_caller_context_unsound"),
-@sec:contract). Covering the caller's store and the entered store by different
-alternatives excludes the value the run computes
-(#isathm("unpaired_entry_cover_unsound"), @fig:unpaired-cover). A relation
+@sec:contract).  A relation
 that admits no context lets a claim meet #oblig("INIT"), #oblig("INTRA"),
 #oblig("CALL") and #oblig("RETURN") while a store collected at a continuation
 lies outside it (#isathm("total_dropped_unsound"), @sec:contract). These are
 direct mutations of conditions we selected; they do not show that every
 premise of the development is needed.
+
 
 === Non-vacuity <sec:nonvacuity>
 
@@ -720,11 +714,7 @@ names the kind of its evidence and the section that argues it.
   (#isathm("total_dropped_unsound")), with one evaluated analyzer run
   (#isathm("ov_empty_continuation_bot")). @sec:contexts, @sec:contract.
 
-+ *Entry coverage must be paired, and a callee's result must be read at the
-  callee's own context.* This fixes #isaconst("dgs_enter") as a list of pairs
-  and the shape of #oblig("RETURN"). _Machine-checked_
-  (#isathm("unpaired_entry_cover_unsound"),
-  #isathm("return_at_caller_context_unsound")). @sec:calls, @sec:contract.
++ *A callee's result must be read at the callee's own context.* This fixes the shape of #oblig("RETURN"). _Machine-checked_ (#isathm("return_at_caller_context_unsound")). @sec:contract.
 
 + *Context selection and seed publication must use the same entered value.*
   _Evaluated_ for one call (#isathm("w0_seed_at_entered_frame"),

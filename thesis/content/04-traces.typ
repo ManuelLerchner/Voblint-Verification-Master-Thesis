@@ -384,32 +384,13 @@ $[v, c]$. The classical designs differ in what a context records @sharir81 @riva
 resulting callee entry state to the analysis's `context` operation
 (@app:goblint-alignment), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
 
-Voblint models context membership as a relation, because Goblint's entry
-operation may answer one call with several pairs of a caller continuation and a
-callee entry state, each routed to its own context.
-Its path-sensitive lifter uses this to enter the callee once for each path of
-the caller
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml")[`PathSensitive2`]).
-When such alternatives overlap, one concrete call belongs to several contexts
-at once. Suppose the caller's state maps $x$ to $[0, 9]$ before a call
-`h(x)` and the entry operation splits the parameter's range into the
-alternatives $[0, 5]$ and $[3, 9]$. For a sound split, the alternatives must together cover the caller's value,
-but they need not be disjoint. Entry-state routing
-(#isaconst("routed_entry_context_rel")) sends each to the context named by its
-entry value, $c_1$ and $c_2$. A concrete call with $x = 4$ lies in both
-alternatives, and both analyses of `h` describe it. A function would force the
-concrete semantics to choose one of them, although no execution determines the
-choice. A relation can admit both $c_1$ and $c_2$, as the analysis does. For a
-Sign specification whose entry operation returns two overlapping alternatives,
-#isathm("ov_two_contexts_admitted") proves that one concrete call is admitted
-under two distinct contexts. The shipped numeric analyses are built from the shared local-state
-specification (#isaconst("analysis_spec")), whose entry operation returns a
-single alternative (#isathm("dgs_enter_local_state_st_for_lifted")). By the definition of
-#isaconst("routed_entry_context_rel"), a concrete call then admits at most one
-callee context from a fixed caller context.
-
-The analyzer does not choose between $c_1$ and $c_2$. It analyzes every
-admitted context, and @sec:eq-call shows how the call equation joins them.
+Voblint models context membership as a relation. With entry-state contexts,
+the context of a call is an abstract value the analysis computes, so which
+context a concrete call belongs to depends on the analysis's result and not on
+the execution alone (@sec:eq-routing). A relation lets the concrete semantics
+admit exactly the contexts the analysis assigns. For the shipped analyses, a
+concrete call admits at most one callee context from a fixed caller context
+(#isaconst("routed_entry_context_rel")).
 
 #block(breakable: false)[
   #definition(name: [Call-context relation], isa: "call_context_rel", cmd: "type_synonym")[
@@ -431,10 +412,7 @@ A call-context relation $R$ decides whether a candidate callee context $c'$ is
 admissible for a concrete call. It may depend on the call, the caller's context,
 the caller's store and the entered store. Ordinary context functions are the
 special case that admits exactly one context
-(#isaconst("call_context_rel_of_fun")). Both stores are present because an
-analysis may split a call into several pairs of a caller value and a callee
-entry value, and soundness requires one such pair to cover the concrete call as
-a whole (@sec:calls). #isaconst("admits_call_context") holds for a call site
+(#isaconst("call_context_rel_of_fun")). Both stores are present because entry-state routing admits a context only for a call whose caller store and entered store the analysis's entry covers (@sec:calls). #isaconst("admits_call_context") holds for a call site
 $u$, a caller context, a callee $p$, a caller store $s$, an entered store and a
 callee context $c'$ when some #isaconst("calls") edge from $u$ enters $p$ with
 exactly this entered store and $R$ admits $c'$ for that edge. The context of a
@@ -491,8 +469,6 @@ In the example of @sec:why-traces, with one context per argument, the final
 store of the `bump(5)` activation belongs to the bucket of context $5$, and
 the final store of `bump(4)` to the bucket of context $4$.
 
-Unlike the classes of a partition, buckets may overlap: one trace may carry
-several contexts, as the call of `h` with $x = 4$ does (@fig:buckets, right).
 Under a functional policy the bucket of $c$ contains the final stores of the
 traces whose context, computed by the context function, is $c$
 (#isathm("activation_collect_of_fun")). Each valid trace then carries exactly
@@ -528,34 +504,21 @@ trace carries at least one context.
 })
 #figure(
   grid(
-    columns: 2,
-    column-gutter: 18pt,
+    columns: 1,
     align: bottom,
     _bucket-panel(
       [#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") at the result of `bump`],
       ((0, 2.1, vb.accent, [context $5$]), (2.1, 4.2, vb.sign, [context $4$])),
       (((1.05, 1.15), "bump(5)"), ((3.15, 1.15), "bump(4)")),
     ),
-    _bucket-panel(
-      [#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") at the entry of `h`],
-      ((0, 2.7, vb.accent, [$c_1$]), (1.5, 4.2, vb.cong, [$c_2$])),
-      (((0.7, 1.15), "x=1"), ((2.1, 1.15), "x=4"), ((3.5, 1.15), "x=8")),
-    ),
   ),
   kind: image,
   placement: none,
   caption: [Buckets inside the trace collecting semantics #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
-    (black frame). In these examples the buckets together fill it. Left: the runs of
-    `bump` split into the buckets of contexts $5$ and $4$, a partition. Right:
-    with overlapping entry alternatives $[0, 5]$ and $[3, 9]$, the call with
-    $x = 4$ lies in both buckets, which cover the collection without
-    partitioning it. Illustrative.],
+    (black frame) at the result of `bump`: its runs split into the buckets of contexts $5$ and $4$, which together fill it. Illustrative.],
 ) <fig:buckets>
 
-Forcing the buckets into a partition would also be arbitrary. Both analyses of
-`h` describe the call with $x = 4$, and no execution decides whether it belongs
-to $c_1$ or to $c_2$. Overlapping buckets avoid this choice: the call lies in
-every context whose analysis describes it.
+
 
 This covering can fail. If $R$ admits no context for a call, the resulting
 callee trace carries no context and contributes to no bucket. Unless another
@@ -663,8 +626,7 @@ running example, the policy that gives each call of `bump` the context of its
 argument is such a function: `bump(5)` enters context $5$ and `bump(4)` enters
 context $4$, whatever the claim is. A relational policy such as entry-state
 routing reads the admitted contexts off the computed claim and has to discharge
-the condition against it. For entry-state routing this follows from paired
-entry coverage (@sec:eq-routing).
+the condition against it. For entry-state routing this follows from entry coverage (@sec:eq-routing).
 
 == The coverage contract <sec:contract>
 

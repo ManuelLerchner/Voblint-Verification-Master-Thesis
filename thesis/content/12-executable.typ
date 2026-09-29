@@ -108,7 +108,7 @@ classifier. Even the bottom state is a parameter, because a least element
 taken from a type class would have to be executable at a function type.
 #isalocale("dg_analysis") imports it and adds the contracts, among them
 soundness of the component (#isaconst("sound_local_spec")) and of the initial
-state, exact emptiness tests, a single entry alternative, seeds distinct from the analysis global, the solver certificate, discharge of the termination
+state, exact emptiness tests, a single entry pair, seeds distinct from the analysis global, the solver certificate, discharge of the termination
 premise by a finished executable run, and correctness of the check classifier.
 
 For a numeric domain, #isalocale("dg_analysis_exec") derives the component

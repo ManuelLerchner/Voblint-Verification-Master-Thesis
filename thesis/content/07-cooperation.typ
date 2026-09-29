@@ -18,7 +18,7 @@
 #let verdict(name, loc) = raw(claim-row(name, loc).verdict)
 #let state(name, loc) = raw(claim-row(name, loc).state)
 
-= Cooperating Analyses <ch:cooperation>
+= How Analyses Cooperate <ch:cooperation>
 
 @ch:analysis-interface fixed what one analysis supplies: a local
 specification whose operations are proved sound one by one. Some facts need two
@@ -47,11 +47,14 @@ that $x = y$ but tracks no value of `z`, and it reports
 Together they can, but only if Interval's assignment can learn what the
 relational analysis knows at that point.
 
-Goblint solves this with its _master control program_ (MCP). The activated
+Goblint solves this with its
+#link(
+  "https://github.com/goblint/analyzer/blob/0dc12d355e01b0d374ab0646360a8bab00cad656/src/analyses/mCP.ml",
+)[_master control program_]
+(MCP). The activated
 analyses run side by side, each on its own part of one combined state, and a
 transfer may ask the other analyses a question through the manager's `ask`
-function
-(#link("https://github.com/goblint/analyzer/blob/0dc12d355e01b0d374ab0646360a8bab00cad656/src/analyses/mCP.ml")[`mCP.ml`]).
+function.
 Goblint does not prove anything about these exchanges. A proof has a
 modularity problem: if Interval's assignment is proved sound using the
 relational analysis's invariant, the two proofs are coupled, every new pair of
@@ -168,7 +171,7 @@ for their composition. Each law is quantified over every channel that holds at
 the stores involved: the caller's store for a step, an entry, a query and the
 first return stage, and the callee's exit store for the callee's channel. The
 seven edge laws together are the inclusion displayed above. The laws match
-#oblig("INTRA"), paired entry coverage and #oblig("RETURN") of
+#oblig("INTRA"), entry coverage and #oblig("RETURN") of
 @ch:analysis-interface, each weakened by the assumption that the channel holds.
 The handler law says that every answer holds at every store of $conc(x)$. It
 is the analysis's promise to its partners, and it is the only law the partners
@@ -238,7 +241,7 @@ _independent_ when each is a frame for every other one's concretization
 (#isathm("mcp_independent_map")).
 
 #isaconst("mcp_combine") builds one component from a list. The step runs the
-components in turn. Entry threads the list of pairs through the components.
+components in turn. Entry runs the components' entries in turn.
 The return runs each component's two stages in turn. The handler meets the
 answers of all components. The concretization is the intersection of the
 components' concretizations (#isaconst("mcp_gamma")). A single component is its
@@ -388,7 +391,7 @@ only that field's law again (#isathm("sound_local_spec_update")).
     [independence of fields (@sec:coop-mcp)],
     [$conc$ monotone], [soundness of the combination],
     [each edge field's law, under any channel that holds], [the closed channel holds],
-    [paired entry coverage and a single entry], [the analysis soundness contract],
+    [entry coverage and a single entry], [the analysis soundness contract],
     [the composed return, under both channels], [coverage for every context policy (@ch:equations)],
     [the handler's answers hold], [the solved result and the verdicts (@ch:results)],
     table.hline(),
@@ -402,8 +405,7 @@ only that field's law again (#isathm("sound_local_spec_update")).
     activation list.],
 ) <tab:mcp-catalogue>
 
-The routed pipeline of @ch:equations asks for the single entry: entry answers
-one alternative whose resume value is the caller's state
+The routed pipeline of @ch:equations asks for the single entry: entry answers one pair, whose resume value is the caller's state
 (#isaconst("single_entry")). Lenses, combination and normalization preserve
 it, so every activation list has it once each analysis does
 (#isathm("single_entry_mcp_comp")).

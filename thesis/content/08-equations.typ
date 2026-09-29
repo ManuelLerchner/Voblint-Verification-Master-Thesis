@@ -99,8 +99,7 @@ $
 $
 with $c' = ctxh(u_1, c, e)$. Generating this equation never enters the callee:
 it names the callee's unknowns and nothing else, so recursion needs no special
-case. An alternative whose entry value $e$ is bottom publishes no seed and
-reads no exit; its program combines $q$ with a bottom callee result. Apinis et
+case. When the entry value $e$ is bottom, the call publishes no seed and reads no exit; its program combines $q$ with a bottom callee result. Apinis et
 al. add the same test so that procedures which are not called are not analyzed
 @apinis12, and Goblint's call handling applies it as well. The shortcut needs
 one assumption of the routed locale: a value the test classifies as bottom
@@ -229,12 +228,8 @@ which admits contexts for concrete calls, while the equations publish only at
 contexts that $ctxh$ computes from abstract entry values. The locale
 #isalocale("routed_context_base_hetero") links the two by two per-instance
 obligations. _Adequacy_: whenever $R$ admits $c'$ for a real call from a covered
-caller store $s$, the entry answer contains a pair $(q, e)$ that covers $s$ and
-the entered store in the paired sense of @sec:calls, and whose entry routes to
-exactly $c'$, a context whose callee entry is solved. _Totality_:
-every covered call admits some context. Taking the context from the covering
-pair keeps a proof from reading one pair's callee result into another pair's
-resume value.
+caller store $s$, the entry answer $(q, e)$ covers $s$ and the entered store (@sec:calls), and its entry value routes to exactly $c'$, a context whose callee entry is solved. _Totality_:
+every covered call admits some context.
 
 A functional policy computes the callee context from the call site and the
 caller's context alone, and $R$ is the graph of the corresponding function on
@@ -244,10 +239,7 @@ policy #isaconst("route_unit") sends every call to $()$, and so does its
 concrete counterpart #isaconst("enterc_unit"). A call string of length $k$ is
 updated by #isaconst("cs_route") from the call site and the caller's context,
 and the concrete context function #isaconst("cs_context") applies the same
-term (#isathm("cs_route_context_agree")), so every alternative routes to the
-admitted context. The rest of adequacy still needs a proof: some alternative
-must cover the caller store and the entered store, which is the paired entry
-coverage of @ch:analysis-interface, and the routed entry unknown must be solved. Both functional policies reach the analyzer through one theorem,
+term (#isathm("cs_route_context_agree")), so the entry value routes to the admitted context. The rest of adequacy still needs a proof: the entry answer must cover the caller store and the entered store, which is the entry coverage of @ch:analysis-interface, and the routed entry unknown must be solved. Both functional policies reach the analyzer through one theorem,
 #isathm("fun_route_activation_collect_sound"), whose only policy-specific
 premise is that the route ignores the abstract state it is given.
 
@@ -260,20 +252,16 @@ abstract state and merged on the others @apinis12. Such a context cannot be a
 function of the concrete call. Abstracting the concrete entered store would
 select a context at which no seed was published. If the caller's solved value
 maps $n$ to $[4, 5]$, a concrete call with $n = 4$ is routed to the context
-$[4, 5]$, while its own entered store abstracts to $[4, 4]$. Moreover, an
-entry operation may answer one call with several overlapping alternatives
-(@sec:contexts).
+$[4, 5]$, while its own entered store abstracts to $[4, 4]$.
 
 The relation #isaconst("routed_entry_context_rel") therefore reads the contexts
 off the solution. It takes the solved table as a parameter and admits $c'$ for
-a concrete call exactly when some alternative of the entry answer at the
-caller's solved value covers the call and routes to $c'$. No decoder of
+a concrete call exactly when the entry answer at the caller's solved value covers the call and routes to $c'$. No decoder of
 concrete stores is needed, and a seed exists at every admitted context because
 the analyzer published one there. The covering and routing parts of adequacy
 hold by definition, the solved part follows from closure of the solved unknowns, and
-totality is paired entry coverage. For the entry-state policy, the shipped
-relation #isaconst("admitted_contexts") instantiates it with the single entry
-alternative that every selectable analysis answers (#isaconst("single_entry"),
+totality is entry coverage. For the entry-state policy, the shipped
+relation #isaconst("admitted_contexts") instantiates it with the single entry answer of every selectable analysis (#isaconst("single_entry"),
 @ch:cooperation), and #isathm("entry_state_activation_collect_sound") is the
 corresponding endpoint (@fig:eq-routes). For entry-state policies the context-indexed
 collecting semantics that the theorem below bounds is thus indexed by the
@@ -465,14 +453,11 @@ theorem uses nothing else about the analysis.
 edge-transfer soundness at a fixed context (@sec:eq-unknowns), and
 #oblig("TOTAL") from routing totality. #oblig("CALL") passes through the seed:
 the continuation's equation publishes $e$, the post-solution bounds the seed,
-and the entry equation reads it back. #oblig("RETURN") uses the alternative
-that adequacy returns, whose program reads the result at that $c'$ and
-combines it with the matching $q$.
+and the entry equation reads it back. #oblig("RETURN") uses the context $c'$ that adequacy returns: the program reads the result at $c'$ and combines it with $q$.
 
 == One publication per global unknown <sec:eq-buffer>
 
-One right-hand side can publish to the same global unknown twice: in the analysis of @sec:mixed-flow every incoming edge of a node publishes to one global unknown, and
-two entry alternatives routed to one context publish to one seed.
+One right-hand side can publish to the same global unknown twice: in the analysis of @sec:mixed-flow every incoming edge of a node publishes to one global unknown.
 Declaratively, the contributions are joined, but a solver applies its update rule per publication,
 and every rule records the latest contribution of each origin, the unknown
 whose equation published (@sec:update-rules). Two publications from one
@@ -699,11 +684,11 @@ obligations of @ch:traces once for every domain, context policy and
 specification: any post-solution on a set of unknowns that contains the program entry
 and is closed under local edges and call continuations bounds every context
 bucket, given the analysis soundness contract, a complete callee list and
-adequate, total routing, where paired entry coverage supplies the covering half
+adequate, total routing, where entry coverage supplies the covering half
 of adequacy. For functional policies totality and the context half of adequacy
 hold by construction. For entry-state policies the
 relation is read off the solved table (#isaconst("routed_entry_context_rel")),
 which makes the covering and routing parts of adequacy definitional and
-totality paired entry coverage.
+totality entry coverage.
 @ch:solving must supply the post-solution and its unknowns, and @ch:results must derive the
 closure of that set, which the solver does not provide directly.

@@ -19,9 +19,7 @@ required. The delivered artifacts additionally trust the parser, code
 generator, compilers, runtimes and presentation code (@sec:trust-boundary).
 
 *What does a calling context denote?* A calling context is a property of an activation-local trace, read off
-how the activation was entered (@sec:contexts). The context relation may admit
-one call at several contexts, and #isathm("ov_two_contexts_admitted") shows
-such a call. When every covered call admits some callee context (totality,
+how the activation was entered (@sec:contexts). Under entry-state routing, the relation reads the context off the analysis's result. When every covered call admits some callee context (totality,
 #isaconst("call_context_total_on")), the context buckets jointly equal the context-free trace collection
 (#isathm("ltr_collect_eq_Union_activation_collect")).
 
@@ -44,10 +42,7 @@ against every sound query channel, and any list of independent analyses
 combines into one that meets the analysis soundness contract
 (#isathm("mcp_combine_sound"), @ch:cooperation).
 
-*Is the theorem informative?* Partly. Counterexample theorems show that reading a callee's result in
-the caller's own context (#isathm("return_at_caller_context_unsound")) and
-unpaired entry coverage (#isathm("unpaired_entry_cover_unsound")) admit
-unsound claims, that a claim meeting every obligation except #oblig("TOTAL")
+*Is the theorem informative?* Partly. Counterexample theorems show that reading a callee's result in the caller's own context (#isathm("return_at_caller_context_unsound")) admits unsound claims, that a claim meeting every obligation except #oblig("TOTAL")
 misses a store of the context-indexed collection
 (#isathm("total_dropped_unsound")), and that Goblint's congruence remainder
 before #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] violates the domain obligation (#isathm("prefix_congruence_mod_unsound")).
@@ -61,14 +56,11 @@ collects this evidence.
 
 == Discussion <sec:discussion>
 
-*Design trade-offs.* Relational context admission lets one call be analyzed
-at several contexts, as Goblint's `enter` permits (@sec:contexts). A function
-always yields a context, while a relation may yield none. The contract
+*Design trade-offs.* Relational context admission lets the context of a call depend on the analysis's result, as entry-state routing needs (@sec:contexts). A function always yields a context, while a relation may yield none. The contract
 therefore needs #oblig("TOTAL"), and under entry-state routing it must be
 discharged against the computed result (@sec:contexts). A functional policy embeds
 as a relation (#isaconst("call_context_rel_of_fun")) and satisfies totality
-directly, so the generality adds no cost for call strings. Only one specification uses it
-(#isathm("ov_two_contexts_admitted")).
+directly, so the generality adds no cost for call strings.
 
 Keeping program globals in the flow-sensitive local state lets the analysis
 soundness contract name a single global and leaves the global unknowns with entry seeds only. Every unknown then carries every global. The flow-insensitive
@@ -125,7 +117,7 @@ component that caller and callee share, so #oblig("RETURN"), the entry pairs
 and one value per variable in the domains (@sec:vimp) would all change. Threads
 interleave activations, which #isaconst("valid_ltr") cannot express. The local
 traces of #cite(<schwarz21>, form: "prose") handle them, but the interface
-would also need synchronization, which it lacks (@sec:omissions). A new update
+would also need synchronization, which it lacks. A new update
 rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
 boundary unless verified.
@@ -166,9 +158,7 @@ arises. @sec:eval-threats collects the threats to the evaluation.
 + *Analysis globals.* The analysis soundness contract admits a single global
   name (@sec:sound-core). The selectable analyses keep program globals in the
   flow-sensitive local state, and the flow-insensitive placement is proved sound for every program at the level of the analysis soundness contract (#isathm("ownership_split_lift_contract")), but end to end only for one program, whose routing obligations are evaluated (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
-+ *Coverage of the configuration space.* Every shipped entry operation
-  answers a call with one alternative, so admission at several contexts is
-  exercised outside #isaconst("run_voblint") only. The combined state admits
++ *Coverage of the configuration space.* The combined state admits
   only components without globals, so #isaconst("rel_order_spec") is not
   selectable; its local form, the order analysis, is (@sec:relational).
 + *Necessity.* Each counterexample theorem weakens one selected condition

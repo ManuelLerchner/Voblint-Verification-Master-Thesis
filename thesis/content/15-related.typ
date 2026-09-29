@@ -293,10 +293,7 @@ Seidl et al. @seidl26[§4] describe digests as generalizing calling contexts to
 the full, possibly concurrent trace reaching a point, but the local-trace
 semantics of that line has no procedures @schwarz25phd[§8].
 #isaconst("trace_context") (@sec:contexts) takes the digest's place for
-sequential activations, with one difference: it is a relation. Goblint's
-`enter` returns a list of alternatives, each routed to its own context, so one
-concrete call may be admitted at several contexts, which a function cannot
-express. Calls and returns need no separate digest, since the admitted contexts
+sequential activations, with one difference: it is a relation, because an entry-state context is read off the analysis's result and not computed from the execution (@sec:contexts). Calls and returns need no separate digest, since the admitted contexts
 are read off the activation-local trace.
 
 Mixed flow sensitivity has been mechanized before.

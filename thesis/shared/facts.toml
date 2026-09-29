@@ -121,11 +121,6 @@ fact = "sound_refinement.bfilter_sound"
 [facts.branch_step_rel_sound]
 why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
 
-[facts.unpaired_entry_cover_unsound]
-why = "Chapter 6, entry coverage must be paired: the unpaired variant misses a run."
-session = "Voblint_Examples"
-theory = "Voblint_Examples.Example_Non_Vacuity"
-
 [facts.mcp_combine_sound]
 why = "Cooperation chapter: independent sound components combine into a sound component."
 session = "Voblint_Framework"

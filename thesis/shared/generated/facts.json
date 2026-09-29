@@ -197,12 +197,6 @@
       "statement": "(\\<lambda>_. 0)(STR ''a'' := 1)\n\\<in> \\<A>\\<^bsub>declared_global\n                   ret_prog,tot_R,0,prog_cfg\n                                     ret_prog,cinit_stores\n         (declared_global ret_prog)\\<^esub>\n       (Statement 3) 0 \\<and>\n(\\<lambda>_. 0)(STR ''a'' := 1) \\<notin> tot_cover (Statement 3) 0",
       "theory": "Example_Non_Vacuity",
       "why": "Chapter 4: dropping TOTAL is unsound."
-    },
-    "unpaired_entry_cover_unsound": {
-      "oracles": [],
-      "statement": "(\\<lambda>_. 0)(STR ''a'' := 1) =\ncall_enter (\\<lambda>_. False)\n (CallEdge (Some STR ''y'') [STR ''a''] [V STR ''x''])\n ((\\<lambda>_. 0)(STR ''x'' := 1))\n\\<exists>(q, e)\\<in>set unpaired_answer.\n   (\\<lambda>_. 0)(STR ''x'' := 1) \\<in> q\n\\<exists>(q, e)\\<in>set unpaired_answer.\n   (\\<lambda>_. 0)(STR ''a'' := 1) \\<in> e\n\\<not> entry_pairs_cover id ((\\<lambda>_. 0)(STR ''x'' := 1))\n        ((\\<lambda>_. 0)(STR ''a'' := 1)) unpaired_answer\n\\<forall>u\\<in>pairwise_contribution unpaired_answer. u STR ''y'' < 0\ncombine_collect (\\<lambda>_. False) (Some STR ''y'')\n ((\\<lambda>_. 0)(STR ''x'' := 1))\n ((\\<lambda>_. 0)\n  (STR ''a'' := 1, ret_var := ((\\<lambda>_. 0)(STR ''a'' := 1)) STR ''a''))\n STR ''y'' =\n1",
-      "theory": "Example_Non_Vacuity",
-      "why": "Chapter 6, entry coverage must be paired: the unpaired variant misses a run."
     }
   },
   "session": "Voblint_CLI",
