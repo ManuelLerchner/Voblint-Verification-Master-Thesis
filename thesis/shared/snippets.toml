@@ -529,46 +529,6 @@ why = "Chapter 7, the obligation of one cooperating analysis, stated against eve
 [snippets.mcp_combine_sound]
 why = "Chapter 7, soundness of the combination of independent components."
 
-[snippets.sign_backward_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Sign/Sign_Backward.thy"
-
-[snippets.ivl_backward_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Interval/Interval_Backward.thy"
-
-[snippets.parity_backward_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Parity/Parity_Backward.thy"
-
-[snippets.congruence_backward_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Congruence/Congruence_Backward.thy"
-
-[snippets.int_backward_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Int/Int_Backward.thy"
-
-[snippets.sign_check_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Sign/Sign_Transfer.thy"
-
-[snippets.interval_check_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Interval/Interval_Transfer.thy"
-
-[snippets.parity_check_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Parity/Parity_Transfer.thy"
-
-[snippets.congruence_check_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Congruence/Congruence_Transfer.thy"
-
-[snippets.int_check_domain]
-why = "Chapter 5, Figure 5.2: a certificate that an analysis implements a final domain locale."
-file = "src/Analyses/Int/Int_Transfer.thy"
-
 [snippets.relc_executable_domain]
 why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."
 instance = "relc :: executable_domain"
@@ -598,3 +558,38 @@ file = "src/Analyses/Congruence/Congruence_Warrowing.thy"
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
 instance = "int_dom_ext :: numeric_domain"
 file = "src/Analyses/Int/Int_Warrowing.thy"
+
+[snippets.reductive_intersection]
+why = "Chapter 5, Figure 5.2: the intersection a refinement needs, below both operands."
+
+[snippets.backward_domain_reductive]
+why = "Chapter 5, Figure 5.2: the backward domain with a reductive intersection, which the bundle certificate requires."
+
+[snippets.sound_special_ops]
+why = "Chapter 5, Figure 5.2: the soundness laws of the min and max operations."
+
+[snippets.sound_nonrelational_ops]
+why = "Chapter 5, Figure 5.2: the certificate for one non-relational operations bundle, the interface a domain implements."
+
+[snippets.sign_tf]
+why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
+file = "src/Analyses/Sign/Sign_Transfer.thy"
+
+[snippets.ivl_tf]
+why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
+file = "src/Analyses/Interval/Interval_Transfer.thy"
+
+[snippets.parity_tf]
+why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
+file = "src/Analyses/Parity/Parity_Transfer.thy"
+
+[snippets.congruence_tf]
+why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
+file = "src/Analyses/Congruence/Congruence_Transfer.thy"
+
+[snippets.int_tf]
+why = "Chapter 5, Figure 5.2: the interpretation certifying an analysis's operations bundle."
+file = "src/Analyses/Int/Int_Transfer.thy"
+
+[snippets.mono_nonrelational_ops]
+why = "Chapter 5, Figure 5.2: the monotone strengthening of the bundle certificate, which an M-marked interpretation proves."

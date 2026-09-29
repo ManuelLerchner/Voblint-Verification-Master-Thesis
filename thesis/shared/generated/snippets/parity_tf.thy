@@ -1,7 +1,7 @@
 (* src/Analyses/Parity/Parity_Transfer.thy *)
 global_interpretation parity_tf: mono_nonrelational_ops parity_ops
-  rewrites "(top :: parity) = PTop"
-    and "sound_minmax_ops.special_transfer (n_special parity_ops) (n_aval parity_ops)
+  rewrites "n_top parity_ops = PTop"
+    and "sound_special_ops.special_transfer (n_special parity_ops) (n_aval parity_ops)
            = special_parity"
   defines assign_parity = parity_tf.assign
     and skip_parity = parity_tf.skip

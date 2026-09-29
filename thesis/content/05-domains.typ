@@ -99,8 +99,8 @@ requires. It also names the laws it omits on purpose.
 
 == The domain interface <sec:domain-contract>
 
-A domain is a type $A$ of abstract values, operations on $A$, and laws that
-relate these operations to $conc$. A non-relational domain hands its
+A domain is a type $A$ of abstract values, its _carrier_, together with
+operations on $A$ and laws that relate these operations to $conc$. A non-relational domain hands its
 operations to the analysis as one record, #isatype("nonrelational_ops"), and
 one interpretation of #isalocale("sound_nonrelational_ops") certifies the record
 from these laws and derives the transfer functions and the check classifier
@@ -145,9 +145,11 @@ evaluation, and backward refinement.
     if mode == "fixes" { fixes.push(entry) } else { laws.push(entry) }
   }
   let kind = head.captures.at(0)
+  // A parent may carry a qualifier (`backward: backward_domain_reductive`).
   let parents = parent-text
     .split("+")
-    .map(p => p.trim().split(regex("\s+")).at(0))
+    .map(p => p.trim().split(regex("\s+")))
+    .map(ws => if ws.len() > 1 and ws.at(0).ends-with(":") { ws.at(1) } else { ws.at(0) })
     .filter(p => p != "")
   // The sort a parameter's type variable is constrained to
   // (`'a::numeric_domain`, `'a::{order_bot, order_top}`).
@@ -217,21 +219,42 @@ evaluation, and backward refinement.
         )
         return (name: inst.captures.at(0), locale: n, kind: "class")
       }
-      let m = src.match(regex("(?m)^lemma\\s+(\\S+):\\s+\"(\\S+)"))
-      assert(m != none and m.captures.at(0) == i, message: "no lemma " + i)
       assert(
         not hierarchy.any(d => n in d.parents),
         message: "domain tree " + key + ": " + n + " is extended, so it is not final",
       )
+      // An interpretation proves the node or a strengthening declared on top of
+      // it, which the figure marks as monotone.
+      let gi = src.match(regex("(?m)^global_interpretation\\s+(\\S+?):\\s+(\\S+)"))
+      if gi != none {
+        let (name, locale) = gi.captures
+        let mono = locale != n
+        assert(
+          not mono or n in _decl(_snip(locale)).parents,
+          message: i + " interprets " + locale + ", which does not extend " + n,
+        )
+        return (name: name, locale: locale, kind: "interp", mono: mono)
+      }
+      let m = src.match(regex("(?m)^lemma\\s+(\\S+):\\s+\"(\\S+)"))
+      assert(m != none and m.captures.at(0) == i, message: "no lemma " + i)
       let locale = m.captures.at(1)
       assert(
         locale == n or locale.starts-with(n + "_"),
         message: i + " proves " + locale + ", not " + n,
       )
-      (name: i, locale: locale, kind: "locale")
+      (name: i, locale: locale, kind: "locale", mono: false)
     }))
   }
+  // Nodes whose operations have a monotone strengthening; `domain_tree.py`
+  // checks each named strengthening against the theories.
+  let mono = cfg.at("mono", default: (:))
+  for n in mono.keys() {
+    assert(n in names, message: "domain tree " + key + ": mono " + n + " is not drawn")
+  }
   (
+    mono: mono,
+    // Whether to draw the dashed edges to a locale's constraining class.
+    bounds: cfg.at("bounds", default: true),
     hierarchy: hierarchy,
     rows: cfg.rows,
     bends: cfg.bends,
@@ -255,15 +278,21 @@ evaluation, and backward refinement.
   stroke: 0.7pt + c,
 )
 
+// Marks an interface whose operations have a monotone strengthening, and an
+// instance that proves it.
+#let mono-mark = super(text(fill: vb.accent)[M])
+
 #let domain-tree(key) = {
   let tree = _tree(key)
   layout(size => context {
     let code(s, fill: vb.plain) = text(fill: fill, raw(decode-isabelle(s)))
     let box-of(d) = {
+      let head = isalocale(d.name)
+      if d.name in tree.mono { head += mono-mark }
       let rows = (
         table.cell(colspan: 2, fill: vb.at(d.origin).lighten(82%), align: center, text(
           size: 5.8pt,
-          isalocale(d.name),
+          head,
         )),
       )
       for (items, fill) in ((d.fixes, vb.const), (d.laws, vb.thm)) {
@@ -296,11 +325,25 @@ evaluation, and backward refinement.
         rows.push(table.cell(colspan: 2, align: center, text(
           fill: vb.muted,
           style: "italic",
-        )[#if instances.all(it => it.kind == "class") [instantiated by] else [proved by]]))
-        // Types need no second column, so they share one wrapped line.
-        let types = instances.filter(it => it.kind == "class")
-        if types != () {
-          rows.push(table.cell(colspan: 2, types.map(it => code(it.name)).join[, ]))
+        )[#if instances.all(it => it.kind == "class") [instantiated by] else if instances.all(
+          it => (
+            it.kind == "interp"
+          ),
+        ) [interpreted by] else [proved by]]))
+        // Types and interpretations need no second column, so they share one
+        // wrapped line.
+        for kind in ("class", "interp") {
+          let these = instances.filter(it => it.kind == kind)
+          if these != () {
+            rows.push(table.cell(
+              colspan: 2,
+              these
+                .map(it => if it.at("mono", default: false) { code(it.name) + mono-mark } else {
+                  code(it.name)
+                })
+                .join[, ],
+            ))
+          }
         }
         // The strengthening a lemma proves is named in the caption, not per row.
         for it in instances.filter(it => it.kind == "locale") {
@@ -323,7 +366,8 @@ evaluation, and backward refinement.
         width: calc.min(measure(t).width, cap),
         stroke: (
           paint: vb.at(d.origin),
-          thickness: 0.7pt,
+          // An interface something implements is drawn heavier.
+          thickness: if instances == () { 0.7pt } else { 1.3pt },
           dash: if d.kind == "locale" { "dashed" } else { none },
         ),
         radius: 2pt,
@@ -341,6 +385,50 @@ evaluation, and backward refinement.
       for (n, x) in row { at.insert(n, (x * size.width, -(y + h / 2))) }
       y += h + tree.row-gap
     }
+    // A straight edge must not pass behind a box it does not connect, where
+    // it would read as ending there. Bent edges are left to the eye.
+    let rect(n) = {
+      let (width: w, height: h) = measure(boxes.at(n))
+      let (x, y) = at.at(n)
+      ((x - w / 2).pt() + 1, (y - h / 2).pt() + 1, (x + w / 2).pt() - 1, (y + h / 2).pt() - 1)
+    }
+    let hits(a, b, r) = {
+      let (t0, t1) = (0.0, 1.0)
+      let (ok, lo, hi) = (true, (r.at(0), r.at(1)), (r.at(2), r.at(3)))
+      for i in range(2) {
+        let (p, d) = (a.at(i), b.at(i) - a.at(i))
+        if d == 0 {
+          if p < lo.at(i) or p > hi.at(i) { ok = false }
+        } else {
+          let (ta, tb) = ((lo.at(i) - p) / d, (hi.at(i) - p) / d)
+          t0 = calc.max(t0, calc.min(ta, tb))
+          t1 = calc.min(t1, calc.max(ta, tb))
+        }
+      }
+      ok and t0 <= t1
+    }
+    let centre(n) = at.at(n).map(c => c.pt())
+    // An arrow implied by a longer path is left out.
+    let drawn(d) = d.parents.filter(p => {
+      not d.parents.any(q => q != p and p in _ancestors(tree.hierarchy, q))
+    })
+    let crossings = ()
+    for d in tree.hierarchy {
+      let ends = drawn(d).filter(p => (
+        tree.parent-bends.at(d.name, default: (:)).at(p, default: 0) == 0
+      ))
+      if tree.bounds and tree.bends.at(d.name, default: 0) == 0 {
+        ends += d.bounds.filter(b => b in at)
+      }
+      for p in ends {
+        for n in at.keys().filter(n => n != d.name and n != p) {
+          if hits(centre(d.name), centre(p), rect(n)) {
+            crossings.push(d.name + " -> " + p + " behind " + n)
+          }
+        }
+      }
+    }
+    assert(crossings == (), message: "domain tree " + key + ": " + crossings.join("; "))
     let hollow = (inherit: "stealth", stealth: 0, fill: white, size: 7)
     diagram(
       node-inset: 0pt,
@@ -349,10 +437,7 @@ evaluation, and backward refinement.
         (node(at.at(d.name), boxes.at(d.name), name: label(d.name), shape: fletcher.shapes.rect),)
       },
       ..for d in tree.hierarchy {
-        // An arrow implied by a longer path is left out.
-        for p in d.parents.filter(p => {
-          not d.parents.any(q => q != p and p in _ancestors(tree.hierarchy, q))
-        }) {
+        for p in drawn(d) {
           (
             edge(
               label(d.name),
@@ -363,7 +448,7 @@ evaluation, and backward refinement.
             ),
           )
         }
-        for b in d.bounds.filter(b => b in at) {
+        for b in d.bounds.filter(b => tree.bounds and b in at) {
           (
             edge(
               label(d.name),
@@ -383,22 +468,25 @@ evaluation, and backward refinement.
   domain-tree("carrier"),
   kind: image,
   placement: top,
-  caption: [What a domain supplies over its carrier type #raw("'a") for
-    sound evaluation, refinement and checks; the laws of `min` and `max` and the
-    reductive and monotone strengthenings are not drawn. Each
-    class (solid) or locale (dashed) lists the operations and laws it declares.
+  caption: [What a non-relational domain supplies over its carrier type
+    #raw("'a"), down to the certificate #isalocale("sound_nonrelational_ops")
+    an analysis interprets. Each class (solid) or locale (dashed) lists the
+    operations and laws it declares, which the declarations below it inherit.
     Solid arrows point to what a declaration extends, dashed ones to the class
-    its type variable is constrained to. An interface an analysis implements
-    lists the instances or lemmas establishing it. The backward lemmas prove the monotone strengthening
-    #isalocale("backward_domain_mono"), except Int's, which proves the
-    reductive one at every refinement mode. Colour gives where a node is
-    declared:
-    #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
+    its type variable is constrained to. An interface an analysis implements has a heavier border and
+    lists its instances. A superscript #mono-mark marks an interface with a
+    monotone strengthening, whose operations are also monotone in the abstract
+    order; on an interpretation it marks one that proves all of them
+    (#isalocale("mono_nonrelational_ops")). Int proves them for every
+    refinement mode except #isaconst("Refine_Fixpoint"). The post-solution
+    soundness argument needs no monotonicity. Colour gives where a node is
+    declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
     #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
 The solver compares abstract values, joins them where control flow merges, and
-uses a least value $lbot$ and a greatest value $ltop$. It also applies a
+uses a least value $lbot$. The analysis also needs a greatest value $ltop$ for
+unknown values. The solver further applies a
 widening $widen$ and a narrowing $narrow$, whose laws only bound their results:
 $
   a lle a widen b, quad b lle a widen b, quad
@@ -451,15 +539,47 @@ soundness needs @nipkow14[Sect. 13.7]. The interface keeps that inclusion and
 drops the lattice. The intersection is any operation with
 $ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
 that lies below both operands, a lower bound that need not be the greatest one
-(#isalocale("reductive_intersection")). The carrier classes require a join but
-no meet.
+(#isalocale("reductive_intersection")). Soundness of the filter needs only the
+inclusion (#isalocale("sound_intersection")). The lower bound serves the
+executable filter, which stops as soon as a refinement step empties the state:
+each later step returns a state below its input, and a state below an empty
+one is empty, so stopping early agrees with the full refinement
+(@sec:readback). The carrier classes require a join but no
+meet.
 
-The interface also asks for no monotone operations. Nipkow and Klein need them
-because their narrowing keeps a post-fixpoint only for a monotone step function
-@nipkow14[Lemma 13.39]. Voblint's solver stops only when every unknown it reached
-is stable, so a terminated solve satisfies each inequality whatever the
-operations are (#isathm("partial_post_solution")). A monotone domain certifies
-monotonicity separately (#isalocale("mono_nonrelational_ops")).
+The interface also asks for no monotone operations, although abstract
+interpretation usually assumes them. Monotonicity carries the classical
+fixpoint argument: Kleene iteration from $lbot$ approaches the least fixpoint
+of a monotone step function (@sec:lattices), and the narrowing of Nipkow and
+Klein keeps a post-fixpoint only for a monotone one @nipkow14[Lemma 13.39].
+Soundness needs less. The analysis result must satisfy every inequality of
+its equation system, whether or not it is the least value that does.
+Voblint's solver establishes this directly: it stops only when every unknown
+it reached is stable, so a terminated solve returns a partial post-solution
+whatever the right-hand sides are (#isathm("partial_post_solution"),
+@tilscher26[Thm. 1]).
+
+Monotonicity would buy a stronger statement, but not for the solver Voblint
+runs. The vendored library proves optimality only for a separate solver that
+joins every update precisely, without widening or narrowing: it returns the
+_least_ partial post-solution (#isathm("least_partial_post_solution"),
+@tilscher26[Thm. 2]) if the equation system is _threefold monotonic_, that is,
+its right-hand sides, their side effects and their dependencies are monotone
+(#isalocale("TD_side_mono"), @tilscher26[Def. 7]). The update-rule solver
+with warrowing that the analyses run has no such theorem. Voblint reduces the
+three conditions to monotonicity of the per-edge programs its equation system
+is built from (#isathm("routed_node_rhs_mono_eq")). The domain certificates
+below supply monotone operations, but no shipped analysis connects them to
+these conditions or runs that solver; the analyses rely on the
+monotonicity-free theorem above. Voblint thus gives up optimality of its
+results, not their soundness.
+
+The domains keep monotonicity as a separate certificate
+(#isalocale("mono_nonrelational_ops")). Sign, Interval, Parity and Congruence
+prove it. Int proves it for every refinement mode except
+#isaconst("Refine_Fixpoint"), whose iterated refinement has no monotonicity
+proof, and the command-line analyzer runs Int in exactly that mode. The
+source-level soundness theorem of @ch:results covers this run all the same.
 
 == Intervals as a numeric domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
 
@@ -493,8 +613,8 @@ is the least upper bound in the bound order. Joined with an empty pair it can
 add integers: $ivl(1, 0) ljoin ivl(5, 5) = ivl(1, 5)$, although only $5$ is
 denoted by either operand. The result is sound but imprecise.
 #isaconst("normalize_ivl") replaces every empty pair by $lbot$ and leaves
-non-empty pairs unchanged. The arithmetic operations normalize their operands
-and results, so they never produce a second empty pair. One representative
+non-empty pairs unchanged. Every arithmetic result is normalized, so no
+operation produces a second empty pair. One representative
 per value also keeps the solver's stability test meaningful, since two
 different empty pairs compare as different values.
 
@@ -514,8 +634,10 @@ of comparing with $lbot$ (#isaconst("is_bottom_ivl")). The
 printer shows $ivl(l, u)$ with $plus.minus infinity$ for infinite ends, every
 empty pair as $lbot$, and a standalone $ltop$ as $ltop$. No law constrains it.
 Isabelle checks it only on a few fixed values
-(#isathm("string_of_ivl_regression")). A printer that swapped the bounds
-would leave every theorem intact and still mislead every reader of the output. It lies outside the verified boundary.
+(#isathm("string_of_ivl_regression"), #isathm("to_string_ivl_regression")).
+A printer that swapped the bounds would leave every soundness theorem intact
+and still mislead every reader of the output. It lies outside the verified
+boundary.
 
 *Concretization laws* (#isalocale("numeric_domain")). $conc(lbot) = emptyset$
 and $conc(ltop) = ZZ$ hold by definition. Monotonicity follows from
@@ -552,7 +674,8 @@ sound. It is however not as precise as it could be. The inverse of addition, for
 example, could refine $x_1$ in $x_1 + x_2 = r$ to $x_1 lmeet (r - x_2)$, as
 the interval analysis of Nipkow and Klein does @nipkow14[Sect. 13.8.3].
 Voblint's Interval keeps this inverse conservative. Parity and Congruence do
-invert arithmetic (@sec:branches).
+invert arithmetic, and so does the product Int through those two components
+(@sec:branches).
 
 === A carrier without least upper bounds <sec:no-defexc>
 
@@ -777,9 +900,10 @@ replaces each empty arm of a disjunction by #ctor("Bot") before the join
 $(sigma(x), sigma(y))$ as in @fig:pointwise, first without and then with
 lifting:
 $ (signval(bot), signval(top)) ljoin (signval(top), signval(bot)) & = (signval(top), signval(top)), \
-                                  ctor("Bot") ljoin ctor("Bot") & = ctor("Bot"). $ Goblint separates reachability in the same way, but outside the
-lattice: a transfer function that finds its path unreachable raises the
-`Deadcode` exception, and the path contributes no further states.
+                                  ctor("Bot") ljoin ctor("Bot") & = ctor("Bot"). $ Goblint separates reachability in the same way. Its framework lifts
+the local state by an outer bottom element for dead code
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L123-L126")[`Analyses.Dom`]), and a transfer function that finds its path unreachable
+raises the `Deadcode` exception instead of returning a state.
 
 Replacing an empty state by #ctor("Bot") does not change the stores it
 describes (#isathm("gamma_state_normalize_lift")), so it cannot make the
@@ -794,14 +918,15 @@ finite test agrees with the original one.
 === A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 
 A relational state keeps what the pointwise form forgets. The type
-#isatype("relc") records a finite set $P$ of variable pairs, where $(x, y)$
+#isatype("relc") records a set $P$ of variable pairs, finite in every value the
+analysis constructs, where $(x, y)$
 asserts $x <= y$. Its concretization is #isaconst("gamma_rel"):
 $
   sem(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
   quad sem(ctor("RelBot")) = emptyset.
 $
 Below, the pair $(x, y)$ is written $x <= y$. More pairs describe fewer stores, so the order is reverse inclusion:
-$ctor("RelC")(P) lle ctor("RelC")(Q)$ if $Q subset.eq P$, with #ctor("RelBot")
+$ctor("RelC")(P) lle ctor("RelC")(Q)$ exactly when $Q subset.eq P$, with #ctor("RelBot")
 below every value and $ltop = ctor("RelC")(emptyset)$, which constrains
 nothing. The join keeps the pairs both operands share,
 $ctor("RelC")(P) ljoin ctor("RelC")(Q) = ctor("RelC")(P inter Q)$. The
@@ -928,16 +1053,17 @@ The branch transfer #isaconst("backward_domain.branch") performs this
 refinement in two stages. A feasibility gate first evaluates the condition
 forward. If its value is empty, or the truth test decides it with the other
 truth value, no store takes the arm, and the result is unreachable. Otherwise
-the filter #isaconst("bfilter") refines the state. It takes a condition, the
-required truth value and a state, and returns the refined state. It follows
-the structure of the condition, as the backward analysis of boolean
-expressions of Nipkow and Klein does @nipkow14[Sect. 13.7.2], and hands
+the branch refines the state with #isaconst("bfilter_lifted"). It follows the
+structure of the condition, as the backward analysis of boolean expressions of
+Nipkow and Klein does @nipkow14[Sect. 13.7.2]. At each comparison it applies
+the filter #isaconst("bfilter"), which takes a condition, the required truth
+value and a state, and returns the refined state. #isaconst("bfilter") hands
 arithmetic operands to #isaconst("afilter"), which refines a state so that an
-expression evaluates within a required abstract value
-@nipkow14[Sect. 13.7.1]. Where a disjunction joins two refined arms, the
-branch uses the variant #isaconst("bfilter_lifted"), which replaces an empty
-arm by #ctor("Bot") before the join. All of these are defined once,
-generically for every backward domain.
+expression evaluates within a required abstract value @nipkow14[Sect. 13.7.1].
+Where a disjunction joins two refined arms, #isaconst("bfilter_lifted")
+replaces an arm that is infeasible or refined to an empty state by
+#ctor("Bot") before the join. All of these are defined once, generically for
+every backward domain.
 
 The inverse operators decide how much the filter learns. @fig:inverse-trace
 follows the true arm of `x + 1 == y`, with $y$ even and $x$ unknown, in Parity
@@ -947,7 +1073,9 @@ parities of its operands, so Parity's inverse of addition
 (#isaconst("inv_plus_parity")) makes $x$ odd
 (#isathm("bfilter_parity_plus_narrows")). Interval's inverse of addition
 returns its operands unchanged, and the same filter learns nothing about $x$.
-Congruence also inverts arithmetic. Sign and Interval invert only comparisons.
+Congruence also inverts arithmetic, and so does the product Int through its
+Parity and Congruence components. Sign and Interval invert only comparisons,
+and Parity inverts equality but not $<$.
 
 #let _tv(body) = text(size: 7.5pt, body)
 #figure(
@@ -982,7 +1110,8 @@ Congruence also inverts arithmetic. Sign and Interval invert only comparisons.
   kind: image,
   placement: auto,
   caption: [The generic branch refinement on the true arm of `x + 1 == y`,
-    one row per step, each naming the primitive it calls; $e : a$ is the
+    one row per primitive it calls, grouped by primitive rather than in
+    execution order; $e : a$ is the
     target value an operand must evaluate within. Parity's inverse of `+` makes
     $x$ odd, which #isathm("bfilter_parity_plus_narrows") checks by
     evaluation. Interval's inverse of `+` is the conservative identity, so $x$
