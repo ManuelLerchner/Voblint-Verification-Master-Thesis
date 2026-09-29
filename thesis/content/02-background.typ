@@ -412,7 +412,7 @@ so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, infinity]$ at once. This value is a post-fixpoint without the bound $5$,
 which the program states in the loop condition `i < 5`. The branch into the body refines the head's value against the
 condition, a backward step from the guard to the stores that pass it
-(#isalocale("backward_domain"), @sec:branches), and restricts $[0, infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
+(#isalocale("sound_refinement"), @sec:branches), and restricts $[0, infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
 The body yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$ (@fig:widening).
 
@@ -665,7 +665,7 @@ A _locale_ fixes parameters and assumptions, and interpreting it proves the
 assumptions for an instance and yields its theorems @ballarin14. Unlike a
 class, a locale can be interpreted several times for one type.
 #isalocale("sound_intersection") fixes an intersection operator and assumes
-that it keeps every value both operands admit:
+that it keeps every value both operands admit and lies below both:
 #thy("sound_intersection")
 
 An _inductive definition_ is the least relation closed under its rules and

@@ -89,12 +89,12 @@ all analyses and answers a query cycle with top.
 Checks use the same channel. A domain answers #isaconst("EvalInt") $c$ for a
 comparison $c$ with its check query from @sec:queries: a definite answer
 becomes the exact integer $1$ or $0$, and an undecided one becomes
-$ivl(0, 1)$ (#isaconst("abstract_check_domain.eval_answer")). A check is
+$ivl(0, 1)$ (#isaconst("sound_check_query.eval_answer")). A check is
 decided from the meet of the answers of all active analyses
 (#isaconst("mcp_answer")): #isaconst("mcp_classify") reads the verdict off
 that answer with #isaconst("answer_check"), as Goblint's `assert` analysis
 reads the answer to its value query. With one analysis this gives the verdicts of
-@sec:queries again (#isathm("abstract_check_domain.classify_eval_answer")).
+@sec:queries again (#isathm("sound_check_query.classify_eval_answer")).
 
 == One obligation per operation, against every sound channel <sec:coop-oracle>
 

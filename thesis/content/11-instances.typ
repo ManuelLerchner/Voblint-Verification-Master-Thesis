@@ -95,13 +95,12 @@ integers it denotes.
 ) <fig:gamma>
 
 The domain proves one certificate about its record,
-#isalocale("sound_nonrelational_ops"). Two parts are laws of
-@fig:domain-carrier, in their reductive form: the refinement operations form a backward domain whose
-intersection lies below both operands (#isalocale("backward_domain_reductive")),
-and the queries are sound checks over the evaluator
-(#isalocale("abstract_check_domain")). The figure does not draw the other two: the abstract
-`min` and `max` are sound (#isalocale("sound_special_ops")), and the
-whole-value element is the top of the carrier. Everything else is derived
+#isalocale("sound_nonrelational_ops"), whose parts @fig:domain-carrier draws:
+the refinement operations form a backward domain whose intersection lies below
+both operands (#isalocale("sound_refinement")), the queries are sound checks
+over the evaluator (#isalocale("sound_check_query")), and the abstract `min`
+and `max` are sound (#isalocale("sound_minmax_ops")). The whole-value element
+is the top of the carrier. Everything else is derived
 once, inside the locale, from the record: the guard filters and the branch transfer, the check
 classifier, the transfer of every edge, procedure entry, and executable
 versions of the transfer and entry over the store representation of
@@ -117,9 +116,9 @@ Voblint's. @fig:instance-pipeline shows the chain.
 
 The certificate asks for soundness alone.
 #isalocale("mono_nonrelational_ops") adds that the evaluator, `min`, `max` and
-the refinement operations are monotone (#isalocale("mono_special_ops"),
-#isalocale("backward_domain_mono")), and derives monotone transfer functions
-(#isathm("mono_nonrelational_ops.br_mono")). Sign, Interval, Parity and
+the refinement operations are monotone (#isalocale("mono_minmax_ops"),
+#isalocale("mono_refinement")), and derives monotone transfer functions
+(#isathm("mono_refinement.branch_mono")). Sign, Interval, Parity and
 Congruence interpret the monotone locale. Int interprets the sound one once,
 parametric in its refinement mode. Monotonicity is proved for the two modes
 without fixpoint iteration (#isathm("int_dom_mono_ops")) and not for the
@@ -377,8 +376,32 @@ until the value stops changing. In every mode reduction preserves the denoted
 set (#isathm("refine_exact")) and only moves down in the order
 (#isathm("refine_reductive")). Monotonicity is proved only for the two
 non-fixpoint modes (#isathm("refine_nonfixpoint_mono")). The public analyzer
-uses the fixpoint mode. Its soundness needs no monotonicity of reduction,
-because no obligation of @ch:domains asks for monotone transfers. The fixpoint
+runs the fixpoint mode by default, and its option `--int-refinement` selects
+another. Each mode is registered as an analysis of its own
+(#isaconst("Int_Analysis"), #isaconst("Int_Once_Analysis"),
+#isaconst("Int_Never_Analysis")), because the combined state of @ch:cooperation
+keeps one field per analysis. Its soundness needs no monotonicity of reduction,
+because no obligation of @ch:domains asks for monotone transfers.
+
+On programs, one round and the fixpoint give the same results in every case we
+know of. A chain of refinements is at most two rounds long, since Congruence
+never learns from Interval and Parity learns from Interval only at a singleton.
+A guard refines twice, once in its inverse operator and once in the
+intersection, and the bounds of an arithmetic result already agree with its
+congruence. The difference one round leaves shows only on operands no stored
+state has (#isathm("mode_never_ne_fixpoint")). No reduction at all differs
+visibly: the regression fixtures
+#fixture(
+  "16-composite-domain/precision/12-refinement_never_keeps_guard_facts_apart.vimp",
+  label: "16-composite-domain/precision/12",
+)
+to
+#fixture(
+  "16-composite-domain/precision/14-refinement_fixpoint_agrees_with_once.vimp",
+  label: "…/14",
+)
+leave a check unproved without reduction that one round proves. This argument
+is not machine-checked. The fixpoint
 mode is total in HOL, returning its input if the iteration never stabilizes,
 while the generated code iterates until the value stops changing. That it
 always stops is not proved, so reduction is a second place, besides the solve,

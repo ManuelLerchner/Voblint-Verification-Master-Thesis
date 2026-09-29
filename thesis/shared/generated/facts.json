@@ -14,7 +14,7 @@
     },
     "bfilter_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>backward_domain intersect aval_abs tobool inv_less inv_eq inv_plus\n          inv_minus inv_times;\n s \\<in> \\<lbrakk>\\<sigma>\\<rbrakk>;\n truthy (\\<lbrakk>e\\<rbrakk>\\<^sub>e s) = res\\<rbrakk>\n\\<Longrightarrow> s \\<in> \\<lbrakk>backward_domain.bfilter intersect\n                                    aval_abs tobool inv_less inv_eq inv_plus\n                                    inv_minus inv_times e res\n                                    \\<sigma>\\<rbrakk>",
+      "statement": "\\<lbrakk>sound_refinement intersect aval_abs tobool inv_less inv_eq inv_plus\n          inv_minus inv_times;\n s \\<in> \\<lbrakk>\\<sigma>\\<rbrakk>;\n truthy (\\<lbrakk>e\\<rbrakk>\\<^sub>e s) = res\\<rbrakk>\n\\<Longrightarrow> s \\<in> \\<lbrakk>sound_refinement.bfilter intersect\n                                    aval_abs tobool inv_less inv_eq inv_plus\n                                    inv_minus inv_times e res\n                                    \\<sigma>\\<rbrakk>",
       "theory": "Backward_Domain",
       "why": "Chapter 5, the guard filter drops no store that passes the guard."
     },

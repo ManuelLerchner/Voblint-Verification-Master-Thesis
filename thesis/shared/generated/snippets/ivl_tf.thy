@@ -1,7 +1,7 @@
 (* src/Analyses/Interval/Interval_Transfer.thy *)
 global_interpretation ivl_tf: mono_nonrelational_ops ivl_ops
-  rewrites "n_top ivl_ops = ivl_top"
-    and "sound_special_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
+  rewrites "(top :: ivl) = ivl_top"
+    and "sound_minmax_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
   defines assign_ivl = ivl_tf.assign
     and skip_ivl = ivl_tf.skip
     and body_ivl = ivl_tf.body

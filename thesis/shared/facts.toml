@@ -116,7 +116,7 @@ theory = "Voblint_Compile.Source_To_Trace"
 
 [facts.bfilter_sound]
 why = "Chapter 5, the guard filter drops no store that passes the guard."
-fact = "backward_domain.bfilter_sound"
+fact = "sound_refinement.bfilter_sound"
 
 [facts.branch_step_rel_sound]
 why = "Chapter 5, the relational guard refinement drops no store that passes the guard."

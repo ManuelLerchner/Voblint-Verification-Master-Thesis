@@ -1,7 +1,6 @@
 (* src/Analyses/Congruence/Congruence_Transfer.thy *)
 global_interpretation congruence_tf: mono_nonrelational_ops congruence_ops
-  rewrites "n_top congruence_ops = top"
-    and "sound_special_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
+  rewrites "sound_minmax_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
            = special_congruence"
   defines assign_congruence = congruence_tf.assign
     and skip_congruence = congruence_tf.skip

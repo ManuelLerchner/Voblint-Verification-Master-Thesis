@@ -1,7 +1,6 @@
 (* src/Analyses/Int/Int_Transfer.thy *)
 global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
-  rewrites "n_top (int_dom_ops mode) = top"
-    and "sound_special_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
+  rewrites "sound_minmax_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
            = special_int_dom mode"
   defines assign_int_dom = int_tf.assign
     and skip_int_dom = int_tf.skip

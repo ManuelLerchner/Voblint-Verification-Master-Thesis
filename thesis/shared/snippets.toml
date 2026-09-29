@@ -69,14 +69,14 @@ why = "The domain interface figure: what a domain must supply and prove."
 [snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
-[snippets.abstract_check_domain]
+[snippets.sound_check_query]
 why = "Chapter 5, the query figure: checks combine the queries with forward evaluation."
 
 [snippets.widening]
 why = "Background, Isabelle mechanisms: a type class, the solver's widening operator and its laws."
 
 [snippets.sound_intersection]
-why = "Background, Isabelle mechanisms: a small locale with one parameter and one assumption."
+why = "Background, Isabelle mechanisms: a small locale with one parameter and three assumptions; Chapter 5, the domain interface figure."
 
 [snippets.pstep]
 why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
@@ -510,11 +510,11 @@ file = "~~/src/HOL/Orderings.thy"
 why = "Chapter 5, the domain carrier box: a HOL base class whose members the carrier inherits."
 file = "~~/src/HOL/Orderings.thy"
 
-[snippets.backward_domain]
+[snippets.sound_refinement]
 why = "Chapter 5, the domain interface: intersection, forward evaluation, truth test and inverse operators."
 
-[snippets.backward_ops]
-why = "Chapter 5, the inverse operators and their soundness laws, a parent of backward_domain."
+[snippets.sound_inverse_ops]
+why = "Chapter 5, the inverse operators and their soundness laws, a parent of sound_refinement."
 
 
 [snippets.sound_evaluator]
@@ -559,13 +559,7 @@ why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
 instance = "int_dom_ext :: numeric_domain"
 file = "src/Analyses/Int/Int_Warrowing.thy"
 
-[snippets.reductive_intersection]
-why = "Chapter 5, Figure 5.2: the intersection a refinement needs, below both operands."
-
-[snippets.backward_domain_reductive]
-why = "Chapter 5, Figure 5.2: the backward domain with a reductive intersection, which the bundle certificate requires."
-
-[snippets.sound_special_ops]
+[snippets.sound_minmax_ops]
 why = "Chapter 5, Figure 5.2: the soundness laws of the min and max operations."
 
 [snippets.sound_nonrelational_ops]

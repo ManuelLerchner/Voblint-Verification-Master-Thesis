@@ -100,13 +100,24 @@ requires. It also names the laws it omits on purpose.
 == The domain interface <sec:domain-contract>
 
 A domain is a type $A$ of abstract values, its _carrier_, together with
-operations on $A$ and laws that relate these operations to $conc$. A non-relational domain hands its
-operations to the analysis as one record, #isatype("nonrelational_ops"), and
-one interpretation of #isalocale("sound_nonrelational_ops") certifies the record
-from these laws and derives the transfer functions and the check classifier
-from it (@sec:instances-supply). @fig:domain-carrier shows the laws, read from
-the declarations. They fall into three groups: what the solver needs, forward
-evaluation, and backward refinement.
+operations on $A$ and laws that relate them to $conc$. A domain supplies only
+primitive operations: how an expression evaluates, how a comparison is
+answered, how a known result refines the operands of an operation, and how
+`min` and `max` combine two values. A non-relational domain hands them over as
+one record, #isatype("nonrelational_ops"). One interpretation of
+#isalocale("sound_nonrelational_ops") certifies the record, and everything else
+is derived from it once: the guard filters, the branch
+transfer, the check classifier and the transfer of every edge
+(@sec:instances-supply, @fig:instance-pipeline).
+
+The laws constrain safety, not precision: a query may always answer unknown, an
+inverse operator may return its operands unchanged, and an intersection may
+keep more than the values both operands share. _Sound_ here means that an
+operation keeps every concrete value its inputs admit. The concretization and the laws are not part of the
+generated analyzer, which runs only the order, the join, widening and
+narrowing, the emptiness test and the primitives (@sec:codegen).
+@fig:domain-carrier, at the end of this section, shows the classes and locales,
+read from the declarations.
 
 // What a domain supplies, as UML inheritance trees. Each node is a class or
 // locale read from its lifted declaration and lists only the members it
@@ -145,7 +156,7 @@ evaluation, and backward refinement.
     if mode == "fixes" { fixes.push(entry) } else { laws.push(entry) }
   }
   let kind = head.captures.at(0)
-  // A parent may carry a qualifier (`backward: backward_domain_reductive`).
+  // A parent may carry a qualifier (`backward: sound_refinement`).
   let parents = parent-text
     .split("+")
     .map(p => p.trim().split(regex("\s+")))
@@ -203,7 +214,7 @@ evaluation, and backward refinement.
   // Each instance is listed at the most derived node it reaches: a type at the
   // class it instantiates, a lemma proving a final locale, one nothing else
   // extends. The lemma may prove a strengthening the figure leaves out
-  // (backward_domain_mono).
+  // (mono_refinement).
   let interpreted = (:)
   for (n, instances) in cfg.at("interpreted", default: (:)) {
     assert(n in names, message: "domain tree " + key + ": interpreted " + n + " is not drawn")
@@ -310,7 +321,7 @@ evaluation, and backward refinement.
           rows.push(code(if fill == vb.const { ":: " + rhs } else { rhs }))
         }
       }
-      // A pure combination such as backward_domain or warrowing declares
+      // A pure combination such as sound_refinement or warrowing declares
       // nothing itself; an empty box would read as a rendering fault.
       let instances = tree.interpreted.at(d.name, default: ())
       if d.fixes == () and d.laws == () and not d.ref and instances == () {
@@ -357,11 +368,12 @@ evaluation, and backward refinement.
         show: isabelle-scripts
         table(columns: 2, stroke: none, inset: (x: 2.5pt, y: 1.2pt), align: left + top, ..rows)
       }
-      // A node that shares its row wraps its statements beyond this width.
+      // A node wraps its statements beyond its configured width; one alone in
+      // its row may otherwise take the whole line.
       let alone = tree.rows.any(r => r.len() == 1 and d.name in r)
-      let cap = if alone { size.width } else {
-        tree.widths.at(d.name, default: 0.3) * size.width
-      }
+      let cap = if d.name in tree.widths { tree.widths.at(d.name) * size.width } else if alone {
+        size.width
+      } else { 0.3 * size.width }
       block(
         width: calc.min(measure(t).width, cap),
         stroke: (
@@ -464,6 +476,104 @@ evaluation, and backward refinement.
   })
 }
 
+=== Carrier and meaning <sec:domain-carrier-laws>
+
+The solver compares abstract values, joins them where control flow merges, and
+uses a least value $lbot$. The analysis also needs a greatest value $ltop$ for
+unknown values. The solver further applies a
+widening $widen$ and a narrowing $narrow$, whose laws only bound their results:
+$
+  a lle a widen b, quad b lle a widen b, quad
+  b lle a ==> b lle a narrow b lle a.
+$
+The laws do not force an iteration with these operators to stop. A domain
+further supplies an emptiness test, a printer, and the concretization
+$conc : A -> cal(P)(ZZ)$ with four laws:
+$
+  conc(lbot) = emptyset, quad conc(ltop) = ZZ, quad
+  a lle b ==> conc(a) subset.eq conc(b), quad
+  #isaconst("is_empty") (a) <==> conc(a) = emptyset.
+$
+The third law turns the solver's inequalities into inclusions; the fourth
+decides emptiness for every value, not only for $lbot$. Such a type is a
+_numeric domain_ (#isalocale("numeric_domain")), which adds the concretization to
+what the analyzer runs, #isalocale("executable_domain").
+
+=== Evaluating and querying <sec:domain-forward>
+
+Forward evaluation computes an abstract value for an expression $e$ from an
+abstract description $d$ of a set of stores $sem(d)$, as in the generic
+abstract interpreter of Nipkow and Klein @nipkow14[Sect. 13.5.2]. The abstract
+result must contain every concrete result:
+$ s in sem(d) ==> sem(e)_e thin s in conc(sh("eval")(e, d)). $
+A domain may also decide the truth of a value. Its truth test
+$"tobool"(a)$ returns $"Some"(b)$ if it can decide that every integer in
+$conc(a)$ has truth value $b$, where non-zero counts as true, and
+$"None"$ otherwise:
+$ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
+
+To answer the checks of @sec:queries, a domain also supplies two queries on
+abstract values, $"less"(a, b)$ for $a < b$ and $"eq"(a, b)$ for $a = b$
+(#isalocale("sound_numeric_queries")). A definite answer must hold for every
+pair of integers the two values denote, and $"None"$ is always allowed:
+$ "less"(a, b) = "Some"(r) and i in conc(a) and j in conc(b) ==> (i < j) = r, $
+and likewise for $"eq"$. #isalocale("sound_check_query") combines the
+queries with forward evaluation.
+
+=== Refining <sec:domain-backward>
+
+Backward refinement runs evaluation in reverse @nipkow14[Sect. 13.7.1]. Given
+abstract operands $a_1, a_2$ and the result an operation must produce, an
+inverse operator returns refined operands $a'_1, a'_2$ that keep every
+concrete pair producing that result. For a comparison that must yield $r$:
+$
+  n_1 in conc(a_1) and n_2 in conc(a_2) and (n_1 < n_2) = r
+  ==> n_1 in conc(a'_1) and n_2 in conc(a'_2),
+$
+and likewise for equality, addition, subtraction and multiplication. An
+intersection combines a refined value with the value known before. Nipkow and
+Klein use a lattice meet and require $conc(a_1 lmeet a_2) = conc(a_1) inter
+conc(a_2)$; one inclusion holds in every lattice, and the other is all that
+soundness needs @nipkow14[Sect. 13.7]. The interface keeps that inclusion and
+drops the lattice. The intersection is any operation with
+$ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
+that lies below both operands, a lower bound that need not be the greatest one
+(#isalocale("sound_intersection")). Soundness of the filter needs only the
+inclusion. The lower bound serves the executable filter, which stops as soon as
+a refinement step empties the state: each later step returns a state below its
+input, and a state below an empty one is empty, so stopping early agrees with
+the full refinement (@sec:readback). Every domain's intersection has both
+properties, so the interface asks for them together. The carrier classes
+require a join but no meet.
+
+=== Monotonicity is optional <sec:domain-mono>
+
+The interface asks for no monotone operations, although abstract
+interpretation usually assumes them: Kleene iteration from $lbot$ approaches
+the least fixpoint only of a monotone step function (@sec:lattices), and the
+narrowing of Nipkow and Klein keeps a post-fixpoint only for a monotone one
+@nipkow14[Lemma 13.39]. Soundness needs less: the result must satisfy every
+inequality of its equation system, whether or not it is the least value that
+does. Voblint's solver stops only when every unknown it reached is stable, so a
+terminated solve returns a partial post-solution whatever the right-hand sides
+are (#isathm("partial_post_solution"), @tilscher26[Thm. 1]).
+
+Monotonicity buys optimality, but not for the solver Voblint runs. The
+vendored library proves that a separate solver, which joins every update
+precisely, returns the _least_ partial post-solution
+(#isathm("least_partial_post_solution"), @tilscher26[Thm. 2]) if the equation
+system is _threefold monotonic_: its right-hand sides, their side effects and
+their dependencies are monotone (#isalocale("TD_side_mono"),
+@tilscher26[Def. 7]). The warrowing solver the analyses run has no such
+theorem. Voblint reduces the three conditions to monotone per-edge programs
+(#isathm("routed_node_rhs_mono_eq")), but no shipped analysis discharges them
+or runs that solver. Voblint gives up optimality, not soundness.
+
+Sign, Interval, Parity and Congruence certify monotonicity separately
+(#isalocale("mono_nonrelational_ops")). Int does so for every refinement mode
+except #isaconst("Refine_Fixpoint"), the command-line default, and the
+soundness theorem of @ch:results covers that run all the same.
+
 #figure(
   domain-tree("carrier"),
   kind: image,
@@ -484,104 +594,7 @@ evaluation, and backward refinement.
     #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
-The solver compares abstract values, joins them where control flow merges, and
-uses a least value $lbot$. The analysis also needs a greatest value $ltop$ for
-unknown values. The solver further applies a
-widening $widen$ and a narrowing $narrow$, whose laws only bound their results:
-$
-  a lle a widen b, quad b lle a widen b, quad
-  b lle a ==> b lle a narrow b lle a.
-$
-The laws do not force an iteration with these operators to stop. A domain
-further supplies an emptiness test, a printer, and the concretization
-$conc : A -> cal(P)(ZZ)$ with four laws:
-$
-  conc(lbot) = emptyset, quad conc(ltop) = ZZ, quad
-  a lle b ==> conc(a) subset.eq conc(b), quad
-  #isaconst("is_empty") (a) <==> conc(a) = emptyset.
-$
-The third law turns the solver's inequalities into inclusions; the fourth
-decides emptiness for every value, not only for $lbot$. Such a type is a
-_numeric domain_ (#isalocale("numeric_domain")).
-
-Forward evaluation computes an abstract value for an expression $e$ from an
-abstract description $d$ of a set of stores $sem(d)$, as in the generic
-abstract interpreter of Nipkow and Klein @nipkow14[Sect. 13.5.2]. The abstract
-result must contain every concrete result:
-$ s in sem(d) ==> sem(e)_e thin s in conc(sh("eval")(e, d)). $
-A domain may also decide the truth of a value. Its truth test
-$"tobool"(a)$ returns $"Some"(b)$ if it can decide that every integer in
-$conc(a)$ has truth value $b$, where non-zero counts as true, and
-$"None"$ otherwise:
-$ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
-
-To answer the checks of @sec:queries, a domain also supplies two queries on
-abstract values, $"less"(a, b)$ for $a < b$ and $"eq"(a, b)$ for $a = b$
-(#isalocale("sound_numeric_queries")). A definite answer must hold for every
-pair of integers the two values denote, and $"None"$ is always allowed:
-$ "less"(a, b) = "Some"(r) and i in conc(a) and j in conc(b) ==> (i < j) = r, $
-and likewise for $"eq"$. #isalocale("abstract_check_domain") combines the
-queries with forward evaluation.
-
-Backward refinement runs evaluation in reverse @nipkow14[Sect. 13.7.1]. Given
-abstract operands $a_1, a_2$ and the result an operation must produce, an
-inverse operator returns refined operands $a'_1, a'_2$ that keep every
-concrete pair producing that result. For a comparison that must yield $r$:
-$
-  n_1 in conc(a_1) and n_2 in conc(a_2) and (n_1 < n_2) = r
-  ==> n_1 in conc(a'_1) and n_2 in conc(a'_2),
-$
-and likewise for equality, addition, subtraction and multiplication. An
-intersection combines a refined value with the value known before. Nipkow and
-Klein use a lattice meet and require $conc(a_1 lmeet a_2) = conc(a_1) inter
-conc(a_2)$; one inclusion holds in every lattice, and the other is all that
-soundness needs @nipkow14[Sect. 13.7]. The interface keeps that inclusion and
-drops the lattice. The intersection is any operation with
-$ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
-that lies below both operands, a lower bound that need not be the greatest one
-(#isalocale("reductive_intersection")). Soundness of the filter needs only the
-inclusion (#isalocale("sound_intersection")). The lower bound serves the
-executable filter, which stops as soon as a refinement step empties the state:
-each later step returns a state below its input, and a state below an empty
-one is empty, so stopping early agrees with the full refinement
-(@sec:readback). The carrier classes require a join but no
-meet.
-
-The interface also asks for no monotone operations, although abstract
-interpretation usually assumes them. Monotonicity carries the classical
-fixpoint argument: Kleene iteration from $lbot$ approaches the least fixpoint
-of a monotone step function (@sec:lattices), and the narrowing of Nipkow and
-Klein keeps a post-fixpoint only for a monotone one @nipkow14[Lemma 13.39].
-Soundness needs less. The analysis result must satisfy every inequality of
-its equation system, whether or not it is the least value that does.
-Voblint's solver establishes this directly: it stops only when every unknown
-it reached is stable, so a terminated solve returns a partial post-solution
-whatever the right-hand sides are (#isathm("partial_post_solution"),
-@tilscher26[Thm. 1]).
-
-Monotonicity would buy a stronger statement, but not for the solver Voblint
-runs. The vendored library proves optimality only for a separate solver that
-joins every update precisely, without widening or narrowing: it returns the
-_least_ partial post-solution (#isathm("least_partial_post_solution"),
-@tilscher26[Thm. 2]) if the equation system is _threefold monotonic_, that is,
-its right-hand sides, their side effects and their dependencies are monotone
-(#isalocale("TD_side_mono"), @tilscher26[Def. 7]). The update-rule solver
-with warrowing that the analyses run has no such theorem. Voblint reduces the
-three conditions to monotonicity of the per-edge programs its equation system
-is built from (#isathm("routed_node_rhs_mono_eq")). The domain certificates
-below supply monotone operations, but no shipped analysis connects them to
-these conditions or runs that solver; the analyses rely on the
-monotonicity-free theorem above. Voblint thus gives up optimality of its
-results, not their soundness.
-
-The domains keep monotonicity as a separate certificate
-(#isalocale("mono_nonrelational_ops")). Sign, Interval, Parity and Congruence
-prove it. Int proves it for every refinement mode except
-#isaconst("Refine_Fixpoint"), whose iterated refinement has no monotonicity
-proof, and the command-line analyzer runs Int in exactly that mode. The
-source-level soundness theorem of @ch:results covers this run all the same.
-
-== Intervals as a numeric domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
+== Intervals as a non-relational domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
 
 The interval domain of @sec:abs-int shows how a concrete type meets these laws.
 @sec:abs-int described it on non-empty intervals. The formal type must also
@@ -626,7 +639,8 @@ $lbot = ivl(+infinity, -infinity)$, this rule would send
 $lbot widen ivl(0, 0)$ to $ltop$, so widening from $lbot$ returns the other
 operand. The narrowing #isaconst("narrow_ivl_td") fills only infinite bounds,
 $ivl(0, +infinity) narrow ivl(0, 10) = ivl(0, 10)$. Each law of the two
-classes follows by comparing bounds.
+classes follows by comparing bounds, and the solver's #isalocale("warrowing")
+only combines them.
 
 *Emptiness test and printer* (#isalocale("executable_domain")). Since an
 empty pair need not be $lbot$, the emptiness test inspects the bounds instead
@@ -654,8 +668,17 @@ $"Some"("false")$ if $l = u = 0$. Otherwise it returns $"None"$. So $ivl(1, 5)$
 is true, $ivl(0, 0)$ is false, and $ivl(0, 5)$ is undecided. An empty pair also
 counts as true. The law holds for it vacuously, since it denotes no integer.
 
+*Queries* (#isalocale("sound_numeric_queries"), #isalocale("sound_check_query")).
+The queries compare bounds. $"less"(ivl(l_1, u_1), ivl(l_2, u_2))$ is true if
+$u_1 < l_2$ and false if $u_2 <= l_1$; $"eq"$ is true only for two equal
+singletons and false for disjoint intervals, four bound comparisons such as
+#isaconst("interval_less_true"). So $"less"(ivl(0, 3), ivl(5, 9))$ is true,
+while $"less"(ivl(0, 5), ivl(3, 9))$ is undecided: the intervals overlap, and
+some of their pairs compare one way and some the other. #isalocale("sound_check_query") combines them with
+the evaluator and asks nothing further.
+
 *Intersection and inverse operators* (#isalocale("sound_intersection"),
-#isalocale("backward_ops")). The meet intersects the bounds and is exact on
+#isalocale("sound_inverse_ops")). The meet intersects the bounds and is exact on
 the denoted sets, $conc(a lmeet b) = conc(a) inter conc(b)$. It cannot
 normalize its result: $ivl(5, 3)$ lies below both $ivl(0, 3)$ and
 $ivl(5, 9)$, but not below the normalized meet $lbot$, so a normalizing meet
@@ -665,25 +688,67 @@ interface is therefore a separate operation, the normalized meet
 #isaconst("intersect_ivl"). It preserves the denoted set exactly, lies below
 both operands as the interface requires, and is monotone. The inverse of $<$ refines $x = ivl(0, +infinity)$
 against $ivl(10, 10)$, with $x < 10$ required true, to $x = ivl(0, 9)$
-(#isaconst("inv_less_ivl")). Only comparisons refine. The inverses of
-addition, subtraction and multiplication return their operands unchanged,
-which the law allows.
+(#isaconst("inv_less_ivl")). The inverse of $=$ gives both sides their meet
+on the true arm and keeps them on the false one (#isaconst("inv_eq_ivl")). Only
+comparisons refine. The inverses of addition, subtraction and multiplication
+return their operands unchanged, which the law allows.
+#isalocale("sound_refinement") combines these operators with the evaluator and
+the truth test and asks nothing further.
+
+*Minimum and maximum* (#isalocale("sound_minmax_ops")). The abstract `min` and
+`max` take the minimum or maximum of both bounds and normalize the result
+(#isaconst("ivl_min"), #isaconst("ivl_max")), so
+$min(ivl(0, 5), ivl(3, 9)) = ivl(0, 5)$.
+
+*Certificate* (#isalocale("sound_nonrelational_ops")). The record
+#isaconst("ivl_ops") collects the evaluator, the queries, the refinement
+operations and `min` and `max`. Its one interpretation proves the monotone form (#isalocale("mono_nonrelational_ops")), and everything of
+@sec:instances-supply follows from it.
 
 Every operation above is proved to satisfy its law, so the interval domain is
 sound. It is however not as precise as it could be. The inverse of addition, for
 example, could refine $x_1$ in $x_1 + x_2 = r$ to $x_1 lmeet (r - x_2)$, as
 the interval analysis of Nipkow and Klein does @nipkow14[Sect. 13.8.3].
-Voblint's Interval keeps this inverse conservative. Parity and Congruence do
-invert arithmetic, and so does the product Int through those two components
-(@sec:branches).
+Voblint's Interval keeps this inverse conservative.
 
-=== A carrier without least upper bounds <sec:no-defexc>
+#let _ip = claim-row("dom-interval-plus-inverse", "10:5")
+#let _ipi = claim-row("dom-int-plus-inverse", "10:5")
+#align(center, block(width: 60%, {
+  show raw: set text(size: 6.5pt)
+  listing(
+    lang: "c",
+    claim: "dom-interval-plus-inverse",
+    ```
+    fun main() {
+      x = __voblint_nondet_int();
+      if (x + 1 < 5) {
+        __voblint_check(x < 4);
+      }
+    }
+    ```.text,
+  )
+}))
 
-Soundness uses the join only as an upper bound of its operands. The carrier
-classes demand more: #isalocale("semilattice_sup") requires the _least_ upper
-bound, because the solver and the generic framework are stated over this
-class. This excludes every carrier in which two values have upper bounds but
-no least one.
+On the true arm every execution has $x <= 3$, so the check holds. The inverse
+of $<$ refines $x + 1$ to $ivl(-infinity, 4)$, but the identity inverse of $+$
+passes nothing on to $x$, which stays $ltop$, and Interval answers #_ip.verdict.
+The inverse of Nipkow and Klein would compute
+$ x lmeet (ivl(-infinity, 4) - ivl(1, 1)) = ivl(-infinity, 3) $
+and prove the check. Parity and Congruence do invert arithmetic, and so does the
+product Int through those two components (@sec:branches). On this guard Int
+still answers #_ipi.verdict: the inverses of $+$ in Parity and Congruence
+carry no order.
+
+== A carrier the interface excludes <sec:no-defexc>
+
+Voblint cannot host every domain Goblint offers. The verified solver requires
+its values to form a #isalocale("bounded_semilattice_sup_bot")
+(#isalocale("TD_side_upd_rule")), and the generic framework inherits the
+requirement. That class asks for the _least_ upper bound
+(#isalocale("semilattice_sup")), and the proofs use it: reductive refinement
+bounds the join of two disjunction arms by the state it started from
+(#isathm("sound_refinement.bfilter_reductive")). The requirement excludes every
+carrier in which two values have upper bounds but no least one.
 
 Goblint's exclusion-set domain
 #link(
@@ -756,6 +821,11 @@ or excludes nothing if one of them is $0$. Voblint could admit this carrier
 only by bounding its integers, or by weakening #isalocale("semilattice_sup")
 to an upper-bound law throughout the solver and the framework. This argument
 is not machine-checked.
+
+The restriction is not marginal. `DefExc` is the only integer domain Goblint
+enables by default; its interval, congruence and enumeration domains are
+opt-in (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/config/options.schema.json")[`ana.int.def_exc`]). A carrier with Voblint's join law cannot run Goblint's
+default integer analysis unchanged.
 
 == From values to stores <sec:domain-states>
 
@@ -993,11 +1063,6 @@ the emptiness test compares with it (#isathm("is_empty_relc_gamma")). Unlike
 the pointwise form, the carrier has a single representation of
 unreachability, so it needs no lifting.
 
-The carrier does not close its pairs under transitivity (@fig:rel-state).
-The join inherits this: joining
-$ctor("RelC"){x <= y, y <= z}$ with $ctor("RelC"){x <= y, x <= z}$ yields
-$ctor("RelC"){x <= y}$, although both operands imply $x <= z$.
-
 The type instantiates the solver's classes and
 #isalocale("executable_domain"). It is not a numeric domain, since its
 concretization yields sets of stores rather than sets of integers, and a
@@ -1039,7 +1104,7 @@ $x = signval(top)$, $y$ becomes #signval($top$), and the state cannot show that
 the check holds.
 Backward refinement instead runs the condition in reverse, as in the backward
 analysis of Nipkow and Klein @nipkow14[Sect. 13.7.2]. Given the truth value the
-branch requires, the inverse operators of #isalocale("backward_domain") refine
+branch requires, the inverse operators of #isalocale("sound_refinement") refine
 the operands so that they retain every concrete pair that can produce it. In
 Sign, the refined value is the meet of the old value with what the guard
 implies. Sign refines $x$ to
@@ -1047,9 +1112,11 @@ $signval(top) lmeet signval("+") = signval("+")$ on the true arm and to
 $signval(top) lmeet signval("≤0") = signval("≤0")$ on the false arm
 (@fig:guard-meet). Both arms
 then give $y$ a non-negative value, and the join yields $y = signval("≥0")$
-(#raw(_g.state)). @sec:queries answers the check from this state.
+(#raw(_g.state)). The counting loop of @sec:constraints already used it: its
+inequality $b gt.eq h lmeet [-infinity, 4]$ is the refinement of the loop-head
+interval $h$ at the guard `i < 5`.
 
-The branch transfer #isaconst("backward_domain.branch") performs this
+The branch transfer #isaconst("sound_refinement.branch") performs this
 refinement in two stages. A feasibility gate first evaluates the condition
 forward. If its value is empty, or the truth test decides it with the other
 truth value, no store takes the arm, and the result is unreachable. Otherwise
@@ -1108,7 +1175,7 @@ and Parity inverts equality but not $<$.
     table.hline(stroke: 0.5pt),
   ),
   kind: image,
-  placement: auto,
+  placement: none,
   caption: [The generic branch refinement on the true arm of `x + 1 == y`,
     one row per primitive it calls, grouped by primitive rather than in
     execution order; $e : a$ is the
@@ -1188,16 +1255,11 @@ condition. It may keep stores that fail it.
 
 The branch inherits this law. Its gate drops only arms that no store takes,
 and replacing an empty arm by #ctor("Bot") keeps the stores it describes
-(#isathm("backward_domain.branch_sound")).
+(#isathm("sound_refinement.branch_sound")).
 
 The relational state satisfies the same statement for its own refinement
-#isaconst("branch_step_rel"), with the polarity `pol` selecting the arm:
-
-#proved("branch_step_rel_sound")
-
-The counting loop of @sec:constraints already used this refinement: its
-inequality $b gt.eq h lmeet [-infinity, 4]$ is the refinement of the loop-head
-interval $h$ at the guard `i < 5`.
+#isaconst("branch_step_rel"), with the polarity `pol` selecting the arm
+(#isathm("branch_step_rel_sound")).
 
 == Answering queries <sec:queries>
 
@@ -1231,18 +1293,50 @@ $
 Negation keeps _unknown_. The connectives `!`, `&&` and `||` combine the answers
 of their operands in three-valued logic: a definite _false_ decides `&&` and a
 definite _true_ decides `||`, whatever the other operand answers. Any other
-expression $e$ is read as $e != 0$, its truth value in VIMP. So
-`x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
-$"eq"(hat(y), hat(0))$ alone, and a new domain gets checks on arbitrary
-conditions by providing these two queries.
-
-In the program of @sec:branches, the state at the check has
-$y = signval("≥0")$, and `y >= 0` becomes
-$not "less"(signval("≥0"), signval("0"))$. No non-negative integer is below $0$,
-so Sign's $"less"$ answers a definite _false_, and the check is answered _true_.
-Without the refinement of @sec:branches, $y = signval(top)$, and
-$"less"(signval(top), signval("0"))$ is _unknown_.
-
+expression $e$ is read as $e != 0$, its truth value in VIMP. A new domain
+therefore gets checks on arbitrary conditions by providing these two queries.
 One proof covers every domain: a definite answer holds in every store the state
 describes (#isathm("check_query_sound")), and @sec:verdicts turns the answers into
 the analyzer's verdicts.
+
+=== Example: a compound check <sec:query-example>
+
+The condition `x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
+$"eq"(hat(y), hat(0))$ alone. In Sign, with $x$ non-positive and $y$ positive,
+both queries give a definite _false_, both negations give _true_, and so does
+the conjunction (@fig:query-tree).
+
+#let _q = claim-row("dom-query-tree-sign", "11:7")
+#assert(_q.verdict == "PROVED", message: "dom-query-tree-sign: the figure says proved")
+#let _qn(pos, name, body, query: false) = node(
+  pos,
+  text(size: 8.5pt, body),
+  name: name,
+  inset: 4pt,
+  stroke: if query { 0.8pt + vb.accent } else { 0.6pt + vb.neutral },
+  fill: if query { vb.accent.lighten(88%) } else { none },
+  shape: rect,
+  corner-radius: 2pt,
+)
+#figure(
+  diagram(
+    spacing: (8mm, 11mm),
+    _qn((1, 0), <q-and>, [`x <= y && y != 0`: _true_]),
+    _qn((0, 1), <q-le>, [`x <= y` #h(0.3em) $~> not "less"(hat(y), hat(x))$: _true_]),
+    _qn((2, 1), <q-ne>, [`y != 0` #h(0.3em) $~> not "eq"(hat(y), hat(0))$: _true_]),
+    _qn((0, 2), <q-less>, [$"less"(signval(+), signval("≤0"))$: _false_], query: true),
+    _qn((2, 2), <q-eq>, [$"eq"(signval(+), signval("0"))$: _false_], query: true),
+    edge(<q-and>, <q-le>, "-", stroke: _order),
+    edge(<q-and>, <q-ne>, "-", stroke: _order),
+    edge(<q-le>, <q-less>, "-", stroke: 1.1pt + vb.accent),
+    edge(<q-ne>, <q-eq>, "-", stroke: 1.1pt + vb.accent),
+  ),
+  kind: image,
+  placement: none,
+  caption: [How #isaconst("check_query") answers a compound condition, in Sign
+    with #raw(_q.state) (claim `dom-query-tree-sign`). Each comparison becomes
+    one of the domain's two queries (blue), as $~>$ marks; the answer follows
+    the colon. Negation flips a definite answer,
+    and `&&` is true because both operands are. The analyzer reports the check
+    #_q.verdict.],
+) <fig:query-tree>

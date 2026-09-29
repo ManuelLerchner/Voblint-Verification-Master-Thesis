@@ -1,7 +1,7 @@
 (* src/Analyses/Sign/Sign_Transfer.thy *)
 global_interpretation sign_tf: mono_nonrelational_ops sign_ops
-  rewrites "n_top sign_ops = STop"
-    and "sound_special_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
+  rewrites "(top :: sign) = STop"
+    and "sound_minmax_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
   defines assign_sign = sign_tf.assign
     and skip_sign = sign_tf.skip
     and body_sign = sign_tf.body

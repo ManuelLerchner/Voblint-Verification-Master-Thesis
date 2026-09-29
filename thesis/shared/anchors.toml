@@ -128,7 +128,7 @@ name = "gamma_state"
 chapter = "ch:domains"
 concept = "Backward refinement"
 kind = "locale"
-name = "backward_domain"
+name = "sound_refinement"
 
 [[anchor]]
 chapter = "ch:domains"

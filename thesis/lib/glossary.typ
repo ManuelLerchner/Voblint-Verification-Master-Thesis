@@ -426,7 +426,7 @@
     "backward-filtering",
     "backward filtering",
     _dom,
-    isa: [#isalocale("backward_domain"), #isaconst("bfilter")],
+    isa: [#isalocale("sound_refinement"), #isaconst("bfilter")],
     see: <ch:domains>,
   )[
     Refining a state under a guard with inverse operators. A filter may keep

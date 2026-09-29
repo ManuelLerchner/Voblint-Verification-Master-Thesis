@@ -246,6 +246,33 @@
       "globals": "warrow"
     }
   },
+  "dom-int-plus-inverse": {
+    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow"
+    }
+  },
+  "dom-interval-plus-inverse": {
+    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow"
+    }
+  },
+  "dom-query-tree-sign": {
+    "fixture": "tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  if (x <= 0) {\n    if (0 < y) {\n      __voblint_check(x <= y && y != 0);\n    }\n  }\n}",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow"
+    }
+  },
   "dom-stride2-congruence": {
     "fixture": "tests/regression/12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp",
     "program": "fun main() {\n  v = 1;\n  while (v < 51) {\n    __voblint_check(v >= 1);\n    v = v + 2;\n    __voblint_check(v <= 52);\n  }\n  __voblint_check(v >= 51);\n  __voblint_check(v <= 52);\n  __voblint_check(v == 51);\n}",

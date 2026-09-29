@@ -211,6 +211,30 @@ argv = [
 ]
 why = "Backward filtering of 0 < x lets Sign prove y >= 0 after both arms, with y=≥0."
 
+[claims.dom-interval-plus-inverse]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
+]
+why = "Interval's identity inverse of + leaves x < 4 unknown on the true arm of x + 1 < 5."
+
+[claims.dom-int-plus-inverse]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
+]
+why = "Int's component inverses of + carry no order either, so x < 4 stays unknown on the true arm of x + 1 < 5."
+
+[claims.dom-query-tree-sign]
+argv = [
+  "--analysis",
+  "sign",
+  "tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp",
+]
+why = "check_query proves x <= y && y != 0 from Sign's less and eq with x=≤0, y=+."
+
 [claims.dom-disjunct-sign]
 argv = [
   "--analysis",
