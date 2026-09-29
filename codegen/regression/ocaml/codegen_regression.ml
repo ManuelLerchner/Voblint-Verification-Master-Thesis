@@ -35,6 +35,8 @@ let domain_label = function
   | Sign_Analysis -> "Sign_Analysis"
   | Interval_Analysis -> "Interval_Analysis"
   | Int_Analysis -> "Int_Analysis"
+  | Int_Once_Analysis -> "Int_Once_Analysis"
+  | Int_Never_Analysis -> "Int_Never_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
   | Order_Analysis -> "Order_Analysis"
