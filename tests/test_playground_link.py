@@ -32,6 +32,19 @@ def test_settings_go_in_the_query_and_the_program_in_the_fragment():
     assert unpack(fragment) == "fun main() {}"
 
 
+def test_int_refinement_is_a_setting_of_its_own():
+    url = playground_link.link("fun main() {}", "int", refinement="never")
+    assert "analysis=int&globals=warrow&context=none&refinement=never#" in url
+
+
+def test_header_int_refinement_reaches_the_link(tmp_path):
+    program = tmp_path / "prog.vimp"
+    program.write_text(
+        "// PARAM: --analysis int --int-refinement once\nfun main() {}\n"
+    )
+    assert "refinement=once" in playground_link.program_link(program, [])
+
+
 def test_flags_in_any_order_override_the_header(tmp_path):
     program = tmp_path / "prog.vimp"
     program.write_text(

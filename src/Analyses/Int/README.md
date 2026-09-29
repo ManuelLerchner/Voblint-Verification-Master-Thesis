@@ -32,17 +32,27 @@ Int_Refinement_Control  the three refine modes
                                                      their commutation, at every mode
   -> Int_Classify                                    check discharge
   -> Int_Sound                                       initial-state facts
-  -> generated/Int_Analyses                          the unit-context registration at
-                                                     Refine_Fixpoint (generated; see below)
+  -> generated/Int_Analyses                          the unit-context registrations at
+     generated/Int_Once_Analyses                     Refine_Fixpoint, Refine_Once and
+     generated/Int_Never_Analyses                    Refine_Never (generated; see below)
 ```
 
 Like Interval, Int has a component with infinite ascending chains, so the global
 update rule matters: every registration takes it as a parameter, and the CLI
 defaults to Apinis warrowing (`Globals_Warrow`).
 
-The registrations, and therefore `run_voblint`, select `Refine_Fixpoint`. The
-executable operations in `Int_Exec` and the facts they rest on keep the mode
-parameter for comparisons and regression witnesses.
+Each mode is registered as an analysis of its own: `Int_Analysis` at
+`Refine_Fixpoint`, `Int_Once_Analysis` and `Int_Never_Analysis`, each with its own
+field of the combined state. The CLI's `--int-refinement` picks one (default
+`fixpoint`); the facts behind all three are the same mode-generic ones.
+
+On programs, `once` and `fixpoint` give the same results in every case we know
+of. A refinement chain is at most two rounds long (Congruence never learns from
+Interval, and Parity learns from it only at singletons), every guard already
+refines twice, and an arithmetic result's bounds already agree with its
+congruence. The difference `refinement_round_is_progressive` witnesses needs
+operands no stored state has. `never` differs visibly: see the regression
+fixtures `16-composite-domain/precision/12`–`14`.
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`
 
@@ -56,8 +66,8 @@ candidate. What each mode then does with it:
 - `Refine_Fixpoint` — the same, here. One round already sufficed *for this guard*.
 
 `Exec_Int_DG_Run` (Examples/Int) proves the `Refine_Never` and `Refine_Once` results by
-real solver runs and closes with `dgExI_never_ne_once`; `Refine_Fixpoint` is the CLI's
-mode, so its result is pinned by the CLI regression. That `Once` equals `Fixpoint` here
+real solver runs and closes with `dgExI_never_ne_once`; the CLI regression pins all
+three modes. That `Once` equals `Fixpoint` here
 is not a general fact: `refinement_round_is_progressive` in `Example_Int_Domain` is a
 witness where a further round still makes progress.
 
@@ -107,10 +117,10 @@ that includes it.
 discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
 `int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
-manifest pins `Refine_Fixpoint` by naming the mode-taking operations as applied
-roles (`{const: int_tf_st_for, args: [Refine_Fixpoint]}`), because a
-config-driven caller needs one concrete choice; the facts it cites are the same
-at every mode.
+manifest registers one analysis per mode by naming the mode-taking operations as
+applied roles (`{const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise at
+`Refine_Once` and `Refine_Never`), because each field needs one concrete choice;
+the facts it cites are the same at every mode.
 
 The global update rule is the second axis. `int_rule` leaves it free as `r`,
 and so do the combined `mcp_es_rule` and `mcp_cs_rule` runs, alongside the

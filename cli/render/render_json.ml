@@ -482,6 +482,8 @@ let domain_json d =
     | C.Sign_Analysis -> "Sign_Analysis"
     | C.Interval_Analysis -> "Interval_Analysis"
     | C.Int_Analysis -> "Int_Analysis"
+    | C.Int_Once_Analysis -> "Int_Once_Analysis"
+    | C.Int_Never_Analysis -> "Int_Never_Analysis"
     | C.Parity_Analysis -> "Parity_Analysis"
     | C.Congruence_Analysis -> "Congruence_Analysis"
     | C.Order_Analysis -> "Order_Analysis")

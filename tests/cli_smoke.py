@@ -205,6 +205,43 @@ CASES = [
         "unknown --globals value",
     ),
     (
+        "--int-refinement never is accepted",
+        ["--analysis", "int", "--int-refinement", "never", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "--int-refinement once is accepted",
+        ["--analysis", "int", "--int-refinement", "once", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "--int-refinement fixpoint is accepted",
+        ["--analysis", "int", "--int-refinement", "fixpoint", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        # The mode belongs to int, wherever int sits in a comma list.
+        "--int-refinement applies to int in a comma list",
+        ["--analysis", "interval,int", "--int-refinement", "once", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "--int-refinement without int is rejected",
+        ["--analysis", "interval", "--int-refinement", "once", SANITY_FILE],
+        1,
+        "--int-refinement is only valid with --analysis int",
+    ),
+    (
+        "unknown --int-refinement value is rejected",
+        ["--analysis", "int", "--int-refinement", "twice", SANITY_FILE],
+        1,
+        "unknown --int-refinement value",
+    ),
+    (
         "retired --solver is rejected as unrecognized",
         ["--analysis", "sign", "--solver", "join", SANITY_FILE],
         1,

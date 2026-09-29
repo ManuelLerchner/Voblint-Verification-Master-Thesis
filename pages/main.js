@@ -75,6 +75,9 @@ const contextSelect = query("#context-select");
 const contextDepthInput = query("#context-depth");
 const contextDepthGroup = query("#context-depth-group");
 
+const intRefinementSelect = query("#int-refinement-select");
+const intRefinementGroup = query("#int-refinement-group");
+
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -2783,6 +2786,10 @@ function saveGraphImage() {
     settings.push(`k${contextDepthInput.value}`);
   }
 
+  if (usesInt()) {
+    settings.push(`int-${intRefinementSelect.value}`);
+  }
+
   const link = document.createElement("a");
 
   link.href = URL.createObjectURL(image);
@@ -3004,6 +3011,16 @@ async function renderGraph(result, runGeneration) {
 /* Configuration                                                              */
 /* -------------------------------------------------------------------------- */
 
+function usesInt() {
+  return activationControl.value.split(",").includes("int");
+}
+
+/* The refinement mode belongs to Int, so it is offered only while Int runs. */
+function updateIntRefinementControls() {
+  intRefinementGroup.hidden = !usesInt();
+  intRefinementSelect.disabled = !usesInt();
+}
+
 function updateContextControls() {
   const usesCallString = contextSelect.value === "call-string";
 
@@ -3075,11 +3092,18 @@ function readConfiguration() {
     }
   }
 
+  const intRefinement = intRefinementSelect.value;
+
+  if (!new Set(["never", "once", "fixpoint"]).has(intRefinement)) {
+    throw new Error(`Unknown Int refinement: ${intRefinement}`);
+  }
+
   return {
     analysis,
     globals,
     context,
     contextDepth,
+    intRefinement,
   };
 }
 
@@ -3096,6 +3120,10 @@ function configurationLabel(configuration) {
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
+  }
+
+  if (usesInt()) {
+    parts.push(`Int ${selectedLabel(intRefinementSelect).toLowerCase()}`);
   }
 
   return parts.join(" · ");
@@ -3278,6 +3306,7 @@ function runAnalysisInWorker(configuration, source) {
         globals: configuration.globals,
         context: configuration.context,
         contextDepth: configuration.contextDepth,
+        intRefinement: configuration.intRefinement,
         source,
       });
     } catch (error) {
@@ -3518,8 +3547,18 @@ valueHintsToggle.addEventListener("change", syncValueHints);
 
 contextSelect.addEventListener("change", updateContextControls);
 
-for (const control of [...analysisChoices, globalsSelect, contextSelect, contextDepthInput]) {
+for (const control of [
+  ...analysisChoices,
+  globalsSelect,
+  contextSelect,
+  contextDepthInput,
+  intRefinementSelect,
+]) {
   control.addEventListener("change", resetForConfigurationChange);
+}
+
+for (const box of analysisChoices) {
+  box.addEventListener("change", updateIntRefinementControls);
 }
 
 globalsSelect.addEventListener("change", updateGlobalsHelp);
@@ -3642,6 +3681,7 @@ new ResizeObserver(() => {
 }).observe(graph);
 
 updateContextControls();
+updateIntRefinementControls();
 updateGlobalsHelp();
 /* A reload can restore the checkbox's last state, which the editor field does not know. */
 syncValueHints();
@@ -3668,7 +3708,7 @@ const editorFile = query("#editor-file");
  * What voblint assumes for a flag a fixture's header leaves out. A header that
  * omits one must not inherit whatever the previous run selected.
  */
-const FIXTURE_DEFAULTS = { context: "none", globals: "warrow" };
+const FIXTURE_DEFAULTS = { context: "none", globals: "warrow", refinement: "fixpoint" };
 
 let examplesPromise = null;
 
@@ -3725,10 +3765,14 @@ function exampleCard(group, fixture, pick = null) {
   chips.className = "example-chips";
   chips.append(exampleChip(fixture.analyses.join(", ")));
 
-  const { context = FIXTURE_DEFAULTS.context, k, globals } = fixture.settings;
+  const { context = FIXTURE_DEFAULTS.context, k, globals, refinement } = fixture.settings;
 
   if (context !== "none") {
     chips.append(exampleChip(k === undefined ? context : `${context} k=${k}`));
+  }
+
+  if (refinement && refinement !== FIXTURE_DEFAULTS.refinement) {
+    chips.append(exampleChip(`int ${refinement}`));
   }
 
   if (globals) {
@@ -3884,6 +3928,7 @@ function openProgram({ source, fileName, settings = {} }) {
   }
   selectIfOffered(globalsSelect, settings.globals);
   selectIfOffered(contextSelect, settings.context);
+  selectIfOffered(intRefinementSelect, settings.refinement);
 
   const depth = parseContextDepth(settings.k);
 
@@ -3892,6 +3937,7 @@ function openProgram({ source, fileName, settings = {} }) {
   }
 
   updateContextControls();
+  updateIntRefinementControls();
   updateGlobalsHelp();
   run();
 }
@@ -3930,7 +3976,7 @@ function selectIfOffered(select, value) {
  * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
-const LINK_SETTINGS = ["analysis", "globals", "context", "k"];
+const LINK_SETTINGS = ["analysis", "globals", "context", "k", "refinement"];
 
 const shareButton = query("#share-link");
 const shareLabel = query("#share-link-label");
@@ -4020,6 +4066,7 @@ async function shareLink() {
     linkParam("globals", globalsSelect.value),
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
+    ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
   ];
   const url = new URL(location.href);
 

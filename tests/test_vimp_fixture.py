@@ -15,12 +15,14 @@ import vimp_fixture  # noqa: E402
 def test_settings_read_every_analysis_flag():
     args = (
         "--analysis int,interval --context call-string --context-depth 2 --globals join"
+        " --int-refinement once"
     )
     assert vimp_fixture.analysis_settings(args.split()) == {
         "analyses": ["int", "interval"],
         "context": "call-string",
         "context_depth": 2,
         "globals": "join",
+        "int_refinement": "once",
     }
 
 

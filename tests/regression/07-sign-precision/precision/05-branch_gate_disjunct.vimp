@@ -1,5 +1,5 @@
 // PARAM: --analysis sign
-// The branch gate is generic in backward_domain, so every domain that
+// The branch gate is generic in sound_refinement, so every domain that
 // interprets it inherits the per-disjunct feasibility test -- including the
 // `feasible` entry each interpretation has to list in its `defines` block for
 // the filter to stay code-generatable. This is the Sign instance of

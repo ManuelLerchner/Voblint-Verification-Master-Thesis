@@ -68,6 +68,7 @@ self.onmessage = async (event) => {
       request.globals,
       request.context,
       request.contextDepth,
+      request.intRefinement,
       request.source,
     );
 

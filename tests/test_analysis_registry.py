@@ -28,6 +28,8 @@ DOMAINS = {
     "Sign_Analysis": ("Sign", "sign"),
     "Interval_Analysis": ("Interval", "interval"),
     "Int_Analysis": ("Int", "int"),
+    "Int_Once_Analysis": ("Int_Once", "int_once"),
+    "Int_Never_Analysis": ("Int_Never", "int_never"),
     "Parity_Analysis": ("Parity", "parity"),
     "Congruence_Analysis": ("Congruence", "congruence"),
 }

@@ -42,10 +42,13 @@ def link(
     context: str = "none",
     k: int | None = None,
     base: str = PLAYGROUND,
+    refinement: str | None = None,
 ) -> str:
     settings = [("analysis", analysis), ("globals", globals_rule), ("context", context)]
     if k is not None:
         settings.append(("k", str(k)))
+    if refinement is not None:
+        settings.append(("refinement", refinement))
     query = "&".join(f"{key}={quote(value)}" for key, value in settings)
     return f"{base}?{query}#code={pack_source(source)}"
 
@@ -104,6 +107,7 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
         settings.get("context", "none"),
         settings.get("context_depth"),
         base,
+        settings.get("int_refinement"),
     )
 
 

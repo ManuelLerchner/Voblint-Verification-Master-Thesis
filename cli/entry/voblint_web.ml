@@ -15,22 +15,27 @@
        globals,
        context,
        context_depth,
+       int_refinement,
        source
      )
 
    Examples:
 
-     Voblint_run("interval", "warrow", "none", 0, source)
+     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source)
 
      Voblint_run(
-       "interval",
+       "int",
        "join",
        "call-string",
        1,
+       "once",
        source
      )
 
    [context_depth] is ignored unless [context = "call-string"].
+
+   [int_refinement] is how the components of int refine each other: "never",
+   "once" or "fixpoint". It is ignored unless [analysis] names int.
 
    [globals] names how the solver merges side-effected globals: "join",
    "per-origin", "warrow" or "warrow-per-origin".
@@ -53,10 +58,17 @@ let now_ms () : float =
 (* Configuration                                                              *)
 (* -------------------------------------------------------------------------- *)
 
-let domain_of_string = function
+(* Each refinement mode is an analysis of its own in the generated carrier. *)
+let int_analysis_of_string = function
+  | "never" -> Some C.Int_Never_Analysis
+  | "once" -> Some C.Int_Once_Analysis
+  | "fixpoint" -> Some C.Int_Analysis
+  | _ -> None
+
+let domain_of_string int_analysis = function
   | "sign" -> Some C.Sign_Analysis
   | "interval" -> Some C.Interval_Analysis
-  | "int" -> Some C.Int_Analysis
+  | "int" -> Some int_analysis
   | "parity" -> Some C.Parity_Analysis
   | "congruence" -> Some C.Congruence_Analysis
   | "order" -> Some C.Order_Analysis
@@ -90,18 +102,21 @@ let context_of_string mode (depth : Js.number_t) =
 
 (* A comma list, kept exactly as given, and no names at all as the empty list:
    run_voblint alone decides whether it is a valid activation. *)
-let domains_of_string names =
+let domains_of_string int_analysis names =
   List.fold_right
     (fun name acc ->
-      match (domain_of_string name, acc) with
+      match (domain_of_string int_analysis name, acc) with
       | Some d, Ok ds -> Ok (d :: ds)
       | None, _ -> Error ("Unknown analysis domain: " ^ name)
       | _, (Error _ as e) -> e)
     (if names = "" then [] else String.split_on_char ',' names)
     (Ok [])
 
-let run analysis_js globals_js context_js context_depth source_js =
+let run analysis_js globals_js context_js context_depth refinement_js source_js
+    =
   let analysis_name = Js.to_string analysis_js in
+
+  let refinement_name = Js.to_string refinement_js in
 
   let globals_name = Js.to_string globals_js in
 
@@ -111,45 +126,49 @@ let run analysis_js globals_js context_js context_depth source_js =
 
   let answer =
     match
-      ( domains_of_string analysis_name,
+      ( int_analysis_of_string refinement_name,
         globals_of_string globals_name,
         context_of_string context_name context_depth )
     with
-    | Error message, _, _ -> Render_json.error_json message
+    | None, _, _ ->
+        Render_json.error_json ("Unknown int refinement: " ^ refinement_name)
     | _, None, _ ->
         Render_json.error_json ("Unknown globals rule: " ^ globals_name)
     | _, _, Error message -> Render_json.error_json message
-    | Ok domains, Some globals, Ok context -> (
-        try
-          let program, stmt_positions, header_positions =
-            Vimp_frontend.program "browser.vimp" source
-          in
-          let analysis_start = now_ms () in
-          let answer =
-            Value_symbols.decode_answer
-              (C.run_voblint domains globals context program)
-          in
-          let analysis_ms = now_ms () -. analysis_start in
-          let raw =
-            Render_json.run_voblint_json ~domains ~globals ~ctx:context program
-              answer
-          in
-          match answer with
-          | C.Invalid_Activation ->
-              Render_json.error_json ~raw
-                "Select at least one analysis, each at most once"
-          | C.Malformed_Program ->
-              let message =
-                match Wf_explain.explain program with
-                | Some reason -> "Program is not well-formed: " ^ reason
-                | None -> "Program is not well-formed"
+    | Some int_analysis, Some globals, Ok context -> (
+        match domains_of_string int_analysis analysis_name with
+        | Error message -> Render_json.error_json message
+        | Ok domains -> (
+            try
+              let program, stmt_positions, header_positions =
+                Vimp_frontend.program "browser.vimp" source
               in
-              Render_json.error_json ~raw message
-          | C.Analysed result ->
-              Render_json.result_json analysis_ms program ~stmt_positions
-                ~header_positions ~raw result
-        with Vimp_frontend.Parse_error { line; col; msg; _ } ->
-          Render_json.parse_error_json ~line ~column:col msg)
+              let analysis_start = now_ms () in
+              let answer =
+                Value_symbols.decode_answer
+                  (C.run_voblint domains globals context program)
+              in
+              let analysis_ms = now_ms () -. analysis_start in
+              let raw =
+                Render_json.run_voblint_json ~domains ~globals ~ctx:context
+                  program answer
+              in
+              match answer with
+              | C.Invalid_Activation ->
+                  Render_json.error_json ~raw
+                    "Select at least one analysis, each at most once"
+              | C.Malformed_Program ->
+                  let message =
+                    match Wf_explain.explain program with
+                    | Some reason -> "Program is not well-formed: " ^ reason
+                    | None -> "Program is not well-formed"
+                  in
+                  Render_json.error_json ~raw message
+              | C.Analysed result ->
+                  Render_json.result_json analysis_ms program ~stmt_positions
+                    ~header_positions ~raw result
+            with Vimp_frontend.Parse_error { line; col; msg; _ } ->
+              Render_json.parse_error_json ~line ~column:col msg))
   in
   Js.string answer
 
@@ -160,4 +179,4 @@ let run analysis_js globals_js context_js context_depth source_js =
  *)
 let () =
   Js.Unsafe.set Js.Unsafe.global (Js.string "Voblint_run")
-    (Js.Unsafe.callback_with_arity 5 run)
+    (Js.Unsafe.callback_with_arity 6 run)
