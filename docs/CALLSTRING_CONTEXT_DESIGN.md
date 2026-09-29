@@ -63,7 +63,7 @@ Read `Routed_Context.thy`, `DG_Ctx_Activation.thy`, `DG_Soundness.thy`,
 locale dg_ctx_activation = analysis_contract S gamma_ownership_split gs
   for S :: "('a::numeric_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname => bool" +
-  fixes g :: cfg and gk0 :: 'k
+  fixes g :: cfg and analysis_global :: 'k
     and route :: "pp => 'c => 'a abs_state => call_action => 'c"
     and cmb :: "..."
     and extra :: "..."
@@ -94,8 +94,8 @@ this pair:
 
 ```isabelle
 locale routed_context =
-  dg_ctx_activation S gs g gk0 route "routed_cmb S gk0" "routed_extra g S seed_key gk0" ...
-  for ... and seed_key :: "pp => 'c => 'k" +
+  dg_ctx_activation S gs g analysis_global route "routed_cmb S analysis_global" "routed_extra g S seed_unknown analysis_global" ...
+  for ... and seed_unknown :: "pp => 'c => 'k" +
   fixes enterc :: "cfg_node => 'c => store => 'c"
   assumes ...
     and route_enterc_agree:
@@ -165,7 +165,7 @@ choice of `cfg_node` for the call-site type), `route_k u ctx d ca = take k
   owes the same obligations every `routed_context` interpretation owes:
   finite reachable context space (checked per instance, section 0/2), solver
   coverage (`part_post_solution`, `by eval`), seed discipline
-  (`seed_key_ne_gk0`), route/enter agreement, and an actual executable
+  (`seed_unknown_ne_analysis_global`), route/enter agreement, and an actual executable
   evaluation that terminates. None of these disappear for `k > 1`; they just
   happen to specialize cleanly. `route_enterc_agree` in particular reduces
   to reflexivity here, since both sides compute the identical `take k (u #
@@ -262,7 +262,7 @@ interpretation twice_k_routed: routed_context
   Sabs is_global twice_cfg GlobalK (route_k k) ...
   "fun_of_st (bot::ivl st)" "fun_of_st cinit_ivl_st" "fun_of_st (restrict_global_st cinit_ivl_st)"
   sigma_abs "fst twice_k_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg_k SeedK (enterc_k k)
-proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
+proof (unfold_locales, goal_cases FinC SeedUnknown RouteAgree CallFwd CombFwd EnterAgree)
   ...
   case RouteAgree ... show ?case by (simp add: route_k_def enterc_k_def)  (* reflexivity *)
   ...
@@ -309,7 +309,7 @@ No changes to any of the three locales themselves.
 `Example_Interval_DG_CallString.thy` already discharges for `route_cs`):
 
 - `finC`: `finite (calls g)` — unchanged, generic per-CFG fact.
-- `seed_key_ne_gk0` — unchanged shape.
+- `seed_unknown_ne_analysis_global` — unchanged shape.
 - `route_enterc_agree` — **simpler than the k=1 case**, since `route_k`/
   `enterc_k` both reduce to the identical `take k (u # ctx)` term regardless
   of the abstract/concrete value passed in; no case split on `s`/`d` needed.
@@ -441,7 +441,7 @@ leaves the existing solver integration. (This stage is M1's stage A2/A3;
 under this design it collapses into Stage 1.) If it turns out `k`'s context
 type needs a genuinely different global-key discipline than `gk_cs` (e.g.
 because `SeedK`/`GlobalK` need to carry the truncated string too), that
-surfaces here and is still small — `Routed_Context.thy`'s `seed_key` is
+surfaces here and is still small — `Routed_Context.thy`'s `seed_unknown` is
 already a free parameter for exactly this.
 
 **Stage 3 — precision witness.**

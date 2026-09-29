@@ -50,14 +50,14 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 
 definition fact_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
     where
   "fact_sol = interval_es_rule.solution Globals_Warrow fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's
   own unknown space: \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> off the
   covered keys and hands out an \<^typ>\<open>ivl abs_state\<close>, so a value assertion below names
-  neither \<^const>\<open>Inl\<close> nor \<^const>\<open>locals\<close> nor the resolved-store representation.\<close>
+  neither \<^const>\<open>Inl\<close> nor \<^const>\<open>dg_local\<close> nor the resolved-store representation.\<close>
 
 definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
   "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
@@ -121,11 +121,11 @@ text \<open>The dead \<open>return 1\<close> edge's own local state (\<open>Stat
   \<^const>\<open>Bot\<close> within every \<open>n>=2\<close> context -- the actual fix the reachability lift
   delivers, not merely an imprecise interval that happens to widen away.\<close>
 lemma fact_dead_branch_bot_ctx_a:
-  "(locals (snd fact_sol (Inl (Statement 2, ctx_a))) :: ivl exec_dg_st lifted) = Bot"
+  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a))) :: ivl exec_dg_st lifted) = Bot"
   by eval
 
 lemma fact_dead_branch_bot_ctx_a2:
-  "(locals (snd fact_sol (Inl (Statement 2, ctx_a2))) :: ivl exec_dg_st lifted) = Bot"
+  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a2))) :: ivl exec_dg_st lifted) = Bot"
   by eval
 
 text \<open>Final acceptance value: the production check-report pipeline end to end, including

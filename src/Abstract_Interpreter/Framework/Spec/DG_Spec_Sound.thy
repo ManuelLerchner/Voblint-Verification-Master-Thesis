@@ -121,8 +121,8 @@ text \<open>The same at a built manager, where \<^const>\<open>man_local\<close>
   \<open>man_local (mk_dg_man d key)\<close> under a higher-order variable.\<close>
 
 lemma enter_runs_local_enter_transfer_mk_dg_man [intro]:
-  "enter_runs (local_enter_transfer f) (mk_dg_man d key) sigma (f d) bot"
-  using enter_runs_local_enter_transfer[of f "mk_dg_man d key" sigma] by simp
+  "enter_runs (local_enter_transfer f) (mk_dg_man d unknown_of) sigma (f d) bot"
+  using enter_runs_local_enter_transfer[of f "mk_dg_man d unknown_of" sigma] by simp
 
 text \<open>The converse direction, which a consumer needs when it has an arbitrary run
   in hand rather than the one above: a pure entry's publication is pinned, so no
@@ -173,8 +173,8 @@ lemma enter_deps_local_enter_transfer [intro]:
   by (simp add: enter_deps_def local_enter_transfer_def sp_return_def)
 
 lemma enter_deps_local_enter_transfer_mk_dg_man [intro]:
-  "enter_deps (local_enter_transfer f) (mk_dg_man d key) sigma (f d) {}"
-  using enter_deps_local_enter_transfer[of f "mk_dg_man d key" sigma] by simp
+  "enter_deps (local_enter_transfer f) (mk_dg_man d unknown_of) sigma (f d) {}"
+  using enter_deps_local_enter_transfer[of f "mk_dg_man d unknown_of" sigma] by simp
 
 text \<open>
   The analysis contract carries everything that is independent of how a call is compiled:
@@ -228,26 +228,26 @@ definition combine_program_at ::
    \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl::bot,'dg) dg_state,'dl) strategy_program"
 where
-  "combine_program_at transfer src_cc src_ex key =
+  "combine_program_at transfer src_cc src_ex unknown_of =
      do {
        dc \<leftarrow> dg_read_at src_cc;
        de \<leftarrow> dg_read_at src_ex;
-       transfer (mk_dg_man dc key) de
+       transfer (mk_dg_man dc unknown_of) de
      }"
 
 definition combine_transfer_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) man_combine_transfer \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "combine_transfer_program T src_cc src_ex key =
-     sp_map (\<lambda>d. DG d \<bottom>) (combine_program_at T src_cc src_ex key)"
+  "combine_transfer_program T src_cc src_ex unknown_of =
+     sp_map (\<lambda>d. DG d \<bottom>) (combine_program_at T src_cc src_ex unknown_of)"
 
 definition dg_spec_combine_program ::
   "('x,'k,'v,'dl::bot,'dg::bot) dg_spec \<Rightarrow> call_info \<Rightarrow> 'x + 'k \<Rightarrow> 'x + 'k \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,('dl,'dg) dg_state) strategy_program"
 where
-  "dg_spec_combine_program S ci src_cc src_ex key =
-     combine_transfer_program (dg_spec_combine_transfer S ci) src_cc src_ex key"
+  "dg_spec_combine_program S ci src_cc src_ex unknown_of =
+     combine_transfer_program (dg_spec_combine_transfer S ci) src_cc src_ex unknown_of"
 
 text \<open>
   What compilation costs an observation here: the two source reads, and then
@@ -257,24 +257,24 @@ text \<open>
 \<close>
 
 lemma traverse_combine_transfer_program:
-  "traverse_program (combine_transfer_program T src_cc src_ex key) \<tau>
+  "traverse_program (combine_transfer_program T src_cc src_ex unknown_of) \<tau>
      = traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-         (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
+         (T (mk_dg_man (dg_local (\<tau> src_cc)) unknown_of) (dg_local (\<tau> src_ex)))) \<tau>"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
 lemma sides_combine_transfer_program:
-  "sides_of_program (combine_transfer_program T src_cc src_ex key) \<tau>
+  "sides_of_program (combine_transfer_program T src_cc src_ex unknown_of) \<tau>
      = sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-         (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex)))) \<tau>"
+         (T (mk_dg_man (dg_local (\<tau> src_cc)) unknown_of) (dg_local (\<tau> src_ex)))) \<tau>"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
 lemma dep_combine_transfer_program:
-  "dep_program \<tau> (combine_transfer_program T src_cc src_ex key)
+  "dep_program \<tau> (combine_transfer_program T src_cc src_ex unknown_of)
      = insert src_cc (insert src_ex
          (dep_aux \<tau> (sp_compile_with (\<lambda>d. DG d \<bottom>)
-            (T (mk_dg_man (locals (\<tau> src_cc)) key) (locals (\<tau> src_ex))))))"
+            (T (mk_dg_man (dg_local (\<tau> src_cc)) unknown_of) (dg_local (\<tau> src_ex))))))"
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
@@ -284,7 +284,7 @@ text \<open>What the compiled form observes when both stages are local, and the 
 
 lemma traverse_local_combine_program [simp]:
   "traverse_program (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk) \<tau>
-     = DG (h (locals (\<tau> src_cc)) (locals (\<tau> src_ex))) bot"
+     = DG (h (dg_local (\<tau> src_cc)) (dg_local (\<tau> src_ex))) bot"
   by (simp add: traverse_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
 
@@ -323,21 +323,21 @@ locale analysis_contract =
     and gammaDG_mono:
       "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d g \<subseteq> \<gamma>\<^sub>D\<^sub>G d' g'"
     and step_sound:
-      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (locals (\<tau> src)) (globs (\<tau> (Inr gk))))
+      "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G
-           (locals (traverse_program
+           (dg_local (traverse_program
               (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
-           (globs (sides_of_program
+           (dg_global (sides_of_program
               (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and combine_sound:
-      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (globs (\<tau> (Inr gk)));
-        t \<in> \<gamma>\<^sub>D\<^sub>G de (globs (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
+      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (dg_global (\<tau> (Inr gk)));
+        t \<in> \<gamma>\<^sub>D\<^sub>G de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G
-            (locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+            (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
                (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
                \<tau>))
-            (globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+            (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
                (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de))
                \<tau> (Inr gk)))"
 
@@ -351,14 +351,14 @@ text \<open>
 \<close>
 
 lemma (in analysis_contract) combine_sound_program:
-  assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_cc)) (globs (\<tau> (Inr gk)))"
-    and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (locals (\<tau> src_ex)) (globs (\<tau> (Inr gk)))"
+  assumes sc: "s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_cc)) (dg_global (\<tau> (Inr gk)))"
+    and se: "t \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src_ex)) (dg_global (\<tau> (Inr gk)))"
   shows "combine_collect \<G> (ci_dst ci) s t
-          \<in> \<gamma>\<^sub>D\<^sub>G (locals (traverse_program
+          \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program
                 (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk)) \<tau>))
-                    (globs (sides_of_program (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk))
+                    (dg_global (sides_of_program (dg_spec_combine_program S ci src_cc src_ex (\<lambda>_. gk))
                                           \<tau> (Inr gk)))"
-  using combine_sound[where dc = "locals (\<tau> src_cc)" and de = "locals (\<tau> src_ex)"
+  using combine_sound[where dc = "dg_local (\<tau> src_cc)" and de = "dg_local (\<tau> src_ex)"
       and \<tau> = \<tau> and gk = gk and ci = ci, OF sc se]
   by (simp add: dg_spec_combine_program_def traverse_combine_transfer_program
       sides_combine_transfer_program)

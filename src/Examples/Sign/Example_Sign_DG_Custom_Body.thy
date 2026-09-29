@@ -128,7 +128,7 @@ abbreviation bf_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sig
 
 definition bf_stock_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "bf_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for bf_prog_gs
@@ -137,7 +137,7 @@ definition bf_stock_eqs ::
 
 definition bf_custom_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "bf_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
@@ -156,7 +156,7 @@ lemma bf_custom_terminates:
 
 definition bf_stock_sol ::
   "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
+   \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "bf_stock_sol =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_stock_eqs
@@ -164,7 +164,7 @@ definition bf_stock_sol ::
 
 definition bf_custom_sol ::
   "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
+   \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "bf_custom_sol =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_custom_eqs
@@ -190,9 +190,9 @@ text \<open>
 \<close>
 
 lemma bf_entry_node_is_pre_body:
-  "bf_lookup (locals (snd bf_stock_sol (Inl (FunctionEntry (STR ''mark''), ()))))
+  "bf_lookup (dg_local (snd bf_stock_sol (Inl (FunctionEntry (STR ''mark''), ()))))
      (STR ''p'') = SPos"
-  "bf_lookup (locals (snd bf_custom_sol (Inl (FunctionEntry (STR ''mark''), ()))))
+  "bf_lookup (dg_local (snd bf_custom_sol (Inl (FunctionEntry (STR ''mark''), ()))))
      (STR ''p'') = SPos"
   by eval+
 
@@ -205,11 +205,11 @@ text \<open>
 \<close>
 
 lemma bf_stock_keeps_the_formal:
-  "bf_lookup (locals (snd bf_stock_sol (Inl (Statement 0, ())))) (STR ''p'') = SPos"
+  "bf_lookup (dg_local (snd bf_stock_sol (Inl (Statement 0, ())))) (STR ''p'') = SPos"
   by eval
 
 lemma bf_custom_forgets_the_formal:
-  "bf_lookup (locals (snd bf_custom_sol (Inl (Statement 0, ())))) (STR ''p'') = STop"
+  "bf_lookup (dg_local (snd bf_custom_sol (Inl (Statement 0, ())))) (STR ''p'') = STop"
   by eval
 
 text \<open>Outside the callee the two agree: the caller's own locals never meet the
@@ -217,8 +217,8 @@ text \<open>Outside the callee the two agree: the caller's own locals never meet
   override. \<open>Statement 4\<close> is that call site in \<open>main\<close>, one command after \<open>r := 1\<close>.\<close>
 
 lemma bf_caller_unaffected:
-  "bf_lookup (locals (snd bf_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
-  "bf_lookup (locals (snd bf_custom_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
+  "bf_lookup (dg_local (snd bf_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
+  "bf_lookup (dg_local (snd bf_custom_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
   by eval+
 
 end

@@ -308,14 +308,14 @@ proof -
   then show ?thesis using sim tc by blast
 qed
 
-text \<open>A functional policy carries \<^const>\<open>key\<close>'s context on every valid trace, so it needs no
+text \<open>A functional policy carries \<^const>\<open>activation_context\<close>'s context on every valid trace, so it needs no
   context witness.\<close>
 corollary source_store_in_activation_collect_of_fun:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> key f startcontext t = c
+                   \<and> activation_context f startcontext t = c
                    \<and> s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -325,10 +325,11 @@ proof -
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have tc: "trace_context \<G> (call_context_rel_of_fun f) startcontext ?g t (key f startcontext t)"
+  have tc:
+    "trace_context \<G> (call_context_rel_of_fun f) startcontext ?g t (activation_context f startcontext t)"
     by (simp add: trace_context_of_fun_iff[OF tv])
   have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,?g,S\<^esub> v
-              (key f startcontext t)"
+              (activation_context f startcontext t)"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim by blast
 qed

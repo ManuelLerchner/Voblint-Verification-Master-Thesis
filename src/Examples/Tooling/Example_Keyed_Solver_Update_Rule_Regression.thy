@@ -1,6 +1,6 @@
 theory Example_Keyed_Solver_Update_Rule_Regression
   imports
-    "Voblint_Framework.DG_Keyed_Generator"
+    "Voblint_Framework.DG_Indexed_Generator"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Analysis_Interval.Interval_Exec"
@@ -94,7 +94,7 @@ text \<open>
   exactly the shape \<open>FunctionResult factorial\<close> has in the real factorial
   regression (two incoming intra edges, one per branch). \<open>merge_step\<close>
   answers fixed constants at \<open>EA_Nop\<close>/\<open>EA_Assign\<close> regardless of the incoming
-  local/global state, so the solved global value at \<open>gkey ()\<close> is exactly
+  local/global state, so the solved global value at \<open>analysis_global_at ()\<close> is exactly
   the join of the two edges' own contributions, not a self-referential
   fixpoint -- letting the check below assert that join directly.
 \<close>
@@ -125,7 +125,7 @@ lemma merge_terminates:
   by eval
 
 lemma merge_global_value:
-  "map_option (\<lambda>sol. globs (snd sol (Inr ()))) (TD_side_warrowing_apinis_Interp_solve_c merge_eqs (Statement 2, ()))
+  "map_option (\<lambda>sol. dg_global (snd sol (Inr ()))) (TD_side_warrowing_apinis_Interp_solve_c merge_eqs (Statement 2, ()))
      = Some (Ivl (Fin 0) (Fin 0) \<squnion> Ivl (Fin 1) (Fin 1))"
   by eval
 

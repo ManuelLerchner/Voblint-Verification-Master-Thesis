@@ -2049,7 +2049,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           <code>⊔</code> of a join node goes. Compiling the program gives the node's single tree.
           Publications are held back rather than emitted where they occur, so a node that writes
           a global ends its tree with one <code>Side</code> carrying the completed contribution
-          (<a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>).
+          (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>).
           A node that writes nothing contributes <code>bot</code>, and
           <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>flush_sides</code></a>
           drops that: joining <code>bot</code> into a global changes nothing, and publishing it
@@ -2106,7 +2106,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
   return (cinit ⊔ locals s)
 }</code></pre>
                 </li>
-                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. <code>cinit</code> is shorthand here rather than a name in the theory: the abstract entry state the fold starts from, over-approximating every store a run can start in &mdash; each declared global <code>0</code>, each local unconstrained (<a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores%7Cconst"><code>cinit_stores</code></a> is that set of concrete stores). This program declares no global, so here it is plain <code>⊤</code>.
+                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. <code>cinit</code> is shorthand here rather than a name in the theory: the abstract entry state the fold starts from, over-approximating every store a run can start in &mdash; each declared global <code>0</code>, each local unconstrained (<a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.cinit_stores%7Cconst"><code>cinit_stores</code></a> is that set of concrete stores). This program declares no global, so here it is plain <code>⊤</code>.
                   <pre class="gen-code" data-lang="isabelle"><code>eqs E =
   QueryG (Seed E c) (λs.
     Answer (cinit ⊔ locals s))</code></pre>
@@ -2139,7 +2139,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
   return ([i := 0] e ⊔ [i := i + 1] b)
 }</code></pre>
                 </li>
-                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
+                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
                   <pre class="gen-code" data-lang="isabelle"><code>eqs H =
   QueryL E (λe. QueryL B (λb.
     Answer ([i := 0] e ⊔ [i := i + 1] b)))</code></pre>
@@ -2165,7 +2165,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
   return (assume (i &lt; 5) h)
 }</code></pre>
                 </li>
-                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
+                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
                   <pre class="gen-code" data-lang="isabelle"><code>eqs B =
   QueryL H (λh. Answer (assume (i &lt; 5) h))</code></pre>
                 </li>
@@ -2190,7 +2190,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
   return (assume (i ≥ 5) h)
 }</code></pre>
                 </li>
-                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
+                <li>compiled back to a <em>tree</em>, with any publication held to the end of its path, <a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs_buffered%7Cconst"><code>routed_node_rhs_buffered</code></a>. This node contributes <code>bot</code> to the analysis global, and a <code>bot</code> publication is dropped, so no <a href="Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.flush_sides%7Cconst"><code>Side</code></a> survives.
                   <pre class="gen-code" data-lang="isabelle"><code>eqs X =
   QueryL H (λh. Answer (assume (i ≥ 5) h))</code></pre>
                 </li>
@@ -2531,7 +2531,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         Voblint publishes for exactly two reasons. One is the analysis global, the single unknown
         carrying whatever a domain wants every program point to see. The other is a call: a caller
         does not write the callee's entry point, it publishes the entry state under a key
-        (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_gk%7Ctype"><code>Activation_Seed</code></a>)
+        (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.global_unknown%7Ctype"><code>Activation_Seed</code></a>)
         that the callee's entry reads back. The vendored solver can only side-effect a global
         unknown, so that key is a global proxy rather than the local unknown Goblint writes with
         <code>sidel</code>, which is a <a href="#goblint">recorded difference</a>, not an accident.
@@ -2678,7 +2678,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <figcaption>
           This is how the equation system is generated, not how it is solved: every node's
           right-hand side is built from its own incoming contributions
-          (<a href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>),
+          (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>),
           and a call site contributes one program that publishes and reads
           (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>).
           <code>enter</code> and <code>combine</code> are the analysis's, fields of
@@ -4737,7 +4737,7 @@ fun main() {
           <li class="chain-link">
             <span class="chain-rel">=</span>
             <a data-mode-link="none" href="Voblint/Voblint_Framework/Routed_Context_Unit.html#Routed_Context_Unit.activation_collect_unit_eq_ltr_collect%7Cfact"><code>activation_collect_unit_eq_ltr_collect</code></a>
-            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.entry_state_ltr_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_ltr_collect_eq_Union_of_terminates</code></a>
+            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_ltr_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_ltr_collect_eq_Union_of_terminates</code></a>
             <span class="chain-link-note"></span>
           </li>
           <li class="chain-rung" data-rung="activation">
@@ -4799,9 +4799,9 @@ fun main() {
         <figcaption>
           Values at rung 4 are the analyzer's interval results for the factorial program, with the
           default Warrow. Links 2 to 4 compose into
-          <a href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>
           without context, and into
-          <a href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
           with entry-state contexts;
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>, the first
           flagship theorem below, adds link 1. On the executable side, one more step transports the solver's
@@ -5276,7 +5276,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   concretization of the result there. Our run's store, <code>i = 5</code>, is in
                   <code>γ([5, 5])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact">fun_route_result_node_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact">fun_route_result_node_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="4">
@@ -5443,7 +5443,7 @@ qed</code></pre>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign. Goblint's Spec, in Isabelle.">
               <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Keyed_Generator.html#DG_Keyed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Keyed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
               <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
               <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
@@ -5463,7 +5463,7 @@ qed</code></pre>
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Keys.html#DG_Live_Keys.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Keys" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
@@ -5568,7 +5568,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">sidel into a function entry</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_gk%7Ctype" title="Definition in the formalization">Side effect into an entry proxy</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.global_unknown%7Ctype" title="Definition in the formalization">Side effect into an entry proxy</a>
             <span class="align-note">A callee entry is published to a global proxy key and read back by the entry's local unknown, so it widens one hop later; no equivalence to Goblint's fixpoint is claimed.</span>
           </li>
           <li class="align-row modeled">

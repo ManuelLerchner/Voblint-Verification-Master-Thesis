@@ -77,7 +77,7 @@ text \<open>\<open>Statement 1\<close> is the true branch of the guard, right af
 subsection \<open>Interval, on the same CFG, same generator, same solver menu\<close>
 
 definition demo_ivl_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
     where
   "demo_ivl_eqs =
      compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
@@ -86,7 +86,7 @@ definition demo_ivl_eqs ::
        (restrict_global_resolved_q (initial_resolved_st_q ivl_top ivl_top))"
 
 definition demo_ivl_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
     where
   "demo_ivl_sol = TD_side_always_join_Interp_solve demo_ivl_eqs (cfg_exit demo_cfg, ())"
 
@@ -102,12 +102,12 @@ text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<op
   parallel generator.\<close>
 
 definition demo_rel_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (relc, relc) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (relc, relc) dg_state) strategy_tree" where
   "demo_rel_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      rel_order_spec demo_cfg \<top> \<top>"
 
 definition demo_rel_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (relc, relc) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (relc, relc) dg_state)" where
   "demo_rel_sol = TD_side_always_join_Interp_solve demo_rel_eqs (cfg_exit demo_cfg, ())"
 
 lemma demo_rel_terminates:
@@ -121,11 +121,11 @@ text \<open>Interval's bound for \<open>x\<close> (and, symmetrically, \<open>y\
   neither operand had a finite bound for the other to narrow against.\<close>
 
 lemma demo_ivl_x_at_branch:
-  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''x'') = Ivl MinInf PlusInf"
+  "demo_lookup (dg_local (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''x'') = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 lemma demo_ivl_y_at_branch:
-  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''y'') = Ivl MinInf PlusInf"
+  "demo_lookup (dg_local (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''y'') = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.
@@ -136,15 +136,15 @@ text \<open>\<open>relc\<close>, at the very same point, has recorded the pair d
   empty concretization cannot make the relation assertion hold vacuously.\<close>
 
 lemma demo_rel_learns_xy:
-  "locals (snd demo_rel_sol (Inl (Statement 1, ()))) \<noteq> RelBot \<and>
+  "dg_local (snd demo_rel_sol (Inl (Statement 1, ()))) \<noteq> RelBot \<and>
    relc_has (STR ''x'') (STR ''y'')
-     (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
+     (dg_local (snd demo_rel_sol (Inl (Statement 1, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 lemma demo_rel_learns_yx:
-  "locals (snd demo_rel_sol (Inl (Statement 2, ()))) \<noteq> RelBot \<and>
+  "dg_local (snd demo_rel_sol (Inl (Statement 2, ()))) \<noteq> RelBot \<and>
    relc_has (STR ''y'') (STR ''x'')
-     (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
+     (dg_local (snd demo_rel_sol (Inl (Statement 2, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 text \<open>Side by side, the three lemmas above are the comparison: at \<open>Statement 1\<close>

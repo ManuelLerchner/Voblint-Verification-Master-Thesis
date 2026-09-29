@@ -119,7 +119,7 @@ export_code
   Field_Store Field_Whole
   route_point route_context route_callee route_targets
   check_point check_label check_exp check_verdict
-  global_key global_state Global_Shared Global_Seed
+  global_unknown global_state Global_Shared Global_Seed
   diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
   arithmetic_operation arithmetic_divisor
   Check_Proved Check_Refuted Check_Unknown

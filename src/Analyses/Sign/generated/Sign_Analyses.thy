@@ -4,7 +4,7 @@ theory Sign_Analyses
     Sign_Classify
     Sign_Transfer
     Sign_Exec
-    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -35,7 +35,7 @@ global_interpretation sign_rule: dg_analysis_exec
     sign_tf_st_for sign_enter_st_for cinit_sign_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) r"
     bot sign_classify_check
     skip_sign assign_sign special_sign branch_sign body_sign return_sign

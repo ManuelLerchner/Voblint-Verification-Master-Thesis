@@ -24,7 +24,7 @@ repeated `Side` writes from destabilising an update rule.
 
 Algorithm correctness lives upstream: `TD.TD_side` proves `partial_correctness`
 and `TD_side_mono`; `part_post_solution` (`TD.Basics_side`) is the certificate
-every soundness endpoint in `Voblint_Framework` consumes. `DG_Keyed_Generator`
+every soundness endpoint in `Voblint_Framework` consumes. `DG_Indexed_Generator`
 (`Voblint_Framework`) discharges `TD_side_mono`'s three preconditions for the
 keyed generator from per-hook properties; they are the hypotheses of the
 least-solution theorem for the solver without widening, which the shipped

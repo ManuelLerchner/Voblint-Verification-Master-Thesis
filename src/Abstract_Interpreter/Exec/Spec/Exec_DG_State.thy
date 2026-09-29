@@ -34,11 +34,11 @@ definition fun_of_dg_st_for ::
    (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
 where
   "fun_of_dg_st_for \<G> d =
-    DG (fun_of_resolved_st_q_for \<G> (locals d)) (fun_of_resolved_st_q_for \<G> (globs d))"
+    DG (fun_of_resolved_st_q_for \<G> (dg_local d)) (fun_of_resolved_st_q_for \<G> (dg_global d))"
 
 lemma fun_of_dg_st_for_simps [simp]:
-  "locals (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (locals d)"
-  "globs (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (globs d)"
+  "dg_local (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (dg_local d)"
+  "dg_global (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (dg_global d)"
   "fun_of_dg_st_for \<G> (DG a b) = DG (fun_of_resolved_st_q_for \<G> a) (fun_of_resolved_st_q_for \<G> b)"
   by (simp_all add: fun_of_dg_st_for_def)
 

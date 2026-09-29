@@ -40,7 +40,7 @@ global_interpretation interval_seed_join: dg_analysis_exec
     ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_seed_join_warrowing_Interp_solve is_activation_seed"
-    "TD_side_seed_join_warrowing_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_seed_join_warrowing_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) is_activation_seed"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
@@ -145,7 +145,7 @@ text \<open>
 
 definition flagship_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
        (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
   "flagship_eqs = interval_sj_equations flagship_gs flagship_prog"
 

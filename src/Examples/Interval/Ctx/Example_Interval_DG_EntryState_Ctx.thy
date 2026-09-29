@@ -13,7 +13,7 @@ text \<open>
   the infinitely many concrete arguments \<open>__voblint_nondet_int()\<close> can produce.
 
   The local unknown carries the whole abstract state, so the routed context is read
-  straight off \<^const>\<open>locals\<close>; there is no separate solver-global slot to reassemble
+  straight off \<^const>\<open>dg_local\<close>; there is no separate solver-global slot to reassemble
   a program state from.
 \<close>
 
@@ -37,7 +37,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 definition rc_ctx_sol ::
   "(pp \<times> ivl list) set
-    \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk
+    \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown
       \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "rc_ctx_sol = interval_es_rule.solution Globals_Warrow rc_gs rc_program"
 

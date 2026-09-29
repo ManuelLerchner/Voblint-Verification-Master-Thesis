@@ -15,7 +15,7 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `DG_Live_Keys` states its endpoints from termination alone |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `DG_Live_Unknowns` states its endpoints from termination alone |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
@@ -96,7 +96,7 @@ it makes the claim by running an order carrier that is not an `abs_state`
 through the same generator, spine and solver.
 
 The boundary is enforced by the ROOT graph. `Rel_Order_Domain` imports only
-`Voblint_Framework.DG_Spec_Sound`, `DG_Keyed_Generator` and `State_Restriction`
+`Voblint_Framework.DG_Spec_Sound`, `DG_Indexed_Generator` and `State_Restriction`
 --- nothing from any of these three sessions --- so parenting it on
 `Voblint_Exec` puts `Nonrelational/` out of reach.
 

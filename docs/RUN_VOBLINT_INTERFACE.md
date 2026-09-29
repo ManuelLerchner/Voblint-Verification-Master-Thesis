@@ -78,9 +78,9 @@ record call_route        = route_point :: pp, route_context :: nat,
                             enter alternatives)
 record result_check      = check_point :: pp, check_exp :: exp,
                            check_verdict :: contextual_verdict
-record 'v result_global  = global_key :: result_global_key,
+record 'v result_global  = global_unknown :: result_global_unknown,
                            global_state :: "'v analysis_view lifted"
-datatype result_global_key = Global_Shared | Global_Seed pname "nat option"
+datatype result_global_unknown = Global_Shared | Global_Seed pname "nat option"
                            (None = a procedure no solved context enters)
 datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)
                            (diagnostic_occurrence :: nat)
@@ -175,7 +175,7 @@ is the step from that table to the `res_states` list OCaml reads.
 
 ## Enumerating contexts without a presentation key
 
-`result_keys` is a set, and a domain's value type already spends its `ord`
+`result_unknowns` is a set, and a domain's value type already spends its `ord`
 instance on the abstraction order, so there is no linear order to list an
 entry-state context set by. `Dispatch_Carrier.thy` supplies a structural
 encoding instead: `order_key` (`Key_Int | Key_Node | Key_List`) derives

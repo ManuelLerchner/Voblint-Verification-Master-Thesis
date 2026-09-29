@@ -20,7 +20,7 @@ text \<open>
 text \<open>The analysis' own solved reader, abbreviated for the two statements below.\<close>
 
 abbreviation twice_ctx_sg ::
-  "pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> ivl exec_dg_st lifted" where
+  "pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> ivl exec_dg_st lifted" where
   "twice_ctx_sg \<equiv> interval_es_rule.reader Globals_Warrow twice_gs twice_program"
 
 abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where

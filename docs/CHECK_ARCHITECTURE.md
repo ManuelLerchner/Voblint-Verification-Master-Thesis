@@ -166,7 +166,7 @@ exposes the result as an `analysis_result` table indexed by `(node, context)`.
 covered keys, reader, result table, globals, the published `state_at` and
 `report` at a context — and carries no correctness assumptions;
 `dg_analysis` adds the domain and solver contracts, and
-`DG_Live_Keys.thy` derives the published soundness theorems from
+`DG_Live_Unknowns.thy` derives the published soundness theorems from
 termination. A domain instantiates it by naming its
 executable transfer, its callee entry, the state a run starts from, the solver,
 the check classifier and the facts that make them sound. The generated
@@ -180,7 +180,7 @@ its examples use. `run_voblint` reads none of these: it runs the combined state
 (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` in `MCP_Analyses.thy`), which
 classifies checks as described below.
 
-The node-soundness bridge is generic and proved once in `DG_Live_Keys.thy`
+The node-soundness bridge is generic and proved once in `DG_Live_Unknowns.thy`
 for every route that is a function of the call site, the unit route among them.
 `fun_route_result_node_sound` bounds `ltr_collect` at *any* node by the union of
 the states published there over the contexts — not only at the solver's own

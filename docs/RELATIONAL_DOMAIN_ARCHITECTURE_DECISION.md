@@ -1075,7 +1075,7 @@ qed
 All four `analysis_contract` obligations are discharged. The theory is the
 sole theory of session `Voblint_Analysis_Relational`, parented on
 `Voblint_Exec`; it imports only `Voblint_Framework` theories (`DG_Spec_Sound`,
-`DG_Keyed_Generator`, `State_Restriction`), and no framework theory imports
+`DG_Indexed_Generator`, `State_Restriction`), and no framework theory imports
 it.
 
 This empirically validates the architectural claim underlying Option 4:

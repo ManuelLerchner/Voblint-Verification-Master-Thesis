@@ -89,7 +89,7 @@ let global_sections result =
   List.map
     (fun g ->
       let key =
-        match C.global_key g with
+        match C.global_unknown g with
         | C.Global_Shared -> "Global"
         | C.Global_Seed (f, None) -> "enter " ^ f
         | C.Global_Seed (f, Some i) -> (

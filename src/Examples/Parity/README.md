@@ -104,7 +104,7 @@ Voblint_Examples_Parity        this directory
 ```
 
 Everything else the theory imports comes from ancestors of that parent:
-`Voblint_Result` (`DG_Live_Keys`: the routed endpoints, among them
+`Voblint_Result` (`DG_Live_Unknowns`: the routed endpoints, among them
 `fun_route_source_sound`), `Voblint_Compile` (`compile_prog`, `compiled_cfg`),
 `Voblint_Exec` (the placed carrier and `gamma_exec`), `Voblint_Solver` (the
 vendored always-join solver), and `Voblint_VIMP` (the `program { ... }`

@@ -81,6 +81,6 @@ unbounded ascending chains.
 
 Global keys differ per policy and are therefore parameters, not a fixed shape.
 The call-string run keys at `call_string_gk`, shared with every other
-call-string-keyed instance. The entry-state run keys at `routed_gk` —
+call-string-keyed instance. The entry-state run keys at `global_unknown` —
 `Analysis_Global` at `unit`, since Sign publishes no named global of its own,
 and `Activation_Seed` carrying a callee entry point with its routed context.

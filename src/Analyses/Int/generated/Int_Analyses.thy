@@ -4,7 +4,7 @@ theory Int_Analyses
     Int_Classify
     Int_Transfer
     Int_Exec
-    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -35,7 +35,7 @@ global_interpretation int_rule: dg_analysis_exec
     "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
     bot "int_classify_check Refine_Fixpoint"
     skip_int_dom "assign_int_dom Refine_Fixpoint" "special_int_dom Refine_Fixpoint"

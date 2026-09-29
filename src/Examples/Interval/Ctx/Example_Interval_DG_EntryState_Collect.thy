@@ -87,7 +87,7 @@ lemma rc_route_at_call:
         (ivl_enter_st_for rc_gs
            (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
              (STR ''p'')))
-        (locals (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+        (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                    (Inl (Statement 3, [])))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
@@ -102,7 +102,7 @@ lemma rc_call_fwd_ok:
             exec_formals_route rc_gs u ctx
               (transfer_lift rc_empty_pred
                  (ivl_enter_st_for rc_gs (call_info_of (CallEdge dst pars args) p))
-                 (locals (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+                 (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                             (Inl (u, ctx)))))
               (CallEdge dst pars args))
          \<in> fst (interval_es_rule.solution Globals_Warrow rc_gs rc_program)"
@@ -167,9 +167,9 @@ qed
 
 lemma rc_context_at_call:
   assumes sin: "s \<in> interval_gamma rc_gs
-                  (locals (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+                  (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                      (Inl (Statement 3, []))))
-                  (globs (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+                  (dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                      (Inr (Analysis_Global ()))))"
   shows "interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program
            (Statement 3) []
@@ -178,10 +178,10 @@ lemma rc_context_at_call:
            ctx_call"
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p'')"
-  let ?d = "locals (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+  let ?d = "dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
               (Inl (Statement 3, [])))"
   let ?entry = "transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ?ci) ?d"
-  let ?g = "globs (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+  let ?g = "dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
               (Inr (Analysis_Global ())))"
   have cov: "entry_pairs_cover (\<lambda>d'. interval_gamma rc_gs d' ?g)
       s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
@@ -226,8 +226,8 @@ proof -
     by eval
   have covd: "(Statement 3, []) \<in> fst rc_ctx_sol"
     unfolding rc_ctx_sol_def by eval
-  have sin: "s \<in> interval_gamma rc_gs (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
-               (globs (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
+  have sin: "s \<in> interval_gamma rc_gs (dg_local (snd rc_ctx_sol (Inl (Statement 3, []))))
+               (dg_global (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
     using sm covd
     unfolding interval_gamma_def interval_es_rule.reader_def
       interval_es_rule.sol_vars_def interval_es_rule.sol_env_def rc_ctx_sol_def[symmetric]

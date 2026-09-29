@@ -1,4 +1,4 @@
-theory DG_Keyed_Generator
+theory DG_Indexed_Generator
   imports DG_Constraint_Programs CFG_Enumeration "TD.TD_side_Interface"
     "Voblint_Solver.Strategy_Tree_Side_Buffering"
     "Voblint_Solver.Strategy_Tree_Post_Solution"
@@ -33,7 +33,7 @@ text \<open>
   \<^item> \<open>cmb\<close> --- the program for one call returning at this node.
   \<^item> \<open>extra\<close> --- the routing protocol's own per-node programs, such as an
     activation-seed read.
-  \<^item> \<open>gkey\<close> --- the analysis-global address for a context.
+  \<^item> \<open>analysis_global_at\<close> --- the analysis-global address for a context.
   \<^item> \<open>bot0\<close> --- the local value a node starts its fold from.
   \<^item> \<open>s0d\<close> --- the local value injected at the CFG entry.
   \<^item> \<open>s0g\<close> --- the global value published at the CFG entry.
@@ -43,7 +43,7 @@ text \<open>
   and folded independently. \<open>routed_node_rhs_buffered\<close> is what production
   runs --- every executable analysis in this development reaches the solver
   through it. It differs deliberately: contributions return their global part
-  in the answer, so the node's own \<open>gkey c\<close> is published once, after the whole
+  in the answer, so the node's own \<open>analysis_global_at c\<close> is published once, after the whole
   fold has been evaluated, and the enclosing \<^const>\<open>buffer_sides\<close> then
   consolidates \<^emph>\<open>every\<close> key it names --- activation seeds included --- into
   one flush apiece.
@@ -196,19 +196,19 @@ definition routed_node_rhs ::
    \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
-  "routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g =
+  "routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
             t = sp_compile (side_rhs_fold_dg acc0
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c v))
-        in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
+        in if v = cfg_entry g then Side (analysis_global_at c) (DG bot s0g) t else t)"
 
 
 lemma eq_routed_node_rhs:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g ctx w). sp_wf p"
   shows
-  "eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g)
+  "eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g)
       (v, ctx) \<tau> =
    DG (side_acc_dg
      (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
@@ -221,10 +221,10 @@ lemma sides_routed_node_rhs:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g ctx w). sp_wf p"
   shows
-  "sides_of_rhs (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g
-      (v, ctx)) \<tau> (Inr (gkey ctx)) =
+  "sides_of_rhs (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+      (v, ctx)) \<tau> (Inr (analysis_global_at ctx)) =
    (if v = cfg_entry g then DG bot s0g else bot)
-   \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+   \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
        (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v) bot"
   by (simp add: routed_node_rhs_def Let_def
         sides_of_program_side_rhs_fold_dg_char[OF wf]
@@ -232,7 +232,7 @@ lemma sides_routed_node_rhs:
 
 text \<open>
   One call site's own contribution to the node's key, as a bound rather than an
-  equation: what a call site publishes at \<open>gkey ctx\<close> is below what the whole
+  equation: what a call site publishes at \<open>analysis_global_at ctx\<close> is below what the whole
   equation publishes there. A soundness argument that has to place a single
   publication inside the solution reaches for this, and then for
   \<^const>\<open>part_post_solution\<close>; it is deliberately directional and untagged.
@@ -242,17 +242,17 @@ lemma sides_comb_le_routed_node_rhs:
   assumes site: "(cc, ca) \<in> set (site_sel g v)"
     and wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                    extra g ctx w). sp_wf p"
-  shows "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (gkey ctx))
-           \<le> sides_of_rhs (routed_node_rhs pred_sel site_sel gkey route it cmb extra
-                 g bot0 s0d s0g (v, ctx)) \<tau> (Inr (gkey ctx))"
+  shows "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
+           \<le> sides_of_rhs (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra
+                 g bot0 s0d s0g (v, ctx)) \<tau> (Inr (analysis_global_at ctx))"
 proof -
   have "cmb route ctx ca cc v
           \<in> set (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v)"
     by (rule routed_contribution_programs_combineI) (rule site)
-  then have "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (gkey ctx))
-          \<le> foldr (\<lambda>t acc. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc)
+  then have "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
+          \<le> foldr (\<lambda>t acc. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc)
               (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v) bot"
-    using foldr_sup_le_iff[of "\<lambda>t. sides_of_program t \<tau> (Inr (gkey ctx))"] by blast
+    using foldr_sup_le_iff[of "\<lambda>t. sides_of_program t \<tau> (Inr (analysis_global_at ctx))"] by blast
   then show ?thesis
     unfolding sides_routed_node_rhs[OF wf] by (simp add: le_supI2)
 qed
@@ -262,10 +262,10 @@ subsection \<open>Buffered generator: fold Side-free contributions, publish once
 text \<open>
   \<^const>\<open>routed_node_rhs\<close> writes a node's own key once per contribution
   that publishes there: several intra predecessors or several return call actions can
-  each independently emit a \<open>Side (gkey c) ...\<close>, so several writes to the same
-  \<open>gkey c\<close> land in one RHS evaluation. \<open>routed_node_rhs_buffered\<close> folds
+  each independently emit a \<open>Side (analysis_global_at c) ...\<close>, so several writes to the same
+  \<open>analysis_global_at c\<close> land in one RHS evaluation. \<open>routed_node_rhs_buffered\<close> folds
   Side-free contribution programs (the caller's own \<open>it_c\<close> for \<open>intra\<close> and \<open>cmb_c\<close> for
-  \<open>comb\<close>) with \<^const>\<open>fold_rhs_program\<close> and publishes \<open>gkey c\<close> once, after every
+  \<open>comb\<close>) with \<^const>\<open>fold_rhs_program\<close> and publishes \<open>analysis_global_at c\<close> once, after every
   contribution has been read.
 
   That fold shapes the node's \<^emph>\<open>own\<close> key, but \<open>extra route c v\<close> stays a list of
@@ -295,13 +295,13 @@ definition routed_node_rhs_buffered ::
    \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
-  "routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g =
+  "routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
             t = sp_compile (fold_rhs_program acc0
                   (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g c v))
         in buffer_sides (sp_lift_tree t (\<lambda>res.
-          Side (gkey c) (DG bot (globs res)) (Answer (DG (locals res) bot)))))"
+          Side (analysis_global_at c) (DG bot (dg_global res)) (Answer (DG (dg_local res) bot)))))"
 
 text \<open>
   \<open>traverse_fold_rhs_program_char\<close> states the fold in evaluation order (a left
@@ -314,9 +314,9 @@ lemma eq_routed_node_rhs_buffered:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it_c cmb_c
                      extra g ctx w). sp_wf p"
   shows
-  "eq (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g)
+  "eq (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g)
       (v, ctx) \<tau> =
-   DG (locals (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
+   DG (dg_local (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
      (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot))) bot"
   by (simp add: routed_node_rhs_buffered_def Let_def
@@ -325,19 +325,20 @@ lemma eq_routed_node_rhs_buffered:
 lemma sides_routed_node_rhs_buffered:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it_c cmb_c
                      extra g ctx w). sp_wf p"
-    and intra_free_at_key: "\<And>c' src a \<sigma>. sides_of_program (it_c c' src a) \<sigma> (Inr (gkey c')) = bot"
+    and intra_free_at_key:
+      "\<And>c' src a \<sigma>. sides_of_program (it_c c' src a) \<sigma> (Inr (analysis_global_at c')) = bot"
     and comb_free_at_key: "\<And>c' ca cc ex \<sigma>.
-                     sides_of_program (cmb_c route c' ca cc ex) \<sigma> (Inr (gkey c')) = bot"
+                     sides_of_program (cmb_c route c' ca cc ex) \<sigma> (Inr (analysis_global_at c')) = bot"
     and extra_free: "\<And>c' w \<sigma> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_program x \<sigma> z = bot"
-  shows "sides_of_rhs (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g
-      bot0 s0d s0g (v, ctx)) \<tau> (Inr (gkey ctx)) =
-   DG bot (globs (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
+  shows "sides_of_rhs (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g
+      bot0 s0d s0g (v, ctx)) \<tau> (Inr (analysis_global_at ctx)) =
+   DG bot (dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
      (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot)))"
 proof -
   have free: "\<And>w \<sigma> x.
       x \<in> set (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx w)
-      \<Longrightarrow> sides_of_program x \<sigma> (Inr (gkey ctx)) = bot"
+      \<Longrightarrow> sides_of_program x \<sigma> (Inr (analysis_global_at ctx)) = bot"
     using intra_free_at_key comb_free_at_key extra_free
     by (blast elim: routed_contribution_programsE)
   show ?thesis
@@ -346,7 +347,7 @@ proof -
     have z0: "sides_of_rhs (sp_compile (fold_rhs_program (DG (bot0 \<squnion> s0d) s0g)
         (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx
            (cfg_entry g))))
-        \<tau> (Inr (gkey ctx)) = bot"
+        \<tau> (Inr (analysis_global_at ctx)) = bot"
       by (simp only: sides_of_program_fold_rhs_program_char[OF wf]
           foldr_sup_bot_of_all_bot[OF free[where w = "cfg_entry g"]])
     from True show ?thesis
@@ -357,7 +358,7 @@ proof -
     case False
     have z0: "sides_of_rhs (sp_compile (fold_rhs_program (DG bot0 bot)
         (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)))
-        \<tau> (Inr (gkey ctx)) = bot"
+        \<tau> (Inr (analysis_global_at ctx)) = bot"
       by (simp only: sides_of_program_fold_rhs_program_char[OF wf]
           foldr_sup_bot_of_all_bot[OF free[where w = v]])
     from False show ?thesis
@@ -382,15 +383,15 @@ text \<open>
 text \<open>
   \<open>routed_node_rhs_buffered\<close>'s declarative value matches
   \<open>routed_node_rhs\<close>'s, given that each buffered hook is the Side-free
-  contribution analogue of its unbuffered counterpart at the SAME \<open>gkey ctx\<close> slot.
+  contribution analogue of its unbuffered counterpart at the SAME \<open>analysis_global_at ctx\<close> slot.
   \<open>intra\<close> and \<open>comb\<close> carry the same six hypotheses -- pairwise local/global/dep
   agreement, buffered-side freeness at the key, side purity, and off-key agreement --
   and \<open>extra\<close> is Side-free and answers only its local slot
   (\<open>extra_free\<close>/\<open>extra_local_only\<close> -- \<open>routed_entry_seed_programs\<close> discharges both by direct
-  inspection, since it answers on its \<open>locals\<close> half and issues no \<open>Side\<close>). A local-only
+  inspection, since it answers on its \<open>dg_local\<close> half and issues no \<open>Side\<close>). A local-only
   intra hook discharges its six trivially: its program publishes nothing, so the
   contribution analogue is the program itself and every hypothesis is reflexive or
-  \<open>bot\<close>; an intra hook that genuinely publishes at \<open>gkey ctx\<close> supplies its reshaped
+  \<open>bot\<close>; an intra hook that genuinely publishes at \<open>analysis_global_at ctx\<close> supplies its reshaped
   contribution program, exactly as a reshaped \<open>routed_call_program\<close> does for \<open>cmb\<close>.
 \<close>
 
@@ -404,49 +405,50 @@ lemma routed_node_rhs_buffered_correspondence:
                        extra g ctx w). sp_wf p"
     and wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                    extra g ctx w). sp_wf p"
-    and intra_t: "\<And>c' src a \<tau>. locals (traverse_program (it_c c' src a) \<tau>)
-                     = locals (traverse_program (it c' src a) \<tau>)"
+    and intra_t: "\<And>c' src a \<tau>. dg_local (traverse_program (it_c c' src a) \<tau>)
+                     = dg_local (traverse_program (it c' src a) \<tau>)"
     and intra_side_pure: "\<And>c' src a \<tau>.
-                            locals (sides_of_program (it c' src a) \<tau> (Inr (gkey c'))) = bot"
-    and intra_s: "\<And>c' src a \<tau>. globs (traverse_program (it_c c' src a) \<tau>)
-                     = globs (sides_of_program (it c' src a) \<tau> (Inr (gkey c')))"
-    and intra_free_at_key: "\<And>c' src a \<tau>. sides_of_program (it_c c' src a) \<tau> (Inr (gkey c')) = bot"
-    and intra_sides_off_key: "\<And>c' src a \<tau> z. z \<noteq> Inr (gkey c')
+                            dg_local (sides_of_program (it c' src a) \<tau> (Inr (analysis_global_at c'))) = bot"
+    and intra_s: "\<And>c' src a \<tau>. dg_global (traverse_program (it_c c' src a) \<tau>)
+                     = dg_global (sides_of_program (it c' src a) \<tau> (Inr (analysis_global_at c')))"
+    and intra_free_at_key:
+      "\<And>c' src a \<tau>. sides_of_program (it_c c' src a) \<tau> (Inr (analysis_global_at c')) = bot"
+    and intra_sides_off_key: "\<And>c' src a \<tau> z. z \<noteq> Inr (analysis_global_at c')
                      \<Longrightarrow> sides_of_program (it_c c' src a) \<tau> z = sides_of_program (it c' src a) \<tau> z"
     and intra_dep: "\<And>c' src a \<tau>. dep_program \<tau> (it_c c' src a) = dep_program \<tau> (it c' src a)"
-    and comb_t: "\<And>c' ca cc ex \<tau>. locals (traverse_program (cmb_c route c' ca cc ex) \<tau>)
-                     = locals (traverse_program (cmb route c' ca cc ex) \<tau>)"
+    and comb_t: "\<And>c' ca cc ex \<tau>. dg_local (traverse_program (cmb_c route c' ca cc ex) \<tau>)
+                     = dg_local (traverse_program (cmb route c' ca cc ex) \<tau>)"
     and comb_side_pure: "\<And>c' ca cc ex \<tau>.
-                     locals (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
-    and comb_s: "\<And>c' ca cc ex \<tau>. globs (traverse_program (cmb_c route c' ca cc ex) \<tau>)
-                     = globs (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (gkey c')))"
+                     dg_local (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (analysis_global_at c'))) = bot"
+    and comb_s: "\<And>c' ca cc ex \<tau>. dg_global (traverse_program (cmb_c route c' ca cc ex) \<tau>)
+                     = dg_global (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (analysis_global_at c')))"
     and comb_free_at_key: "\<And>c' ca cc ex \<tau>.
-                     sides_of_program (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
-    and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (gkey c')
+                     sides_of_program (cmb_c route c' ca cc ex) \<tau> (Inr (analysis_global_at c')) = bot"
+    and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (analysis_global_at c')
                      \<Longrightarrow> sides_of_program (cmb_c route c' ca cc ex) \<tau> z
                          = sides_of_program (cmb route c' ca cc ex) \<tau> z"
     and comb_dep: "\<And>c' ca cc ex \<tau>. dep_program \<tau> (cmb_c route c' ca cc ex)
                      = dep_program \<tau> (cmb route c' ca cc ex)"
     and extra_free: "\<And>c' w \<tau> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_program x \<tau> z = bot"
     and extra_local_only: "\<And>c' w \<tau> x.
-                             x \<in> set (extra route c' w) \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
+                             x \<in> set (extra route c' w) \<Longrightarrow> dg_global (traverse_program x \<tau>) = bot"
   shows "traverse_rhs
-           (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
              (v, ctx)) \<tau>
          = traverse_rhs
-           (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
     (is ?T)
     and "dep_aux \<tau>
-           (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
              (v, ctx))
          = dep_aux \<tau>
-           (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx))"
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx))"
     (is ?D)
     and "sides_of_rhs
-           (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
              (v, ctx)) \<tau>
          = sides_of_rhs
-           (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
     (is ?S)
 proof -
   let ?intra_new = "map (\<lambda>(src, a). it_c ctx src a) (pred_sel g v ctx)"
@@ -462,141 +464,141 @@ proof -
   have old_split: "?old = ?intra_old @ ?comb_old @ ?extra"
     by (simp add: routed_contribution_programs_def)
   have intra_local: "list_all2
-      (\<lambda>t_new t_old. locals (traverse_program t_new \<tau>) = locals (traverse_program t_old \<tau>))
+      (\<lambda>t_new t_old. dg_local (traverse_program t_new \<tau>) = dg_local (traverse_program t_old \<tau>))
       ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_t)
   have intra_global: "list_all2
-      (\<lambda>t_new t_old. globs (traverse_program t_new \<tau>)
-                       = globs (sides_of_program t_old \<tau> (Inr (gkey ctx))))
+      (\<lambda>t_new t_old. dg_global (traverse_program t_new \<tau>)
+                       = dg_global (sides_of_program t_old \<tau> (Inr (analysis_global_at ctx))))
       ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_s)
   have comb_local: "list_all2
-      (\<lambda>t_new t_old. locals (traverse_program t_new \<tau>) = locals (traverse_program t_old \<tau>))
+      (\<lambda>t_new t_old. dg_local (traverse_program t_new \<tau>) = dg_local (traverse_program t_old \<tau>))
       ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_t)
   have comb_global: "list_all2
-      (\<lambda>t_new t_old. globs (traverse_program t_new \<tau>)
-                       = globs (sides_of_program t_old \<tau> (Inr (gkey ctx))))
+      (\<lambda>t_new t_old. dg_global (traverse_program t_new \<tau>)
+                       = dg_global (sides_of_program t_old \<tau> (Inr (analysis_global_at ctx))))
       ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_s)
   have extra_local: "list_all2
-      (\<lambda>t_new t_old. locals (traverse_program t_new \<tau>) = locals (traverse_program t_old \<tau>))
+      (\<lambda>t_new t_old. dg_local (traverse_program t_new \<tau>) = dg_local (traverse_program t_old \<tau>))
       ?extra ?extra"
     by (rule list.rel_refl_strong) simp
   have extra_global: "list_all2
-      (\<lambda>t_new t_old. globs (traverse_program t_new \<tau>)
-                       = globs (sides_of_program t_old \<tau> (Inr (gkey ctx))))
+      (\<lambda>t_new t_old. dg_global (traverse_program t_new \<tau>)
+                       = dg_global (sides_of_program t_old \<tau> (Inr (analysis_global_at ctx))))
       ?extra ?extra"
     by (rule list.rel_refl_strong) (simp add: extra_free extra_local_only bot_dg_state_def)
   have local_list: "list_all2
-      (\<lambda>t_new t_old. locals (traverse_program t_new \<tau>) = locals (traverse_program t_old \<tau>))
+      (\<lambda>t_new t_old. dg_local (traverse_program t_new \<tau>) = dg_local (traverse_program t_old \<tau>))
       ?new ?old"
     unfolding new_split old_split
     using intra_local comb_local extra_local by (intro list_all2_appendI)
-  have global_list: "list_all2 (\<lambda>t_new t_old. globs (traverse_program t_new \<tau>)
-                                   = globs (sides_of_program t_old \<tau> (Inr (gkey ctx))))
+  have global_list: "list_all2 (\<lambda>t_new t_old. dg_global (traverse_program t_new \<tau>)
+                                   = dg_global (sides_of_program t_old \<tau> (Inr (analysis_global_at ctx))))
       ?new ?old"
     unfolding new_split old_split
     using intra_global comb_global extra_global by (intro list_all2_appendI)
   show ?T
   proof -
     have "traverse_rhs
-        (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
           (v, ctx)) \<tau>
-        = DG (locals (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)) bot"
+        = DG (dg_local (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)) bot"
       by (simp add: eq_routed_node_rhs_buffered[OF wf_c] routed_contribution_programs_def)
-    also have "\<dots> = DG (foldr (\<lambda>t acc'. locals (traverse_program t \<tau>) \<squnion> acc')
-                     ?new (locals ?acc0)) bot"
-      by (simp add: locals_foldr_generic)
-    also have "\<dots> = DG (foldr (\<lambda>t acc'. locals (traverse_program t \<tau>) \<squnion> acc')
-                     ?old (locals ?acc0)) bot"
+    also have "\<dots> = DG (foldr (\<lambda>t acc'. dg_local (traverse_program t \<tau>) \<squnion> acc')
+                     ?new (dg_local ?acc0)) bot"
+      by (simp add: dg_local_foldr_generic)
+    also have "\<dots> = DG (foldr (\<lambda>t acc'. dg_local (traverse_program t \<tau>) \<squnion> acc')
+                     ?old (dg_local ?acc0)) bot"
       by (simp only: foldr_sup_list_all2_cong[OF local_list])
-    also have "\<dots> = DG (side_acc_dg (locals ?acc0) \<tau> ?old) bot"
+    also have "\<dots> = DG (side_acc_dg (dg_local ?acc0) \<tau> ?old) bot"
       by (simp add: side_acc_dg_as_foldr_seeded)
     also have "\<dots> = traverse_rhs
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
       by (simp add: eq_routed_node_rhs[OF wf] routed_contribution_programs_def)
     finally show ?thesis .
   qed
   have global_new: "sides_of_rhs
-      (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
-        (v, ctx)) \<tau> (Inr (gkey ctx))
-      = DG bot (globs (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0))"
+      (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
+        (v, ctx)) \<tau> (Inr (analysis_global_at ctx))
+      = DG bot (dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0))"
     unfolding routed_contribution_programs_def[symmetric]
     by (intro sides_routed_node_rhs_buffered[OF wf_c])
        (use intra_free_at_key comb_free_at_key extra_free in blast)+
-  have globs_new_char: "globs (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
-      = globs ?acc0
-        \<squnion> foldr (\<lambda>t acc'. globs (sides_of_program t \<tau> (Inr (gkey ctx))) \<squnion> acc') ?old bot"
+  have dg_global_new_char: "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
+      = dg_global ?acc0
+        \<squnion> foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (analysis_global_at ctx))) \<squnion> acc') ?old bot"
   proof -
-    have "globs (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
-        = foldr (\<lambda>t acc'. globs (traverse_program t \<tau>) \<squnion> acc') ?new (globs ?acc0)"
-      by (rule globs_foldr_generic)
-    also have "\<dots> = foldr (\<lambda>t acc'. globs (sides_of_program t \<tau> (Inr (gkey ctx))) \<squnion> acc')
-                     ?old (globs ?acc0)"
+    have "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
+        = foldr (\<lambda>t acc'. dg_global (traverse_program t \<tau>) \<squnion> acc') ?new (dg_global ?acc0)"
+      by (rule dg_global_foldr_generic)
+    also have "\<dots> = foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (analysis_global_at ctx))) \<squnion> acc')
+                     ?old (dg_global ?acc0)"
       by (simp only: foldr_sup_list_all2_cong[OF global_list])
-    also have "\<dots> = globs ?acc0
-                     \<squnion> foldr (\<lambda>t acc'. globs (sides_of_program t \<tau> (Inr (gkey ctx))) \<squnion> acc')
+    also have "\<dots> = dg_global ?acc0
+                     \<squnion> foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (analysis_global_at ctx))) \<squnion> acc')
                          ?old bot"
       by (rule foldr_join_seed_out)
     finally show ?thesis .
   qed
   have old_elem_side_pure: "\<And>t. t \<in> set ?old
-      \<Longrightarrow> locals (sides_of_program t \<tau> (Inr (gkey ctx))) = bot"
+      \<Longrightarrow> dg_local (sides_of_program t \<tau> (Inr (analysis_global_at ctx))) = bot"
     using comb_side_pure extra_free
     by (auto simp: intra_side_pure bot_dg_state_def routed_contribution_programs_def
           split: prod.splits)
-  have old_fold_side_pure: "locals
-      (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc') ?old bot)
+  have old_fold_side_pure: "dg_local
+      (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc') ?old bot)
       = bot"
-    by (rule foldr_sides_locals_bot) (rule old_elem_side_pure)
-  have old_fold_collapse: "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+    by (rule foldr_sides_dg_local_bot) (rule old_elem_side_pure)
+  have old_fold_collapse: "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
       ?old bot
-      = DG bot (globs (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+      = DG bot (dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
            ?old bot))"
     using old_fold_side_pure
-    by (cases "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+    by (cases "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
            ?old bot") simp
   have old_sides: "sides_of_rhs
-      (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
-      (Inr (gkey ctx))
-      = DG bot (globs ?acc0
-                \<squnion> globs (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+      (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
+      (Inr (analysis_global_at ctx))
+      = DG bot (dg_global ?acc0
+                \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
                      ?old bot))"
   proof -
     have "sides_of_rhs
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
-        (Inr (gkey ctx))
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
+        (Inr (analysis_global_at ctx))
         = (if v = cfg_entry g then DG bot s0g else bot)
-          \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+          \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
               ?old bot"
       by (simp add: sides_routed_node_rhs[OF wf] routed_contribution_programs_def)
-    also have "\<dots> = DG bot (globs ?acc0
-          \<squnion> globs (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+    also have "\<dots> = DG bot (dg_global ?acc0
+          \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
               ?old bot))"
       by (subst old_fold_collapse)
          (cases "v = cfg_entry g", simp_all add: DG_sup_bot_left bot_dg_state_def)
     finally show ?thesis .
   qed
   have S_at_key: "sides_of_rhs
-      (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
-        (v, ctx)) \<tau> (Inr (gkey ctx))
+      (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
+        (v, ctx)) \<tau> (Inr (analysis_global_at ctx))
       = sides_of_rhs
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
-        (Inr (gkey ctx))"
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
+        (Inr (analysis_global_at ctx))"
   proof -
     have "sides_of_rhs
-        (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
-          (v, ctx)) \<tau> (Inr (gkey ctx))
-        = DG bot (globs (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0))"
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
+          (v, ctx)) \<tau> (Inr (analysis_global_at ctx))
+        = DG bot (dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0))"
       by (rule global_new)
-    also have "\<dots> = DG bot (globs ?acc0
-        \<squnion> globs (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (gkey ctx)) \<squnion> acc')
+    also have "\<dots> = DG bot (dg_global ?acc0
+        \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc')
              ?old bot))"
-      by (simp only: globs_new_char foldr_globs_sides_char)
+      by (simp only: dg_global_new_char foldr_dg_global_sides_char)
     also have "\<dots> = sides_of_rhs
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
-        (Inr (gkey ctx))"
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
+        (Inr (analysis_global_at ctx))"
       by (rule old_sides[symmetric])
     finally show ?thesis .
   qed
@@ -616,7 +618,7 @@ proof -
   show ?D
   proof -
     have "dep_aux \<tau>
-        (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
           (v, ctx))
         = (\<Union>t\<in>set ?new. dep_program \<tau> t)"
       by (simp add: routed_node_rhs_buffered_def Let_def
@@ -624,16 +626,16 @@ proof -
     also have "\<dots> = (\<Union>t\<in>set ?old. dep_program \<tau> t)"
       by (rule list_all2_Union_eq[OF dep_list])
     also have "\<dots> = dep_aux \<tau>
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx))"
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx))"
       by (simp add: routed_node_rhs_def Let_def
           dep_program_side_rhs_fold_dg_char[OF wf])
     finally show ?thesis .
   qed
-  have intra_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
+  have intra_sides_off: "\<And>z. z \<noteq> Inr (analysis_global_at ctx)
       \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_program t_new \<tau> z = sides_of_program t_old \<tau> z)
               ?intra_new ?intra_old"
     by (rule list_all2_map_diag) (auto simp: intra_sides_off_key)
-  have comb_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
+  have comb_sides_off: "\<And>z. z \<noteq> Inr (analysis_global_at ctx)
       \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_program t_new \<tau> z = sides_of_program t_old \<tau> z)
               ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_sides_off_key)
@@ -641,17 +643,17 @@ proof -
       list_all2 (\<lambda>t_new t_old. sides_of_program t_new \<tau> z = sides_of_program t_old \<tau> z)
         ?extra ?extra"
     by (rule list.rel_refl_strong) simp
-  have sides_list_off: "\<And>z. z \<noteq> Inr (gkey ctx)
+  have sides_list_off: "\<And>z. z \<noteq> Inr (analysis_global_at ctx)
       \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_program t_new \<tau> z = sides_of_program t_old \<tau> z)
           ?new ?old"
     unfolding new_split old_split
     using intra_sides_off comb_sides_off extra_sides_off by (intro list_all2_appendI)
-  have fold_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx) \<Longrightarrow>
+  have fold_sides_off: "\<And>z. z \<noteq> Inr (analysis_global_at ctx) \<Longrightarrow>
       foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot
         = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
   proof -
     fix z :: "cfg_node \<times> 'c + 'k"
-    assume z: "z \<noteq> Inr (gkey ctx)"
+    assume z: "z \<noteq> Inr (analysis_global_at ctx)"
     show "foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot
         = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
       using sides_list_off[OF z] by (induction rule: list_all2_induct) simp_all
@@ -660,24 +662,24 @@ proof -
   proof (rule ext)
     fix z
     show "sides_of_rhs
-        (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
           (v, ctx)) \<tau> z
       = sides_of_rhs
-        (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z"
-    proof (cases "z = Inr (gkey ctx)")
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z"
+    proof (cases "z = Inr (analysis_global_at ctx)")
       case True
       with S_at_key show ?thesis by simp
     next
       case False
       have new_off: "sides_of_rhs
-          (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g
+          (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g
             (v, ctx)) \<tau> z
         = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot"
         using False
         by (simp add: routed_node_rhs_buffered_def Let_def
             sides_of_program_fold_rhs_program_char[OF wf_c] bot_dg_state_def[symmetric])
       have old_off: "sides_of_rhs
-          (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z
+          (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z
         = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
         using False
         by (simp add: routed_node_rhs_def Let_def
@@ -705,41 +707,43 @@ lemma part_post_solution_routed_node_rhs_buffered:
                          cmb_c extra g c' w). sp_wf p"
     and wf: "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g c' w). sp_wf p"
-    and intra_t: "\<And>c' src a \<tau>. locals (traverse_program (it_c c' src a) \<tau>)
-                     = locals (traverse_program (it c' src a) \<tau>)"
+    and intra_t: "\<And>c' src a \<tau>. dg_local (traverse_program (it_c c' src a) \<tau>)
+                     = dg_local (traverse_program (it c' src a) \<tau>)"
     and intra_side_pure: "\<And>c' src a \<tau>.
-                            locals (sides_of_program (it c' src a) \<tau> (Inr (gkey c'))) = bot"
-    and intra_s: "\<And>c' src a \<tau>. globs (traverse_program (it_c c' src a) \<tau>)
-                     = globs (sides_of_program (it c' src a) \<tau> (Inr (gkey c')))"
-    and intra_free_at_key: "\<And>c' src a \<tau>. sides_of_program (it_c c' src a) \<tau> (Inr (gkey c')) = bot"
-    and intra_sides_off_key: "\<And>c' src a \<tau> z. z \<noteq> Inr (gkey c')
+                            dg_local (sides_of_program (it c' src a) \<tau> (Inr (analysis_global_at c'))) = bot"
+    and intra_s: "\<And>c' src a \<tau>. dg_global (traverse_program (it_c c' src a) \<tau>)
+                     = dg_global (sides_of_program (it c' src a) \<tau> (Inr (analysis_global_at c')))"
+    and intra_free_at_key:
+      "\<And>c' src a \<tau>. sides_of_program (it_c c' src a) \<tau> (Inr (analysis_global_at c')) = bot"
+    and intra_sides_off_key: "\<And>c' src a \<tau> z. z \<noteq> Inr (analysis_global_at c')
                      \<Longrightarrow> sides_of_program (it_c c' src a) \<tau> z = sides_of_program (it c' src a) \<tau> z"
     and intra_dep: "\<And>c' src a \<tau>. dep_program \<tau> (it_c c' src a) = dep_program \<tau> (it c' src a)"
-    and comb_t: "\<And>c' ca cc ex \<tau>. locals (traverse_program (cmb_c route c' ca cc ex) \<tau>)
-                     = locals (traverse_program (cmb route c' ca cc ex) \<tau>)"
+    and comb_t: "\<And>c' ca cc ex \<tau>. dg_local (traverse_program (cmb_c route c' ca cc ex) \<tau>)
+                     = dg_local (traverse_program (cmb route c' ca cc ex) \<tau>)"
     and comb_side_pure: "\<And>c' ca cc ex \<tau>.
-                     locals (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (gkey c'))) = bot"
-    and comb_s: "\<And>c' ca cc ex \<tau>. globs (traverse_program (cmb_c route c' ca cc ex) \<tau>)
-                     = globs (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (gkey c')))"
+                     dg_local (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (analysis_global_at c'))) = bot"
+    and comb_s: "\<And>c' ca cc ex \<tau>. dg_global (traverse_program (cmb_c route c' ca cc ex) \<tau>)
+                     = dg_global (sides_of_program (cmb route c' ca cc ex) \<tau> (Inr (analysis_global_at c')))"
     and comb_free_at_key: "\<And>c' ca cc ex \<tau>.
-                     sides_of_program (cmb_c route c' ca cc ex) \<tau> (Inr (gkey c')) = bot"
-    and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (gkey c')
+                     sides_of_program (cmb_c route c' ca cc ex) \<tau> (Inr (analysis_global_at c')) = bot"
+    and comb_sides_off_key: "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (analysis_global_at c')
                      \<Longrightarrow> sides_of_program (cmb_c route c' ca cc ex) \<tau> z
                          = sides_of_program (cmb route c' ca cc ex) \<tau> z"
     and comb_dep: "\<And>c' ca cc ex \<tau>. dep_program \<tau> (cmb_c route c' ca cc ex)
                      = dep_program \<tau> (cmb route c' ca cc ex)"
     and extra_free: "\<And>c' w \<tau> z x. x \<in> set (extra route c' w) \<Longrightarrow> sides_of_program x \<tau> z = bot"
     and extra_local_only: "\<And>c' w \<tau> x.
-                             x \<in> set (extra route c' w) \<Longrightarrow> globs (traverse_program x \<tau>) = bot"
+                             x \<in> set (extra route c' w) \<Longrightarrow> dg_global (traverse_program x \<tau>) = bot"
     and pp_buf: "part_post_solution
-        (routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g)
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g)
         x sigma vars"
   shows "part_post_solution
-      (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) x sigma vars"
+      (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x sigma vars"
 proof -
   let ?Tbuf =
-    "routed_node_rhs_buffered pred_sel site_sel gkey route it_c cmb_c extra g bot0 s0d s0g"
-  let ?Told = "routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g"
+    "routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it_c cmb_c extra g bot0 s0d s0g"
+  let ?Told =
+    "routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g"
   have corr: "\<And>u. traverse_rhs (?Tbuf u) sigma = traverse_rhs (?Told u) sigma
       \<and> dep_aux sigma (?Tbuf u) = dep_aux sigma (?Told u)
       \<and> sides_of_rhs (?Tbuf u) sigma = sides_of_rhs (?Told u) sigma"
@@ -752,7 +756,7 @@ proof -
       unfolding u
       using routed_node_rhs_buffered_correspondence
               [where cmb = cmb and cmb_c = cmb_c and it = it and it_c = it_c
-                 and route = route and gkey = gkey,
+                 and route = route and analysis_global_at = analysis_global_at,
                OF wf_c wf
                   intra_t intra_side_pure intra_s intra_free_at_key intra_sides_off_key intra_dep
                   comb_t comb_side_pure comb_s comb_free_at_key comb_sides_off_key comb_dep
@@ -788,12 +792,13 @@ lemma routed_node_rhs_mono_eq:
       traverse_program (cmb route c ca cc v) s1 \<le> traverse_program (cmb route c ca cc v) s2"
   assumes extra_mono: "\<And>v c t s1 s2. t \<in> set (extra route c v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
       traverse_program t s1 \<le> traverse_program t s2"
-  shows "is_mono_eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g)"
+  shows
+    "is_mono_eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g)"
 proof (unfold is_mono_eq_def, intro allI)
   fix x s1 s2
   show "s1 \<le> s2 \<longrightarrow>
-      eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) x s1
-        \<le> eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) x s2"
+      eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x s1
+        \<le> eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x s2"
   proof (intro impI)
     assume le: "s1 \<le> s2"
     obtain v c where x: "x = (v, c)" by (cases x)
@@ -802,8 +807,8 @@ proof (unfold is_mono_eq_def, intro allI)
                        \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_program t s1 \<le> traverse_program t s2"
       using intra_mono comb_mono extra_mono
       by (auto simp: routed_contribution_programs_def)
-    show "eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) x s1
-          \<le> eq (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) x s2"
+    show "eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x s1
+          \<le> eq (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x s2"
       unfolding x eq_routed_node_rhs[OF wf]
       using side_rhs_fold_dg_mono[OF wf tree_mono le]
       by (simp add: traverse_side_rhs_fold_dg[OF wf])
@@ -835,13 +840,14 @@ lemma routed_node_rhs_mono_sides:
       sides_of_program (cmb route c ca cc v) s1 \<le> sides_of_program (cmb route c ca cc v) s2"
   assumes extra_sides_mono: "\<And>v c t s1 s2. t \<in> set (extra route c v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
       sides_of_program t s1 \<le> sides_of_program t s2"
-  shows "mono_sides (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g)"
+  shows
+    "mono_sides (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g)"
 proof (unfold mono_sides_def, intro allI)
   fix x s1 s2
   show "s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g x) s1
+      sides_of_rhs (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g x) s1
         \<le> sides_of_rhs
-            (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g x) s2"
+            (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g x) s2"
   proof (intro impI)
     assume le: "s1 \<le> s2"
     obtain v c where x: "x = (v, c)" by (cases x)
@@ -858,9 +864,9 @@ proof (unfold mono_sides_def, intro allI)
                       s2"
       by (rule side_rhs_fold_dg_sides_mono[OF wf tree_sides_mono le])
     show "sides_of_rhs
-            (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g x) s1
+            (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g x) s1
           \<le> sides_of_rhs
-            (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g x) s2"
+            (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g x) s2"
       unfolding x routed_node_rhs_def
       by (simp add: Let_def fold_le fun_upd_sup_mono[OF fold_le] split: if_splits)
   qed
@@ -876,12 +882,13 @@ lemma routed_node_rhs_mono_deps:
       mono_tree_deps (sp_compile (cmb route c ca cc v))"
   assumes extra_deps_mono: "\<And>v c t. t \<in> set (extra route c v)
       \<Longrightarrow> mono_tree_deps (sp_compile t)"
-  shows "mono_deps (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g)"
+  shows
+    "mono_deps (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g)"
 proof (unfold mono_deps_def, intro allI)
   fix x s1 s2
   show "s1 \<le> s2 \<longrightarrow>
-      dep (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) s1 x
-        \<subseteq> dep (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) s2 x"
+      dep (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) s1 x
+        \<subseteq> dep (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) s2 x"
   proof (intro impI)
     assume ord: "s1 \<le> s2"
     obtain v c where x: "x = (v, c)" by (cases x)
@@ -898,8 +905,8 @@ proof (unfold mono_deps_def, intro allI)
                 \<subseteq> dep_aux s2 (sp_compile (side_rhs_fold_dg acc
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
       using fold_mono[unfolded mono_tree_deps_def] ord by blast
-    show "dep (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) s1 x
-            \<subseteq> dep (routed_node_rhs pred_sel site_sel gkey route it cmb extra g bot0 s0d s0g) s2 x"
+    show "dep (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) s1 x
+            \<subseteq> dep (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) s2 x"
       unfolding x dep_def routed_node_rhs_def
       by (simp add: Let_def dsub split: if_splits)
   qed
@@ -910,7 +917,7 @@ text \<open>
   edge's program, exactly as \<open>cmb\<close> and \<open>extra\<close> already supply theirs,
   so which unknowns an equation reads and which keys it publishes are
   properties of the supplied programs, not of the generator. The one key the
-  generator names itself is \<open>gkey c\<close>, at the CFG entry, where it publishes
+  generator names itself is \<open>analysis_global_at c\<close>, at the CFG entry, where it publishes
   \<open>s0g\<close>; a routed activation seed is not its own but arrives through
   \<open>extra\<close>.
 \<close>

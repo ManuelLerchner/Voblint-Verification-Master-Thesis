@@ -19,7 +19,7 @@ text \<open>
   carried as a hypothesis everywhere else.
 
   \<^const>\<open>Bot\<close> means ``the solver's canonical result at this key is an
-  outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>result_keys\<close> altogether;
+  outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>result_unknowns\<close> altogether;
   \<open>Lifted a\<close> means ``the canonical result is \<^const>\<open>Lifted\<close>'', with the
   local unknown projected to the abstract state \<open>a\<close>. This is a structural
   reading, not a semantic-emptiness test: raw solver values are
@@ -71,7 +71,7 @@ lemma gamma_state_of_reachable_env [simp]:
 subsection \<open>The result table\<close>
 
 text \<open>
-  \<open>result_keys\<close> is the authoritative coverage surface --- the keys the
+  \<open>result_unknowns\<close> is the authoritative coverage surface --- the keys the
   solver actually reached --- while \<open>result_at\<close> is merely a total
   lookup function, defined everywhere but meaningful only on the key set.
   \<open>lookup_context\<close> keeps that distinction explicit rather than trusting
@@ -88,22 +88,22 @@ text \<open>
 
 datatype (plugins del: quickcheck_narrowing) ('ctx, 'a) analysis_result =
   Analysis_Result
-    (result_keys: "(pp \<times> 'ctx) set")
+    (result_unknowns: "(pp \<times> 'ctx) set")
     (result_at: "pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted")
 
 definition contexts_at :: "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx set" where
-  "contexts_at r v = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (result_keys r)"
+  "contexts_at r v = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (result_unknowns r)"
 
 definition lookup_context ::
   "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted" where
   "lookup_context r v ctx =
-     (if (v, ctx) \<in> result_keys r then result_at r v ctx else Bot)"
+     (if (v, ctx) \<in> result_unknowns r then result_at r v ctx else Bot)"
 
-lemma contexts_at_iff [simp]: "ctx \<in> contexts_at r v \<longleftrightarrow> (v, ctx) \<in> result_keys r"
+lemma contexts_at_iff [simp]: "ctx \<in> contexts_at r v \<longleftrightarrow> (v, ctx) \<in> result_unknowns r"
   unfolding contexts_at_def by force
 
 lemma lookup_context_absent [simp]:
-  "(v, ctx) \<notin> result_keys r \<Longrightarrow> lookup_context r v ctx = Bot"
+  "(v, ctx) \<notin> result_unknowns r \<Longrightarrow> lookup_context r v ctx = Bot"
   unfolding lookup_context_def by simp
 
 subsection \<open>Telling ``analysed and dead'' from ``never analysed''\<close>
@@ -132,24 +132,24 @@ text \<open>
 definition lookup_context_result ::
   "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a context_result" where
   "lookup_context_result r v ctx =
-     (if (v, ctx) \<in> result_keys r then Covered (result_at r v ctx) else Uncovered)"
+     (if (v, ctx) \<in> result_unknowns r then Covered (result_at r v ctx) else Uncovered)"
 
 lemma lookup_context_result_covered [simp]:
-  "(v, ctx) \<in> result_keys r \<Longrightarrow>
+  "(v, ctx) \<in> result_unknowns r \<Longrightarrow>
      lookup_context_result r v ctx = Covered (result_at r v ctx)"
   unfolding lookup_context_result_def by simp
 
 lemma lookup_context_result_uncovered [simp]:
-  "(v, ctx) \<notin> result_keys r \<Longrightarrow> lookup_context_result r v ctx = Uncovered"
+  "(v, ctx) \<notin> result_unknowns r \<Longrightarrow> lookup_context_result r v ctx = Uncovered"
   unfolding lookup_context_result_def by simp
 
 lemma lookup_context_result_eq_Uncovered_iff:
-  "lookup_context_result r v ctx = Uncovered \<longleftrightarrow> (v, ctx) \<notin> result_keys r"
+  "lookup_context_result r v ctx = Uncovered \<longleftrightarrow> (v, ctx) \<notin> result_unknowns r"
   unfolding lookup_context_result_def by simp
 
 lemma lookup_context_result_eq_Covered_iff:
   "lookup_context_result r v ctx = Covered x \<longleftrightarrow>
-     (v, ctx) \<in> result_keys r \<and> result_at r v ctx = x"
+     (v, ctx) \<in> result_unknowns r \<and> result_at r v ctx = x"
   unfolding lookup_context_result_def by auto
 
 text \<open>
@@ -208,7 +208,7 @@ lemma result_node_is_bottomI:
 
 lemma result_node_is_bottomD:
   assumes bot: "result_node_is_bottom r v"
-    and covered: "(v, ctx) \<in> result_keys r"
+    and covered: "(v, ctx) \<in> result_unknowns r"
   shows "lookup_context_result r v ctx = Covered Bot"
 proof -
   have eq: "lookup_context_result r v ctx = Covered (result_at r v ctx)"
@@ -220,7 +220,7 @@ qed
 
 lemma result_node_is_bottom_iff_keys:
   "result_node_is_bottom r v \<longleftrightarrow>
-     (\<forall>ctx. (v, ctx) \<in> result_keys r \<longrightarrow> result_at r v ctx = Bot)"
+     (\<forall>ctx. (v, ctx) \<in> result_unknowns r \<longrightarrow> result_at r v ctx = Bot)"
   unfolding result_node_is_bottom_def
   by (auto simp: lookup_context_result_eq_Covered_iff)
 
@@ -252,7 +252,7 @@ lemma report_flag_imp_result_node_is_bottom:
 proof (rule result_node_is_bottomI)
   fix ctx :: unit and a
   assume cov: "lookup_context_result r v ctx = Covered a"
-  then have keys: "(v, ctx) \<in> result_keys r" and val: "result_at r v ctx = a"
+  then have keys: "(v, ctx) \<in> result_unknowns r" and val: "result_at r v ctx = a"
     by (simp_all add: lookup_context_result_eq_Covered_iff)
   have unit_bot: "lookup_context r v () = Bot"
     using flag by (simp add: report_lifted_state_unreachable_iff)
@@ -264,7 +264,7 @@ qed
 
 lemma report_flag_covered_eq_Covered_Bot:
   fixes r :: "('ctx, 'a::bot) analysis_result"
-  assumes covered: "(v, ctx) \<in> result_keys r"
+  assumes covered: "(v, ctx) \<in> result_unknowns r"
     and flag: "fst (report_lifted_state (lookup_context r v ctx))"
   shows "lookup_context_result r v ctx = Covered Bot"
   using covered flag
@@ -415,7 +415,7 @@ text \<open>
 \<close>
 
 definition finite_analysis_result :: "('ctx, 'a) analysis_result \<Rightarrow> bool" where
-  "finite_analysis_result r \<longleftrightarrow> finite (result_keys r)"
+  "finite_analysis_result r \<longleftrightarrow> finite (result_unknowns r)"
 
 definition wf_analysis_result ::
   "('a \<Rightarrow> bool) \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> bool" where

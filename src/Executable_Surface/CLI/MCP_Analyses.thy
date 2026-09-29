@@ -201,10 +201,10 @@ text \<open>
 \<close>
 
 lemma mcp_routed_dg_analysis:
-  fixes gk0 :: 'k
-  assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
+  fixes analysis_global :: 'k
+  assumes "\<And>v ctx. seed v ctx \<noteq> analysis_global"
   shows "dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
-    (mcp_init (activation as)) gk0 seed (TD_side_rule_Interp_solve r)
+    (mcp_init (activation as)) analysis_global seed (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)"
@@ -251,7 +251,7 @@ global_interpretation mcp_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
@@ -270,7 +270,7 @@ global_interpretation mcp_es_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, mcp_ctx) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, mcp_ctx) global_unknown)
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"

@@ -135,7 +135,7 @@ definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
   "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
 
 lemma fact_result_dead_branch_covered:
-  "(Statement 2, ctx_a) \<in> result_keys fact_result"
+  "(Statement 2, ctx_a) \<in> result_unknowns fact_result"
   by eval
 
 lemma fact_result_dead_branch_not_reachable:
@@ -170,7 +170,7 @@ definition gcall_ctx_bogus :: "ivl list" where
   "gcall_ctx_bogus = [Ivl (Fin 77) (Fin 77)]"
 
 lemma gcall_result_bogus_absent:
-  "(bump_entry, gcall_ctx_bogus) \<notin> result_keys gcall_result"
+  "(bump_entry, gcall_ctx_bogus) \<notin> result_unknowns gcall_result"
   by eval
 
 lemma gcall_result_bogus_unreachable:
@@ -181,7 +181,7 @@ text \<open>The default context \<open>[]\<close> is likewise uncovered at the c
   it is not a hidden answer either.\<close>
 
 lemma gcall_result_bump_default_ctx_absent:
-  "(bump_entry, []) \<notin> result_keys gcall_result"
+  "(bump_entry, []) \<notin> result_unknowns gcall_result"
   by eval
 
 subsection \<open>The joined per-node view\<close>
@@ -252,9 +252,9 @@ lemma gcall_callee_ctx_at_agrees_with_route:
   by eval+
 
 lemma gcall_callee_ctx_at_covered:
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 4) gcall_call_first)) \<in> result_keys gcall_result"
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 5) gcall_call_second)) \<in> result_keys gcall_result"
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 9) gcall_call_third)) \<in> result_keys gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 4) gcall_call_first)) \<in> result_unknowns gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 5) gcall_call_second)) \<in> result_unknowns gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 9) gcall_call_third)) \<in> result_unknowns gcall_result"
   by eval+
 
 text \<open>No call site routes to another call site's context. This is the negative

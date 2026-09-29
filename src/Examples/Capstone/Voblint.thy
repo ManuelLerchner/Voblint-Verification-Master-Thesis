@@ -327,7 +327,7 @@ text \<open>
       \<^verbatim>\<open>combine_sound\<close> obligations.
     \<^item> @{theory Voblint_Framework.State_Restriction} --- the
       local/global restriction algebra used to reassemble routed states.
-    \<^item> @{theory Voblint_Framework.DG_Keyed_Generator} ---
+    \<^item> @{theory Voblint_Framework.DG_Indexed_Generator} ---
       \<^verbatim>\<open>routed_node_rhs_mono_eq\<close>/
       \<^verbatim>\<open>routed_node_rhs_mono_sides\<close>/
       \<^verbatim>\<open>routed_node_rhs_mono_deps\<close> discharge the vendored
@@ -483,7 +483,7 @@ text \<open>
       (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
       (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
-    \<^item> @{theory Voblint_Result.DG_Live_Keys} --- the endpoints of a routed
+    \<^item> @{theory Voblint_Result.DG_Live_Unknowns} --- the endpoints of a routed
       analysis whose route is a function of the call site, the unit context
       among them; they are what every flagship and codegen entry point applies: one
       \<^verbatim>\<open>solve_c ... \<noteq> None\<close> fact in, source-level soundness out.
@@ -583,7 +583,7 @@ text \<open>
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> \<^bold>\<open>Named global unknowns\<close> --- a keyed global family is the routed D/G
-      context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge
+      context's own \<open>analysis_global_at\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge
       program reads: @{thm dep_dg_edge_program_at} names the source address and the
       one global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml
@@ -650,7 +650,7 @@ text \<open>
     \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the endpoint \<open>interval_seed_join.fun_route_source_sound\<close>
-      (@{theory Voblint_Result.DG_Live_Keys}, the routed analysis at the unit
+      (@{theory Voblint_Result.DG_Live_Unknowns}, the routed analysis at the unit
       context) bundles solver correctness,
       executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one

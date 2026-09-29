@@ -50,7 +50,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 
 definition gcall_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
     where
   "gcall_sol = interval_es_rule.solution Globals_Warrow gcall_gs gcall_prog"
 
@@ -103,7 +103,7 @@ text \<open>Callee entry, first activation: the formal \<open>n\<close> binds to
   would have had to reassemble \<open>g\<close> from a separate solver-global slot to see it here;
   the whole-state local unknown carries it directly.\<close>
 lemma gcall_entry_first:
-  "(case locals (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_first))) of
+  "(case dg_local (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_first))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''n'')))
      = Some (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
   by eval
@@ -111,7 +111,7 @@ lemma gcall_entry_first:
 text \<open>Callee entry, second activation: \<open>g\<close> is the value the first activation wrote and
   returned through, so a callee global write survives the return into the next call.\<close>
 lemma gcall_entry_second:
-  "(case locals (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_second))) of
+  "(case dg_local (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_second))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''n'')))
      = Some (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
   by eval
@@ -120,7 +120,7 @@ text \<open>Callee entry, third activation: the global-valued argument \<open>g\
   the caller's real state before entry, so both the routed context and the entered \<open>n\<close>
   carry the caller's live value \<open>19\<close>, not \<open>bot\<close>.\<close>
 lemma gcall_entry_third:
-  "(case locals (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_third))) of
+  "(case dg_local (snd gcall_sol (Inl (FunctionEntry (STR ''bump''), gcall_ctx_third))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''n'')))
      = Some (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
@@ -128,14 +128,14 @@ lemma gcall_entry_third:
 text \<open>Caller state after the first return: the callee's global write is visible, and the
   return-value assignment \<open>a := bump(5)\<close> landed \<open>bump\<close>'s own returned value in \<open>a\<close>.\<close>
 lemma gcall_after_first_return:
-  "(case locals (snd gcall_sol (Inl (Statement 5, []))) of
+  "(case dg_local (snd gcall_sol (Inl (Statement 5, []))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''a'')))
      = Some (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
   by eval
 
 text \<open>Same, after the second return.\<close>
 lemma gcall_after_second_return:
-  "(case locals (snd gcall_sol (Inl (Statement 8, []))) of
+  "(case dg_local (snd gcall_sol (Inl (Statement 8, []))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''b'')))
      = Some (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
@@ -143,7 +143,7 @@ lemma gcall_after_second_return:
 text \<open>Caller state after the third return: the callee's global write is visible, and the
   return-value assignment \<open>c := bump(g)\<close> landed \<open>bump\<close>'s own returned value in \<open>c\<close>.\<close>
 lemma gcall_after_third_return:
-  "(case locals (snd gcall_sol (Inl (Statement 10, []))) of
+  "(case dg_local (snd gcall_sol (Inl (Statement 10, []))) of
       Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (gcall_lookup d (STR ''g''), gcall_lookup d (STR ''c'')))
      = Some (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
   by eval

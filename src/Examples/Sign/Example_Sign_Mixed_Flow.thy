@@ -48,21 +48,23 @@ qed
 
 lemma dg_spec_wf_mf_spec [intro, simp]: "dg_spec_wf (mf_spec \<G>)"
 proof (unfold dg_spec_wf_def, intro conjI allI impI)
-  show "sp_wf (dg_spec_step (mf_spec \<G>) a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))" for a d key A
+  show "sp_wf (dg_spec_step (mf_spec \<G>) a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>))" for a d
+    unknown_of A
     unfolding dg_spec_step_ownership_split_st_for ownership_split_transfer_st_def
     by (auto simp: ownership_split_transfer_gen_def local_transfer_def intro!: sp_wf_bind)
 next
-  show "sp_wf (dgs_query (mf_spec \<G>) ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)" for d key A q
+  show "sp_wf (dgs_query (mf_spec \<G>) ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q)" for d unknown_of A
+    q
     by (simp add: ownership_split_dg_spec_st_for_def)
 next
-  fix ci d key
-  show "sp_wf (enter\<^sup># (mf_spec \<G>) ci (mk_dg_man d key))"
+  fix ci d unknown_of
+  show "sp_wf (enter\<^sup># (mf_spec \<G>) ci (mk_dg_man d unknown_of))"
     unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_enter_transfer_st_def
     by (auto simp: ownership_split_enter_transfer_gen_def local_enter_transfer_def
         intro!: sp_wf_bind)
 next
-  fix ci d key ex
-  show "sp_wf (dg_spec_combine_transfer (mf_spec \<G>) ci (mk_dg_man d key) ex)"
+  fix ci d unknown_of ex
+  show "sp_wf (dg_spec_combine_transfer (mf_spec \<G>) ci (mk_dg_man d unknown_of) ex)"
     unfolding dg_spec_combine_transfer_ownership_split_dg_spec_st_for
       ownership_split_combine_transfer_st_def
     by (auto simp: ownership_split_combine_transfer_gen_def local_combine_transfer_def
@@ -86,7 +88,7 @@ next
     by (simp add: sign_tf_st_sound del: fun_of_resolved_st_q_for_combine)
 next
   case (4 s dc \<tau> gk t de ci)
-  let ?G = "globs (\<tau> (Inr gk))"
+  let ?G = "dg_global (\<tau> (Inr gk))"
   let ?x = "combine_resolved_st_q dc ?G" and ?y = "combine_resolved_st_q de ?G"
   have xy: "combine_resolved_st_q ?x ?y = ?x"
     by (rule resolved_st_q_eqI) (simp split: location.split)
@@ -174,7 +176,7 @@ definition mf_cfg :: cfg where
   "mf_cfg = compile_prog (prog_table mf_program) (prog_procs mf_program)"
 
 definition mf_eqs ::
-  "(pp \<times> unit, (unit, unit) routed_gk, (sign exec_dg_st, sign exec_dg_st) dg_state) eqsT" where
+  "(pp \<times> unit, (unit, unit) global_unknown, (sign exec_dg_st, sign exec_dg_st) dg_state) eqsT" where
   "mf_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        route_unit
@@ -186,7 +188,7 @@ definition mf_eqs ::
 
 definition mf_sol ::
   "(pp \<times> unit) set \<times>
-   (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+   (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "mf_sol = TD_side_always_join_Interp_solve mf_eqs (cfg_exit mf_cfg, ())"
 
 lemma mf_terminates_c:
@@ -194,12 +196,12 @@ lemma mf_terminates_c:
   unfolding mf_eqs_def mf_cfg_def mf_program_def by eval
 
 abbreviation mf_G :: "sign exec_dg_st" where
-  "mf_G \<equiv> globs (snd mf_sol (Inr (Analysis_Global ())))"
+  "mf_G \<equiv> dg_global (snd mf_sol (Inr (Analysis_Global ())))"
 
-definition mf_reader :: "pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> sign exec_dg_st lifted" where
+definition mf_reader :: "pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> sign exec_dg_st lifted" where
   "mf_reader k = (case k of
      Inl vc \<Rightarrow> if vc \<in> fst mf_sol
-       then Lifted (combine_resolved_st_q (locals (snd mf_sol (Inl vc))) mf_G) else Bot
+       then Lifted (combine_resolved_st_q (dg_local (snd mf_sol (Inl vc))) mf_G) else Bot
    | Inr _ \<Rightarrow> Bot)"
 
 abbreviation mf_gammaM :: "sign exec_dg_st lifted \<Rightarrow> store set" where
@@ -207,8 +209,8 @@ abbreviation mf_gammaM :: "sign exec_dg_st lifted \<Rightarrow> store set" where
 
 lemma mf_snapshot_raw:
   "(let sol = mf_sol;
-        G = globs (snd sol (Inr (Analysis_Global ())));
-        at7 = combine_resolved_st_q (locals (snd sol (Inl (Statement 7, ())))) G
+        G = dg_global (snd sol (Inr (Analysis_Global ())));
+        at7 = combine_resolved_st_q (dg_local (snd sol (Inl (Statement 7, ())))) G
     in TD_side_always_join_Interp_solve_c mf_eqs (cfg_exit mf_cfg, ()) \<noteq> None
      \<and> (cfg_entry mf_cfg, ()) \<in> fst sol
      \<and> \<not> mf_gs ret_var
@@ -231,9 +233,9 @@ lemma mf_snapshot:
    \<and> (\<forall>(u, ca, ce, cont) \<in> calls mf_cfg. \<forall>f \<in> set (ce_formals ca). \<not> mf_gs f)
    \<and> (Statement 7, ()) \<in> fst mf_sol
    \<and> fun_of_resolved_st_q_for mf_gs
-       (combine_resolved_st_q (locals (snd mf_sol (Inl (Statement 7, ())))) mf_G) (STR ''x'') = SPos
+       (combine_resolved_st_q (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G) (STR ''x'') = SPos
    \<and> fun_of_resolved_st_q_for mf_gs
-       (combine_resolved_st_q (locals (snd mf_sol (Inl (Statement 7, ())))) mf_G) (STR ''y'')
+       (combine_resolved_st_q (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G) (STR ''y'')
        = SNonNeg
    \<and> fun_of_resolved_st_q_for mf_gs mf_G (STR ''Gx'') = SNonNeg"
   using mf_snapshot_raw unfolding Let_def by fastforce
@@ -250,7 +252,7 @@ interpretation mf_routed: routed_context_base_hetero
 proof (rule routed_context_base_hetero.intro
     [OF dg_ctx_activation_base.intro[OF analysis_contract_mf]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedKey IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
+    SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_mf_spec])
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
@@ -274,7 +276,7 @@ next
     unfolding mf_cfg_def calls_source_unique_def using compile_prog_calls_source_unique
     by blast
 next
-  case (SeedKey p ctx) show ?case by simp
+  case (SeedUnknown p ctx) show ?case by simp
 next
   case IsBotBot show ?case by simp
 next
@@ -286,7 +288,7 @@ next
 next
   case (EnterCover u ctx dst pars args p cont s ctx')
   let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?d = "locals (snd mf_sol (Inl (u, ctx)))"
+  let ?d = "dg_local (snd mf_sol (Inl (u, ctx)))"
   let ?D = "combine_resolved_st_q ?d mf_G"
   let ?E = "sign_enter_st_for mf_gs ?ci ?D"
   let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_resolved_q cont, restrict_local_resolved_q entry))
@@ -341,7 +343,7 @@ theorem mf_ltr_collect_sound:
 corollary mf_ltr_collect_solved:
   assumes "(v, ()) \<in> fst mf_sol"
   shows "\<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> v
-           \<subseteq> split_gamma mf_gs (locals (snd mf_sol (Inl (v, ())))) mf_G"
+           \<subseteq> split_gamma mf_gs (dg_local (snd mf_sol (Inl (v, ())))) mf_G"
   using mf_ltr_collect_sound[of v] assms
   by (simp add: mf_reader_def split_gamma_def del: fun_of_resolved_st_q_for_combine)
 
@@ -349,10 +351,10 @@ corollary mf_after_calls:
   assumes "s \<in> \<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> (Statement 7)"
   shows "0 < s (STR ''x'') \<and> 0 \<le> s (STR ''y'')"
 proof -
-  have "s \<in> split_gamma mf_gs (locals (snd mf_sol (Inl (Statement 7, ())))) mf_G"
+  have "s \<in> split_gamma mf_gs (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G"
     using mf_ltr_collect_solved mf_snapshot assms by blast
   then have mem: "s \<in> \<lbrakk>fun_of_resolved_st_q_for mf_gs
-      (combine_resolved_st_q (locals (snd mf_sol (Inl (Statement 7, ())))) mf_G)\<rbrakk>"
+      (combine_resolved_st_q (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G)\<rbrakk>"
     unfolding split_gamma_def .
   have "s (STR ''x'') \<in> \<gamma> SPos"
     using gamma_stateD[OF mem, of "STR ''x''"] mf_snapshot by simp

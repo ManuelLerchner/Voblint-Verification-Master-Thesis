@@ -68,25 +68,25 @@ definition nest_2_snapshot :: "(pp \<times> cfg_node list) set \<times> ivl list
      (let sol = nest_2_sol in
       (fst sol,
        [nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
           (STR ''p''),
         nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5]))))
           (STR ''#ret''),
         nest_lookup
-          (locals (snd sol
+          (dg_local (snd sol
             (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6]))))
           (STR ''#ret''),
-        nest_lookup (locals (snd sol (Inl (Statement 3, [Statement 5]))))
+        nest_lookup (dg_local (snd sol (Inl (Statement 3, [Statement 5]))))
           (STR ''t''),
-        nest_lookup (locals (snd sol (Inl (Statement 6, [])))) (STR ''x''),
-        nest_lookup (locals (snd sol (Inl (Statement 7, [])))) (STR ''y'')]))"
+        nest_lookup (dg_local (snd sol (Inl (Statement 6, [])))) (STR ''x''),
+        nest_lookup (dg_local (snd sol (Inl (Statement 7, [])))) (STR ''y'')]))"
 
 lemma nest_2_snapshot_eq:
   "nest_2_snapshot =
@@ -209,8 +209,8 @@ next
 next
   case (EnterComplete u ctx dst pars args p cont s)
   let ?ci = "call_info_of (CallEdge dst pars args) p"
-  let ?caller = "locals (snd nest_2_sol (Inl (u, ctx)))"
-  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (globs (snd nest_2_sol (Inr Global)))) s
+  let ?caller = "dg_local (snd nest_2_sol (Inl (u, ctx)))"
+  have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (dg_global (snd nest_2_sol (Inr Global)))) s
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
@@ -281,44 +281,44 @@ text \<open>Both \<open>f\<close> activations reach \<open>g\<close> through the
 
 lemma nest_2_g_entry_first:
   "nest_lookup
-     (locals (snd nest_2_sol
+     (dg_local (snd nest_2_sol
        (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
      (STR ''p'') = Ivl (Fin 3) (Fin 3)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_entry_second:
   "nest_lookup
-     (locals (snd nest_2_sol
+     (dg_local (snd nest_2_sol
        (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
      (STR ''p'') = Ivl (Fin 10) (Fin 10)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_result_first:
   "nest_lookup
-     (locals (snd nest_2_sol
+     (dg_local (snd nest_2_sol
        (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5]))))
      (STR ''#ret'') = Ivl (Fin 6) (Fin 6)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_g_result_second:
   "nest_lookup
-     (locals (snd nest_2_sol
+     (dg_local (snd nest_2_sol
        (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6]))))
      (STR ''#ret'') = Ivl (Fin 20) (Fin 20)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_t_after_inner_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 3, [Statement 5]))))
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (Statement 3, [Statement 5]))))
      (STR ''t'') = Ivl (Fin 6) (Fin 6)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_x_after_first_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
      = Ivl (Fin 6) (Fin 6)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
 lemma nest_2_y_after_second_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
      = Ivl (Fin 20) (Fin 20)"
   using nest_2_snapshot_eq by (simp add: nest_2_snapshot_def)
 
@@ -327,14 +327,14 @@ text \<open>The precision witness: at \<open>g\<close>'s entry and at both of \<
   merely a different key space --- it is strictly more precise on this program.\<close>
 
 theorem nest_k2_strictly_more_precise_than_k1:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')"
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
+     < nest_lookup (dg_local (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
+     < nest_lookup (dg_local (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
+     < nest_lookup (dg_local (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')"
+  "nest_lookup (dg_local (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
+     < nest_lookup (dg_local (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')"
   by (simp_all add: nest_1_g_entry_merged nest_1_x_after_first_return nest_1_y_after_second_return
                     nest_2_g_entry_first nest_2_g_entry_second nest_2_x_after_first_return
                     nest_2_y_after_second_return less_ivl_def less_eq_ivl_def)

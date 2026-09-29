@@ -4,7 +4,7 @@ theory Congruence_Analyses
     Congruence_Classify
     Congruence_Transfer
     Congruence_Exec
-    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Framework.Call_String_Context"
     "Voblint_Framework.Routed_Context"
     "Voblint_Solver.TD_Solver_Bridge"
@@ -35,7 +35,7 @@ global_interpretation congruence_rule: dg_analysis_exec
     congruence_tf_st_for congruence_enter_st_for cinit_congruence_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((congruence exec_dg_st lifted, congruence exec_dg_st lifted) dg_state) r"
     bot congruence_classify_check
     skip_congruence assign_congruence special_congruence branch_congruence body_congruence

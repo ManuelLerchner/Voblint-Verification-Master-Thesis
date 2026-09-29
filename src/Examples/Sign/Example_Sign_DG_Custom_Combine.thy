@@ -186,23 +186,23 @@ lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
 lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
   "dg_spec_wf (sign_dg_spec_env_join \<G>)"
 proof (unfold dg_spec_wf_def, intro conjI allI impI)
-  show "sp_wf (dg_spec_step (sign_dg_spec_env_join \<G>) a ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>))"
-    if "\<forall>q. sp_wf (A q)" for a d key A
+  show "sp_wf (dg_spec_step (sign_dg_spec_env_join \<G>) a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>))"
+    if "\<forall>q. sp_wf (A q)" for a d unknown_of A
     unfolding dg_spec_step_sign_dg_spec_env_join
     by (rule dg_spec_wf_step_ask[OF dg_spec_wf_ownership_split_lift_sign_base])
        (use that in blast)
 next
-  show "sp_wf (dgs_query (sign_dg_spec_env_join \<G>) ((mk_dg_man d key)\<lparr>man_ask := A\<rparr>) q)"
-    for d key A q
+  show "sp_wf (dgs_query (sign_dg_spec_env_join \<G>) ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q)"
+    for d unknown_of A q
     by simp
 next
-  fix ci d key
-  show "sp_wf (enter\<^sup># (sign_dg_spec_env_join \<G>) ci (mk_dg_man d key))"
+  fix ci d unknown_of
+  show "sp_wf (enter\<^sup># (sign_dg_spec_env_join \<G>) ci (mk_dg_man d unknown_of))"
     by (simp only: dgs_enter_sign_dg_spec_env_join
         dg_spec_wf_enter[OF dg_spec_wf_ownership_split_lift_sign_base])
 next
-  fix ci d key ex
-  show "sp_wf (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci (mk_dg_man d key) ex)"
+  fix ci d unknown_of ex
+  show "sp_wf (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci (mk_dg_man d unknown_of) ex)"
     unfolding dg_spec_combine_transfer_def
     by (auto simp: sign_dg_spec_env_join_def combine_env_callee_join_abs_def
         local_combine_transfer_def
@@ -251,13 +251,13 @@ text \<open>The override's own tree observations. The generic reduction rules do
   with the joined local, so it is reduced once explicitly.\<close>
 
 lemma traverse_combine_env_join:
-  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
      = restrict_local_for \<G>
          (combine\<^sup># \<G> (ci_dst ci)
-            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (globs (\<tau> (Inr gk))))
-            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
+            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
+            (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_dg_spec_of
@@ -265,13 +265,13 @@ lemma traverse_combine_env_join:
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma sides_combine_env_join:
-  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
      = restrict_global_for \<G>
          (combine\<^sup># \<G> (ci_dst ci)
-            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (globs (\<tau> (Inr gk))))
-            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
+            (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
+            (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_dg_spec_of
@@ -282,13 +282,13 @@ text \<open>The stock observations, in the same shape, so the comparison below i
   between two equations rather than between a tree and an equation.\<close>
 
 lemma traverse_combine_stock:
-  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
      = restrict_local_for \<G>
          (combine\<^sup># \<G> (ci_dst ci)
-            (combine_env \<G> dc (globs (\<tau> (Inr gk))))
-            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
+            (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
+            (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_dg_spec_of
@@ -296,13 +296,13 @@ lemma traverse_combine_stock:
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma sides_combine_stock:
-  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
      = restrict_global_for \<G>
          (combine\<^sup># \<G> (ci_dst ci)
-            (combine_env \<G> dc (globs (\<tau> (Inr gk))))
-            (combine_env \<G> de (globs (\<tau> (Inr gk)))))"
+            (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
+            (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
     ownership_split_combine_transfer_def local_state_dg_spec_for_def
     dg_spec_combine_transfer_dg_spec_of
@@ -310,20 +310,20 @@ lemma sides_combine_stock:
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
 
 lemma traverse_combine_env_join_ge:
-  "locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)
-     \<le> locals (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
+     \<le> dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d bot)
           (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
              (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>)"
   unfolding traverse_combine_stock traverse_combine_env_join
   by (rule restrict_local_for_mono[OF combine_collect_abs_join_ge])
 
 lemma sides_combine_env_join_ge:
-  "globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+  "dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
        (dg_spec_combine_transfer (ownership_split_lift \<G> (sign_base_spec \<G>)) ci
           (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))
-     \<le> globs (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
+     \<le> dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d bot)
           (dg_spec_combine_transfer (sign_dg_spec_env_join \<G>) ci
              (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk))"
   unfolding sides_combine_stock sides_combine_env_join
@@ -391,7 +391,7 @@ abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sig
 
 definition cj_stock_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "cj_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for cj_prog_gs
@@ -400,7 +400,7 @@ definition cj_stock_eqs ::
 
 definition cj_custom_eqs ::
   "pp \<times> unit
-   \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk,
+   \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
         (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
   "cj_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_callee_join cj_prog_gs
@@ -419,7 +419,7 @@ lemma cj_custom_terminates:
 
 definition cj_stock_sol ::
   "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
+   \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "cj_stock_sol =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs
@@ -427,7 +427,7 @@ definition cj_stock_sol ::
 
 definition cj_custom_sol ::
   "(pp \<times> unit) set
-   \<times> (pp \<times> unit + (unit, unit) routed_gk
+   \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "cj_custom_sol =
      TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs
@@ -452,21 +452,21 @@ text \<open>
 \<close>
 
 lemma cj_agree_before_the_call:
-  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
-  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 4, ())))) (STR ''r'')  = SPos"
+  "cj_lookup (dg_local (snd cj_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
+  "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 4, ())))) (STR ''r'')  = SPos"
   by eval+
 
 lemma cj_stock_keeps_caller_after_the_call:
-  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''r'') = SPos"
+  "cj_lookup (dg_local (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''r'') = SPos"
   by eval
 
 lemma cj_callee_join_widens_after_the_call:
-  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''r'') = STop"
+  "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''r'') = STop"
   by eval
 
 lemma cj_return_assignment_unaffected:
-  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
-  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
+  "cj_lookup (dg_local (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
+  "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   by eval+
 
 end
