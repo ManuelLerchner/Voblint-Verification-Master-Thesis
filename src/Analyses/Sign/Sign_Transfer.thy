@@ -92,11 +92,9 @@ text \<open>
   registration data; the theorems about them stay under \<open>sign_tf.\<close>, which is where
   a reader looks to find out that they are the generic ones rather than Sign's
   own. \<^const>\<open>skip_sign\<close>'s soundness is \<open>sign_tf.skip_sound\<close>, the branch's is
-  \<open>sign_tf.br_sound\<close>, and the framework's transfer contract at Sign is
+  \<open>sign_tf.backward.branch_sound\<close>, and the framework's transfer contract at Sign is
   \<open>sign_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
-
-thm sign_tf.backward.bfilter.simps(1) sign_tf.backward.afilter.simps(1)
 
 subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
 

@@ -482,31 +482,23 @@ definition int_eq_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" whe
 definition int_eq_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
   "int_eq_false a b = is_empty (intersect_int_dom_mode Refine_Fixpoint a b)"
 
-lemma int_backward_ops:
-  "sound_inverse_ops (intersect_int_dom_mode Refine_Fixpoint) (inv_less_int_dom Refine_Fixpoint)
-     (inv_eq_int_dom Refine_Fixpoint) (inv_plus_int_dom Refine_Fixpoint)
-     (inv_minus_int_dom Refine_Fixpoint) (inv_times_int_dom Refine_Fixpoint)"
-proof -
-  interpret sound_refinement "intersect_int_dom_mode Refine_Fixpoint"
-      "aval_int_dom Refine_Fixpoint" int_dom_tobool
-      "inv_less_int_dom Refine_Fixpoint" "inv_eq_int_dom Refine_Fixpoint"
-      "inv_plus_int_dom Refine_Fixpoint" "inv_minus_int_dom Refine_Fixpoint"
-      "inv_times_int_dom Refine_Fixpoint"
-    by (rule int_backward_domain)
-  show ?thesis by unfold_locales
-qed
-
 lemma int_less_true_sound:
   assumes "int_less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i < j"
-  using assms sound_inverse_ops.less_true_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_less_true_def sound_inverse_ops.less_true_def[OF int_backward_ops])
+  using assms sound_inverse_ops.less_true_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_less_true_def sound_inverse_ops.less_true_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 lemma int_less_false_sound:
   assumes "int_less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "\<not> i < j"
-  using assms sound_inverse_ops.less_false_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_less_false_def sound_inverse_ops.less_false_def[OF int_backward_ops])
+  using assms sound_inverse_ops.less_false_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_less_false_def sound_inverse_ops.less_false_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 lemma int_eq_true_sound:
   assumes "int_eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
@@ -517,8 +509,11 @@ lemma int_eq_true_sound:
 lemma int_eq_false_sound:
   assumes "int_eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i \<noteq> j"
-  using assms sound_inverse_ops.eq_false_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_eq_false_def sound_inverse_ops.eq_false_def[OF int_backward_ops])
+  using assms sound_inverse_ops.eq_false_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_eq_false_def sound_inverse_ops.eq_false_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 global_interpretation int_dom_numeric_queries:
   numeric_query_judgments int_less_true int_less_false int_eq_true int_eq_false

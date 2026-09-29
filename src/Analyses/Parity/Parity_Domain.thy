@@ -214,6 +214,4 @@ interpretation parity_arith: mono_arith_ops
                       parity_tobool_mono[unfolded is_empty_parity])+
   done
 
-lemmas aval_parity_sound = parity_arith.aval_abs_sound[unfolded gamma_abs_parity]
-
 end

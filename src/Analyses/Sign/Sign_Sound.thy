@@ -116,8 +116,8 @@ text \<open>
 
 lemma sign_cinit_gamma:
   "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted cinit_sign_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
+     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_sign_st)\<rbrakk>\<^sub>\<bottom>"
+  by (auto simp: cinit_stores_def gamma_state_def
       fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q)
 
 end

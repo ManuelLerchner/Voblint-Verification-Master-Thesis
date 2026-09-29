@@ -108,9 +108,4 @@ lemma special_congruence_eq_transfer:
   "special_congruence sc x \<sigma> = congruence_special.special_transfer sc x \<sigma>"
   by (cases sc) simp_all
 
-lemmas special_congruence_sound =
-  congruence_special.special_transfer_sound[folded special_congruence_eq_transfer]
-lemmas special_congruence_mono =
-  congruence_special.special_transfer_mono[folded special_congruence_eq_transfer]
-
 end

@@ -60,11 +60,10 @@ proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def
     by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
 next
   case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule ivl_enter_st_for_commute)
+    by (rule ivl_enter_st_for_commute)
 next
   case (4 \<G> u ctx d ca) show ?case by simp
 next
@@ -127,8 +126,6 @@ definition flagship_cfg :: cfg where
 
 interpretation flagship: compiled_cfg flagship_pi "prog_procs flagship_prog" flagship_cfg
   by (unfold_locales; unfold flagship_cfg_def; simp add: compile_prog_finite)
-
-lemmas flagship_entry = flagship.entry[unfolded prog_main_name_def]
 
 lemma flagship_calls: "calls flagship_cfg = {}"
   unfolding flagship_cfg_def flagship_pi_def

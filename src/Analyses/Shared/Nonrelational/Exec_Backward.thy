@@ -466,15 +466,6 @@ lemmas bfilter_st_lift_simps [simp] =
 lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift \<G> b res Bot = Bot"
   by (simp add: bfilter_st_lift_def)
 
-text \<open>
-    This locale's lifted filters are the standalone recursion at \<open>ops\<close>, so their
-  agreement with it is the defining equation read backwards. The two names below
-  state it in that direction, which is the one callers instantiate.
-\<close>
-
-lemmas afilter_st_lift_with_ops = afilter_st_lift_def [symmetric]
-lemmas bfilter_st_lift_with_ops = bfilter_st_lift_def [symmetric]
-
 end
 
 context sound_refinement
@@ -799,7 +790,7 @@ lemma branch_st_commute:
     finally show ?thesis
       using True
       by (simp add: branch_st_def branch_def branch_lifted_def
-          bfilter_st_lift_with_ops)
+          bfilter_st_lift_def [symmetric])
 next
   case False
   then show ?thesis

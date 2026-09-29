@@ -47,14 +47,6 @@ locale sound_nonrelational_ops =
   for ops :: "'a::numeric_domain nonrelational_ops"
 begin
 
-text \<open>The guard is the branch the refinement operations derive.\<close>
-
-abbreviation br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "br \<equiv> backward.branch"
-
-lemma br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
-  by (rule backward.branch_sound)
-
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
 
 definition assign :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -142,9 +134,9 @@ text \<open>The eight operations discharge the framework's contract in one
   so only the per-edge operations and the callee entry are the domain's own.\<close>
 
 lemma is_sound_nonrelational_transfer:
-  "sound_nonrelational_transfer \<G> skip assign special_transfer br body ret (enter_ci_for \<G>) event"
+  "sound_nonrelational_transfer \<G> skip assign special_transfer backward.branch body ret (enter_ci_for \<G>) event"
   by unfold_locales
-     (simp_all add: assign_sound special_transfer_sound br_sound skip_sound body_sound
+     (simp_all add: assign_sound special_transfer_sound backward.branch_sound skip_sound body_sound
         ret_sound enter_ci_for_sound event_sound)
 
 text \<open>The per-edge dispatcher. The executable mirror a domain runs dispatches on
@@ -152,14 +144,14 @@ text \<open>The per-edge dispatcher. The executable mirror a domain runs dispatc
   rather than one lemma per operation.\<close>
 
 definition tf_abs :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_abs = local_spec_step skip assign special_transfer br body ret event"
+  "tf_abs = local_spec_step skip assign special_transfer backward.branch body ret event"
 
 lemma tf_abs_simps [simp]:
   "tf_abs EA_Nop = skip"
   "tf_abs (EA_Assign x e) = assign x e"
   "tf_abs (EA_Special sc y) = special_transfer sc y"
-  "tf_abs (EA_Assume b) = br b True"
-  "tf_abs (EA_AssumeNot b) = br b False"
+  "tf_abs (EA_Assume b) = backward.branch b True"
+  "tf_abs (EA_AssumeNot b) = backward.branch b False"
   "tf_abs (EA_Body p) = body p"
   "tf_abs (EA_Ret eo p) = ret eo p"
   "tf_abs (EA_Check l c) = event (Check_Event l c)"
@@ -183,10 +175,10 @@ text \<open>
   commutation is already proved once against \<^const>\<open>generic_tf_abs\<close>.
 \<close>
 
-lemma tf_abs_eq_generic: "tf_abs = generic_tf_abs ops br"
+lemma tf_abs_eq_generic: "tf_abs = generic_tf_abs ops backward.branch"
 proof (rule ext, rule ext)
   fix a :: edge_action and \<sigma> :: "'a abs_state"
-  show "tf_abs a \<sigma> = generic_tf_abs ops br a \<sigma>"
+  show "tf_abs a \<sigma> = generic_tf_abs ops backward.branch a \<sigma>"
     by (cases a)
        (simp_all add: op_defs split: special_call.splits option.splits)
 qed
@@ -197,9 +189,6 @@ text \<open>
   executable step with it.
 \<close>
 
-lemma n_bfilter_eq: "n_bfilter ops = backward.branch_st"
-  using backward.branch_st_with_ops by simp
-
 theorem tf_st_for_commute:
   assumes "live_resolved_st_q \<G> s"
   shows
@@ -207,7 +196,7 @@ theorem tf_st_for_commute:
      tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
-     (simp add: n_bfilter_eq backward.branch_st_commute[OF assms])
+     (simp add: backward.branch_st_with_ops [simplified] backward.branch_st_commute[OF assms])
 
 lemma enter_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (generic_enter_st_for ops \<G> ci s) =
@@ -228,7 +217,7 @@ text \<open>
 theorem dg_analysis_execI:
   assumes route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_exec_dg_st_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
     and seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
     and solve_pp:
       "\<And>eqs x. solve_dom eqs x
@@ -236,19 +225,19 @@ theorem dg_analysis_execI:
     and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and init_sound:
       "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
     and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
   shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st gk0 seed
            route solve solve_dom bot check.classify_check
-           skip assign special_transfer br body ret enter_ci_for event route_abs solve_c"
+           skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"
 proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def tf_abs_def[symmetric] by (rule tf_st_for_commute)
+    unfolding tf_abs_def[symmetric] by (rule tf_st_for_commute)
 next
   case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule enter_st_for_commute)
+    by (rule enter_st_for_commute)
 qed (fact route_agree seed_ne_gk0 solve_pp solve_fin init_sound dom_of_solve_c
        check.classify_check_proved check.classify_check_refuted refl)+
 
@@ -271,9 +260,6 @@ locale mono_nonrelational_ops = sound_nonrelational_ops ops
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
   for ops :: "'a::numeric_domain nonrelational_ops"
 begin
-
-lemma br_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> br b pol \<sigma>1 \<le> br b pol \<sigma>2"
-  by (rule backward.branch_mono)
 
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
   unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)

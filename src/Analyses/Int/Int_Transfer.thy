@@ -141,10 +141,6 @@ where
 | "special_int_dom mode (Max a b) x \<sigma> =
      \<sigma>(x := int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
 
-lemma gamma_int_dom_top: "gamma_int_dom (top :: int_dom) = UNIV"
-  by (simp add: gamma_int_dom_def top_int_dom_ext_def top_ivl_def
-        gamma_sign_top gamma_ivl_top gamma_parity_top)
-
 definition int_dom_special_ops :: "refine_mode \<Rightarrow> int_dom special_ops" where
   "int_dom_special_ops mode =
      \<lparr> special_min = int_dom_min mode, special_max = int_dom_max mode \<rparr>"
@@ -237,7 +233,7 @@ global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
 
 text \<open>
   The theorems stay under \<open>int_tf.\<close>: \<^const>\<open>skip_int_dom\<close>'s soundness is
-  \<open>int_tf.skip_sound\<close>, the branch's is \<open>int_tf.br_sound\<close>, and the framework's
+  \<open>int_tf.skip_sound\<close>, the branch's is \<open>int_tf.backward.branch_sound\<close>, and the framework's
   transfer contract at every mode is \<open>int_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 

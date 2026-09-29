@@ -59,8 +59,6 @@ lemma gEx_calls: "calls gEx = {}"
 interpretation gEx: compiled_cfg sign_ex_pi "prog_procs sign_ex_prog" gEx
   by (unfold_locales; unfold gEx_def; simp add: compile_prog_finite)
 
-lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
-
 subsection \<open>The equation system and its solve\<close>
 
 text \<open>\<open>dgEx_eqs\<close> is the registered equation system at this program. The executable
@@ -121,7 +119,7 @@ text \<open>The unit registration routes the whole abstract state through the lo
   the solver computed, beside the theorem above that quantifies over every run.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. case map_lift (fun_of_exec_dg_st_for sign_ex_gs)
+  "map_option (\<lambda>sol. case map_lift (fun_of_resolved_st_q_for sign_ex_gs)
                             (locals (snd sol (Inl (Statement 2, ()))))
                       of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None)
      (TD_side_rule_Interp_solve_c Globals_Join dgEx_eqs (cfg_exit gEx, ())) = Some (Some SPos)"

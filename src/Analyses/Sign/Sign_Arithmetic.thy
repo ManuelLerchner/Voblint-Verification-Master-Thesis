@@ -16,7 +16,7 @@ text \<open>
   \<open>sign_tobool\<close> return \<open>Some b\<close> when every pair of concrete values agrees on
   \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
   monotone, which is exactly what the shared \<open>sound_arith_ops\<close> locale
-  needs; interpreting it at the end yields \<open>aval_sign_sound\<close> and
+  needs; interpreting it at the end yields \<open>sign_arith.aval_dom_sound\<close> and
   \<open>sign_arith.aval_dom_mono\<close> for whole expressions.
 \<close>
 
@@ -349,8 +349,6 @@ interpretation sign_arith: mono_arith_ops
   apply (blast intro: sign_lt_mono[unfolded is_empty_sign] sign_eqb_mono[unfolded is_empty_sign]
                       sign_tobool_mono[unfolded is_empty_sign])+
   done
-
-lemmas aval_sign_sound = sign_arith.aval_abs_sound[unfolded gamma_abs_sign]
 
 
 end

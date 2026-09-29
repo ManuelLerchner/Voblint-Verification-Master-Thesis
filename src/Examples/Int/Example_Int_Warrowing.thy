@@ -9,10 +9,9 @@ section \<open>Where the composite widens and narrows, and where it must not ref
 text \<open>
   Widening and narrowing on the product are the four components' own operators
   applied side by side, with nothing run afterward to reconcile them. This
-  theory pins that by \<open>eval\<close> in both directions, cites the \<open>warrowing\<close> class
-  laws at \<open>int_dom\<close> so they hold for every pair rather than these examples, and
-  then exhibits the concrete state that makes the omission necessary: refining
-  after a narrow would break the solver's \<open>narrow_ge\<close> bracket. Vocabulary:
+  theory pins that by \<open>eval\<close> in both directions and then exhibits the
+  concrete state that makes the omission necessary: refining after a narrow
+  would break the solver's \<open>narrow_ge\<close> bracket. Vocabulary:
   \<open>int_dom_sipc s i p c\<close> overwrites \<open>top\<close> in the order sign, interval, parity,
   congruence, and \<open>mk_congruence c m\<close> is the residue class of \<open>c\<close> modulo \<open>m\<close>.
 \<close>
@@ -57,28 +56,6 @@ lemma narrow_int_dom_componentwise_regression:
      (int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven (top :: congruence)) =
    int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PTop (top :: congruence)"
   by eval
-
-subsection \<open>The composite \<open>warrowing\<close> laws hold generically\<close>
-
-text \<open>
-  Not just spot-checked by \<open>eval\<close> at one instance: these cite the
-  \<open>warrowing\<close> class facts directly at \<open>int_dom\<close>, witnessing that the
-  \<open>warrowing\<close> instantiation of \<open>int_dom_ext\<close> in
-  \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> actually resolves and discharges
-  its obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
-\<close>
-
-lemma int_dom_widen_ge1: "(a :: int_dom) \<le> widen a b"
-  by (rule widen_ge1)
-
-lemma int_dom_widen_ge2: "(b :: int_dom) \<le> widen a b"
-  by (rule widen_ge2)
-
-lemma int_dom_narrow_ge: "(b :: int_dom) \<le> a \<Longrightarrow> b \<le> narrow a b"
-  by (rule narrow_ge)
-
-lemma int_dom_narrow_le: "(b :: int_dom) \<le> a \<Longrightarrow> narrow a b \<le> a"
-  by (rule narrow_le)
 
 subsection \<open>Why post-narrow refinement would break \<open>narrow_ge\<close>\<close>
 

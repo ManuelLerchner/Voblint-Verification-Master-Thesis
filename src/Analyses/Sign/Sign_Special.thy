@@ -134,7 +134,4 @@ lemma sign_special_ops_max [simp]: "special_max sign_special_ops = sign_max"
 lemma special_sign_eq_transfer: "special_sign sc x \<sigma> = sign_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_sign_def)
 
-lemmas special_sign_sound = sign_special.special_transfer_sound[folded special_sign_eq_transfer]
-lemmas special_sign_mono  = sign_special.special_transfer_mono[folded special_sign_eq_transfer]
-
 end

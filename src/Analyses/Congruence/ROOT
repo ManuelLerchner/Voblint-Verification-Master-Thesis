@@ -19,7 +19,6 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
     Congruence_Arithmetic
     Congruence_Backward
     Congruence_Special
-    Congruence_Numeric_Queries
     Congruence_Transfer
     Congruence_Exec
     Congruence_Sound

@@ -82,8 +82,7 @@ proof
     by (cases q) (simp add: gamma_query_lift_inf[OF gamma_inf_int_dom])
 qed
 
-lemma eval_holds_top [simp]: "eval_holds q \<top> s"
-  by (rule eval_query.top_sound)
+declare eval_query.top_sound [simp]
 
 text \<open>
   The exact answer for a known integer, and a known integer read back from

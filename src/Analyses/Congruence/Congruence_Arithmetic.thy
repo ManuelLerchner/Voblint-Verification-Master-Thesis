@@ -436,7 +436,7 @@ proof -
   proof (cases "Rep_congruence a1")
     case None
     then have "a1 = bottom_congruence"
-      by (simp only: Rep_congruence_inject[symmetric] Rep_bottom_congruence)
+      by (simp only: Rep_congruence_inject[symmetric] bottom_congruence.rep_eq)
     with assms(1) show ?thesis
       by (simp add: is_bottom_congruence_def bot_congruence_def)
   next

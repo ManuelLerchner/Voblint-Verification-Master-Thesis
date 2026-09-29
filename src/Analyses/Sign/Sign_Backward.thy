@@ -257,15 +257,6 @@ qed (use sign_tobool_mono in \<open>simp_all add: inf_sign_sound inv_less_sign_s
        inv_eq_sign_sound inv_conservative_def sign_tobool_sound inf_mono sign_arith.aval_dom_mono
        inv_less_sign_mono inv_eq_sign_mono le_infI1 le_infI2\<close>)
 
-lemma sign_backward_ops:
-  "sound_inverse_ops inf inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
-proof -
-  interpret mono_refinement inf aval_sign sign_tobool
-      inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
-    by (rule sign_backward_domain)
-  show ?thesis by unfold_locales
-qed
-
 subsection \<open>Executable equality-narrowing tests\<close>
 
 text \<open>

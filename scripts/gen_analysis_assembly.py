@@ -131,7 +131,6 @@ CONTEXTS = [
         "params": "r",
         "case_route": [
             "  case (1 \\<G> u ctx d ca) show ?case",
-            "    unfolding fun_of_exec_dg_st_for_def",
             "    by (rule exec_formals_route_commute[symmetric])",
         ],
     },

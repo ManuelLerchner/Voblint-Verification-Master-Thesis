@@ -82,7 +82,7 @@ text \<open>
   registration data; the theorems about them stay under \<open>parity_tf.\<close>, which is
   where a reader looks to find out that they are the generic ones rather than
   Parity's own. \<^const>\<open>skip_parity\<close>'s soundness is \<open>parity_tf.skip_sound\<close>, the
-  branch's is \<open>parity_tf.br_sound\<close>, and the framework's transfer contract at
+  branch's is \<open>parity_tf.backward.branch_sound\<close>, and the framework's transfer contract at
   Parity is \<open>parity_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 

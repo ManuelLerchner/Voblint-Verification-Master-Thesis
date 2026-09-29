@@ -32,8 +32,9 @@ text \<open>
 
 lemma int_cinit_gamma:
   "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted cinit_int_dom_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q gamma_int_dom_top)
+     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_int_dom_st)\<rbrakk>\<^sub>\<bottom>"
+  by (auto simp: cinit_stores_def gamma_state_def
+      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q
+      gamma_top [where 'a = int_dom, unfolded gamma_abs_int_dom_ext])
 
 end

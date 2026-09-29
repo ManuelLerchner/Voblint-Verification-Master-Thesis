@@ -2,7 +2,6 @@ theory Congruence_Transfer
   imports
     Congruence_Backward
     Congruence_Special
-    Congruence_Numeric_Queries
     "Voblint_Nonrelational.Nonrelational_Transfer"
 begin
 
@@ -85,7 +84,7 @@ text \<open>
   registration data; the theorems about them stay under \<open>congruence_tf.\<close>, which is
   where a reader looks to find out that they are the generic ones rather than
   Congruence's own. \<^const>\<open>skip_congruence\<close>'s soundness is
-  \<open>congruence_tf.skip_sound\<close>, the branch's is \<open>congruence_tf.br_sound\<close>, and the
+  \<open>congruence_tf.skip_sound\<close>, the branch's is \<open>congruence_tf.backward.branch_sound\<close>, and the
   framework's transfer contract at Congruence is
   \<open>congruence_tf.is_sound_nonrelational_transfer\<close>.
 \<close>

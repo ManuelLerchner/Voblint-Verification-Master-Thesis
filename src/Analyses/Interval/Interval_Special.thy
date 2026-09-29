@@ -36,7 +36,4 @@ lemma ivl_special_ops_max [simp]: "special_max ivl_special_ops = ivl_max"
 lemma special_ivl_eq_transfer: "special_ivl sc x \<sigma> = ivl_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_ivl_def)
 
-lemmas special_ivl_sound = ivl_special.special_transfer_sound[folded special_ivl_eq_transfer]
-lemmas special_ivl_mono  = ivl_special.special_transfer_mono[folded special_ivl_eq_transfer]
-
 end

@@ -8,7 +8,7 @@ text \<open>
   The verified solver uses the executable association-list carrier \<open>'a exec_dg_st\<close>, while
   soundness is stated over function-valued abstract states. This theory is the bottom of the
   bridge: the D/G product's lattice structure and the classifier-parametric readback
-  \<open>fun_of_dg_st_for\<close> that lifts \<open>fun_of_exec_dg_st_for\<close> to that product. Everything
+  \<open>fun_of_dg_st_for\<close> that lifts \<^const>\<open>fun_of_resolved_st_q_for\<close> to that product. Everything
   here is carrier-level -- no specification, no transfer, no equation shape -- so a
   domain's executable mirror is related to its abstract state once, here, and the
   specification layers above never restate it.
@@ -23,36 +23,23 @@ type_synonym 'a exec_dg_st = "'a resolved_st_q"
 subsection \<open>Classifier-parametric readback\<close>
 
 text \<open>
-  The executable local/side readback, generic in the classifier: an
-  executable state is written with a declaration-driven classifier, so
-  reading it back needs the same classifier or the readback consults the
-  wrong slot.
+  The executable local/side readback is \<^const>\<open>fun_of_resolved_st_q_for\<close>, generic in
+  the classifier: an executable state is written with a declaration-driven classifier,
+  so reading it back needs the same classifier or the readback consults the wrong slot.
+  \<open>fun_of_dg_st_for\<close> applies it to both components.
 \<close>
-
-definition fun_of_exec_dg_st_for ::
-  "(vname => bool) => ('a::bot) exec_dg_st => 'a abs_state" where
-  "fun_of_exec_dg_st_for \<G> = fun_of_resolved_st_q_for \<G>"
-
-lemma fun_of_exec_dg_st_for_bot [simp]:
-  "fun_of_exec_dg_st_for \<G> (bot :: ('a::order_bot) exec_dg_st) = bot"
-  unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_bot)
-
-lemma fun_of_exec_dg_st_for_sup [simp]:
-  "fun_of_exec_dg_st_for \<G> ((s :: ('a::bounded_semilattice_sup_bot) exec_dg_st) \<squnion> t)
-     = fun_of_exec_dg_st_for \<G> s \<squnion> fun_of_exec_dg_st_for \<G> t"
-  unfolding fun_of_exec_dg_st_for_def by (rule fun_of_resolved_st_q_for_sup)
 
 definition fun_of_dg_st_for ::
   "(vname => bool) =>
    (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
 where
   "fun_of_dg_st_for \<G> d =
-    DG (fun_of_exec_dg_st_for \<G> (locals d)) (fun_of_exec_dg_st_for \<G> (globs d))"
+    DG (fun_of_resolved_st_q_for \<G> (locals d)) (fun_of_resolved_st_q_for \<G> (globs d))"
 
 lemma fun_of_dg_st_for_simps [simp]:
-  "locals (fun_of_dg_st_for \<G> d) = fun_of_exec_dg_st_for \<G> (locals d)"
-  "globs (fun_of_dg_st_for \<G> d) = fun_of_exec_dg_st_for \<G> (globs d)"
-  "fun_of_dg_st_for \<G> (DG a b) = DG (fun_of_exec_dg_st_for \<G> a) (fun_of_exec_dg_st_for \<G> b)"
+  "locals (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (locals d)"
+  "globs (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (globs d)"
+  "fun_of_dg_st_for \<G> (DG a b) = DG (fun_of_resolved_st_q_for \<G> a) (fun_of_resolved_st_q_for \<G> b)"
   by (simp_all add: fun_of_dg_st_for_def)
 
 lemma fun_of_dg_st_for_bot [simp]:

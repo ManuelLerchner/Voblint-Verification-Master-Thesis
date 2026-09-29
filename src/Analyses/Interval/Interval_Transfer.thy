@@ -84,16 +84,9 @@ text \<open>
   registration data; the theorems about them stay under \<open>ivl_tf.\<close>, which is where
   a reader looks to find out that they are the generic ones rather than
   Interval's own. \<^const>\<open>skip_ivl\<close>'s soundness is \<open>ivl_tf.skip_sound\<close>, the
-  branch's is \<open>ivl_tf.br_sound\<close>, and the framework's transfer contract at
+  branch's is \<open>ivl_tf.backward.branch_sound\<close>, and the framework's transfer contract at
   Interval is \<open>ivl_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
-
-lemma branch_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
-  by (rule ivl_tf.br_sound)
-
-lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
-  by (rule ivl_tf.backward.branch_le_bfilter)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain, covering
