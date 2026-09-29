@@ -93,7 +93,7 @@ lemma arithmetic_condition_safe:
     \<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   by (auto simp: arithmetic_condition_def split: if_splits)
 
-context abstract_check_domain
+context sound_check_query
 begin
 
 lemma arithmetic_classify_safe:

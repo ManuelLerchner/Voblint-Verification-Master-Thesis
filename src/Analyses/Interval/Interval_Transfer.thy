@@ -27,7 +27,7 @@ text \<open>
 \<close>
 
 lemma interval_check_domain:
-  "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
+  "sound_check_query interval_less interval_eq gamma_state aval_ivl"
   by unfold_locales (rule ivl_arith.aval_abs_sound)
 
 definition ivl_ops :: "ivl nonrelational_ops" where
@@ -45,7 +45,7 @@ lemma ivl_ops_simps [simp]:
 
 global_interpretation ivl_tf: mono_nonrelational_ops ivl_ops
   rewrites "n_top ivl_ops = ivl_top"
-    and "sound_special_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
+    and "sound_minmax_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
   defines assign_ivl = ivl_tf.assign
     and skip_ivl = ivl_tf.skip
     and body_ivl = ivl_tf.body
@@ -69,12 +69,12 @@ global_interpretation ivl_tf: mono_nonrelational_ops ivl_ops
 proof -
   show "mono_nonrelational_ops ivl_ops"
   proof (rule mono_nonrelational_opsI, unfold ivl_ops_simps ivl_refine_ops_simps)
-    show "mono_special_ops ivl_special_ops aval_ivl"
-      by (rule ivl_special.mono_special_ops_axioms)
-    show "backward_domain_mono intersect_ivl aval_ivl interval_tobool
+    show "mono_minmax_ops ivl_special_ops aval_ivl"
+      by (rule ivl_special.mono_minmax_ops_axioms)
+    show "mono_refinement intersect_ivl aval_ivl interval_tobool
             inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative"
       by (rule ivl_backward_domain)
-    show "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
+    show "sound_check_query interval_less interval_eq gamma_state aval_ivl"
       by (rule interval_check_domain)
     show "ivl_top = top"
       by (simp add: top_ivl_def)

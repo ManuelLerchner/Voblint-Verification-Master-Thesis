@@ -34,7 +34,7 @@ text \<open>
   second name for the same function.
 \<close>
 
-lemma sign_check_domain: "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
+lemma sign_check_domain: "sound_check_query sign_less sign_eq gamma_state aval_sign"
   by unfold_locales (rule sign_arith.aval_abs_sound)
 
 definition sign_ops :: "sign nonrelational_ops" where
@@ -52,7 +52,7 @@ lemma sign_ops_simps [simp]:
 
 global_interpretation sign_tf: mono_nonrelational_ops sign_ops
   rewrites "n_top sign_ops = STop"
-    and "sound_special_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
+    and "sound_minmax_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
   defines assign_sign = sign_tf.assign
     and skip_sign = sign_tf.skip
     and body_sign = sign_tf.body
@@ -77,12 +77,12 @@ global_interpretation sign_tf: mono_nonrelational_ops sign_ops
 proof -
   show "mono_nonrelational_ops sign_ops"
   proof (rule mono_nonrelational_opsI, unfold sign_ops_simps sign_refine_ops_simps)
-    show "mono_special_ops sign_special_ops aval_sign"
-      by (rule sign_special.mono_special_ops_axioms)
-    show "backward_domain_mono inf aval_sign sign_tobool
+    show "mono_minmax_ops sign_special_ops aval_sign"
+      by (rule sign_special.mono_minmax_ops_axioms)
+    show "mono_refinement inf aval_sign sign_tobool
             inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
       by (rule sign_backward_domain)
-    show "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
+    show "sound_check_query sign_less sign_eq gamma_state aval_sign"
       by (rule sign_check_domain)
     show "STop = top"
       by (simp add: top_sign_def)

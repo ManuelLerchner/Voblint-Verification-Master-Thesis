@@ -9,7 +9,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 | --- | --- |
 | `Sign_Warrowing.thy` | widening (join), narrowing (left argument), and the `numeric_domain` instance; the lattice itself is `Voblint_Domain.Sign_Lattice` |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
-| `Sign_Backward.thy` | inverse operators, `sign_refine_ops`, and the `backward_domain_mono` certificate `sign_backward_domain` |
+| `Sign_Backward.thy` | inverse operators, `sign_refine_ops`, and the `mono_refinement` certificate `sign_backward_domain` |
 | `Sign_Special.thy` | `sign_min`/`sign_max`, the abstract implementation of the `Min`/`Max` special calls |
 | `Sign_Numeric_Queries.thy` | Sign's comparison queries, derived from the inverse operators |
 | `Sign_Transfer.thy` | the `sign_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |

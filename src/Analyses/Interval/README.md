@@ -10,7 +10,7 @@ Executable witnesses live under
 | `Interval_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): bounds, order, lattice, and concretization |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws, then the `numeric_domain` instance, which needs them |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
-| `Interval_Backward.thy` | inverse operators, `ivl_refine_ops`, and the `backward_domain_mono` certificate |
+| `Interval_Backward.thy` | inverse operators, `ivl_refine_ops`, and the `mono_refinement` certificate |
 | `Interval_Transfer.thy` | the `ivl_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Interval_Domain.thy` | aggregate import façade and small domain demonstrations |
 | `Interval_Exec.thy` | executable transfer mirror + commutation |

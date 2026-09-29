@@ -15,7 +15,7 @@ text \<open>
   denotes rather than about the sign itself: \<open>sign_lt\<close>, \<open>sign_eqb\<close> and
   \<open>sign_tobool\<close> return \<open>Some b\<close> when every pair of concrete values agrees on
   \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
-  monotone, which is exactly what the shared \<open>expression_domain_sound\<close> locale
+  monotone, which is exactly what the shared \<open>sound_arith_ops\<close> locale
   needs; interpreting it at the end yields \<open>aval_sign_sound\<close> and
   \<open>sign_arith.aval_dom_mono\<close> for whole expressions.
 \<close>
@@ -125,7 +125,7 @@ subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
   \<open>sign_lt\<close>/\<open>sign_eqb\<close>/\<open>sign_tobool\<close> are Sign's three-valued \<open>bool option\<close>
-  queries for \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries for \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close>
   locale: \<open>Some True\<close>/\<open>Some False\<close> when the two operands' sign bounds alone
   decide it, \<open>None\<close> otherwise. Every guard here is a \<open>sign_le\<close> test against a
   fixed threshold, so downward-closedness under \<open>\<le>\<close> (needed for
@@ -336,7 +336,7 @@ lemma sign_times_combine_mono:
   "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::sign)"
   by (meson order.trans sign_times_mono1 sign_times_mono2)
 
-interpretation sign_arith: expression_domain_mono
+interpretation sign_arith: mono_arith_ops
     aval_sign sign_of_int "(+)" "(-)" "(*)" sign_div sign_mod sign_lt sign_eqb sign_tobool
   apply unfold_locales
   apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound

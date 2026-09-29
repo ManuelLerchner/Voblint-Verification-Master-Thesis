@@ -3455,3 +3455,18 @@ twice_finE
 # --- Unused Interval evaluator alias (2026-09-29) ---
 aval_ivl_sound
 bfilter_int_dom_never_plus_eq_congruence_only
+
+# --- Domain locales follow one naming scheme (2026-09-29) ---
+# The reductive laws joined sound_intersection and backward_domain, whose
+# reductive variants had no instance of their own. The law locales take the
+# sound_/mono_ prefix of their siblings and name what they certify.
+reductive_intersection
+backward_domain_reductive
+backward_ops
+backward_domain
+backward_domain_mono
+expression_domain_sound
+expression_domain_mono
+sound_special_ops
+mono_special_ops
+abstract_check_domain

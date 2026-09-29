@@ -11,7 +11,7 @@ text \<open>
   \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
   \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
   \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
-  queries \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  queries \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close>
   locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
   it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
   interval \<open>[0,0]\<close>.
@@ -185,7 +185,7 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
         else of_bool_option ivl_of_int
                (or_opt (interval_tobool (aval_ivl a \<sigma>)) (interval_tobool (aval_ivl b \<sigma>))))"
 
-interpretation ivl_arith: expression_domain_mono
+interpretation ivl_arith: mono_arith_ops
     aval_ivl ivl_of_int "(+)" "(-)" "(*)" ivl_div ivl_mod
     interval_lt interval_eqb interval_tobool
   by unfold_locales
@@ -399,13 +399,13 @@ lemma ivl_refine_ops_simps [simp]:
 
 text \<open>
   The certificate discharges soundness, monotonicity, and reductiveness together
-  against @{locale backward_domain_mono}; each \<open>inv_*\<close>'s mono/reductive obligation
+  against @{locale mono_refinement}; each \<open>inv_*\<close>'s mono/reductive obligation
   is one @{const le_pair} fact, built from the componentwise per-operator lemmas
   above.
 \<close>
 
 lemma ivl_backward_domain:
-  "backward_domain_mono intersect_ivl aval_ivl interval_tobool
+  "mono_refinement intersect_ivl aval_ivl interval_tobool
      inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative"
 proof unfold_locales
   fix n :: int and a b :: ivl

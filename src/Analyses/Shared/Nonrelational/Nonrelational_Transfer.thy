@@ -38,11 +38,11 @@ text \<open>
 \<close>
 
 locale sound_nonrelational_ops =
-  sound_special_ops "n_special ops" "n_aval ops"
-  + backward: backward_domain "r_intersect (n_refine ops)" "n_aval ops"
+  sound_minmax_ops "n_special ops" "n_aval ops"
+  + backward: sound_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
-  + check: abstract_check_domain "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
+  + check: sound_check_query "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
       "n_aval ops"
   for ops :: "'a::numeric_domain nonrelational_ops" +
   assumes top_eq: "n_top ops = top"
@@ -74,7 +74,7 @@ definition body :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   "body p \<sigma> = \<sigma>"
 
 text \<open>A check observes its condition but never refines the store --- narrowing a
-  state against a checked condition is \<open>abstract_check_domain\<close>'s job --- so
+  state against a checked condition is \<open>sound_check_query\<close>'s job --- so
   \<open>event\<close> is the identity like \<open>skip\<close> and \<open>body\<close>.\<close>
 
 definition event :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -272,8 +272,8 @@ text \<open>
 \<close>
 
 locale mono_nonrelational_ops = sound_nonrelational_ops ops
-  + mono_special_ops "n_special ops" "n_aval ops"
-  + backward: backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+  + mono_minmax_ops "n_special ops" "n_aval ops"
+  + backward: mono_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
   for ops :: "'a::numeric_domain nonrelational_ops"
@@ -308,26 +308,26 @@ end
 subsection \<open>Certifying a bundle from its capability certificates\<close>
 
 lemma sound_nonrelational_opsI:
-  assumes "sound_special_ops (n_special ops) (n_aval ops)"
-    and "backward_domain (r_intersect (n_refine ops)) (n_aval ops)
+  assumes "sound_minmax_ops (n_special ops) (n_aval ops)"
+    and "sound_refinement (r_intersect (n_refine ops)) (n_aval ops)
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
-    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
+    and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
     and "n_top ops = top"
   shows "sound_nonrelational_ops ops"
   by (intro sound_nonrelational_ops.intro sound_nonrelational_ops_axioms.intro assms)
 
 lemma mono_nonrelational_opsI:
-  assumes special: "mono_special_ops (n_special ops) (n_aval ops)"
-    and backward: "backward_domain_mono (r_intersect (n_refine ops)) (n_aval ops)
+  assumes special: "mono_minmax_ops (n_special ops) (n_aval ops)"
+    and backward: "mono_refinement (r_intersect (n_refine ops)) (n_aval ops)
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
-    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
+    and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
     and "n_top ops = top"
   shows "mono_nonrelational_ops ops"
 proof -
-  interpret mono_special_ops "n_special ops" "n_aval ops" by (rule special)
-  interpret backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+  interpret mono_minmax_ops "n_special ops" "n_aval ops" by (rule special)
+  interpret mono_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
     by (rule backward)

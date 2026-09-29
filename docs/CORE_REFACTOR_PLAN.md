@@ -175,7 +175,7 @@ Mechanical once Phase 0 is green.
 
 | # | Step | Status |
 | --- | --- | --- |
-| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `backward_domain`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | landed (`Backward_Domain.thy`, 1180 lines; `Abstract_Domain` 1013) |
+| 1.1 | Split `Abstract_Domain` at line 919: `Backward_Domain.thy` takes `semantic_intersection`, `sound_refinement`, `backward_domain_refined`, the inverse-operator sections, `show_val`. | landed (`Backward_Domain.thy`, 1180 lines; `Abstract_Domain` 1013) |
 | 1.2 | Rename `Exec_St` to `Abstract_State` (it is the quotient state, the counterpart of HOL-IMP's `Abs_State`; nothing about it is specific to execution). Keep the constant names for now. | superseded: `Exec_St` was split into `Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer` and `Exec_St_Reachability` (Exec `ROOT`) |
 | 1.3 | Extract the hooks route from `DG_Soundness` (968-1508) and `DG_LTR_Sound` (`sound_dg_hooks_ltr`), plus `gamma_join` and `ownership_split_dg_spec_placed`, into `Examples/Placement/Placement_Hooks.thy`. Move `Exec_Placement` beside it. | landed as `Examples/Placement/Placement_Policy.thy`: the `*_placed` specification, `gamma_join` and its section, and `sound_dg_hooks_ltr`; `sound_dg_hooks` itself stays, it is the engine `analysis_contract` reduces to. Later deleted whole: the placement experiment went on 2026-09-02, and `sound_dg_hooks` is in `scripts/retired_identifiers.txt` |
 | 1.4 | Create `src/Abstract_Interpreter/Domain/ROOT`, `src/Abstract_Interpreter/Solver/ROOT`, `src/Abstract_Interpreter/Exec/ROOT`; rewrite `src/Abstract_Interpreter/Framework/ROOT`; add the four directories to `ROOTS`. | landed |

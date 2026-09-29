@@ -7,7 +7,7 @@ section \<open>A domain's answer to the value of an expression\<close>
 text \<open>
   A domain with a check decision procedure answers \<open>EvalInt e\<close> for every
   comparison or logical operator \<open>e\<close>: such an expression evaluates to \<open>0\<close> or
-  \<open>1\<close>, so a decided \<^const>\<open>abstract_check_domain.check_query\<close> is the
+  \<open>1\<close>, so a decided \<^const>\<open>sound_check_query.check_query\<close> is the
   exact integer, and an undecided one is the interval \<open>[0, 1]\<close>. Other
   expressions it declines with \<open>\<top>\<close>. A check is then classified from this
   answer exactly as the domain's own \<open>classify_check\<close> classified it.
@@ -43,7 +43,7 @@ proof (cases r)
     using answer_const_bool_range by (simp add: bool_answer_def answer_of_ivl_def)
 qed (auto simp: bool_answer_def classify_answer_of_int)
 
-context abstract_check_domain
+context sound_check_query
 begin
 
 fun eval_answer :: "'d \<Rightarrow> query \<Rightarrow> answer" where
@@ -113,7 +113,7 @@ lemma answer_check_refuted:
   using assms classify_answer_refuted
   by (auto simp: answer_check_def split: lifted.splits)
 
-lemma (in abstract_check_domain) answer_check_eval_answer:
+lemma (in sound_check_query) answer_check_eval_answer:
   "answer_check eval_answer = classify_check"
   by (simp add: fun_eq_iff answer_check_def classify_eval_answer del: eval_answer.simps)
 

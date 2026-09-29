@@ -27,7 +27,7 @@ text \<open>
 \<close>
 
 lemma congruence_check_domain:
-  "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
+  "sound_check_query congruence_lt congruence_eqb gamma_state aval_congruence"
   by unfold_locales (rule congruence_arith.aval_abs_sound)
 
 definition congruence_ops :: "congruence nonrelational_ops" where
@@ -46,7 +46,7 @@ lemma congruence_ops_simps [simp]:
 
 global_interpretation congruence_tf: mono_nonrelational_ops congruence_ops
   rewrites "n_top congruence_ops = top"
-    and "sound_special_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
+    and "sound_minmax_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
            = special_congruence"
   defines assign_congruence = congruence_tf.assign
     and skip_congruence = congruence_tf.skip
@@ -70,13 +70,13 @@ proof -
   show "mono_nonrelational_ops congruence_ops"
   proof (rule mono_nonrelational_opsI,
          unfold congruence_ops_simps congruence_refine_ops_simps)
-    show "mono_special_ops congruence_special_ops aval_congruence"
-      by (rule congruence_special.mono_special_ops_axioms)
-    show "backward_domain_mono inf aval_congruence congruence_tobool
+    show "mono_minmax_ops congruence_special_ops aval_congruence"
+      by (rule congruence_special.mono_minmax_ops_axioms)
+    show "mono_refinement inf aval_congruence congruence_tobool
             inv_less_congruence inv_eq_congruence
             inv_plus_congruence inv_minus_congruence inv_times_congruence"
       by (rule congruence_backward_domain)
-    show "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
+    show "sound_check_query congruence_lt congruence_eqb gamma_state aval_congruence"
       by (rule congruence_check_domain)
   qed simp
 qed (simp_all add: special_congruence_eq_transfer fun_eq_iff)

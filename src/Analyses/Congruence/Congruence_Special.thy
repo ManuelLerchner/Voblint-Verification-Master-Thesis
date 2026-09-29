@@ -70,7 +70,7 @@ lemma congruence_special_ops_min [simp]: "special_min congruence_special_ops = c
 lemma congruence_special_ops_max [simp]: "special_max congruence_special_ops = congruence_max"
   by (simp add: congruence_special_ops_def)
 
-interpretation congruence_special: mono_special_ops congruence_special_ops aval_congruence
+interpretation congruence_special: mono_minmax_ops congruence_special_ops aval_congruence
 proof unfold_locales
   fix i j :: int and p q :: congruence
   assume "i \<in> \<gamma> p" and "j \<in> \<gamma> q"

@@ -26,7 +26,7 @@ text \<open>
   rather than introducing a second name for it.
 \<close>
 
-lemma parity_check_domain: "abstract_check_domain parity_less parity_eq gamma_state aval_parity"
+lemma parity_check_domain: "sound_check_query parity_less parity_eq gamma_state aval_parity"
   by unfold_locales (rule parity_arith.aval_abs_sound)
 
 definition parity_ops :: "parity nonrelational_ops" where
@@ -44,7 +44,7 @@ lemma parity_ops_simps [simp]:
 
 global_interpretation parity_tf: mono_nonrelational_ops parity_ops
   rewrites "n_top parity_ops = PTop"
-    and "sound_special_ops.special_transfer (n_special parity_ops) (n_aval parity_ops)
+    and "sound_minmax_ops.special_transfer (n_special parity_ops) (n_aval parity_ops)
            = special_parity"
   defines assign_parity = parity_tf.assign
     and skip_parity = parity_tf.skip
@@ -67,12 +67,12 @@ global_interpretation parity_tf: mono_nonrelational_ops parity_ops
 proof -
   show "mono_nonrelational_ops parity_ops"
   proof (rule mono_nonrelational_opsI, unfold parity_ops_simps parity_refine_ops_simps)
-    show "mono_special_ops parity_special_ops aval_parity"
-      by (rule parity_special.mono_special_ops_axioms)
-    show "backward_domain_mono inf aval_parity parity_tobool
+    show "mono_minmax_ops parity_special_ops aval_parity"
+      by (rule parity_special.mono_minmax_ops_axioms)
+    show "mono_refinement inf aval_parity parity_tobool
             inv_conservative inv_eq_parity inv_plus_parity inv_minus_parity inv_times_parity"
       by (rule parity_backward_domain)
-    show "abstract_check_domain parity_less parity_eq gamma_state aval_parity"
+    show "sound_check_query parity_less parity_eq gamma_state aval_parity"
       by (rule parity_check_domain)
     show "PTop = top"
       by (simp add: top_parity_def)

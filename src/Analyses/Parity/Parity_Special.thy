@@ -80,7 +80,7 @@ where
 definition parity_special_ops :: "parity special_ops" where
   "parity_special_ops = (| special_min = parity_min, special_max = parity_max |)"
 
-interpretation parity_special: mono_special_ops parity_special_ops aval_parity
+interpretation parity_special: mono_minmax_ops parity_special_ops aval_parity
   by unfold_locales
      (auto simp: parity_special_ops_def gamma_parity_top
            intro: parity_min_sound parity_max_sound parity_min_combine_mono parity_max_combine_mono)

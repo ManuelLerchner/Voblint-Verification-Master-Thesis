@@ -154,22 +154,22 @@ lemma int_dom_special_ops_simps [simp]:
   "special_max (int_dom_special_ops mode) = int_dom_max mode"
   by (simp_all add: int_dom_special_ops_def)
 
-lemma int_dom_sound_special_ops: "sound_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
-  by (intro sound_special_ops.intro int_dom_sound_evaluator sound_special_ops_axioms.intro)
+lemma int_dom_sound_special_ops: "sound_minmax_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro sound_minmax_ops.intro int_dom_sound_evaluator sound_minmax_ops_axioms.intro)
      (simp_all add: int_dom_min_sound int_dom_max_sound)
 
 lemma int_dom_mono_special_ops:
   assumes "mode \<noteq> Refine_Fixpoint"
-  shows "mono_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
-  by (intro mono_special_ops.intro int_dom_sound_special_ops int_dom_mono_evaluator[OF assms]
-        mono_special_ops_axioms.intro)
+  shows "mono_minmax_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro mono_minmax_ops.intro int_dom_sound_special_ops int_dom_mono_evaluator[OF assms]
+        mono_minmax_ops_axioms.intro)
      (simp_all add: int_dom_min_mono int_dom_max_mono assms)
 
 lemma special_int_dom_eq_transfer:
-  "sound_special_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
+  "sound_minmax_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
      = special_int_dom mode sc x \<sigma>"
   by (cases sc)
-     (simp_all add: sound_special_ops.special_transfer_def[OF int_dom_sound_special_ops])
+     (simp_all add: sound_minmax_ops.special_transfer_def[OF int_dom_sound_special_ops])
 
 subsection \<open>The bundle, per refinement mode, and its certificates\<close>
 
@@ -195,8 +195,8 @@ lemma int_dom_ops_simps [simp]:
   by (simp_all add: int_dom_ops_def)
 
 lemma int_check_domain:
-  "abstract_check_domain int_less int_eq gamma_state (aval_int_dom mode)"
-  by (intro abstract_check_domain.intro int_dom_numeric_queries.sound_numeric_queries_axioms
+  "sound_check_query int_less int_eq gamma_state (aval_int_dom mode)"
+  by (intro sound_check_query.intro int_dom_numeric_queries.sound_numeric_queries_axioms
         int_dom_sound_evaluator)
 
 lemma int_dom_sound_ops: "sound_nonrelational_ops (int_dom_ops mode)"
@@ -212,7 +212,7 @@ lemma int_dom_mono_ops:
 
 global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
   rewrites "n_top (int_dom_ops mode) = top"
-    and "sound_special_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
+    and "sound_minmax_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
            = special_int_dom mode"
   defines assign_int_dom = int_tf.assign
     and skip_int_dom = int_tf.skip

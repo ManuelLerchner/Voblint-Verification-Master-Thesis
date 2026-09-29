@@ -8,7 +8,7 @@ text \<open>
   Third-domain validation for \<open>sound_numeric_queries\<close>
   (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>), hand-tuned like
   \<open>Voblint_Analysis_Interval.Interval_Numeric_Queries\<close> rather than derived through
-  \<open>backward_domain\<close>: parity has no \<open>inv_less\<close> instance (guards do not
+  \<open>sound_refinement\<close>: parity has no \<open>inv_less\<close> instance (guards do not
   refine parity), so there is nothing for
   the generic derivations to read off. Parity carries no order information at
   all, so \<open>parity_less_true\<close>/\<open>parity_less_false\<close> are provable only in the
