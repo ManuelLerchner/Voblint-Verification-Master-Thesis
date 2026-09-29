@@ -393,7 +393,7 @@ subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
   Soundness and the reductiveness of \<open>intersect\<close> hold at every mode, so every
-  mode interprets @{locale backward_domain_reductive} and shares the precise,
+  mode interprets @{locale backward_domain} and shares the precise,
   dead-arm-eliminating \<open>branch\<close>/\<open>branch_st\<close>. Monotonicity needs
   \<open>mode \<noteq> Refine_Fixpoint\<close>: \<open>refine_fix\<close>'s total wrapper has no monotonicity
   theorem (\<open>Int_Refinement\<close>), a faithful transliteration of Goblint's
@@ -403,13 +403,12 @@ text \<open>
 \<close>
 
 lemma int_backward_domain:
-  "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
+  "backward_domain (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_reductive.intro backward_domain.intro sound_intersection.intro
+proof (intro backward_domain.intro sound_intersection.intro
     int_dom_sound_evaluator mono_truth_test.axioms(1)[OF int_dom_truth_test]
-    backward_ops.intro backward_ops_axioms.intro
-    reductive_intersection.intro reductive_intersection_axioms.intro)
+    backward_ops.intro backward_ops_axioms.intro)
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound
        inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound
@@ -427,6 +426,7 @@ proof (intro backward_domain_mono.intro int_backward_domain
     sound_intersection.intro)
 qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_dom_mode_mono
        refine_exact intersect_int_dom_mode_sound
+       intersect_int_dom_mode_reductive1 intersect_int_dom_mode_reductive2
        inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
        inv_plus_int_dom_raw_mono inv_minus_int_dom_raw_mono inv_times_int_dom_raw_mono)
 
@@ -487,7 +487,7 @@ lemma int_backward_ops:
      (inv_eq_int_dom Refine_Fixpoint) (inv_plus_int_dom Refine_Fixpoint)
      (inv_minus_int_dom Refine_Fixpoint) (inv_times_int_dom Refine_Fixpoint)"
 proof -
-  interpret backward_domain_reductive "intersect_int_dom_mode Refine_Fixpoint"
+  interpret backward_domain "intersect_int_dom_mode Refine_Fixpoint"
       "aval_int_dom Refine_Fixpoint" int_dom_tobool
       "inv_less_int_dom Refine_Fixpoint" "inv_eq_int_dom Refine_Fixpoint"
       "inv_plus_int_dom Refine_Fixpoint" "inv_minus_int_dom Refine_Fixpoint"

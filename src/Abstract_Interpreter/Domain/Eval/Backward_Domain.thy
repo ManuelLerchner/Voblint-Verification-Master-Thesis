@@ -12,9 +12,8 @@ text \<open>
   \<open>inv_plus\<close>, ...), each sound in the sense that every concrete pair the operator
   admits before the operation is still admitted after narrowing, from which \<open>afilter\<close>
   and \<open>bfilter\<close> -- the expression- and boolean-level filters -- are derived once with
-  their soundness and monotonicity. \<open>backward_domain_reductive\<close> and
-  \<open>backward_domain_mono\<close> add the reductive and monotone inverse operators a
-  domain with a conservative inverse can provide.
+  their soundness and reductiveness. \<open>backward_domain_mono\<close> adds the
+  monotone operators a domain can provide on top.
   This abstracts the backward-refinement operations Goblint's \<open>BaseInvariant\<close> implements
   concretely for its Base analysis; Goblint has no generic module signature this locale
   is a formalization of.
@@ -24,28 +23,22 @@ subsection \<open>Backward-analysis locale\<close>
 
 text \<open>
   A semantic intersection preserves every concrete value shared by both
-  operands. It need not be the lattice infimum: a domain may normalize an
-  empty result while its representation order still distinguishes several
-  empty elements. This locale records the preservation obligation;
-  \<open>reductive_intersection\<close> and \<open>mono_intersection\<close> add reductiveness and
-  monotonicity as separate strengthenings.
+  operands and lies below both. It need not be the lattice infimum: a domain
+  may normalize an empty result while its representation order still
+  distinguishes several empty elements. Soundness of the filters needs only
+  \<open>intersect_sound\<close>. The lower bounds make every refinement step reductive,
+  so a state emptied by one step stays empty through the rest, which is what
+  lets the executable filter stop at the first empty step
+  (\<open>Exec_Backward\<close>). Every domain's intersection has both, so they form one
+  contract; \<open>mono_intersection\<close> adds monotonicity as a separate
+  strengthening.
 \<close>
-
 
 locale sound_intersection =
   fixes intersect :: "'a::numeric_domain => 'a => 'a"
   assumes intersect_sound[intro]:
     "n \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> n \<in> \<gamma> (intersect a b)"
-
-text \<open>
-  The intersection has the same layers as the forward operations: soundness
-  above, and two properties the solver-facing filters need on top of it.  A
-  reductive intersection never goes above its operands, which bounds each
-  refinement step; a monotone one keeps the filters monotone.
-\<close>
-
-locale reductive_intersection = sound_intersection +
-  assumes intersect_reductive1[intro]: "intersect a b \<le> a"
+    and intersect_reductive1[intro]: "intersect a b \<le> a"
     and intersect_reductive2[intro]: "intersect a b \<le> b"
 
 locale mono_intersection = sound_intersection +

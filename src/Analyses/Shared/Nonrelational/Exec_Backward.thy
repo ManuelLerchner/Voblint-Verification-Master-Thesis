@@ -477,7 +477,7 @@ lemmas bfilter_st_lift_with_ops = bfilter_st_lift_def [symmetric]
 
 end
 
-context backward_domain_reductive
+context backward_domain
 begin
 
 lemma afilter_lift_step:

@@ -33,7 +33,7 @@ mentions a graph, an equation, or a solver run.
 | --- | --- |
 | `Forward_Domain.thy` | Forward expression evaluation over a numeric domain: `sound_evaluator` and `sound_truth_test` |
 | `Backward_Domain.thy` | `backward_ops`: the inverse operators on abstract values; `backward_domain`: their use on pointwise states, the derived `afilter`/`bfilter` guard refinement, the counterpart of Goblint's `BaseInvariant` |
-| `Backward_Domain_Mono.thy` | `backward_domain_reductive` and `backward_domain_mono`: reductive and monotone inverse operators, and the filtering facts they buy |
+| `Backward_Domain_Mono.thy` | reductiveness of the `backward_domain` filters, and `backward_domain_mono`: monotone inverse operators and the filtering facts they buy |
 | `Numeric_Queries.thy` | The `sound_numeric_queries` interface the check layer consumes, and `numeric_query_judgments`, which builds an instance from four yes/no judgments |
 | `Backward_Numeric_Queries.thy` | The four judgments every `backward_ops` instance answers for free, read off its own inverse operators |
 
