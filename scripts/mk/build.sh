@@ -6,7 +6,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
 SESSION="${SESSION:-Voblint_Examples}"
 
-# Tee the -v output: check_build_reelaboration.py reads the per-theory lines to
+# Tee the -v output: `pixi run reelaboration-check` reads the per-theory lines to
 # see which library heaps a session inherited and which it re-elaborated, and
 # that is only visible in a build log. pipefail keeps the build's exit status.
 LOG="${BUILD_LOG:-$REPO_ROOT/build/isabelle-build.log}"

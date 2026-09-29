@@ -50,26 +50,12 @@ lemma checks_ivl_ex_program_declared_global_vars [simp]:
   "declared_global_vars checks_ivl_ex_program = []"
   by (simp add: checks_ivl_ex_program_def)
 
-lemma checks_ivl_ex_calls_eval: "calls (prog_cfg checks_ivl_ex_program) = {}"
-  unfolding prog_cfg_def
-  by (rule compile_prog_calls_empty)
-     (simp_all add: checks_ivl_ex_program_def special_table_def
-        special_pname_nondet_int_def main_body_def prog_main_name_def)
-
 lemma checks_ivl_ex_solver_terminates:
   "interval_rule.terminates Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
   by (rule interval_rule.terminates_of_solve_c) (simp only: interval_rule.root_query_def, eval)
 
-lemma checks_ivl_ex_entry_cov:
-  "(cfg_entry (prog_cfg checks_ivl_ex_program), ())
-     \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
-  by eval
-
-lemma checks_ivl_ex_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ivl_ex_program).
-     (u, ()) \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program
-       \<longrightarrow> (w, ()) \<in> interval_rule.sol_vars Globals_Join checks_ivl_ex_gs checks_ivl_ex_program"
-  by eval
+lemma checks_ivl_ex_wf: "wf_program_compile_input checks_ivl_ex_program"
+  by (rule wf_program_compile_input_exec_sound) eval
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ivl_ex_reach v =
@@ -106,11 +92,14 @@ lemma checks_ivl_ex_entry_eval:
   by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
 
 lemma checks_ivl_ex_node_sound: "checks_ivl_ex_reach v \<le> \<lbrakk>checks_ivl_ex_env v\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def interval_rule.state_at_unfold[symmetric]
-  using checks_ivl_ex_fwd_ok_ball
-  by (intro interval_rule.result_node_sound_closure checks_ivl_ex_solver_terminates
-        checks_ivl_ex_entry_cov)
-     (auto simp: checks_ivl_ex_calls_eval)
+proof -
+  have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
+  show ?thesis
+    using interval_rule.fun_route_result_node_sound
+        [OF unit_route checks_ivl_ex_wf checks_ivl_ex_solver_terminates]
+    by (simp add: checks_ivl_ex_reach_def checks_ivl_ex_env_def interval_rule.state_at_unfold
+        UNIV_unit)
+qed
 
 text \<open>Executable classification at each check's own node --- the guard
   \<open>0 < x \<and> x < 10\<close> narrows \<open>x\<close> to \<open>[1,9]\<close> at \<open>Statement 2\<close>, so \<open>x < 11\<close> is
@@ -144,18 +133,20 @@ lemma checks_ivl_ex_precision_over_sign:
 corollary checks_ivl_ex_first_check_holds:
   assumes "t \<in> checks_ivl_ex_reach (Statement 2)"
   shows "truthy (\<lbrakk>Less (V (STR ''x'')) (N 11)\<rbrakk>\<^sub>e t)"
-  using assms checks_ivl_ex_node_sound interval_classify_check_proved[OF checks_ivl_ex_classify_2]
+  using assms checks_ivl_ex_node_sound
+    ivl_tf.check.classify_check_proved[OF checks_ivl_ex_classify_2]
   by blast
 
 corollary checks_ivl_ex_second_check_refuted:
   assumes "t \<in> checks_ivl_ex_reach (Statement 3)"
   shows "\<not> truthy (\<lbrakk>Less (V (STR ''x'')) (N 0)\<rbrakk>\<^sub>e t)"
-  using assms checks_ivl_ex_node_sound interval_classify_check_refuted[OF checks_ivl_ex_classify_3]
+  using assms checks_ivl_ex_node_sound
+    ivl_tf.check.classify_check_refuted[OF checks_ivl_ex_classify_3]
   by blast
 
 lemma checks_ivl_ex_proven_check_discharged:
   "interval_checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_env"
-proof (rule interval_checks_provenI)
+proof (rule ivl_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then have v_eq: "v = Statement 2" and cnd_eq: "cnd = Less (V (STR ''x'')) (N 11)" by auto
@@ -165,7 +156,7 @@ qed
 
 lemma checks_ivl_ex_proven_check_checks_proven:
   "checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_reach"
-  by (rule interval_checks_proven_sound)
+  by (rule ivl_tf.check.abstract_checks_proven_sound)
      (use checks_ivl_ex_node_sound checks_ivl_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: reading \<open>5\<close> for \<open>x\<close> satisfies the guard, so the all-zero initial store
@@ -190,7 +181,7 @@ qed
 subsection \<open>Whole-program check report\<close>
 
 lemma checks_ivl_ex_report_eval:
-  "interval_rule.report Globals_Join checks_ivl_ex_gs checks_ivl_ex_program =
+  "interval_rule.report Globals_Join checks_ivl_ex_gs checks_ivl_ex_program () =
      [(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved),
       (Statement 3, Less (V (STR ''x'')) (N 0), Check_Refuted),
       (Statement 4, Eq (V (STR ''x'')) (N 5), Check_Unknown)]"

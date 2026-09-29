@@ -87,4 +87,3 @@ lemma gamma_lift_canonicalize_lift:
   by (cases x) (simp_all add: normalize_lift_def assms)
 
 end
-

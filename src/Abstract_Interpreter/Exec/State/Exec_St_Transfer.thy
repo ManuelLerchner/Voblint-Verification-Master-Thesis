@@ -182,8 +182,8 @@ lemma fun_of_resolved_st_for_combine_assign [simp]:
   "fun_of_resolved_st_for \<G>
       (combine_assign_resolved \<G> dst v s) =
    combine_assign dst v (fun_of_resolved_st_for \<G> s)"
-by (cases dst)
-   (simp_all add: combine_assign_resolved_def)
+  by (cases dst)
+     (simp_all add: combine_assign_resolved_def)
 
 lemma fun_of_resolved_st_q_for_combine_assign [simp]:
   "fun_of_resolved_st_q_for \<G>
@@ -242,15 +242,15 @@ lemma fun_of_resolved_st_for_fold_update:
       (fold (\<lambda>(x, a) t. update_resolved_st t (location_of \<G> x) a) ps s) =
    fold (\<lambda>(x, a) t. t(x := a)) ps
       (fun_of_resolved_st_for \<G> s)"
-by (induction ps arbitrary: s)
-   (simp_all split: prod.splits)
+  by (induction ps arbitrary: s)
+     (simp_all split: prod.splits)
 
 lemma fun_of_resolved_st_for_bind_formals [simp]:
   "fun_of_resolved_st_for \<G>
       (bind_formals_resolved \<G> xs avs s) =
    bind_formals xs avs (fun_of_resolved_st_for \<G> s)"
-unfolding bind_formals_resolved_def
-by (rule fun_of_resolved_st_for_fold_update)
+  unfolding bind_formals_resolved_def
+  by (rule fun_of_resolved_st_for_fold_update)
 
 lemma fun_of_resolved_st_q_for_bind_formals [simp]:
   "fun_of_resolved_st_q_for \<G>
@@ -273,7 +273,6 @@ proof (rule ext)
     by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
         simp_all add: location_of_def)
 qed
-
 
 
 subsection \<open>Ownership restriction and combination\<close>
@@ -395,9 +394,9 @@ lemma lookup_combine_resolved_st [simp]:
    (case loc of
       Local_Location x => lookup_resolved_st sc loc
     | Global_Location x => lookup_resolved_st se loc)"
-by (cases sc; cases se; cases loc)
-     (simp_all add: combine_resolved_st_def map_add_def map_of_filter_fst
-       split: option.splits)
+  by (cases sc; cases se; cases loc)
+       (simp_all add: combine_resolved_st_def map_add_def map_of_filter_fst
+         split: option.splits)
 
 lemma eq_resolved_st_combine:
   assumes "eq_resolved_st sc1 sc2"
@@ -468,9 +467,9 @@ lemma lookup_enter_frame_D_resolved [simp]:
    (case loc of
       Local_Location x => top_val
     | Global_Location x => lookup_resolved_st s loc)"
-by (cases s; cases loc)
-     (simp_all add: enter_frame_D_resolved_def map_of_filter_fst
-       split: option.splits)
+  by (cases s; cases loc)
+       (simp_all add: enter_frame_D_resolved_def map_of_filter_fst
+         split: option.splits)
 
 lemma eq_resolved_st_enter_frame_D:
   assumes "eq_resolved_st s t"

@@ -29,10 +29,12 @@ one sits in the chain.
 
 ## 1. Abstract transfer soundness
 
-A domain proves one fact per operation and interprets `sound_transfer_for`
-(`DG_Local_State_Spec.thy`) once: the non-relational domains through
-`is_sound_transfer_for` (`Nonrelational_Transfer.thy`), the `int_dom` product
-through `int_is_sound_transfer_for` (`Int_Transfer.thy`).
+Every shipped domain reaches `sound_nonrelational_transfer` (`DG_Local_State_Spec.thy`)
+the same way: it supplies one `nonrelational_ops` record of primitive operations,
+proves certificates about those operations (a backward domain, sound checks, sound
+special calls), and interprets `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`)
+once, which yields `<impl>_tf.is_sound_nonrelational_transfer`. The `int_dom` product
+interprets it once, parametric in its refinement mode.
 `local_state_dg_spec_for_contract` turns that into `analysis_contract` for
 the whole-state specification every shipped domain uses.
 
@@ -83,7 +85,7 @@ agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 `solve_dom_of_solve_c` (`TD_Solver_Bridge.thy`) turns a successful `solve_c`
 into `solve_dom`, and the vendored `partial_post_solution` turns `solve_dom`
 into the certificate `part_post_solution` (`Basics_side.thy`). The analysis
-locale `routed_dg_analysis` assumes both facts of its solver parameters, and
+locale `dg_analysis` assumes both facts of its solver parameters, and
 every generated domain registration discharges them with
 `TD_side_rule_Interp.solve_dom_of_solve_c` and
 `TD_side_rule_Interp.partial_post_solution`; `run_voblint`'s termination
@@ -108,7 +110,7 @@ definite verdict listed there holds for that store.
 point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
 solver run completed -- and nothing proves that in general; it is established per
 program by evaluation. That the run solved enough keys is no premise:
-`live_keys_cover` (`Routed_Live_Keys.thy`) proves it from termination. The
+`live_keys_cover` (`DG_Live_Keys.thy`) proves it from termination. The
 root `README.md` states the theorem in full.
 
 ## 6. `export_code` and the code-generation trust boundary

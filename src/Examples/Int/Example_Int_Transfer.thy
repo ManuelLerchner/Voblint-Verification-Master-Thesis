@@ -51,30 +51,23 @@ lemma enter_int_dom_ci_for_once_binds_formal:
      (call_info_of (CallEdge None [STR ''p''] [N 7]) (STR ''f''))
      test_env_top (STR ''p'') =
    int_dom_of_int 7"
-  unfolding enter_int_dom_ci_for_def by simp eval
+  by (simp add: int_tf.op_defs) eval
 
-subsection \<open>Guard refinement through the registered operations, mode contrast\<close>
+subsection \<open>Guard refinement through the registered operations\<close>
 
 text \<open>
-  What a dispatched branch step does splits into two halves, and only one of
-  them is a computation. The half proved here is that the dispatcher's branch
-  case is the mode's own \<open>branch_int_dom_*\<close> -- an equation between operations,
-  because \<open>branch_int_dom_*\<close> collapses the lifted filter and \<open>bfilter_lifted\<close>
-  normalizes against \<open>is_empty_state\<close>, which quantifies over an infinite
-  \<open>vname\<close> and so has no code equation; only the executable \<open>resolved_st_q\<close>
-  mirror \<open>branch_int_dom_*_st\<close> runs. The other half -- that the filter those
-  branches call narrows \<open>x + 1 = 3\<close> to exactly \<open>x = 2\<close> under \<open>Once\<close> and to the
-  congruence component alone under \<open>Never\<close> -- is proved in
-  \<^theory>\<open>Voblint_Examples_Int.Example_Int_Backward\<close>, which this theory
-  imports.
+  The dispatcher's guard case is \<^const>\<open>branch_int_dom_for\<close> at the mode, which
+  the bundle derives from \<open>int_refine_ops mode\<close>; there is no per-mode branch to
+  pin it against. The abstract branch normalizes against \<open>is_empty_state\<close>, which
+  quantifies over an infinite \<open>vname\<close> and so has no code equation; the executable
+  filter the bundle derives is what runs. That it narrows \<open>x + 1 = 3\<close> to exactly
+  \<open>x = 2\<close> under \<open>Once\<close> and to the congruence component alone under \<open>Never\<close> is
+  proved in \<^theory>\<open>Voblint_Examples_Int.Example_Int_Backward\<close>, which this
+  theory imports.
 \<close>
 
-lemma branch_int_dom_for_once_is_branch_int_dom:
-  "branch_int_dom_for Refine_Once = branch_int_dom_once"
-  by simp
-
-lemma branch_int_dom_for_never_is_branch_int_dom:
-  "branch_int_dom_for Refine_Never = branch_int_dom_never"
+lemma int_tf_abs_assume_is_branch:
+  "int_tf_abs mode (EA_Assume b) = branch_int_dom_for mode b True"
   by simp
 
 subsection \<open>Min/Max special-call dispatch through the registered bundle\<close>
@@ -98,4 +91,3 @@ lemma int_tf_abs_once_special_min:
   by simp eval
 
 end
-

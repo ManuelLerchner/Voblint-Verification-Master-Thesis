@@ -77,7 +77,8 @@ text \<open>\<open>Statement 1\<close> is the true branch of the guard, right af
 subsection \<open>Interval, on the same CFG, same generator, same solver menu\<close>
 
 definition demo_ivl_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) routed_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+    where
   "demo_ivl_eqs =
      compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
        (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs))
@@ -85,7 +86,8 @@ definition demo_ivl_eqs ::
        (restrict_global_resolved_q (initial_resolved_st_q ivl_top ivl_top))"
 
 definition demo_ivl_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+    where
   "demo_ivl_sol = TD_side_always_join_Interp_solve demo_ivl_eqs (cfg_exit demo_cfg, ())"
 
 lemma demo_ivl_terminates:
@@ -157,5 +159,3 @@ lemma direct_relational_order_guards:
   by (simp_all add: assume_step_def assume_not_step_def)
 
 end
-
-

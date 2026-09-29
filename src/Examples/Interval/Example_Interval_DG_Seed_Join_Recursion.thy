@@ -76,7 +76,8 @@ where
      sj_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition sj_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) routed_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+    where
   "sj_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed sj_eqs (cfg_exit sj_cfg, ())"
 
 lemma sj_terminates:

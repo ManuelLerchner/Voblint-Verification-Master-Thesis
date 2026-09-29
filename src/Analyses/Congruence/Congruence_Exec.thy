@@ -29,10 +29,9 @@ text \<open>
   layers read one value. The two constants below are the generic constructions
   of \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not
   independent definitions. The guard transfer needs no third:
-  \<^const>\<open>generic_tf_st_for\<close> reads \<open>n_bfilter\<close> off the bundle directly, so naming
-  that projection separately would only rename \<^const>\<open>branch_congruence_st\<close>.
+  \<^const>\<open>generic_tf_st_for\<close> derives its filter from the bundle's evaluator and
+  refinement operations.
 \<close>
-
 
 definition congruence_enter_st_for ::
   "(vname => bool) => call_info =>
@@ -58,10 +57,10 @@ lemmas congruence_tf_st_for_simps [simp] =
 subsection \<open>Classifier-parametric commutation\<close>
 
 text \<open>
-  The guard is the only case that needs the liveness premise: the backward
-  filter's own commutation is stated on a live state, because a state with no
-  live locations reads back as a map the filter can no longer distinguish. Every
-  other case is settled for any bundle by \<open>congruence_tf.tf_st_for_commute\<close>.
+  The liveness premise is the guard's: the derived filter's commutation is
+  stated on a live state, because a state with no live locations reads back as a
+  map the filter can no longer distinguish. \<open>congruence_tf.tf_st_for_commute\<close>
+  settles every case, the guard included.
 \<close>
 
 theorem congruence_tf_st_for_commute:
@@ -70,8 +69,7 @@ theorem congruence_tf_st_for_commute:
     "fun_of_resolved_st_q_for \<G> (congruence_tf_st_for \<G> a s) =
      congruence_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding congruence_tf_st_for_def
-  by (rule congruence_tf.tf_st_for_commute)
-     (simp add: congruence_backward_domain.branch_st_commute[OF live])
+  by (rule congruence_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_congruence_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q top s) =

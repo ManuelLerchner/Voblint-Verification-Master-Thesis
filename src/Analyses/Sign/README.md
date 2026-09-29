@@ -9,22 +9,22 @@ they demonstrate the domain, they are not part of the reusable instance.
 | --- | --- |
 | `Sign_Warrowing.thy` | widening (join), narrowing (left argument), and the `numeric_domain` instance; the lattice itself is `Voblint_Domain.Sign_Lattice` |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
-| `Sign_Backward.thy` | backward guard/filter operators; names the sign `afilter_sign_st`/`bfilter_sign_st` executable mirror via `Exec_Backward` |
+| `Sign_Backward.thy` | inverse operators, `sign_refine_ops`, and the `backward_domain_mono` certificate `sign_backward_domain` |
 | `Sign_Special.thy` | `sign_min`/`sign_max`, the abstract implementation of the `Min`/`Max` special calls |
-| `Sign_Numeric_Queries.thy` | Sign's instance of `sound_numeric_queries` |
-| `Sign_Transfer.thy` | edge transfer record and transfer soundness |
+| `Sign_Numeric_Queries.thy` | Sign's comparison queries, derived from the inverse operators |
+| `Sign_Transfer.thy` | the `sign_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `analysis_contract` — no context, no solver |
-| `Sign_Classify.thy` | Sign instance of the generic check-discharge interface |
-| `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `unit_dg_analysis` at the unit context. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the context-free soundness endpoints come out |
+| `Sign_Classify.thy` | consumer-facing names for the derived check classifier, and its executable tests |
+| `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
 
 `generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`
 from `manifests/analyses.yaml`; edit those, not the theory.
 
 Sign's soundness endpoints live here rather than in `Voblint_CLI` because
-nothing in them needs to see another domain: `sign_rule.source_sound`,
-`sign_rule.result_node_sound` and their siblings depend on Sign and on the
-`unit_dg_analysis` endpoints of `Voblint_Result`, both of which this session
+nothing in them needs to see another domain: `sign_rule.fun_route_source_sound`,
+`sign_rule.fun_route_result_node_sound` and their siblings depend on Sign and on
+the routed endpoints of `Voblint_Result`, both of which this session
 already has. The combined CLI state still depends on this registration:
 `MCP_Carrier` cites `sign_rule.comp_sound` and `sign_rule.init_sound` when it
 proves the combined component and its initial state sound, whatever other
@@ -40,7 +40,7 @@ Sign's own generated file registers only the context-insensitive run,
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Sign is one of those
 fields whenever `Sign_Analysis` is in the activation list. Neither policy has
-a pipeline of its own. Both are interpretations of `routed_dg_analysis`, which
+a pipeline of its own. Both are interpretations of `dg_analysis`, which
 owns the equation system, the solve, the covered keys, the reader, the result
 table, the contextual report and the activation-indexed soundness endpoint —
 for every active combination at every policy.
@@ -64,8 +64,8 @@ That difference is the whole content of the routing-agreement obligation, and
 it is why the executable route and its abstract counterpart
 `formals_route_lifted_gen` are separate parameters.
 
-The context-insensitive run is neither of these: it is `sign_rule`, Sign's own
-registration of `unit_dg_analysis` at the unit context.
+The context-insensitive run is the third policy: it is `sign_rule`, Sign's own
+registration of `dg_analysis_exec` at the unit route.
 
 ## Why widening buys Sign nothing
 

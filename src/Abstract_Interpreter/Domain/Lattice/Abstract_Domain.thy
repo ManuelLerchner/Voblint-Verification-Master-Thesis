@@ -143,4 +143,3 @@ definition string_of_int :: "int \<Rightarrow> String.literal" where
       else string_of_nat (nat i))"
 
 end
-

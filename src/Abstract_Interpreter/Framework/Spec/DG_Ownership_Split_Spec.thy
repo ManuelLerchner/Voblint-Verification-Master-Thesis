@@ -479,7 +479,7 @@ text \<open>
   side condition arises.
 \<close>
 
-theorem (in sound_transfer_for) ownership_split_lift_contract:
+theorem (in sound_nonrelational_transfer) ownership_split_lift_contract:
   "analysis_contract
      (ownership_split_lift \<G> (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev))
      (gamma_ownership_split \<G>) \<G>"
@@ -499,7 +499,7 @@ next
   case (4 s \<tau> src_cc gk t src_ex ci)
   then show ?case
     unfolding dg_spec_combine_transfer_ownership_split_lift
-      local_state_dg_spec_for_def dg_spec_combine_transfer_local_dg_spec
+      local_state_dg_spec_for_def dg_spec_combine_transfer_dg_spec_of
       ownership_split_combine_transfer_def gamma_ownership_split_def
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc

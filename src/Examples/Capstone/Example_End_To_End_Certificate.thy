@@ -282,7 +282,8 @@ proof -
              where \<G> = "declared_global certificate_demo_prog"
                and g = "prog_cfg certificate_demo_prog"]
     by (simp add: certificate_demo_entry_eval)
-  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
+  have s2:
+    "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
     by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: certificate_demo_intra_eval)
   have ce1: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
@@ -320,7 +321,7 @@ qed
 subsection \<open>What the solve owes\<close>
 
 text \<open>
-  The solver's own run is the first. \<^const>\<open>routed_dg_pipeline.root_query\<close> has no
+  The solver's own run is the first. \<^const>\<open>dg_pipeline.root_query\<close> has no
   code equation of its own --- its type does not mention the domain, so the
   generator cannot see its sort hypothesis --- and a call-string bound is a
   runtime argument, so no registration inlined it here. Unfolding it once is what
@@ -329,12 +330,12 @@ text \<open>
 
 lemma certificate_demo_solve_c:
   "TD_side_rule_Interp_solve_c Globals_Join
-     (routed_dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
+     (dg_pipeline.equations (mcp_comp (activation [Int_Analysis]))
         (mcp_init (activation [Int_Analysis]))
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
         (declared_global certificate_demo_prog) certificate_demo_prog)
-     (routed_dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
-  unfolding routed_dg_pipeline.root_query_def by eval
+     (dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
+  unfolding dg_pipeline.root_query_def by eval
 
 lemma certificate_demo_terminates:
   "mcp_cs_rule.terminates [Int_Analysis] 1 Globals_Join
@@ -415,7 +416,8 @@ text \<open>
 lemma certificate_demo_checks_sound_at_check:
   assumes ans: "run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1)
                   certificate_demo_prog = Analysed res"
-      and mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
+      and mem:
+        "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   shows "checks_sound_at res (Statement 4) s"
   using run_voblint_sound_at [OF certificate_demo_config_terminates ans mem] by blast
 
@@ -426,7 +428,8 @@ theorem certificate_demo_check_semantically_true:
            truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
 proof (intro ballI)
   fix s :: store
-  assume mem: "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
+  assume mem:
+    "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   obtain chk where r: "res_checks res = [chk]" and rp: "check_point chk = Statement 4"
     and re: "check_exp chk = Less (N 0) (V (STR ''b''))"
     and rv: "check_verdict chk = Decided Check_Proved"

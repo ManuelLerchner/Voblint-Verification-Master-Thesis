@@ -6,7 +6,7 @@ section \<open>The order carrier as a component that asks\<close>
 
 text \<open>
   \<^const>\<open>rel_order_spec\<close> reads and publishes the global channel, so it is not a
-  local specification and cannot join a product of cooperating analyses. This
+  local specification and cannot join the combination of cooperating analyses. This
   theory gives the same carrier a local-only form. Intraprocedurally it is the
   order analysis of \<^theory>\<open>Voblint_Analysis_Relational.Rel_Order_Domain\<close>, with
   one addition: after an assignment it asks the oracle how the assigned value
@@ -49,22 +49,22 @@ definition rel_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
 fun rel_qry :: "relc \<Rightarrow> answers" where
   "rel_qry d (EvalInt e) = rel_eval d e"
 
-lemma relc_has_sound: "s \<in> gamma_rel d \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
+lemma relc_has_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
   by (cases d) auto
 
 lemma var_of_SomeD: "var_of a = Some x \<Longrightarrow> a = V x"
   by (cases a) simp_all
 
-lemma rel_le_sound: "s \<in> gamma_rel d \<Longrightarrow> rel_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
+lemma rel_le_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> rel_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by (auto simp: rel_le_def split: option.splits dest!: var_of_SomeD
       dest: relc_has_sound)
 
 lemma rel_eval_sound:
-  "s \<in> gamma_rel d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (rel_eval d e)"
+  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (rel_eval d e)"
   by (cases e) (auto simp: rel_eval_def
       dest: rel_le_sound intro: order_antisym)
 
-lemma rel_qry_sound: "s \<in> gamma_rel d \<Longrightarrow> eval_holds q (rel_qry d q) s"
+lemma rel_qry_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> eval_holds q (rel_qry d q) s"
   by (cases q) (simp add: rel_eval_sound)
 
 subsection \<open>Learning orders from the oracle\<close>
@@ -87,20 +87,10 @@ definition rel_learn :: "answers \<Rightarrow> vname list \<Rightarrow> vname \<
           \<union> set (map (\<lambda>y. (y, x))
                 (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
 
-text \<open>The questions \<open>rel_learn\<close> consults at \<open>x = e\<close>, and nothing elsewhere.\<close>
-
-definition rel_qs :: "vname list \<Rightarrow> edge_action \<Rightarrow> relc \<Rightarrow> query list" where
-  "rel_qs ys a d =
-     (case a of
-        EA_Assign x e \<Rightarrow>
-          concat (map (\<lambda>y. if y = x then []
-                           else [EvalInt (LessEq e (V y)), EvalInt (LessEq (V y) e)]) ys)
-      | _ \<Rightarrow> [])"
-
 lemma rel_learn_sound:
-  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gamma_rel d"
+  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>d\<rbrakk>"
     and "eval_query.oracle_holds ask s"
-  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> gamma_rel (rel_learn ask ys x e d)"
+  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>rel_learn ask ys x e d\<rbrakk>"
 proof (cases d)
   case RelBot
   with assms(1) show ?thesis by simp
@@ -118,69 +108,50 @@ qed
 
 subsection \<open>The component\<close>
 
+text \<open>
+  The order analysis as a component of the combined state, over the variables
+  \<open>ys\<close> it relates. It starts from the conservative local specification: skip,
+  body and events keep the relation, and the first return stage keeps the
+  caller's. It supplies the operations without a default -- assignments ask and
+  learn, the callee starts from the empty relation, and the return keeps
+  nothing, which is sound and imprecise by design -- and overrides the handler
+  and the branch, where it decides more than the default.
+\<close>
+
 definition rel_ret :: "exp option \<Rightarrow> relc \<Rightarrow> relc" where
   "rel_ret eo d = (case eo of None \<Rightarrow> d | Some a \<Rightarrow> forget_relc ret_var d)"
 
-theorem rel_local_component:
-  "sound_local_dg_spec rel_qry
-     (\<lambda>A d. d)
-     (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
-     (\<lambda>A sc x d. forget_relc x d)
-     (\<lambda>A b pol d. branch_step_rel b pol d)
-     (\<lambda>A p d. d)
-     (\<lambda>A eo p d. rel_ret eo d)
-     (\<lambda>ci d. [(d, top_relc)])
-     (\<lambda>A ev d. d)
-     (\<lambda>ci dc de. dc)
-     (\<lambda>ci d de. top_relc)
-     gamma_rel \<G>"
-proof (unfold_locales, goal_cases)
-  case (1 d d')
-  then show ?case by (rule gamma_rel_mono)
-next
-  case (2 a d ask)
-  show ?case
-  proof (cases a)
-    case (EA_Assign x e)
-    then show ?thesis
-      by (auto intro!: rel_learn_sound)
-  next
-    case (EA_Special sc x)
-    then show ?thesis by (cases sc) auto
-  next
-    case (EA_Ret eo p)
-    then show ?thesis by (cases eo) (auto simp: rel_ret_def)
-  qed (auto simp: branch_step_rel_def)
-next
-  case (3 s d ci)
-  then show ?case by (auto simp: entry_pairs_cover_def)
-next
-  case (4 s dc t de ci)
-  then show ?case by simp
-next
-  case (5 s d q)
-  then show ?case by (rule rel_qry_sound)
+definition order_spec :: "vname list \<Rightarrow> relc local_spec" where
+  "order_spec ys = (conservative_local_spec
+       (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
+       (\<lambda>A sc x d. forget_relc x d)
+       (\<lambda>A eo p d. rel_ret eo d)
+       (\<lambda>A ci p. [(fst p, top_relc)])
+       (\<lambda>B ci d de. top_relc))
+     \<lparr>ls_query := (\<lambda>A. rel_qry), ls_branch := (\<lambda>A b pol d. branch_step_rel b pol d)\<rparr>"
+
+theorem order_spec_sound: "sound_local_spec \<G> gamma_rel (order_spec ys)"
+proof -
+  have special: "sound_special gamma_rel (\<lambda>A sc x d. forget_relc x d)"
+    unfolding sound_special_def
+  proof (intro allI impI)
+    fix A d s sc x t
+    assume "s \<in> gamma_rel d" "t \<in> special_step sc x s"
+    then show "t \<in> gamma_rel (forget_relc x d)" by (cases sc) auto
+  qed
+  have base: "sound_local_spec \<G> gamma_rel (conservative_local_spec
+       (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d)) (\<lambda>A sc x d. forget_relc x d)
+       (\<lambda>A eo p d. rel_ret eo d) (\<lambda>A ci p. [(fst p, top_relc)]) (\<lambda>B ci d de. top_relc))"
+    by (rule sound_conservative_local_spec[OF gamma_rel_mono _ special])
+       (auto simp: sound_assign_def sound_return_def sound_enter_def rel_ret_def
+          sound_combine_env_identity split: option.splits intro!: rel_learn_sound)
+  show ?thesis
+    unfolding order_spec_def
+    by (intro sound_local_spec_update_branch[OF sound_local_spec_update_query[OF base]])
+       (auto simp: sound_query_def sound_branch_def branch_step_rel_def rel_qry_sound)
 qed
 
-subsection \<open>The component on the combined state\<close>
-
-text \<open>
-  The same operations as a component of the combined state, over the variables
-  \<open>ys\<close> it relates. It asks at assignments and answers comparisons; its entry
-  answers one alternative.
-\<close>
-
-definition order_component :: "vname list \<Rightarrow> relc mcp_component" where
-  "order_component ys = local_component rel_qry
-     (\<lambda>A d. d) (\<lambda>A x e d. rel_learn A ys x e (forget_relc x d))
-     (\<lambda>A sc x d. forget_relc x d) (\<lambda>A b pol d. branch_step_rel b pol d)
-     (\<lambda>A p d. d) (\<lambda>A eo p d. rel_ret eo d) (\<lambda>ci d. [(d, top_relc)])
-     (\<lambda>A ev d. d) (\<lambda>ci dc de. dc) (\<lambda>ci d de. top_relc)"
-
-theorem order_component_sound: "mcp_component_sound \<G> gamma_rel (order_component ys)"
-  unfolding order_component_def by (rule local_component_sound[OF rel_local_component])
-
-lemma single_entry_order_component: "single_entry (order_component ys)"
-  by (simp add: single_entry_def order_component_def lens_component_def)
+lemma single_entry_order_spec: "single_entry (order_spec ys)"
+  by (simp add: single_entry_def order_spec_def conservative_local_spec_def)
 
 end

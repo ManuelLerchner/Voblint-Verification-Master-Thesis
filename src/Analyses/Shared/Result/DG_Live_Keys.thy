@@ -1,5 +1,5 @@
-theory Routed_Live_Keys
-  imports Routed_DG_Analysis "Voblint_Compile.Live_Nodes"
+theory DG_Live_Keys
+  imports DG_Analysis "Voblint_Compile.Live_Nodes"
 begin
 
 section \<open>Which solved keys a terminating solve is closed on\<close>
@@ -130,13 +130,13 @@ qed
 
 subsection \<open>Keys of a solve whose activation returned\<close>
 
-context routed_dg_analysis
+context dg_analysis
 begin
 
 lemma analysis_spec_enter:
   "enter\<^sup># (analysis_spec (declared_global p) p) ci
      = local_enter_transfer (\<lambda>d. [(d, entry_of (declared_global p) p ci d)])"
-  by (simp add: analysis_spec_def component_spec_def enter_single)
+  by (simp add: analysis_spec_def dg_spec_of_def enter_single)
 
 lemma analysis_contribs_wf [simp]:
   "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
@@ -309,7 +309,7 @@ begin
 
 interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
     "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)" "declared_global p"
-  unfolding analysis_spec_def by (rule component_contract[OF comp_sound])
+  unfolding analysis_spec_def by (rule dg_spec_of_contract[OF comp_sound])
 
 text \<open>
   The routed soundness at the live keys, for any relation admitting call contexts.
@@ -396,7 +396,7 @@ next
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
   show ?case
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov_e req covE
-    by (fastforce simp: analysis_spec_def component_spec_def enter_single entry_pairs_cover_def)
+    by (fastforce simp: analysis_spec_def dg_spec_of_def enter_single entry_pairs_cover_def)
 next
   case (EnterTotal u ctx dst pars args q cont s)
   then show ?case by (rule total_R)
@@ -464,7 +464,7 @@ proof -
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
-    by (rule live.routed_activation_collect_sound
+    by (rule live.activation_collect_dg_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
 qed
@@ -494,12 +494,107 @@ proof (rule activation_collect_sound_live_keys[OF wf solves])
              (locals (sol_env (declared_global p) p (Inl (u, ctx)))))
           (CallEdge dst pars args) = ctx'"
     using Rc
-    by (simp add: route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
+    by (simp add:
+      route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
 next
   fix u ctx dst pars args q cont and s :: store
   show "\<exists>ctx'. call_context_rel_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
                  (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
     by simp
+qed
+
+text \<open>
+  The same fact read off the published surface, and what it yields at a program
+  point, at a check and at a source run. A store reaching a point lies in one of
+  the point's contexts, so the point is bounded by the union of the states published
+  there. At the unit policy the union has the one member \<open>()\<close>.
+\<close>
+
+theorem fun_route_state_at_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
+    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  shows "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
+           \<subseteq> gamma\<^sub>V (state_at (declared_global p) p ctx v)"
+proof -
+  have "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+          prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
+        \<subseteq> gamma_lift gamma\<^sub>V (lookup_context (result (declared_global p) p) v ctx)"
+    using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
+    unfolding gamma_reader_eq_lookup .
+  then show ?thesis
+    by (auto simp: state_at_unfold bot_state_empty split: lifted.splits)
+qed
+
+theorem fun_route_result_node_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
+    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
+           \<subseteq> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
+  using fun_route_ltr_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
+    fun_route_state_at_sound[OF route_const wf solves]
+  by (simp add: SUP_mono')
+
+theorem fun_route_report_proved_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
+    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+    and mem: "(v, c, Check_Proved) \<in> set (report (declared_global p) p ctx)"
+  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+                 prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+proof -
+  have fin: "finite (intra (prog_cfg p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule classify_checks_proved_sound
+          [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
+             and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
+             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+                               prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
+           OF fin _ classify_proved fun_route_state_at_sound[OF route_const wf solves]])
+       (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
+qed
+
+theorem fun_route_report_refuted_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
+    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+    and mem: "(v, c, Check_Refuted) \<in> set (report (declared_global p) p ctx)"
+  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+                 prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+proof -
+  have fin: "finite (intra (prog_cfg p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule classify_checks_refuted_sound
+          [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
+             and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
+             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+                               prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
+           OF fin _ classify_refuted fun_route_state_at_sound[OF route_const wf solves]])
+       (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
+qed
+
+theorem fun_route_source_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and s0 s :: store
+  assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
+    and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+    and s0: "s0 \<in> cinit_stores (declared_global p)"
+    and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, [])
+                \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+  shows "\<exists>v stk ctx. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> s \<in> gamma\<^sub>V (state_at (declared_global p) p ctx v)"
+proof -
+  have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
+    by (rule prog_cfg_def)
+  have "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+          \<and> s \<in> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
+    unfolding cfg_eq
+    by (rule source_sound_from_ltr_collecting_cap[OF wf s0 run])
+       (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
+  then show ?thesis by blast
 qed
 
 subsection \<open>Entry-state routing\<close>
@@ -533,7 +628,8 @@ next
   fix u ctx dst pars args q cont and s :: store
   assume "(u, ctx) \<in> live_keys p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and sin: "s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (locals (sol_env (declared_global p) p (Inl (u, ctx)))))"
+    and sin:
+      "s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (locals (sol_env (declared_global p) p (Inl (u, ctx)))))"
   show "\<exists>ctx'. admitted_contexts (declared_global p) p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
                  (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
@@ -560,7 +656,7 @@ proof -
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_keys p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
-    by (rule live.routed_activation_collect_sound
+    by (rule live.activation_collect_dg_sound
           [OF ctx_vars_cover_live_entryD[OF live_keys_cover[OF wf solves]] cinit_le_init])
   then show ?thesis using gamma_live_reader_le by blast
 qed

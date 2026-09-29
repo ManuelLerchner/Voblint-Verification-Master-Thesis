@@ -15,7 +15,7 @@ text \<open>
   reason a table is: each context policy keys its table by its own context type.
 
   Coverage of the solve is not a premise: the keys of a terminating solve that a run
-  can reach are closed on their own, which \<^theory>\<open>Voblint_Result.Routed_Live_Keys\<close>
+  can reach are closed on their own, which \<^theory>\<open>Voblint_Result.DG_Live_Keys\<close>
   proves from what the generated equations read. Nor is well-formedness: a malformed
   program answers \<^const>\<open>Malformed_Program\<close>.
 \<close>
@@ -313,4 +313,3 @@ proof (rule equals0I)
 qed
 
 end
-

@@ -659,4 +659,3 @@ theorem unpaired_entry_cover_unsound:
                  combine_collect_def combine_env_def ret_var_def fun_eq_iff)
 
 end
-

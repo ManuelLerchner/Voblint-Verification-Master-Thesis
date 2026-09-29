@@ -17,7 +17,7 @@ text \<open>
   \<open>b\<close> and \<open>None\<close> when they do not. Each operation and query is proved sound and
   monotone, which is exactly what the shared \<open>expression_domain_sound\<close> locale
   needs; interpreting it at the end yields \<open>aval_sign_sound\<close> and
-  \<open>aval_sign_mono\<close> for whole expressions.
+  \<open>sign_arith.aval_dom_mono\<close> for whole expressions.
 \<close>
 
 instantiation sign :: plus begin
@@ -339,8 +339,10 @@ lemma sign_times_combine_mono:
 interpretation sign_arith: expression_domain_mono
     aval_sign sign_of_int "(+)" "(-)" "(*)" sign_div sign_mod sign_lt sign_eqb sign_tobool
   apply unfold_locales
-  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound sign_div_sound sign_mod_sound
-                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono sign_div_mono sign_mod_mono
+  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
+    sign_div_sound sign_mod_sound
+                        sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
+                          sign_div_mono sign_mod_mono
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]
                         sup_sign_def
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
@@ -349,6 +351,6 @@ interpretation sign_arith: expression_domain_mono
   done
 
 lemmas aval_sign_sound = sign_arith.aval_abs_sound[unfolded gamma_abs_sign]
-lemmas aval_sign_mono = sign_arith.aval_dom_mono
+
 
 end

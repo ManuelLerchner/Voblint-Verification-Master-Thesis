@@ -8,12 +8,13 @@ begin
 section \<open>The surface a solved table publishes\<close>
 
 text \<open>
-  What every domain, at every solver discipline, ends up publishing about a
-  whole program: the state its solved table (an \<open>analysis_result\<close>) holds at
-  a point, and the check report read off that state. \<open>analysis_surface\<close>
-  states both once, generically in the domain \<open>'a\<close>, so a domain's public
-  API is one interpretation rather than a rewritten copy per domain and per
-  solver discipline.
+  What every domain, at every solver discipline and context policy, ends up
+  publishing about a whole program: the state its solved table (an
+  \<open>analysis_result\<close>) holds at a point under a context, and the check report read
+  off those states. \<open>analysis_surface\<close> states both once, generically in the
+  domain \<open>'a\<close> and the context type \<open>'c\<close>, so a domain's public API is one
+  interpretation rather than a rewritten copy per domain, solver discipline and
+  policy. A context-insensitive run reads it at the one context \<open>()\<close>.
 \<close>
 
 text \<open>
@@ -38,17 +39,17 @@ text \<open>
 \<close>
 
 locale analysis_surface =
-  fixes table :: "imp_prog \<Rightarrow> (unit, 'a) analysis_result"
+  fixes table :: "imp_prog \<Rightarrow> ('c, 'a) analysis_result"
     and bot_state :: 'a
     and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
 begin
 
-definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
-  "state_at p v =
-     (case lookup_context (table p) v () of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
+definition state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'a" where
+  "state_at p ctx v =
+     (case lookup_context (table p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
 
-definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "report p = classify_checks (prog_cfg p) (state_at p) classify"
+definition report :: "imp_prog \<Rightarrow> 'c \<Rightarrow> check_report_entry list" where
+  "report p ctx = classify_checks (prog_cfg p) (state_at p ctx) classify"
 
 text \<open>
   The same table read with its \<^const>\<open>Bot\<close> entries kept visible: \<open>True\<close> marks a
@@ -63,9 +64,10 @@ text \<open>
   it from its own soundness theorem about the table it supplies.
 \<close>
 
-definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
-  "reach_state_at p v =
-     (case lookup_context (table p) v () of Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
+definition reach_state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
+  "reach_state_at p ctx v =
+     (case lookup_context (table p) v ctx of
+        Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
 
 text \<open>
   The two readings agree on the state: \<open>reach_state_at\<close> adds a column and changes no
@@ -75,32 +77,33 @@ text \<open>
 \<close>
 
 lemma state_at_Bot [simp]:
-  "lookup_context (table p) v () = Bot \<Longrightarrow> state_at p v = bot_state"
+  "lookup_context (table p) v ctx = Bot \<Longrightarrow> state_at p ctx v = bot_state"
   by (simp add: state_at_def)
 
 lemma state_at_Lifted [simp]:
-  "lookup_context (table p) v () = Lifted st \<Longrightarrow> state_at p v = st"
+  "lookup_context (table p) v ctx = Lifted st \<Longrightarrow> state_at p ctx v = st"
   by (simp add: state_at_def)
 
 lemma reach_state_at_Bot [simp]:
-  "lookup_context (table p) v () = Bot \<Longrightarrow> reach_state_at p v = (True, bot_state)"
+  "lookup_context (table p) v ctx = Bot \<Longrightarrow> reach_state_at p ctx v = (True, bot_state)"
   by (simp add: reach_state_at_def)
 
 lemma reach_state_at_Lifted [simp]:
-  "lookup_context (table p) v () = Lifted st \<Longrightarrow> reach_state_at p v = (False, st)"
+  "lookup_context (table p) v ctx = Lifted st \<Longrightarrow> reach_state_at p ctx v = (False, st)"
   by (simp add: reach_state_at_def)
 
 lemma snd_reach_state_at [simp]:
-  "snd (reach_state_at p v) = state_at p v"
+  "snd (reach_state_at p ctx v) = state_at p ctx v"
   by (simp add: reach_state_at_def state_at_def split: lifted.splits)
 
 lemma fst_reach_state_at [simp]:
-  "fst (reach_state_at p v) = (lookup_context (table p) v () = Bot)"
+  "fst (reach_state_at p ctx v) = (lookup_context (table p) v ctx = Bot)"
   by (simp add: reach_state_at_def split: lifted.splits)
 
-definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
-  "report_with_state p =
-     classify_checks_with_state (prog_cfg p) (reach_state_at p)
+definition report_with_state ::
+  "imp_prog \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
+  "report_with_state p ctx =
+     classify_checks_with_state (prog_cfg p) (reach_state_at p ctx)
        (\<lambda>c (_, s). classify c s)"
 
 end

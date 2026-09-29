@@ -15,14 +15,14 @@ the floor under it.
 | Session | Directory | Holds |
 | --- | --- | --- |
 | `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
-| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `Routed_DG_Analysis` assembles one whole analysis --- at any context policy --- from a domain's choices, and `Unit_DG_Analysis` does the same for the context-insensitive case, the only context-insensitive pipeline there is |
+| `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `DG_Live_Keys` states its endpoints from termination alone |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `nonrelational_transfer` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle they read. |
+| reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `expression_domain_sound` (`Abstract_Arithmetic`), `sound_special_ops` (`Special_Ops`) and `sound_nonrelational_ops`/`mono_nonrelational_ops` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `backward_domain` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle a domain supplies: its primitive choices, from which one interpretation derives the filters, the branch, the check classifier and the transfer. |
 | non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
 | routing policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
 | context space | the candidate contexts a routing policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
@@ -38,19 +38,19 @@ remain in `Sign_Numeric_Queries`;
 `Routing/Compiled_Routed_Equations` assembles the common executable equation
 system from the chosen keys, route, specification, graph, and initial state.
 `Result/DG_Result_Construction` turns the solved system into a published table
-and `Result/Analysis_Surface` is what `unit_dg_analysis` reads it back through.
+and `Result/Analysis_Surface` is what every registration reads it back through,
+at a given context.
 
-Above those, `Result/Routed_DG_Analysis`'s `routed_dg_analysis` is what the
+Above those, `Result/DG_Analysis`'s `dg_analysis` is what the
 CLI's combined registrations interpret at the routed policies: `mcp_cs_rule`
 at the call-string routing pair and `mcp_es_rule` at the entry-state one
 (`Voblint_CLI.MCP_Analyses`), each with Sign among the active analyses. That
 locale owns the equation system, the solve, the covered keys, the reader, the
 result table, the contextual report and the activation-indexed soundness
 endpoints, so a policy costs an interpretation rather than a pipeline. The
-context-insensitive route stays local to a domain and is the same shape one
-layer over: `sign_rule` is a `global_interpretation` of
-`Result/Unit_DG_Analysis`'s `unit_dg_analysis` in Sign's own generated theory,
-`Sign_Analyses`. Every registration takes the global update rule as a
+context-insensitive route is the same locale at the unit route, local to a
+domain: `sign_rule` is a `global_interpretation` of `dg_analysis_exec`
+in Sign's own generated theory, `Sign_Analyses`. Every registration takes the global update rule as a
 parameter, and the combined ones take the activation list besides. Sign
 contributes the lattice and the transfer functions. Every other piece of those
 sentences is from here.
@@ -59,7 +59,7 @@ sentences is from here.
 
 The groups own distinct responsibilities: routing over compiled programs,
 publication of solved results, and pointwise non-relational reuse. One import edge
-crosses them: `Routed_DG_Analysis` imports `Compiled_Routed_Equations` and
+crosses them: `DG_Analysis` imports `Compiled_Routed_Equations` and
 `Entry_State_Routed_Context` from `Routing/`. `Nonrelational/` imports nothing from
 either. Keeping those names explicit prevents shared
 code from becoming an undifferentiated analysis base; CLI-only dispatch and
@@ -136,9 +136,9 @@ then `Call_String_Routed_Context`, the policy whose route never reads the state;
 `Entry_State_Routed_Context` reads as a variation on it. Then
 `Result/DG_Result_Construction` for what a solve turns into,
 `Result/Analysis_Surface` for how a caller reads that back, and
-`Result/Routed_DG_Analysis` for the assembly that puts all of it together ---
-its `routed_dg_pipeline` is the construction with no correctness assumptions and
-`routed_dg_analysis` the same objects under the domain and solver contracts.
+`Result/DG_Analysis` for the assembly that puts all of it together ---
+its `dg_pipeline` is the construction with no correctness assumptions and
+`dg_analysis` the same objects under the domain and solver contracts.
 `Nonrelational/` is
 reference material a domain author reaches for rather than a narrative;
 `Abstract_Arithmetic` is the one to read first if you are adding a domain.

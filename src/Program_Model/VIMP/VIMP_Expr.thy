@@ -172,4 +172,3 @@ lemma truthy_aval_Or [simp]:
   by simp
 
 end
-

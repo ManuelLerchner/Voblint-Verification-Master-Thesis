@@ -3,7 +3,6 @@ theory Example_Int_Refinement_Mode_Regression
     "Voblint_Examples_Int.Example_Int_Domain"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Analysis_Int.Int_Exec"
-    "Voblint_Analysis_Int.Int_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_Int.Exec_Int_DG_Run"
 begin
@@ -55,8 +54,6 @@ text \<open>
   running alone against the \<^const>\<open>Refine_Never\<close> state above.
 \<close>
 
-lemmas mode_once_state = arithmetic_once_result
-
 lemma mode_never_ne_once:
   "plus_int_dom Refine_Never arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Once arithmetic_left arithmetic_right"
@@ -76,8 +73,6 @@ text \<open>
   to the tighter interval one full round later.
 \<close>
 
-lemmas mode_fixpoint_state = arithmetic_fixpoint_result
-
 lemma mode_never_ne_fixpoint:
   "plus_int_dom Refine_Never arithmetic_left arithmetic_right \<noteq>
    plus_int_dom Refine_Fixpoint arithmetic_left arithmetic_right"
@@ -85,7 +80,7 @@ lemma mode_never_ne_fixpoint:
 
 text \<open>
   Sign's own three-value progression \<open>STop \<rightarrow> SNonPos \<rightarrow> SZero\<close>
-  (\<open>mode_never_state\<close>/\<open>mode_once_state\<close>/\<open>mode_fixpoint_state\<close>, unfolded)
+  (\<open>mode_never_state\<close>/\<open>arithmetic_once_result\<close>/\<open>arithmetic_fixpoint_result\<close>, unfolded)
   witnesses a genuine three-way divergence: \<^const>\<open>Refine_Never\<close>,
   \<^const>\<open>Refine_Once\<close>, and \<^const>\<open>Refine_Fixpoint\<close> compute three pairwise
   distinct \<open>int_dom\<close> values on the same input, not merely two.
@@ -162,9 +157,9 @@ text \<open>
   \<open>Exec_Int_DG_Run\<close> carries the two non-CLI refinement modes through a compiled
   VIMP program and the real D/G solver. On
   \<open>if (y + 1 == 3) {x := 1} else {x := 0}\<close>, \<open>dgExI_never_result\<close> leaves \<open>y\<close>
-  at \<open>STop\<close>/top/\<open>PTop\<close> and narrows only Congruence to \<open>y \<equiv> 0 (mod 2)\<close>.
-  \<open>dgExI_once_result\<close> reaches the exact singleton
-  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>y \<equiv> 0 (mod 2)\<close>. The corollary
+  at \<open>STop\<close>/top and narrows only Parity, to \<open>PEven\<close>, and Congruence, to the
+  singleton class of \<open>2\<close>. \<open>dgExI_once_result\<close> reaches the exact singleton
+  \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>2\<close>. The corollary
   \<open>dgExI_never_ne_once\<close> pins the mode-sensitive difference.
 
   The CLI composite-domain regression group covers the production

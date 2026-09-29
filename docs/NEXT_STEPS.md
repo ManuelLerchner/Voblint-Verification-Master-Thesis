@@ -17,7 +17,7 @@ collecting semantics to the CLI:
   `Entry_State_Routed_Context` and `Call_String_Routed_Context`
   (`Voblint_Routing`) instantiate it. `'c` carries no `finite` sort constraint:
   termination is the per-run `solve_dom` premise, as for the flat analysis.
-- **Endpoints.** `routed_dg_analysis.entry_state_activation_collect_sound` and
+- **Endpoints.** `dg_analysis.entry_state_activation_collect_sound` and
   `fun_route_activation_collect_sound` bound each bucket;
   `sound_table_of_activation` and `sound_table.source_sound` (`Analysis_Run_Sound`)
   reach a source run.
@@ -86,15 +86,13 @@ composite `int_dom` only reduces internally among its own scalar components.
 Design investigation tracked in #70; alignment inventory and staging (Phase 3)
 in #141.
 
-## Soundness and monotonicity in `nonrelational_transfer`
+## Soundness and monotonicity in the transfer bundle (done)
 
-`nonrelational_transfer` assumes `br_mono` and extends `mono_special_ops`, so
-Sign, Interval, Parity and Congruence prove monotonicity to reach the
-soundness path, which does not use it; Int stays outside the builder because
-its fixpoint mode has no monotonicity proof. Splitting the locale into a sound
-layer and a monotone one is deferred until the cooperating-analyses work
-(`COOPERATING_ANALYSES_DESIGN.md`) shows a client for the weaker layer, since
-that work may reshape the non-relational transfer boundary itself.
+`sound_nonrelational_ops` asks only for soundness (a reductive backward domain,
+sound special calls, sound checks); `mono_nonrelational_ops` adds monotonicity.
+Sign, Interval, Parity and Congruence interpret the monotone locale; Int
+interprets the sound one, parametric in its refinement mode, because the fixpoint
+mode has no monotonicity proof.
 
 ## Numeric precision
 
@@ -117,9 +115,9 @@ classification (`Numeric_Queries.thy`).
 
 No domain writes its configuration out by hand.
 `manifests/analyses.yaml` drives `scripts/gen_analysis_assembly.py`, which
-generates each domain's `<Domain>_Analyses` theory: one rule-parametric
-registration of `unit_dg_analysis` and two of `routed_dg_analysis`
-(`Voblint_Result`). The equation system, solve, reader, result table, report and
+generates each domain's `<Domain>_Analyses` theory: rule-parametric
+registrations of `dg_analysis_exec` (`Voblint_Result`), one per context
+policy the domain lists. The equation system, solve, reader, result table, report and
 soundness endpoints come from those locales, and the generated theory only names
 a domain's own facts.
 

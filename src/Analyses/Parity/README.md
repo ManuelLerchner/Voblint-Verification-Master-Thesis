@@ -21,7 +21,8 @@ It also says things the other domains cannot. `y := x * 2` is even whatever `x` 
 ```text
 Parity_Warrowing   widening, narrowing, numeric_domain instance (lattice: Voblint_Domain.Parity_Lattice)
 Parity_Domain      arithmetic, comparisons, and the expression evaluator
-  -> Parity_Special / Parity_Transfer   special calls; the transfer functions
+  -> Parity_Special / Parity_Backward  special calls; inverse operators and their certificate
+  -> Parity_Transfer                    the parity_ops bundle and its one interpretation
   -> Parity_Exec                        executable transfer, on the finite-map carrier
   -> Parity_Sound                       what the initial abstract state describes
   -> Parity_Numeric_Queries             numeric queries used by check discharge
@@ -34,11 +35,11 @@ Parity_Domain      arithmetic, comparisons, and the expression evaluator
 from `manifests/analyses.yaml`.
 
 `Parity_Analyses` holds one `global_interpretation`, `parity_rule`, with the
-global update rule `r` as a parameter: `unit_dg_analysis`
-(`Shared/Result/Unit_DG_Analysis.thy`) at the unit context. It discharges the
-same twelve obligations from Parity's transfer contract, two commutation laws,
-the solver contract, the classifier contract and the initial-state contract,
-and gets back the equation system, the solve, the reader, the result table,
+global update rule `r` as a parameter: `dg_analysis_exec`
+(`Shared/Result/DG_Analysis.thy`) at the unit route. It applies
+`parity_tf.dg_analysis_execI`, which Parity's bundle certificate provides, and
+discharges the six obligations left: the routing agreement, the seed key, the
+solver contract and the initial-state contract. It gets back the equation system, the solve, the reader, the result table,
 the report and the context-free soundness endpoints. The entry-state and
 call-string runs are the CLI's combined registrations, `mcp_es_rule` and
 `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`), which route calls to more than one
@@ -46,8 +47,10 @@ context for every active analysis at once; Parity's own registration still
 matters there, since the combined state cites `parity_rule.comp_sound` and
 `parity_rule.init_sound`.
 
-Parity currently has no backward-domain interpretation. Branch transfer is the
-conservative identity, so guards do not refine parity facts.
+Guards refine parity through `parity_refine_ops`: an equality that held gives
+both sides the meet of their parities, a known sum or difference fixes one
+operand's parity from the other's, and an odd product makes both factors odd.
+An order comparison says nothing about parity and leaves the store unchanged.
 
 ## Worked example
 
@@ -76,7 +79,7 @@ registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Parity is one of
 those fields whenever `Parity_Analysis` is in the activation list. Neither
 policy has a pipeline of its own. Both are interpretations of
-`routed_dg_analysis`, which owns the equation system, the solve, the covered
+`dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every active combination at every
 policy.

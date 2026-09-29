@@ -15,9 +15,9 @@ text \<open>
 
 subsection \<open>Each analysis on its own field\<close>
 
-lemma mcp_component_of_frame:
-  "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_component_of \<G> p a) (part_gamma \<G> b)"
-  by (cases a; cases b; simp only: part_gamma.simps mcp_component_of.simps;
+lemma local_spec_of_frame:
+  "a \<noteq> b \<Longrightarrow> mcp_frame (local_spec_of \<G> p a) (part_gamma \<G> b)"
+  by (cases a; cases b; simp only: part_gamma.simps local_spec_of.simps;
       rule field_frame; simp add: lift_get_put_other)
 
 lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
@@ -43,17 +43,17 @@ lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> eval_hol
   by (cases x) (auto simp: part_answer_def part_gamma_rd intro: val_answer_sound)
 
 definition mcp_field ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted mcp_component" where
-  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (mcp_component_of \<G> p a)"
+  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
+  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (local_spec_of \<G> p a)"
 
 lemma mcp_field_sound:
-  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)
+  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
      (mcp_field (declared_global p) p a)"
   unfolding mcp_field_def
-  by (rule with_qry_sound[OF mcp_component_of_sound]) (rule part_answer_sound)
+  by (rule with_qry_sound[OF local_spec_of_sound]) (rule part_answer_sound)
 
 lemma mcp_field_frame: "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_field \<G> p a) (part_gamma \<G> b)"
-  unfolding mcp_field_def by (rule with_qry_frame[OF mcp_component_of_frame])
+  unfolding mcp_field_def by (rule with_qry_frame[OF local_spec_of_frame])
 
 subsection \<open>The active analyses, run as one\<close>
 
@@ -80,31 +80,31 @@ lemma mcp_gamma_norm:
   by (cases x) (auto simp: mcp_norm_def mcp_gamma_def list_all_iff dest: part_gamma_dead)
 
 definition mcp_comp ::
-  "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted mcp_component" where
-  "mcp_comp as \<G> p = map_component (mcp_norm as) (mcp_combine (map (mcp_field \<G> p) as))"
+  "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted local_spec" where
+  "mcp_comp as \<G> p = map_local_spec (mcp_norm as) (mcp_combine (map (mcp_field \<G> p) as))"
 
 theorem mcp_comp_sound:
   assumes "distinct as" and "as \<noteq> []"
-  shows "mcp_component_sound (declared_global p)
+  shows "sound_local_spec (declared_global p)
            (mcp_gamma (map (part_gamma (declared_global p)) as))
            (mcp_comp as (declared_global p) p)"
 proof -
   let ?gcs = "map (\<lambda>a. (part_gamma (declared_global p) a,
                          mcp_field (declared_global p) p a)) as"
-  have "mcp_component_sound (declared_global p) (mcp_gamma (map fst ?gcs))
+  have "sound_local_spec (declared_global p) (mcp_gamma (map fst ?gcs))
           (mcp_combine (map snd ?gcs))"
     by (rule mcp_combine_sound)
        (auto simp: mcp_field_sound assms
          intro!: mcp_independent_map mcp_field_frame)
   then show ?thesis
     unfolding mcp_comp_def
-    by (intro map_component_sound) (simp_all add: comp_def mcp_gamma_norm)
+    by (intro map_local_spec_sound) (simp_all add: comp_def mcp_gamma_norm)
 qed
 
 lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp_comp as \<G> p)"
   unfolding mcp_comp_def mcp_field_def
-  by (intro single_entry_map_component single_entry_mcp_combine)
-     (auto simp: single_entry_mcp_component_of single_entry_with_qry)
+  by (intro single_entry_map_local_spec single_entry_mcp_combine)
+     (auto simp: single_entry_local_spec_of single_entry_with_qry)
 
 subsection \<open>What the combined state publishes\<close>
 
@@ -203,7 +203,7 @@ text \<open>
 lemma mcp_routed_dg_analysis:
   fixes gk0 :: 'k
   assumes "\<And>v ctx. seed v ctx \<noteq> gk0"
-  shows "routed_dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
+  shows "dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
     (mcp_init (activation as)) gk0 seed (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
@@ -220,8 +220,8 @@ next
   show ?case
     using single_entryD[OF single_entry_mcp_comp[OF activation_ne],
         of as "declared_global p" p
-          "mc_channel (mcp_comp (activation as) (declared_global p) p) d" ci "(d, d)"]
-    by (simp add: routed_dg_pipeline.entry_of_def)
+          "ls_channel (mcp_comp (activation as) (declared_global p) p) d" ci "(d, d)"]
+    by (simp add: dg_pipeline.entry_of_def)
 next
   case (EmptyRd p s) show ?case by (rule mcp_emp_rd)
 next
@@ -247,7 +247,7 @@ qed
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation mcp_rule: routed_dg_analysis
+global_interpretation mcp_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
@@ -266,7 +266,7 @@ text \<open>
   runs keys nothing.
 \<close>
 
-global_interpretation mcp_es_rule: routed_dg_analysis
+global_interpretation mcp_es_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "mcp_formals_route (activation as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
@@ -279,7 +279,7 @@ global_interpretation mcp_es_rule: routed_dg_analysis
 
 subsection \<open>At the call-string context\<close>
 
-global_interpretation mcp_cs_rule: routed_dg_analysis
+global_interpretation mcp_cs_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"

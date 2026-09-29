@@ -49,8 +49,8 @@ TD   ---> Solver -------^                                                       
 
 The source-level endpoints sit *below* the analysis family, not after it:
 `Voblint_Result` holds the domain-free source bridge (`Source_Activation_Sound`)
-and the context-insensitive assembly `unit_dg_analysis` whose `source_sound` and
-`completed_run_sound` every domain instantiates, so each domain inherits them
+and the routed endpoints (`fun_route_source_sound`, `fun_route_result_node_sound`)
+every domain's registration instantiates, so each domain inherits them
 from an ancestor heap rather than re-deriving them.
 
 ## The analysis and example families
@@ -79,7 +79,7 @@ Each domain follows the same layer chain, so a reader who knows one knows them a
 ```
 
 The last one is generated from `manifests/analyses.yaml` (each domain's `generated/`
-folder); Int adds `Int_Exec_Sound` to choose its transfer by refinement mode.
+folder).
 
 Everything under a `generated/` folder is emitted by
 `scripts/gen_analysis_assembly.py`: change the yaml or the generator, never the

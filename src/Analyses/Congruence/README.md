@@ -59,14 +59,14 @@ and terminates without acceleration.
 | `Congruence_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): carrier, normalization, order, join and meet |
 | `Congruence_Warrowing.thy` | the `warrowing` instance the TD solver's sort requires (widening is join, narrowing keeps the left argument), then the `numeric_domain` instance, which needs it |
 | `Congruence_Arithmetic.thy` | modular `+`, `-`, `*` on residue classes |
-| `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand |
+| `Congruence_Backward.thy` | the inverse direction: what a known result tells you about an operand; `congruence_refine_ops` and its certificate |
 | `Congruence_Special.thy` | `Min`/`Max` return an operand, so both answer with the join of their arguments; `Nondet_Int` lands at `top` |
-| `Congruence_Transfer.thy` | one abstract operation per edge kind the framework can hand a domain, and their `sound_transfer_for` contract |
+| `Congruence_Transfer.thy` | the `congruence_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, the branch, the check classifier and every edge operation |
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Numeric_Queries.thy` | interprets the generic query interface at `congruence_lt`/`congruence_eqb`, so the check layer reads Congruence like any other domain |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
-| `Congruence_Classify.thy` | one interpretation of `abstract_check_domain`: the Boolean recursion over a check condition and its three-way verdict |
-| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `unit_dg_analysis` at the unit context, at any global update rule; see below |
+| `Congruence_Classify.thy` | executable tests of the derived check classifier |
+| `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
 
@@ -91,7 +91,7 @@ registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Congruence is one of
 those fields whenever `Congruence_Analysis` is in the activation list. Neither
 policy has a pipeline of its own. Both are interpretations of
-`routed_dg_analysis`, which owns the equation system, the solve, the covered
+`dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint — for every active combination at every
 policy.

@@ -76,7 +76,7 @@ theorem compiled_call_string_vars_finite:
 proof -
   have "vars \<subseteq> cfg_nodes (compile_prog Pi ps)
           \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps) \<and> length cs \<le> k}"
-    using nodes ctxs by(auto; force) 
+    using nodes ctxs by(auto; force)
   moreover have "finite (cfg_nodes (compile_prog Pi ps)
           \<times> {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps) \<and> length cs \<le> k})"
     using cfg_nodes_finite compile_prog_finite compiled_call_strings_finite

@@ -7,7 +7,7 @@ begin
 section \<open>Routed execution, once for every domain and context policy\<close>
 
 text \<open>
-  \<^locale>\<open>routed_dg_domain_exec\<close> already reduces a domain's obligation to the routed
+  \<^locale>\<open>dg_domain_exec\<close> already reduces a domain's obligation to the routed
   spine to three primitive commute facts. What it deliberately does not carry is the
   \<^emph>\<open>routing\<close> layer: the equation system a routed analysis actually solves, and the
   executable-to-abstract transport of its post-solution. Each domain, at each context
@@ -26,7 +26,7 @@ text \<open>
 
   Deliberately absent: the equation-system, solved-table and result \<^theory_text>\<open>definition\<close>s
   themselves. They must stay concrete per-domain constants because they carry \<open>[code]\<close>
-  equations, and \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>empty_pred_exact\<close> is not
+  equations, and \<^locale>\<open>dg_domain_exec\<close>'s own \<open>empty_pred_exact\<close> is not
   dischargeable without fixing a concrete global set, so no locale carrying it can be
   interpreted globally. The domain keeps its definitions; what it stops re-proving is
   everything below.
@@ -38,20 +38,20 @@ text \<open>
 \<close>
 
 
-subsection \<open>The buffered generator at any local specification\<close>
+subsection \<open>The buffered generator at any component\<close>
 
 text \<open>
   The buffered generator a domain actually solves, reconciled with the unbuffered one
-  the framework is stated over, for every local specification. Both reshaping hooks
-  are the identity: the buffered generator only asks a hook to hoist what it
-  publishes at the buffered key \<open>gk0\<close>, and a local specification publishes nothing
+  the framework is stated over, for every component run as a specification. Both
+  reshaping hooks are the identity: the buffered generator only asks a hook to hoist
+  what it publishes at the buffered key \<open>gk0\<close>, and a component publishes nothing
   there, since its edge transfers, its entry and its return all read and write the
-  local unknown only. A local specification's queries do not change that: its
-  handler answers from the local value, so an asking transfer is still a local one.
+  local unknown only. Its queries do not change that: its channel is a pure function
+  of the local value, so an asking transfer is still a local one.
 \<close>
 
-theorem pp_local_dg_spec:
-  assumes S: "S = local_dg_spec qs qry sk asn sp br bd rt en ev ce ca"
+theorem pp_dg_spec_of:
+  assumes S: "S = dg_spec_of c"
     and ne: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. gk0) route_st
@@ -126,7 +126,7 @@ proof -
 qed
 
 locale routed_domain_exec =
-  routed_dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
+  dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for \<G> :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
@@ -153,7 +153,7 @@ locale routed_domain_exec =
 begin
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. \<open>spec_st\<close>
-  and \<open>spec_abs\<close> come from \<^locale>\<open>routed_dg_domain_exec\<close>; nothing here mentions a domain
+  and \<open>spec_abs\<close> come from \<^locale>\<open>dg_domain_exec\<close>; nothing here mentions a domain
   constant beyond them, so one proof serves every instance. The caller continuation needs
   no hypothesis: \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine
   sub-tree.\<close>
@@ -234,7 +234,7 @@ theorem pp_st:
         (routed_entry_seed_programs seed_key)
         g bot0 s0d s0g)
      x0 sigma_st vars"
-  by (rule pp_local_dg_spec[where S = spec_st])
+  by (rule pp_dg_spec_of[where S = spec_st])
      (rule local_state_dg_spec_st_for_lifted_def, rule seed_key_ne_gk0, rule pp)
 
 end

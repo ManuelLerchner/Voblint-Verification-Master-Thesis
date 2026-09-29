@@ -1,7 +1,10 @@
 # conda-forge OCaml packaging tracker
 
-f
-Local working notes, excluded via `.git/info/exclude`. Not committed.
+Working notes on moving the OCaml toolchain from opam to conda-forge. The
+package list and dependencies the thesis shows live in
+`manifests/conda-forge-ocaml.toml`; `pixi run thesis-conda-write` records which
+of them conda-forge publishes. This file keeps the reasoning, upstream state
+and open decisions behind that list.
 
 Goal: every OCaml tool and library Voblint builds with installs through
 `pixi.toml`, so `ocaml-deps-install` (opam) and `ocaml/setup-ocaml` in CI can go.

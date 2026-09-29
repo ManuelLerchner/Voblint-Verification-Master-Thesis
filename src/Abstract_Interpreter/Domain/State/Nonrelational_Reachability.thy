@@ -18,9 +18,14 @@ text \<open>
 
 subsection \<open>Composed concretization\<close>
 
-abbreviation gamma_state_lift ::
+text \<open>A lifted pointwise state is one more kind of state, so \<open>\<lbrakk>d\<rbrakk>\<close> covers it too.
+  \<open>\<lbrakk>_\<rbrakk>\<^sub>\<bottom>\<close> stays as input syntax that fixes the lifted type where nothing else does.\<close>
+
+abbreviation (input) gamma_state_lift ::
   "'a::numeric_domain abs_state lifted \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^sub>\<bottom>") where
   "gamma_state_lift \<equiv> gamma_lift gamma_state"
+
+adhoc_overloading gamma_S == "gamma_lift gamma_state"
 
 fun is_empty_state_lift ::
   "'a::executable_domain abs_state lifted \<Rightarrow> bool" where

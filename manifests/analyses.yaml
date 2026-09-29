@@ -38,8 +38,6 @@ domains:
   - name: Parity
     value_type: parity
     imports: [Parity_Sound, Parity_Classify, Parity_Transfer, Parity_Exec]
-    roles:
-      tf_commute: parity_tf_st_for_commute_if_live
 
   - name: Int
     value_type: int_dom
@@ -59,10 +57,9 @@ domains:
       return: {const: return_int_dom, args: [Refine_Fixpoint]}
       enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Fixpoint]}
       event: event_int_dom
-      transfer_sound: int_is_sound_transfer_for
-      tf_commute: int_tf_st_for_commute
-      tf_abs_def: int_tf_abs_def
-      enter_commute: int_dom_enter_st_for_commute
+      classifier: {const: int_classify_check, args: [Refine_Fixpoint]}
+    field:
+      answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st $q)'
 
   - name: Congruence
     value_type: congruence
@@ -82,18 +79,18 @@ domains:
       state_type: relc
       published_type: relc
       context_type: unit list
-      component: order_component (program_vars $p)
-      gamma: gamma_rel $f
+      component: order_spec (program_vars $p)
+      gamma: '\<lbrakk>$f\<rbrakk>'
       empty: ($f = RelBot)
       read: $f
-      published_gamma: gamma_rel $v
+      published_gamma: '\<lbrakk>$v\<rbrakk>'
       published_empty: ($v = RelBot)
       answer: rel_qry $v $q
       display: Field_Whole (OrderValue (order_pairs $v))
       init: top_relc
       route: "[]"
       context_values: "[]"
-      component_sound: order_component_sound
-      single_entry: single_entry_order_component
+      component_sound: order_spec_sound
+      single_entry: single_entry_order_spec
       init_sound: ""
       answer_sound: rel_qry_sound

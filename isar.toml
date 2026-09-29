@@ -1,0 +1,19 @@
+# isar-tools (`isar check`, `isar fmt`, `isar stats`, `isar project ...`), read
+# from any directory below this one. No AFP is needed: isar-tools ships the
+# commands AFP entries declare (`derive`, ...).
+
+# Voblint imports the vendored TD sessions (like `isabelle build -d`); where the
+# submodule is not checked out, this is skipped with a note.
+include = ["vendor/td-verification"]
+
+# Generated theories belong to their generators; the drift checks compare them.
+# The thesis snippets are quoted verbatim by `pixi run thesis-snippets-write`.
+exclude = [
+  "src/**/generated/**",
+  "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy",
+  "thesis/shared/generated/**",
+]
+
+[fmt]
+# The limit `isar stats style` (pixi run theory-stats style) reports.
+max-line-length = 100

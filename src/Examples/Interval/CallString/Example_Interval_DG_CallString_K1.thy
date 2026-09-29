@@ -77,7 +77,6 @@ text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Stat
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
   parameter --- the same source location regardless of which \<open>f\<close> activation runs it.\<close>
 
-lemmas nest_finE = nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>nest_cfg\<close>: each call site \<open>u\<close>
   pins down its callee \<open>p\<close> and continuation \<open>cont\<close>.\<close>
@@ -122,7 +121,7 @@ text \<open>The executable spec is sound for the concretization that reads a loc
 definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
   "nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
-interpretation nest_domain: routed_dg_domain_exec
+interpretation nest_domain: dg_domain_exec
   nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
   skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
   "enter_ivl_ci_for nest_gs" event_ivl
@@ -136,7 +135,7 @@ lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
 
 interpretation nest_dg_sound: analysis_contract nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
-  by (rule nest_domain.analysis_contract_st[OF ivl_tf.is_sound_transfer_for])
+  by (rule nest_domain.analysis_contract_st[OF ivl_tf.is_sound_nonrelational_transfer])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -315,7 +314,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule nest_finE)
+  show ?case by (rule nest.finite_intra)
 next
   case PP
   show ?case
@@ -341,7 +340,7 @@ next
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
-            [OF ivl_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF ivl_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
@@ -396,7 +395,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 theorem nest_1_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 1),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule nest_1_cs.activation_collect_sound[unfolded nest_cfg_compile,
+  by (rule nest_1_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])
 
 section \<open>What the 1-call-string context actually computes\<close>
@@ -465,7 +464,4 @@ lemma nest_1_seed_f_second:
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
 
-
 end
-
-

@@ -33,10 +33,9 @@ text \<open>The executable mirror of \<open>parity_tf_abs\<close>/\<open>enter_p
   \<open>parity_ops\<close>, Parity's primitive bundle, is defined beside the abstract transfer
   in \<^theory>\<open>Voblint_Analysis_Parity.Parity_Transfer\<close>, so both layers read one
   value. The two constants below are the generic constructions of
-  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it. Parity's branch
-  transfer is the identity, so unlike Sign and Interval there is no
-  \<open>branch_parity_st_for\<close> at all --- \<open>n_bfilter\<close>'s value here is the identity
-  function, and nothing needs to name it separately.\<close>
+  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it. The guard
+  transfer needs no third: \<^const>\<open>generic_tf_st_for\<close> derives its filter from the
+  bundle's evaluator and refinement operations.\<close>
 
 definition parity_enter_st_for ::
   "(vname => bool) => call_info =>
@@ -59,29 +58,16 @@ definition parity_tf_st_for ::
 lemmas parity_tf_st_for_simps [simp] =
   generic_tf_st_for.simps [of parity_ops, folded parity_tf_st_for_def]
 
-text \<open>Both filters are the identity here, so the guard obligation the generic
-  commutation leaves open holds on every executable state, not only a live one.\<close>
+text \<open>The liveness premise is the guard's: the derived filter commutes with the
+  abstract branch on a live state. \<open>parity_tf.tf_st_for_commute\<close> settles every
+  action, the guard included.\<close>
 
 theorem parity_tf_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (parity_tf_st_for \<G> a s) =
-   parity_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
-  unfolding parity_tf_st_for_def
-  by (rule parity_tf.tf_st_for_commute) (simp add: branch_parity_def)
-
-text \<open>
-  The same commutation in the shape the shared assembly's transfer obligation is
-  stated in, which carries a liveness premise because a domain may need it. Parity
-  does not: \<^const>\<open>parity_tf_st_for\<close> commutes on every executable state, and
-  \<open>parity_tf_st_for_commute\<close> above remains the theorem this domain exports. This
-  corollary exists so registration can cite a registration-shaped fact without the
-  stronger one being weakened to meet it.
-\<close>
-
-lemma parity_tf_st_for_commute_if_live:
-  assumes "live_resolved_st_q \<G> s"
+  assumes live: "live_resolved_st_q \<G> s"
   shows "fun_of_resolved_st_q_for \<G> (parity_tf_st_for \<G> a s) =
          parity_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
-  by (rule parity_tf_st_for_commute)
+  unfolding parity_tf_st_for_def
+  by (rule parity_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_parity_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q PTop s) =
@@ -95,4 +81,3 @@ lemma parity_enter_st_for_commute:
                 enter_frame_def enter_frame_parity_st_for_commute)
 
 end
-

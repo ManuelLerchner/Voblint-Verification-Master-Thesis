@@ -39,8 +39,8 @@ lemma update_rule_update_global_of:
 global_interpretation TD_side_rule_Interp:
   TD_side_upd_rule init_basic_ug_state "update_global_of r" T for r T
   defines TD_side_rule_Interp_solve = TD_side_rule_Interp.solve
-  and TD_side_rule_Interp_solve_c = TD_side_rule_Interp.solve_c
-  and TD_side_rule_Interp_solve_rec_c = TD_side_rule_Interp.solve_rec_c
+    and TD_side_rule_Interp_solve_c = TD_side_rule_Interp.solve_c
+    and TD_side_rule_Interp_solve_rec_c = TD_side_rule_Interp.solve_rec_c
   by (simp add: TD_side_upd_rule.intro update_rule_update_global_of)
 
 end

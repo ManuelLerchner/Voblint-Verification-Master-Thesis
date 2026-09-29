@@ -161,7 +161,7 @@ text \<open>
     classes at the exit of a straight-line program.
   \<^item> \<^theory>\<open>Voblint_Examples_Int.Exec_Int_DG_Run\<close> runs the reduced product of Sign,
     Interval, Parity and Congruence.  @{thm [source] dgExI_never_ne_once} separates
-    \<^const>\<open>Refine_Never\<close>, which narrows only the Congruence component, from
+    \<^const>\<open>Refine_Never\<close>, which narrows only the Parity and Congruence components, from
     \<^const>\<open>Refine_Once\<close>, whose one reduction round reaches the exact singleton.  Refinement
     is legal because \<^const>\<open>int_reduction_step\<close> preserves the concretization while
     descending the order.
@@ -320,7 +320,7 @@ text \<open>
       return combination, and their soundness against
       \<^verbatim>\<open>gamma_state\<close>.
     \<^item> @{theory Voblint_Framework.DG_Local_State_Spec} --- the
-      \<^verbatim>\<open>sound_transfer_for\<close> contract and two Base
+      \<^verbatim>\<open>sound_nonrelational_transfer\<close> contract and two Base
       constructions. Their edge and \<^verbatim>\<open>EA_Check\<close> soundness
       facts discharge \<^theory>\<open>Voblint_Framework.DG_Spec_Sound\<close>'s
       \<^verbatim>\<open>step_sound\<close> and
@@ -407,10 +407,10 @@ text \<open>
       \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
-      domain as a \<^locale>\<open>routed_dg_analysis\<close> instance at entry state and call
-      string and a \<^locale>\<open>unit_dg_analysis\<close> instance at the unit context, so each
-      reaches \<^const>\<open>activation_collect\<close>, and at the unit context
-      \<^const>\<open>ltr_collect\<close>, through the locale's generic node-soundness bridge.
+      domain as a \<^locale>\<open>dg_analysis_exec\<close> instance at the unit context, and
+      Interval also at entry state and call string, so each reaches
+      \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>ltr_collect\<close>,
+      through the locale's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
@@ -443,7 +443,7 @@ text \<open>
       (\<^const>\<open>fun_of_dg_st_gen\<close>), letting the executable run answer
       for the mathematical system.
     \<^item> @{theory Voblint_Exec.DG_Local_State_Exec_Refinement} ---
-      \<^locale>\<open>routed_dg_domain_exec\<close> proves a registered domain's
+      \<^locale>\<open>dg_domain_exec\<close> proves a registered domain's
       D/G spec sound directly at the executable carrier, without a separate
       abstract-carrier transport step.
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Exec} --- executable Sign transfer functions.
@@ -483,9 +483,9 @@ text \<open>
       (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
       (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
-    \<^item> @{theory Voblint_Result.Unit_DG_Analysis} --- the context-insensitive
-      analysis as the routed one at the unit context; its endpoints are what every
-      flagship and codegen entry point applies: one
+    \<^item> @{theory Voblint_Result.DG_Live_Keys} --- the endpoints of a routed
+      analysis whose route is a function of the call site, the unit context
+      among them; they are what every flagship and codegen entry point applies: one
       \<^verbatim>\<open>solve_c ... \<noteq> None\<close> fact in, source-level soundness out.
       Solver correctness, executable-to-pure commutation, post-solution
       transport, and D/G collecting soundness are discharged inside. It is
@@ -649,9 +649,9 @@ text \<open>
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
     \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
-    \<^item> the endpoint \<open>interval_seed_join.source_sound\<close>
-      (@{theory Voblint_Result.Unit_DG_Analysis}'s \<^verbatim>\<open>unit_dg_analysis\<close> locale, the
-      routed analysis at the unit context) bundles solver correctness,
+    \<^item> the endpoint \<open>interval_seed_join.fun_route_source_sound\<close>
+      (@{theory Voblint_Result.DG_Live_Keys}, the routed analysis at the unit
+      context) bundles solver correctness,
       executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
       application, bounding \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close> at every program point.

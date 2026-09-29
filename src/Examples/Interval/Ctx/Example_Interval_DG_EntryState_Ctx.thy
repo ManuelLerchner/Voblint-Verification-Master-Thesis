@@ -53,7 +53,7 @@ lemma rc_ctx_terminates:
 
 subsection \<open>The routed context is exactly \<open>Top\<close>\<close>
 
-text \<open>The routed callee context is \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type
+text \<open>The routed callee context is \<^const>\<open>dg_pipeline.ctx_succ\<close>, whose type
   omits the domain, so evaluation inlines its body rather than looking for a code
   equation of its own.\<close>
 
@@ -75,4 +75,3 @@ lemma callee_not_under_main: "(FunctionEntry (STR ''p''), []) \<notin> fst rc_ct
   unfolding rc_ctx_sol_def rc_empty_pred_def by eval
 
 end
-

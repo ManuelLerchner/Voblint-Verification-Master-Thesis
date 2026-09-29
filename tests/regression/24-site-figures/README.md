@@ -31,6 +31,7 @@ blocks.
 | One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |
 | What the analyzer will answer (collecting semantics) | `sum(2)` via `dec`, no contexts | `known-imprecision/19-sum_dec_no_context` |
 | What does it tell you? | `100 / k`, `100 / d` and two checks | `precision/47-answers_every_kind` |
+| Thesis Figure 1.2 (every answer) | a clamp function, one check per verdict and two divisions | `precision/48-clamp_every_answer` |
 
 ## What is not pinned
 

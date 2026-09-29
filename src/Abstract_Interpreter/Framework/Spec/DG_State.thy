@@ -15,7 +15,6 @@ text \<open>An analysis chooses a flow-sensitive answer domain \<open>D\<close> 
   concrete domains.\<close>
 
 
-
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
 text \<open>
   The solver's single value type must order local and global halves

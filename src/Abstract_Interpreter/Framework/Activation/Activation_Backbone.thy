@@ -69,4 +69,3 @@ proof -
 qed
 
 end
-

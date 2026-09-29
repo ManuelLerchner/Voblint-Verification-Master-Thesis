@@ -151,7 +151,7 @@ next
   fix ci d key ex
   show "sp_wf (dg_spec_combine_transfer (ov_spec \<G> ep) ci (mk_dg_man d key) ex)"
     unfolding dg_spec_combine_transfer_def dgs_combine_env_ov_spec dgs_combine_assign_ov_spec
-    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def local_dg_spec_def
+    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def
         local_combine_transfer_def)
 qed
 
@@ -182,7 +182,7 @@ qed
 
 subsection \<open>The routed equation system, solved\<close>
 
-text \<open>The entry-state registration's construction of \<^const>\<open>routed_dg_pipeline.equations\<close>
+text \<open>The entry-state registration's construction of \<^const>\<open>dg_pipeline.equations\<close>
   at the overriding specification: same generator, same route, same buffered seed
   protocol, same plain-join solver.\<close>
 
@@ -631,7 +631,6 @@ lemma ov_alt2_route:
   using ov_solution_snapshot by blast
 
 
-
 subsection \<open>Soundness through the relational context layer\<close>
 
 text \<open>
@@ -1054,4 +1053,3 @@ text \<open>
 \<close>
 
 end
-

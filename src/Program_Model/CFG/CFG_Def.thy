@@ -369,4 +369,3 @@ lemma finite_nodes [simp]: "finite (cfg_nodes g)"
 end
 
 end
-

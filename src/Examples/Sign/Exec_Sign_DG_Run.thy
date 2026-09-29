@@ -60,8 +60,6 @@ interpretation gEx: compiled_cfg sign_ex_pi "prog_procs sign_ex_prog" gEx
   by (unfold_locales; unfold gEx_def; simp add: compile_prog_finite)
 
 lemmas gEx_entry = gEx.entry[unfolded prog_main_name_def]
-lemmas gEx_finE = gEx.finite_intra
-lemmas gEx_finC = gEx.finite_calls
 
 subsection \<open>The equation system and its solve\<close>
 
@@ -92,28 +90,25 @@ lemma dgEx_wf:
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
-text \<open>Coverage is read off the solved key set. A routed callee entry is solved only
-  once a caller publishes its seed, so which nodes the solver visited is a fact
-  about this run, decided by \<^const>\<open>vars_cover_exec\<close> over the two edge
-  enumerations. \<open>gEx\<close> has no calls, so here it says every intra target was solved.\<close>
-
-lemma dgEx_vars_cover:
-  "vars_cover (prog_cfg sign_ex_prog) (sign_rule.sol_vars Globals_Join sign_ex_gs sign_ex_prog)"
-  by (rule sign_rule.vars_cover_of_exec_prog) eval
+text \<open>The unit route names the one context \<open>()\<close> at every call, so the routed
+  endpoint for a route that is a function of the call site applies, and the state
+  published at \<open>()\<close> bounds every run.\<close>
 
 theorem dgEx_source_run_sound:
   assumes run: "sign_ex_gs, sign_ex_pi \<turnstile> (prog_main sign_ex_prog, s, [])
                      \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores sign_ex_gs"
   shows "\<exists>v stk. sign_ex_pi, gEx \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-                 \<and> t \<in> \<lbrakk>sign_rule.state_at Globals_Join sign_ex_gs sign_ex_prog v\<rbrakk>"
+                 \<and> t \<in> \<lbrakk>sign_rule.state_at Globals_Join sign_ex_gs sign_ex_prog () v\<rbrakk>"
 proof -
-  have run': "sign_ex_gs, prog_table sign_ex_prog \<turnstile> (main_body (prog_table sign_ex_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
+  have run':
+    "sign_ex_gs, prog_table sign_ex_prog \<turnstile> (main_body (prog_table sign_ex_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
     using run by (simp add: sign_ex_pi_def)
   have wf: "wf_compile_input sign_ex_gs (prog_table sign_ex_prog) (prog_procs sign_ex_prog)"
     using dgEx_wf by (simp add: sign_ex_pi_def)
+  have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   show ?thesis
-    using sign_rule.source_sound[OF dgEx_terminates dgEx_vars_cover wf init run']
+    using sign_rule.fun_route_source_sound[OF unit_route wf dgEx_terminates init run']
     by (simp add: gEx_prog_cfg sign_ex_pi_def)
 qed
 
@@ -133,4 +128,3 @@ lemma dgEx_inspect:
   by eval
 
 end
-

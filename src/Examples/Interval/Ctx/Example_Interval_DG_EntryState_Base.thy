@@ -67,7 +67,6 @@ lemma rc_calls_unique_site:
       u1 = u2 \<longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> k1 = k2"
   unfolding rc_cfg_def by eval
 
-lemmas rc_finC = rc.finite_calls
 
 subsection \<open>Source-level well-formedness\<close>
 

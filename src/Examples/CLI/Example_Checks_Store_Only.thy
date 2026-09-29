@@ -19,7 +19,7 @@ text \<open>
   --- checking \<open>0 < y\<close> again after \<open>y := 0\<close> --- is \<^term>\<open>Check_Refuted\<close>, and
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
   The run is Sign's unit-context registration \<open>sign_rule\<close> at \<^const>\<open>Globals_Join\<close>,
-  and its node-soundness endpoint \<open>sign_rule.result_node_sound_closure\<close> connects
+  and its node-soundness endpoint \<open>sign_rule.fun_route_result_node_sound\<close> connects
   the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
   every covered node, not only the solver's query seed. No ghost or
   trace-projection content: the check
@@ -55,30 +55,14 @@ lemma checks_ex_program_declared_global_vars [simp]:
   "declared_global_vars checks_ex_program = []"
   by (simp add: checks_ex_program_def)
 
-text \<open>The nondeterministic read compiles to an \<^const>\<open>EA_Special\<close> intra edge, not a
-  \<^const>\<open>CallEdge\<close>, so the graph has no call edges and the node-soundness bridge's two
-  call-closure obligations hold vacuously.  The remaining coverage facts are computed.\<close>
-
-lemma checks_ex_calls_eval: "calls (prog_cfg checks_ex_program) = {}"
-  unfolding prog_cfg_def
-  by (rule compile_prog_calls_empty)
-     (simp_all add: checks_ex_program_def main_body_def prog_main_name_def
-        special_table_def special_pname_nondet_int_def)
+text \<open>Termination and well-formedness of the compiled input are both computed.\<close>
 
 lemma checks_ex_solver_terminates:
   "sign_rule.terminates Globals_Join checks_ex_gs checks_ex_program"
   by (rule sign_rule.terminates_of_solve_c) (simp only: sign_rule.root_query_def, eval)
 
-lemma checks_ex_entry_cov:
-  "(cfg_entry (prog_cfg checks_ex_program), ())
-     \<in> sign_rule.sol_vars Globals_Join checks_ex_gs checks_ex_program"
-  by eval
-
-lemma checks_ex_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg checks_ex_program).
-     (u, ()) \<in> sign_rule.sol_vars Globals_Join checks_ex_gs checks_ex_program \<longrightarrow>
-     (w, ()) \<in> sign_rule.sol_vars Globals_Join checks_ex_gs checks_ex_program"
-  by eval
+lemma checks_ex_wf: "wf_program_compile_input checks_ex_program"
+  by (rule wf_program_compile_input_exec_sound) eval
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ex_reach v =
@@ -115,11 +99,13 @@ text \<open>Node-local collecting soundness at every node --- no store is forwar
   and no reachability-to-exit premise is needed.\<close>
 
 lemma checks_ex_node_sound: "checks_ex_reach v \<le> \<lbrakk>checks_ex_env v\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def sign_rule.state_at_unfold[symmetric]
-  using checks_ex_fwd_ok_ball
-  by (intro sign_rule.result_node_sound_closure checks_ex_solver_terminates
-        checks_ex_entry_cov)
-     (auto simp: checks_ex_calls_eval)
+proof -
+  have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
+  show ?thesis
+    using sign_rule.fun_route_result_node_sound
+        [OF unit_route checks_ex_wf checks_ex_solver_terminates]
+    by (simp add: checks_ex_reach_def checks_ex_env_def sign_rule.state_at_unfold UNIV_unit)
+qed
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> (so the second \<open>0 < y\<close> is refuted,
@@ -142,12 +128,14 @@ text \<open>The proved check's condition holds at every reaching store and the r
 corollary checks_ex_first_check_holds:
   assumes "t \<in> checks_ex_reach (Statement 1)"
   shows "truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
-  using assms checks_ex_node_sound sign_classify_check_proved[OF checks_ex_classify_1] by blast
+  using assms checks_ex_node_sound sign_tf.check.classify_check_proved[OF checks_ex_classify_1]
+  by blast
 
 corollary checks_ex_second_check_refuted:
   assumes "t \<in> checks_ex_reach (Statement 3)"
   shows "\<not> truthy (\<lbrakk>Less (N 0) (V (STR ''y''))\<rbrakk>\<^sub>e t)"
-  using assms checks_ex_node_sound sign_classify_check_refuted[OF checks_ex_classify_3] by blast
+  using assms checks_ex_node_sound sign_tf.check.classify_check_refuted[OF checks_ex_classify_3]
+  by blast
 
 text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
   exercised on exactly the checks that are actually true: the compiler's own
@@ -157,7 +145,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 
 lemma checks_ex_proven_check_discharged:
   "sign_checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_env"
-proof (rule sign_checks_provenI)
+proof (rule sign_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
@@ -167,7 +155,7 @@ qed
 
 lemma checks_ex_proven_check_checks_proven:
   "checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_reach"
-  by (rule sign_checks_proven_sound)
+  by (rule sign_tf.check.abstract_checks_proven_sound)
      (use checks_ex_node_sound checks_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: stores do reach the check nodes.  The all-zero initial store runs the
@@ -206,21 +194,21 @@ text \<open>
 \<close>
 
 lemma checks_ex_report_eval:
-  "sign_rule.report Globals_Join checks_ex_gs checks_ex_program =
+  "sign_rule.report Globals_Join checks_ex_gs checks_ex_program () =
      [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
       (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted),
       (Statement 5, Eq (V (STR ''z'')) (N 1), Check_Unknown)]"
   unfolding sign_rule.report_def by eval
 
 lemma checks_ex_report_unfold:
-  "sign_rule.report Globals_Join checks_ex_gs checks_ex_program
+  "sign_rule.report Globals_Join checks_ex_gs checks_ex_program ()
      = classify_checks (prog_cfg checks_ex_program) checks_ex_env sign_classify_check"
   unfolding sign_rule.report_def surface_unfold checks_ex_env_def
   by (simp add: prog_main_name_def)
 
 corollary checks_ex_report_agrees_with_node_classification:
   "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved)
-     \<in> set (sign_rule.report Globals_Join checks_ex_gs checks_ex_program)"
+     \<in> set (sign_rule.report Globals_Join checks_ex_gs checks_ex_program ())"
   unfolding checks_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg checks_ex_program"
       "Statement 1" "Less (N 0) (V (STR ''y''))" Check_Proved checks_ex_env sign_classify_check]
@@ -228,4 +216,3 @@ corollary checks_ex_report_agrees_with_node_classification:
   by (auto simp: checks_ex_intra_eval)
 
 end
-

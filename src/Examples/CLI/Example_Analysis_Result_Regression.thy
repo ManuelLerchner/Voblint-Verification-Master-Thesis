@@ -385,4 +385,3 @@ text \<open>Solver-specific adapter routing is covered by the CLI solver-choice 
   The cases above exercise the solver-independent result API once.\<close>
 
 end
-

@@ -76,7 +76,6 @@ proof unfold_locales
 qed
 
 lemmas sign_nest_entry = sign_nest.entry[unfolded prog_main_name_def]
-lemmas sign_nest_finE = sign_nest.finite_intra
 
 text \<open>The three call edges' shape, computed directly from \<open>sign_nest_cfg\<close>: each call site
   \<open>u\<close> pins down its callee \<open>p\<close> and continuation \<open>cont\<close>. \<open>g\<close> is called once, from inside
@@ -124,7 +123,7 @@ definition sign_nest_gamma ::
     "sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
   "sign_nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
-interpretation sign_nest_domain: routed_dg_domain_exec
+interpretation sign_nest_domain: dg_domain_exec
   sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
   "sign_enter_st_for sign_nest_gs"
   skip_sign assign_sign special_sign branch_sign body_sign return_sign
@@ -134,11 +133,12 @@ interpretation sign_nest_domain: routed_dg_domain_exec
       rule sign_enter_st_for_commute, rule sign_nest_exact)
 
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
-  by (intro ext) (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
+  by (intro ext)
+    (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
 
 interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
-  by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_nonrelational_transfer])
 
 subsection \<open>The routed equation system and its computed solution\<close>
 
@@ -284,7 +284,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule sign_nest_finE)
+  show ?case by (rule sign_nest.finite_intra)
 next
   case PP
   show ?case
@@ -312,7 +312,7 @@ next
       [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
-            [OF sign_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF sign_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: sign_nest_gamma_eq sign_nest_domain.gamma_exec_def)
   show ?case
@@ -369,7 +369,7 @@ theorem sign_nest_1_activation_collect_sound:
      cinit_stores sign_nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
            (sign_ctx_sg_1 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule sign_nest_1_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+  by (rule sign_nest_1_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
 
 section \<open>What the 1-call-string context actually computes\<close>
@@ -395,4 +395,3 @@ lemma sign_nest_1_g_entry_merged:
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 end
-

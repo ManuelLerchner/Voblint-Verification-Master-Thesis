@@ -125,7 +125,6 @@ lemma compatible_four_components_witness:
   by (simp add: int_dom_sipc_def gamma_int_dom_def top_int_dom_ext_def)
 
 
-
 subsection \<open>Progressive integer-domain refinement\<close>
 
 text \<open>

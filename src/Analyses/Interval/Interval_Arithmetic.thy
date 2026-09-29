@@ -451,7 +451,6 @@ lemma c_div_antimono_divisor:
   by (simp add: c_div_nonneg_divisor zdiv_mono2)
 
 
-
 lemma c_div_positive_divisor_bounds:
   assumes "0 < l" "l \<le> b" "b \<le> u"
   shows "min (c_div a l) (c_div a u) \<le> c_div a b \<and>

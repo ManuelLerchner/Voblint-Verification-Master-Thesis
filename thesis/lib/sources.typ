@@ -5,7 +5,7 @@
 // nothing is retyped. Two sources, generated outside Typst and committed:
 //
 //   /shared/generated/snippets/<name>.thy   source text of a declaration,
-//                                           lifted by name (tools/snippets.py)
+//                                           lifted by name (isar project extract)
 //   /shared/generated/facts.json            the statement Isabelle proved,
 //                                           exported from a built session
 //                                           (tools/facts.py)

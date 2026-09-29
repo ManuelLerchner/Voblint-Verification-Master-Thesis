@@ -26,12 +26,12 @@ Int_Warrowing           componentwise widen/narrow and the numeric_domain instan
 Int_Refinement          exactness of reduction steps; one refinement round
 Int_Refinement_Control  the three refine modes
   -> Int_Arithmetic / Int_Backward                   mode-aware forward and backward
-  -> Int_Transfer -> Int_Exec                        transfer bundles; executable carrier
-  -> Int_Exec_Sound                                  the transfer and entry dispatchers
-                                                     over refine_mode
+  -> Int_Transfer                                    the bundle int_dom_ops mode and its
+                                                     one interpretation, parametric in mode
+  -> Int_Exec                                        executable transfer and entry, and
+                                                     their commutation, at every mode
   -> Int_Classify                                    check discharge
-  -> Int_Sound                                       mode-generic commutation and
-                                                     initial-state facts
+  -> Int_Sound                                       initial-state facts
   -> generated/Int_Analyses                          the unit-context registration at
                                                      Refine_Fixpoint (generated; see below)
 ```
@@ -41,7 +41,7 @@ update rule matters: every registration takes it as a parameter, and the CLI
 defaults to Apinis warrowing (`Globals_Warrow`).
 
 The registrations, and therefore `run_voblint`, select `Refine_Fixpoint`. The
-dispatchers in `Int_Exec_Sound` and the facts in `Int_Sound` keep the mode
+executable operations in `Int_Exec` and the facts they rest on keep the mode
 parameter for comparisons and regression witnesses.
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`
@@ -49,8 +49,8 @@ parameter for comparisons and regression witnesses.
 The guard gives `y + 1 = 3`. Backward filtering inverts `+` and hands the leaf `y` a
 candidate. What each mode then does with it:
 
-- `Refine_Never` — Congruence narrows `y` to `2 (mod 0)` on its own; Sign, Interval and
-  Parity learn nothing, so `y` stays `STop`/`top`/`PTop`.
+- `Refine_Never` — Congruence narrows `y` to `2 (mod 0)` and Parity to `PEven`, each through
+  its own inverse of `+`; Sign and Interval learn nothing, so `y` stays `STop`/`top` there.
 - `Refine_Once` — one round pushes the congruence singleton into the other three, and
   `y` becomes `SPos`/`[2,2]`/`PEven`/`2 (mod 0)`: exact.
 - `Refine_Fixpoint` — the same, here. One round already sufficed *for this guard*.
@@ -95,7 +95,7 @@ Int's own generated file registers only the context-insensitive run,
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Int is one of those
 fields whenever `Int_Analysis` is in the activation list. Neither policy has
-a pipeline of its own. Both are interpretations of `routed_dg_analysis`, which
+a pipeline of its own. Both are interpretations of `dg_analysis`, which
 owns the equation system, the solve, the covered keys, the reader, the result
 table, the contextual report and the activation-indexed soundness endpoint —
 for every active combination at every policy.
@@ -104,7 +104,7 @@ Int is the domain where two axes meet, and they stay independent in every run
 that includes it.
 
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
-discharged by one of Int's own mode-generic facts — `int_is_sound_transfer_for`,
+discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
 `int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
 manifest pins `Refine_Fixpoint` by naming the mode-taking operations as applied

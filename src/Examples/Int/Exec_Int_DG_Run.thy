@@ -81,12 +81,12 @@ where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_never_for int_ex_gs) (int_dom_enter_never_st_for int_ex_gs))
+       (int_tf_st_for Refine_Never int_ex_gs) (int_dom_enter_st_for Refine_Never int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_never_result:
   "int_ex_result dgExI_never_eqs =
-   Some (int_dom_sipc STop top PTop (congruence_of_int 2))"
+   Some (int_dom_sipc STop top PEven (congruence_of_int 2))"
   by eval
 
 definition dgExI_once_eqs ::
@@ -96,7 +96,7 @@ where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
        (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_once_for int_ex_gs) (int_dom_enter_once_st_for int_ex_gs))
+       (int_tf_st_for Refine_Once int_ex_gs) (int_dom_enter_st_for Refine_Once int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_once_result:
@@ -106,9 +106,9 @@ lemma dgExI_once_result:
 
 text \<open>
   The retained mode contrast comes from two real solver runs on the same
-  compiled program. \<open>Refine_Never\<close> narrows only the Congruence component
-  through its own inverse. \<open>Refine_Once\<close> propagates that information to
-  Sign, Interval, and Parity and reaches the exact singleton.
+  compiled program. \<open>Refine_Never\<close> narrows only the Parity and Congruence
+  components, through their own inverses of \<open>+\<close>. \<open>Refine_Once\<close> propagates
+  that information to Sign and Interval and reaches the exact singleton.
 \<close>
 
 corollary dgExI_never_ne_once:
@@ -120,4 +120,3 @@ corollary dgExI_never_ne_once:
 
 
 end
-

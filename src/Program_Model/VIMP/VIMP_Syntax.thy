@@ -41,4 +41,3 @@ derive (linorder) compare_order String.literal
 derive linorder exp
 
 end
-

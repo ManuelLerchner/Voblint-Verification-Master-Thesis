@@ -30,54 +30,29 @@ lemma x1_prog_declared_global_vars [simp]:
 lemma x1_reserved: "reserved_ret_var x1_gs"
   unfolding reserved_ret_var_def x1_prog_def by (simp add: ret_var_def)
 
-lemma x1_calls_eval: "calls (prog_cfg x1_prog) = {}"
-  unfolding prog_cfg_def by eval
-
 text \<open>
   Termination is not assumed but proved: the executable routed solver returns a
   result on this program (@{method eval}), so the program lies in the solver's
-  domain.  The three closure facts are computed the same way.
+  domain.  Well-formedness of the compiled input is computed the same way.
 \<close>
 
 lemma x1_terminates: "sign_rule.terminates Globals_Join x1_gs x1_prog"
   unfolding sign_rule.terminates_code
   by (rule TD_side_rule_Interp.solve_dom_of_solve_c) eval
 
-lemma x1_entry_cov:
-  "(cfg_entry (prog_cfg x1_prog), ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-  by eval
-
-lemma x1_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg x1_prog).
-     (u, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog \<longrightarrow>
-     (w, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-  by eval
-
-lemma x1_fwd_ok:
-  assumes "(u, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-    and "(u, a, w) \<in> intra (prog_cfg x1_prog)"
-  shows "(w, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-  using assms x1_fwd_ok_ball by (cases ctx) auto
-
-lemma x1_call_fwd_ok:
-  assumes "(u, ctx) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(FunctionEntry q, ()) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-  using assms by (simp add: x1_calls_eval)
-
-lemma x1_comb_fwd_ok:
-  assumes "(cl, c1) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg x1_prog)"
-  shows "(k, c1) \<in> sign_rule.sol_vars Globals_Join x1_gs x1_prog"
-  using assms by (simp add: x1_calls_eval)
+lemma x1_wf: "wf_program_compile_input x1_prog"
+  by (rule wf_program_compile_input_exec_sound) eval
 
 lemma x1_node_sound:
   "\<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> v
      \<subseteq> \<lbrakk>case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog) v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
-  using sign_rule.result_node_sound_closure
-          [OF x1_terminates x1_fwd_ok x1_call_fwd_ok x1_comb_fwd_ok x1_entry_cov]
-  unfolding sign_rule.state_at_unfold .
+proof -
+  have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
+  show ?thesis
+    using sign_rule.fun_route_result_node_sound[OF unit_route x1_wf x1_terminates]
+    by (simp add: sign_rule.state_at_unfold UNIV_unit)
+qed
 
 definition x1_exit_env :: "sign abs_state" where
   "x1_exit_env =
@@ -155,6 +130,3 @@ next
 qed
 
 end
-
-
-

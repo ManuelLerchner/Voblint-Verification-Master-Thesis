@@ -17,7 +17,7 @@ text \<open>
   What the instance witnesses is coverage rather than per-value precision. The one
   call's argument is drawn from \<open>__voblint_nondet_int()\<close>, so the call site is reached by
   infinitely many concrete stores that share a single caller-local abstract value
-  \<open>Top\<close>. The production context relation \<^const>\<open>routed_dg_analysis.admitted_contexts\<close>
+  \<open>Top\<close>. The production context relation \<^const>\<open>dg_analysis.admitted_contexts\<close>
   admits its concrete-store argument and recomputes the routed value from the caller's
   own solved abstract state, so every one of those draws enters under the very same
   admissible context \<^const>\<open>ctx_call\<close>.
@@ -74,12 +74,12 @@ text \<open>The state a call enters its callee with, as the registration's pipel
   and as the executable entry transfer computes it.\<close>
 
 lemma rc_entered:
-  "routed_dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_component \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+  "dg_pipeline.entry_of
+     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
         (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
      rc_gs rc_program ci d
    = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"
-  by (simp add: routed_dg_pipeline.entry_of_def rc_empty_pred_def)
+  by (simp add: dg_pipeline.entry_of_def rc_empty_pred_def)
 
 lemma rc_route_at_call:
   "exec_formals_route rc_gs (Statement 3) []
@@ -149,7 +149,7 @@ theorem rc_activation_collect_sound:
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
-text \<open>\<^const>\<open>routed_dg_analysis.admitted_contexts\<close> admits a routed context relationally
+text \<open>\<^const>\<open>dg_analysis.admitted_contexts\<close> admits a routed context relationally
   rather than computing one from the concrete store, so at the one call site it admits
   exactly the constant \<^const>\<open>ctx_call\<close> --- no matter which
   \<open>__voblint_nondet_int()\<close> outcome produced the store it is handed.\<close>
@@ -158,7 +158,7 @@ lemma rc_call_site_action:
   "call_action_at_call_site (compile_prog rc_pi rc_procs) (Statement 3)
      = CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]"
 proof (rule call_action_at_call_site_eq
-    [OF rc_finC[unfolded rc_cfg_def] compile_prog_calls_source_unique])
+    [OF rc.finite_calls[unfolded rc_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
           FunctionEntry (STR ''p''), Statement 4)
           \<in> calls (compile_prog rc_pi rc_procs)"

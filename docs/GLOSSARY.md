@@ -61,7 +61,7 @@ layer without embedding line numbers that drift.
 | `numeric_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
 | `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every side contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
-| `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) it discharges the solver assumptions of `routed_dg_analysis`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
+| `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) it discharges the solver assumptions of `dg_analysis`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
 
 ## D/G framework
 
@@ -163,9 +163,9 @@ including those of every interpretation of its locale, which then print as
 `X.cover v c`. `ltr_coverage` is only interpreted inside proofs, so printing
 mode is safe there. The other locales have theory-level interpretations, so
 their abbreviations are input-only and interpreted facts keep the explicit
-terms. The anonymous contexts fixing `p` in `Routed_DG_Analysis.thy` and
-`Unit_DG_Analysis.thy` add the input-only `pgs` and `ugs` for
-`declared_global p`; they are not locales and stay out of the table.
+terms. The anonymous context fixing `p` in `DG_Analysis.thy` adds the
+input-only `pgs` for `declared_global p`; it is not a locale and stays out of
+the table.
 
 ## Source-facing endpoints
 
@@ -173,4 +173,4 @@ terms. The anonymous contexts fixing `p` in `Routed_DG_Analysis.thy` and
 | --- | --- | --- |
 | `config_terminates` | The termination premise of the `run_voblint` theorems: `solve_dom` of the configured solve at the program's root query. A per-program fact. Inside Isabelle it is discharged by evaluating `solve_c` with `eval` (itself a code-generator oracle) and `terminates_of_solve_c`, which the repository does for its witness programs. A CLI or browser run that returns has computed `solve_c` and so establishes it through `solve_dom_of_solve_c`, but that step runs outside Isabelle's theorem check and relies on the trusted code generator and toolchain. | `src/Executable_Surface/CLI/Analysis_Certified.thy` |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
-| `unit_dg_analysis` | The context-insensitive analysis: `routed_dg_analysis` at the unit context, with the published `state_at`/`report` and the endpoints connecting a computed solve to source execution (`source_sound`, `completed_run_sound`, `result_node_sound`). Every domain's unit route interprets it. | `src/Analyses/Shared/Result/Unit_DG_Analysis.thy` |
+| `fun_route_source_sound` | The routed endpoints for a route that is a function of the call site, the unit route among them: a terminating solve bounds every store a source run reaches by the state published at its point under one of its contexts (`fun_route_source_sound`, `fun_route_result_node_sound`, `fun_route_report_proved_sound`). Every domain's unit registration is an instance. | `src/Analyses/Shared/Result/DG_Live_Keys.thy` |

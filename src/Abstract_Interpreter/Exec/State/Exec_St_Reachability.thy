@@ -309,7 +309,6 @@ proof -
 qed
 
 
-
 subsection \<open>Incremental dead-code tracking\<close>
 
 

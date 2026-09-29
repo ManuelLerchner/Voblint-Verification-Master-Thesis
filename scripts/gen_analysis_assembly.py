@@ -8,9 +8,9 @@ One output per domain, plus one for the combined state:
 
 A domain is registered once per context it lists (`contexts`, default `[unit]`),
 each registration taking the global update rule as a parameter, so one
-registration serves every solver discipline. The unit registration interprets
-`unit_dg_analysis`, the entry-state and call-string ones its parent
-`routed_dg_analysis_exec`. The combined state has one lifted field per domain,
+registration serves every solver discipline. Every registration interprets
+`dg_analysis_exec`; the contexts differ only in their keys and route. The
+combined state has one lifted field per domain,
 in manifest order, and the per-domain cases the handwritten `MCP_Analyses`
 registers over.
 
@@ -46,8 +46,7 @@ ISABELLE_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9_'.]*$")
 # Named explicitly rather than relied on transitively: an implicit dependency is
 # what turns a later unrelated import prune into a failure nobody can place.
 COMMON_IMPORTS = [
-    '"Voblint_Result.Unit_DG_Analysis"',
-    '"Voblint_Result.Routed_Live_Keys"',
+    '"Voblint_Result.DG_Live_Keys"',
     '"Voblint_Framework.Call_String_Context"',
     '"Voblint_Framework.Routed_Context"',
     '"Voblint_Solver.TD_Solver_Bridge"',
@@ -76,21 +75,11 @@ ROLES = [
     "return",
     "enter_ci",
     "event",
-    "transfer_sound",
-    "tf_commute",
-    "tf_abs_def",
-    "enter_commute",
     "classifier",
+    "exec_intro",
     "init_gamma",
 ]
-FACT_ROLES = {
-    "transfer_sound",
-    "tf_commute",
-    "tf_abs_def",
-    "enter_commute",
-    "init_gamma",
-    "classifier",
-}
+FACT_ROLES = {"exec_intro", "init_gamma"}
 
 # How an analysis runs as one field of the combined state. Each role is a term
 # template; its placeholders are $G (the globals predicate), $p (the program),
@@ -119,36 +108,29 @@ FIELD_ROLES = [
 ]
 
 # What distinguishes the three contexts: the global and seed keys, the route on
-# the executable and on the abstract carrier, and obligation 4, which says the
+# the executable and on the abstract carrier, and the route agreement, which says the
 # route reads only what the abstraction preserves.
 CONTEXTS = [
     {
         "key": "unit",
         "suffix": "",
         "title": "the unit context",
-        "locale": "unit_dg_analysis",
-        "header": [
-            "proof (rule unit_dg_analysis.intro, rule routed_dg_analysis_exec.intro,",
-            "       goal_cases)",
-        ],
         "gk": lambda vt: "(unit, unit) routed_gk",
-        "keys": None,
-        "route_abs": None,
+        "keys": '"Analysis_Global ()" Activation_Seed "\\<lambda>_. route_unit" "()"',
+        "route_abs": '"\\<lambda>_. route_unit"',
         "params": "r",
-        "case4": ["  case (4 \\<G> u ctx d ca) show ?case by simp"],
+        "case_route": ["  case (1 \\<G> u ctx d ca) show ?case by simp"],
     },
     {
         "key": "entry-state",
         "suffix": "_es",
         "title": "the entry-state context",
-        "locale": "routed_dg_analysis_exec",
-        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: f"(unit, {vt} list) routed_gk",
         "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",
-        "case4": [
-            "  case (4 \\<G> u ctx d ca) show ?case",
+        "case_route": [
+            "  case (1 \\<G> u ctx d ca) show ?case",
             "    unfolding fun_of_exec_dg_st_for_def",
             "    by (rule exec_formals_route_commute[symmetric])",
         ],
@@ -157,8 +139,6 @@ CONTEXTS = [
         "key": "call-string",
         "suffix": "_cs",
         "title": "the call-string context",
-        "locale": "routed_dg_analysis_exec",
-        "header": ["proof (rule routed_dg_analysis_exec.intro, goal_cases)"],
         "gk": lambda vt: "call_string_gk",
         "keys": (
             "Call_String_Context.Global Call_String_Context.Seed"
@@ -166,8 +146,8 @@ CONTEXTS = [
         ),
         "route_abs": '"\\<lambda>_. cs_route k"',
         "params": "k r",
-        "case4": [
-            "  case (4 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
+        "case_route": [
+            "  case (1 \\<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)"
         ],
     },
 ]
@@ -221,11 +201,8 @@ class Domain:
             "return": f"return_{i}",
             "enter_ci": f"enter_{i}_ci_for",
             "event": f"event_{i}",
-            "transfer_sound": f"{i}_tf.is_sound_transfer_for",
-            "tf_commute": f"{i}_tf_st_for_commute",
-            "tf_abs_def": f"{i}_tf.tf_abs_def",
-            "enter_commute": f"{i}_enter_st_for_commute",
             "classifier": f"{self.name.lower()}_classify_check",
+            "exec_intro": f"{i}_tf.dg_analysis_execI",
             "init_gamma": f"{self.name.lower()}_cinit_gamma",
         }
         roles.update(self.overrides)
@@ -245,14 +222,14 @@ class Domain:
             "state_type": f"{vt} exec_dg_st lifted",
             "published_type": f"{vt} abs_state lifted",
             "context_type": f"{vt} list",
-            "component": "ask_assign (exec_component $G"
+            "component": "ask_assign (exec_spec $G"
             " (resolved_st_q_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
-            "gamma": "gamma_point (map_lift (fun_of_resolved_st_q_for $G) $f)",
+            "gamma": "\\<lbrakk>map_lift (fun_of_resolved_st_q_for $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
             "empty": "(case $f of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for $gs st)",
             "read": "map_lift (fun_of_resolved_st_q_for $G) $f",
-            "published_gamma": "gamma_point $v",
+            "published_gamma": "\\<lbrakk>$v\\<rbrakk>\\<^sub>\\<bottom>",
             "published_empty": "(case $v of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> is_empty_state st)",
             "answer": "(case $v of Bot \\<Rightarrow> \\<top>"
@@ -263,9 +240,9 @@ class Domain:
             "route": "exec_formals_route $G u [] $f ca",
             "context_values": f"map {vc} $c",
             "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
-            "single_entry": "single_entry_ask_assign[OF single_entry_exec_component]",
+            "single_entry": "single_entry_ask_assign[OF single_entry_exec_spec]",
             "init_sound": f"{p}_rule.init_sound",
-            "answer_sound": f"{p}_eval_answer_sound",
+            "answer_sound": f"{self.impl}_tf.check.eval_answer_sound",
         }
         roles.update(self.field_overrides)
         return roles
@@ -323,66 +300,52 @@ def pack_operands(groups):
     return out + [line]
 
 
+def const_name(role):
+    return role["const"] if isinstance(role, dict) else role
+
+
 def registration(dom, ctx):
-    """One registration with the same twelve discharges every time; only the
-    context terms and obligation 4 vary."""
+    """One registration. The bundle's certificate discharges every domain
+    obligation; the six left are the context's, the solver's and the initial
+    state's, and only the route agreement varies with the context."""
     r = dom.roles()
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
     out = [
-        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: {ctx['locale']}",
+        f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: dg_analysis_exec",
         f"    {t['tf_st']} {t['enter_st']} {t['init_st']}",
+        f"    {ctx['keys']}",
     ]
-    if ctx["keys"]:
-        out.append(f"    {ctx['keys']}")
     out += [
         f'    "{INTERP}_solve r"',
         f'    "{INTERP}.solve_dom TYPE({ctx["gk"](vt)})',
         f'       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state) r"',
         f"    bot {t['classifier']}",
     ]
-    tail = [t["enter_ci"], t["event"]] + (
-        [ctx["route_abs"]] if ctx["route_abs"] else []
-    )
     groups = [
         [t[k] for k in ["skip", "assign", "special", "branch", "body", "return"]],
-        tail,
+        [t["enter_ci"], t["event"], ctx["route_abs"]],
         [f'"{INTERP}_solve_c r"'],
     ]
-    if not ctx["route_abs"]:
-        groups = [groups[0], tail + groups[2]]
     out += pack_operands(groups)
     out.append(f"  for {ctx['params']}")
-    out += ctx["header"]
+    folded = " ".join(f"{const_name(r[k])}_def" for k in ["tf_st", "enter_st"])
     out += [
-        f"  case (1 \\<G>) show ?case by (rule {r['transfer_sound']})",
+        f"proof (rule {r['exec_intro']}",
+        f"    [folded {folded}], goal_cases)",
+        *ctx["case_route"],
         "next",
-        "  case (2 \\<G> a s) then show ?case",
-        "    unfolding fun_of_exec_dg_st_for_def",
-        f"    by (rule {r['tf_commute']}[unfolded {r['tf_abs_def']}])",
+        "  case (2 v ctx) show ?case by simp",
         "next",
-        "  case (3 \\<G> ci s) show ?case",
-        f"    unfolding fun_of_exec_dg_st_for_def by (rule {r['enter_commute']})",
-        "next",
-        *ctx["case4"],
-        "next",
-        "  case (5 v ctx) show ?case by simp",
-        "next",
-        "  case (6 eqs x) then show ?case",
+        "  case (3 eqs x) then show ?case",
         *rule_step(f"{INTERP}.partial_post_solution[OF _ surjective_pairing]"),
         "next",
-        "  case (7 eqs x) then show ?case",
+        "  case (4 eqs x) then show ?case",
         *rule_step(f"{INTERP}.finite_stabl_solve"),
         "next",
-        f"  case (8 c d s) then show ?case by (rule {r['classifier']}_proved)",
+        f"  case (5 \\<G>) show ?case by (rule {r['init_gamma']})",
         "next",
-        f"  case (9 c d s) then show ?case by (rule {r['classifier']}_refuted)",
-        "next",
-        "  case 10 show ?case by (rule refl)",
-        "next",
-        f"  case (11 \\<G>) show ?case by (rule {r['init_gamma']})",
-        "next",
-        "  case (12 eqs x) then show ?case",
+        "  case (6 eqs x) then show ?case",
         *rule_step(f"{INTERP}.solve_dom_of_solve_c"),
         "qed",
     ]
@@ -414,7 +377,7 @@ def render(dom):
         + wrap_prose(
             f"{dom.name} runs through the shared D/G pipeline {listed}. The CLI runs it as"
             " a field of the combined state of \\<open>MCP_Analyses\\<close>,"
-            " whose component and soundness this unit registration supplies. Each"
+            " whose component and soundness the unit registration supplies. Each"
             " registration leaves the rule that merges a value side-effected into a"
             " global as a parameter \\<open>r\\<close>"
             + (
@@ -630,13 +593,13 @@ def render_mcp(doms):
 
     out += fun_block(
         [
-            "fun mcp_component_of ::",
+            "fun local_spec_of ::",
             '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain'
-            ' \\<Rightarrow> mcp_st lifted mcp_component" where',
+            ' \\<Rightarrow> mcp_st lifted local_spec" where',
         ],
         per(
             lambda k, d: (
-                f"mcp_component_of {G} p {d.constructor}",
+                f"local_spec_of {G} p {d.constructor}",
                 f"lens_of (lift_get slot{k}) (lift_put set_slot{k})"
                 f" {arg(d.term('component', G=G, p='p'))}",
             )
@@ -803,16 +766,16 @@ def render_mcp(doms):
         f"field_component_sound[OF {d.field()['component_sound']}]" for d in doms
     )
     out += [
-        "lemma mcp_component_of_sound:",
-        '  "mcp_component_sound (declared_global p) (part_gamma (declared_global p) a)',
-        '     (mcp_component_of (declared_global p) p a)"',
-        "  by (cases a; simp only: part_gamma.simps mcp_component_of.simps;",
+        "lemma local_spec_of_sound:",
+        '  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)',
+        '     (local_spec_of (declared_global p) p a)"',
+        "  by (cases a; simp only: part_gamma.simps local_spec_of.simps;",
     ]
     out += wrap_term("rule " + comps + ";", 6)
     out += ["      auto simp: less_eq_analysis_product_def)", ""]
     singles = " ".join(dict.fromkeys(d.field()["single_entry"] for d in doms))
     out += [
-        'lemma single_entry_mcp_component_of: "single_entry (mcp_component_of \\<G> p a)"'
+        'lemma single_entry_local_spec_of: "single_entry (local_spec_of \\<G> p a)"'
     ]
     out += wrap_term(
         f"by (cases a) (auto intro!: single_entry_lens_of lift_put_get {singles})", 2
@@ -820,11 +783,10 @@ def render_mcp(doms):
     out += [""]
     silent = [d.constructor for d in doms if "component" not in d.field_overrides]
     out += [
-        "lemma mcp_component_of_silent:",
+        "lemma local_spec_of_silent:",
         f'  "a \\<in> {{{", ".join(silent)}}}',
-        f'     \\<Longrightarrow> mc_qry (mcp_component_of {G} p a) A x q = \\<top>"',
-        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_component_def"
-        " lens_component_def)",
+        f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
+        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)",
         "",
     ]
     inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])

@@ -1,6 +1,5 @@
 theory Example_Sign_Backward_Pollution_Regression
   imports
-    "Voblint_Analysis_Sign.Sign_Backward"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -20,7 +19,7 @@ text \<open>
   disjunct's untouched location survives the pointwise join and overrides
   it, so the whole state comes back exactly as unconstrained as it started
   for \<open>x\<close> and \<open>y\<close> -- \<open>bfilter\<close>'s documented join-arm-pollution limitation.
-  \<open>sign_backward_domain.bfilter_lifted\<close> canonicalizes each disjunct to
+  \<^const>\<open>bfilter_lifted_sign\<close> canonicalizes each disjunct to
   structural \<open>Bot\<close> before joining, so the genuine, whole-state infeasibility
   is discovered instead, and the executable \<open>bfilter_sign_st_lift\<close> mirror
   is proven exact to it.
@@ -65,8 +64,7 @@ text \<open>
 \<close>
 
 lemma bfilter_sign_eq_0_and_1_lifted:
-  "sign_backward_domain.bfilter_lifted
-     (And (Eq (V x) (N 0)) (Eq (V x) (N 1))) True (\<lambda>_. STop) = Bot"
+  "bfilter_lifted_sign (And (Eq (V x) (N 0)) (Eq (V x) (N 1))) True (\<lambda>_. STop) = Bot"
 proof -
   have step1: "bfilter_sign (Eq (V x) (N 1)) True (\<lambda>_. STop) = (\<lambda>_. STop)(x := SPos)"
     by simp
@@ -77,21 +75,20 @@ proof -
     by (simp add: is_empty_state_def is_bottom_sign_def)
   have empty_bot: "is_empty_state ((\<lambda>_. STop)(x := SBot))"
     by (auto simp: is_empty_state_def is_bottom_sign_def intro: exI[of _ x])
-  have l1: "sign_backward_domain.bfilter_lifted (Eq (V x) (N 1)) True (\<lambda>_. STop)
+  have l1: "bfilter_lifted_sign (Eq (V x) (N 1)) True (\<lambda>_. STop)
               = Lifted ((\<lambda>_. STop)(x := SPos))"
     using step1 not_empty_pos by simp
-  have l2: "sign_backward_domain.bfilter_lifted (Eq (V x) (N 0)) True
-              ((\<lambda>_. STop)(x := SPos)) = Bot"
+  have l2: "bfilter_lifted_sign (Eq (V x) (N 0)) True ((\<lambda>_. STop)(x := SPos)) = Bot"
     using step2 empty_bot by simp
   show ?thesis using l1 l2 by simp
 qed
 
 lemma bfilter_sign_lifted_pollution_fixed:
-  "sign_backward_domain.bfilter_lifted x_or_y_contradiction True (\<lambda>_. STop) = Bot"
+  "bfilter_lifted_sign x_or_y_contradiction True (\<lambda>_. STop) = Bot"
 proof -
-  have hx: "sign_backward_domain.bfilter_lifted x_eq_0_and_1 True (\<lambda>_. STop) = Bot"
+  have hx: "bfilter_lifted_sign x_eq_0_and_1 True (\<lambda>_. STop) = Bot"
     unfolding x_eq_0_and_1_def using bfilter_sign_eq_0_and_1_lifted .
-  have hy: "sign_backward_domain.bfilter_lifted y_eq_0_and_1 True (\<lambda>_. STop) = Bot"
+  have hy: "bfilter_lifted_sign y_eq_0_and_1 True (\<lambda>_. STop) = Bot"
     unfolding y_eq_0_and_1_def using bfilter_sign_eq_0_and_1_lifted .
   show ?thesis
     unfolding x_or_y_contradiction_def using hx hy by simp
@@ -101,7 +98,7 @@ subsection \<open>The executable mirror is exact, not just the specification\<cl
 
 text \<open>
   \<^const>\<open>bfilter_sign_st_lift\<close> is the code-generatable mirror of
-  \<open>sign_backward_domain.bfilter_lifted\<close>; \<open>bfilter_st_lift_correct\<close>
+  \<^const>\<open>bfilter_lifted_sign\<close>; \<open>bfilter_st_lift_correct\<close>
   (\<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) proves that readback commutes
   exactly with filtering. This lemma is not a restatement of that theorem:
   it separately checks that code
@@ -121,7 +118,7 @@ subsection \<open>The semantic branch operation inherits the fix\<close>
 text \<open>
   \<open>x_or_y_contradiction\<close> is trivially feasible at the top level (\<open>STop\<close>
   answers every forward check as unknown), so \<^const>\<open>branch_lifted_sign\<close>
-  reduces to \<open>sign_backward_domain.bfilter_lifted\<close> here and inherits its
+  reduces to \<^const>\<open>bfilter_lifted_sign\<close> here and inherits its
   precision directly, exercising \<open>branch_lifted_sign\<close> itself rather than
   only its internal filter. Sign's registered branch operation is plain
   \<^const>\<open>branch_sign\<close>, so what this regression covers is
@@ -132,6 +129,6 @@ text \<open>
 lemma branch_sign_lifted_pollution_fixed:
   "branch_lifted_sign x_or_y_contradiction True (\<lambda>_. STop) = Bot"
   using bfilter_sign_lifted_pollution_fixed
-  by (simp add: sign_backward_domain.branch_lifted_def sign_backward_domain.feasible_def)
+  by (simp add: sign_tf.backward.branch_lifted_def sign_tf.backward.feasible_def)
 
 end

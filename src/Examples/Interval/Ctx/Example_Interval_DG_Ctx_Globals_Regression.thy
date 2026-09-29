@@ -45,12 +45,13 @@ definition gcall_cfg :: cfg where
 
 text \<open>Every value below is Interval's entry-state registration \<open>interval_es_rule\<close> at
   \<^const>\<open>Globals_Warrow\<close>, the discipline Interval ships with. The routed callee
-  context is \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type omits the domain, so
+  context is \<^const>\<open>dg_pipeline.ctx_succ\<close>, whose type omits the domain, so
   evaluation inlines its body rather than looking for a code equation of its own.\<close>
 
 
 definition gcall_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) routed_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+    where
   "gcall_sol = interval_es_rule.solution Globals_Warrow gcall_gs gcall_prog"
 
 lemma gcall_terminates:

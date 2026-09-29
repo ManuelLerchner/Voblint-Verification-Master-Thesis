@@ -72,16 +72,16 @@ locale backward_ops = sound_intersection intersect
       inv_less_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_less res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_less res a1 a2))"
-  and inv_eq_sound:
+    and inv_eq_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> (n1 = n2) = res
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_eq res a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_eq res a1 a2))"
-  and inv_plus_sound:
+    and inv_plus_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 + n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_plus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_plus r a1 a2))"
-  and inv_minus_sound:
+    and inv_minus_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 - n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_minus r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_minus r a1 a2))"
-  and inv_times_sound:
+    and inv_times_sound:
       "n1 \<in> \<gamma> a1 \<Longrightarrow> n2 \<in> \<gamma> a2 \<Longrightarrow> n1 * n2 \<in> \<gamma> r
        \<Longrightarrow> n1 \<in> \<gamma> (fst (inv_times r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_times r a1 a2))"
 begin
@@ -183,7 +183,7 @@ lemma feasible_of_concrete [intro]:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
   shows "feasible e pol \<sigma>"
   unfolding feasible_def using assms is_empty_correct tobool_sound by blast
- 
+
 text \<open>
   \<open>bfilter\<close> narrows a state under an assumed truth value of \<open>e\<close>: \<open>bfilter e
   True\<close> is \<open>assume e\<close>, \<open>bfilter e False\<close> is \<open>assume-not e\<close>. \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>
@@ -359,6 +359,7 @@ text \<open>
 \<close>
 
 lemma gated_join_sound:
+  fixes f1 f2 :: "'a abs_state"
   assumes st: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
     and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
     and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
@@ -687,15 +688,16 @@ end
 subsection \<open>Conservative inverse operator\<close>
 
 text \<open>
-  A domain that is too coarse for useful arithmetic inversion (e.g. sign,
-  which cannot narrow either operand of a plus/minus/times from its result)
-  instantiates @{term inv_plus} / @{term inv_minus} / @{term inv_times} with
-  this shared no-op: both operands pass through unchanged. Any
+  A domain too coarse to invert an operator (e.g. sign, which cannot narrow
+  either operand of a plus/minus/times from its result) instantiates that
+  inverse with this shared no-op: both operands pass through unchanged. The
+  first argument is the known result or truth value, so the same no-op serves
+  the arithmetic inverses and the comparison inverses. Any
   @{class numeric_domain} discharges its soundness for free, so domains share
   one proof instead of each restating the same trivial obligation.
 \<close>
 
-definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
+definition inv_conservative :: "'r => 'a => 'a => 'a * 'a" where
   "inv_conservative r a1 a2 = (a1, a2)"
 
 lemma inv_conservative_sound:

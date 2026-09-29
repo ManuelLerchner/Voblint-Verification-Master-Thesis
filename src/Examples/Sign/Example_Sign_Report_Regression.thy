@@ -20,7 +20,7 @@ text \<open>
 \<close>
 
 abbreviation sign_join_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "sign_join_report p \<equiv> sign_rule.report Globals_Join (declared_global p) p"
+  "sign_join_report p \<equiv> sign_rule.report Globals_Join (declared_global p) p ()"
 
 subsection \<open>Base-style flow-sensitive global regressions\<close>
 

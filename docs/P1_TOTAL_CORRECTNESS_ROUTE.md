@@ -8,10 +8,9 @@ phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 ## What P1 is
 
-The end-to-end endpoints (`unit_dg_analysis`'s `source_sound` and
-`result_node_sound_of_terminates` in `Unit_DG_Analysis.thy`, and the routed
-`*_of_terminates` theorems in `Routed_Live_Keys.thy`) carry one solver
-hypothesis:
+The end-to-end endpoints (`fun_route_source_sound`,
+`fun_route_result_node_sound` and the other routed `*_of_terminates` theorems
+in `DG_Live_Keys.thy`) carry one solver hypothesis:
 
 ```isabelle
 assumes solves: "terminates ugs p"

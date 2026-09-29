@@ -28,10 +28,10 @@ lemma pleft_pright_mono:
 
 lemma field_component_sound:
   fixes f :: "'r::{semilattice_sup, order_bot} \<Rightarrow> 'c::order_bot"
-  assumes sound: "mcp_component_sound \<G> g cmp"
+  assumes sound: "sound_local_spec \<G> g cmp"
     and get_put: "\<And>r v. f (u r v) = v" and get_bot: "f \<bottom> = \<bottom>"
     and mono: "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
-  shows "mcp_component_sound \<G> (\<lambda>x. g (lift_get f x)) (lens_of (lift_get f) (lift_put u) cmp)"
+  shows "sound_local_spec \<G> (\<lambda>x. g (lift_get f x)) (lens_of (lift_get f) (lift_put u) cmp)"
   by (rule lens_of_sound[OF sound, where get = "lift_get f"])
      (simp_all add: lift_get_put[OF get_put get_bot] lift_get_mono[OF mono])
 
@@ -45,8 +45,8 @@ lemma field_frame:
   shows "mcp_frame (lens_of get (lift_put u) cmp) g"
   unfolding mcp_frame_def lens_of_def by (auto simp: assms)
 
-lemma single_entry_exec_component:
-  "single_entry (exec_component \<G> empty_pred tf_st enter_st)"
-  by (simp add: single_entry_def exec_component_def lens_component_def)
+lemma single_entry_exec_spec:
+  "single_entry (exec_spec \<G> empty_pred tf_st enter_st)"
+  by (simp add: single_entry_def exec_spec_def)
 
 end

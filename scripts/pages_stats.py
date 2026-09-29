@@ -8,13 +8,11 @@ collection also writes every `[data-stat]` figure into the built HTML, so the
 published page carries real numbers without running any script. The sources
 keep the neutral FALLBACK there, which cannot go stale.
 
-Isabelle figures reuse thy_stats.py's scanner, so the page and
-`pixi run theory-stats` never disagree. The session graph behind the strata
-figure comes from session_graph.py, read from ROOT files and theory imports.
-The OCaml counts are plain line counts.
-
-The thesis reads the same collection (`thesis/tools/stats.py`), so a figure
-means one thing on both: every counting rule lives here.
+Isabelle figures come from isar-tools (scripts/isar_json.py), which parses the
+theories, so the page and `pixi run theory-stats` (`isar stats`) never
+disagree; what counts as a definition or a lemma is fixed in isar_json.py. The
+session graph behind the strata figure comes from session_graph.py. The OCaml
+counts are plain line counts.
 """
 
 import argparse
@@ -26,10 +24,18 @@ from datetime import date
 from pathlib import Path
 
 import session_graph
-from extract_definitions import VENDOR_SESSIONS, iter_theory_files
-from thy_stats import scan_theory, statement_kinds
+from isar_json import (
+    DEFINITION_COMMANDS,
+    STRUCTURE_COMMANDS,
+    THEOREM_COMMANDS,
+    command_counts,
+    sessions,
+    theory_command_counts,
+    theory_sizes,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+TD_DIR = REPO_ROOT / "vendor" / "td-verification"
 GENERATED_ML = REPO_ROOT / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
 CLI_DIR = REPO_ROOT / "cli"
 SRC_DIR = REPO_ROOT / "src"
@@ -51,6 +57,27 @@ SEMANTICS_THEORIES = (
     "VIMP_Program",
     "VIMP_Proc",
 )
+
+
+def _proof_text(src: str) -> str:
+    """Theory source without comments and cartouches, which may nest."""
+    open_c, close_c = "\\<open>", "\\<close>"
+    out, depth, i = [], 0, 0
+    while i < len(src):
+        if src.startswith("(*", i):
+            end = src.find("*)", i + 2)
+            i = len(src) if end < 0 else end + 2
+        elif src.startswith(open_c, i):
+            depth += 1
+            i += len(open_c)
+        elif depth and src.startswith(close_c, i):
+            depth -= 1
+            i += len(close_c)
+        else:
+            if not depth:
+                out.append(src[i])
+            i += 1
+    return "".join(out)
 
 
 def count_lines(path: Path) -> int:
@@ -116,12 +143,10 @@ def flatten(node: dict, prefix: str = ""):
             yield f"{prefix}{key}", value
 
 
-def source_directory(theory) -> str | None:
+def source_directory(path: str) -> str | None:
     """Top-level directory below src/ holding the theory, or None outside src/."""
-    try:
-        return theory.path.resolve().relative_to(SRC_DIR).parts[0]
-    except ValueError:
-        return None
+    parts = Path(path).parts
+    return parts[1] if len(parts) > 2 and parts[0] == "src" else None
 
 
 def git(*args: str) -> str | None:
@@ -153,28 +178,56 @@ def commit_days() -> dict | None:
     return {"total": sum(days.values()), "days": dict(sorted(days.items()))}
 
 
-def kind_counts(theories) -> dict:
-    """Declaration, statement and structure-command counts, as `theory-stats --view kinds`."""
-    declarations, statements = {}, {}
-    for t in theories:
-        for kind, n in t.decls.items():
-            declarations[kind] = declarations.get(kind, 0) + n
-        for kind, n in statement_kinds(t).items():
-            statements[kind] = statements.get(kind, 0) + n
-    return {"declarations": declarations, "statements": statements}
+def count(counts: dict[str, int], commands) -> int:
+    return sum(counts.get(c, 0) for c in commands)
+
+
+def kind_counts(counts: dict[str, int]) -> dict:
+    """Declaration, statement and structure-command counts, as `theory-stats commands`."""
+    return {
+        "declarations": {c: counts[c] for c in DEFINITION_COMMANDS if counts.get(c)},
+        "statements": {
+            c: counts[c] for c in THEOREM_COMMANDS + STRUCTURE_COMMANDS if counts.get(c)
+        },
+    }
+
+
+def add(total: dict[str, int], counts: dict[str, int]) -> dict[str, int]:
+    for command, n in counts.items():
+        total[command] = total.get(command, 0) + n
+    return total
 
 
 def collect() -> dict:
-    scanned = [scan_theory(p) for p in iter_theory_files(vendor=True)]
-    vendored = set(VENDOR_SESSIONS.values())
-    theories = [t for t in scanned if t.session not in vendored]
-    solver = [t for t in scanned if t.session in vendored]
-    sessions = {}
+    # Sizes per theory and command counts per session, from isar-tools. The
+    # project's own theories are those under src/; the vendored TD sessions
+    # (vendor/td-verification) are the solver.
+    theories = [t for t in theory_sizes(".") if source_directory(t["path"])]
+    own_commands = command_counts(".")
+    session_directory = {
+        s["session"]: source_directory(s["directory"] + "/.") for s in sessions(".")
+    }
+    solver = theory_sizes("vendor/td-verification") if TD_DIR.is_dir() else []
+    solver = [t for t in solver if t["session"] != "-"]
+    solver_commands = (
+        add(
+            {},
+            *[
+                c
+                for n, c in command_counts("vendor/td-verification").items()
+                if n != "-"
+            ],
+        )
+        if solver
+        else {}
+    )
+
+    areas = {}
     for t in theories:
-        s = sessions.setdefault(
-            t.session,
+        g = areas.setdefault(
+            source_directory(t["path"]),
             {
-                "name": t.session,
+                "name": source_directory(t["path"]),
                 "theories": 0,
                 "lines": 0,
                 "code": 0,
@@ -183,16 +236,34 @@ def collect() -> dict:
                 "proofs": 0,
             },
         )
-        s["theories"] += 1
-        s["lines"] += t.lines
-        s["code"] += t.code_lines
-        s["doc"] += t.doc_lines
-        s["defs"] += t.n_decls
-        s["proofs"] += t.n_proofs
+        g["theories"] += 1
+        g["lines"] += t["lines"]
+        g["code"] += t["code_lines"]
+        g["doc"] += t["doc_lines"]
+    all_commands: dict[str, int] = {}
+    for session, counts in own_commands.items():
+        directory = session_directory.get(session)
+        if directory is None:
+            continue
+        add(all_commands, counts)
+        if directory in areas:
+            areas[directory]["defs"] += count(counts, DEFINITION_COMMANDS)
+            areas[directory]["proofs"] += count(counts, THEOREM_COMMANDS)
 
     # The vendored development holds solver variants Voblint never loads; the page
     # distinguishes the theories Voblint's imports reach from the whole directory.
-    solver_used = [scan_theory(p) for p in session_graph.imported_theories("TD")]
+    used_names = (
+        [n.split(".", 1)[1] for n in session_graph.imported_theories("TD")]
+        if solver
+        else []
+    )
+    solver_used = sorted(
+        (t for t in solver if t["theory"] in used_names), key=lambda t: t["theory"]
+    )
+    per_theory = theory_command_counts("vendor/td-verification") if solver else {}
+    used_commands: dict[str, int] = {}
+    for t in solver_used:
+        add(used_commands, per_theory.get((t["session"], t["theory"]), {}))
 
     handwritten = [
         p
@@ -202,8 +273,8 @@ def collect() -> dict:
 
     directories = {}
     for t in theories:
-        directory = source_directory(t) or "outside_src"
-        directories[directory] = directories.get(directory, 0) + t.lines
+        directory = source_directory(t["path"])
+        directories[directory] = directories.get(directory, 0) + t["lines"]
 
     cases = sorted(CORPUS_DIR.rglob("*.vimp"))
     groups = sorted(d.name for d in CORPUS_DIR.iterdir() if d.is_dir())
@@ -223,28 +294,28 @@ def collect() -> dict:
         "commits": commit_days(),
         "isabelle": {
             "theories": len(theories),
-            "lines": sum(t.lines for t in theories),
-            "code": sum(t.code_lines for t in theories),
-            "doc": sum(t.doc_lines for t in theories),
-            "defs": sum(t.n_decls for t in theories),
-            "proofs": sum(t.n_proofs for t in theories),
-            "kinds": kind_counts(theories),
-            "sessions": sorted(sessions.values(), key=lambda s: -s["lines"]),
+            "lines": sum(t["lines"] for t in theories),
+            "code": sum(t["code_lines"] for t in theories),
+            "doc": sum(t["doc_lines"] for t in theories),
+            "defs": count(all_commands, DEFINITION_COMMANDS),
+            "proofs": count(all_commands, THEOREM_COMMANDS),
+            "kinds": kind_counts(all_commands),
+            "sessions": sorted(areas.values(), key=lambda g: -g["lines"]),
             "directories": dict(sorted(directories.items())),
         },
         "solver": {
             "theories": len(solver),
-            "lines": sum(t.lines for t in solver),
-            "defs": sum(t.n_decls for t in solver),
-            "proofs": sum(t.n_proofs for t in solver),
+            "lines": sum(t["lines"] for t in solver),
+            "defs": count(solver_commands, DEFINITION_COMMANDS),
+            "proofs": count(solver_commands, THEOREM_COMMANDS),
             "used": {
-                "names": [t.theory for t in solver_used],
+                "names": [t["theory"] for t in solver_used],
                 "theories": len(solver_used),
-                "lines": sum(t.lines for t in solver_used),
-                "code": sum(t.code_lines for t in solver_used),
-                "doc": sum(t.doc_lines for t in solver_used),
-                "defs": sum(t.n_decls for t in solver_used),
-                "proofs": sum(t.n_proofs for t in solver_used),
+                "lines": sum(t["lines"] for t in solver_used),
+                "code": sum(t["code_lines"] for t in solver_used),
+                "doc": sum(t["doc_lines"] for t in solver_used),
+                "defs": count(used_commands, DEFINITION_COMMANDS),
+                "proofs": count(used_commands, THEOREM_COMMANDS),
             },
         },
         "sessions": session_graph.collect(),
@@ -264,8 +335,15 @@ def collect() -> dict:
             "kinds": kinds,
             "by_group": by_group,
         },
+        # Whole word only, and only in proof text: prose such as "proved by
+        # evaluation" or a quoted `by eval` inside a cartouche is no proof.
         "eval_witnesses": sum(
-            p.read_text(encoding="utf-8", errors="replace").count("by eval")
+            len(
+                re.findall(
+                    r"\bby eval\b",
+                    _proof_text(p.read_text(encoding="utf-8", errors="replace")),
+                )
+            )
             for p in EXAMPLES_DIR.rglob("*.thy")
         ),
     }
@@ -285,15 +363,13 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    missing = [root for root in VENDOR_SESSIONS if not (root / "ROOT").is_file()]
-    if missing:
+    if not (TD_DIR / "ROOT").is_file():
         # A silent zero would publish a wrong solver count and session graph.
-        for root in missing:
-            print(
-                f"pages_stats: {root.relative_to(REPO_ROOT)} is not checked out; "
-                "run `pixi run vendor-init` (CI: initialize the submodule)",
-                file=sys.stderr,
-            )
+        print(
+            f"pages_stats: {TD_DIR.relative_to(REPO_ROOT)} is not checked out; "
+            "run `pixi run vendor-init` (CI: initialize the submodule)",
+            file=sys.stderr,
+        )
         return 1
 
     if git("rev-parse", "--is-shallow-repository") == "true":

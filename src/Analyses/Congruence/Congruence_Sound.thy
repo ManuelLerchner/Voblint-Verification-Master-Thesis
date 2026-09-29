@@ -17,7 +17,7 @@ text \<open>
 
   Congruence's specification, its concretization and the soundness of the one
   against the other are not restated here. Those are constants and theorems of
-  \<^locale>\<open>routed_dg_domain_exec\<close>, and an assembly reaches them by interpreting
+  \<^locale>\<open>dg_domain_exec\<close>, and an assembly reaches them by interpreting
   that locale from Congruence's own commute lemmas in
   \<^theory>\<open>Voblint_Analysis_Congruence.Congruence_Exec\<close> --- so a per-domain copy
   would only rename what the locale already proves.

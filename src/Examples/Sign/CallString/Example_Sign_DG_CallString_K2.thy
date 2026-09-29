@@ -158,7 +158,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule sign_nest_finE)
+  show ?case by (rule sign_nest.finite_intra)
 next
   case PP
   show ?case
@@ -186,7 +186,7 @@ next
       [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
-            [OF sign_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF sign_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: sign_nest_gamma_eq sign_nest_domain.gamma_exec_def)
   show ?case
@@ -242,7 +242,7 @@ theorem sign_nest_2_activation_collect_sound:
      cinit_stores sign_nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
            (sign_ctx_sg_2 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule sign_nest_2_cs.activation_collect_sound[unfolded sign_nest_cfg_compile,
+  by (rule sign_nest_2_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])
 
 
@@ -287,4 +287,3 @@ theorem sign_k2_strictly_more_precise_than_k1_at_g:
                     less_sign_def sign_le_refl)
 
 end
-

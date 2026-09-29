@@ -359,4 +359,3 @@ lemma entry_store_Resume_caller:
   by (simp add: entry_store_def hd_append)
 
 end
-

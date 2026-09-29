@@ -13,7 +13,13 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 # on PATH, not on a pixi-managed OCaml environment.
 
 [dependencies]
-python = ">=3.10"
+python = ">=3.11"
+
+# isar-tools: source tooling for the .thy/ROOT files (`isar check`, `isar fmt`,
+# `isar stats`, `isar project extract|names`). Pure Python, no Isabelle or AFP
+# needed; configured in isar.toml.
+[pypi-dependencies]
+isar-tools = ">=0.2.0,<0.3"
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
@@ -153,6 +159,7 @@ pages-site-serve = { cmd = "python3 -m http.server --directory build/github-page
 pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
 pages-stats = { cmd = "python3 scripts/check_pages_stats.py", description = "Check that the site's repository figures are derived (data-stat) and the sources keep their neutral fallback." }
 pages-terms = { cmd = "python3 scripts/check_pages_terms.py", description = "Check that every Isabelle name the site pages set in code is linked into the theory HTML." }
+check-ref = { cmd = "bash scripts/mk/check-ref.sh", description = "Run the fast source checks against a committed ref instead of the working tree: pixi run check-ref <ref>." }
 theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
@@ -176,9 +183,10 @@ thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-
 ], description = "Regenerate thesis analyzer figures from current CLI output." }
 
 # Declarations the thesis shows are lifted out of the theories by name, never
-# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
-thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
-thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
+# retyped (`isar project extract`, manifest thesis/shared/snippets.toml). Pure
+# text extraction -- no Isabelle needed, so this runs fail-fast.
+thesis-snippets = { cmd = "isar project extract --manifest thesis/shared/snippets.toml --out thesis/shared/generated/snippets --check", description = "Check thesis Isabelle snippets against their source declarations." }
+thesis-snippets-write = { cmd = "isar project extract --manifest thesis/shared/snippets.toml --out thesis/shared/generated/snippets --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
 
 # Theorem statements are exported from a built session, which is what gives the
 # Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
@@ -280,6 +288,17 @@ ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", descripti
 # ignored vendor/autocorrode/ directory, outside the repository's submodule set.
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
+# Source checks and formatting with isar-tools, configured in isar.toml (no AFP
+# needed). `isar-check` runs the project, proofs, and syntax groups: ROOT
+# entries, `sorry`/`oops` and unclosed proofs, lexical errors, and theory names,
+# after `isar-fmt-check`. `isar-fmt` formats the given theories, or all of them
+# but the generated ones; layout only, see isar-tools' docs/FORMATTER.md.
+isar-check = { cmd = "isar check .", depends-on = [
+  "isar-fmt-check",
+], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
+isar-fmt = { cmd = "isar fmt", description = "Format Isabelle theories with isar-tools (default: all but generated ones; pass paths to narrow)." }
+isar-fmt-check = { cmd = "isar fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
+
 # Isabelle build
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
   "vendor-init",
@@ -322,7 +341,24 @@ codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", desc
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
 sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
-reelaboration-check = { cmd = "python3 scripts/check_build_reelaboration.py", description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
+# A session inherits its parent chain's heaps and nothing else: a theory of a
+# library session that is no ancestor is re-elaborated inside every session
+# that imports it. The build stays green; only the clock shows it (19% of a
+# clean build once). This reads an `isabelle build -v` log and holds each
+# library session to a budget of such elaborations; every library session not
+# listed gets 0, so a new one slipping in fails. Budgets:
+#   HOL-Library 0  an ancestor since Voblint_VIMP = "HOL-Library"
+#   TD 8           Framework hoists the expensive ones; Domain keeps two (~8s)
+#   HOL-Computational_Algebra 2  hoisted into Voblint_VIMP
+#   Deriving 8     8 tiny theories, ~3s total, one user
+#   HOL-IMP 1      one theory, under a second
+#   Root_Balanced_Tree 1  Time_Monad, inside TD itself when TD is rebuilt
+# The fix is ancestry, or building the theory into the nearest common
+# ancestor's heap with a qualified `theories` entry. A log that rebuilt nothing
+# proves nothing and passes (--allow-empty); CI's html job does a clean build.
+reelaboration-check = { cmd = "isar stats build {{ log }} --budget HOL-Library=0 --budget TD=8 --budget HOL-Computational_Algebra=2 --budget Deriving=8 --budget HOL-IMP=1 --budget Root_Balanced_Tree=1 --default-budget 0 --project . --allow-empty", args = [
+  { arg = "log", default = "build/isabelle-build.log" },
+], description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
 # Everything the export exposes is decided by its root list, and a missing
 # root breaks an OCaml consumer rather than the Isabelle build. Reads the
 # checked-in export too, so it costs a second and needs no toolchain.
@@ -360,7 +396,7 @@ regression-lint = { cmd = "python3 tests/run.py --lint", description = "Check re
 # a lint; deliberately not in `verify` yet -- there is a standing backlog of
 # undocumented headings, and gating on it today would just be a red build.
 # Add it to `verify` once that backlog is cleared.
-docs-coverage-check = { cmd = "python3 scripts/extract_definitions.py --lint", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
+docs-coverage-check = { cmd = "isar check docs src", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
 
 # Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
@@ -378,15 +414,15 @@ retired-identifiers-check = { cmd = "python3 scripts/check_retired_identifiers.p
 # assumption, whether or not it was ever a constant here. Isabelle generalizes
 # the assumption over it, so the locale keeps building while the assumption
 # stops saying anything.
-locale-parameters-check = { cmd = "python3 scripts/check_locale_parameters.py", description = "Check locale assumptions for accidentally free identifiers." }
+locale-parameters-check = { cmd = "isar check locales src", description = "Check locale assumptions for accidentally free identifiers." }
 
-docs-overview-generate = { cmd = "python3 scripts/extract_definitions.py --dump --out docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
+docs-overview-generate = { cmd = "mkdir -p docs/generated && isar project names --format markdown > docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
 
 # Size and shape of the .thy corpus: lines per session, per theory, and per
 # proof, plus a watchlist of theories past the 1500-line / 100-symbol style
 # limits. Reporting only -- never gates a build, so it stays out of `verify`.
-# Views and formats: `pixi run theory-stats -- --help`.
-theory-stats = { cmd = "python3 scripts/thy_stats.py", description = "Report theory, session, proof, and line-length statistics." }
+# Views and formats: `pixi run theory-stats --help`, e.g. `pixi run theory-stats style .`.
+theory-stats = { cmd = "isar stats", description = "Report theory, session, proof, and line-length statistics (isar stats; views: summary, sessions, theories, proofs, commands, style)." }
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
@@ -483,6 +519,7 @@ verify = { depends-on = [
   # Keep the main build before consumers such as thesis-facts/codegen so
   # they can reuse the populated heap store.
   # ------------------------------------------------------------------------
+  "isar-check",
   "isabelle-build",
   "reelaboration-check",
   "thesis-facts",

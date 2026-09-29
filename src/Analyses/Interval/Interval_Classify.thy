@@ -8,48 +8,17 @@ begin
 section \<open>Interval instance of the generic check-discharge interface\<close>
 
 text \<open>
-  Only composition lives here, mirroring \<open>Sign_Classify\<close>: the Interval bound
-  tables (\<open>interval_less_true\<close>/\<open>interval_less_false\<close>/\<open>interval_eq_true\<close>/
-  \<open>interval_eq_false\<close>) and their \<open>Interval_Numeric_Queries\<close> interpretation of
-  \<open>sound_numeric_queries\<close> live in that theory. The Interval expression
-  evaluator \<open>aval_ivl\<close> lives in \<open>Interval_Backward\<close>. The Boolean recursion over
-  \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way classification, and the
-  node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
-  \<open>abstract_check_domain\<close> once, below, reusing the numeric-query facts
-  already proved sound in \<open>interval_numeric_queries\<close> rather than re-deriving
-  the comparison tables --- the same way \<open>ivl_backward_domain\<close> in
-  \<open>Interval_Backward\<close> interprets \<open>backward_domain\<close> for guard narrowing.
+  The check classifier is derived from Interval's bundle, mirroring
+  \<open>Sign_Classify\<close>: the Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the
+  three-way classification, and the node-indexed bridge to
+  \<^const>\<open>checks_proven\<close> come from the bundle's bound-comparison queries
+  \<^const>\<open>interval_less\<close>/\<^const>\<open>interval_eq\<close> and evaluator, through the
+  \<open>ivl_tf\<close> interpretation in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Transfer\<close>.
 
   The classifier sits below \<open>Interval_Analyses\<close>: each registration there discharges
-  its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations with \<open>interval_classify_check\<close>'s two
-  soundness directions.
+  its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations with \<open>ivl_tf.check.classify_check_proved\<close>
+  and \<open>ivl_tf.check.classify_check_refuted\<close>.
 \<close>
-
-global_interpretation interval_check_domain:
-  abstract_check_domain interval_less interval_eq gamma_state aval_ivl
-  defines
-    interval_truthy_query = interval_check_domain.truthy_query
-    and interval_check_query = interval_check_domain.check_query
-    and interval_classify_check = interval_check_domain.classify_check
-    and interval_eval_answer = interval_check_domain.eval_answer
-    and interval_checks_proven = interval_check_domain.abstract_checks_proven
-  by unfold_locales (rule ivl_arith.aval_abs_sound)
-
-text \<open>
-  Only the consumer-facing aliases get a short Interval-prefixed name, the
-  same choice \<open>Sign_Classify\<close> makes: \<open>classify_check\<close>'s two directions and the
-  \<open>checks_proven\<close> bridge, both exercised by the worked example. The lower-
-  level \<open>check_query_sound\<close> fact \<open>classify_check\<close>'s own soundness is built
-  from stays reachable under the qualified \<open>interval_check_domain.\<close> name
-  instead of a dedicated alias here.
-\<close>
-
-lemmas interval_eval_answer_sound = interval_check_domain.eval_answer_sound
-lemmas interval_answer_check = interval_check_domain.answer_check_eval_answer
-lemmas interval_classify_check_proved = interval_check_domain.classify_check_proved
-lemmas interval_classify_check_refuted = interval_check_domain.classify_check_refuted
-lemmas interval_checks_provenI = interval_check_domain.abstract_checks_provenI
-lemmas interval_checks_proven_sound = interval_check_domain.abstract_checks_proven_sound
 
 subsection \<open>Executable classification tests\<close>
 

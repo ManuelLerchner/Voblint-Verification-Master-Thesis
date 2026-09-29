@@ -35,7 +35,7 @@ subsection \<open>Per-point reachability\<close>
 text \<open>
   Per-point reachability is \<^typ>\<open>'a lifted\<close> itself
   (\<^theory>\<open>Voblint_Domain.Reachability_Lift\<close>), not a nominal copy of it: the
-  reachability reading is fixed by \<open>gamma_point\<close> below rather than
+  reachability reading is fixed below rather than
   left to the caller, and every operation on it (\<open>is_reachable_point\<close>,
   \<open>join_point_with\<close>, ...) is stated directly in terms of \<^const>\<open>Bot\<close>/
   \<^const>\<open>Lifted\<close>.
@@ -63,18 +63,8 @@ text \<open>
   value reads back to exactly this at an abstract-store instance.
 \<close>
 
-abbreviation gamma_point :: "'a::numeric_domain abs_state lifted \<Rightarrow> store set" where
-  "gamma_point \<equiv> gamma_lift gamma_state"
-
-text \<open>
-  The shape every migrated report's per-node environment reads a
-  \<^typ>\<open>'a lifted\<close> point through (\<open>Bot \<Rightarrow> bot\<close>, \<open>Lifted st \<Rightarrow> st\<close>)
-  concretizes to exactly \<open>gamma_point\<close>, so a soundness proof against
-  that environment never needs to re-case-split the point state by hand.
-\<close>
-
 lemma gamma_state_of_reachable_env [simp]:
-  "\<lbrakk>case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = gamma_point p"
+  "\<lbrakk>case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = \<lbrakk>p\<rbrakk>\<^sub>\<bottom>"
   for p :: "'a::numeric_domain abs_state lifted"
   by (cases p) simp_all
 
@@ -236,7 +226,7 @@ lemma result_node_is_bottom_iff_keys:
 
 lemma reported_covered_unreachable_empty_point:
   assumes lookup: "lookup_context_result r v ctx = Covered Bot"
-    and sound: "C \<subseteq> gamma_point (lookup_context r v ctx)"
+    and sound: "C \<subseteq> \<lbrakk>lookup_context r v ctx\<rbrakk>\<^sub>\<bottom>"
   shows "C = {}"
   using sound by (rule reported_covered_unreachable_empty[OF lookup])
 
@@ -465,7 +455,7 @@ lemma wf_analysis_result_gamma_point_eq_empty_iff:
     and empty_pred :: "'a abs_state \<Rightarrow> bool"
   assumes wf: "wf_analysis_result empty_pred r"
     and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<lbrakk>st\<rbrakk> = {}"
-  shows "gamma_point (lookup_context r v ctx) = {} \<longleftrightarrow> lookup_context r v ctx = Bot"
+  shows "\<lbrakk>lookup_context r v ctx\<rbrakk>\<^sub>\<bottom> = {} \<longleftrightarrow> lookup_context r v ctx = Bot"
 proof (cases "lookup_context r v ctx")
   case Bot
   then show ?thesis by simp
@@ -476,4 +466,3 @@ next
 qed
 
 end
-

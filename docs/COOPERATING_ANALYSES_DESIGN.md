@@ -1,8 +1,7 @@
 # Cooperating analyses: design record
 
-Status: **implemented** on branch `cooperating-analyses`, checked in the
-editor. The batch build, codegen regeneration and thesis checks have not been
-rerun since the last changes. This record reverses the earlier decision
+Status: **implemented**. Cooperating analyses run as components of Goblint's
+`MCP` shape and reach `run_voblint`. This record reverses the earlier decision
 against generic analysis composition with MCP-style queries (issue #70 closed
 as not planned, and the "Domain composition" and "Cross-analysis query
 composition" sections of `NEXT_STEPS.md` and `ROADMAP.md`). The non-goal "No
@@ -12,10 +11,9 @@ specified analyses that cooperate through queries.
 
 ## Goal
 
-Independently verified analyses run as one product. During a transfer, each
-may ask questions that the product answers from the predecessor state. One
-generic theorem turns the component proofs into an `analysis_contract` for the
-product, so an analysis is added by proving obligations about itself and never
+Independently verified analyses run as one combined state. During a transfer,
+each may ask questions that the combined state answers. One generic theorem
+turns the component proofs into an `analysis_contract` for the combination, so an analysis is added by proving obligations about itself and never
 about its partners.
 
 ## Goblint reference model
@@ -29,10 +27,10 @@ for `queries.ml`.
 | `Spec.query`; `DefaultSpec.query` returns `Result.top` | `analyses.ml:369` | field `dgs_query`; the template answers `⊤` |
 | `EvalInt : exp -> ID.t`, `ID = Lattice.Lift(IntDomTuple)` | `queries.ml:108`, `valueDomainQueries.ml:9–12` | `datatype query = EvalInt exp`, answers in `answer = int_dom query_lift` |
 | former `MustBeEqual`, `MayBeLess` derived from `EvalInt` | `queries.ml:528–539` | comparisons answered by the exact integers `1` or `0` |
-| `query'` meets the answers of all analyses from `Result.top` | `mCP.ml:290–293, 331` | `qry_prod` meets the component handlers |
+| `query'` meets the answers of all analyses from `Result.top` | `mCP.ml:290–293, 331` | `mcp_qry` meets the component handlers |
 | manager built around the predecessor product state | `mCP.ml:395–397` (`outer_man`) | `outer_man` installs the spec's handler before the edge runs |
 | queries may ask; a cycle answers `Result.top` | `mCP.ml:264–275` | `ask_with`: an already-asked query answers `⊤`; depth bound `query_depth = 1024` aborts generated code when exceeded |
-| `enter` takes the Cartesian product of alternatives | `mCP.ml:539` | `prod_enter` |
+| `enter` takes the Cartesian product of alternatives | `mCP.ml:539` | `mcp_en_from` |
 | globals as a variant, `ask` at combine, events, spawn | `mCP.ml` | not modelled |
 
 The query layer depends on the integer product lattice, as Goblint's query
@@ -71,86 +69,50 @@ whose logical value is `⊤`, so the bound plays no part in soundness.
 every well-formed ask channel (`dg_spec_wf_step_ask`, `dg_spec_wf_query`);
 `sp_wf_ask_with` then gives well-formedness of the installed channel.
 
-## Local specifications that ask (`DG_Spec.thy`, `DG_Spec_Sound.thy`)
+## Components (`MCP_Spec.thy`)
 
-A local transfer names its questions up front, `qs :: edge_action ⇒ 'D ⇒ query
-list`, and then runs a pure function of the answers (`asking_transfer`). A
-question it did not name is answered `⊤`. `local_dg_spec qs qry sk asn …` takes
-answer-relative intraprocedural transfers and a pure handler `qry`, installed
-as `local_query qry`. Entry and combine take no answers.
+An analysis that cooperates is an `local_spec`: a record with one field per
+operation of Goblint's `Spec` (`ls_query`, `ls_skip`, `ls_assign`, `ls_special`,
+`ls_branch`, `ls_body`, `ls_return`, `ls_event`, `ls_enter`,
+`ls_combine_env`, `ls_combine_assign`). Every field receives the channel
+`answers`, the counterpart of `man.ask`. `sound_local_spec 𝒢 γ c` states
+each operation's obligation against every channel that holds at the store it
+is asked about; the edge obligation splits into one named law per field
+(`ls_step_sound_iff`), and `sound_local_spec_update` replaces one field
+while re-proving only that field's law.
 
-`sound_local_dg_spec qry sk asn … gammaD 𝒢` proves each step against every
-answer function that holds at the start store:
-
-```text
-edge_collect a (gammaD d ∩ {s. oracle_holds A s}) ⊆ gammaD (step A a d)
-s ∈ gammaD d ⟹ eval_holds q (qry d q) s
-```
-
-`qs` is not a locale parameter: `local_spec_contract` gives `analysis_contract
-(local_dg_spec qs qry …)` for every `qs`. A spec that never asks instantiates
-`qs = λ_ _. []`, ignores the answers and answers `⊤`; every field then reduces
-to the old `local_transfer`, so the Base, lifted and executable builders are
-instances of the widened ones. `sound_local_dg_spec_with_qry` replaces the
-handler of a sound spec by any other sound handler for the same states.
-
-## Product (`Local_Spec_Product.thy`)
-
-`analysis_product` is a datatype with componentwise order, join, bottom,
-widening and narrowing (raw pairs carry `Product_Lexorder`). The product spec
-applies both components' transfers to the same answer function, asks the
-concatenation of both question lists (`qs_prod`), meets the handlers
-(`qry_prod`), intersects the concretizations (`gamma_prod`), and enters with the
-Cartesian product of alternatives.
-
-```text
-product_local_spec: sound_local_dg_spec A ⟹ sound_local_dg_spec B
-                    ⟹ sound_local_dg_spec (A ⊗ B)
-product_contract:   … ⟹ analysis_contract (local_dg_spec (qs_prod qs1 qs2) (qry_prod q1 q2) …)
-```
-
-Every component receives the answers of every other, and nesting gives n-ary
-products, because the answers are fixed once per edge by the generator around
-the whole product rather than inside a component.
+`mcp_combine` folds several components into one, meeting their handlers
+(`mcp_qry`) and entering with the Cartesian product of alternatives
+(`mcp_en_from`). `mcp_combine_sound` proves the combination sound for the
+intersection of the concretizations when the components are pairwise framed
+(`mcp_independent`). `dg_spec_of_contract` turns a sound component into an
+`analysis_contract`. `lens_of` runs a component on one field of the combined
+record; `analysis_product` (`Local_Spec_Product.thy`) is the componentwise
+ordered pair the generated carrier nests.
 
 ## Components and wrappers
 
-- `assign_ask` (`Oracle_Wrappers.thy`): at `x = e`, if the answer to `EvalInt e`
-  is an exact integer `n`, assign `N n`; otherwise the component's own assignment.
-  `sound_local_assign_ask` preserves `sound_local_dg_spec`; `assign_ask_qs`
-  adds the question.
-- `rel_local_component` (`Rel_Order_Local.thy`): the order carrier `relc` as a
-  local spec. Its handler `rel_qry` answers comparisons between variables it
-  has ordered with the exact integers `1` or `0`, everything else `⊤`. At `x = e` it asks
-  `e <= y` and `y <= e` for each candidate `y` (`rel_qs`) and records a pair on
-  the exact answer `1`. At calls it enters with the empty relation and combines to it,
-  which is sound and imprecise by design; `Rel_Order_Domain` remains the
+- `ask_assign` (`Oracle_Wrappers.thy`): at `x = e`, if the channel answers
+  `EvalInt e` with an exact integer `n`, assign `N n`; otherwise the
+  component's own assignment. It replaces the assign field only, so its
+  soundness is `assign_ask_sound` plus the update lemma.
+- `order_spec` (`Rel_Order_Local.thy`): the order carrier `relc`. Its
+  handler `rel_qry` answers comparisons between variables it has ordered with
+  the exact integers `1` or `0`, everything else `⊤`. At `x = e` it asks the
+  channel `e <= y` and `y <= e` for each tracked `y` and records a pair on the
+  exact answer `1`. At calls it enters with the empty relation and combines to
+  it, which is sound and imprecise by design; `Rel_Order_Domain` remains the
   example of relational call and global behaviour.
 
-## Demo (`Example_Cooperating_Demo.thy`)
+## Evidence
 
-Program: `if (x <= y) { if (y <= x) { z = (x == y); __voblint_check(z == 1); } }`.
-The product is the executable Interval spec with `assign_ask` and the handler
-`answer_of_ivl ∘ aval_ivl`, times `rel_local_component` over `x`, `y`, `z`.
-
-- `coop_after_assignment` (by evaluation): right after the assignment the
-  order component holds `(x, y)` and `(y, x)`, and Interval holds `z = [1,1]`.
-- `coop_ivl_alone_after_assignment` (by evaluation): Interval alone holds
-  `z = [0,1]` there.
-- `coop_terminates` (by evaluation): the solver run terminates.
-- `coop_contract` (proved): the product spec satisfies `analysis_contract`.
-
-Evidence class: `coop_contract` is machine-checked; the two value lemmas are
-executable evidence for one program and support no general precision claim.
-
-## Boundary
-
-The product is certified at the `analysis_contract` level and executed
-through the verified solver. It does not reach `run_voblint`, the result
-adapter or the CLI: `routed_dg_pipeline` is specialized to the pointwise
-carrier. Reaching it means generalizing that pipeline over the carrier (spec
-constructor, emptiness test for `DEAD`, readback, classifier); that step is
-not claimed to be mechanical.
+`coop_demo_needs_both` (`Example_Analysis_Dispatch_Regression.thy`, by
+evaluation of `run_voblint`) runs
+`if (x <= y) { if (y <= x) { z = (x == y); __voblint_check(z == 1); } }`:
+Interval alone and Order alone leave the check `UNKNOWN`; both together prove
+it. This is executable evidence for one program and supports no general
+precision claim. Soundness of the combined run is the generic
+`run_voblint` theorem over the MCP carrier.
 
 ## Open questions
 

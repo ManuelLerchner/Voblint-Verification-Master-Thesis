@@ -101,7 +101,8 @@ next
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3) IfRight.hyps(2)] .
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3) IfRight.hyps(2)]
+    .
   then show ?case using jw sub by blast
 qed simp_all
 
@@ -223,7 +224,8 @@ next
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c1 e1"
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c2 e2" by blast
   have "control_at \<Pi> p (If b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If b' c1' c2') k n0 c2 e2"
-    using control_at.IfRight[OF jw(4) IfRight.hyps(2)] control_at.IfRight[OF jw(5) IfRight.hyps(2)] .
+    using control_at.IfRight[OF jw(4) IfRight.hyps(2)] control_at.IfRight[OF jw(5) IfRight.hyps(2)]
+    .
   then show ?case using jw sub by blast
 next
   case (WhileUnfolded b'' c'' k n0)
@@ -329,7 +331,8 @@ next
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub IfRight.prems(3)] src2]
   obtain v' where v': "control_at \<Pi> p c2' k (Suc n0 + csize c1) c2 v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s, stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)] .
+  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)]
+    .
   with v'(2) show ?case by blast
 qed simp_all
 

@@ -104,4 +104,3 @@ lemma post_narrow_refinement_would_violate_narrow_ge:
   by eval
 
 end
-

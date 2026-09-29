@@ -130,9 +130,11 @@ lemma callee_covered_f3_2: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 lemma callee_covered_f10_2: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
-lemma callee_covered_g_f3_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f3_2:
+  "(FunctionEntry (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
-lemma callee_covered_g_f10_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f10_2:
+  "(FunctionEntry (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 
 lemma covered_ret6_2: "(Statement 6, []) \<in> fst nest_2_sol"
@@ -186,7 +188,7 @@ next
   then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
   case FinE
-  show ?case by (rule nest_finE)
+  show ?case by (rule nest.finite_intra)
 next
   case PP
   show ?case
@@ -212,7 +214,7 @@ next
       (call_enter nest_gs (CallEdge dst pars args) s)
       [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
-            [OF ivl_tf.is_sound_transfer_for, where ci = ?ci and d = ?caller]
+            [OF ivl_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
@@ -266,7 +268,7 @@ section \<open>The headline theorem: 2-call-string activation collecting soundne
 theorem nest_2_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 2),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
      \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_2_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  by (rule nest_2_cs.activation_collect_sound[unfolded nest_cfg_compile,
+  by (rule nest_2_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_2 nest_cinit_le_cinit_ivl_st])
 
 
@@ -338,7 +340,4 @@ theorem nest_k2_strictly_more_precise_than_k1:
                     nest_2_y_after_second_return less_ivl_def less_eq_ivl_def)
 
 
-
 end
-
-

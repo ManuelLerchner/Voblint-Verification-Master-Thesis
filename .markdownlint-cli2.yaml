@@ -11,7 +11,7 @@ ignores:
   - "output/**"
   - "node_modules/**"
   - "codegen/generated/**"
-  # Written by scripts/extract_definitions.py.
+  # Written by `pixi run docs-overview-generate` (isar project names).
   - "docs/generated/**"
   # Kept verbatim for provenance (docs/history/README.md).
   - "docs/history/**"

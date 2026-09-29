@@ -331,7 +331,8 @@ theorem source_sound:
   fixes s0 s :: store
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
       and s0: "s0 \<in> cinit_stores (declared_global p)"
-      and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+      and run:
+        "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and checks: "res_checks res
                      = result_checks_of (prog_cfg p) r classify"
   shows "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
@@ -433,8 +434,8 @@ next
   case 3
   show ?case
     using mcp_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def routed_dg_pipeline.result_def
-        routed_dg_pipeline.sol_vars_def)
+    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+        dg_pipeline.sol_vars_def)
 qed
 
 end

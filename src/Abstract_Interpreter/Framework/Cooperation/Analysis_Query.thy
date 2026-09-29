@@ -7,13 +7,13 @@ unbundle lattice_syntax
 section \<open>Queries one analysis answers for another\<close>
 
 text \<open>
-  An analysis in a product may ask its partners a question about the stores the
+  An analysis in a combination may ask its partners a question about the stores the
   current state describes, as a Goblint transfer asks \<open>man.ask\<close>. What an answer
   claims is fixed by one relation, \<open>answer_holds q a s\<close>: answer \<open>a\<close> to query \<open>q\<close>
   is true of store \<open>s\<close>. Answers form a meet-semilattice with top, as Goblint's
   per-query result lattices do (\<open>queries.ml\<close> at \<open>5320a6b7\<close>): \<open>\<top>\<close> claims
   nothing, and \<open>\<sqinter>\<close> combines what several analyses answered. The two laws below
-  are all a product needs to trust a combined answer; associativity and
+  are all a combination needs to trust a combined answer; associativity and
   commutativity of the combination come from the class.
 \<close>
 

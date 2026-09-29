@@ -63,7 +63,7 @@ lemma sign_conf_gamma_Bot [simp]: "sign_conf_gamma \<G> Bot g = {}"
 subsection \<open>Soundness of the specification against the concretization\<close>
 
 text \<open>
-  \<^locale>\<open>routed_dg_domain_exec\<close> is the reader-commutation layer, itself free of
+  \<^locale>\<open>dg_domain_exec\<close> is the reader-commutation layer, itself free of
   any routing context: its three obligations are Sign's own commute lemmas and
   the exactness of the emptiness test. Everything the routed spine later needs
   about Sign is derived from this one interpretation.
@@ -74,7 +74,7 @@ context
   assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
 begin
 
-interpretation sign_dom: routed_dg_domain_exec
+interpretation sign_dom: dg_domain_exec
   \<G> empty_pred "sign_tf_st_for \<G>" "sign_enter_st_for \<G>"
   skip_sign assign_sign special_sign branch_sign body_sign return_sign
   "enter_sign_ci_for \<G>" event_sign
@@ -88,7 +88,7 @@ lemma sign_conf_gamma_eq: "sign_conf_gamma \<G> = sign_dom.gamma_exec"
 theorem sign_conf_sound_exec:
   "analysis_contract (sign_conf_spec \<G> empty_pred) (sign_conf_gamma \<G>) \<G>"
   unfolding sign_conf_gamma_eq sign_conf_spec_def
-  by (rule sign_dom.analysis_contract_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_dom.analysis_contract_st[OF sign_tf.is_sound_nonrelational_transfer])
 
 text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this Base-style entry answers.\<close>
@@ -99,7 +99,7 @@ theorem sign_conf_entry_cover_exec:
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (sign_enter_st_for \<G> ci) d)]"
   using assms unfolding sign_conf_gamma_eq sign_dom.gamma_exec_def
-  by (rule sign_dom.entry_pairs_cover_st[OF sign_tf.is_sound_transfer_for])
+  by (rule sign_dom.entry_pairs_cover_st[OF sign_tf.is_sound_nonrelational_transfer])
 
 end
 

@@ -24,14 +24,15 @@ lists `entry-state` and `call-string`, which its examples read:
 
 | Registration | Locale | Context policy | Parameters |
 | --- | --- | --- | --- |
-| `<d>_rule` | `unit_dg_analysis` | unit | `r` |
-| `<d>_es_rule` | `routed_dg_analysis` | entry state | `r` |
-| `<d>_cs_rule` | `routed_dg_analysis` | call string | `k r` |
+| `<d>_rule` | `dg_analysis_exec` | unit | `r` |
+| `<d>_es_rule` | `dg_analysis_exec` | entry state | `r` |
+| `<d>_cs_rule` | `dg_analysis_exec` | call string | `k r` |
 
 `r :: globals_rule` is the global update rule, so one registration serves every
 solver discipline; `k` is the call-string bound. None of them has a `defines`
 clause: a caller reads the locale's own constants and facts under the
-qualifier, as in `sign_rule.result Globals_Join gs p` or `sign_rule.source_sound`.
+qualifier, as in `sign_rule.result Globals_Join gs p` or
+`sign_rule.fun_route_source_sound`.
 
 Theory names, paths, imports, binders and the entire proof text are derived by
 convention, identically for every domain. Domain rationale -- why a lattice has
@@ -40,10 +41,13 @@ README.
 
 ## What is generated, and what is not
 
-Generated: the interpretations and the twelve obligation discharges of
-each. Between the contexts only the context terms differ -- global and
-seed keys, the executable and abstract route -- together with obligation 4, the
-routing agreement.
+Generated: the interpretations and their proofs. Each proof applies
+`<impl>_tf.dg_analysis_execI`, which the domain's bundle certificate already
+provides: the transfer, the two readbacks and the classifier are discharged
+once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
+obligations remain per registration: the routing agreement, the seed key, the
+three solver contracts and the initial state. Between the contexts only the
+context terms and the routing agreement differ.
 
 Not generated, ever: the mathematics. Every obligation is discharged by citing
 a fact the registry only *names* -- the domain's own, or the rule-parametric
@@ -56,17 +60,12 @@ position Isabelle checks.
 
 Because the proof text is uniform, a domain has to satisfy the shape it cites
 into. Each role has a conventional spelling built from `impl`:
-`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.is_sound_transfer_for`,
-`<impl>_tf_st_for_commute`, and so on. The classifier and the initial-state fact
-use the lowercased domain name (`interval_classify_check`,
-`interval_cinit_gamma`) even where `impl` differs (`ivl`).
-
-Obligation 2 carries a liveness premise, so the fact named for it must be
-registration-shaped -- premise and all. Sign's and Interval's commutation
-theorems already are. Parity's is stronger: unconditional, and therefore not
-citable into the chained proof. Parity keeps its stronger theorem and supplies a
-registration-shaped corollary, which the registry names under
-`roles: tf_commute: parity_tf_st_for_commute_if_live`.
+`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.dg_analysis_execI`, and so on.
+The proof folds `<tf_st>_def` and `<enter_st>_def`, so the two executable
+transfers must be defined as `generic_tf_st_for` and `generic_enter_st_for` at the
+domain's bundle. The classifier and the initial-state fact use the lowercased
+domain name (`interval_classify_check`, `interval_cinit_gamma`) even where `impl`
+differs (`ivl`).
 
 A role may also be an application `{const, args}` for an operation that takes a
 configuration argument. Int registers at its most precise refinement mode this
@@ -82,23 +81,23 @@ holds the `analysis_domain` datatype, one constructor per domain, and the
 combined state `mcp_st`: a nested product with one lifted field per domain,
 each field carrying that domain's `exec_dg_st`. Beside it comes the per-domain
 dispatch the combined state needs, one equation per domain each:
-`mcp_component_of` (a field's transfer, lensed into the product), the field
+`local_spec_of` (a field's transfer, lensed into the product), the field
 concretization and liveness readers, `val_answer` (a field's answer to a
 query), `value_of` (a field's value for display, wrapped in the domain's
 `value_constructor`), `mcp_init` (active fields start at the domain's initial
 state, inactive ones at `Bot`) and the readers for the formals a context is
-keyed by. The lemmas `mcp_component_of_sound`, `mcp_init_sound` and
+keyed by. The lemmas `local_spec_of_sound`, `mcp_init_sound` and
 `val_answer_sound` are proved by case analysis over the domain, citing only
 facts the domains already export.
 
 Each of these lines comes from a field role, a term template in the generator's
 `FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
-field runs `ask_assign (exec_component ...)`, which asks for the value of an
+field runs `ask_assign (exec_spec ...)`, which asks for the value of an
 assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
-`order_component` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
-keys no context. The generator also emits `mcp_component_of_silent`: every
+`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
+keys no context. The generator also emits `local_spec_of_silent`: every
 pointwise field's own component answers every query with `\<top>`.
 `MCP_Analyses.thy` replaces each field's handler with the answer the field
 publishes for checks (`mcp_field`), so every active analysis answers during the
@@ -138,7 +137,7 @@ The tooling is about 970 lines -- a 61-line registry, a 784-line generator and
 and the 276-line combined state.
 
 Two different things are at work and they are worth keeping apart. The
-*assembly* -- `routed_dg_analysis` and its unit instance `unit_dg_analysis` --
+*assembly* -- `dg_analysis` and its executable builder `dg_analysis_exec` --
 removes repeated implementation and repeated reasoning: the equation system, the
 solve, the reader, the result table and the soundness transport are constructed
 and proved once. The *generator* removes repeated registration text. A new
@@ -146,8 +145,8 @@ domain becomes cheaper to integrate through both, and neither removes the
 domain's own mathematics.
 
 The failure mode to watch is not a domain needing a shape of its own. A domain
-can legitimately fall outside the supported family -- `unit_dg_analysis` states
-its own scope, and a relational carrier is outside it by construction. The
+can legitimately fall outside the supported family -- `dg_analysis_exec`
+states its own scope, and a relational carrier is outside it by construction. The
 warning signs are semantic exceptions and per-domain overrides of the proof text
 accumulating *inside* the generator, at which point the registry has become a
 second programming language and the uniform shape is a fiction. A `roles` entry

@@ -24,9 +24,8 @@ text \<open>
   \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not independent
   definitions; Interval, Parity, Congruence and each of the Int product's three
   refinement modes instantiate the same two at their own bundles. The guard
-  transfer needs no third: \<^const>\<open>generic_tf_st_for\<close> reads \<open>n_bfilter\<close> off the
-  bundle directly, so naming that projection separately would only rename
-  \<^const>\<open>branch_sign_st\<close>.
+  transfer needs no third: \<^const>\<open>generic_tf_st_for\<close> derives its filter from
+  the bundle's evaluator and refinement operations.
 \<close>
 
 definition sign_enter_st_for ::
@@ -57,9 +56,9 @@ text \<open>The classifier-parametric commutation of the executable and abstract
   needs the executable transfer to commute with the abstract transfer at an
   arbitrary classifier \<open>\<G>\<close>.
 
-  Only the guard is Sign's to discharge. Every other action is settled once for
-  any bundle by \<open>sign_tf.tf_st_for_commute\<close>, so what remains is
-  \<open>sign_backward_domain\<close>'s own filter commutation, which holds on a live state.\<close>
+  Nothing here is Sign's to discharge: the guard filter is derived from the
+  bundle, so \<open>sign_tf.tf_st_for_commute\<close> settles every action, the guard
+  included, on a live state.\<close>
 
 theorem sign_tf_st_for_commute:
   assumes live: "live_resolved_st_q \<G> s"
@@ -67,8 +66,7 @@ theorem sign_tf_st_for_commute:
     "fun_of_resolved_st_q_for \<G> (sign_tf_st_for \<G> a s) =
      sign_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding sign_tf_st_for_def
-  by (rule sign_tf.tf_st_for_commute)
-     (simp add: sign_backward_domain.branch_st_commute[OF live])
+  by (rule sign_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_sign_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q STop s) =
@@ -82,4 +80,3 @@ lemma sign_enter_st_for_commute:
                 enter_frame_sign_st_for_commute)
 
 end
-

@@ -102,6 +102,14 @@ pre-commit:
             run: pixi run toml-format -- {staged_files}
             stage_fixed: true
 
+          # isar-tools: layout only (indentation, trailing whitespace, blank
+          # lines, wrapping at 100 symbols). isar.toml excludes the generated
+          # theories, also when they are staged.
+          - name: isabelle-format
+            glob: "**/*.thy"
+            run: pixi run isar-fmt -- {staged_files}
+            stage_fixed: true
+
           - name: pages-format
             glob:
               - "pages/**/*.js"
@@ -382,6 +390,16 @@ pre-commit:
               - "src/**/*.thy"
               - "scripts/retired_identifiers.txt"
             run: pixi run retired-identifiers-check
+
+          # ROOT entries, sorry/oops and unclosed proofs, lexical errors, theory
+          # names, and formatting of every theory (isar-tools, isar.toml).
+          - name: isar-check
+            glob:
+              - "**/ROOT"
+              - "ROOTS"
+              - "isar.toml"
+              - "src/**/*.thy"
+            run: pixi run isar-check
 
           # Whether a locale name is free depends on the complete theory tree.
           - name: locale-parameters-check

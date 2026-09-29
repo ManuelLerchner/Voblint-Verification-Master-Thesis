@@ -57,29 +57,15 @@ lemma parity_ex_program_declared_global_vars [simp]:
   "declared_global_vars parity_ex_program = []"
   by (simp add: parity_ex_program_def)
 
-text \<open>The nondeterministic reads compile to \<^const>\<open>EA_Special\<close> intra edges, so the graph has
-  no call edges and the node-soundness bridge's call-closure obligations hold vacuously.\<close>
-
-lemma parity_ex_calls_eval: "calls (prog_cfg parity_ex_program) = {}"
-  unfolding prog_cfg_def
-  by (rule compile_prog_calls_empty)
-     (simp_all add: parity_ex_program_def special_table_def
-        special_pname_nondet_int_def main_body_def prog_main_name_def)
-
 lemma parity_ex_solver_terminates:
   "parity_rule.terminates Globals_Join parity_ex_gs parity_ex_program"
   by (rule parity_rule.terminates_of_solve_c) (simp only: parity_rule.root_query_def, eval)
 
-lemma parity_ex_entry_cov:
-  "(cfg_entry (prog_cfg parity_ex_program), ())
-     \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program"
-  by eval
+lemma parity_ex_wf: "wf_program_compile_input parity_ex_program"
+  by (rule wf_program_compile_input_exec_sound) eval
 
-lemma parity_ex_fwd_ok_ball:
-  "\<forall>(u, a, w) \<in> intra (prog_cfg parity_ex_program).
-     (u, ()) \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program \<longrightarrow>
-     (w, ()) \<in> parity_rule.sol_vars Globals_Join parity_ex_gs parity_ex_program"
-  by eval
+lemma parity_ex_unit_route: "route_unit u ctx d ca = enterc_unit u ctx s"
+  by simp
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
   "parity_ex_reach v =
@@ -111,11 +97,9 @@ lemma parity_ex_entry_eval: "cfg_entry (prog_cfg parity_ex_program) = FunctionEn
   unfolding prog_cfg_def by (simp add: prog_main_name_def)
 
 lemma parity_ex_node_sound: "parity_ex_reach v \<le> \<lbrakk>parity_ex_env v\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def parity_rule.state_at_unfold[symmetric]
-  using parity_ex_fwd_ok_ball
-  by (intro parity_rule.result_node_sound_closure parity_ex_solver_terminates
-        parity_ex_entry_cov)
-     (auto simp: parity_ex_calls_eval)
+  using parity_rule.fun_route_result_node_sound
+      [OF parity_ex_unit_route parity_ex_wf parity_ex_solver_terminates]
+  by (simp add: parity_ex_reach_def parity_ex_env_def parity_rule.state_at_unfold UNIV_unit)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
@@ -138,13 +122,13 @@ lemma parity_ex_classify_6:
 corollary parity_ex_first_check_holds:
   assumes "t \<in> parity_ex_reach (Statement 3)"
   shows "truthy (\<lbrakk>NotEq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
-  using assms parity_ex_node_sound parity_classify_check_proved[OF parity_ex_classify_3]
+  using assms parity_ex_node_sound parity_tf.check.classify_check_proved[OF parity_ex_classify_3]
   by blast
 
 corollary parity_ex_second_check_refuted:
   assumes "t \<in> parity_ex_reach (Statement 4)"
   shows "\<not> truthy (\<lbrakk>Eq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
-  using assms parity_ex_node_sound parity_classify_check_refuted[OF parity_ex_classify_4]
+  using assms parity_ex_node_sound parity_tf.check.classify_check_refuted[OF parity_ex_classify_4]
   by blast
 
 text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>Voblint_Framework.Checks\<close> bridge,
@@ -153,7 +137,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 
 lemma parity_ex_proven_check_discharged:
   "parity_checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_env"
-proof (rule parity_checks_provenI)
+proof (rule parity_tf.check.abstract_checks_provenI)
   fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))}"
   then have v_eq: "v = Statement 3"
@@ -165,7 +149,7 @@ qed
 
 lemma parity_ex_proven_check_checks_proven:
   "checks_proven {(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')))} parity_ex_reach"
-  by (rule parity_checks_proven_sound)
+  by (rule parity_tf.check.abstract_checks_proven_sound)
      (use parity_ex_node_sound parity_ex_proven_check_discharged in auto)
 
 text \<open>Non-vacuity: reading \<open>7\<close> for \<open>x\<close> and \<open>99\<close> for \<open>w\<close>, the all-zero initial store reaches
@@ -203,7 +187,7 @@ qed
 subsection \<open>Whole-program check report\<close>
 
 lemma parity_ex_report_eval:
-  "parity_rule.report Globals_Join parity_ex_gs parity_ex_program =
+  "parity_rule.report Globals_Join parity_ex_gs parity_ex_program () =
      [(Statement 3, NotEq (V (STR ''y'')) (V (STR ''z'')), Check_Proved),
       (Statement 4, Eq (V (STR ''y'')) (V (STR ''z'')), Check_Refuted),
       (Statement 6, Eq (V (STR ''y'')) (V (STR ''w'')), Check_Unknown)]"
@@ -211,15 +195,18 @@ lemma parity_ex_report_eval:
 
 text \<open>The proved entry, discharged against the collecting semantics rather than against
   the computed table, by the report-level soundness endpoint
-  \<open>parity_rule.report_proved_sound_closure\<close> of Parity's unit registration in
-  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Analyses\<close>.\<close>
+  \<open>parity_rule.fun_route_report_proved_sound\<close> of Parity's unit registration in
+  \<^theory>\<open>Voblint_Analysis_Parity.Parity_Analyses\<close>. At the unit context the
+  activation-indexed reading it bounds is the program-point one.\<close>
 
 corollary parity_ex_report_proved_entry_sound:
   "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (\<lbrakk>NotEq (V (STR ''y'')) (V (STR ''z''))\<rbrakk>\<^sub>e t)"
-  unfolding parity_ex_reach_def
-  by (rule parity_rule.report_proved_sound_closure
-        [OF parity_ex_solver_terminates _ _ _ parity_ex_entry_cov])
-     (use parity_ex_fwd_ok_ball in \<open>auto simp: parity_ex_calls_eval parity_ex_report_eval\<close>)
+  using parity_rule.fun_route_report_proved_sound
+      [where ctx_fun = enterc_unit, OF parity_ex_unit_route parity_ex_wf
+         parity_ex_solver_terminates,
+       of "Statement 3" "NotEq (V (STR ''y'')) (V (STR ''z''))" "()"]
+  unfolding activation_collect_unit_eq_ltr_collect
+  by (simp add: parity_ex_reach_def parity_ex_report_eval)
 
 lemma parity_direct_comparisons:
   "map (\<lambda>c. aval_parity (c (V (STR ''x'')) (N 1)) (\<lambda>_. PEven))

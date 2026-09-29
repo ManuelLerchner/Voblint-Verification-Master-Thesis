@@ -397,4 +397,3 @@ definition run_voblint ::
      map_analysis_answer string_of_abstract_value (analyse_program as rule ctx p)"
 
 end
-

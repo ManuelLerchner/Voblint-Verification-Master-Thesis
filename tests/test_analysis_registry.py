@@ -35,9 +35,9 @@ DOMAINS = {
 # registration of their own.
 FIELD_ONLY = {"Order_Analysis"}
 MCP_ROUTES = [
-    ("mcp_rule", "routed_dg_analysis", "as r"),
-    ("mcp_es_rule", "routed_dg_analysis", "as r"),
-    ("mcp_cs_rule", "routed_dg_analysis", "as k r"),
+    ("mcp_rule", "dg_analysis", "as r"),
+    ("mcp_es_rule", "dg_analysis", "as r"),
+    ("mcp_cs_rule", "dg_analysis", "as k r"),
 ]
 
 
@@ -77,7 +77,7 @@ def test_every_domain_registers_its_unit_route(generated, domain):
     found = [interpretation_params(text, name) for text in generated.values()]
     found = [f for f in found if f]
     assert len(found) == 1, f"{name}: {len(found)} registrations"
-    assert found[0] == ("unit_dg_analysis", ["r"])
+    assert found[0] == ("dg_analysis_exec", ["r"])
 
 
 @pytest.mark.parametrize("name,locale,params", MCP_ROUTES)

@@ -10,16 +10,16 @@ Executable witnesses live under
 | `Interval_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): bounds, order, lattice, and concretization |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws, then the `numeric_domain` instance, which needs them |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
-| `Interval_Backward.thy` | backward guard/filter operators; names the interval `afilter_ivl_st`/`bfilter_ivl_st` executable mirror via `Exec_Backward` |
-| `Interval_Transfer.thy` | edge transfer record and transfer soundness |
+| `Interval_Backward.thy` | inverse operators, `ivl_refine_ops`, and the `backward_domain_mono` certificate |
+| `Interval_Transfer.thy` | the `ivl_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Interval_Domain.thy` | aggregate import façade and small domain demonstrations |
 | `Interval_Exec.thy` | executable transfer mirror + commutation |
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
 | `Interval_Numeric_Queries.thy` | Interval's instance of `sound_numeric_queries` |
 | `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
-| `Interval_Classify.thy` | Interval instance of the generic check-discharge interface |
-| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule` of the shared `unit_dg_analysis`, and `interval_es_rule` and `interval_cs_rule` of `routed_dg_analysis` at the entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
+| `Interval_Classify.thy` | executable tests of the derived check classifier |
+| `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |
 
 ## The contextual configurations
 
@@ -31,7 +31,7 @@ the classifier and the initial-state fact carry the domain name
 (`interval_rule`, `interval_classify_check`, `interval_cinit_gamma`).
 
 Neither contextual policy has a pipeline of its own. Both are interpretations
-of `routed_dg_analysis`, which owns the equation system, the solve, the covered
+of `dg_analysis`, which owns the equation system, the solve, the covered
 keys, the reader, the result table, the contextual report and the
 activation-indexed soundness endpoint.
 

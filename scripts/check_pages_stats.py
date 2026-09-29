@@ -8,7 +8,7 @@ every `[data-stat]` figure into the published HTML from that measurement
 This checks that no figure is typed straight into the prose, where no build
 refreshes it; that every `[data-stat]` names a measured figure and holds the
 fallback; and that the corpus counts agree. It needs no Isabelle:
-pages_stats.py reads the sources.
+pages_stats.py reads the sources through isar-tools.
 """
 
 import argparse
@@ -72,19 +72,14 @@ def corpus_problems(stats):
 def main():
     argparse.ArgumentParser(description=__doc__).parse_args()
 
-    # collect() reads the vendored solver, so without the submodule it dies deep
-    # inside session_graph with a FileNotFoundError. pages_stats.py refuses to
-    # guess a solver count rather than publish a wrong one; say the same thing
-    # here, in one line, instead of a traceback.
-    absent = [
-        root for root in pages_stats.VENDOR_SESSIONS if not (root / "ROOT").is_file()
-    ]
-    if absent:
-        for root in absent:
-            print(
-                f"check_pages_stats: {root.relative_to(REPO)} is not checked out; "
-                "run `pixi run vendor-init` (CI: initialize the submodule)"
-            )
+    # collect() reads the vendored solver. pages_stats.py refuses to guess a
+    # solver count rather than publish a wrong one; say the same thing here,
+    # in one line, instead of a zero.
+    if not (pages_stats.TD_DIR / "ROOT").is_file():
+        print(
+            f"check_pages_stats: {pages_stats.TD_DIR.relative_to(REPO)} is not checked out; "
+            "run `pixi run vendor-init` (CI: initialize the submodule)"
+        )
         return 1
 
     stats = pages_stats.collect()

@@ -163,7 +163,7 @@ theorem twice_activation_collect_sound:
 
 subsection \<open>The context each call site selects\<close>
 
-text \<open>\<^const>\<open>routed_dg_analysis.admitted_contexts\<close> admits a routed context relationally
+text \<open>\<^const>\<open>dg_analysis.admitted_contexts\<close> admits a routed context relationally
   rather than computing one from the concrete store, so at each call site it admits
   exactly the constant the flagship computed.\<close>
 
@@ -172,7 +172,7 @@ lemma twice_call_site_action1:
   "call_action_at_call_site (compile_prog twice_pi twice_procs) (Statement 2)
      = CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]"
 proof (rule call_action_at_call_site_eq
-    [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
+    [OF twice.finite_calls[unfolded twice_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 2, CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3],
           FunctionEntry (STR ''twice''), Statement 3)
           \<in> calls (compile_prog twice_pi twice_procs)"
@@ -183,7 +183,7 @@ lemma twice_call_site_action2:
   "call_action_at_call_site (compile_prog twice_pi twice_procs) (Statement 3)
      = CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]"
 proof (rule call_action_at_call_site_eq
-    [OF twice_finC[unfolded twice_cfg_def] compile_prog_calls_source_unique])
+    [OF twice.finite_calls[unfolded twice_cfg_def] compile_prog_calls_source_unique])
   show "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10],
           FunctionEntry (STR ''twice''), Statement 4)
           \<in> calls (compile_prog twice_pi twice_procs)"
@@ -270,7 +270,6 @@ proof -
 qed
 
 
-
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
 definition ivl_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
@@ -280,7 +279,7 @@ text \<open>\<^const>\<open>ivl_context\<close> is the \<^emph>\<open>semantic\<
   (Seidl et al., \<^emph>\<open>Mixed Flow-Sensitive Static Analysis\<close>, FM 2026, Example 8):
   it decodes the concrete entered store's formals
   through \<^const>\<open>ivl_decode\<close>, looking its formals up from the call site via
-  \<^const>\<open>formals_at_call_site\<close>.  \<^const>\<open>routed_dg_analysis.admitted_contexts\<close>
+  \<^const>\<open>formals_at_call_site\<close>.  \<^const>\<open>dg_analysis.admitted_contexts\<close>
   instead ignores the store and
   recomputes the routed value from the caller's solved abstract state.  The two are
   distinct functions; for \<open>twice\<close>'s two constant-argument calls they agree, which is
@@ -327,7 +326,8 @@ text \<open>The semantic store-decode and the routed relation agree: the value \
 theorem ivl_context_is_entry_state_context_call1:
   assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
-    and es: "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
+    and es:
+      "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) [] (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) (STR ''twice''))
            s s' (ivl_context (Statement 2) [] s')"
@@ -340,7 +340,8 @@ qed
 theorem ivl_context_is_entry_state_context_call2:
   assumes cov: "s \<in> interval_gamma twice_gs (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
                   (globs (snd twice_ctx_sol (Inr (Analysis_Global ()))))"
-    and es: "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
+    and es:
+      "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
@@ -374,4 +375,3 @@ lemma twice_ctx_global_slot_inert:
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
 end
-

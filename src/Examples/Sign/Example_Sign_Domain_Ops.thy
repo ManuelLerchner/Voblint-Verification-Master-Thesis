@@ -99,6 +99,6 @@ lemma sign_interface_regression:
 
 lemma sign_meet_zero_not_empty:
   "\<not> is_empty (SNonNeg \<sqinter> SNonPos)"
-  by (rule sign_backward_domain.intersect_shared_not_empty[of 0]) simp_all
+  using sign_tf.backward.intersect_shared_not_empty[of 0 SNonNeg SNonPos] by simp
 
 end

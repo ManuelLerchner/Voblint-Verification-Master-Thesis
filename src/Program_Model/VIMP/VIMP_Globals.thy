@@ -72,4 +72,3 @@ definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> store set" 
   "cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}"
 
 end
-

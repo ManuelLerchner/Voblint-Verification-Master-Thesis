@@ -48,8 +48,10 @@ syntax
   "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }" [0] 1000)
   "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }" [0, 0] 1000)
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("fun _'(') { _ } _" [1000, 0, 0] 1000)
-  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("fun _'( _ ') { _ } _" [1000, 0, 0, 0] 1000)
+  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"
+    ("fun _'(') { _ } _" [1000, 0, 0] 1000)
+  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"
+    ("fun _'( _ ') { _ } _" [1000, 0, 0, 0] 1000)
 
 parse_translation \<open>
   let
@@ -291,6 +293,3 @@ lemma aval_division_remainder:
   by (simp add: c_div_def c_mod_def)
 
 end
-
-
-

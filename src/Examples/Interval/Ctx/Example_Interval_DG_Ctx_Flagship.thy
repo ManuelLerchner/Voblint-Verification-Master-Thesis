@@ -70,7 +70,7 @@ lemma twice_ctx_terminates:
 
 subsection \<open>The two calling contexts are distinct\<close>
 
-text \<open>The routed callee context is \<^const>\<open>routed_dg_pipeline.ctx_succ\<close>, whose type
+text \<open>The routed callee context is \<^const>\<open>dg_pipeline.ctx_succ\<close>, whose type
   omits the domain, so evaluation inlines its body rather than looking for a code
   equation of its own.\<close>
 

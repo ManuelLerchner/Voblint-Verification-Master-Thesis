@@ -676,21 +676,35 @@ lemma inv_times_congruence_mono:
   using assms inverse_times_candidate_mono
   by (auto simp: inv_times_congruence_def intro: le_infI1 le_infI2)
 
-subsection \<open>Backward-domain interpretation\<close>
+subsection \<open>The refinement operations and their certificate\<close>
 
-global_interpretation congruence_backward_domain:
-    backward_domain_mono inf aval_congruence congruence_tobool
-      inv_less_congruence inv_eq_congruence
-      inv_plus_congruence inv_minus_congruence inv_times_congruence
-  defines
-    afilter_congruence = congruence_backward_domain.afilter
-    and feasible_congruence = congruence_backward_domain.feasible
-    and bfilter_congruence = congruence_backward_domain.bfilter
-    and branch_congruence = congruence_backward_domain.branch
-    and branch_lifted_congruence = congruence_backward_domain.branch_lifted
-    and afilter_congruence_st = congruence_backward_domain.afilter_st
-    and bfilter_congruence_st = congruence_backward_domain.bfilter_st
-    and branch_congruence_st = congruence_backward_domain.branch_st
+text \<open>
+  Congruence's refinement choices: the lattice meet, and an inverse for every
+  comparison and arithmetic operator. The guard filters and the branch are
+  derived from this record and the evaluator in \<open>Congruence_Transfer\<close>.
+\<close>
+
+definition congruence_refine_ops :: "congruence refine_ops" where
+  "congruence_refine_ops =
+     \<lparr>r_tobool = congruence_tobool, r_inv_less = inv_less_congruence,
+      r_inv_eq = inv_eq_congruence, r_inv_plus = inv_plus_congruence,
+      r_inv_minus = inv_minus_congruence, r_inv_times = inv_times_congruence,
+      r_intersect = inf\<rparr>"
+
+lemma congruence_refine_ops_simps [simp]:
+  "r_tobool congruence_refine_ops = congruence_tobool"
+  "r_inv_less congruence_refine_ops = inv_less_congruence"
+  "r_inv_eq congruence_refine_ops = inv_eq_congruence"
+  "r_inv_plus congruence_refine_ops = inv_plus_congruence"
+  "r_inv_minus congruence_refine_ops = inv_minus_congruence"
+  "r_inv_times congruence_refine_ops = inv_times_congruence"
+  "r_intersect congruence_refine_ops = inf"
+  by (simp_all add: congruence_refine_ops_def)
+
+lemma congruence_backward_domain:
+  "backward_domain_mono inf aval_congruence congruence_tobool
+     inv_less_congruence inv_eq_congruence
+     inv_plus_congruence inv_minus_congruence inv_times_congruence"
 proof unfold_locales
 qed (simp_all add: inf_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
        inv_plus_congruence_sound inv_minus_congruence_sound inv_times_congruence_sound
@@ -698,10 +712,5 @@ qed (simp_all add: inf_congruence_sound inv_less_congruence_sound inv_eq_congrue
        inv_less_congruence_mono inv_eq_congruence_mono inv_plus_congruence_mono
        inv_minus_congruence_mono inv_times_congruence_mono
        le_infI1 le_infI2 congruence_tobool_mono)
-
-lemmas afilter_congruence_st_commute =
-  congruence_backward_domain.afilter_st_commute
-lemmas bfilter_congruence_st_commute =
-  congruence_backward_domain.bfilter_st_commute
 
 end

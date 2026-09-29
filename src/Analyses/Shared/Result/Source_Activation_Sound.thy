@@ -254,7 +254,3 @@ proof -
 qed
 
 end
-
-
-
-
