@@ -52,7 +52,14 @@ Interval, and Parity learns from it only at singletons), every guard already
 refines twice, and an arithmetic result's bounds already agree with its
 congruence. The difference `refinement_round_is_progressive` witnesses needs
 operands no stored state has. `never` differs visibly: see the regression
-fixtures `16-composite-domain/precision/12`–`14`.
+fixtures `16-composite-domain/precision/12`–`15`.
+
+Checks do not refine. As in Goblint's `IntDomTuple`, a comparison is decided
+when one component decides it on its own value (`int_less_true` and its
+siblings in `Int_Backward`), so the mode reaches a check only through the
+values the transfers stored and the evaluator computed. Under `never`, a fact
+only the combined components know, such as a remainder that is `[0,5]` in
+Interval and `1 (mod 6)` in Congruence, does not prove `r == 1` (fixture 15).
 
 ## Worked example: `if (y + 1 == 3) { x := 1 } else { x := 0 }`
 

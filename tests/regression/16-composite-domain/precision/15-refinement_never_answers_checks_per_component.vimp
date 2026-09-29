@@ -1,0 +1,18 @@
+// PARAM: --analysis int --int-refinement never
+// Without refinement, Int answers a check component by component, as
+// Goblint's IntDomTuple does: a check is decided when one component decides it
+// on its own value. The remainder is [0,5] in Interval and 1 (mod 6) in
+// Congruence; only their combination is the singleton 1, and never does not
+// combine them. Parity alone knows r is odd, which rules out 0.
+// Under once and fixpoint all six checks are proved (09-remainder_reduction).
+fun main() {
+  n = __voblint_nondet_int();
+  if (0 <= n && n <= 20) {
+    dividend = n * 6 + 1;
+    r = dividend % 6;
+    __voblint_check(r == 1); // UNKNOWN
+    __voblint_check(r != 0); // PROVED
+    __voblint_check(r > 0); // UNKNOWN
+    __voblint_check(r < 2); // UNKNOWN
+  }
+}

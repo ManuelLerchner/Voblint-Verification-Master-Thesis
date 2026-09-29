@@ -2,8 +2,10 @@ theory Int_Backward
   imports
     Int_Arithmetic
     "Voblint_Analysis_Sign.Sign_Backward"
+    "Voblint_Analysis_Sign.Sign_Numeric_Queries"
     "Voblint_Analysis_Interval.Interval_Backward"
     "Voblint_Analysis_Parity.Parity_Backward"
+    "Voblint_Analysis_Parity.Parity_Numeric_Queries"
     "Voblint_Analysis_Congruence.Congruence_Backward"
     "Voblint_Nonrelational.Exec_Backward"
 begin
@@ -458,62 +460,80 @@ lemma int_refine_ops_simps [simp]:
 subsection \<open>Comparison queries\<close>
 
 text \<open>
-  The four comparison judgments are the generic derivations of
-  \<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close> at the most precise mode's
-  inverses. They are stated as plain definitions over those inverses so that they
-  carry code equations; each is definitionally the \<^locale>\<open>sound_inverse_ops\<close> judgment,
-  whose soundness therefore transfers in one line. A sharper composite table,
-  reduced through all four components at once, is future precision work.
+  A comparison is answered component by component, as Goblint's
+  \<open>IntDomTuple\<close> answers \<open>lt\<close> and \<open>eq\<close>: it is decided when some component
+  decides it on its own value, and no step here combines the components. The
+  refinement mode therefore reaches a comparison only through its operands,
+  which \<^const>\<open>aval_int_dom\<close> reduces as the mode says; under
+  \<^const>\<open>Refine_Never\<close> a fact that only the reduced product knows is not
+  available to a check.
 \<close>
 
 definition int_less_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
-  "int_less_true a b =
-     (is_empty (fst (inv_less_int_dom Refine_Fixpoint False a b))
-      \<or> is_empty (snd (inv_less_int_dom Refine_Fixpoint False a b)))"
+  "int_less_true a b \<longleftrightarrow>
+     sign_less_true (int_sign a) (int_sign b)
+     \<or> interval_less_true (int_ivl a) (int_ivl b)
+     \<or> parity_less_true (int_parity a) (int_parity b)
+     \<or> congruence_lt (int_congruence a) (int_congruence b) = Some True"
 
 definition int_less_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
-  "int_less_false a b =
-     (is_empty (fst (inv_less_int_dom Refine_Fixpoint True a b))
-      \<or> is_empty (snd (inv_less_int_dom Refine_Fixpoint True a b)))"
+  "int_less_false a b \<longleftrightarrow>
+     sign_less_false (int_sign a) (int_sign b)
+     \<or> interval_less_false (int_ivl a) (int_ivl b)
+     \<or> parity_less_false (int_parity a) (int_parity b)
+     \<or> congruence_lt (int_congruence a) (int_congruence b) = Some False"
 
 definition int_eq_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
-  "int_eq_true a b = (int_less_false a b \<and> int_less_false b a)"
+  "int_eq_true a b \<longleftrightarrow>
+     sign_eq_true (int_sign a) (int_sign b)
+     \<or> interval_eq_true (int_ivl a) (int_ivl b)
+     \<or> parity_eq_true (int_parity a) (int_parity b)
+     \<or> congruence_eqb (int_congruence a) (int_congruence b) = Some True"
 
 definition int_eq_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
-  "int_eq_false a b = is_empty (intersect_int_dom_mode Refine_Fixpoint a b)"
+  "int_eq_false a b \<longleftrightarrow>
+     sign_eq_false (int_sign a) (int_sign b)
+     \<or> interval_eq_false (int_ivl a) (int_ivl b)
+     \<or> parity_eq_false (int_parity a) (int_parity b)
+     \<or> congruence_eqb (int_congruence a) (int_congruence b) = Some False"
+
+lemma gamma_int_dom_components:
+  assumes "i \<in> \<gamma> (a :: int_dom)"
+  shows "i \<in> gamma_sign (int_sign a)" "i \<in> gamma_ivl (int_ivl a)"
+    "i \<in> gamma_parity (int_parity a)" "i \<in> gamma_congruence (int_congruence a)"
+  using assms by (simp_all add: gamma_int_dom_def)
 
 lemma int_less_true_sound:
   assumes "int_less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i < j"
-  using assms sound_inverse_ops.less_true_sound[OF
-      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
-      of a b i j]
-  by (simp add: int_less_true_def sound_inverse_ops.less_true_def[OF
-        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
+  using assms(1) gamma_int_dom_components[OF assms(2)] gamma_int_dom_components[OF assms(3)]
+  unfolding int_less_true_def
+  by (auto dest: sign_less_true_sound interval_less_true_sound parity_less_true_sound
+      congruence_lt_sound)
 
 lemma int_less_false_sound:
   assumes "int_less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "\<not> i < j"
-  using assms sound_inverse_ops.less_false_sound[OF
-      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
-      of a b i j]
-  by (simp add: int_less_false_def sound_inverse_ops.less_false_def[OF
-        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
+  using assms(1) gamma_int_dom_components[OF assms(2)] gamma_int_dom_components[OF assms(3)]
+  unfolding int_less_false_def
+  by (auto dest: sign_less_false_sound interval_less_false_sound parity_less_false_sound
+      congruence_lt_sound)
 
 lemma int_eq_true_sound:
   assumes "int_eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i = j"
-  using assms int_less_false_sound[of a b i j] int_less_false_sound[of b a j i]
-  by (fastforce simp: int_eq_true_def)
+  using assms(1) gamma_int_dom_components[OF assms(2)] gamma_int_dom_components[OF assms(3)]
+  unfolding int_eq_true_def
+  by (auto dest: sign_eq_true_sound interval_eq_true_sound parity_eq_true_sound
+      congruence_eqb_sound)
 
 lemma int_eq_false_sound:
   assumes "int_eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i \<noteq> j"
-  using assms sound_inverse_ops.eq_false_sound[OF
-      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
-      of a b i j]
-  by (simp add: int_eq_false_def sound_inverse_ops.eq_false_def[OF
-        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
+  using assms(1) gamma_int_dom_components[OF assms(2)] gamma_int_dom_components[OF assms(3)]
+  unfolding int_eq_false_def
+  by (auto dest: sign_eq_false_sound interval_eq_false_sound parity_eq_false_sound
+      congruence_eqb_sound)
 
 global_interpretation int_dom_numeric_queries:
   numeric_query_judgments int_less_true int_less_false int_eq_true int_eq_false
