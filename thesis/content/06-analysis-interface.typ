@@ -56,12 +56,17 @@ value $d$, whose concretization $conc_(D)(d)$ is the set of stores it describes
 (@ch:domains). For each action $a$ it supplies an _abstract transfer_
 $sh(f)_a$, which maps the value before the edge to the value after it. The
 transfer is sound if it loses no successor: every $s in conc_(D)(d)$ and every
-$s' in$ #isai("edge_step a s") satisfy $s' in conc_(D)(sh(f)_a (d))$. This is
-the obligation #oblig("INTRA") of @ch:traces, stated for one edge. The kinds of
+$s' in$ #isai("edge_step a s") satisfy $s' in conc_(D)(sh(f)_a (d))$. For a
+transfer that uses only the local value, this is the obligation
+#oblig("INTRA") of @ch:traces, stated for one edge. A transfer that also reads
+and publishes analysis globals, introduced below, owes the same with the value
+of the analysis global added on both sides (@sec:sound-core). The kinds of
 action give an analysis seven edge transfers, named after the methods of
 Goblint's `Spec` with the same role: skip, assign, special, branch, body,
 return and event. They become the first fields of the record #isatype("dg_spec")
 (@sec:sound-core).
+
+=== Analysis globals <sec:analysis-globals>
 
 Not every fact belongs to one program point. Seidl et al. describe the
 specification of a mixed flow-sensitive analysis in Goblint @seidl26[§6]. It
@@ -84,6 +89,8 @@ may track a program global flow-sensitively in its local value, and an analysis
 global need not stand for any program variable. The numeric analyses of this
 thesis track program globals in the local value, as Goblint's base analysis
 does for single-threaded programs, and need no analysis global.
+
+=== Side-effecting transfers and the manager <sec:manager>
 
 A transfer of a mixed flow-sensitive analysis still returns the next local
 value, but it may also read analysis globals and contribute new values to them:
@@ -108,9 +115,11 @@ The manager is a record of type #isatype("man"):
 Here `'dl` and `'dg` are the local and the global lattice, $D_L$ and $D_G$, `'v` names the
 analysis globals, and `'x` and `'k` name the solver's local and global unknowns. #isaconst("man_local") is the current local value. The program is a
 #isatype("strategy_program"), which compiles to a strategy tree
-(@sec:side-effects): #isaconst("man_global") $v$ reads the global $v$ and
-compiles to a #ctor("QueryG"), #isaconst("man_sideg") $v$ $g$ publishes $g$ to
-it and compiles to a #ctor("Side"), and #isaconst("man_ask") poses a query to
+(@sec:side-effects). The record fixes only the types of the fields. The
+framework hands every transfer the manager #isaconst("mk_dg_man") builds, in
+which #isaconst("man_global") $v$ reads the global $v$ and compiles to a
+#ctor("QueryG"), #isaconst("man_sideg") $v$ $g$ publishes $g$ to it and
+compiles to a #ctor("Side"), and #isaconst("man_ask") poses a query to
 the other analyses, which answer it through their query handlers (@ch:cooperation). The manager thus separates what an analysis asks for from how the solver tracks it. Soundness constrains what the program returns and publishes, not the order or
 number of the reads and publications that produce them. The constraint is
 #oblig("INTRA") for the compiled program, which @sec:sound-core states
@@ -165,6 +174,8 @@ are of this kind, so for them the manager changes nothing about the equations.
     #isatype("dg_state") (grey): a node its local value $d_i$ in the local half,
     $kappa$ the range $v$ of `g` in the global half.],
 ) <fig:shared-deps>
+
+=== Global unknowns in the solver <sec:global-unknowns>
 
 In the solver, an analysis global is a _global unknown_: an unknown without a right-hand side, which only receives side contributions (@sec:side-effects).
 Analysis globals are not the only global unknowns. The framework adds its own, as
@@ -407,9 +418,7 @@ development; a second global would need a concretization over a global
 environment. Entry is absent: its soundness depends on which alternative the
 routed equations select, and @sec:eq-routing states it as paired coverage.
 
-The obligations are stated over what the compiled programs return and publish.
-No local and shared pair is reconstructed, and a transfer that publishes
-nothing is checked against $lbot$. The contract asks the carriers only for a
+The contract asks the carriers only for a
 bounded join semilattice and $conc_(D G)$ only for monotonicity; it never
 requires a map from variables to abstract values. For this reason the
 relational carrier of @sec:relational (#isaconst("rel_order_spec")) satisfies
@@ -419,8 +428,7 @@ Most analyses neither read nor publish an analysis global. For them the framewor
 has a narrower interface, the _local specification_ #isatype("local_spec"). It
 has one field per field of #isatype("dg_spec"), and each field is a pure function
 of local values. Each field also receives a query channel, which
-@ch:cooperation introduces. A local specification cannot read or publish an
-analysis global. Its soundness #isaconst("sound_local_spec") asks for a
+@ch:cooperation introduces. Its soundness #isaconst("sound_local_spec") asks for a
 monotone concretization and one law per operation: an edge field covers the
 concrete successors of its edge, entry satisfies paired entry coverage, the
 composed return covers #isaconst("combine_collect"), and the query handler
@@ -544,9 +552,7 @@ the whole return in #isaconst("dgs_combine_assign"). The rules are the eight
 assumptions of #isalocale("sound_nonrelational_transfer"), one per operation,
 and #isathm("sound_nonrelational_transfer.local_state_dg_spec_for_contract")
 derives the analysis soundness contract from them through
-#isathm("dg_spec_of_contract"). A non-relational domain obtains the rules from
-its certificate
-(#isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer")).
+#isathm("dg_spec_of_contract").
 
 The executed analyses use the local specification #isaconst("exec_spec") over
 the executable carrier of @ch:solving. It splits the return as Goblint does:
@@ -566,17 +572,14 @@ and obligation. The initial state is not a field either. The pipeline
 obligation, #isathm("dg_analysis.init_sound"), is to cover the fixed initial
 stores #isaconst("cinit_stores"). Goblint's `startstate` may also install
 facts of its own, such as global initializers. The context of a call is not a
-field: the routing policy of @ch:equations chooses it. The contract
-places no soundness obligation on the query field #isaconst("dgs_query"). A transfer may ask
-through the manager, but what an answer means, and how several analyses answer
-one another, is the subject of @ch:cooperation.
+field: the routing policy of @ch:equations chooses it. The contract places no soundness obligation on the query field
+#isaconst("dgs_query"); @ch:cooperation gives answers their meaning.
 
-An analysis meets the analysis soundness contract
-#isalocale("analysis_contract") either directly or as a sound local
-specification through #isathm("dg_spec_of_contract").
+An analysis meets #isalocale("analysis_contract") directly or, as a sound local
+specification, through #isathm("dg_spec_of_contract").
 The interface takes its shape from Goblint: a local and a global lattice, a manager, entry pairs
 and a two-stage return. New in this chapter are a soundness contract for that shape
 and the paired entry obligation with its counterexample.
-@ch:equations proves the five obligations of @ch:traces for the generated
-equations from the contract, paired entry coverage, the coverage of the
-initial state and the adequacy of the routing policy.
+@ch:equations derives the five obligations of @ch:traces from the contract,
+paired entry coverage, the initial state and the adequacy of the routing
+policy.

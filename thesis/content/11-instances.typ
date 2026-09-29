@@ -400,7 +400,15 @@ to
   label: "…/14",
 )
 leave a check unproved without reduction that one round proves. This argument
-is not machine-checked. The fixpoint
+is not machine-checked. Checks themselves do not reduce: as in Goblint's
+`IntDomTuple`, a comparison is decided when one component decides it on its own
+value (#isaconst("int_less_true")), so the mode reaches a check only through the
+values the transfers stored. Without reduction, a remainder that is $[0, 5]$ in
+Interval and $1$ modulo $6$ in Congruence leaves `r == 1` unproved
+(#fixture(
+  "16-composite-domain/precision/15-refinement_never_answers_checks_per_component.vimp",
+  label: "…/15",
+)). The fixpoint
 mode is total in HOL, returning its input if the iteration never stabilizes,
 while the generated code iterates until the value stops changing. That it
 always stops is not proved, so reduction is a second place, besides the solve,
