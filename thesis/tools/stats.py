@@ -132,13 +132,11 @@ def main() -> int:
     mode.add_argument("--check", action="store_true", help="fail on drift")
     args = parser.parse_args()
 
-    absent = [r for r in pages_stats.VENDOR_SESSIONS if not (r / "ROOT").is_file()]
-    if absent:
-        for root in absent:
-            print(
-                f"thesis stats: {root.relative_to(REPO)} is not checked out; "
-                "run `pixi run vendor-init` (CI: initialize the submodule)"
-            )
+    if not (pages_stats.TD_DIR / "ROOT").is_file():
+        print(
+            f"thesis stats: {pages_stats.TD_DIR.relative_to(REPO)} is not checked out; "
+            "run `pixi run vendor-init` (CI: initialize the submodule)"
+        )
         return 1
 
     stats = measure()
