@@ -9,7 +9,7 @@
 // branch is recognized as unreachable.
 //
 // The Int product reaches this through the same generic construction as Sign
-// and Interval: every refinement mode interprets backward_domain_reductive,
+// and Interval: every refinement mode interprets sound_refinement,
 // which is all the lifted filtering needs, so Refine_Fixpoint -- monotone
 // nowhere but reductive everywhere -- gets the precise result too.
 fun main() {

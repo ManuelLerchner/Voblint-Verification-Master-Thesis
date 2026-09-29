@@ -342,7 +342,7 @@ text \<open>
   arithmetic is parameterized by \<open>refine_mode\<close> (\<open>plus_int_dom
   Refine_Never\<close> and \<open>plus_int_dom Refine_Fixpoint\<close> are genuinely
   different operations) -- so \<open>int_dom\<close> cannot literally interpret
-  \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close> locale,
+  \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close> locale,
   which fixes those as type-class operations. \<open>int_dom_lt\<close>/\<open>int_dom_eqb\<close>/
   \<open>int_dom_tobool\<close> below still follow that locale's query shape exactly
   (\<open>bool option\<close>, \<open>Some True\<close>/\<open>Some False\<close>/\<open>None\<close>), and \<open>aval_int_dom\<close>'s
@@ -632,7 +632,7 @@ subsection \<open>Arithmetic-expression evaluation\<close>
 
 text \<open>
   \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> mirror the shape
-  \<open>Voblint_Nonrelational.Abstract_Arithmetic.expression_domain_sound\<close> would assume
+  \<open>Voblint_Nonrelational.Abstract_Arithmetic.sound_arith_ops\<close> would assume
   were \<open>int_dom\<close> able to interpret it (see the comment above
   \<open>int_dom_lt\<close>): each operand is recursively evaluated to a whole
   \<open>int_dom\<close> value first, and only the composite-level \<open>int_dom_lt\<close>/
@@ -703,7 +703,7 @@ where
          else of_bool_option int_dom_of_int (or_opt (int_dom_tobool a) (int_dom_tobool b)))"
 
 text \<open>
-  \<open>aval_int_dom\<close> has exactly the shape \<open>expression_domain_sound\<close> assumes, once
+  \<open>aval_int_dom\<close> has exactly the shape \<open>sound_arith_ops\<close> assumes, once
   that locale's \<open>pls\<close>/\<open>mns\<close>/\<open>tms\<close> parameters are instantiated at this domain's
   mode-indexed operations instead of the type-class \<open>+\<close>/\<open>-\<close>/\<open>*\<close> the other four
   domains pass. So the shared induction over \<open>exp\<close> is reused here rather than
@@ -713,7 +713,7 @@ text \<open>
   Soundness holds at every \<open>mode\<close>. Monotonicity holds only away from
   \<open>Refine_Fixpoint\<close>, so it is a second interpretation, inside a context that
   carries that side condition --- which is what puts the condition on the
-  exported \<open>int_dom_mono_evaluator\<close> and keeps it off \<open>aval_int_dom_sound\<close>.
+  exported \<open>int_dom_mono_evaluator\<close> and keeps it off \<open>int_dom_sound_evaluator\<close>.
 \<close>
 
 lemma int_dom_truth_test: "mono_truth_test int_dom_tobool"
@@ -724,7 +724,7 @@ context
   fixes mode :: refine_mode
 begin
 
-interpretation int_arith: expression_domain_sound
+interpretation int_arith: sound_arith_ops
     "aval_int_dom mode" int_dom_of_int
     "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
       "mod_int_dom mode"
@@ -733,8 +733,6 @@ interpretation int_arith: expression_domain_sound
      (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
        div_int_dom_sound mod_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
-
-lemmas aval_int_dom_sound = int_arith.aval_abs_sound[unfolded gamma_abs_int_dom_ext]
 
 lemma int_dom_sound_evaluator: "sound_evaluator gamma_state (aval_int_dom mode)"
   by unfold_locales (rule int_arith.aval_abs_sound)
@@ -746,7 +744,7 @@ context
   assumes mode_nonfixpoint: "mode \<noteq> Refine_Fixpoint"
 begin
 
-interpretation int_arith_mono: expression_domain_mono
+interpretation int_arith_mono: mono_arith_ops
     "aval_int_dom mode" int_dom_of_int
     "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
       "mod_int_dom mode"

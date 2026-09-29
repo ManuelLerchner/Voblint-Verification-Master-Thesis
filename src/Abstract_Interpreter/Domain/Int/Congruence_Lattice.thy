@@ -143,14 +143,7 @@ lift_definition bottom_congruence :: congruence
   is None
   by simp
 
-lemma Rep_mk_congruence [simp]:
-  "Rep_congruence (mk_congruence c m) =
-   normalize_congruence_rep (Some (c, m))"
-  by (rule mk_congruence.rep_eq)
-
-lemma Rep_bottom_congruence [simp]:
-  "Rep_congruence bottom_congruence = None"
-  by (rule bottom_congruence.rep_eq)
+declare mk_congruence.rep_eq [simp] bottom_congruence.rep_eq [simp]
 
 lemma congruence_cases [cases type: congruence]:
   obtains "a = bottom_congruence"
@@ -353,7 +346,7 @@ qed
 lemma gamma_mk_congruence [simp]:
   "gamma_congruence (mk_congruence c m) = {n. m dvd n - c}"
   unfolding gamma_congruence_def
-  by (simp only: Rep_mk_congruence gamma_normalize_congruence_rep
+  by (simp only: mk_congruence.rep_eq gamma_normalize_congruence_rep
       gamma_congruence_rep.simps)
 
 lemma mk_congruence_member [simp]:
@@ -611,11 +604,7 @@ lift_definition join_congruence :: "congruence => congruence => congruence"
   is "\<lambda>x y. normalize_congruence_rep (join_congruence_rep x y)"
   by (rule normalized_normalize_congruence_rep)
 
-lemma Rep_join_congruence [simp]:
-  "Rep_congruence (join_congruence a b) =
-   normalize_congruence_rep
-     (join_congruence_rep (Rep_congruence a) (Rep_congruence b))"
-  by (rule join_congruence.rep_eq)
+declare join_congruence.rep_eq [simp]
 
 lemma gamma_join_congruence [simp]:
   "gamma_congruence (join_congruence a b) =
@@ -771,14 +760,14 @@ lemma join_congruence_ub1:
   "a <= join_congruence a b"
   unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
-  apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
+  apply (simp only: join_congruence.rep_eq gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_ub1)
 
 lemma join_congruence_ub2:
   "b <= join_congruence a b"
   unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
-  apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
+  apply (simp only: join_congruence.rep_eq gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_ub2)
 
 lemma join_congruence_least:
@@ -787,7 +776,7 @@ lemma join_congruence_least:
   using assms
   unfolding less_eq_congruence_iff_gamma
     gamma_congruence_def
-  apply (simp only: Rep_join_congruence gamma_normalize_congruence_rep)
+  apply (simp only: join_congruence.rep_eq gamma_normalize_congruence_rep)
   by (rule gamma_join_congruence_rep_least)
 
 instantiation congruence :: sup
@@ -1023,12 +1012,6 @@ proof -
     using gamma_intersect_congruence_rep[OF norm_a norm_b]
     by (simp add: gamma_congruence_def inf_congruence.rep_eq)
 qed
-
-lemma inf_congruence_sound:
-  assumes "n : gamma_congruence a"
-      and "n : gamma_congruence b"
-  shows "n : gamma_congruence (a \<sqinter> b)"
-  using assms by simp
 
 instance congruence :: semilattice_inf
   by standard (auto simp: less_eq_congruence_iff_gamma)

@@ -23,7 +23,7 @@ record 'a special_ops =
   special_min :: "'a => 'a => 'a"
   special_max :: "'a => 'a => 'a"
 
-locale sound_special_ops = sound_evaluator gamma_state ev
+locale sound_minmax_ops = sound_evaluator gamma_state ev
   for ops :: "'a::numeric_domain special_ops"
     and ev  :: "exp => 'a abs_state => 'a" +
   assumes special_min_sound[intro]:
@@ -36,13 +36,13 @@ text \<open>
   operations: soundness of the special calls needs none of it.
 \<close>
 
-locale mono_special_ops = sound_special_ops + mono_evaluator gamma_state ev +
+locale mono_minmax_ops = sound_minmax_ops + mono_evaluator gamma_state ev +
   assumes special_min_mono[intro]:
     "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_min ops p1 q1 \<le> special_min ops p2 q2"
   assumes special_max_mono[intro]:
     "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
 
-context sound_special_ops
+context sound_minmax_ops
 begin
 
 definition special_transfer ::
@@ -100,7 +100,7 @@ qed
 
 end
 
-context mono_special_ops
+context mono_minmax_ops
 begin
 
 lemma special_transfer_mono:

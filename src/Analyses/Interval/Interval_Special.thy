@@ -22,7 +22,7 @@ where
 definition ivl_special_ops :: "ivl special_ops" where
   "ivl_special_ops = (| special_min = ivl_min, special_max = ivl_max |)"
 
-interpretation ivl_special: mono_special_ops ivl_special_ops aval_ivl
+interpretation ivl_special: mono_minmax_ops ivl_special_ops aval_ivl
   by unfold_locales
      (auto simp: ivl_special_ops_def top_ivl_def gamma_ivl_top
            intro: ivl_min_sound ivl_max_sound ivl_min_combine_mono ivl_max_combine_mono)
@@ -35,8 +35,5 @@ lemma ivl_special_ops_max [simp]: "special_max ivl_special_ops = ivl_max"
 
 lemma special_ivl_eq_transfer: "special_ivl sc x \<sigma> = ivl_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_ivl_def)
-
-lemmas special_ivl_sound = ivl_special.special_transfer_sound[folded special_ivl_eq_transfer]
-lemmas special_ivl_mono  = ivl_special.special_transfer_mono[folded special_ivl_eq_transfer]
 
 end

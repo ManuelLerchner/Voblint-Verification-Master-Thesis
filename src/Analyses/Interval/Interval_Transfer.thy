@@ -27,12 +27,12 @@ text \<open>
 \<close>
 
 lemma interval_check_domain:
-  "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
+  "sound_check_query interval_less interval_eq gamma_state aval_ivl"
   by unfold_locales (rule ivl_arith.aval_abs_sound)
 
 definition ivl_ops :: "ivl nonrelational_ops" where
   "ivl_ops = \<lparr> n_aval = aval_ivl, n_query = \<lparr>q_less = interval_less, q_eq = interval_eq\<rparr>,
-               n_refine = ivl_refine_ops, n_special = ivl_special_ops, n_top = ivl_top \<rparr>"
+               n_refine = ivl_refine_ops, n_special = ivl_special_ops \<rparr>"
 
 lemma ivl_ops_simps [simp]:
   "n_aval ivl_ops = aval_ivl"
@@ -40,12 +40,11 @@ lemma ivl_ops_simps [simp]:
   "q_eq (n_query ivl_ops) = interval_eq"
   "n_refine ivl_ops = ivl_refine_ops"
   "n_special ivl_ops = ivl_special_ops"
-  "n_top ivl_ops = ivl_top"
   by (simp_all add: ivl_ops_def)
 
 global_interpretation ivl_tf: mono_nonrelational_ops ivl_ops
-  rewrites "n_top ivl_ops = ivl_top"
-    and "sound_special_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
+  rewrites "(top :: ivl) = ivl_top"
+    and "sound_minmax_ops.special_transfer (n_special ivl_ops) (n_aval ivl_ops) = special_ivl"
   defines assign_ivl = ivl_tf.assign
     and skip_ivl = ivl_tf.skip
     and body_ivl = ivl_tf.body
@@ -69,17 +68,15 @@ global_interpretation ivl_tf: mono_nonrelational_ops ivl_ops
 proof -
   show "mono_nonrelational_ops ivl_ops"
   proof (rule mono_nonrelational_opsI, unfold ivl_ops_simps ivl_refine_ops_simps)
-    show "mono_special_ops ivl_special_ops aval_ivl"
-      by (rule ivl_special.mono_special_ops_axioms)
-    show "backward_domain_mono intersect_ivl aval_ivl interval_tobool
+    show "mono_minmax_ops ivl_special_ops aval_ivl"
+      by (rule ivl_special.mono_minmax_ops_axioms)
+    show "mono_refinement intersect_ivl aval_ivl interval_tobool
             inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative"
       by (rule ivl_backward_domain)
-    show "abstract_check_domain interval_less interval_eq gamma_state aval_ivl"
+    show "sound_check_query interval_less interval_eq gamma_state aval_ivl"
       by (rule interval_check_domain)
-    show "ivl_top = top"
-      by (simp add: top_ivl_def)
   qed
-qed (simp_all add: special_ivl_eq_transfer fun_eq_iff)
+qed (simp_all add: special_ivl_eq_transfer fun_eq_iff top_ivl_def)
 
 text \<open>
   No fact is renamed. The transfer functions get Interval-prefixed names above
@@ -87,16 +84,9 @@ text \<open>
   registration data; the theorems about them stay under \<open>ivl_tf.\<close>, which is where
   a reader looks to find out that they are the generic ones rather than
   Interval's own. \<^const>\<open>skip_ivl\<close>'s soundness is \<open>ivl_tf.skip_sound\<close>, the
-  branch's is \<open>ivl_tf.br_sound\<close>, and the framework's transfer contract at
+  branch's is \<open>ivl_tf.backward.branch_sound\<close>, and the framework's transfer contract at
   Interval is \<open>ivl_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
-
-lemma branch_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
-  by (rule ivl_tf.br_sound)
-
-lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
-  by (rule ivl_tf.backward.branch_le_bfilter)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain, covering

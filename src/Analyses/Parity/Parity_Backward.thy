@@ -105,7 +105,7 @@ lemma parity_refine_ops_simps [simp]:
   by (simp_all add: parity_refine_ops_def)
 
 lemma parity_backward_domain:
-  "backward_domain_mono inf aval_parity parity_tobool
+  "mono_refinement inf aval_parity parity_tobool
      inv_conservative inv_eq_parity inv_plus_parity inv_minus_parity inv_times_parity"
 proof unfold_locales
 qed (simp_all add: inv_conservative_def inv_eq_parity_sound inv_plus_parity_sound

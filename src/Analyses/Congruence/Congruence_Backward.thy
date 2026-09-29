@@ -702,11 +702,11 @@ lemma congruence_refine_ops_simps [simp]:
   by (simp_all add: congruence_refine_ops_def)
 
 lemma congruence_backward_domain:
-  "backward_domain_mono inf aval_congruence congruence_tobool
+  "mono_refinement inf aval_congruence congruence_tobool
      inv_less_congruence inv_eq_congruence
      inv_plus_congruence inv_minus_congruence inv_times_congruence"
 proof unfold_locales
-qed (simp_all add: inf_congruence_sound inv_less_congruence_sound inv_eq_congruence_sound
+qed (simp_all add: inv_less_congruence_sound inv_eq_congruence_sound
        inv_plus_congruence_sound inv_minus_congruence_sound inv_times_congruence_sound
        congruence_tobool_sound inf_mono congruence_arith.aval_dom_mono
        inv_less_congruence_mono inv_eq_congruence_mono inv_plus_congruence_mono

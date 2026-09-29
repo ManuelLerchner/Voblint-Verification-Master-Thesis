@@ -68,9 +68,11 @@ domain name (`interval_classify_check`, `interval_cinit_gamma`) even where `impl
 differs (`ivl`).
 
 A role may also be an application `{const, args}` for an operation that takes a
-configuration argument. Int registers at its most precise refinement mode this
-way: `tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise for the
-two entry transfers, assignment, special calls, branch and return. The renderer quotes the
+configuration argument. Int registers once per refinement mode this way:
+`tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise for the
+two entry transfers, assignment, special calls, branch and return; the entries
+`Int_Once` and `Int_Never` repeat it at `Refine_Once` and `Refine_Never`, with
+`dir: Int` so their registrations are generated into Int's session. The renderer quotes the
 application, so the interpretation still receives one argument. A fact takes no
 arguments, so an applied fact role is a registry error.
 

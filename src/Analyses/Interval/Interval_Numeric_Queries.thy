@@ -262,7 +262,7 @@ text \<open>
   result. The witness below is disjoint by \<open>interval_eq_false\<close>'s sound table,
   yet its representation-level meet is not \<open>bot\<close>.
 
-  The generic \<open>eq_false\<close> derived in \<^locale>\<open>backward_domain\<close>'s own context
+  The generic \<open>eq_false\<close> derived in \<^locale>\<open>sound_refinement\<close>'s own context
   (\<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close>) instead tests semantic
   intersection via @{const is_empty}. \<^const>\<open>intersect_ivl\<close> returns a value
   @{const is_empty} classifies as empty on the same witness, so the generic

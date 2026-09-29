@@ -18,7 +18,10 @@ voblint --help
 
 - `--analysis sign|interval|int|parity|congruence` selects the domain (required
   unless `--parse-only`). `int` is the refining composite Sign x Interval x
-  Parity x Congruence domain, fixed at its most precise refinement mode.
+  Parity x Congruence domain; `--int-refinement never|once|fixpoint` (default
+  `fixpoint`, only valid with `int`) selects how its components refine each
+  other. Each mode is a registered analysis of its own (`Int_Analysis`,
+  `Int_Once_Analysis`, `Int_Never_Analysis`); all of them are `int` in reports.
   `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
   only by refuting them across differing parities. `congruence` is the residue-class domain, one
   value constrained to `x = r (mod m)`. A comma list runs the named domains

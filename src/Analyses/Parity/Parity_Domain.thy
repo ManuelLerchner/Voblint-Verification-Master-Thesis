@@ -198,7 +198,7 @@ fun aval_parity :: "exp => (vname => parity) => parity" where
         else of_bool_option parity_of_int
                (or_opt (parity_tobool (aval_parity a \<sigma>)) (parity_tobool (aval_parity b \<sigma>))))"
 
-interpretation parity_arith: expression_domain_mono
+interpretation parity_arith: mono_arith_ops
     aval_parity parity_of_int "(+)" "(-)" "(*)" parity_div parity_mod
     parity_lt parity_eqb parity_tobool
   apply unfold_locales
@@ -213,7 +213,5 @@ interpretation parity_arith: expression_domain_mono
                       parity_eqb_mono[unfolded is_empty_parity]
                       parity_tobool_mono[unfolded is_empty_parity])+
   done
-
-lemmas aval_parity_sound = parity_arith.aval_abs_sound[unfolded gamma_abs_parity]
 
 end

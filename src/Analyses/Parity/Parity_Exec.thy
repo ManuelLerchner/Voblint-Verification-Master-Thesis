@@ -48,7 +48,7 @@ lemma parity_enter_st_for_eq [simp]:
       (map (\<lambda>e. aval_parity e
         (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
       (enter_frame_D_resolved_q PTop s)"
-  by (simp add: parity_enter_st_for_def generic_enter_st_for_def)
+  by (simp add: parity_enter_st_for_def generic_enter_st_for_def top_parity_def)
 
 definition parity_tf_st_for ::
   "(vname => bool) => edge_action =>

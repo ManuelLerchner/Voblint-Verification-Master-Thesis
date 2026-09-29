@@ -35,6 +35,7 @@ SETTING_FLAGS = {
     "--context": "context",
     "--context-depth": "context_depth",
     "--globals": "globals",
+    "--int-refinement": "int_refinement",
 }
 
 

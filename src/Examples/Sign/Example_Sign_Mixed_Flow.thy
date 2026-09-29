@@ -325,7 +325,7 @@ subsection \<open>Soundness against the concrete trace semantics\<close>
 lemma mf_cinit_sound:
   "cinit_stores mf_gs \<subseteq> split_gamma mf_gs cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
   using sign_cinit_gamma[of mf_gs]
-  by (simp add: split_gamma_def fun_of_exec_dg_st_for_def del: fun_of_resolved_st_q_for_combine)
+  by (simp add: split_gamma_def del: fun_of_resolved_st_q_for_combine)
 
 theorem mf_activation_collect_sound:
   "\<A>\<^bsub>mf_gs,call_context_rel_of_fun enterc_unit,(),mf_cfg,cinit_stores mf_gs\<^esub> v ()

@@ -5,11 +5,9 @@ begin
 section \<open>Monotone and reductive backward filtering\<close>
 
 text \<open>
-  Split out of @{theory Voblint_Domain.Backward_Domain}: the base
-  \<open>backward_domain\<close> locale states filtering and its soundness alone, with no
-  monotonicity or reductiveness content; this theory adds the two strengthened
-  locales, \<open>backward_domain_reductive\<close> for a reductive intersection and
-  \<open>backward_domain_mono\<close> for monotone operations on top of it.
+  Split out of @{theory Voblint_Domain.Backward_Domain}: this theory proves the
+  filters of \<open>sound_refinement\<close> reductive, from its reductive intersection, and
+  adds \<open>mono_refinement\<close> for monotone operations on top of it.
 \<close>
 
 subsection \<open>Pairwise order for reductive/monotone inverse operators\<close>
@@ -36,10 +34,10 @@ lemma le_pair_snd: "le_pair p q \<Longrightarrow> snd p \<le> snd q"
 subsection \<open>Refined backward-analysis locale\<close>
 
 text \<open>
-  Extends @{locale backward_domain} with two orthogonal strengthenings of the
+  Extends @{locale sound_refinement} with two orthogonal strengthenings of the
   domain-author operators, bundled into one locale so a concrete domain proves
   both against a single interpretation rather than reproving @{locale
-  backward_domain}'s base soundness once per strengthening:
+  sound_refinement}'s base soundness once per strengthening:
 
     - Monotonicity: the generic @{term afilter} / @{term bfilter} are then
       monotone in the abstract state (and target value) by the same induction
@@ -61,17 +59,17 @@ text \<open>
 \<close>
 
 text \<open>
-  The two strengthenings are separate locales because a domain can have one
-  without the other, and the executable lifted filtering needs only the
-  weaker one. Int's \<open>Refine_Fixpoint\<close> mode is exactly that case: \<open>refine\<close> is
-  reductive at every mode but monotone only off \<open>Refine_Fixpoint\<close>
-  (\<open>Int_Arithmetic\<close>'s \<open>refine_nonfixpoint_mono\<close>), so it interprets
-  \<open>backward_domain_reductive\<close> and gets the precise, dead-arm-eliminating
-  filtering, while \<open>branch_mono\<close> and the rest of the monotonicity layer stay
-  out of its reach.
+  Reductiveness is part of every backward domain, and monotonicity is a
+  separate locale because a domain can be reductive without being monotone,
+  and the executable lifted filtering needs only reductiveness. Int's
+  \<open>Refine_Fixpoint\<close> mode is exactly that case: \<open>refine\<close> is reductive at every
+  mode but monotone only off \<open>Refine_Fixpoint\<close> (\<open>Int_Arithmetic\<close>'s
+  \<open>refine_nonfixpoint_mono\<close>), so it interprets \<open>sound_refinement\<close> and gets the
+  precise, dead-arm-eliminating filtering, while \<open>branch_mono\<close> and the rest
+  of the monotonicity layer stay out of its reach.
 \<close>
 
-locale backward_domain_reductive = backward_domain + reductive_intersection intersect
+context sound_refinement
 begin
 
 text \<open>
@@ -223,8 +221,8 @@ text \<open>The monotonicity half of the strengthening.  Each inverse operator i
   induction.  \<open>tobool_mono\<close> is the one assumption that does not read that way: a definite
   truth value found at the coarser value must survive at the sharper one, and only a
   non-empty sharper value can be asked -- an empty one decides everything vacuously.\<close>
-locale backward_domain_mono =
-  backward_domain_reductive + mono_intersection intersect
+locale mono_refinement =
+  sound_refinement + mono_intersection intersect
     + mono_evaluator gamma_state aval_abs + mono_truth_test tobool +
   assumes inv_less_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_less res x1 y1) (inv_less res x2 y2)"

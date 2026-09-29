@@ -135,7 +135,7 @@ text \<open>
   node, so that target is dropped and the incoming state survives unchanged.
   Forward evaluation of the same condition yields \<^term>\<open>Ivl (Fin 0) (Fin 0)\<close>,
   whose \<^const>\<open>interval_tobool\<close> contradicts the selected polarity, so the gate
-  returns \<^const>\<open>bot\<close>.  @{thm [source] branch_ivl_le_bfilter_ivl} is the general
+  returns \<^const>\<open>bot\<close>.  @{thm [source] ivl_tf.backward.branch_le_bfilter} is the general
   inequality; this is a state where it is strict.
 \<close>
 lemma cmp_guard_forward_value:

@@ -917,13 +917,11 @@ interpretation entry: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g.
 
 text \<open>
   The routed protocol at one call: the callee entry state published under an
-  admitted context is sound, and a return combine at the caller's own context is
-  sound. The interpretation above is local to this context, so these exports are
-  what an interpretation of this locale can cite.
+  admitted context is sound. The interpretation above is local to this context, so
+  this export is what an interpretation of this locale can cite.
 \<close>
 
 lemmas entry_state_routed_context_call = entry.routed_context_call
-lemmas entry_state_routed_context_comb = entry.routed_context_comb
 
 theorem entry_state_activation_collect_sound:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
@@ -1128,14 +1126,14 @@ locale dg_analysis_exec =
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
       "\<And>\<G> a s. live_resolved_st_q \<G> s
-         \<Longrightarrow> fun_of_exec_dg_st_for \<G> (tf_st \<G> a s)
-               = local_spec_step sk asn spc br bd rt ev a (fun_of_exec_dg_st_for \<G> s)"
+         \<Longrightarrow> fun_of_resolved_st_q_for \<G> (tf_st \<G> a s)
+               = local_spec_step sk asn spc br bd rt ev a (fun_of_resolved_st_q_for \<G> s)"
     and enter_commute:
-      "\<And>\<G> ci s. fun_of_exec_dg_st_for \<G> (enter_st \<G> ci s)
-                    = en \<G> ci (fun_of_exec_dg_st_for \<G> s)"
+      "\<And>\<G> ci s. fun_of_resolved_st_q_for \<G> (enter_st \<G> ci s)
+                    = en \<G> ci (fun_of_resolved_st_q_for \<G> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_exec_dg_st_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
     and exec_seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
     and exec_solve_pp:
       "\<And>eqs x. solve_dom eqs x
@@ -1149,7 +1147,7 @@ locale dg_analysis_exec =
     and bot_state_eq: "bot_state = bot"
     and exec_init_sound:
       "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
     and exec_dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
@@ -1165,8 +1163,8 @@ proof (unfold_locales, goal_cases CompSound EnterSingle EmptyExact EmptyVExact S
       "resolved_st_q_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
       "enter_st (declared_global p)" sk asn spc br bd rt "en (declared_global p)" ev
     by unfold_locales
-       (rule tf_commute[unfolded fun_of_exec_dg_st_for_def], assumption,
-        rule enter_commute[unfolded fun_of_exec_dg_st_for_def],
+       (rule tf_commute, assumption,
+        rule enter_commute,
         rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
   show ?case by (rule dom.exec_spec_sound[OF tf_sound])
 next
@@ -1192,7 +1190,7 @@ next
     by (simp add: bot_state_eq is_empty_state_iff_gamma_state_empty[symmetric])
 next
   case (Init p) then show ?case
-    using exec_init_sound[of "declared_global p"] by (simp add: fun_of_exec_dg_st_for_def)
+    using exec_init_sound[of "declared_global p"] by simp
 next
   case (DomC eqs x) then show ?case by (rule exec_dom_of_solve_c)
 qed

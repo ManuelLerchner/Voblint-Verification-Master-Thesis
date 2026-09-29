@@ -4,7 +4,8 @@
 # src/Analyses/<name>/generated/<name>_Analyses.thy, which registers the domain
 # at its contexts for every global update rule.
 #
-# `impl` is the prefix of the domain's own constants and facts (default: the
+# `dir` is the directory, and with it the session, its registration is generated
+# into (default: the name). `impl` is the prefix of the domain's own constants and facts (default: the
 # lowercased name). `contexts` lists the context policies the domain registers
 # on its own (default: `[unit]`; `[]` for none); the CLI runs every domain at
 # every policy as a field of the combined state generated into
@@ -44,7 +45,9 @@ domains:
     impl: int
     value_constructor: IntDomValue
     imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
-    # Int is registered at its most precise refinement mode.
+    # Int is registered once per refinement mode, each an analysis of its own
+    # with its own field; the CLI's --int-refinement picks one. Int itself is the
+    # most precise mode.
     roles:
       tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}
       enter_st: {const: int_dom_enter_st_for, args: [Refine_Fixpoint]}
@@ -60,6 +63,54 @@ domains:
       classifier: {const: int_classify_check, args: [Refine_Fixpoint]}
     field:
       answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st $q)'
+
+  - name: Int_Once
+    dir: Int
+    value_type: int_dom
+    impl: int
+    value_constructor: IntDomOnceValue
+    imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
+    # Int with one refinement round after every operation.
+    roles:
+      tf_st: {const: int_tf_st_for, args: [Refine_Once]}
+      enter_st: {const: int_dom_enter_st_for, args: [Refine_Once]}
+      init_st: cinit_int_dom_st
+      skip: skip_int_dom
+      assign: {const: assign_int_dom, args: [Refine_Once]}
+      special: {const: special_int_dom, args: [Refine_Once]}
+      branch: {const: branch_int_dom_for, args: [Refine_Once]}
+      body: body_int_dom
+      return: {const: return_int_dom, args: [Refine_Once]}
+      enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Once]}
+      event: event_int_dom
+      init_gamma: int_cinit_gamma
+      classifier: {const: int_classify_check, args: [Refine_Once]}
+    field:
+      answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Once st $q)'
+
+  - name: Int_Never
+    dir: Int
+    value_type: int_dom
+    impl: int
+    value_constructor: IntDomNeverValue
+    imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
+    # Int with no refinement between its components.
+    roles:
+      tf_st: {const: int_tf_st_for, args: [Refine_Never]}
+      enter_st: {const: int_dom_enter_st_for, args: [Refine_Never]}
+      init_st: cinit_int_dom_st
+      skip: skip_int_dom
+      assign: {const: assign_int_dom, args: [Refine_Never]}
+      special: {const: special_int_dom, args: [Refine_Never]}
+      branch: {const: branch_int_dom_for, args: [Refine_Never]}
+      body: body_int_dom
+      return: {const: return_int_dom, args: [Refine_Never]}
+      enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Never]}
+      event: event_int_dom
+      init_gamma: int_cinit_gamma
+      classifier: {const: int_classify_check, args: [Refine_Never]}
+    field:
+      answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Never st $q)'
 
   - name: Congruence
     value_type: congruence
@@ -87,7 +138,7 @@ domains:
       published_empty: ($v = RelBot)
       answer: rel_qry $v $q
       display: Field_Whole (OrderValue (order_pairs $v))
-      init: top_relc
+      init: '(\<top> :: relc)'
       route: "[]"
       context_values: "[]"
       component_sound: order_spec_sound

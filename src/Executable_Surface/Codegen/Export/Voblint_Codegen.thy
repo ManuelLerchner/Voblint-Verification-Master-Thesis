@@ -127,8 +127,8 @@ export_code
   cfg_entry cfg_node_list
 
   \<comment> \<open>Ask: domain, global update rule, context\<close>
-  Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis Congruence_Analysis
-  Order_Analysis
+  Sign_Analysis Interval_Analysis Int_Analysis Int_Once_Analysis Int_Never_Analysis
+  Parity_Analysis Congruence_Analysis Order_Analysis
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin
   Ctx_None Ctx_EntryState Ctx_CallString
 

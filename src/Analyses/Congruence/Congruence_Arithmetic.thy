@@ -436,7 +436,7 @@ proof -
   proof (cases "Rep_congruence a1")
     case None
     then have "a1 = bottom_congruence"
-      by (simp only: Rep_congruence_inject[symmetric] Rep_bottom_congruence)
+      by (simp only: Rep_congruence_inject[symmetric] bottom_congruence.rep_eq)
     with assms(1) show ?thesis
       by (simp add: is_bottom_congruence_def bot_congruence_def)
   next
@@ -831,7 +831,7 @@ where
              (or_opt (congruence_tobool (aval_congruence e1 sigma))
                 (congruence_tobool (aval_congruence e2 sigma))))"
 
-interpretation congruence_arith: expression_domain_mono
+interpretation congruence_arith: mono_arith_ops
     aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod
     congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales

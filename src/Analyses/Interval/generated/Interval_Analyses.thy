@@ -78,7 +78,6 @@ global_interpretation interval_es_rule: dg_analysis_exec
 proof (rule ivl_tf.dg_analysis_execI
     [folded ivl_tf_st_for_def ivl_enter_st_for_def], goal_cases)
   case (1 \<G> u ctx d ca) show ?case
-    unfolding fun_of_exec_dg_st_for_def
     by (rule exec_formals_route_commute[symmetric])
 next
   case (2 v ctx) show ?case by simp

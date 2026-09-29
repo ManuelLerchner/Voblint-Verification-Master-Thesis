@@ -152,6 +152,19 @@
                 </select>
               </div>
 
+              <div class="control-group" id="int-refinement-group" hidden>
+                <label for="int-refinement-select">Int refinement</label>
+                <select id="int-refinement-select" aria-describedby="int-refinement-help">
+                  <option value="never">Never</option>
+                  <option value="once">Once</option>
+                  <option value="fixpoint" selected>Fixpoint</option>
+                </select>
+                <span id="int-refinement-help" class="visually-hidden">
+                  How the components of Int teach each other after every operation:
+                  not at all, one round, or rounds until nothing changes.
+                </span>
+              </div>
+
               <div class="control-group">
                 <label for="context-select">Context sensitivity</label>
                 <select id="context-select">

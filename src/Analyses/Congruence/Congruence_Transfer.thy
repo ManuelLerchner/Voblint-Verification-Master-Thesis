@@ -2,7 +2,6 @@ theory Congruence_Transfer
   imports
     Congruence_Backward
     Congruence_Special
-    Congruence_Numeric_Queries
     "Voblint_Nonrelational.Nonrelational_Transfer"
 begin
 
@@ -27,13 +26,13 @@ text \<open>
 \<close>
 
 lemma congruence_check_domain:
-  "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
+  "sound_check_query congruence_lt congruence_eqb gamma_state aval_congruence"
   by unfold_locales (rule congruence_arith.aval_abs_sound)
 
 definition congruence_ops :: "congruence nonrelational_ops" where
   "congruence_ops =
      \<lparr> n_aval = aval_congruence, n_query = \<lparr>q_less = congruence_lt, q_eq = congruence_eqb\<rparr>,
-       n_refine = congruence_refine_ops, n_special = congruence_special_ops, n_top = top \<rparr>"
+       n_refine = congruence_refine_ops, n_special = congruence_special_ops \<rparr>"
 
 lemma congruence_ops_simps [simp]:
   "n_aval congruence_ops = aval_congruence"
@@ -41,12 +40,10 @@ lemma congruence_ops_simps [simp]:
   "q_eq (n_query congruence_ops) = congruence_eqb"
   "n_refine congruence_ops = congruence_refine_ops"
   "n_special congruence_ops = congruence_special_ops"
-  "n_top congruence_ops = top"
   by (simp_all add: congruence_ops_def)
 
 global_interpretation congruence_tf: mono_nonrelational_ops congruence_ops
-  rewrites "n_top congruence_ops = top"
-    and "sound_special_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
+  rewrites "sound_minmax_ops.special_transfer (n_special congruence_ops) (n_aval congruence_ops)
            = special_congruence"
   defines assign_congruence = congruence_tf.assign
     and skip_congruence = congruence_tf.skip
@@ -70,15 +67,15 @@ proof -
   show "mono_nonrelational_ops congruence_ops"
   proof (rule mono_nonrelational_opsI,
          unfold congruence_ops_simps congruence_refine_ops_simps)
-    show "mono_special_ops congruence_special_ops aval_congruence"
-      by (rule congruence_special.mono_special_ops_axioms)
-    show "backward_domain_mono inf aval_congruence congruence_tobool
+    show "mono_minmax_ops congruence_special_ops aval_congruence"
+      by (rule congruence_special.mono_minmax_ops_axioms)
+    show "mono_refinement inf aval_congruence congruence_tobool
             inv_less_congruence inv_eq_congruence
             inv_plus_congruence inv_minus_congruence inv_times_congruence"
       by (rule congruence_backward_domain)
-    show "abstract_check_domain congruence_lt congruence_eqb gamma_state aval_congruence"
+    show "sound_check_query congruence_lt congruence_eqb gamma_state aval_congruence"
       by (rule congruence_check_domain)
-  qed simp
+  qed
 qed (simp_all add: special_congruence_eq_transfer fun_eq_iff)
 
 text \<open>
@@ -87,7 +84,7 @@ text \<open>
   registration data; the theorems about them stay under \<open>congruence_tf.\<close>, which is
   where a reader looks to find out that they are the generic ones rather than
   Congruence's own. \<^const>\<open>skip_congruence\<close>'s soundness is
-  \<open>congruence_tf.skip_sound\<close>, the branch's is \<open>congruence_tf.br_sound\<close>, and the
+  \<open>congruence_tf.skip_sound\<close>, the branch's is \<open>congruence_tf.backward.branch_sound\<close>, and the
   framework's transfer contract at Congruence is
   \<open>congruence_tf.is_sound_nonrelational_transfer\<close>.
 \<close>

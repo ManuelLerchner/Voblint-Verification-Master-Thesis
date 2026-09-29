@@ -141,10 +141,6 @@ where
 | "special_int_dom mode (Max a b) x \<sigma> =
      \<sigma>(x := int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
 
-lemma gamma_int_dom_top: "gamma_int_dom (top :: int_dom) = UNIV"
-  by (simp add: gamma_int_dom_def top_int_dom_ext_def top_ivl_def
-        gamma_sign_top gamma_ivl_top gamma_parity_top)
-
 definition int_dom_special_ops :: "refine_mode \<Rightarrow> int_dom special_ops" where
   "int_dom_special_ops mode =
      \<lparr> special_min = int_dom_min mode, special_max = int_dom_max mode \<rparr>"
@@ -154,22 +150,22 @@ lemma int_dom_special_ops_simps [simp]:
   "special_max (int_dom_special_ops mode) = int_dom_max mode"
   by (simp_all add: int_dom_special_ops_def)
 
-lemma int_dom_sound_special_ops: "sound_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
-  by (intro sound_special_ops.intro int_dom_sound_evaluator sound_special_ops_axioms.intro)
+lemma int_dom_sound_special_ops: "sound_minmax_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro sound_minmax_ops.intro int_dom_sound_evaluator sound_minmax_ops_axioms.intro)
      (simp_all add: int_dom_min_sound int_dom_max_sound)
 
 lemma int_dom_mono_special_ops:
   assumes "mode \<noteq> Refine_Fixpoint"
-  shows "mono_special_ops (int_dom_special_ops mode) (aval_int_dom mode)"
-  by (intro mono_special_ops.intro int_dom_sound_special_ops int_dom_mono_evaluator[OF assms]
-        mono_special_ops_axioms.intro)
+  shows "mono_minmax_ops (int_dom_special_ops mode) (aval_int_dom mode)"
+  by (intro mono_minmax_ops.intro int_dom_sound_special_ops int_dom_mono_evaluator[OF assms]
+        mono_minmax_ops_axioms.intro)
      (simp_all add: int_dom_min_mono int_dom_max_mono assms)
 
 lemma special_int_dom_eq_transfer:
-  "sound_special_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
+  "sound_minmax_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
      = special_int_dom mode sc x \<sigma>"
   by (cases sc)
-     (simp_all add: sound_special_ops.special_transfer_def[OF int_dom_sound_special_ops])
+     (simp_all add: sound_minmax_ops.special_transfer_def[OF int_dom_sound_special_ops])
 
 subsection \<open>The bundle, per refinement mode, and its certificates\<close>
 
@@ -183,7 +179,7 @@ text \<open>
 definition int_dom_ops :: "refine_mode \<Rightarrow> int_dom nonrelational_ops" where
   "int_dom_ops mode =
      \<lparr> n_aval = aval_int_dom mode, n_query = \<lparr>q_less = int_less, q_eq = int_eq\<rparr>,
-       n_refine = int_refine_ops mode, n_special = int_dom_special_ops mode, n_top = top \<rparr>"
+       n_refine = int_refine_ops mode, n_special = int_dom_special_ops mode \<rparr>"
 
 lemma int_dom_ops_simps [simp]:
   "n_aval (int_dom_ops mode) = aval_int_dom mode"
@@ -191,28 +187,26 @@ lemma int_dom_ops_simps [simp]:
   "q_eq (n_query (int_dom_ops mode)) = int_eq"
   "n_refine (int_dom_ops mode) = int_refine_ops mode"
   "n_special (int_dom_ops mode) = int_dom_special_ops mode"
-  "n_top (int_dom_ops mode) = top"
   by (simp_all add: int_dom_ops_def)
 
 lemma int_check_domain:
-  "abstract_check_domain int_less int_eq gamma_state (aval_int_dom mode)"
-  by (intro abstract_check_domain.intro int_dom_numeric_queries.sound_numeric_queries_axioms
+  "sound_check_query int_less int_eq gamma_state (aval_int_dom mode)"
+  by (intro sound_check_query.intro int_dom_numeric_queries.sound_numeric_queries_axioms
         int_dom_sound_evaluator)
 
 lemma int_dom_sound_ops: "sound_nonrelational_ops (int_dom_ops mode)"
   by (rule sound_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
-     (rule int_dom_sound_special_ops int_backward_domain int_check_domain refl)+
+     (rule int_dom_sound_special_ops int_backward_domain int_check_domain)+
 
 lemma int_dom_mono_ops:
   assumes "mode \<noteq> Refine_Fixpoint"
   shows "mono_nonrelational_ops (int_dom_ops mode)"
   by (rule mono_nonrelational_opsI; unfold int_dom_ops_simps int_refine_ops_simps)
      (rule int_dom_mono_special_ops[OF assms] int_dom_backward_domain_mono[OF assms]
-        int_check_domain refl)+
+        int_check_domain)+
 
 global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
-  rewrites "n_top (int_dom_ops mode) = top"
-    and "sound_special_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
+  rewrites "sound_minmax_ops.special_transfer (n_special (int_dom_ops mode)) (n_aval (int_dom_ops mode))
            = special_int_dom mode"
   defines assign_int_dom = int_tf.assign
     and skip_int_dom = int_tf.skip
@@ -239,7 +233,7 @@ global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
 
 text \<open>
   The theorems stay under \<open>int_tf.\<close>: \<^const>\<open>skip_int_dom\<close>'s soundness is
-  \<open>int_tf.skip_sound\<close>, the branch's is \<open>int_tf.br_sound\<close>, and the framework's
+  \<open>int_tf.skip_sound\<close>, the branch's is \<open>int_tf.backward.branch_sound\<close>, and the framework's
   transfer contract at every mode is \<open>int_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 

@@ -34,12 +34,12 @@ text \<open>
   second name for the same function.
 \<close>
 
-lemma sign_check_domain: "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
+lemma sign_check_domain: "sound_check_query sign_less sign_eq gamma_state aval_sign"
   by unfold_locales (rule sign_arith.aval_abs_sound)
 
 definition sign_ops :: "sign nonrelational_ops" where
   "sign_ops = \<lparr> n_aval = aval_sign, n_query = \<lparr>q_less = sign_less, q_eq = sign_eq\<rparr>,
-                n_refine = sign_refine_ops, n_special = sign_special_ops, n_top = STop \<rparr>"
+                n_refine = sign_refine_ops, n_special = sign_special_ops \<rparr>"
 
 lemma sign_ops_simps [simp]:
   "n_aval sign_ops = aval_sign"
@@ -47,12 +47,11 @@ lemma sign_ops_simps [simp]:
   "q_eq (n_query sign_ops) = sign_eq"
   "n_refine sign_ops = sign_refine_ops"
   "n_special sign_ops = sign_special_ops"
-  "n_top sign_ops = STop"
   by (simp_all add: sign_ops_def)
 
 global_interpretation sign_tf: mono_nonrelational_ops sign_ops
-  rewrites "n_top sign_ops = STop"
-    and "sound_special_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
+  rewrites "(top :: sign) = STop"
+    and "sound_minmax_ops.special_transfer (n_special sign_ops) (n_aval sign_ops) = special_sign"
   defines assign_sign = sign_tf.assign
     and skip_sign = sign_tf.skip
     and body_sign = sign_tf.body
@@ -77,17 +76,15 @@ global_interpretation sign_tf: mono_nonrelational_ops sign_ops
 proof -
   show "mono_nonrelational_ops sign_ops"
   proof (rule mono_nonrelational_opsI, unfold sign_ops_simps sign_refine_ops_simps)
-    show "mono_special_ops sign_special_ops aval_sign"
-      by (rule sign_special.mono_special_ops_axioms)
-    show "backward_domain_mono inf aval_sign sign_tobool
+    show "mono_minmax_ops sign_special_ops aval_sign"
+      by (rule sign_special.mono_minmax_ops_axioms)
+    show "mono_refinement inf aval_sign sign_tobool
             inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
       by (rule sign_backward_domain)
-    show "abstract_check_domain sign_less sign_eq gamma_state aval_sign"
+    show "sound_check_query sign_less sign_eq gamma_state aval_sign"
       by (rule sign_check_domain)
-    show "STop = top"
-      by (simp add: top_sign_def)
   qed
-qed (simp_all add: special_sign_eq_transfer fun_eq_iff)
+qed (simp_all add: special_sign_eq_transfer fun_eq_iff top_sign_def)
 
 text \<open>
   No fact is renamed here. The transfer functions get Sign-prefixed names above
@@ -95,11 +92,9 @@ text \<open>
   registration data; the theorems about them stay under \<open>sign_tf.\<close>, which is where
   a reader looks to find out that they are the generic ones rather than Sign's
   own. \<^const>\<open>skip_sign\<close>'s soundness is \<open>sign_tf.skip_sound\<close>, the branch's is
-  \<open>sign_tf.br_sound\<close>, and the framework's transfer contract at Sign is
+  \<open>sign_tf.backward.branch_sound\<close>, and the framework's transfer contract at Sign is
   \<open>sign_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
-
-thm sign_tf.backward.bfilter.simps(1) sign_tf.backward.afilter.simps(1)
 
 subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
 

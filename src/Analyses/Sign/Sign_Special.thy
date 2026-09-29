@@ -120,7 +120,7 @@ where
 definition sign_special_ops :: "sign special_ops" where
   "sign_special_ops = (| special_min = sign_min, special_max = sign_max |)"
 
-interpretation sign_special: mono_special_ops sign_special_ops aval_sign
+interpretation sign_special: mono_minmax_ops sign_special_ops aval_sign
   by unfold_locales
      (auto simp: sign_special_ops_def gamma_sign_top
            intro: sign_min_sound sign_max_sound sign_min_combine_mono sign_max_combine_mono)
@@ -133,8 +133,5 @@ lemma sign_special_ops_max [simp]: "special_max sign_special_ops = sign_max"
 
 lemma special_sign_eq_transfer: "special_sign sc x \<sigma> = sign_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_sign_def)
-
-lemmas special_sign_sound = sign_special.special_transfer_sound[folded special_sign_eq_transfer]
-lemmas special_sign_mono  = sign_special.special_transfer_mono[folded special_sign_eq_transfer]
 
 end

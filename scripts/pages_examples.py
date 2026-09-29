@@ -47,6 +47,12 @@ SHOWCASE = [
         "so the outer counter is proved non-negative.",
     ),
     (
+        "16-composite-domain/precision/13-refinement_once_shares_guard_facts.vimp",
+        "Components that teach each other",
+        "Int's refinement hands Congruence's y = 2 to Interval before a join; set "
+        "Int refinement to Never and the check is no longer proved.",
+    ),
+    (
         "07-sign-precision/precision/06-tutorial_negative_join.vimp",
         "Dead code from a sign",
         "Goblint's tutorial in the Sign domain: a guard infeasible on a negative "
@@ -103,7 +109,12 @@ SHOWCASE = [
 ]
 
 # The playground's own names for a PARAM header's settings.
-PLAYGROUND_KEYS = {"context": "context", "context_depth": "k", "globals": "globals"}
+PLAYGROUND_KEYS = {
+    "context": "context",
+    "context_depth": "k",
+    "globals": "globals",
+    "int_refinement": "refinement",
+}
 
 
 def group_title(folder: Path) -> str:

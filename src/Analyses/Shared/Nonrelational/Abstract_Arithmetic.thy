@@ -55,7 +55,7 @@ fun of_bool_option :: "(int \<Rightarrow> 'a::sup) \<Rightarrow> bool option \<R
   "of_bool_option lit (Some b) = lit (if b then 1 else 0)"
 | "of_bool_option lit None = lit 0 \<squnion> lit 1"
 
-locale expression_domain_sound =
+locale sound_arith_ops =
   sound_truth_test tobool + sound_numeric_queries lt eqb
   for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::numeric_domain) \<Rightarrow> 'a"
     and lit :: "int \<Rightarrow> 'a"
@@ -193,12 +193,12 @@ end
 text \<open>
   The expression domain extends the truth test and the numeric queries, whose laws it
   assumes, and derives its evaluator's soundness by induction.  An interpretation of
-  \<^locale>\<open>expression_domain_sound\<close> therefore registers the whole forward interface
-  once, and a later \<open>backward_domain\<close>, \<open>sound_special_ops\<close> or check-layer
+  \<^locale>\<open>sound_arith_ops\<close> therefore registers the whole forward interface
+  once, and a later \<open>sound_refinement\<close>, \<open>sound_minmax_ops\<close> or check-layer
   interpretation over the same operations does not ask for these laws again.
 \<close>
 
-sublocale expression_domain_sound \<subseteq> sound_evaluator gamma_state ev
+sublocale sound_arith_ops \<subseteq> sound_evaluator gamma_state ev
   by unfold_locales (rule aval_dom_sound)
 
 text \<open>
@@ -211,7 +211,7 @@ text \<open>
   than repeat both proofs by hand.
 \<close>
 
-locale expression_domain_mono = expression_domain_sound + mono_truth_test tobool +
+locale mono_arith_ops = sound_arith_ops + mono_truth_test tobool +
   assumes plus_mono[intro]:
       "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> pls p1 q1 \<le> pls p2 q2"
     and minus_mono[intro]:
@@ -304,7 +304,7 @@ qed (auto simp add: le_funD)
 
 end
 
-sublocale expression_domain_mono \<subseteq> mono_evaluator gamma_state ev
+sublocale mono_arith_ops \<subseteq> mono_evaluator gamma_state ev
   by unfold_locales (rule aval_dom_mono)
 
 end

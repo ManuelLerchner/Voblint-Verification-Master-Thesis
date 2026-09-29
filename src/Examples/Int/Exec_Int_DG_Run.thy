@@ -38,7 +38,7 @@ definition gExI :: cfg where
 text \<open>
   The Base construction routes the whole abstract state through the local
   unknown, reachability-lifted: \<open>int_ex_read\<close> reads a computed \<open>exec_dg_st
-  lifted\<close> value back through \<^const>\<open>fun_of_exec_dg_st_for\<close>, matching
+  lifted\<close> value back through \<^const>\<open>fun_of_resolved_st_q_for\<close>, matching
   \<open>parity_lookup\<close>'s role in Parity's own DG flagship -- a genuinely
   unreachable local unknown (\<open>Bot\<close>) reads back as \<open>top\<close>, never spuriously
   observed here since every inspected node below is reachable.
@@ -46,7 +46,7 @@ text \<open>
 
 abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" where
   "int_ex_read d x ==
-     (case map_lift (fun_of_exec_dg_st_for int_ex_gs) d of
+     (case map_lift (fun_of_resolved_st_q_for int_ex_gs) d of
         Lifted f => f x | Bot => top)"
 
 abbreviation int_ex_result where

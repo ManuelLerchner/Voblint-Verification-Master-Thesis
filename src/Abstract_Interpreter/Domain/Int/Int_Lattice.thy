@@ -630,10 +630,7 @@ lift_definition restrict_congruence_by_parity ::
   is restrict_congruence_rep_by_parity
   by (rule normalized_restrict_congruence_rep_by_parity)
 
-lemma Rep_restrict_congruence_by_parity [simp]:
-  "Rep_congruence (restrict_congruence_by_parity p c) =
-   restrict_congruence_rep_by_parity p (Rep_congruence c)"
-  by (rule restrict_congruence_by_parity.rep_eq)
+declare restrict_congruence_by_parity.rep_eq [simp]
 
 lemma gamma_restrict_congruence_by_parity [simp]:
   "gamma_congruence (restrict_congruence_by_parity p c) =

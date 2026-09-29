@@ -8,7 +8,7 @@ section \<open>A domain-generic sound decision procedure for compiled checks\<cl
 text \<open>
   A check needs two capabilities every domain with an \<open>exp\<close> evaluator already
   has: \<open>aval_abs_sound\<close>-shaped soundness (\<^locale>\<open>sound_evaluator\<close>, the same
-  reuse point the \<open>backward_domain\<close> locale takes for its own \<open>aval_abs\<close>) and the
+  reuse point the \<open>sound_refinement\<close> locale takes for its own \<open>aval_abs\<close>) and the
   relational queries of \<^locale>\<open>sound_numeric_queries\<close>
   (\<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>). Extending
   \<open>sound_numeric_queries\<close> directly, rather than fixing four raw
@@ -17,7 +17,7 @@ text \<open>
   consumer of it inherits whatever a domain already proved for
   \<^locale>\<open>sound_numeric_queries\<close> instead of restating it.
 
-  The per-domain guard machinery (the \<open>backward_domain\<close> locale's
+  The per-domain guard machinery (the \<open>sound_refinement\<close> locale's
   \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False \<sigma>\<close>
   represents no states, \<open>c\<close> is soundly established on \<open>\<sigma>\<close>, whenever
   \<open>gamma bot = {}\<close> --- a sound sufficient condition, not an iff, since no
@@ -33,7 +33,7 @@ text \<open>
   misclassified.
 \<close>
 
-locale abstract_check_domain =
+locale sound_check_query =
   sound_numeric_queries less eq + sound_evaluator \<gamma>\<^sub>S aval_abs
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"

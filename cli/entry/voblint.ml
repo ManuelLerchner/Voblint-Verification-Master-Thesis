@@ -28,8 +28,8 @@
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
-   join|per-origin|warrow|warrow-per-origin] [--dot] [--timeout SECONDS] \
-   FILE.vimp\n\
+   join|per-origin|warrow|warrow-per-origin] [--int-refinement \
+   never|once|fixpoint] [--dot] [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\n\
    Options:\n\
@@ -37,8 +37,8 @@ let usage =
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
-  \                             fixed at its most precise refinement mode\n\
-  \                             (Refine_Fixpoint).\n\
+  \                             whose components refine each other as\n\
+  \                             --int-refinement selects.\n\
   \                             parity is the four-element Bot/Even/Odd/Top\n\
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities.\n\
@@ -79,6 +79,11 @@ let usage =
   \                             warrowed, or warrowed per origin (default:\n\
   \                             warrow). Locals are warrowed at loop heads\n\
   \                             under every rule.\n\
+  \  --int-refinement never|once|fixpoint\n\
+  \                             How the components of int teach each other\n\
+  \                             after every operation: not at all, one round,\n\
+  \                             or rounds until nothing changes (default:\n\
+  \                             fixpoint). Only valid with --analysis int.\n\
   \  --dot                      Emit the canonical contextual GraphViz .dot CFG\n\
   \                             instead of the textual check report. Every local\n\
   \                             node carries its own context state and checks.\n\
@@ -371,7 +376,8 @@ type context_kind = CK_None | CK_EntryState | CK_CallString
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
-  let analyses = ref None in
+  let analysis_names = ref None in
+  let int_refinement = ref None in
   let context_kind = ref CK_None in
   let context_depth = ref None in
   let globals = ref Voblint_CLI.Generated.Globals_Warrow in
@@ -392,19 +398,19 @@ let () =
         print_endline usage;
         exit 0
     | "--analysis" :: v :: rest ->
-        let kind_of name =
-          match name with
-          | "sign" -> Voblint_CLI.Generated.Sign_Analysis
-          | "interval" -> Voblint_CLI.Generated.Interval_Analysis
-          | "int" -> Voblint_CLI.Generated.Int_Analysis
-          | "parity" -> Voblint_CLI.Generated.Parity_Analysis
-          | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
-          | "order" -> Voblint_CLI.Generated.Order_Analysis
-          | _ ->
-              prerr_endline ("unknown --analysis value: " ^ name);
-              exit 1
-        in
-        analyses := Some (List.map kind_of (String.split_on_char ',' v));
+        analysis_names := Some (String.split_on_char ',' v);
+        parse_args rest
+    | "--int-refinement" :: v :: rest ->
+        (match v with
+        | "never" ->
+            int_refinement := Some Voblint_CLI.Generated.Int_Never_Analysis
+        | "once" ->
+            int_refinement := Some Voblint_CLI.Generated.Int_Once_Analysis
+        | "fixpoint" ->
+            int_refinement := Some Voblint_CLI.Generated.Int_Analysis
+        | _ ->
+            prerr_endline ("unknown --int-refinement value: " ^ v);
+            exit 1);
         parse_args rest
     | "--context" :: v :: rest ->
         (match v with
@@ -468,6 +474,32 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
+  (* The refinement mode belongs to int, so it is resolved after every flag is
+     read and rejected when no int analysis is named. Each mode is an analysis
+     of its own in the generated carrier; all of them are int to the user. *)
+  let analyses =
+    let kind_of name =
+      match name with
+      | "sign" -> Voblint_CLI.Generated.Sign_Analysis
+      | "interval" -> Voblint_CLI.Generated.Interval_Analysis
+      | "int" ->
+          Option.value !int_refinement
+            ~default:Voblint_CLI.Generated.Int_Analysis
+      | "parity" -> Voblint_CLI.Generated.Parity_Analysis
+      | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
+      | "order" -> Voblint_CLI.Generated.Order_Analysis
+      | _ ->
+          prerr_endline ("unknown --analysis value: " ^ name);
+          exit 1
+    in
+    Option.map (List.map kind_of) !analysis_names
+  in
+  (match (!int_refinement, !analysis_names) with
+  | Some _, names when not (List.mem "int" (Option.value names ~default:[])) ->
+      prerr_endline
+        "voblint: --int-refinement is only valid with --analysis int";
+      exit 1
+  | _ -> ());
   (* --context-depth is only meaningful paired with --context call-string, so
      a mismatch between the two flags is rejected here. *)
   let context =
@@ -520,7 +552,7 @@ let () =
     exit 0
   end;
   let domains =
-    match !analyses with
+    match analyses with
     | Some ds -> ds
     | None ->
         prerr_endline

@@ -3455,3 +3455,69 @@ twice_finE
 # --- Unused Interval evaluator alias (2026-09-29) ---
 aval_ivl_sound
 bfilter_int_dom_never_plus_eq_congruence_only
+
+# --- Domain locales follow one naming scheme (2026-09-29) ---
+# The reductive laws joined sound_intersection and backward_domain, whose
+# reductive variants had no instance of their own. The law locales take the
+# sound_/mono_ prefix of their siblings and name what they certify.
+reductive_intersection
+backward_domain_reductive
+backward_ops
+backward_domain
+backward_domain_mono
+expression_domain_sound
+expression_domain_mono
+sound_special_ops
+mono_special_ops
+abstract_check_domain
+
+# --- The whole-value element is the class top (2026-09-29) ---
+# The non-relational bundle carried it as a field that every certificate pinned
+# to top; its sort now includes top, and gamma_top states its concretization.
+n_top
+top_eq
+top_gamma
+
+# --- Alias facts that restate an existing name (2026-09-29) ---
+# Each was a second name for a fact, constant or interpretation that already
+# exists; its uses now cite the original.
+br_sound
+br_mono
+n_bfilter_eq
+branch_ivl_sound
+branch_ivl_le_bfilter_ivl
+afilter_st_lift_with_ops
+bfilter_st_lift_with_ops
+special_sign_sound
+special_sign_mono
+special_ivl_sound
+special_ivl_mono
+special_parity_sound
+special_parity_mono
+special_congruence_sound
+special_congruence_mono
+aval_sign_sound
+aval_int_dom_sound
+aval_parity_sound
+gamma_int_dom_top
+inf_congruence_sound
+sign_backward_ops
+int_backward_ops
+Congruence_Numeric_Queries
+congruence_numeric_queries
+Rep_mk_congruence
+Rep_bottom_congruence
+Rep_join_congruence
+Rep_restrict_congruence_by_parity
+fun_of_exec_dg_st_for
+fun_of_exec_dg_st_for_bot
+fun_of_exec_dg_st_for_sup
+resolved_st_q_is_bot_for_alt
+flagship_entry
+gEx_entry
+int_dom_widen_ge1
+int_dom_widen_ge2
+int_dom_narrow_ge
+int_dom_narrow_le
+eval_holds_top
+entry_state_routed_context_comb

@@ -80,14 +80,14 @@ lemma parity_gcount_not_global [simp]: "\<not> parity_gs (STR ''Gcount'')"
 text \<open>
   The Base construction routes the whole abstract state through the local
   unknown, reachability-lifted: \<open>parity_lookup\<close> reads a computed
-  \<open>exec_dg_st lifted\<close> value back through \<^const>\<open>fun_of_exec_dg_st_for\<close>,
+  \<open>exec_dg_st lifted\<close> value back through \<^const>\<open>fun_of_resolved_st_q_for\<close>,
   matching Sign's own DG flagship -- a genuinely unreachable local unknown
   (\<open>Bot\<close>) reads back as \<open>PTop\<close>, never spuriously observed here since every
   inspected node below is reachable.
 \<close>
 abbreviation parity_lookup :: "parity exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> parity" where
   "parity_lookup d x \<equiv>
-     (case map_lift (fun_of_exec_dg_st_for parity_gs) d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
+     (case map_lift (fun_of_resolved_st_q_for parity_gs) d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
 
 definition parity_pi :: proc_table where
   "parity_pi = prog_table parity_program"

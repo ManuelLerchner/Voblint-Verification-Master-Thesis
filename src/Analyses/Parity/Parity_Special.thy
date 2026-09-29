@@ -80,7 +80,7 @@ where
 definition parity_special_ops :: "parity special_ops" where
   "parity_special_ops = (| special_min = parity_min, special_max = parity_max |)"
 
-interpretation parity_special: mono_special_ops parity_special_ops aval_parity
+interpretation parity_special: mono_minmax_ops parity_special_ops aval_parity
   by unfold_locales
      (auto simp: parity_special_ops_def gamma_parity_top
            intro: parity_min_sound parity_max_sound parity_min_combine_mono parity_max_combine_mono)
@@ -94,11 +94,5 @@ lemma parity_special_ops_max [simp]: "special_max parity_special_ops = parity_ma
 lemma special_parity_eq_transfer:
   "special_parity sc x \<sigma> = parity_special.special_transfer sc x \<sigma>"
   by (cases sc) (simp_all add: top_parity_def)
-
-lemmas special_parity_sound =
-  parity_special.special_transfer_sound[folded special_parity_eq_transfer]
-
-lemmas special_parity_mono =
-  parity_special.special_transfer_mono[folded special_parity_eq_transfer]
 
 end

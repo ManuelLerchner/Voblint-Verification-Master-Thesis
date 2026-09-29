@@ -38,29 +38,14 @@ text \<open>
 \<close>
 
 locale sound_nonrelational_ops =
-  sound_special_ops "n_special ops" "n_aval ops"
-  + backward: backward_domain_reductive "r_intersect (n_refine ops)" "n_aval ops"
+  sound_minmax_ops "n_special ops" "n_aval ops"
+  + backward: sound_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
-  + check: abstract_check_domain "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
+  + check: sound_check_query "q_less (n_query ops)" "q_eq (n_query ops)" gamma_state
       "n_aval ops"
-  for ops :: "'a::numeric_domain nonrelational_ops" +
-  assumes top_eq: "n_top ops = top"
+  for ops :: "'a::numeric_domain nonrelational_ops"
 begin
-
-text \<open>The guard is the branch the refinement operations derive.\<close>
-
-abbreviation br :: "exp \<Rightarrow> bool \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "br \<equiv> backward.branch"
-
-lemma br_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
-  by (rule backward.branch_sound)
-
-text \<open>The whole-value element is the class \<^const>\<open>top\<close>, so its concretization is
-  everything by \<open>gamma_top\<close> rather than by an assumption of its own.\<close>
-
-lemma top_gamma: "\<gamma> (n_top ops) = UNIV"
-  by (simp add: top_eq)
 
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
 
@@ -74,7 +59,7 @@ definition body :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   "body p \<sigma> = \<sigma>"
 
 text \<open>A check observes its condition but never refines the store --- narrowing a
-  state against a checked condition is \<open>abstract_check_domain\<close>'s job --- so
+  state against a checked condition is \<open>sound_check_query\<close>'s job --- so
   \<open>event\<close> is the identity like \<open>skip\<close> and \<open>body\<close>.\<close>
 
 definition event :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -113,11 +98,11 @@ text \<open>
 \<close>
 
 definition enter_frame_for :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_frame_for \<G> = enter_frame \<G> (n_top ops)"
+  "enter_frame_for \<G> = enter_frame \<G> top"
 
 definition enter_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "enter_for \<G> = enter_binding \<G> (n_top ops) (n_aval ops)"
+  "enter_for \<G> = enter_binding \<G> top (n_aval ops)"
 
 definition enter_ci_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -128,7 +113,7 @@ lemma enter_for_sound:
   shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
            \<in> \<lbrakk>enter_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_for_def enter_binding_concrete[symmetric]
-proof (rule enter_binding_sound[OF \<G> top_gamma])
+proof (rule enter_binding_sound[OF \<G> gamma_top])
   fix e
   show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (n_aval ops e \<sigma>)"
     using gamma_stateD[OF \<G>] by blast
@@ -149,9 +134,9 @@ text \<open>The eight operations discharge the framework's contract in one
   so only the per-edge operations and the callee entry are the domain's own.\<close>
 
 lemma is_sound_nonrelational_transfer:
-  "sound_nonrelational_transfer \<G> skip assign special_transfer br body ret (enter_ci_for \<G>) event"
+  "sound_nonrelational_transfer \<G> skip assign special_transfer backward.branch body ret (enter_ci_for \<G>) event"
   by unfold_locales
-     (simp_all add: assign_sound special_transfer_sound br_sound skip_sound body_sound
+     (simp_all add: assign_sound special_transfer_sound backward.branch_sound skip_sound body_sound
         ret_sound enter_ci_for_sound event_sound)
 
 text \<open>The per-edge dispatcher. The executable mirror a domain runs dispatches on
@@ -159,14 +144,14 @@ text \<open>The per-edge dispatcher. The executable mirror a domain runs dispatc
   rather than one lemma per operation.\<close>
 
 definition tf_abs :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_abs = local_spec_step skip assign special_transfer br body ret event"
+  "tf_abs = local_spec_step skip assign special_transfer backward.branch body ret event"
 
 lemma tf_abs_simps [simp]:
   "tf_abs EA_Nop = skip"
   "tf_abs (EA_Assign x e) = assign x e"
   "tf_abs (EA_Special sc y) = special_transfer sc y"
-  "tf_abs (EA_Assume b) = br b True"
-  "tf_abs (EA_AssumeNot b) = br b False"
+  "tf_abs (EA_Assume b) = backward.branch b True"
+  "tf_abs (EA_AssumeNot b) = backward.branch b False"
   "tf_abs (EA_Body p) = body p"
   "tf_abs (EA_Ret eo p) = ret eo p"
   "tf_abs (EA_Check l c) = event (Check_Event l c)"
@@ -184,18 +169,18 @@ subsection \<open>Agreement with the executable mirror\<close>
 
 text \<open>
   Each operation above is the one the bundle determines --- \<open>Nondet_Int\<close>'s
-  \<^const>\<open>top\<close> is \<open>n_top ops\<close> by \<open>top_eq\<close>, and every other case is definitional ---
+  \<^const>\<open>top\<close>, and every other case is definitional ---
   so this domain's dispatcher is \<^const>\<open>generic_tf_abs\<close> at its own bundle and
   branch. That identification is the whole content: the executable mirror's
   commutation is already proved once against \<^const>\<open>generic_tf_abs\<close>.
 \<close>
 
-lemma tf_abs_eq_generic: "tf_abs = generic_tf_abs ops br"
+lemma tf_abs_eq_generic: "tf_abs = generic_tf_abs ops backward.branch"
 proof (rule ext, rule ext)
   fix a :: edge_action and \<sigma> :: "'a abs_state"
-  show "tf_abs a \<sigma> = generic_tf_abs ops br a \<sigma>"
+  show "tf_abs a \<sigma> = generic_tf_abs ops backward.branch a \<sigma>"
     by (cases a)
-       (simp_all add: op_defs top_eq split: special_call.splits option.splits)
+       (simp_all add: op_defs split: special_call.splits option.splits)
 qed
 
 text \<open>
@@ -204,9 +189,6 @@ text \<open>
   executable step with it.
 \<close>
 
-lemma n_bfilter_eq: "n_bfilter ops = backward.branch_st"
-  using backward.branch_st_with_ops by simp
-
 theorem tf_st_for_commute:
   assumes "live_resolved_st_q \<G> s"
   shows
@@ -214,7 +196,7 @@ theorem tf_st_for_commute:
      tf_abs a (fun_of_resolved_st_q_for \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
-     (simp add: n_bfilter_eq backward.branch_st_commute[OF assms])
+     (simp add: backward.branch_st_with_ops [simplified] backward.branch_st_commute[OF assms])
 
 lemma enter_st_for_commute:
   "fun_of_resolved_st_q_for \<G> (generic_enter_st_for ops \<G> ci s) =
@@ -235,7 +217,7 @@ text \<open>
 theorem dg_analysis_execI:
   assumes route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_exec_dg_st_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
     and seed_ne_gk0: "\<And>v ctx. seed v ctx \<noteq> gk0"
     and solve_pp:
       "\<And>eqs x. solve_dom eqs x
@@ -243,19 +225,19 @@ theorem dg_analysis_execI:
     and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and init_sound:
       "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_exec_dg_st_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
     and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
   shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st gk0 seed
            route solve solve_dom bot check.classify_check
-           skip assign special_transfer br body ret enter_ci_for event route_abs solve_c"
+           skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"
 proof (rule dg_analysis_exec.intro, goal_cases)
   case (1 \<G>) show ?case by (rule is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
-    unfolding fun_of_exec_dg_st_for_def tf_abs_def[symmetric] by (rule tf_st_for_commute)
+    unfolding tf_abs_def[symmetric] by (rule tf_st_for_commute)
 next
   case (3 \<G> ci s) show ?case
-    unfolding fun_of_exec_dg_st_for_def by (rule enter_st_for_commute)
+    by (rule enter_st_for_commute)
 qed (fact route_agree seed_ne_gk0 solve_pp solve_fin init_sound dom_of_solve_c
        check.classify_check_proved check.classify_check_refuted refl)+
 
@@ -272,15 +254,12 @@ text \<open>
 \<close>
 
 locale mono_nonrelational_ops = sound_nonrelational_ops ops
-  + mono_special_ops "n_special ops" "n_aval ops"
-  + backward: backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+  + mono_minmax_ops "n_special ops" "n_aval ops"
+  + backward: mono_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
   for ops :: "'a::numeric_domain nonrelational_ops"
 begin
-
-lemma br_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> br b pol \<sigma>1 \<le> br b pol \<sigma>2"
-  by (rule backward.branch_mono)
 
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
   unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
@@ -308,26 +287,24 @@ end
 subsection \<open>Certifying a bundle from its capability certificates\<close>
 
 lemma sound_nonrelational_opsI:
-  assumes "sound_special_ops (n_special ops) (n_aval ops)"
-    and "backward_domain_reductive (r_intersect (n_refine ops)) (n_aval ops)
+  assumes "sound_minmax_ops (n_special ops) (n_aval ops)"
+    and "sound_refinement (r_intersect (n_refine ops)) (n_aval ops)
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
-    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
-    and "n_top ops = top"
+    and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
   shows "sound_nonrelational_ops ops"
-  by (intro sound_nonrelational_ops.intro sound_nonrelational_ops_axioms.intro assms)
+  by (intro sound_nonrelational_ops.intro assms)
 
 lemma mono_nonrelational_opsI:
-  assumes special: "mono_special_ops (n_special ops) (n_aval ops)"
-    and backward: "backward_domain_mono (r_intersect (n_refine ops)) (n_aval ops)
+  assumes special: "mono_minmax_ops (n_special ops) (n_aval ops)"
+    and backward: "mono_refinement (r_intersect (n_refine ops)) (n_aval ops)
            (r_tobool (n_refine ops)) (r_inv_less (n_refine ops)) (r_inv_eq (n_refine ops))
            (r_inv_plus (n_refine ops)) (r_inv_minus (n_refine ops)) (r_inv_times (n_refine ops))"
-    and "abstract_check_domain (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
-    and "n_top ops = top"
+    and "sound_check_query (q_less (n_query ops)) (q_eq (n_query ops)) gamma_state (n_aval ops)"
   shows "mono_nonrelational_ops ops"
 proof -
-  interpret mono_special_ops "n_special ops" "n_aval ops" by (rule special)
-  interpret backward_domain_mono "r_intersect (n_refine ops)" "n_aval ops"
+  interpret mono_minmax_ops "n_special ops" "n_aval ops" by (rule special)
+  interpret mono_refinement "r_intersect (n_refine ops)" "n_aval ops"
       "r_tobool (n_refine ops)" "r_inv_less (n_refine ops)" "r_inv_eq (n_refine ops)"
       "r_inv_plus (n_refine ops)" "r_inv_minus (n_refine ops)" "r_inv_times (n_refine ops)"
     by (rule backward)

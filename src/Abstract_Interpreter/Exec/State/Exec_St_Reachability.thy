@@ -290,11 +290,6 @@ lift_definition resolved_st_q_is_bot_for ::
   is "\<lambda>globals s. resolved_st_is_bot_for globals (\<lambda>x. x \<in> set globals) s"
   by (rule eq_resolved_st_is_bot_for)
 
-lemma resolved_st_q_is_bot_for_alt:
-  "resolved_st_q_is_bot_for globals s =
-     resolved_st_is_bot_for globals (\<lambda>x. x \<in> set globals) (rep_resolved_st s)"
-  by (rule resolved_st_q_is_bot_for.rep_eq)
-
 lemma resolved_st_q_is_bot_for_iff:
   fixes s :: "'a::executable_domain resolved_st_q"
   assumes globals: "\<And>x. \<G> x = (x \<in> set globals)"
@@ -303,7 +298,7 @@ proof -
   have gs_eq: "(\<lambda>x. x \<in> set globals) = \<G>"
     using globals by (simp add: fun_eq_iff)
   show ?thesis
-    unfolding resolved_st_q_is_bot_for_alt gs_eq
+    unfolding resolved_st_q_is_bot_for.rep_eq gs_eq
     by (simp add: resolved_st_is_bot_for_iff[OF globals]
       fun_of_resolved_st_q_for_rep)
 qed

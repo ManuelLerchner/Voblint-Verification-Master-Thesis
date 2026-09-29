@@ -5,13 +5,13 @@ begin
 section \<open>Generic executable mirror of backward filtering\<close>
 
 text \<open>
-  Every interpretation of @{locale backward_domain} gets an executable
+  Every interpretation of @{locale sound_refinement} gets an executable
   @{typ "'a resolved_st_q"} mirror of its @{text afilter} / @{text bfilter}
   for free, parameterized by an explicit location classifier \<open>\<G>\<close>:
   \<open>afilter_st\<close> / \<open>bfilter_st\<close> and their commutation with the abstract
   filters through @{const fun_of_resolved_st_q_for}, proved once here so no
     domain needs to repeat the induction by hand. Each concrete domain names its
-  specialization through its existing \<open>backward_domain\<close> interpretation; Sign,
+  specialization through its existing \<open>sound_refinement\<close> interpretation; Sign,
   Interval, Congruence, and the Int product all reuse the same correspondence.
 \<close>
 
@@ -19,14 +19,14 @@ subsection \<open>Standalone executable recursion, outside the semantic locale\<
 
 text \<open>
   \<open>afilter_st_lift\<close>/\<open>bfilter_st_lift\<close> below are proved *inside*
-  \<^locale>\<open>backward_domain\<close>, so once exported their \<open>.simps\<close> each carry that
+  \<^locale>\<open>sound_refinement\<close>, so once exported their \<open>.simps\<close> each carry that
   locale's own soundness assumptions as a hypothesis -- a fact code generation
   cannot discharge, so a recursive \<open>fun\<close> defined that way has no usable code
   equation, no matter how it is later aliased. \<open>refine_ops\<close> packages
   the same raw operations directly, and \<open>afilter_st_lift_with\<close>/
   \<open>bfilter_st_lift_with\<close> recurse over an explicit \<open>'a::executable_domain\<close>
   value instead of interpreting the soundness locale, so their equations carry
-  no such premise. The \<^locale>\<open>backward_domain\<close> context below builds an
+  no such premise. The \<^locale>\<open>sound_refinement\<close> context below builds an
   \<open>ops\<close> value from its own fixed operations and proves the two recursions
   agree; \<open>branch_st\<close> calls the standalone form directly.
 \<close>
@@ -198,7 +198,7 @@ where
       then collapse_lift (bfilter_st_lift_with ev ops \<G> e pol (Lifted s))
       else bot)"
 
-context backward_domain
+context sound_refinement
 begin
 
 fun afilter_st ::
@@ -292,7 +292,7 @@ text \<open>
   because a gate ruled the polarity out, or because the arm's own recursion
   narrowed to \<open>Bot\<close>.  A permitting gate is therefore not on its own enough to
   keep the join live.  No
-  per-domain code is needed: this is generic in the @{locale backward_domain}
+  per-domain code is needed: this is generic in the @{locale sound_refinement}
   operations, exactly like \<open>afilter_st\<close>/\<open>bfilter_st\<close> themselves.
 \<close>
 
@@ -303,7 +303,7 @@ text \<open>
   must inline to the record literal at every use site, including inside
   \<open>branch_st\<close>'s own executable definition below, rather than naming a separate
   locale-internal constant whose own code equation would carry
-  \<^locale>\<open>backward_domain\<close>'s assumptions as a premise -- the same problem
+  \<^locale>\<open>sound_refinement\<close>'s assumptions as a premise -- the same problem
   \<open>afilter_st_lift_with\<close>/\<open>bfilter_st_lift_with\<close> exist to avoid, one level up.
 \<close>
 
@@ -466,18 +466,9 @@ lemmas bfilter_st_lift_simps [simp] =
 lemma bfilter_st_lift_Bot [simp]: "bfilter_st_lift \<G> b res Bot = Bot"
   by (simp add: bfilter_st_lift_def)
 
-text \<open>
-    This locale's lifted filters are the standalone recursion at \<open>ops\<close>, so their
-  agreement with it is the defining equation read backwards. The two names below
-  state it in that direction, which is the one callers instantiate.
-\<close>
-
-lemmas afilter_st_lift_with_ops = afilter_st_lift_def [symmetric]
-lemmas bfilter_st_lift_with_ops = bfilter_st_lift_def [symmetric]
-
 end
 
-context backward_domain_reductive
+context sound_refinement
 begin
 
 lemma afilter_lift_step:
@@ -799,7 +790,7 @@ lemma branch_st_commute:
     finally show ?thesis
       using True
       by (simp add: branch_st_def branch_def branch_lifted_def
-          bfilter_st_lift_with_ops)
+          bfilter_st_lift_def [symmetric])
 next
   case False
   then show ?thesis

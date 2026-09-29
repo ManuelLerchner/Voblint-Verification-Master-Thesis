@@ -393,23 +393,22 @@ subsection \<open>Backward-domain interpretation\<close>
 
 text \<open>
   Soundness and the reductiveness of \<open>intersect\<close> hold at every mode, so every
-  mode interprets @{locale backward_domain_reductive} and shares the precise,
+  mode interprets @{locale sound_refinement} and shares the precise,
   dead-arm-eliminating \<open>branch\<close>/\<open>branch_st\<close>. Monotonicity needs
   \<open>mode \<noteq> Refine_Fixpoint\<close>: \<open>refine_fix\<close>'s total wrapper has no monotonicity
   theorem (\<open>Int_Refinement\<close>), a faithful transliteration of Goblint's
   \<open>fixpoint\<close> loop. So \<open>Refine_Never\<close> and \<open>Refine_Once\<close> interpret the full
-  @{locale backward_domain_mono}, and \<open>Refine_Fixpoint\<close> stays out of reach of
+  @{locale mono_refinement}, and \<open>Refine_Fixpoint\<close> stays out of reach of
   \<open>branch_mono\<close> and the rest of the monotonicity layer.
 \<close>
 
 lemma int_backward_domain:
-  "backward_domain_reductive (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
+  "sound_refinement (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
      (inv_less_int_dom mode) (inv_eq_int_dom mode)
      (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_reductive.intro backward_domain.intro sound_intersection.intro
+proof (intro sound_refinement.intro sound_intersection.intro
     int_dom_sound_evaluator mono_truth_test.axioms(1)[OF int_dom_truth_test]
-    backward_ops.intro backward_ops_axioms.intro
-    reductive_intersection.intro reductive_intersection_axioms.intro)
+    sound_inverse_ops.intro sound_inverse_ops_axioms.intro)
 qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_sound
        inv_less_int_dom_raw_sound inv_eq_int_dom_raw_sound inv_plus_int_dom_raw_sound
        inv_minus_int_dom_raw_sound inv_times_int_dom_raw_sound
@@ -418,15 +417,16 @@ qed (simp_all add: inv_int_dom_map_prod refine_exact intersect_int_dom_mode_soun
 lemma int_dom_backward_domain_mono:
   assumes "mode \<noteq> Refine_Fixpoint"
   shows
-    "backward_domain_mono (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
+    "mono_refinement (intersect_int_dom_mode mode) (aval_int_dom mode) int_dom_tobool
        (inv_less_int_dom mode) (inv_eq_int_dom mode)
        (inv_plus_int_dom mode) (inv_minus_int_dom mode) (inv_times_int_dom mode)"
-proof (intro backward_domain_mono.intro int_backward_domain
-    int_dom_mono_evaluator[OF assms] int_dom_truth_test backward_domain_mono_axioms.intro
+proof (intro mono_refinement.intro int_backward_domain
+    int_dom_mono_evaluator[OF assms] int_dom_truth_test mono_refinement_axioms.intro
     mono_intersection.intro mono_intersection_axioms.intro
     sound_intersection.intro)
 qed (auto simp: assms inv_int_dom_map_prod refine_mode_mono_trans intersect_int_dom_mode_mono
        refine_exact intersect_int_dom_mode_sound
+       intersect_int_dom_mode_reductive1 intersect_int_dom_mode_reductive2
        inv_less_int_dom_raw_mono inv_eq_int_dom_raw_mono
        inv_plus_int_dom_raw_mono inv_minus_int_dom_raw_mono inv_times_int_dom_raw_mono)
 
@@ -461,7 +461,7 @@ text \<open>
   The four comparison judgments are the generic derivations of
   \<^theory>\<open>Voblint_Domain.Backward_Numeric_Queries\<close> at the most precise mode's
   inverses. They are stated as plain definitions over those inverses so that they
-  carry code equations; each is definitionally the \<^locale>\<open>backward_ops\<close> judgment,
+  carry code equations; each is definitionally the \<^locale>\<open>sound_inverse_ops\<close> judgment,
   whose soundness therefore transfers in one line. A sharper composite table,
   reduced through all four components at once, is future precision work.
 \<close>
@@ -482,31 +482,23 @@ definition int_eq_true :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" whe
 definition int_eq_false :: "int_dom \<Rightarrow> int_dom \<Rightarrow> bool" where
   "int_eq_false a b = is_empty (intersect_int_dom_mode Refine_Fixpoint a b)"
 
-lemma int_backward_ops:
-  "backward_ops (intersect_int_dom_mode Refine_Fixpoint) (inv_less_int_dom Refine_Fixpoint)
-     (inv_eq_int_dom Refine_Fixpoint) (inv_plus_int_dom Refine_Fixpoint)
-     (inv_minus_int_dom Refine_Fixpoint) (inv_times_int_dom Refine_Fixpoint)"
-proof -
-  interpret backward_domain_reductive "intersect_int_dom_mode Refine_Fixpoint"
-      "aval_int_dom Refine_Fixpoint" int_dom_tobool
-      "inv_less_int_dom Refine_Fixpoint" "inv_eq_int_dom Refine_Fixpoint"
-      "inv_plus_int_dom Refine_Fixpoint" "inv_minus_int_dom Refine_Fixpoint"
-      "inv_times_int_dom Refine_Fixpoint"
-    by (rule int_backward_domain)
-  show ?thesis by unfold_locales
-qed
-
 lemma int_less_true_sound:
   assumes "int_less_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i < j"
-  using assms backward_ops.less_true_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_less_true_def backward_ops.less_true_def[OF int_backward_ops])
+  using assms sound_inverse_ops.less_true_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_less_true_def sound_inverse_ops.less_true_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 lemma int_less_false_sound:
   assumes "int_less_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "\<not> i < j"
-  using assms backward_ops.less_false_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_less_false_def backward_ops.less_false_def[OF int_backward_ops])
+  using assms sound_inverse_ops.less_false_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_less_false_def sound_inverse_ops.less_false_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 lemma int_eq_true_sound:
   assumes "int_eq_true a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
@@ -517,8 +509,11 @@ lemma int_eq_true_sound:
 lemma int_eq_false_sound:
   assumes "int_eq_false a b" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "i \<noteq> j"
-  using assms backward_ops.eq_false_sound[OF int_backward_ops, of a b i j]
-  by (simp add: int_eq_false_def backward_ops.eq_false_def[OF int_backward_ops])
+  using assms sound_inverse_ops.eq_false_sound[OF
+      int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)],
+      of a b i j]
+  by (simp add: int_eq_false_def sound_inverse_ops.eq_false_def[OF
+        int_backward_domain[of Refine_Fixpoint, THEN sound_refinement.axioms(4)]])
 
 global_interpretation int_dom_numeric_queries:
   numeric_query_judgments int_less_true int_less_false int_eq_true int_eq_false

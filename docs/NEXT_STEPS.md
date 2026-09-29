@@ -102,7 +102,7 @@ reference model.
 
 ## Equality backward narrowing (done)
 
-`inv_eq`, analogous to `inv_less`, is a `backward_domain` operator alongside
+`inv_eq`, analogous to `inv_less`, is a `sound_refinement` operator alongside
 `inv_less`/`inv_plus`/`inv_minus`/`inv_times` (`Backward_Domain.thy`).
 `bfilter`'s `Eq` case narrows through it on both branches, not only the true
 branch. Sign has a real, monotone instance (`inv_eq_sign`,

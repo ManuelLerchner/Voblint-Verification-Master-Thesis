@@ -5,7 +5,7 @@ begin
 section \<open>Queries derived from backward inversion\<close>
 
 text \<open>
-  Any @{locale backward_ops} instance already proves \<open>inv_less_sound\<close>/
+  Any @{locale sound_inverse_ops} instance already proves \<open>inv_less_sound\<close>/
   \<open>intersect_sound\<close>, so it answers entailment/refutation of
   \<open><\<close>/\<open>=\<close> over two atomic values for free: narrowing under an assumed truth
   value yields an @{const is_empty} component only if no represented witness
@@ -13,13 +13,13 @@ text \<open>
   a sound entailment/refutation test, though an imprecise inverse may still
   answer "unknown" even when the relation is already concrete-semantically
   fixed. The four judgments need the inverse operators and nothing about
-  states, so they are defined in @{locale backward_ops}'s own context; every
-  @{locale backward_domain} interpretation extends it and gets them with no
+  states, so they are defined in @{locale sound_inverse_ops}'s own context; every
+  @{locale sound_refinement} interpretation extends it and gets them with no
   restated proof obligation. Turning the four into the
   two queries a caller asks for is not backward-specific and is not done
   here: this file ends by interpreting
   \<^locale>\<open>numeric_query_judgments\<close> at them, so every
-  @{locale backward_ops} instance is a numeric-query instance too.
+  @{locale sound_inverse_ops} instance is a numeric-query instance too.
 
   Classification tests @{const is_empty}, not canonical-\<open>bot\<close> equality: a value
   can denote \<open>{}\<close> without being the representation's chosen \<open>bot\<close> element
@@ -29,12 +29,12 @@ text \<open>
   judgments, not the public interface \<^theory>\<open>Voblint_Domain.Numeric_Queries\<close>
   gives: a caller after the generic default wants \<open>less\<close>/\<open>eq\<close>; these four
   remain named and proved because \<open>Sign_Backward\<close> and \<open>Int_Classify\<close> cite
-  them directly off a concrete @{locale backward_domain} interpretation to
+  them directly off a concrete @{locale sound_refinement} interpretation to
   state that a domain's own sharper, hand-tuned query agrees with this
   generic default.
 \<close>
 
-context backward_ops
+context sound_inverse_ops
 begin
 
 subsection \<open>Comparison judgments\<close>
@@ -103,10 +103,10 @@ text \<open>
   assumes the same four soundness statements this context proves, under the
   same four names, so an unqualified registration would try to declare each
   twice in every @{command global_interpretation} of
-  @{locale backward_ops}.
+  @{locale sound_inverse_ops}.
 \<close>
 
-sublocale backward_ops \<subseteq> queries:
+sublocale sound_inverse_ops \<subseteq> queries:
   numeric_query_judgments less_true less_false eq_true eq_false
   by unfold_locales
      (fact less_true_sound, fact less_false_sound, fact eq_true_sound, fact eq_false_sound)

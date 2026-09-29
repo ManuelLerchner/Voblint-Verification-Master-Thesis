@@ -4,8 +4,8 @@
 > responsibilities" and "Why no automatic sublocale" name retired pieces:
 > `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
 > `numeric_query_judgments` (`Numeric_Queries.thy`), interpreted for
-> every `backward_domain` in `Backward_Numeric_Queries.thy`; `backward_domain`
-> lives in `Backward_Domain.thy`; `abstract_domain` and `backward_domain_mono`
+> every `sound_refinement` in `Backward_Numeric_Queries.thy`; `sound_refinement`
+> lives in `Backward_Domain.thy`; `abstract_domain` and `mono_refinement`
 > no longer exist. The current inventory is the
 > `Checks/` row of `src/Abstract_Interpreter/Framework/README.md`. The
 > rendering sections describe the tree as it stands.
@@ -17,7 +17,7 @@ proof status lives in the `.thy` files themselves (`docs/PROOF_PHASES.md`).
 
 ## Pipeline
 
-`abstract_check_domain` produces two independent outputs from the same
+`sound_check_query` produces two independent outputs from the same
 node-indexed abstract environment: an *executable classification* that
 `run_voblint` exports and the OCaml CLI renders, and a *logical discharge*
 that `checks_proven` turns into a semantic guarantee. Rendering never
@@ -38,7 +38,7 @@ node-indexed analysis_result       -- <d>_rule.result r
     |
     | domain-specific sound_numeric_queries instance
     v
-abstract_check_domain (Abstract_Checks.thy)
+sound_check_query (Abstract_Checks.thy)
     |
     +--> classify_check                              [executable]
     |        |
@@ -77,8 +77,8 @@ locale (`state_at`, `report`).
 ### `Abstract_Domain.thy` — lattice and backward refinement
 
 Owns `numeric_domain`/`abstract_domain` (the type-class every domain value
-type instantiates), `sound_intersection`, `backward_domain` (guard narrowing: `inv_less`,
-`inv_eq`, `afilter`/`bfilter`), and `backward_domain_mono`. Nothing here
+type instantiates), `sound_intersection`, `sound_refinement` (guard narrowing: `inv_less`,
+`inv_eq`, `afilter`/`bfilter`), and `mono_refinement`. Nothing here
 knows about checks. `derived_less_queries`/`derived_eq_true_from_less`/
 `derived_eq_false_from_intersection` do **not** live here — see the next layer.
 
@@ -86,31 +86,31 @@ knows about checks. `derived_less_queries`/`derived_eq_true_from_less`/
 
 Owns the `sound_numeric_queries` locale (`less_true`, `less_false`,
 `eq_true`, `eq_false` over one abstract value + four soundness
-assumptions) and its generic derivation from any `backward_domain`
+assumptions) and its generic derivation from any `sound_refinement`
 instance's own narrowing operators. The derivation locales are registered
 as sublocales of the backward capability hierarchy, precisely:
 
 ```text
-backward_domain -> derived_less_queries -> derived_eq_true_from_less
-backward_domain -> derived_eq_false_from_intersection
+sound_refinement -> derived_less_queries -> derived_eq_true_from_less
+sound_refinement -> derived_eq_false_from_intersection
 ```
 
 (`derived_eq_true_from_less` sublocales under `derived_less_queries`, not
-directly under `backward_domain`; `derived_eq_false_from_intersection`
-sublocales under `backward_domain` directly, reusing its own
+directly under `sound_refinement`; `derived_eq_false_from_intersection`
+sublocales under `sound_refinement` directly, reusing its own
 `intersect_sound` premise.)
-A concrete `backward_domain` interpretation inherits all four query
+A concrete `sound_refinement` interpretation inherits all four query
 functions with no extra proof obligation *once `Numeric_Queries.thy`
 is in scope at the point that interpretation is processed* — `Sign_Backward.thy`
 needed an explicit import added for exactly this reason (see below).
 
 The derivation is a **sound default, not a mandatory implementation**.
-`sublocale backward_domain \<subseteq> sound_numeric_queries` was deliberately
+`sublocale sound_refinement \<subseteq> sound_numeric_queries` was deliberately
 never added — see "Why no automatic sublocale" below.
 
 ### `Abstract_Checks.thy` — expression/check evaluation
 
-Owns `abstract_check_domain` (the numeric queries plus a sound
+Owns `sound_check_query` (the numeric queries plus a sound
 `aval_abs` over a state concretization `γS`), the three-valued
 `check_query` over `exp`, the three-way `classify_check`,
 and `abstract_checks_proven`, the node-indexed bridge to
@@ -126,7 +126,7 @@ makes no claim either way.
 
 ### Per-domain instances
 
-Each domain proves one certificate lemma `<domain>_check_domain: abstract_check_domain ...`
+Each domain proves one certificate lemma `<domain>_check_domain: sound_check_query ...`
 (in `<Domain>_Transfer.thy`); its single `sound_nonrelational_ops` interpretation
 then `defines`-exports `<domain>_check_query`/`<domain>_classify_check`/`<domain>_checks_proven`,
 with the facts under `<impl>_tf.check.`.
@@ -217,7 +217,7 @@ unrelated procedure-exit node.
 ## Why no automatic sublocale
 
 The natural-looking generalization —
-`sublocale backward_domain \<subseteq> sound_numeric_queries` — was tried and
+`sublocale sound_refinement \<subseteq> sound_numeric_queries` — was tried and
 reverted (`docs/history/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
 It answers two different questions, both against it:
 
@@ -231,11 +231,11 @@ It answers two different questions, both against it:
 2. **Would a downstream `sublocale` declaration have worked anyway?**
    The specific experiment tried it in the wrong place and failed for a
    second, narrower reason: the relation was declared in a theory
-   processed *after* Sign's own `backward_domain` interpretation, so
+   processed *after* Sign's own `sound_refinement` interpretation, so
    Isabelle's sublocale-to-existing-interpretation composition never
    reached back into it. Even with correct theory placement (the
    `Numeric_Queries.thy` split now gives every future domain the
-   option to import it *before* interpreting `backward_domain`), an
+   option to import it *before* interpreting `sound_refinement`), an
    unconditional sublocale would still be the wrong canonical
    architecture for reason 1 — reason 2 was a placement bug in one
    experiment, not the standing argument against the design.

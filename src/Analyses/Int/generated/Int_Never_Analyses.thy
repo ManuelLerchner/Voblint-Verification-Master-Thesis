@@ -1,0 +1,64 @@
+theory Int_Never_Analyses
+  imports
+    Int_Sound
+    Int_Classify
+    Int_Transfer
+    Int_Exec
+    "Voblint_Result.DG_Live_Keys"
+    "Voblint_Framework.Call_String_Context"
+    "Voblint_Framework.Routed_Context"
+    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
+    "Voblint_VIMP.VIMP_Program"
+begin
+
+section \<open>Registering \<open>Int_Never\<close> at every context and update rule\<close>
+
+text \<open>
+  GENERATED FILE. Source: \<^verbatim>\<open>manifests/analyses.yaml\<close>; generator:
+  \<^verbatim>\<open>scripts/gen_analysis_assembly.py\<close>. Regenerate with the generator
+  rather than hand-editing; a drift check compares regenerated output against
+  this file.
+
+  \<open>Int_Never\<close> runs through the shared D/G pipeline at the unit context.
+  The CLI runs it as a field of the combined state of \<open>MCP_Analyses\<close>,
+  whose component and soundness the unit registration supplies. Each registration
+  leaves the rule that merges a value side-effected into a global as a parameter
+  \<open>r\<close>. The equation system, the solve, the result table and every
+  soundness endpoint come from the interpreted locale; this theory only names the
+  domain's own implementation and facts.
+\<close>
+
+subsection \<open>At the unit context\<close>
+
+global_interpretation int_never_rule: dg_analysis_exec
+    "int_tf_st_for Refine_Never" "int_dom_enter_st_for Refine_Never" cinit_int_dom_st
+    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) routed_gk)
+       TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) r"
+    bot "int_classify_check Refine_Never"
+    skip_int_dom "assign_int_dom Refine_Never" "special_int_dom Refine_Never"
+    "branch_int_dom_for Refine_Never" body_int_dom "return_int_dom Refine_Never"
+    "enter_int_dom_ci_for Refine_Never" event_int_dom "\<lambda>_. route_unit"
+    "TD_side_rule_Interp_solve_c r"
+  for r
+proof (rule int_tf.dg_analysis_execI
+    [folded int_tf_st_for_def int_dom_enter_st_for_def], goal_cases)
+  case (1 \<G> u ctx d ca) show ?case by simp
+next
+  case (2 v ctx) show ?case by simp
+next
+  case (3 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+next
+  case (4 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.finite_stabl_solve)
+next
+  case (5 \<G>) show ?case by (rule int_cinit_gamma)
+next
+  case (6 eqs x) then show ?case
+    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+qed
+
+end

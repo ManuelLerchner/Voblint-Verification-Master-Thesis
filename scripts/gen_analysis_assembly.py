@@ -131,7 +131,6 @@ CONTEXTS = [
         "params": "r",
         "case_route": [
             "  case (1 \\<G> u ctx d ca) show ?case",
-            "    unfolding fun_of_exec_dg_st_for_def",
             "    by (rule exec_formals_route_commute[symmetric])",
         ],
     },
@@ -170,12 +169,15 @@ class Domain:
         self.constructor = f"{self.name}_Analysis"
         self.value_constructor = entry.get("value_constructor", f"{self.name}Value")
         self.field_overrides = entry.get("field", {})
-        self.path = f"src/Analyses/{self.name}/generated/{self.name}_Analyses.thy"
+        # The directory, and with it the session, the registration belongs to:
+        # a variant of another analysis registers next to it.
+        self.dir = entry.get("dir", self.name)
+        self.path = f"src/Analyses/{self.dir}/generated/{self.name}_Analyses.thy"
         # What the combined state imports for this field: the domain's own
         # registration unless the domain has none.
         self.field_imports = entry.get(
             "field_imports",
-            [f"Voblint_Analysis_{self.name}.{self.name}_Analyses"]
+            [f"Voblint_Analysis_{self.dir}.{self.name}_Analyses"]
             if self.contexts
             else [],
         )
@@ -250,6 +252,11 @@ class Domain:
     def term(self, role, **values):
         """A field role with its placeholders filled in."""
         return Template(self.field()[role]).substitute(values)
+
+
+def prose_name(name):
+    """A name in document prose; LaTeX needs an identifier with `_` quoted."""
+    return f"\\<open>{name}\\<close>" if "_" in name else name
 
 
 def role_term(role):
@@ -356,7 +363,7 @@ def render(dom):
     out = [f"theory {dom.name}_Analyses", "  imports"]
     out += [f"    {i}" for i in dom.imports + COMMON_IMPORTS] + ["begin", ""]
     out += [
-        f"section \\<open>Registering {dom.name} at every context and update rule\\<close>",
+        f"section \\<open>Registering {prose_name(dom.name)} at every context and update rule\\<close>",
         "",
     ]
     ctxs = [c for c in CONTEXTS if c["key"] in dom.contexts]
@@ -375,7 +382,7 @@ def render(dom):
         GENERATED_NOTICE
         + "\n"
         + wrap_prose(
-            f"{dom.name} runs through the shared D/G pipeline {listed}. The CLI runs it as"
+            f"{prose_name(dom.name)} runs through the shared D/G pipeline {listed}. The CLI runs it as"
             " a field of the combined state of \\<open>MCP_Analyses\\<close>,"
             " whose component and soundness the unit registration supplies. Each"
             " registration leaves the rule that merges a value side-effected into a"
@@ -782,9 +789,9 @@ def render_mcp(doms):
     )
     out += [""]
     silent = [d.constructor for d in doms if "component" not in d.field_overrides]
+    out += ["lemma local_spec_of_silent:"]
+    out += wrap_term(f'"a \\<in> {{{", ".join(silent)}}}', 2)
     out += [
-        "lemma local_spec_of_silent:",
-        f'  "a \\<in> {{{", ".join(silent)}}}',
         f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
         "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)",
         "",
@@ -822,7 +829,9 @@ def validate(doms):
     problems = []
     for what, values in [
         ("domain name", [d.name for d in doms]),
-        ("value type", [d.value_type for d in doms]),
+        # Variants of one analysis share its value type; each still needs a
+        # constructor of its own in abstract_value.
+        ("value constructor", [d.value_constructor for d in doms]),
     ]:
         if len(values) != len(set(values)):
             problems.append(f"duplicate {what}")

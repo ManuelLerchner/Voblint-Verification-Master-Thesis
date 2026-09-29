@@ -8,7 +8,7 @@ text \<open>
   A single, domain-generic report over every compiled \<^const>\<open>EA_Check\<close> edge:
   one entry per check, at its own source node, classified by whatever
   \<open>classify\<close> function a domain supplies (\<open>sign_classify_check\<close> and its
-  siblings, or \<open>abstract_check_domain.classify_check\<close> generically).
+  siblings, or \<open>sound_check_query.classify_check\<close> generically).
   Entries are read directly off \<^const>\<open>intra\<close> through the same deterministic
   order \<^const>\<open>cfg_intra_list\<close> already gives the TD bridge, rather than
   sorting \<^typ>\<open>pp\<close> or \<^typ>\<open>exp\<close> values by hand: a compiled \<^const>\<open>checks\<close>

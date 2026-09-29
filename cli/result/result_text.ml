@@ -43,7 +43,7 @@ let diagnostic_message d =
 let analysis_label = function
   | C.Sign_Analysis -> "sign"
   | C.Interval_Analysis -> "interval"
-  | C.Int_Analysis -> "int"
+  | C.Int_Analysis | C.Int_Once_Analysis | C.Int_Never_Analysis -> "int"
   | C.Parity_Analysis -> "parity"
   | C.Congruence_Analysis -> "congruence"
   | C.Order_Analysis -> "order"
