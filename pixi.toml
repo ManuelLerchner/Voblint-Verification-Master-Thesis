@@ -67,6 +67,8 @@ property-test = { cmd = "python3 -m pytest tests/property", description = "Build
 arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = [
   "cli-build",
 ], description = "Check arithmetic warnings, source annotations, and HTML findings." }
+tracer-gate = { cmd = "bash scripts/mk/tracer-gate.sh", description = "The exported tracer's gate, run alone: codegen, trace calls in the generated OCaml, traced equals untraced on the corpus, trace and replay tests, wasm build." }
+replay-state-check = { cmd = "node --test tests/replay_state.test.mjs", description = "Unit-test the solve replay's reducer on hand-written event streams; needs no build." }
 solver-trace-check = { cmd = "python3 -m pytest tests/test_solver_trace.py", depends-on = [
   "cli-build",
 ], description = "Check the --trace hooks, that tracing leaves stdout unchanged, and the event order on the context example." }
