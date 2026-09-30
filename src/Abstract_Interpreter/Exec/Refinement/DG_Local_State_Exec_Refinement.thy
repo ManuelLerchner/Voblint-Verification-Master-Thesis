@@ -181,17 +181,17 @@ text \<open>
 \<close>
 
 abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) dg_spec" where
-  "spec_st \<equiv> local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st"
+  "spec_st \<equiv> exec_dg_spec \<G> empty_pred tf_st enter_st"
 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
-  "spec_abs \<equiv> local_state_dg_spec_for_lifted \<G> is_empty_state sk asn sp br bd rt en ev"
+  "spec_abs \<equiv> lifted_state_dg_spec \<G> is_empty_state sk asn sp br bd rt en ev"
 
 lemma Hstep_lifted_for:
   assumes "normalized_lift empty_pred d"
   shows "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dg_spec_step_local_state_st_for_lifted dg_spec_step_local_state_for_lifted
+  unfolding dg_spec_step_exec_dg_spec dg_spec_step_lifted_state_dg_spec
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     step_lift_commute[OF assms] by fastforce
 
@@ -199,7 +199,7 @@ lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
      (enter\<^sup># spec_st ci (mk_dg_man d (\<lambda>_. gk)))
      (enter\<^sup># spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
-  unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
+  unfolding dgs_enter_exec_dg_spec dgs_enter_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_enter_st_commute_local_enter_transfer
         [OF dg_reader_commute_gen_lifted_for])
      (simp add: enter_lift_commute)
@@ -210,8 +210,8 @@ lemma Hcomb_lifted_for:
         (dg_spec_combine_transfer spec_st ci (mk_dg_man d (\<lambda>_. gk)) de))
      (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)) (reader de)))"
-  unfolding dg_spec_combine_transfer_local_state_st_for_lifted
-    dg_spec_combine_transfer_local_state_for_lifted
+  unfolding dg_spec_combine_transfer_exec_dg_spec
+    dg_spec_combine_transfer_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_tree_st_commute_local_combine_transfer
         [OF dg_reader_commute_gen_lifted_for,
          where F = "transfer_lift2 is_empty_state (combine\<^sup># \<G> (ci_dst ci))"])
@@ -268,9 +268,9 @@ text \<open>
   contract below is its one-line consequence.
 \<close>
 
-theorem exec_spec_sound:
+theorem exec_local_spec_sound:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>) (exec_spec \<G> empty_pred tf_st enter_st)"
+  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>) (exec_local_spec \<G> empty_pred tf_st enter_st)"
 proof -
   have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     for a d
@@ -300,14 +300,14 @@ proof -
     unfolding sound_local_spec_def gamma_lift_default_st_gamma_readback
     using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step]
       entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback] comb
-    by (auto simp: exec_spec_def)
+    by (auto simp: exec_local_spec_def)
 qed
 
 theorem analysis_contract_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
   shows "analysis_contract spec_st gamma_exec \<G>"
-  unfolding local_state_dg_spec_st_for_lifted_def gamma_exec_def[abs_def]
-  by (rule dg_spec_of_contract[OF exec_spec_sound[OF tf_sound]])
+  unfolding exec_dg_spec_def gamma_exec_def[abs_def]
+  by (rule dg_spec_of_contract[OF exec_local_spec_sound[OF tf_sound]])
 
 end
 

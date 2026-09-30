@@ -472,7 +472,7 @@ text \<open>
   wrapper feeds it a local value the environment never held: an argument that read
   a global of its own would read it at a slot this concretization does not account
   for. A whole-state analysis makes no such read, which is exactly what
-  \<^const>\<open>local_state_dg_spec_for\<close> guarantees about its programs.
+  \<^const>\<open>state_dg_spec\<close> guarantees about its programs.
 
   The callee exit is merged before the wrapped combine sees it, so the return slot
   is read off a whole state like every other name and no \<open>reserved_ret_var\<close>
@@ -481,7 +481,7 @@ text \<open>
 
 theorem (in sound_nonrelational_transfer) ownership_split_lift_contract:
   "analysis_contract
-     (ownership_split_lift \<G> (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev))
+     (ownership_split_lift \<G> (state_dg_spec \<G> sk asn sp br bd rt en ev))
      (gamma_ownership_split \<G>) \<G>"
 proof (unfold_locales, goal_cases)
   case 1
@@ -493,13 +493,13 @@ next
   case (3 a \<tau> src gk)
   show ?case
     unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_lift
-      dg_spec_step_local_state_for ownership_split_transfer_def gamma_ownership_split_def
+      dg_spec_step_state_dg_spec ownership_split_transfer_def gamma_ownership_split_def
     by (simp add: step_sound_for)
 next
   case (4 s \<tau> src_cc gk t src_ex ci)
   then show ?case
     unfolding dg_spec_combine_transfer_ownership_split_lift
-      local_state_dg_spec_for_def dg_spec_combine_transfer_dg_spec_of
+      state_dg_spec_def dg_spec_combine_transfer_dg_spec_of
       ownership_split_combine_transfer_def gamma_ownership_split_def
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc

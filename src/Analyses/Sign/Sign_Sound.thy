@@ -35,7 +35,7 @@ definition sign_conf_spec ::
    \<Rightarrow> ('x, 'k, unit, sign default_st lifted, sign default_st lifted) dg_spec"
 where
   "sign_conf_spec \<G> empty_pred =
-     local_state_dg_spec_st_for_lifted \<G> empty_pred (sign_tf_st_for \<G>) (sign_enter_st_for \<G>)"
+     exec_dg_spec \<G> empty_pred (sign_tf_st_for \<G>) (sign_enter_st_for \<G>)"
 
 lemma dg_spec_wf_sign_conf_spec [intro, simp]: "dg_spec_wf (sign_conf_spec \<G> empty_pred)"
   by (simp add: sign_conf_spec_def)
@@ -44,7 +44,7 @@ definition sign_conf_abs_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x, 'k, unit, sign abs_state lifted, sign abs_state lifted) dg_spec"
 where
-  "sign_conf_abs_spec \<G> = local_state_dg_spec_for_lifted \<G> is_empty_state
+  "sign_conf_abs_spec \<G> = lifted_state_dg_spec \<G> is_empty_state
      skip_sign assign_sign special_sign branch_sign body_sign return_sign
      (enter_sign_ci_for \<G>) event_sign"
 

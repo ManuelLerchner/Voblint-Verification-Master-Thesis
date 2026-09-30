@@ -25,12 +25,12 @@ definition interval_spec ::
    \<Rightarrow> ('x, 'k, unit, ivl default_st lifted, ivl default_st lifted) dg_spec"
 where
   "interval_spec \<G> empty_pred =
-     local_state_dg_spec_st_for_lifted \<G> empty_pred (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>)"
+     exec_dg_spec \<G> empty_pred (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>)"
 
 definition interval_abs_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
 where
-  "interval_abs_spec \<G> = local_state_dg_spec_for_lifted \<G> is_empty_state
+  "interval_abs_spec \<G> = lifted_state_dg_spec \<G> is_empty_state
      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
      (enter_ivl_ci_for \<G>) event_ivl"
 

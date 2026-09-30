@@ -1081,7 +1081,7 @@ text \<open>
   transfers: the abstract transfer it implements is sound, its executable
   mirror reads back to that transfer, and its routing, solver, classifier and
   entry state satisfy the pipeline's contracts at the abstract-store readback.
-  Its component is \<^const>\<open>exec_spec\<close>, so the generic pipeline runs
+  Its component is \<^const>\<open>exec_local_spec\<close>, so the generic pipeline runs
   exactly its local specification, and every theorem above holds of it.
 
   \<open>route_abs\<close> is the same routing decision taken on the abstract carrier, kept
@@ -1141,7 +1141,7 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
     and exec_init_sound: "\<And>\<G>. cinit_stores \<G> \<subseteq> default_st_gamma \<G> init_st"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
-    "\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+    "\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
              (tf_st \<G>) (enter_st \<G>)"
     "\<lambda>p. default_st_is_bot_for (declared_global_vars p)"
     default_st_to_fun init_st analysis_global seed route root_ctx solve solve_dom bot_state
@@ -1159,7 +1159,7 @@ proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intr
         rule enter_commute,
         rule default_st_is_bot_for_iff[OF declared_global_iff])
   show ?case
-    by (rule dom.exec_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback])
+    by (rule dom.exec_local_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback])
 next
   case (EnterSingle p ci d)
   then show ?case by (simp add: dg_pipeline.entry_of_def)
@@ -1189,7 +1189,7 @@ text \<open>
 
 lemma (in dg_analysis_exec) exec_comp_sound:
   "sound_local_spec (declared_global p) (gamma_lift (default_st_gamma (declared_global p)))
-     (exec_spec (declared_global p) (default_st_is_bot_for (declared_global_vars p))
+     (exec_local_spec (declared_global p) (default_st_is_bot_for (declared_global_vars p))
         (tf_st (declared_global p)) (enter_st (declared_global p)))"
   unfolding gamma_lift_default_st_gamma_readback by (rule comp_sound)
 
@@ -1200,7 +1200,7 @@ text \<open>
 
 lemma (in dg_analysis_exec) entry_of_exec:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
         (tf_st \<G>) (enter_st \<G>))
      \<G> p ci d
    = transfer_lift (default_st_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"

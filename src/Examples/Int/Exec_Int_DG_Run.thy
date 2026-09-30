@@ -68,7 +68,7 @@ text \<open>
   observable in the solver's own computed result.
 
   Each mode is registered on the generic Base construction
-  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
+  \<^const>\<open>exec_dg_spec\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
   matching Sign's own production route: the local unknown carries the whole
   reachability-lifted \<open>int_dom default_st\<close>, with no separate local/global
   split for \<open>int_ex_prog\<close>'s (empty) set of declared globals to route through.
@@ -79,7 +79,7 @@ definition dgExI_never_eqs ::
        (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
-     (local_state_dg_spec_st_for_lifted int_ex_gs
+     (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_for Refine_Never int_ex_gs) (int_dom_enter_st_for Refine_Never int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
@@ -94,7 +94,7 @@ definition dgExI_once_eqs ::
        (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
-     (local_state_dg_spec_st_for_lifted int_ex_gs
+     (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_for Refine_Once int_ex_gs) (int_dom_enter_st_for Refine_Once int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"

@@ -3833,3 +3833,36 @@ fun_of_dg_st_gen_bot
 fun_of_dg_st_gen_mono
 fun_of_dg_st_gen_simps
 fun_of_dg_st_gen_sup
+# --- Whole-state specification builders renamed (2026-09-30): local_spec
+# builders end in _local_spec (state, lifted_state, exec), and the D/G
+# specifications built from them by dg_spec_of end in _dg_spec. ---
+closed_step_exec_spec
+closed_step_lifted_state_spec
+closed_step_state_spec
+dg_spec_combine_transfer_local_state_for_lifted
+dg_spec_combine_transfer_local_state_st_for_lifted
+dg_spec_step_local_state_for
+dg_spec_step_local_state_for_lifted
+dg_spec_step_local_state_st_for_lifted
+dg_spec_wf_local_state_dg_spec_for
+dg_spec_wf_local_state_dg_spec_for_lifted
+dg_spec_wf_local_state_dg_spec_st_for_lifted
+dgs_enter_local_state_for_lifted
+dgs_enter_local_state_st_for_lifted
+exec_spec
+exec_spec_sound
+lifted_state_spec
+lifted_state_spec_sound
+local_state_dg_spec_for
+local_state_dg_spec_for_contract
+local_state_dg_spec_for_lifted
+local_state_dg_spec_for_lifted_contract
+local_state_dg_spec_st_for_lifted
+ls_combine_state_spec
+ls_enter_exec_spec
+ls_step_exec_spec
+ls_step_lifted_state_spec
+ls_step_state_spec
+single_entry_exec_spec
+state_spec
+state_spec_sound

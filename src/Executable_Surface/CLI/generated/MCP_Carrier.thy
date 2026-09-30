@@ -191,31 +191,31 @@ subsection \<open>Each analysis on its own field\<close>
 fun local_spec_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
   "local_spec_of \<G> p Sign_Analysis =
-     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
        (sign_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Interval_Analysis =
-     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
        (ivl_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Parity_Analysis =
-     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
        (parity_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Int_Analysis =
-     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint \<G>)
        (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
 | "local_spec_of \<G> p Int_Once_Analysis =
-     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
        (int_dom_enter_st_for Refine_Once \<G>)))"
 | "local_spec_of \<G> p Int_Never_Analysis =
-     lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
        (int_dom_enter_st_for Refine_Never \<G>)))"
 | "local_spec_of \<G> p Congruence_Analysis =
-     lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign (exec_spec \<G>
+     lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
        (congruence_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Order_Analysis =
@@ -441,13 +441,13 @@ lemma local_spec_of_sound:
 
 lemma single_entry_local_spec_of: "single_entry (local_spec_of \<G> p a)"
   by (cases a) (auto intro!: single_entry_lens_of lift_put_get single_entry_ask_assign[OF
-    single_entry_exec_spec] single_entry_order_spec)
+    single_entry_exec_local_spec] single_entry_order_spec)
 
 lemma local_spec_of_silent:
   "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, Int_Analysis,
     Int_Once_Analysis, Int_Never_Analysis, Congruence_Analysis}
      \<Longrightarrow> ls_query (local_spec_of \<G> p a) A x q = \<top>"
-  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)
+  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)
 
 lemma mcp_init_sound:
   "cinit_stores (declared_global p)

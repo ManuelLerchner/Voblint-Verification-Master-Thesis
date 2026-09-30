@@ -94,7 +94,7 @@ facts the domains already export.
 
 Each of these lines comes from a field role, a term template in the generator's
 `FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
-field runs `ask_assign (exec_spec ...)`, which asks for the value of an
+field runs `ask_assign (exec_local_spec ...)`, which asks for the value of an
 assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs

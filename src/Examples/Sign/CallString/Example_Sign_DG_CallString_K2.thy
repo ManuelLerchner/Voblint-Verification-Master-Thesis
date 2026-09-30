@@ -190,7 +190,7 @@ next
       EnterComplete(3)
     by (simp add: sign_nest_gamma_eq sign_nest_domain.gamma_exec_def)
   show ?case
-    unfolding sign_nest_S_st_def dgs_enter_local_state_st_for_lifted
+    unfolding sign_nest_S_st_def dgs_enter_exec_dg_spec
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)

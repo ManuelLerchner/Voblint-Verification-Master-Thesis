@@ -25,7 +25,7 @@ text \<open>
   Storage is Base-style: the local unknown carries the whole abstract state on the lifted
   carrier \<^typ>\<open>ivl default_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
-  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
+  \<^const>\<open>exec_dg_spec\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
   (\<^const>\<open>cs_route\<close>, \<^const>\<open>cs_context\<close>) is call-string specific; the storage, the
   transfer primitives, and the CALL/COMB discharge are shared with the
@@ -111,7 +111,7 @@ text \<open>The same Base-style pair the context-insensitive and entry-state-key
 definition nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
      unit, ivl default_st lifted, ivl default_st lifted) dg_spec" where
-  "nest_S_st = local_state_dg_spec_st_for_lifted nest_gs nest_empty_pred
+  "nest_S_st = exec_dg_spec nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
@@ -346,7 +346,7 @@ next
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
-    unfolding nest_S_st_def dgs_enter_local_state_st_for_lifted
+    unfolding nest_S_st_def dgs_enter_exec_dg_spec
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)

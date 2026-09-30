@@ -169,8 +169,8 @@ lemma dg_prog_st_commute_routed_call_program:
         [where Floc = "map_lift (default_st_to_fun \<G>)"
            and Fglob = "map_lift (default_st_to_fun \<G>)"])
      (rule dg_reader_commute_gen_lifted_for seed_unknown_ne_analysis_global
-           dg_spec_wf_local_state_dg_spec_st_for_lifted
-           dg_spec_wf_local_state_dg_spec_for_lifted
+           dg_spec_wf_exec_dg_spec
+           dg_spec_wf_lifted_state_dg_spec
            Henter_lifted_for Hcomb_lifted_for
            route_agree map_lift_eq_Bot_iff resolve_agree)+
 
@@ -212,14 +212,14 @@ text \<open>The two tree properties that make the identity hooks legitimate: nei
   \<open>bot\<close> on the globals half.\<close>
 
 lemma intra_st_side_free: "sides_of_program (intra_st ctx' src a) \<tau> z = bot"
-  by (simp add: dg_spec_edge_program_def dg_spec_step_local_state_st_for_lifted)
+  by (simp add: dg_spec_edge_program_def dg_spec_step_exec_dg_spec)
 
 lemma cmb_st_side_free_at_analysis_global:
   "sides_of_program (cmb_st g route' ctx' ca cc ex) \<tau> (Inr analysis_global) = bot"
   by (rule routed_call_program_side_free_at_analysis_global
-        [OF dg_spec_wf_local_state_dg_spec_st_for_lifted])
-     (auto simp: dgs_enter_local_state_st_for_lifted
-        dg_spec_combine_transfer_local_state_st_for_lifted
+        [OF dg_spec_wf_exec_dg_spec])
+     (auto simp: dgs_enter_exec_dg_spec
+        dg_spec_combine_transfer_exec_dg_spec
         local_transfer_def local_combine_transfer_def
         dest!: enter_runs_local_pub_bot)
 
@@ -237,7 +237,7 @@ theorem pp_st:
         g bot0 s0d s0g)
      x0 sigma_st vars"
   by (rule pp_dg_spec_of[where S = spec_st])
-     (rule local_state_dg_spec_st_for_lifted_def, rule seed_unknown_ne_analysis_global, rule pp)
+     (rule exec_dg_spec_def, rule seed_unknown_ne_analysis_global, rule pp)
 
 end
 

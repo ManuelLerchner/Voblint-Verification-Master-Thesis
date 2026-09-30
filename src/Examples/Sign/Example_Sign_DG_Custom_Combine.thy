@@ -146,7 +146,7 @@ text \<open>
 
 abbreviation sign_base_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state,sign abs_state) dg_spec" where
-  "sign_base_spec \<G> \<equiv> local_state_dg_spec_for \<G>
+  "sign_base_spec \<G> \<equiv> state_dg_spec \<G>
      skip_sign assign_sign special_sign branch_sign body_sign return_sign
      (enter_sign_ci_for \<G>) event_sign"
 
@@ -182,7 +182,7 @@ lemma dgs_query_sign_dg_spec_env_join [simp]:
 
 lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
   "dg_spec_wf (ownership_split_lift \<G> (sign_base_spec \<G>))"
-  by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+  by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_state_dg_spec])
 
 lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
   "dg_spec_wf (sign_dg_spec_env_join \<G>)"
@@ -208,7 +208,7 @@ next
     by (auto simp: sign_dg_spec_env_join_def combine_env_callee_join_abs_def
         local_combine_transfer_def
         intro!: sp_wf_bind
-          sp_wf_dgs_combine_assign_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+          sp_wf_dgs_combine_assign_ownership_split_lift[OF dg_spec_wf_state_dg_spec])
 qed
 
 text \<open>
@@ -260,7 +260,7 @@ lemma traverse_combine_env_join:
             (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -274,7 +274,7 @@ lemma sides_combine_env_join:
             (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -291,7 +291,7 @@ lemma traverse_combine_stock:
             (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -305,7 +305,7 @@ lemma sides_combine_stock:
             (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)

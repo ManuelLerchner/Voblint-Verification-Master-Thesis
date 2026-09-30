@@ -153,7 +153,7 @@ next
   fix ci d unknown_of ex
   show "sp_wf (dg_spec_combine_transfer (ov_spec \<G> ep) ci (mk_dg_man d unknown_of) ex)"
     unfolding dg_spec_combine_transfer_def dgs_combine_env_ov_spec dgs_combine_assign_ov_spec
-    by (simp add: sign_conf_spec_def local_state_dg_spec_st_for_lifted_def
+    by (simp add: sign_conf_spec_def exec_dg_spec_def
         local_combine_transfer_def)
 qed
 
@@ -698,7 +698,7 @@ lemma ov_pp_st:
 lemma ov_intra_side_free:
   "sides_of_program (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src g) \<tau> z = bot"
   unfolding dg_spec_edge_program_def dg_spec_step_ov_spec sign_conf_spec_def
-  by (simp add: dg_spec_step_local_state_st_for_lifted)
+  by (simp add: dg_spec_step_exec_dg_spec)
 
 lemma dg_spec_combine_transfer_ov_spec [simp]:
   "dg_spec_combine_transfer (ov_spec \<G> ep) ci m exit
@@ -722,7 +722,7 @@ next
           (dg_spec_combine_transfer (ov_spec ov_gs ov_ep) ci
             (mk_dg_man d (\<lambda>_. Analysis_Global ())) de))
           sigma z = bot"
-    by (simp add: sign_conf_spec_def dg_spec_combine_transfer_local_state_st_for_lifted
+    by (simp add: sign_conf_spec_def dg_spec_combine_transfer_exec_dg_spec
         sp_compile_with_def local_combine_transfer_def sp_return_def bot_dg_state_def)
 next
   show "\<And>p ctx'. Activation_Seed (FunctionEntry p) ctx' \<noteq> Analysis_Global ()"
@@ -791,7 +791,7 @@ next
            (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>
            (Inr (Analysis_Global ())))"
     by (simp add: ov_intra_side_free dg_spec_edge_program_def sign_conf_spec_def
-        dg_spec_step_local_state_st_for_lifted bot_dg_state_def)
+        dg_spec_step_exec_dg_spec bot_dg_state_def)
 next
   show "\<And>c' src a \<tau>. sides_of_program
            (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>

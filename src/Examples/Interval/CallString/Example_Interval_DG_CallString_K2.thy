@@ -218,7 +218,7 @@ next
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
-    unfolding nest_S_st_def dgs_enter_local_state_st_for_lifted
+    unfolding nest_S_st_def dgs_enter_exec_dg_spec
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)

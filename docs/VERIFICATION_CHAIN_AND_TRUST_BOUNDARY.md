@@ -35,7 +35,7 @@ proves certificates about those operations (a backward domain, sound checks, sou
 special calls), and interprets `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`)
 once, which yields `<impl>_tf.is_sound_nonrelational_transfer`. The `int_dom` product
 interprets it once, parametric in its refinement mode.
-`local_state_dg_spec_for_contract` turns that into `analysis_contract` for
+`state_dg_spec_contract` turns that into `analysis_contract` for
 the whole-state specification every shipped domain uses.
 
 Guards go through `branch_lifted` (`Backward_Domain.thy`): a forward feasibility
