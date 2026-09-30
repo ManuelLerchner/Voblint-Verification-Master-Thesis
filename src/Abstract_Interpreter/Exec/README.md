@@ -21,7 +21,7 @@ refinement layer, not as part of the framework.
 | `Spec/DG_Local_State_Exec.thy` | The executable Base-style D/G construction: definitions and their selector equations |
 | `Refinement/DG_Local_State_Exec_Refinement.thy` | `dg_domain_exec`: soundness at the executable carrier, pulled back through the represented functions |
 | `Refinement/Routed_Exec_Refinement.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
-| `State/Exec_Result_Publication.thy` | `result_value_to_abs`: publishing a solved local unknown as the abstract state it represents |
+| `State/Exec_Result_Abs.thy` | `result_value_to_abs`: a solved local unknown as the abstract state it represents |
 
 Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 
@@ -29,7 +29,7 @@ Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 
 ```text
 State/       the executable state: representation, algebra, classifier boundary,
-             dead-code test, the represented function and result publication
+             dead-code test, the represented function and the result conversion
 Spec/        analyses built at that carrier: the D/G pair, the ownership split,
              the Base local-state construction
 Refinement/  what relates the carrier to the mathematical one: dg_domain_exec

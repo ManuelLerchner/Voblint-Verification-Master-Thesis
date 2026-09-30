@@ -5,7 +5,7 @@ theory DG_Result_Construction
     "Voblint_Framework.Routed_Call_Programs"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Program"
-    "Voblint_Exec.Exec_Result_Publication"
+    "Voblint_Exec.Exec_Result_Abs"
     "Voblint_Exec.Exec_DG_State"
     "Voblint_Exec.Default_St_Reachability"
 begin

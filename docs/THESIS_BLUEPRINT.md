@@ -403,7 +403,7 @@ L8  EXECUTABLE ↔ MATHEMATICAL
     default_st (quotient), default_st_to_fun   Default_St_Base, Default_St_Transfer
     generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
     routed_dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
-    result_value_to_abs, canonicalize_lift              Exec_Result_Publication
+    result_value_to_abs, canonicalize_lift              Exec_Result_Abs
              │
              v
 L9  PUBLICATION
