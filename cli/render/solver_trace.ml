@@ -20,7 +20,10 @@ type format = Text | Jsonl
    run; the context, the global unknowns and the values have a type the
    context mode and the analyses fix. Those stay [Obj.t] here and reach a
    printer the same run installed, so a value only ever meets a reader of its
-   own type. This is the one place that casts. *)
+   own type. This is the one place that casts. Cast values only become trace
+   text: this runs after run_voblint has returned, and nothing here reaches the
+   solver or the result, so a wrong cast can only give wrong or missing trace
+   output. *)
 type x = C.cfg_node * Obj.t
 type solver_event = (x, Obj.t, Obj.t) C.solver_event
 type route_event = (x, Obj.t, Obj.t) C.route_event
@@ -69,9 +72,11 @@ let context_label (ctx : C.abstract_value C.analysis_context) =
   | C.Context_Call_String ps ->
       "[" ^ String.concat " " (List.map A.point_name ps) ^ "]"
 
-type view = (C.analysis_domain * C.abstract_value C.field_state) list C.lifted
+type 'v view = (C.analysis_domain * 'v C.field_state) list C.lifted
 
-let view_text (v : view) =
+(* A state as one line, with [value_text] for each value: the trace's own
+   values, or the strings of the returned result. *)
+let view_text_with value_text (v : 'v view) =
   match v with
   | C.Bot -> "⊥"
   | C.Lifted sections ->
@@ -87,6 +92,8 @@ let view_text (v : view) =
                    (List.map (fun (x, v) -> x ^ "=" ^ value_text v) bs)
              | C.Field_Whole v -> value_text v)
            sections)
+
+let view_text v = view_text_with value_text v
 
 let proc_of = function
   | C.FunctionEntry p | C.FunctionResult p -> p
@@ -137,8 +144,8 @@ let unknown_text nm = function
 (* ------------------------------------------- the per-caller event stream *)
 
 (* The steps the compact form and JSON Lines report, as they are read off the
-   solver events. Both forms keep the vocabulary they had before the solver
-   reported further steps. *)
+   solver events. The first nine are schema 1's, unchanged; schema 2 adds the
+   solver's internal steps, which the compact form ignores. *)
 type step =
   | Solve of x  (** a local unknown whose right-hand side is evaluated *)
   | Query_local of x * x  (** current unknown, queried local unknown *)
@@ -151,20 +158,46 @@ type step =
   | Answer of x * Obj.t  (** current unknown, value of its right-hand side *)
   | Route_step of x * Obj.t * Obj.t
       (** calling local unknown, entry value, routed context *)
+  | Start of x  (** the root unknown of the solve *)
+  | Iterate of x * bool * bool * bool
+      (** an iteration of a local unknown: called, stable, widening point *)
+  | Eq of x  (** one evaluation of the unknown's right-hand side *)
+  | Stable_add of x
+      (** the evaluation first puts its unknown in the stable set *)
+  | Widen of x  (** the new value is warrowed into the old one here *)
+  | Still_unstable of x  (** the evaluation destabilized its own unknown *)
+  | Add_infl of (x, Obj.t) C.sum * x  (** read unknown, its new reader *)
+  | Wpoint_add of x  (** a query reached an unknown being solved *)
+  | Wpoint_remove of x  (** a stable, unchanged unknown stops widening *)
+  | Destabilize of (x, Obj.t) C.sum
+      (** readers of the unknown lose stability *)
+  | Stable_remove of x  (** one reader leaves the stable set *)
 
-let step_of = function
-  | Route (C.Ev_Route (u, d, c)) -> Some (Route_step (u, d, c))
+let steps_of = function
+  | Route (C.Ev_Route (u, d, c)) -> [ Route_step (u, d, c) ]
   | Solver e -> (
       match e with
-      | C.Ev_Iterate (x, _, false, _) -> Some (Solve x)
-      | C.Ev_Query (y, x, _, _) -> Some (Query_local (y, x))
-      | C.Ev_Answer (y, x, d) -> Some (Value_local (y, x, d))
-      | C.Ev_Answer_Global (x, g, d) -> Some (Query_global (x, g, d))
-      | C.Ev_Side (x, g, d) -> Some (Side (x, g, d))
-      | C.Ev_Update_Global (_, g, _, o, n) -> Some (Update_global (g, o, n))
-      | C.Ev_Update (x, _, _, o, n) -> Some (Update_local (x, o, n))
-      | C.Ev_Rhs (x, d) -> Some (Answer (x, d))
-      | _ -> None)
+      | C.Ev_Iterate (x, called, stable, wp) ->
+          Iterate (x, called, stable, wp)
+          :: (if stable then [] else [ Solve x ])
+      | C.Ev_Query (y, x, _, _) -> [ Query_local (y, x) ]
+      | C.Ev_Answer (y, x, d) -> [ Value_local (y, x, d) ]
+      | C.Ev_Answer_Global (x, g, d) -> [ Query_global (x, g, d) ]
+      | C.Ev_Side (x, g, d) -> [ Side (x, g, d) ]
+      | C.Ev_Update_Global (_, g, _, o, n) -> [ Update_global (g, o, n) ]
+      | C.Ev_Update (x, _, _, o, n) -> [ Update_local (x, o, n) ]
+      | C.Ev_Rhs (x, d) -> [ Answer (x, d) ]
+      | C.Ev_Start x -> [ Start x ]
+      | C.Ev_Eq x -> [ Eq x; Stable_add x ]
+      | C.Ev_Widen (x, true) -> [ Widen x ]
+      | C.Ev_Wpoint_Clear (x, true) -> [ Wpoint_remove x ]
+      | C.Ev_Still_Unstable x -> [ Still_unstable x ]
+      | C.Ev_Add_Infl (y, x) -> [ Add_infl (y, x) ]
+      | C.Ev_Query_Wpoint (x, false) -> [ Wpoint_add x ]
+      | C.Ev_Wpoint_Remove (x, true) -> [ Wpoint_remove x ]
+      | C.Ev_Destabilize y -> [ Destabilize y ]
+      | C.Ev_Stable_Remove x -> [ Stable_remove x ]
+      | _ -> [])
 
 (* ------------------------------------------------------------ one record *)
 
@@ -199,7 +232,44 @@ let json_global nm g =
         (json_string (proc_of n))
         (json_context nm c)
 
+let json_unknown nm = function
+  | C.Inl x -> json_local nm x
+  | C.Inr g -> json_global nm g
+
+let json_bool b = if b then "true" else "false"
+
 let record_of nm seen = function
+  | Iterate (x, called, stable, wp) ->
+      {
+        kind = "iterate";
+        json =
+          [
+            ("unknown", json_local nm x);
+            ("called", json_bool called);
+            ("stable", json_bool stable);
+            ("wpoint", json_bool wp);
+          ];
+      }
+  | Start x -> { kind = "start"; json = [ ("unknown", json_local nm x) ] }
+  | Eq x -> { kind = "eq"; json = [ ("unknown", json_local nm x) ] }
+  | Stable_add x ->
+      { kind = "stable_add"; json = [ ("unknown", json_local nm x) ] }
+  | Widen x -> { kind = "widen"; json = [ ("unknown", json_local nm x) ] }
+  | Still_unstable x ->
+      { kind = "still_unstable"; json = [ ("unknown", json_local nm x) ] }
+  | Add_infl (y, x) ->
+      {
+        kind = "add_infl";
+        json = [ ("unknown", json_unknown nm y); ("reader", json_local nm x) ];
+      }
+  | Wpoint_add x ->
+      { kind = "wpoint_add"; json = [ ("unknown", json_local nm x) ] }
+  | Wpoint_remove x ->
+      { kind = "wpoint_remove"; json = [ ("unknown", json_local nm x) ] }
+  | Destabilize y ->
+      { kind = "destabilize"; json = [ ("unknown", json_unknown nm y) ] }
+  | Stable_remove x ->
+      { kind = "stable_remove"; json = [ ("unknown", json_local nm x) ] }
   | Solve x ->
       let again = Hashtbl.mem seen x in
       Hashtbl.replace seen x ();
@@ -431,6 +501,7 @@ let goblint_line nm = function
                 wp (nm.local_value old) (nm.local_value eqd)
                 (nm.local_value now),
               Keep )
+      | C.Ev_Wpoint_Clear _ -> None
       | C.Ev_Wpoint_Remove (i, wp) ->
           if wp then Some ("wpoint", "iterate removing wpoint " ^ x i, Keep)
           else None
@@ -495,6 +566,30 @@ let verbose ~pr ~selected nm events =
 
 (* ------------------------------------------------------------------ emit *)
 
+(* The returned result's state at every point and context, named as the trace
+   names local unknowns. These come from run_voblint's answer, not from the
+   events, so a replay of the events can be checked against them. *)
+let result_records result =
+  let contexts = Array.of_list (C.res_contexts result) in
+  let json_ctx = function
+    | C.Context_Unit -> {|{"kind":"unit"}|}
+    | C.Context_Entry vs ->
+        Printf.sprintf {|{"kind":"entry_state","values":[%s]}|}
+          (String.concat "," (List.map json_string vs))
+    | C.Context_Call_String ps ->
+        Printf.sprintf {|{"kind":"call_string","sites":[%s]}|}
+          (String.concat ","
+             (List.map (fun p -> json_string (A.point_name p)) ps))
+  in
+  List.map
+    (fun st ->
+      Printf.sprintf
+        {|{"event":"result","unknown":{"kind":"local","node":%s,"context":%s},"value":%s}|}
+        (json_string (node_name (C.state_point st)))
+        (json_ctx contexts.(A.int_of_nat (C.state_context st)))
+        (json_string (view_text_with Fun.id (C.state_value st))))
+    (C.res_states result)
+
 let checks result =
   List.map
     (fun c ->
@@ -530,12 +625,12 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
   | None -> pr "Voblint trace: the run recorded no solve\n"
   | Some printers -> (
       let nm = names_of printers in
-      let steps = List.filter_map step_of events in
+      let steps = List.concat_map steps_of events in
       let locals, globals_n = counts steps in
       match format with
       | Jsonl ->
           pr
-            {|{"event":"run","schema":1,"analysis":[%s],"context_policy":%s,"update_rule":%s,"program":%s}|}
+            {|{"event":"run","schema":2,"analysis":[%s],"context_policy":%s,"update_rule":%s,"program":%s}|}
             (String.concat "," (List.map json_string analyses))
             (json_string context) (json_string globals) (json_string program);
           pr "\n";
@@ -551,6 +646,7 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
                          r.json));
                  step + 1)
                1 steps);
+          List.iter (fun r -> pr "%s\n" r) (result_records result);
           List.iter
             (fun (point, cond, verdict) ->
               pr {|{"event":"check","point":%s,"condition":%s,"verdict":%s}|}

@@ -139,7 +139,7 @@ let usage =
   \                             seed reads, flushed publications, restarts\n\
   \                             and returns (default).\n\
   \  --verbose                  Trace every solver step, one line per step\n\
-  \                             in the form of Goblint's --trace output\n\
+  \                             in a Goblint-aligned tracing vocabulary\n\
   \                             ('%%% iter: begin iterate ...').\n\
   \  --trace-sys SYS[,...]      Print only these subsystems of the verbose\n\
   \                             trace, as Goblint's --trace SYS selects them:\n\

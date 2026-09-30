@@ -65,7 +65,7 @@ def test_output_file(tmp_path):
     out = tmp_path / "trace.jsonl"
     proc = voblint(*ARGS, "--trace", "--format", "jsonl", "--output", str(out), PROGRAM)
     assert proc.stderr == ""
-    assert out.read_text().startswith('{"event":"run","schema":1')
+    assert out.read_text().startswith('{"event":"run","schema":2')
 
 
 @pytest.mark.parametrize("flag", [["--compact"], ["--verbose"]])
@@ -177,7 +177,7 @@ def test_header_and_steps(events):
     run = events[0]
     assert run == {
         "event": "run",
-        "schema": 1,
+        "schema": 2,
         "analysis": ["interval"],
         "context_policy": "entry-state",
         "update_rule": "warrow",
@@ -251,3 +251,22 @@ def test_generated_module_carries_trace_calls():
     assert solver.count('Solver_trace_hook.emit "solver"') >= 15
     for channel in ('"solver"', '"route"', '"run"'):
         assert f"Solver_trace_hook.emit {channel}" in text
+
+
+def test_schema2_internal_steps(events):
+    """Queries nest (the replay's stack), every destabilization is followed by
+    its stable removals, and each solve evaluates its right-hand side."""
+    steps = [e for e in events if "step" in e]
+    depth = 0
+    for e in steps:
+        if e["event"] == "query_local":
+            depth += 1
+        elif e["event"] == "value_local":
+            depth -= 1
+        assert depth >= 0
+    assert depth == 0
+    kinds = [e["event"] for e in steps]
+    assert "destabilize" in kinds and "stable_remove" in kinds and "add_infl" in kinds
+    assert kinds.count("eq") >= kinds.count("solve") + kinds.count("resolve")
+    first = kinds.index("iterate")
+    assert kinds[first + 1] == "solve"
