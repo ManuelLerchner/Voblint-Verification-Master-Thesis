@@ -19,7 +19,7 @@ text \<open>
     \<^item> \<open>finC\<close> holds for every \<^const>\<open>compile_prog\<close> output (\<open>compile_prog_finite\<close>);
     \<^item> \<open>calls_unique\<close> is call-source uniqueness for every \<^const>\<open>compile_prog\<close>
       output (\<open>compile_prog_calls_source_unique\<close>);
-    \<^item> \<open>seed_unknown_ne_analysis_global\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
+    \<^item> \<open>seed_ne_analysis_global\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
     \<^item> \<open>routed_entry_cover\<close>'s routing conjunct is \<^const>\<open>cs_route\<close> and
       \<^const>\<open>cs_context\<close> being the same closed term (\<open>cs_route_context_agree\<close>),
       independently of the entered value, so every context the relation admits is the

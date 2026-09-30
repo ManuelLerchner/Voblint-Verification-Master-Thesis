@@ -3866,3 +3866,7 @@ ls_step_state_spec
 single_entry_exec_spec
 state_spec
 state_spec_sound
+# --- One name per concept (2026-09-30): the seed-key injection is `seed`
+# everywhere (was seed_unknown in the routed locales). ---
+seed_unknown
+seed_unknown_ne_analysis_global

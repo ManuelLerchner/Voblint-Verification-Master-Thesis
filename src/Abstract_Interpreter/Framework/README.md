@@ -79,7 +79,7 @@ in the session derives from, transports, or instantiates one of them.
 | `dg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
 | `analysis_contract` | a joint concretization `gammaDG d g` the edge and combine programs' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
 | `dg_context_activation` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
-| `routed_context` | a routing policy `route`/`call_context_rel`/`seed_unknown`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
+| `routed_context` | a routing policy `route`/`call_context_rel`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
 | `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
 Entry is deliberately absent from `analysis_contract`. A call answers a *list* of

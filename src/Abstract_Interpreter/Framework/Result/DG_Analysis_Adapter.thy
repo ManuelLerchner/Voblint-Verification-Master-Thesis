@@ -40,7 +40,7 @@ text \<open>
 
 locale dg_analysis_adapter =
   routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0 sg
-    seed_unknown
+    seed
     "static_resolve g" is_bot \<gamma>\<^sub>M R
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -53,7 +53,7 @@ locale dg_analysis_adapter =
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
-    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and R :: "'c call_context_rel" +

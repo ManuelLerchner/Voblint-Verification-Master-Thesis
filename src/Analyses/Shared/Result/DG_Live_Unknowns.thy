@@ -50,19 +50,19 @@ qed
 
 lemma dep_program_routed_call_program:
   assumes wfS: "dg_spec_wf S"
-  shows "dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v)
+  shows "dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v)
      = insert (Inl (cc, ctx))
          (\<Union>q\<in>set (resolve v cc ca (dg_local (\<tau> (Inl (cc, ctx))))).
-            dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+            dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
                         (dg_local (\<tau> (Inl (cc, ctx)))) q))"
   by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes
       dep_program_side_rhs_fold_dg_char[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
 lemma routed_call_program_mem:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-  shows "routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k
+  shows "routed_call_program S analysis_global seed resolve is_bot route cx ca u k
            \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                    (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx k)"
+                    (routed_call_program S analysis_global seed resolve is_bot) extra g cx k)"
 proof -
   have "(u, ca) \<in> set (call_site_list g k)" using e fin by auto
   then show ?thesis by (rule routed_contribution_programs_combineI)
@@ -72,17 +72,17 @@ lemma dep_L_routed_node_rhs_call_site:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-            (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+            (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   have "Inl (u, cx)
-          \<in> dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k)"
+          \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
     by (simp add: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed_unknown resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
@@ -94,23 +94,23 @@ lemma dep_L_routed_node_rhs_callee_result:
     and nb: "\<not> is_bot (f (dg_local (\<tau> (Inl (u, cx)))))"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(FunctionResult q, route u cx (f (dg_local (\<tau> (Inl (u, cx))))) ca)
            \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-                (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+                (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   let ?d = "dg_local (\<tau> (Inl (u, cx)))"
-  have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot cx ca u ?d q)
+  have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)
       = dep_aux \<tau> (sp_compile (side_rhs_fold_dg bot
-          (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot cx ca u q)
+          (map (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q)
              [(?d, f ?d)])))"
     unfolding routed_callee_call_program_def enter sp_compile_bind
     by (rule enter_depsD[OF enter_deps_local_enter_transfer_mk_dg_man, simplified])
   have "Inl (FunctionResult q, route u cx (f ?d) ca)
-          \<in> dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot cx ca u ?d q)"
+          \<in> dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)"
   proof -
     have "Inl (FunctionResult q, route u cx (f ?d) ca)
-            \<in> dep_program \<tau> (routed_call_alternative_program S analysis_global seed_unknown route is_bot cx ca u q
+            \<in> dep_program \<tau> (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q
                            (?d, f ?d))"
       using nb by (simp add: routed_call_alternative_program_def Let_def)
     then show ?thesis
@@ -119,12 +119,12 @@ proof -
       by simp
   qed
   then have "Inl (FunctionResult q, route u cx (f ?d) ca)
-               \<in> dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k)"
+               \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
     using res by (auto simp: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed_unknown resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 

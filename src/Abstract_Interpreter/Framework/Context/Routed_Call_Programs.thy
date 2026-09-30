@@ -88,7 +88,7 @@ text \<open>
   Parameter order matches \<open>dg_context_activation\<close>'s \<open>cmb\<close> calling
   convention: the generator supplies \<open>route\<close> as \<open>cmb\<close>'s own first argument
   (\<open>cmb route c ca cc ex\<close> in \<^const>\<open>routed_node_rhs\<close>), so
-  \<open>routed_call_program S analysis_global seed_unknown\<close>, closing over the spec, the shared slot, and the
+  \<open>routed_call_program S analysis_global seed\<close>, closing over the spec, the shared slot, and the
   seed-key injection, is the value that instantiates \<open>cmb\<close>.
 
   This program owns the whole call lifecycle for one call action: it reads the caller once,
@@ -113,8 +113,8 @@ text \<open>
   \<^type>\<open>dg_state\<close> already carries both fields at every key regardless of whether the
   key is reached through \<open>Inl\<close> (a \<open>(pp, 'c)\<close> local unknown) or \<open>Inr\<close> (a \<open>'k\<close>
   global unknown): \<open>dg_local\<close>/\<open>dg_global\<close> are call-site conventions, not something
-  \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> themselves enforce. Since \<open>seed_unknown p ctx\<close> is
-  always distinct from \<open>analysis_global\<close> (\<open>seed_unknown_ne_analysis_global\<close>) and no other equation ever
+  \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> themselves enforce. Since \<open>seed p ctx\<close> is
+  always distinct from \<open>analysis_global\<close> (\<open>seed_ne_analysis_global\<close>) and no other equation ever
   publishes to a seed key, nothing else reads or writes that key's \<open>dg_local\<close> half.
 \<close>
 
@@ -149,7 +149,7 @@ definition routed_call_alternative_program ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
-  "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p alt =
+  "routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p alt =
      (case alt of (cont, entry) \<Rightarrow>
         (if is_bot entry
          then sp_map (\<lambda>d. DG d bot)
@@ -158,7 +158,7 @@ where
          else
            (let ctx' = route cc ctx entry ca
             in do {
-                 _ \<leftarrow> sp_publish (seed_unknown (FunctionEntry p) ctx') (DG entry bot);
+                 _ \<leftarrow> sp_publish (seed (FunctionEntry p) ctx') (DG entry bot);
                  callee_state \<leftarrow> sp_read_local (FunctionResult p, ctx');
                  sp_map (\<lambda>d. DG d bot)
                    (dg_spec_combine_transfer S (call_info_of ca p)
@@ -175,7 +175,7 @@ text \<open>
 
 lemma routed_call_alternative_program_bot [simp]:
   assumes "is_bot entry"
-  shows "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p (cont, entry)
+  shows "routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p (cont, entry)
            = sp_map (\<lambda>d. DG d bot)
                (dg_spec_combine_transfer S (call_info_of ca p)
                  (mk_dg_man cont (\<lambda>_. analysis_global)) bot)"
@@ -183,9 +183,9 @@ lemma routed_call_alternative_program_bot [simp]:
 
 lemma routed_call_alternative_program_nonbot [simp]:
   assumes "\<not> is_bot entry"
-  shows "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p (cont, entry)
+  shows "routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p (cont, entry)
      = do {
-         _ \<leftarrow> sp_publish (seed_unknown (FunctionEntry p) (route cc ctx entry ca)) (DG entry bot);
+         _ \<leftarrow> sp_publish (seed (FunctionEntry p) (route cc ctx entry ca)) (DG entry bot);
          callee_state \<leftarrow> sp_read_local (FunctionResult p, route cc ctx entry ca);
          sp_map (\<lambda>d. DG d bot)
            (dg_spec_combine_transfer S (call_info_of ca p)
@@ -203,11 +203,11 @@ definition routed_callee_call_program ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
-  "routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p =
+  "routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p =
      do {
        pairs \<leftarrow> enter\<^sup># S (call_info_of ca p) (mk_dg_man caller (\<lambda>_. analysis_global));
        side_rhs_fold_dg bot
-         (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p) pairs)
+         (map (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p) pairs)
      }"
 
 text \<open>
@@ -234,11 +234,11 @@ definition routed_call_program ::
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
-  "routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v =
+  "routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v =
      do {
        caller_state \<leftarrow> sp_read_local (cc, ctx);
        side_rhs_fold_dg bot
-         (map (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+         (map (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
                  (dg_local caller_state))
               (resolve v cc ca (dg_local caller_state)))
      }"
@@ -253,22 +253,22 @@ definition routed_entry_seed_programs ::
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G::bounded_semilattice_sup_bot) dg_state,
         ('D, 'G) dg_state) strategy_program list"
 where
-  "routed_entry_seed_programs seed_unknown route ctx v =
+  "routed_entry_seed_programs seed route ctx v =
      (case v of FunctionEntry _ \<Rightarrow>
         [do {
-           seed_state \<leftarrow> sp_read_global (seed_unknown v ctx);
+           seed_state \<leftarrow> sp_read_global (seed v ctx);
            sp_return (DG (dg_local seed_state) bot)
          }]
        | _ \<Rightarrow> [])"
 
 lemma routed_entry_seed_programs_free:
-  "x \<in> set (routed_entry_seed_programs seed_unknown route ctx v)
+  "x \<in> set (routed_entry_seed_programs seed route ctx v)
      \<Longrightarrow> sides_of_program x tau z = bot"
   unfolding routed_entry_seed_programs_def
   by (cases v) (auto simp: sp_compile_def bot_fun_def)
 
 lemma routed_entry_seed_programs_local_only:
-  "x \<in> set (routed_entry_seed_programs seed_unknown route ctx v)
+  "x \<in> set (routed_entry_seed_programs seed route ctx v)
      \<Longrightarrow> dg_global (traverse_program x tau) = bot"
   unfolding routed_entry_seed_programs_def by (cases v) (auto simp: sp_compile_def)
 
@@ -279,20 +279,20 @@ text \<open>
 \<close>
 
 lemma sp_wf_routed_entry_seed_programs [intro]:
-  "x \<in> set (routed_entry_seed_programs seed_unknown route ctx v) \<Longrightarrow> sp_wf x"
+  "x \<in> set (routed_entry_seed_programs seed route ctx v) \<Longrightarrow> sp_wf x"
   unfolding routed_entry_seed_programs_def by (cases v) auto
 
 lemma sp_wf_routed_call_alternative_program [intro]:
   assumes "dg_spec_wf S"
   shows
-    "sp_wf (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p alt)"
+    "sp_wf (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p alt)"
   unfolding routed_call_alternative_program_def Let_def
   by (auto intro!: sp_wf_map sp_wf_bind dg_spec_wf_combine[OF assms] split: prod.splits)
 
 lemma sp_wf_routed_callee_call_program [intro]:
   assumes "dg_spec_wf S"
   shows
-    "sp_wf (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p)"
+    "sp_wf (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p)"
   unfolding routed_callee_call_program_def
   by (intro sp_wf_bind dg_spec_wf_enter[OF assms] sp_wf_side_rhs_fold_dg)
      (auto intro: sp_wf_routed_call_alternative_program[OF assms])
@@ -300,20 +300,20 @@ lemma sp_wf_routed_callee_call_program [intro]:
 lemma sp_wf_routed_call_program [intro]:
   assumes "dg_spec_wf S"
   shows
-    "sp_wf (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v)"
+    "sp_wf (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v)"
   unfolding routed_call_program_def
   by (intro sp_wf_bind sp_wf_read_local sp_wf_side_rhs_fold_dg)
      (auto intro: sp_wf_routed_callee_call_program[OF assms])
 
 lemma sp_wf_routed_call_alternative_programs [intro]:
   "dg_spec_wf S
-     \<Longrightarrow> \<forall>q \<in> set (map (routed_call_alternative_program S analysis_global seed_unknown route
+     \<Longrightarrow> \<forall>q \<in> set (map (routed_call_alternative_program S analysis_global seed route
              is_bot ctx ca cc p) pairs). sp_wf q"
   by (auto intro: sp_wf_routed_call_alternative_program)
 
 lemma sp_wf_routed_callee_call_programs [intro]:
   "dg_spec_wf S
-     \<Longrightarrow> \<forall>q \<in> set (map (routed_callee_call_program S analysis_global seed_unknown route
+     \<Longrightarrow> \<forall>q \<in> set (map (routed_callee_call_program S analysis_global seed route
              is_bot ctx ca cc caller) ps). sp_wf q"
   by (auto intro: sp_wf_routed_callee_call_program)
 
@@ -332,21 +332,21 @@ lemma routed_callee_call_program_sides_ge_seed:
     and mem: "(cont, entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
   shows "DG entry bot
-           \<le> sides_of_program (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx
+           \<le> sides_of_program (routed_callee_call_program S analysis_global seed route is_bot ctx
                 (CallEdge dst pars args) cc caller p) \<sigma>
-                (Inr (seed_unknown (FunctionEntry p)
+                (Inr (seed (FunctionEntry p)
                    (route cc ctx entry (CallEdge dst pars args))))"
 proof -
-  let ?F = "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx
+  let ?F = "routed_call_alternative_program S analysis_global seed route is_bot ctx
               (CallEdge dst pars args) cc p"
-  let ?k = "Inr (seed_unknown (FunctionEntry p) (route cc ctx entry (CallEdge dst pars args)))"
+  let ?k = "Inr (seed (FunctionEntry p) (route cc ctx entry (CallEdge dst pars args)))"
   have "DG entry bot \<le> sides_of_program (?F (cont, entry)) \<sigma> ?k"
     unfolding routed_call_alternative_program_def using nb
     by (simp add: Let_def sp_compile_def)
   also have "\<dots> \<le> sides_of_program (side_rhs_fold_dg bot (map ?F pairs)) \<sigma> ?k"
     by (rule sides_le_side_rhs_fold_dg[OF sp_wf_routed_call_alternative_programs[OF wfS]])
        (use mem in force)
-  also have "\<dots> \<le> sides_of_program (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx
+  also have "\<dots> \<le> sides_of_program (routed_callee_call_program S analysis_global seed route is_bot ctx
                      (CallEdge dst pars args) cc caller p) \<sigma> ?k"
     unfolding routed_callee_call_program_def
     by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
@@ -363,7 +363,7 @@ lemma routed_callee_call_program_sides_ge_prefix:
   assumes R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. analysis_global)) \<sigma> pairs pub"
   shows "pub \<le> sides_of_program
-                 (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma>"
+                 (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma>"
   unfolding routed_callee_call_program_def
   by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R])
 
@@ -377,14 +377,14 @@ text \<open>
 lemma routed_call_program_sides_ge_at:
   assumes wfS: "dg_spec_wf S"
     and mem: "p \<in> set (resolve v cc ca (dg_local (\<sigma> (Inl (cc, ctx)))))"
-  shows "sides_of_program (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+  shows "sides_of_program (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
              (dg_local (\<sigma> (Inl (cc, ctx)))) p) \<sigma> z
            \<le> sides_of_program
-                (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v) \<sigma> z"
+                (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v) \<sigma> z"
 proof -
-  have "routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+  have "routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
           (dg_local (\<sigma> (Inl (cc, ctx)))) p
-          \<in> set (map (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+          \<in> set (map (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
                         (dg_local (\<sigma> (Inl (cc, ctx)))))
                   (resolve v cc ca (dg_local (\<sigma> (Inl (cc, ctx))))))"
     using mem by simp
@@ -400,18 +400,18 @@ lemma routed_callee_call_program_sides_ge_combine:
                 (mk_dg_man caller (\<lambda>_. analysis_global)) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "sides_of_program
-           (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p (cont, entry))
+           (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p (cont, entry))
              \<sigma> z
            \<le> sides_of_program
-                (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma> z"
+                (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma> z"
 proof -
-  let ?F = "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p"
+  let ?F = "routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p"
   have "sides_of_program (?F (cont, entry)) \<sigma> z
           \<le> sides_of_program (side_rhs_fold_dg bot (map ?F pairs)) \<sigma> z"
     by (rule sides_le_side_rhs_fold_dg[OF sp_wf_routed_call_alternative_programs[OF wfS]])
        (use mem in force)
   also have "\<dots> \<le> sides_of_program
-                    (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma> z"
+                    (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma> z"
     unfolding routed_callee_call_program_def
     by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
   finally show ?thesis .
@@ -431,17 +431,17 @@ lemma routed_callee_call_program_traverse_ge:
                 (mk_dg_man caller (\<lambda>_. analysis_global)) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "dg_local (traverse_program
-             (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p (cont, entry))
+             (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p (cont, entry))
                \<sigma>)
            \<le> dg_local (traverse_program
-                (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma>)"
+                (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma>)"
 proof -
-  let ?F = "routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p"
+  let ?F = "routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p"
   have "dg_local (traverse_program (?F (cont, entry)) \<sigma>)
           \<le> side_acc_dg bot \<sigma> (map ?F pairs)"
     by (rule dg_local_traverse_le_side_acc_dg) (use mem in force)
   also have "\<dots> = dg_local (traverse_program
-                     (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma>)"
+                     (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma>)"
     unfolding routed_callee_call_program_def
     by (simp add: sp_compile_bind sp_wf_observes enter_runsD_traverse[OF R]
         traverse_side_rhs_fold_dg[OF sp_wf_routed_call_alternative_programs[OF wfS]])
@@ -477,7 +477,7 @@ lemma sides_side_rhs_fold_dg_bot:
 lemma routed_call_program_global_free:
   assumes wfS: "dg_spec_wf S"
   shows "dg_global (traverse_program
-           (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v) \<sigma>) = bot"
+           (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v) \<sigma>) = bot"
   by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes
       traverse_side_rhs_fold_dg[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
@@ -497,25 +497,25 @@ lemma routed_callee_call_program_side_free_at_analysis_global:
         enter_runs (enter\<^sup># S ci) (mk_dg_man d (\<lambda>_. analysis_global)) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d (\<lambda>_. analysis_global)) de)) \<sigma> z = bot"
-    and ne: "\<And>p ctx'. seed_unknown (FunctionEntry p) ctx' \<noteq> analysis_global"
+    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> analysis_global"
   shows "sides_of_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
+           (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
          = bot"
 proof -
   obtain pairs pub
     where R: "enter_runs (enter\<^sup># S (call_info_of ca p))
                 (mk_dg_man caller (\<lambda>_. analysis_global)) \<sigma> pairs pub"
     using enter_runs_ex by blast
-  have alts: "\<And>t. t \<in> set (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx
+  have alts: "\<And>t. t \<in> set (map (routed_call_alternative_program S analysis_global seed route is_bot ctx
                                   ca cc p) pairs)
                  \<Longrightarrow> sides_of_program t \<sigma> (Inr analysis_global) = bot"
     by (auto simp: routed_call_alternative_program_def Let_def sp_compile_def
         comb_free ne[THEN not_sym] split: if_splits)
   have "sides_of_program
-          (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
+          (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
         = pub (Inr analysis_global)
           \<squnion> sides_of_program (side_rhs_fold_dg bot
-                (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p)
+                (map (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p)
                   pairs))
               \<sigma> (Inr analysis_global)"
     unfolding routed_callee_call_program_def
@@ -523,7 +523,7 @@ proof -
   also have "\<dots> = bot"
   proof -
     have "sides_of_program (side_rhs_fold_dg bot
-            (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot ctx ca cc p) pairs))
+            (map (routed_call_alternative_program S analysis_global seed route is_bot ctx ca cc p) pairs))
             \<sigma> (Inr analysis_global) = bot"
       by (rule sides_side_rhs_fold_dg_bot[OF sp_wf_routed_call_alternative_programs[OF wfS]])
          (rule alts)
@@ -540,17 +540,17 @@ lemma routed_call_program_side_free_at_analysis_global:
         enter_runs (enter\<^sup># S ci) (mk_dg_man d (\<lambda>_. analysis_global)) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d (\<lambda>_. analysis_global)) de)) \<sigma> z = bot"
-    and ne: "\<And>p ctx'. seed_unknown (FunctionEntry p) ctx' \<noteq> analysis_global"
-  shows "sides_of_program (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v)
+    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> analysis_global"
+  shows "sides_of_program (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v)
            \<sigma> (Inr analysis_global) = bot"
 proof -
   have at_free: "\<And>caller p.
-      sides_of_program (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc caller p)
+      sides_of_program (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p)
         \<sigma> (Inr analysis_global) = bot"
     by (rule routed_callee_call_program_side_free_at_analysis_global[OF wfS])
        (rule enter_free enter_runs_ex comb_free ne, assumption?)+
   have "sides_of_program (side_rhs_fold_dg bot
-          (map (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+          (map (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
                   (dg_local (\<sigma> (Inl (cc, ctx)))))
              (resolve v cc ca (dg_local (\<sigma> (Inl (cc, ctx))))))) \<sigma> (Inr analysis_global) = bot"
     by (rule sides_side_rhs_fold_dg_bot[OF sp_wf_routed_callee_call_programs[OF wfS]])
