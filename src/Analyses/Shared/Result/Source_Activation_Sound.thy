@@ -128,7 +128,7 @@ proof -
          [where f = "\<lambda>_ _ _. ()" and c\<^sub>0 = "()",
           OF wf s0 run]
   obtain v stk t c where m: "Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-    and "activation_context (\<lambda>_ _ _. ()) () t = c"
+    and "activation_context_of (\<lambda>_ _ _. ()) () t = c"
     and mem: "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun (\<lambda>_ _ _. ()),(),?g,S\<^esub> v c"
     by blast
   have "s \<in> \<C>\<^bsub>\<G>,?g,S\<^esub> v"

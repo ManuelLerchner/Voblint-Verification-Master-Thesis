@@ -177,7 +177,7 @@ theorem Union_activation_collect_le_node_collect:
 text \<open>Bridge (2): the converse needs every valid activation trace to carry some context.  That premise is
   the whole content of the direction -- a policy that leaves some trace uncontexted loses the
   stores on it, and the union then falls short.  A functional policy has it outright, since
-  \<^const>\<open>activation_context\<close> is total; a relational one earns it from conditional totality, which is
+  \<^const>\<open>activation_context_of\<close> is total; a relational one earns it from conditional totality, which is
   \<open>Activation_Trace_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem node_collect_eq_Union_activation_of_has_context:
   assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"

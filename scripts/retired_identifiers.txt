@@ -3969,3 +3969,6 @@ trace_context_caller_of_None
 trace_context_extend
 trace_context_of_fun_iff
 
+# --- The functional context of an activation trace is activation_context_of (2026-09-30):
+# the function package reserves activation_context_rel for its termination relation. ---
+activation_context

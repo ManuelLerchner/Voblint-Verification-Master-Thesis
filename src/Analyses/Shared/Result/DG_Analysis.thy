@@ -1034,7 +1034,7 @@ qed
 text \<open>
   The functional route's counterpart of the entry-state pair, and the reason a
   source-level statement is available for it too. The union side needs nothing
-  at all: \<^const>\<open>activation_context\<close> is total, so every valid activation trace carries a context without
+  at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
   any coverage having been established. Only the per-bucket bound depends on the
   solve, and it takes the same single closure premise as the entry-state one.
 
