@@ -427,16 +427,17 @@ exactly. It makes the existing abstraction computable and adds no new one.
 
 Voblint's carrier keeps two defaults, one for locals and one for globals, next
 to a list of overrides at _locations_, which tag a name as local or global
-(#isatype("default_st_rep"), #isatype("location")). We write a carrier state as a
-triple of the local default, the global default and the override list. A map
+(#isatype("default_st_rep"), #isatype("location")). Isabelle writes the carrier
+state with local default $l$, global default $g$ and override list $"ps"$ as
+the triple $⟪l, g, "ps"⟫$ (#isaconst("default_st_mk")), and so do we. A map
 over a fixed #ltop cannot express two states the analysis needs. VIMP
 initializes variables as C does: globals start at zero and the locals of
 `main` are arbitrary (@sec:vimp-vs-c, #c11("6.7.9p10")). The initial state is
-$(ltop, 0^sharp, [])$ (#isaconst("initial_default_st"); for Sign,
+$⟪ltop, 0^sharp, []⟫$ (#isaconst("initial_default_st"); for Sign,
 #isaconst("cinit_sign_st")), where $0^sharp$ is the domain's abstract value of
 the constant $0$: every local is #ltop and every global $0^sharp$, without
 listing the declared globals. The solver's lattice interface also asks for a
-least element, here $(lbot, lbot, [])$ (#isaconst("bot_default_st")), and
+least element, here $⟪lbot, lbot, []⟫$ (#isaconst("bot_default_st")), and
 the mixed-flow extension of @sec:mixed-flow stores states whose locals are all
 #lbot. In
 #isaconst("run_voblint") the solver's values are lifted states, which start at
@@ -457,24 +458,28 @@ equality (#isaconst("equal_default_st")) tests the order in both
 directions. An operation is defined on the finite representation and lifted to
 the quotient once it is shown to give equal results on equal descriptions.
 
-Such an element is used like a map with `get` and `set`. `get`
-(#isaconst("default_st_get")) returns the override of a location, or the
-default for its tag if there is none; `set` (#isaconst("default_st_set"))
-records an override. Readback $rho$ (#isaconst("default_st_to_fun")) is
-`get` on every variable: it turns a carrier state into the total function on
-variable names that the specification uses. It looks each name $x$ up at its
-location $ell(x)$, the local or global location that the program's
-global-variable classifier (@sec:pstep) assigns to $x$.
+Such an element is used like a map. The lookup $d⟨l⟩$
+(#isaconst("default_st_get")) returns the override of location $l$, or the
+default for its tag if there is none; the update $d⟨l := a⟩$
+(#isaconst("default_st_set")) records an override. Readback $rho_(cal(G))$
+(#isaconst("default_st_to_fun")) is lookup on every variable: it turns a
+carrier state into the total function on variable names that the
+specification uses. It looks each name $x$ up at its location $ell(x)$, the
+local or global location that the program's global-variable classifier
+$cal(G)$ (@sec:pstep) assigns to $x$.
 
 A carrier state means what its readback means. @sec:nonrel-state concretizes a
 function state $f$ to the stores whose every variable lies in the
 concretization of its value, $sem(f) = setcomp(s, forall x. s(x) in conc(f(x)))$
-(#isaconst("gamma_state")). We write $gamma_(S)$ for that set after readback:
-$ gamma_(S) (d) = sem(rho(d)) = setcomp(s, forall x. s(x) in conc("get"(d, ell(x)))). $
-The downstream contracts do not use a separate concretization of the carrier:
-they are stated through readback, as the commutation laws below show. The
-solver never computes
-$gamma_(S)$; it uses only the executable lattice operations.
+(#isaconst("gamma_state")). The carrier's concretization
+(#isaconst("default_st_gamma")) is that set after readback:
+$ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
+It depends on $cal(G)$, which decides where each name's value is stored.
+Within the refinement locale #isalocale("dg_domain_exec"), which fixes
+$cal(G)$, Isabelle writes it $sem(d)$ like every other concretization of an
+abstract state. Semantic statements about carrier states use it; readback
+relates carrier operations to their counterparts on functions. The solver
+never computes $sem(d)$; it uses only the executable lattice operations.
 
 The solver needs a lattice of states: bottom to start every unknown, order and
 equality to decide whether an unknown changed, join to combine contributions,
@@ -545,7 +550,7 @@ elements for one local and one global.
               $
             }
           }
-          align(center, text(size: 6.5pt)[(#spell(st.at(0)), #spell(st.at(1)), []) \ #text(
+          align(center, text(size: 6.5pt)[⟪#spell(st.at(0)), #spell(st.at(1)), []⟫ \ #text(
               size: 6pt,
               fill: vb.muted,
               den,
@@ -572,35 +577,35 @@ elements for one local and one global.
   placement: auto,
   caption: [The override-free carrier states over Parity, part of an infinite
     lattice. A node shows its representation (local default, global default,
-    overrides) and, below it, its concretization $gamma_(S) (d)$ restricted to
+    overrides) and, below it, its concretization $sem(d)$ restricted to
     one local $x$ and one global $g$. Edges are the carrier order. Purple is the
-    least element $(lbot, lbot, [])$; blue is the initial state
-    $(ltop, "even", [])$ (#isaconst("cinit_parity_st")), which the quotient
-    also identifies with $(ltop, "even", [g |-> "even"])$.],
+    least element $⟪lbot, lbot, []⟫$; blue is the initial state
+    $⟪ltop, "even", []⟫$ (#isaconst("cinit_parity_st")), which the quotient
+    also identifies with $⟪ltop, "even", [g |-> "even"]⟫$.],
 ) <fig:carrier-lattice>
 
 
 The figure shows two ways in which states can be alike. The quotient
 identifies representations that answer every lookup alike, such as
-$(ltop, "even", [])$ and $(ltop, "even", [g |-> "even"])$. Distinct carrier
+$⟪ltop, "even", []⟫$ and $⟪ltop, "even", [g |-> "even"]⟫$. Distinct carrier
 elements can still denote the same stores: every node with a #lbot component
-has $gamma_(S) (d) = emptyset$. These nodes read back to distinct function
+has $sem(d) = emptyset$. These nodes read back to distinct function
 states, so the quotient keeps them apart, and a higher node denotes at least
 the stores of a lower one.
 
 Each operation is computed with the value domain's operation on the two
-defaults and on each listed location, so under `get` it agrees with the
+defaults and on each listed location, so under lookup it agrees with the
 pointwise operation on functions: for the join,
 #isathm("default_st_get_sup") states
-$"get"(d union.sq e, l) = "get"(d, l) union.sq "get"(e, l)$, and
+$(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and
 #isathm("default_st_get_bot"), #isathm("le_default_st_iff"),
 #isathm("default_st_get_widen") and #isathm("default_st_get_narrow")
 state the same for bottom, order, widening and narrowing. Point update is not a
 lattice operation; the transfer functions use it for assignments.
 
 The transfer functions must commute with readback,
-$ rho("op"_"exec" (d)) = "op"_"abs" (rho(d)), $
-and since $gamma_(S) (d) = sem(rho(d))$, the soundness facts of
+$ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
+and since $sem(d) = sem(rho_(cal(G))(d))$, the soundness facts of
 @ch:analysis-interface for the abstract operation then transport to the
 executable one. The locale #isalocale("dg_analysis_exec") states this
 commutation as its readback contract, for the transfer on nonempty states and
@@ -617,13 +622,10 @@ The carrier decides it with a finite test. The test inspects the local
 default, the overrides that readback reads, and each declared global. The
 globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
-#isathm("default_st_is_bot_for_iff") proves that the test holds exactly
-when the readback $rho(d)$ satisfies #isaconst("is_empty_state"), provided the
-supplied list enumerates exactly the globals of the global-variable
-classifier, and #isathm("is_empty_state_iff_gamma_state_empty") shows that
-#isaconst("is_empty_state") holds exactly for the function states that denote
-no store. Composed, the two make the test exact:
-$ "is_bot"(d) <==> gamma_(S) (d) = emptyset. $
+#isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
+$ #isaconst("default_st_is_bot_for") space "globals" space d <==> sem(d) = emptyset, $
+provided the supplied list enumerates exactly the globals of the
+global-variable classifier.
 
 The carrier uses the equivalence in both directions. The specification
 collapses exactly the empty states to #lbot, and because the test is exact the
