@@ -37,7 +37,7 @@ text \<open>
 
   Beyond \<^locale>\<open>dg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>R\<close> is the trace-semantic context relation
-  keying the activation-local collecting semantics; and two obligations about it cannot be
+  keying the activation-trace collecting semantics; and two obligations about it cannot be
   discharged generically.  \<open>routed_entry_cover\<close> is adequacy: whenever \<open>R\<close> admits a context
   for a real call edge and a covered caller store, some alternative of the specification's
   own entry run describes that call --- its continuation half containing the caller store,
@@ -609,7 +609,7 @@ next
 qed
 
 text \<open>
-  Every valid trace of a covered program carries some context under this instance's own
+  Every valid activation trace of a covered program carries some context under this instance's own
   \<open>R\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
   \<open>activation_coverage\<close> total here, so a \<open>Source_Ctx\<close>-style example can discharge the
   \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the

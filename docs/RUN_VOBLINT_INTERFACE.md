@@ -120,7 +120,7 @@ definition diagnostics_sound_at :: "'v run_result => imp_prog => pp => store => 
 lemma run_voblint_sound_at:
   assumes "config_terminates as rule ctx p"
       and "run_voblint as rule ctx p = Analysed res"
-      and "s : ltr_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v"
+      and "s : node_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v"
   shows "analysis_result_covers as rule ctx p v s
          /\ checks_sound_at res v s /\ diagnostics_sound_at res p v s"
 ```

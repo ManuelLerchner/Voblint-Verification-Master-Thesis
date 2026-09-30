@@ -193,7 +193,7 @@ text \<open>
   being total. Both readings are settled in
   \<^theory>\<open>Voblint_CFG.Activation_Trace_Collect\<close>: a functional policy has the union outright,
   a relational one --- such as the entry-state policy --- earns it from the
-  existence of a context for every valid trace. \<^const>\<open>Bot\<close> cannot be the entry
+  existence of a context for every valid activation trace. \<^const>\<open>Bot\<close> cannot be the entry
   found, since it concretizes to no store at all.
 \<close>
 

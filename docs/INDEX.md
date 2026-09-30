@@ -6,7 +6,7 @@ These documents describe the supported architecture and its verification.
 ## Architecture
 
 - [Procedure-aware CFG architecture](PROCEDURE_AWARE_CFG_ARCHITECTURE.md) — source
-  contract, compiler, activation-local semantics, equations, D/G routing, and
+  contract, compiler, activation-trace semantics, equations, D/G routing, and
   solver integration.
 - [Proof overview](PROOF_OVERVIEW.md) — end-to-end soundness chain.
 - [Theorem map](THEOREM_MAP.md) — thesis and pipeline claims mapped to checked
@@ -25,8 +25,8 @@ These documents describe the supported architecture and its verification.
   difference exists, and what would close it.
 - [Verification chain and trust boundary](VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
   — what is proved, what is generated, and what is handwritten.
-- [Activation-local trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
-  why `valid_ltr` is the concrete foundation and how contexts project from it.
+- [Activation trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
+  why `valid_activation_trace` is the concrete foundation and how contexts project from it.
 - [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
   `manifests/analyses.yaml` registry and what it generates.
 - [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and

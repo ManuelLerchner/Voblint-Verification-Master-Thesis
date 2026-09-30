@@ -29,5 +29,5 @@ session Voblint_Compile in "." = "Voblint_CFG" +
        every live node reaches its procedure's result. *)
     Live_Nodes
     (* The bridge, and the only theory that needs both branches: a source run
-       becomes a valid local trace (csim -> valid_activation_trace). *)
+       becomes a valid activation trace (csim -> valid_activation_trace). *)
     Source_To_Trace

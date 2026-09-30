@@ -324,7 +324,7 @@ next
   then show ?case using mf_snapshot by fastforce
 qed
 
-subsection \<open>Soundness against the concrete trace semantics\<close>
+subsection \<open>Soundness against the activation-trace semantics\<close>
 
 lemma mf_cinit_sound:
   "cinit_stores mf_gs \<subseteq> split_gamma mf_gs cinit_sign_st (restrict_global_default_st cinit_sign_st)"

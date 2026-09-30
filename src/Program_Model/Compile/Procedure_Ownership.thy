@@ -581,7 +581,7 @@ next
   from nostub[OF this stub(2)] show ?thesis ..
 qed
 
-text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
+text \<open>Every activation in the caller chain of a valid activation trace is fragment-local.  The property is
   carried over the whole \<^const>\<open>callers\<close> chain so that the return case, which resumes the caller,
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_activation_trace_frag_callers:

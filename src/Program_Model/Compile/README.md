@@ -16,7 +16,7 @@ These five words appear throughout and are worth having straight first.
 | **located** | "the graph's program counter is at node `v`". `control_at` relates a residual to the node it is located at. |
 | **activation** | one live call of a procedure: its own store and its own position. Recursion means several activations of the same procedure. |
 | **certificate** | `compiled_at \Pi g p c0 k n`: `c0` is procedure `p`'s body, and that body compiled at offset `n` with continuation `k` sits in graph `g`. Every live activation in the simulation relation carries one. |
-| **local trace** | the history of *one* activation — its path through its own fragment, plus a link to the caller that spawned it. Defined in `Voblint_CFG`, not here. |
+| **activation trace** | the history of *one* activation — its path through its own fragment, plus a link to the caller that spawned it. Defined in `Voblint_CFG`, not here. |
 
 The one design choice that explains most of the code: **`compile` takes the
 continuation as an input**, rather than returning an exit node. So a fragment
@@ -52,7 +52,7 @@ resume.
 `FunctionResult inc` pops that frame and resumes at `Statement 3`. Note the
 return follows **no edge** — the stack supplied the continuation.
 
-*As a trace* (`valid_ltr`): `main`'s activation is one trace, `inc`'s call is a
+*As a trace* (`valid_activation_trace`): `main`'s activation is one trace, `inc`'s call is a
 second trace linked to it as its caller. The store at `Statement 3` is what
 `activation_collect` reports at that node, and what the analysis must
 over-approximate.
@@ -69,7 +69,7 @@ over-approximate.
 | `Simulation/Simulation_Relation.thy` | What does it mean for a source state and a graph state to agree? (`csim`) |
 | `Simulation/Simulation_Preservation.thy` | Does that agreement survive every step, and every run? (`csim_star`) |
 | `Procedure_Ownership.thy` | Can an activation wander into another procedure's nodes? (no) |
-| `Source_To_Trace.thy` | Is a source run a valid local trace? (yes — and this is what soundness consumes) |
+| `Source_To_Trace.thy` | Is a source run a valid activation trace? (yes — and this is what soundness consumes) |
 
 ## Shape of the session
 

@@ -56,7 +56,7 @@ text \<open>
 
   A functional policy --- the unit context, a k-call-string --- is the graph of a function,
   \<open>call_context_rel_of_fun\<close>.  The abstract selector an analysis actually runs stays a
-  function of the abstract entry value; only the trace semantics is relational.
+  function of the abstract entry value; only the activation-trace semantics is relational.
 \<close>
 
 type_synonym 'c call_context_rel =
@@ -278,8 +278,8 @@ proof -
   with iff assms(4,5) show ?thesis by blast
 qed
 
-text \<open>A functional policy carries exactly \<^const>\<open>activation_context\<close>'s context on every valid trace.  The
-  restriction to valid traces is what supplies the call edge the relational clause names.\<close>
+text \<open>A functional policy carries exactly \<^const>\<open>activation_context\<close>'s context on every valid activation trace.  The
+  restriction to valid activation traces is what supplies the call edge the relational clause names.\<close>
 lemma activation_context_rel_of_fun_iff:
   assumes "t \<in> \<T>"
   shows "activation_context_rel \<G> (call_context_rel_of_fun f) c\<^sub>0 g t ctx
@@ -317,7 +317,7 @@ qed
 
 subsection \<open>Functional context entry invariant\<close>
 
-text \<open>Every ancestor of a valid trace is itself valid: \<open>caller_chain_closure\<close>'s own
+text \<open>Every ancestor of a valid activation trace is itself valid: \<open>caller_chain_closure\<close>'s own
   four cases are exactly \<^const>\<open>valid_activation_trace\<close>'s four introduction rules, so the closure fact
   and validity coincide.\<close>
 
@@ -401,7 +401,7 @@ text \<open>
   A relation may admit no context for a call.  The callee activation then carries no
   context and drops out of every bucket, but the resumed caller keeps its own, so the
   continuation is still collected.  CALL and RETURN hold vacuously at such a call, and a
-  claim may leave the continuation uncovered although a valid trace reaches it there
+  claim may leave the continuation uncovered although a valid activation trace reaches it there
   (\<open>total_dropped_unsound\<close> in \<open>Example_Non_Vacuity\<close>).  \<open>call_context_total_on cover R \<G> g\<close>
   rules that out exactly where it matters: at every call edge, every store the claimed
   \<open>cover\<close> admits at the call site has some admissible callee context.  A dead call site
@@ -433,7 +433,7 @@ lemma call_context_total_on_of_fun [simp]:
 
 subsection \<open>The activation-indexed context collecting\<close>
 
-text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
+text \<open>The activation-sensitive collecting is the sink stores of valid activation traces reaching \<open>v\<close>
   that may carry the queried context \<open>c\<close>.  One trace may carry several contexts, so the
   buckets of one node cover its stores without partitioning them.\<close>
 
@@ -450,7 +450,7 @@ lemma activation_collect_I [intro]:
    \<Longrightarrow> sink_store t \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
   unfolding activation_collect_def by blast
 
-text \<open>Every collected state has a valid trace witness carrying the queried \<open>c\<close>.\<close>
+text \<open>Every collected state has a valid activation trace witness carrying the queried \<open>c\<close>.\<close>
 lemma activation_collect_E [elim]:
   assumes "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
   obtains t where "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" "sink_node t = v"

@@ -289,7 +289,7 @@ text \<open>
   locale theorems, since they depend on which keys a terminated solve
   actually reached --- \<open>entry_cov\<close> mirrors those instances' own \<open>entry_cov\<close>
   context assumption, and \<open>s0_sound\<close> mirrors the \<open>sound0\<close>/\<open>collect_exit\<close>
-  premises every LTR-level soundness theorem in this development already
+  premises every activation-trace-level soundness theorem in this development already
   takes.
 \<close>
 text \<open>Both endpoints below reach their classifier obligation the same way, and

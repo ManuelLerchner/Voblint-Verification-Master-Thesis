@@ -169,7 +169,7 @@ text \<open>
   "the execution is at \<open>v\<close>": it says \<open>v\<close> \<^emph>\<open>can represent\<close> this control state.
 
   A caller that needs the semantic node pairs this with membership in \<open>node_collect\<close> at the
-  same node, which the dead witness cannot satisfy --- no valid local trace reaches it.  That
+  same node, which the dead witness cannot satisfy --- no valid activation trace reaches it.  That
   pairing, not uniqueness, is what the source-level endpoints are stated over.
 \<close>
 

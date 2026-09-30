@@ -12,7 +12,7 @@
 
 Voblint is a machine-checked Isabelle/HOL framework for building, running and
 verifying interprocedural abstract interpreters, modelled on Goblint's D/G
-architecture. It chains verified CFG compilation, activation-local operational
+architecture. It chains verified CFG compilation, activation-trace operational
 semantics, executable equation generation, and a vendored verified top-down
 solver into one soundness statement about the analyzer's own output.
 
@@ -138,10 +138,10 @@ every `PROVED` or `REFUTED` verdict there is correct for it. The theorem is stat
 about the same `run_voblint` that is exported to OCaml and runs in the CLI and the
 playground.
 
-"Every execution" is made precise by an activation-local collecting semantics.
-A [`valid_ltr`](src/Program_Model/CFG/Collecting/LTR_Def.thy) trace records one
+"Every execution" is made precise by an activation-trace collecting semantics.
+A [`valid_activation_trace`](src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy) trace records one
 procedure activation's view of a run, and
-[`ltr_collect`](src/Program_Model/CFG/Collecting/LTR_Collect.thy) gathers every
+[`node_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy) gathers every
 store such traces hold at each CFG node, adapting Goblint's thread-modular local
 traces from threads to procedure activations.
 
@@ -159,7 +159,7 @@ theorem run_voblint_certified_source_sound:
       and terminates: "config_terminates as rule ctx p"
       and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-               ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+               ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
                ∧ analysis_result_covers as rule ctx p v s
                ∧ checks_sound_at res v s"
@@ -175,7 +175,7 @@ theorem run_voblint_certified_source_sound:
 | Conclusion | Guarantee |
 | --- | --- |
 | `csim ... (v, s, stk)` | The compiler's forward simulation relates the source state to CFG node `v`. |
-| `s ∈ ltr_collect ... v` | A valid trace reaches `v` with store `s`. |
+| `s ∈ node_collect ... v` | A valid activation trace reaches `v` with store `s`. |
 | `analysis_result_covers ... v s` | The abstract state filed for `v`, in an admitted context, contains `s`. |
 | `checks_sound_at res v s` | No check at `v` is `DEAD`, and every `PROVED` or `REFUTED` verdict there holds for `s`. |
 
@@ -190,7 +190,7 @@ length.
 A source state need not determine one CFG node: in `main() { x := 1; }` and
 `unused() { x := 1; }` the command `x := 1` structurally matches a node in each
 procedure, but only `main`'s is reached with the running store. `csim` records
-the structural match and `ltr_collect` picks the reachable witness. Contexts are
+the structural match and `node_collect` picks the reachable witness. Contexts are
 existential for the same reason: a call string is a function of the call history,
 but entry-state routing may admit several contexts.
 
@@ -225,7 +225,7 @@ theorem run_voblint_check_sound:
       and terminates: "config_terminates as rule ctx p"
       and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
-           ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+           ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
                    (cinit_stores (declared_global p)) (check_point c)
            ∧ check_verdict c ≠ Dead
            ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (aval e s))
@@ -238,7 +238,7 @@ corollary run_voblint_dead_check_unreached:
       and ans: "run_voblint as rule ctx p = Analysed res"
       and listed: "chk ∈ set (res_checks res)"
       and dead: "check_verdict chk = Dead"
-  shows "ltr_collect (declared_global p) (prog_cfg p)
+  shows "node_collect (declared_global p) (prog_cfg p)
            (cinit_stores (declared_global p)) (check_point chk) = {}"
 ```
 
@@ -246,7 +246,7 @@ corollary run_voblint_dead_check_unreached:
 theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates as rule ctx p"
       and ans: "run_voblint as rule ctx p = Analysed res"
-      and mem: "s ∈ ltr_collect (declared_global p) (prog_cfg p)
+      and mem: "s ∈ node_collect (declared_global p) (prog_cfg p)
                             (cinit_stores (declared_global p)) v"
       and absent: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
@@ -295,16 +295,16 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | context<sup>#</sup> | the computed callee context | [`route`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale) | the routing policy's abstract context function: the callee context the equations compute from an abstract entry value |
 | a ∇ b / a Δ b | _a_ widened by _b_, _a_ narrowed by _b_ | [`widen`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst) / [`narrow`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst) | the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_ |
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
-| 𝒯<sub>𝒢,g,S</sub><br>Within `ltr_coverage`, the fixed parameters are omitted: 𝒯 | the valid traces of _g_ from _S_ | [`valid_ltr`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst) | the activation-local traces of graph _g_ from initial stores _S_ |
-| 𝒞<sub>𝒢,g,S</sub> v<br>Within `ltr_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`ltr_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst) | the stores valid traces reach at node _v_ |
-| 𝒜<sub>𝒢,R,startcontext,g,S</sub> v c<br>Within `ltr_coverage`, the fixed parameters are omitted: 𝒜 v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst) | the stores valid traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_ |
+| 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
+| 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
+| 𝒜<sub>𝒢,R,startcontext,g,S</sub> v c<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒜 v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst) | the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_ |
 
 These names are local abbreviations available while writing proofs in the indicated locales. They are not new definitions: they unfold when parsed, and outside those locale contexts Isabelle shows the underlying expressions.
 
 | Shorthand | Stands for | Locale |
 | --- | --- | --- |
-| [`carries t c`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.carries%7Cconst) | trace&#95;context 𝒢 R startcontext g | `ltr_coverage` |
-| [`admits u ctx p s es ctx'`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.admits%7Cconst) | admits&#95;call&#95;context 𝒢 g R | `ltr_coverage` |
+| [`carries t c`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | trace&#95;context 𝒢 R startcontext g | `activation_coverage` |
+| [`admits u ctx p s es ctx'`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.admits%7Cconst) | admits&#95;call&#95;context 𝒢 g R | `activation_coverage` |
 | [`admits u ctx p s es ctx'`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.admits%7Cconst) | admits&#95;call&#95;context 𝒢 g R | `routed_context` (input only) |
 | [`gamma_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.gamma_at%7Cconst) | γ<sub>DG</sub> (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr analysis_global))) | `dg_context_activation` (input only) |
 | [`man_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.man_at%7Cconst) | mk&#95;dg&#95;man (locals (sigma (Inl (v, ctx)))) (λ&#95;. analysis_global) | `dg_context_activation` (input only) |
@@ -385,7 +385,7 @@ AFP=/path/to/afp/thys pixi run isabelle-build  # check the formalization
 - **Abstract Interpretation of Annotated Commands** ([ITP 2012](https://doi.org/10.1007/978-3-642-32347-8_9)): reusable abstract interpretation in Isabelle/HOL.
 - **The Top-Down Solver Verified** ([CAV 2024](https://doi.org/10.1007/978-3-031-65627-9_15)): the vendored executable verified solver.
 - **Mixed Flow-Sensitive Static Analysis: Engineering Modularity** ([FM 2026](https://doi.org/10.1007/978-3-032-26220-2_22)).
-- **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)): thread-modular local-trace semantics, which Voblint's activation-local traces (`src/Program_Model/CFG/Collecting/`) adapt to procedure activations.
+- **Data Race Detection by Digest-Driven Abstract Interpretation** ([arXiv:2511.11055](https://arxiv.org/abs/2511.11055)): thread-modular local-trace semantics of a multithreaded program. Voblint's activation traces (`src/Program_Model/CFG/Collecting/`) adapt its shape to procedure activations of a sequential run.
 
 ## Documentation
 

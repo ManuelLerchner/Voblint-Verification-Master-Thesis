@@ -725,7 +725,7 @@ lemma cinit_le_init: "cinit_stores pgs \<subseteq> cgam (Lifted init_st)"
   using init_sound[of p] by simp
 
 text \<open>
-  Every activation the trace semantics admits at a context is described by the
+  Every activation the activation-trace semantics admits at a context is described by the
   solved table's entry for that context. The coverage premises are the shape a
   solver's own reachable set supplies: an edge out of an unknown the solve
   visited lands on one it also visited.
@@ -884,7 +884,7 @@ qed
 
 text \<open>
   The two endpoints an entry-state caller consumes: the per-context collecting
-  bound, and the existence of a context for every valid trace, which a
+  bound, and the existence of a context for every valid activation trace, which a
   source-level caller needs to name a context witness at all. Both are the
   routed spine's own theorems at the interpretation just established.
 \<close>
@@ -1034,7 +1034,7 @@ qed
 text \<open>
   The functional route's counterpart of the entry-state pair, and the reason a
   source-level statement is available for it too. The union side needs nothing
-  at all: \<^const>\<open>activation_context\<close> is total, so every valid trace carries a context without
+  at all: \<^const>\<open>activation_context\<close> is total, so every valid activation trace carries a context without
   any coverage having been established. Only the per-bucket bound depends on the
   solve, and it takes the same single closure premise as the entry-state one.
 

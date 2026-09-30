@@ -231,7 +231,7 @@ qed
 subsection \<open>COMB: the guarded combine transport\<close>
 
 text \<open>The caller, callee-result and continuation slots are transported independently; which
-  caller a return belongs to is settled by the trace semantics, so this layer never has to
+  caller a return belongs to is settled by the activation-trace semantics, so this layer never has to
   reconstruct the activation pairing itself.  The two bounds are assumptions because the
   combine program that establishes them is built by the routed call generator, not here.\<close>
 

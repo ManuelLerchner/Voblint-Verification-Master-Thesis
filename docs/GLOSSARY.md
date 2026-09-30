@@ -36,22 +36,22 @@ layer without embedding line numbers that drift.
 | `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/Program_Model/Compile/VIMP_Proc_to_CFG.thy` |
 | `wf_compile_input` | Canonical static contract for accepted source programs. | `src/Program_Model/Compile/Compile_Invariants.thy` |
 
-## Activation-local semantics
+## Activation-trace semantics
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `trace` | One activation's record: a list of `(cfg_node, store)` pairs. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/Program_Model/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | `activation_collect gs R c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `ltr_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid trace. | `src/Program_Model/CFG/Collecting/LTR_Abstract.thy` |
-| `trace_context` | Inductive `trace_context gs R c\<^sub>0 g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`ltr_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `c\<^sub>0` | Context of the root activation (locale parameter, formerly `startcontext`), Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `activation_path` | One activation's own path: a list of `(cfg_node, store)` pairs, read by `path_of`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `activation_trace` | One procedure activation of a sequential run: its own `activation_path`, its frozen caller ancestry, and its completed callee subtrees (root, called activation, or resumed caller). Distinct from the local traces of Schwarz et al., which are per-thread traces of a multithreaded semantics. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `valid_activation_trace` | Inductive concrete semantics over activation traces. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `node_collect` | Node-indexed collecting semantics: reachable sink stores at each CFG node, forgetting activation structure and context. `activation_collect` is its context-indexed refinement. | `src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy` |
+| `activation_collect` | `activation_collect gs R c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `activation_context_rel`-grouped view of `node_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `activation_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid activation trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy` |
+| `activation_context_rel` | Inductive `activation_context_rel gs R c\<^sub>0 g t c`: the context a valid activation trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`node_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `c\<^sub>0` | Context of the root activation (locale parameter, formerly `startcontext`), Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
 
 ## Abstract interpretation
 
@@ -119,7 +119,7 @@ carries the soundness proof -- notation does not rename the identifier.
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
 `route`'s semantic counterpart is the relation `call_context_rel`
-(`LTR_Activation_Context.thy`), which consumes **concrete** stores rather than
+(`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
 counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the
 per-instance locale obligation: at a real call edge, some `(cont, entry)`
@@ -161,7 +161,7 @@ reading or meaning; everything else comes from the theories.
 Locale abbreviations unfold at parse time, so every exported theorem is the same
 term as without them. A printing abbreviation also folds goals and facts,
 including those of every interpretation of its locale, which then print as
-`X.cover v c`. `ltr_coverage` is only interpreted inside proofs, so printing
+`X.cover v c`. `activation_coverage` is only interpreted inside proofs, so printing
 mode is safe there. The other locales have theory-level interpretations, so
 their abbreviations are input-only and interpreted facts keep the explicit
 terms. The anonymous context fixing `p` in `DG_Analysis.thy` adds the

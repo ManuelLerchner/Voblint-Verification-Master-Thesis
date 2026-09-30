@@ -19,7 +19,7 @@ text \<open>
   \<open>INTRA\<close> per intra edge, \<open>CALL\<close> per call and admitted context, \<open>RETURN\<close> per return,
   \<open>TOTAL\<close> for at least one admitted context per covered call ---
   \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
-  of stores some valid trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
+  of stores some valid activation trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
   twin of \<open>node_collect_semantic_postfix\<close> and shares its proof shape: interpret
   \<^locale>\<open>activation_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_activation_trace_covered_at\<close>.
 

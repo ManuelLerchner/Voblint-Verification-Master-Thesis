@@ -32,7 +32,7 @@ definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightar
 
 text \<open>The trace-semantic context function whose graph, \<open>call_context_rel_of_fun (cs_context k)\<close>,
   instantiates \<open>routed_context\<close>'s \<open>R\<close>: same closed term as \<^const>\<open>cs_route\<close>,
-  over the concrete \<^typ>\<open>store\<close> the trace semantics supplies instead of an
+  over the concrete \<^typ>\<open>store\<close> the activation-trace semantics supplies instead of an
   abstract/executable \<open>'d\<close>.\<close>
 
 definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where

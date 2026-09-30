@@ -27,9 +27,9 @@ continuation, callee result to continuation) that execution never takes.
 
 | File | Role |
 | --- | --- |
-| `Collecting/LTR_Def.thy` | `ltr`, `valid_ltr`, caller and ancestor structure |
-| `Collecting/LTR_Activation_Context.thy` | `key`, the context entry invariant, and `activation_collect` |
-| `Collecting/LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
-| `Collecting/LTR_Abstract.thy` | The `ltr_coverage` locale and its generic postfix soundness theorem |
+| `Collecting/Activation_Trace_Def.thy` | `activation_trace`, `valid_activation_trace`, caller and ancestor structure |
+| `Collecting/Activation_Trace_Context.thy` | `key`, the context entry invariant, and `activation_collect` |
+| `Collecting/Activation_Trace_Collect.thy` | `node_collect`, introduction rules, and least-fixpoint characterization |
+| `Collecting/Activation_Trace_Abstract.thy` | The `activation_coverage` locale and its generic postfix soundness theorem |
 
 Concrete CFGs and trace witnesses live in the `Voblint_Examples_CFG` session.

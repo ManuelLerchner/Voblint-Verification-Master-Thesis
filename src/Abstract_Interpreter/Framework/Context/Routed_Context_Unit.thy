@@ -56,7 +56,7 @@ text \<open>
 \<close>
 
 text \<open>
-  The unit context never filters a trace: every valid trace carries the one context
+  The unit context never filters a trace: every valid activation trace carries the one context
   \<^term>\<open>()\<close>, so \<^const>\<open>activation_collect\<close>'s context conjunct holds for every trace
   reaching \<open>v\<close> and the two collectors coincide. Domain-generic: no domain-specific fact is
   used, so every \<^typ>\<open>unit\<close>-context routed producer (Sign, Interval, ...) cites this one

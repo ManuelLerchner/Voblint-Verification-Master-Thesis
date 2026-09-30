@@ -90,7 +90,7 @@ text \<open>
   \<^verbatim>\<open>
     source execution
       -> procedure-aware CFG execution
-      -> activation-local trace
+      -> activation trace
       -> collecting semantics
       -> D/G equation system
       -> verified side-effecting solver
@@ -200,7 +200,7 @@ text \<open>
   cannot.
 \<close>
 
-subsection \<open>Activation-local concrete semantics\<close>
+subsection \<open>Activation-trace concrete semantics\<close>
 
 text \<open>
   \<^const>\<open>valid_activation_trace\<close> represents one procedure activation and its ancestry.
@@ -211,7 +211,7 @@ text \<open>
 
   \<^const>\<open>node_collect\<close> forgets the activation structure and collects stores by
   node, while \<^const>\<open>activation_collect\<close> keys the same collection by the
-  structural activation context.  Both contain only stores from valid local traces.
+  structural activation context.  Both contain only stores from valid activation traces.
 \<close>
 
 subsection \<open>Procedure-aware source and CFG\<close>
@@ -286,7 +286,7 @@ text \<open>
     \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
-  the activation-local trace semantics it carries.
+  the activation trace semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types,
       predecessor enumeration, and finite code lists.
     \<^item> @{theory Voblint_Compile.VIMP_Proc_to_CFG} ---
@@ -299,7 +299,7 @@ text \<open>
       \<^verbatim>\<open>combine_collect\<close>, and
       \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.Activation_Trace_Def} --- the call-structured
-      activation-local trace \<^const>\<open>valid_activation_trace\<close>
+      activation trace \<^const>\<open>valid_activation_trace\<close>
       (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/
       \<^verbatim>\<open>Resume\<close>), the \<^const>\<open>node_collect\<close> and
       \<^const>\<open>activation_collect\<close> projections, and the
@@ -412,7 +412,7 @@ text \<open>
       \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>node_collect\<close>,
       through the locale's generic node-soundness bridge.
 
-  \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
+  \<^bold>\<open>4c. Activation-trace certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
     \<^item> @{theory Voblint_Framework.Activation_Backbone} --- the generic
       \<^verbatim>\<open>activation_collect_sound\<close>. Over

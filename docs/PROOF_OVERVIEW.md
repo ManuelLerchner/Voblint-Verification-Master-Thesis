@@ -9,8 +9,8 @@ interprocedural abstract interpreter.
 well-formed VIMP source
   -> compiled procedure-aware CFG
   -> located CFG execution
-  -> valid activation-local trace
-  -> ltr_collect / activation_collect
+  -> valid activation trace
+  -> node_collect / activation_collect
   -> abstract post-solution
   -> verified solver result
 ```
@@ -38,13 +38,13 @@ The located execution relation associates a source configuration with a CFG
 node, store, and activation stack. Control simulation shows that each source
 step has a matching located CFG execution.
 
-## Activation-local semantics
+## Activation-trace semantics
 
-`valid_ltr` records one activation and its structural caller chain. Root, call,
+`valid_activation_trace` records one activation and its structural caller chain. Root, call,
 and resume constructors preserve the correlation between a completed callee
 and its immediate caller.
 
-`ltr_collect` projects valid traces to stores at each node.
+`node_collect` projects valid activation traces to stores at each node.
 `activation_collect` groups those same stores by the structural activation
 context required by context-sensitive analyses.
 
@@ -59,7 +59,7 @@ Every equation right-hand side joins three contribution families:
 The executable RHS and its mathematical characterization share the same source
 definitions. Transfer soundness proves that each concrete trace constructor is
 covered by its corresponding abstract contribution. A post-solution therefore
-covers `ltr_collect`.
+covers `node_collect`.
 
 ## Solver integration
 
@@ -90,7 +90,7 @@ through the analysis-defined global interface.
 The source theorem composes:
 
 - source/CFG simulation;
-- construction of a valid local trace;
+- construction of a valid activation trace;
 - membership in the appropriate collector;
 - collector coverage by the computed abstract solution.
 

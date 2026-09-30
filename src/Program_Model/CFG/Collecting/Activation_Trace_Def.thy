@@ -2,11 +2,11 @@ theory Activation_Trace_Def
   imports CFG_Def CFG_Transfer
 begin
 
-section \<open>Activation-local concrete traces\<close>
+section \<open>Activation traces\<close>
 
 text \<open>
-  An \<open>activation_trace\<close> represents one procedure activation and its concrete ancestry.  Its local
-  path contains \<open>(cfg_node, store)\<close> pairs; structural constructors record the
+  An \<open>activation_trace\<close> represents one procedure activation of a sequential run and its
+  concrete ancestry.  Its own path contains \<open>(cfg_node, store)\<close> pairs; structural constructors record the
   suspended caller and, after resumption, the completed callee.  Activation contexts
   are projections of this structure rather than fields stored in the trace.
 
@@ -16,12 +16,12 @@ text \<open>
   \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
   and the return value with \<^const>\<open>combine_collect\<close>.
 
-  The design adapts the thread-modular local-trace semantics introduced by Schwarz et
-  al., \<^emph>\<open>Improving Thread-Modular Abstract Interpretation\<close> (SAS 2021).  Schwarz and
-  Erhard, \<^emph>\<open>Data Race Detection by Digest-Driven Abstract Interpretation\<close>
-  (arXiv:2511.11055, 2025), is later work on the same semantics.  There a local trace
-  is one thread's execution and synchronisation relates traces; here a local trace is
-  one procedure activation and a return composes the completed callee into its suspended caller.
+  The shape is adapted from the local traces of Schwarz et al., \<^emph>\<open>Improving Thread-Modular
+  Abstract Interpretation\<close> (SAS 2021), and Schwarz and Erhard, \<^emph>\<open>Data Race Detection
+  by Digest-Driven Abstract Interpretation\<close> (arXiv:2511.11055, 2025).  Theirs is a
+  multithreaded semantics: a local trace is one thread's view, in which operations of different
+  threads are only partially ordered.  An activation trace is one activation of a sequential run,
+  and a return composes the completed callee into its suspended caller.
 \<close>
 
 subsection \<open>The datatype\<close>
@@ -35,9 +35,8 @@ text \<open>
     \<open>callee\<close> is the retained completed callee subtree; \<open>p\<close> is the continued path.
 \<close>
 
-text \<open>An \<open>activation_path\<close> is what a run leaves behind with no procedures in the picture: which node
-  control stood at, and what the store held there.  A local trace is one of these per
-  activation, with the surrounding activations beside it rather than on it.\<close>
+text \<open>An \<open>activation_path\<close> lists the nodes one activation passed and the store it held at
+  each.  An activation trace carries the path of its own activation, with the surrounding activations beside it rather than on it.\<close>
 
 type_synonym activation_path = "(cfg_node \<times> store) list"
 
@@ -49,7 +48,7 @@ datatype activation_trace =
 
 subsection \<open>Observers\<close>
 
-text \<open>\<open>path_of\<close> is the activation-local control-flow path.  \<open>sink_node\<close> and \<open>sink_store\<close>
+text \<open>\<open>path_of\<close> is the activation path.  \<open>sink_node\<close> and \<open>sink_store\<close>
   return its final program point and final store.\<close>
 
 fun path_of :: "activation_trace \<Rightarrow> activation_path" where
@@ -192,7 +191,7 @@ proof (induction arbitrary: cc q rule: valid_activation_trace.induct)
   then show ?case using intra.IH by simp
 qed auto
 
-text \<open>A valid \<^const>\<open>Resume\<close> retains its callee as a valid trace, and its frozen caller is
+text \<open>A valid \<^const>\<open>Resume\<close> retains its callee as a valid activation trace, and its frozen caller is
   forced to be exactly \<open>caller_of callee\<close> --- a return cannot invent a caller.\<close>
 lemma valid_activation_trace_Resume_fields:
   "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q
@@ -204,7 +203,7 @@ proof (induction arbitrary: cc dd q rule: valid_activation_trace.induct)
   then show ?case using intra.IH by simp
 qed auto
 
-text \<open>Every caller recovered from a valid trace by \<^const>\<open>caller_of\<close> is itself valid.\<close>
+text \<open>Every caller recovered from a valid activation trace by \<^const>\<open>caller_of\<close> is itself valid.\<close>
 lemma valid_activation_trace_caller_valid:
   "t \<in> \<T> \<Longrightarrow> caller_of t = Some c \<Longrightarrow> c \<in> \<T>"
 proof (induction t arbitrary: c)
@@ -300,7 +299,7 @@ subsection \<open>Generic caller-chain closure\<close>
 
 text \<open>
   A caller-chain-quantified predicate \<open>P\<close> holds along the whole \<^const>\<open>callers\<close> chain of
-  every valid trace once its four \<open>valid_activation_trace\<close> obligations are discharged.  Each obligation
+  every valid activation trace once its four \<open>valid_activation_trace\<close> obligations are discharged.  Each obligation
   reads its own generating trace's induction hypothesis as the whole-chain fact
   \<open>\<forall>u \<in> callers _. P u\<close>, not a single-node fact --- this is exactly what \<open>ret\<close> needs to
   recover its caller's own chain fact from the callee's.

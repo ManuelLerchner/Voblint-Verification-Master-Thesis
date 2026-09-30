@@ -9,14 +9,14 @@ stable gates for assessing a change.
 - main has no explicit return;
 - compiler certificates expose procedure ownership and disjoint ranges;
 - source steps are simulated by located CFG execution;
-- reached source configurations have `valid_ltr` witnesses.
+- reached source configurations have `valid_activation_trace` witnesses.
 
 ## Collecting semantics
 
-- `valid_ltr` handles root, call, local flow, procedure result, and resume;
-- `valid_ltr` is an inductive set, and `ltr_collect` projects it to stores
-  (`ltr_collect_I`/`ltr_collect_E`);
-- `activation_collect` groups the same stores by the context `trace_context`
+- `valid_activation_trace` handles root, call, local flow, procedure result, and resume;
+- `valid_activation_trace` is an inductive set, and `node_collect` projects it to stores
+  (`node_collect_I`/`node_collect_E`);
+- `activation_collect` groups the same stores by the context `activation_context_rel`
   assigns;
 - abstract closure obligations imply collector coverage.
 
@@ -24,7 +24,7 @@ stable gates for assessing a change.
 
 - executable and mathematical RHS views share one contribution abstraction;
 - local-edge, entry, and combine transfers are sound;
-- post-solutions cover `ltr_collect`;
+- post-solutions cover `node_collect`;
 - finite enumerations agree with their set specifications.
 
 ## Solver
@@ -48,7 +48,7 @@ stable gates for assessing a change.
 - the concrete initial store belongs to the abstract seed;
 - every explicit coverage premise follows from the solver domain;
 - the conclusion refers to the computed solution;
-- the conclusion names its collector: `ltr_collect` at the unit context, one
+- the conclusion names its collector: `node_collect` at the unit context, one
   `activation_collect` bucket at a routed one. A routed bound is not a
   source-facing theorem until a source run is placed in one of its buckets,
   as `sound_table_of_activation` and `sound_table.source_sound` do together.

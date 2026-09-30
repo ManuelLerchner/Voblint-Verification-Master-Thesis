@@ -6,7 +6,7 @@ section \<open>Which stores can occur at each node\<close>
 
 text \<open>
   \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close> is the set of stores a run can actually have at node \<open>v\<close>: take
-  every valid trace that ends there and keep its final store.  This is the concrete set an
+  every valid activation trace that ends there and keep its final store.  This is the concrete set an
   analysis has to over-approximate, so it is the target of every soundness statement
   downstream.
 
@@ -23,7 +23,7 @@ text \<open>
 
 subsection \<open>Forgetful projections\<close>
 
-text \<open>\<open>node_collect\<close> is the concrete collecting view: the sink stores of valid traces
+text \<open>\<open>node_collect\<close> is the concrete collecting view: the sink stores of valid activation traces
   reaching node \<open>v\<close>.  \<^const>\<open>activation_collect\<close> is the context-indexed collector, keeping
   those whose trace may carry the queried context; the context type is not required
   finite, and a bucket is not claimed to be an exact activation identity.\<close>
@@ -52,7 +52,7 @@ lemma node_collect_I [intro]:
   "t \<in> \<T> \<Longrightarrow> sink_store t \<in> \<C> (sink_node t)"
   unfolding node_collect_def by blast
 
-text \<open>Every collected state has a valid trace witness.\<close>
+text \<open>Every collected state has a valid activation trace witness.\<close>
 lemma node_collect_E [elim]:
   assumes "s \<in> \<C> v"
   obtains t where "t \<in> \<T>" "sink_node t = v" "sink_store t = s"
@@ -174,7 +174,7 @@ theorem Union_activation_collect_le_node_collect:
   "(\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
   using activation_collect_le_node_collect by blast
 
-text \<open>Bridge (2): the converse needs every valid trace to carry some context.  That premise is
+text \<open>Bridge (2): the converse needs every valid activation trace to carry some context.  That premise is
   the whole content of the direction -- a policy that leaves some trace uncontexted loses the
   stores on it, and the union then falls short.  A functional policy has it outright, since
   \<^const>\<open>activation_context\<close> is total; a relational one earns it from conditional totality, which is

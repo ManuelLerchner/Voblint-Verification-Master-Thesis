@@ -150,7 +150,7 @@ downstream of it.
 ## I/R fallback
 
 - Initialize a REPL from a fully qualified import, such as
-  `Voblint_CFG.LTR_Def`.
+  `Voblint_CFG.Activation_Trace_Def`.
 - Send one Isar command per `step`.
 - After a theory edit, reload it with its fully qualified theory name.
 - `explore` is non-persistent; a REPL step changes the current state.

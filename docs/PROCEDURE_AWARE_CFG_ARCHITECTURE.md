@@ -17,7 +17,7 @@ The framework represents those facts directly:
 
 - procedure entries and results are typed CFG nodes;
 - calls are separate from ordinary intra-procedural edges;
-- local traces retain the activation stack;
+- activation traces retain the activation stack;
 - equation systems distinguish local flow, callee entry, and return
   combination;
 - context-sensitive analyses route information through the generic D/G
@@ -101,26 +101,26 @@ keeps callee global effects, restores caller locals, and writes the published
 value to the destination when one exists.
 
 The compiler maps every explicit return and procedure fall-through to the
-matching `FunctionResult p`. A local trace resumes the continuation recorded by
+matching `FunctionResult p`. An activation trace resumes the continuation recorded by
 the call relation and combines the caller and callee stores with the same
 operation used by the source semantics.
 
-## 6. Activation-local trace semantics
+## 6. Activation trace semantics
 
-`valid_ltr` is the concrete interprocedural reference semantics. Its trace
+`valid_activation_trace` is the concrete interprocedural reference semantics. Its trace
 constructors represent:
 
 - a root path beginning at the program entry;
 - a called activation linked to its immediate caller;
 - a resumed caller linked to the completed callee.
 
-Each trace stores one activation-local CFG path. The caller relation remains
+Each trace stores one activation path. The caller relation remains
 structural, so nested and recursive calls resume the nearest activation without
 encoding an unbounded stack in CFG nodes.
 
 ## 7. Collecting semantics
 
-`ltr_collect` forgets trace structure and collects sink stores at each CFG
+`node_collect` forgets trace structure and collects sink stores at each CFG
 node. `activation_collect` retains the activation context required by
 context-sensitive soundness results.
 
@@ -178,7 +178,7 @@ used by the simulation.
 The proof chain establishes:
 
 1. solver output forms an abstract post-solution;
-2. the post-solution covers activation-local collecting semantics;
+2. the post-solution covers activation-trace collecting semantics;
 3. compiler simulation maps accepted source executions into those traces;
 4. source-level observations are contained in the analyzer result.
 

@@ -5,7 +5,7 @@ begin
 section \<open>Which stores reach a node once calls and returns are tracked\<close>
 
 text \<open>
-  A local trace records one activation: the nodes and stores it passed through, and which
+  An activation trace records one activation: the nodes and stores it passed through, and which
   trace called it.  \<open>valid_activation_trace\<close> is the set of traces a graph admits, and \<open>node_collect\<close> reads
   off the stores reaching a given node across all of them.  The witnesses below build such
   traces by hand for three call shapes --- a two-level chain, one procedure reaching its
@@ -373,7 +373,7 @@ text \<open>Flat CFG: for a \<open>calls = {}\<close> graph the collector agrees
 definition flat_cfg :: "cfg \<Rightarrow> bool" where
   "flat_cfg g \<longleftrightarrow> calls g = {}"
 
-text \<open>When \<open>calls g = {}\<close>, every valid trace is a \<^const>\<open>Root\<close>: no \<^const>\<open>Call\<close> or
+text \<open>When \<open>calls g = {}\<close>, every valid activation trace is a \<^const>\<open>Root\<close>: no \<^const>\<open>Call\<close> or
   \<^const>\<open>Resume\<close> can arise.\<close>
 lemma valid_activation_trace_flat_root:
   assumes "flat_cfg g" and "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"

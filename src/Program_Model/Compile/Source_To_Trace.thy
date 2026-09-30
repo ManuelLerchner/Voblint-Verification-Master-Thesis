@@ -2,10 +2,10 @@ theory Source_To_Trace
   imports Procedure_Ownership Simulation_Preservation "Voblint_CFG.Activation_Trace_Collect"
 begin
 
-section \<open>A source run is a local trace\<close>
+section \<open>A source run is an activation trace\<close>
 
 text \<open>
-  What the session is for.  A graph configuration is tied to a valid local trace: the
+  What the session is for.  A graph configuration is tied to a valid activation trace: the
   activation currently running \<^emph>\<open>is\<close> the trace, and the runtime frame stack is exactly
   its chain of callers.  Each \<^const>\<open>cstep\<close> rule lines up with one \<^const>\<open>valid_activation_trace\<close>
   constructor, so advancing the graph by an edge extends the trace by a step.
@@ -37,7 +37,7 @@ text \<open>Inversion by the shape of the runtime stack.  A frame's clause recur
 inductive_cases stack_repr_NilE [elim!]: "stack_repr g [] t"
 inductive_cases stack_repr_ConsE [elim]: "stack_repr g (cf # stk) t"
 
-text \<open>\<open>activation_trace_repr\<close> pins a valid trace to a located configuration: the trace's sink is the current
+text \<open>\<open>activation_trace_repr\<close> pins a valid activation trace to a located configuration: the trace's sink is the current
   node/store, and its caller chain is the runtime stack.\<close>
 definition activation_trace_repr ::
   "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> activation_trace \<Rightarrow> bool" where
@@ -248,7 +248,7 @@ subsection \<open>The source bridge\<close>
 
 text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cstep\<close>
   simulation) and the located invariant: every source run produces a matching valid
-  activation-local trace at the simulated node.\<close>
+  activation trace at the simulated node.\<close>
 theorem source_run_has_activation_trace:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and s0: "s0 \<in> S"
@@ -282,7 +282,7 @@ proof -
   then show ?thesis using sim' cf' store by blast
 qed
 
-text \<open>The plain projected source bridge: a reachable source store lies in the local-trace
+text \<open>The plain projected source bridge: a reachable source store lies in the activation-trace
   collecting \<^const>\<open>activation_collect\<close> at the simulated node, in a context the witness
   trace carries. A relational policy may leave a trace without any context, so the bridge
   asks for one: \<open>has_ctx\<close> is what \<open>activation_coverage\<close>'s \<open>TOTAL\<close> buys downstream, and what a
@@ -310,7 +310,7 @@ proof -
   then show ?thesis using sim tc by blast
 qed
 
-text \<open>A functional policy carries \<^const>\<open>activation_context\<close>'s context on every valid trace, so it needs no
+text \<open>A functional policy carries \<^const>\<open>activation_context\<close>'s context on every valid activation trace, so it needs no
   context witness.\<close>
 corollary source_store_in_activation_collect_of_fun:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"

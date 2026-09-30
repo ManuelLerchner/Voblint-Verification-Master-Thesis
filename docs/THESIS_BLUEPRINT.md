@@ -56,19 +56,21 @@ idealized model sits between the theorem and the program people run.
 Three design decisions give the thesis its technical spine, and each is worth
 a chapter.
 
-**The concrete semantics is activation-local.** A run is not modelled as a set
-of reachable states but as a family of *activation-local traces*: one trace is
+**The concrete semantics is a set of activation traces.** A run is not modelled as a set
+of reachable states but as a family of *activation traces*: one trace is
 one procedure activation together with its structural caller chain, and a
 return composes a completed callee back into the caller it was spawned from.
-This adapts the thread-modular local-trace semantics of Schwarz and Erhard
-from threads to procedure activations. The payoff is that calling context
+The shape is adapted from the thread-modular local-trace semantics of Schwarz
+and Erhard, a multithreaded semantics in which operations of different threads
+are only partially ordered; an activation trace is one activation's view of a
+sequential run, so the thesis does not call it a local trace. The payoff is that calling context
 becomes a *projection of the concrete object* rather than an extra parameter
-whose soundness must be postulated: `trace_context` reads a context off a
+whose soundness must be postulated: `activation_context_rel` reads a context off a
 trace, and `activation_collect` is the collecting semantics indexed by it.
 
 **Soundness is one contract, stated once, over an arbitrary graph.** An
 analysis claims "at node `v`, in context `c`, only these stores occur".
-`ltr_coverage` says what such a claim must satisfy to be believed: five local
+`activation_coverage` says what such a claim must satisfy to be believed: five local
 obligations — `INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL` — and
 `activation_collect_sound` proves that satisfying them bounds every valid
 trace. No domain, no solver, no equation system appears in that theorem. The
@@ -192,10 +194,10 @@ table; and a `parse_translation`-based concrete syntax generated from
 entry and continuation. Nodes are `Statement n`, `FunctionEntry p`,
 `FunctionResult p`. `cstep` executes an arbitrary graph. `CFG_Transfer` gives
 the three concrete transfers: `edge_collect`, `call_enter`, `combine_collect`.
-`Collecting/` holds the semantic heart: `ltr`, `valid_ltr`, `ltr_collect`,
-`trace_context`, `call_context_rel`, `activation_collect`, and the
-`ltr_coverage` locale with `activation_collect_sound` and
-`ltr_collect_eq_Union_activation_collect`.
+`Collecting/` holds the semantic heart: `activation_trace`, `valid_activation_trace`, `node_collect`,
+`activation_context_rel`, `call_context_rel`, `activation_collect`, and the
+`activation_coverage` locale with `activation_collect_sound` and
+`node_collect_eq_Union_activation_collect`.
 
 **`Voblint_Compile`.** `compile_prog` as a continuation-passing compiler;
 `wf_compile_input` and its executable form; graph well-formedness
@@ -203,7 +205,7 @@ the three concrete transfers: `edge_collect`, `call_enter`, `combine_collect`.
 `control_at` (where a partly executed command sits in the graph); `csim` and
 the forward simulation `csim_step`/`csim_star`; procedure ownership; live
 nodes; and the one theory that needs both halves, `Source_To_Trace`, which
-turns a source run into a `valid_ltr` witness.
+turns a source run into a `valid_activation_trace` witness.
 
 **`Voblint_Domain`.** The `numeric_domain` type class (carrier, order,
 concretization, no `alpha`); the reachability lift `'a lifted` mirroring
@@ -224,7 +226,7 @@ compiler-free. `dg_state` (opaque `D`/`G`), the manager (`man_local`,
 `man_global`, `man_sideg`), `dg_spec` with one field per Goblint `Spec` method,
 `analysis_contract` as the soundness contract, the keyed equation generator
 `routed_node_rhs` (and its buffered production variant), `Activation_Backbone`
-(the `ltr_coverage` obligations in global shape), `DG_Ctx_Activation` (EDGE and
+(the `activation_coverage` obligations in global shape), `DG_Ctx_Activation` (EDGE and
 COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
 discharged once for any routing policy), the check layers, and the result table.
 
@@ -347,20 +349,20 @@ L1  COMPILATION AND SIMULATION
     compile_prog_wf / _finite / _calls_source_unique   Compile_Wellformed
     control_at, csim                               Residual_Location, Simulation_Relation
     csim_step, csim_star                           Simulation_Preservation
-             │  source_run_has_ltr
+             │  source_run_has_activation_trace
              v
 L2  CONCRETE INTERPROCEDURAL SEMANTICS
-    ltr, valid_ltr (Root / intra / call / ret)     LTR_Def
-    ltr_collect, ltr_collect_I / _E                LTR_Collect
-    trace_context, call_context_rel,
-    call_context_total_on, activation_collect      LTR_Activation_Context
+    activation_trace, valid_activation_trace (Root / intra / call / ret)     Activation_Trace_Def
+    node_collect, node_collect_I / _E                Activation_Trace_Collect
+    activation_context_rel, call_context_rel,
+    call_context_total_on, activation_collect      Activation_Trace_Context
              │
              v
 L3  THE SOUNDNESS CONTRACT  ← the pivot of the thesis
-    locale ltr_coverage: INIT, INTRA, CALL, RETURN, TOTAL
-    valid_ltr_covered_at                           LTR_Abstract
-    ltr_collect_semantic_postfix                   LTR_Abstract
-    ltr_collect_eq_Union_activation_collect        LTR_Abstract
+    locale activation_coverage: INIT, INTRA, CALL, RETURN, TOTAL
+    valid_activation_trace_covered_at                           Activation_Trace_Abstract
+    node_collect_semantic_postfix                   Activation_Trace_Abstract
+    node_collect_eq_Union_activation_collect        Activation_Trace_Abstract
     activation_collect_sound  (global shape)       Activation_Backbone
              │  "construct a cover that discharges the five obligations"
              v
@@ -382,7 +384,7 @@ L6  FROM A POST-SOLUTION TO A COVER
     dg_context_activation  ⊢ EDGE, COMB           DG_Ctx_Activation
     routed_context ⊢ CALL, COMB,
       activation_collect_dg_sound                  Routed_Context
-    route_unit, activation_collect_unit_eq_ltr_collect   Routed_Context_Unit
+    route_unit, activation_collect_unit_eq_node_collect   Routed_Context_Unit
     cs_route / cs_context  (call strings)          Call_String_Context,
                                                    Call_String_Routed_Context
     formals_route_lifted_gen  (entry state)        Entry_State_Routed_Context
@@ -449,7 +451,7 @@ theorem run_voblint_certified_source_sound:
       and terminates: "config_terminates as rule ctx p"
       and ans: "run_voblint as rule ctx p = Analysed res"
   shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-               ∧ s ∈ ltr_collect (declared_global p) (prog_cfg p)
+               ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
                          (cinit_stores (declared_global p)) v
                ∧ analysis_result_covers as rule ctx p v s
                ∧ checks_sound_at res v s"
@@ -459,7 +461,7 @@ Four things about this statement deserve a paragraph each in the thesis.
 
 *The node is existential.* A source configuration does not determine a CFG
 node — `x := 1` in `main` and in an unused procedure match structurally. `csim`
-records the structural match; `ltr_collect` picks the reachable witness.
+records the structural match; `node_collect` picks the reachable witness.
 
 *The context is existential too.* Under entry-state routing one store may be
 admitted at several contexts; under call strings at exactly one. A statement
@@ -540,7 +542,7 @@ The consequence is the one Chapter 2 should state and Chapter 13 should
 develop: a syntax-directed proof is an induction whose cases *are* the language
 constructs, which makes it compact and ties it to the language; a
 constraint-based proof has to say separately what the equations mean, which
-costs a whole layer (`ltr_coverage`, Ch. 4) and buys a solver that can be
+costs a whole layer (`activation_coverage`, Ch. 4) and buys a solver that can be
 replaced without touching the semantics (C4). Neither is better; they fail
 differently. Voblint is constraint-based because Goblint is.
 
@@ -569,9 +571,9 @@ that ratio to a syntax-directed interval analyzer, and losing it means nothing.
 | Knoop & Steffen 1992 | interprocedural coincidence; the call/return matching discipline | background for why `calls` carries its continuation | Ch. 3, Ch. 7 |
 | Sotin & Jeannet, ESOP 2011 | precise interprocedural analysis with stack-allocated data | closest classical relative of the activation-local view | Ch. 4, Ch. 13 |
 | Erhard, Schinabeck, Schwarz, Seidl, *Context gas and friends* | on-the-fly context bounding | the named reference for the open context-bounding problem | Ch. 14 |
-| Rival & Mauborgne, TOPLAS 2007, *Trace partitioning* | partitioning a semantics by control history | the sequential precedent for context-indexed collecting; must be compared to `trace_context` when claiming novelty | Ch. 4, Ch. 13 |
+| Rival & Mauborgne, TOPLAS 2007, *Trace partitioning* | partitioning a semantics by control history | the sequential precedent for context-indexed collecting; must be compared to `activation_context_rel` when claiming novelty | Ch. 4, Ch. 13 |
 
-### 4.4 Goblint and local traces
+### 4.4 Goblint and activation traces
 
 | Source | Supplies | Relevance | Thesis home |
 | --- | --- | --- | --- |
@@ -579,7 +581,7 @@ that ratio to a syntax-directed interval analyzer, and losing it means nothing.
 | Vojdani, PhD 2010; Vojdani et al., FM 2016 | Goblint's architecture and race analysis | the analyzer the thesis is modelled on | Ch. 1, Ch. 13 |
 | Schwarz et al., SAS 2021, *Improving thread-modular abstract interpretation* | local traces; the thread-modular local perspective | the semantics Voblint adapts | Ch. 4 |
 | Schwarz et al., ESOP 2023, *Clustered relational thread-modular AI with local traces* | relational local-trace analyses | positions the relational stretch goal | Ch. 13 |
-| Schwarz & Erhard, VMCAI 2026 (arXiv:2511.11055), *Data race detection by digest-driven AI* | the current formulation of local-trace semantics and digests | **the direct source of the `ltr` design**; `LTR_Def`'s header cites it | Ch. 4, Ch. 13 |
+| Schwarz & Erhard, VMCAI 2026 (arXiv:2511.11055), *Data race detection by digest-driven AI* | the current formulation of local-trace semantics and digests | **the direct source of the `activation_trace` design**; `Activation_Trace_Def`'s header cites it | Ch. 4, Ch. 13 |
 | Seidl et al., FM 2026, *Mixed flow-sensitive static analysis: engineering modularity* | the engineering account of Goblint's modularity | the architecture claim's upstream statement; per-origin widening examples in `tests/regression/19-paper-examples/` | Ch. 6, Ch. 12 |
 
 ### 4.5 Verified analyzers and mechanized abstract interpretation
@@ -647,16 +649,16 @@ one thing a careless reading could miss.
 
 **Claim.** Calling context is given a semantics rather than postulated. A
 `call_context_rel` says which contexts may describe one concrete call
-transition; `trace_context` threads it along a concrete trace; and
+transition; `activation_context_rel` threads it along a concrete trace; and
 `activation_collect` is the collecting semantics indexed by it. The relational
 form is essential, because Goblint's `enter` returns a list of alternatives
 and each routes separately, so one concrete call may be admitted at several
 contexts — buckets are a cover, not a partition. The conditional totality
 condition `call_context_total_on` is exactly what makes the buckets exhaust
 the context-insensitive collection
-(`ltr_collect_eq_Union_activation_collect`).
+(`node_collect_eq_Union_activation_collect`).
 
-**Evidence.** `LTR_Activation_Context.thy`, `LTR_Abstract.thy`,
+**Evidence.** `Activation_Trace_Context.thy`, `Activation_Trace_Abstract.thy`,
 `Activation_Backbone.thy`; the multi-alternative regression
 `Example_Sign_DG_Overlapping_Enter.thy`; both policy instances
 (`Call_String_Routed_Context`, `Entry_State_Routed_Context`) discharging the
@@ -676,14 +678,14 @@ found none, but absence of evidence after one pass is not evidence of absence.
 ### C3 — Local-trace semantics adapted to procedure activations
 
 **Claim.** The thread-modular local-trace semantics of Schwarz et al. is
-adapted from threads to procedure activations and mechanized: one `ltr` is one
+adapted from threads to procedure activations and mechanized: one `activation_trace` is one
 activation plus its structural caller chain; a return recovers its caller
 through `caller_of` rather than by an independent choice; recursion needs no
 duplicated nodes because there is one `FunctionResult` per procedure and the
 continuation comes from the `calls` edge.
 
-**Evidence.** `LTR_Def.thy` (datatype, four `valid_ltr` clauses, `caller_of`,
-`extend`), `LTR_Collect.thy`; `Source_To_Trace.thy` connecting an actual source
+**Evidence.** `Activation_Trace_Def.thy` (datatype, four `valid_activation_trace` clauses, `caller_of`,
+`extend`), `Activation_Trace_Collect.thy`; `Source_To_Trace.thy` connecting an actual source
 run to a trace; `Procedure_Ownership.thy`'s activation-locality theorem.
 
 **Must compare.** Schwarz et al. SAS 2021 / ESOP 2023 / VMCAI 2026 (the source
@@ -691,9 +693,9 @@ of the idea, not mechanized in a prover and about concurrency); Sotin &
 Jeannet; classical stack-based interprocedural semantics.
 
 **Confidence.** **Medium.** Frame it as "the first mechanization of a
-local-trace-style semantics, specialized to activations, and the first use of
+activation-trace-style semantics, specialized to activations, and the first use of
 one as the soundness target of a verified analyzer" — not as a new semantics.
-The adaptation is real but derivative, and the header of `LTR_Def.thy` already
+The adaptation is real but derivative, and the header of `Activation_Trace_Def.thy` already
 says so.
 
 ### C4 — Solver consumption through a single certificate
@@ -954,7 +956,7 @@ Pipeline order for the *concrete* side, then the soundness contract as the
 pivot, then the analyzer as "how to build and compute something that discharges
 it".
 
-Source language → CFG and compilation → activation-local traces → **the five
+Source language → CFG and compilation → activation traces → **the five
 obligations and what they buy** → domains → the analysis interface → equations
 and contexts → solving and the executable carrier → results and the source-level
 theorem → instances → code generation → evaluation.
@@ -996,8 +998,8 @@ satisfies five obligations. A reader who has not met those obligations has no
 way to see why any of it is shaped as it is, and the chapters read as a tour of
 machinery. Met early, each later chapter has a question it answers.
 
-Import order is corroboration, not the argument. It happens that `ltr_coverage`
-sits in `Voblint_CFG.LTR_Abstract`, a session with no domain, no solver, no
+Import order is corroboration, not the argument. It happens that `activation_coverage`
+sits in `Voblint_CFG.Activation_Trace_Abstract`, a session with no domain, no solver, no
 framework and no compiler — which is evidence that the contract really is
 independent of everything that discharges it, and that stating it first is
 possible. But repository topology is a fact about a build graph, and exposition
@@ -1013,7 +1015,7 @@ that way.** It is discharged in five named steps, each in a different session:
 
 | Step | Discharges | Where |
 | --- | --- | --- |
-| `ltr_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
+| `activation_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
 | `dg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
 | `routed_context` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
 | `routed_dg_analysis` / `unit_dg_analysis` | the published table and the source bridge | `Voblint_Result` |
@@ -1069,12 +1071,12 @@ PART II — WHAT MUST BE OVER-APPROXIMATED
   3.7 Forward simulation: csim and what it does not determine
   3.8 Structural certificates: ownership, liveness, call-source uniqueness
 
-4 Activation-local traces and the soundness contract               [12%]
+4 Activation traces and the soundness contract               [12%]
   4.1 Why not reachable states: context must be a projection of the concrete
   4.2 Local traces, from threads to activations
-  4.3 valid_ltr: four clauses, one per graph phenomenon
-  4.4 ltr_collect: the set an analysis must over-approximate
-  4.5 Contexts as an admissibility relation; trace_context
+  4.3 valid_activation_trace: four clauses, one per graph phenomenon
+  4.4 node_collect: the set an analysis must over-approximate
+  4.5 Contexts as an admissibility relation; activation_context_rel
   4.6 activation_collect and why buckets cover rather than partition
   4.7 THE CONTRACT: INIT, INTRA, CALL, RETURN, TOTAL
   4.8 What the contract buys: activation_collect_sound, and the union theorem
@@ -1210,9 +1212,9 @@ there.
 
 **Ch. 4.** The pivot. Prerequisite: Ch. 3. Build in this order: the design law
 ("the concrete semantics must carry at least the distinctions the analysis
-claims"), then `ltr`, then `valid_ltr`'s four clauses side by side with
-`cstep`'s three rules, then `ltr_collect`. Contexts come second, as a *separate*
-layer: relation, `trace_context`, `activation_collect`, cover-not-partition.
+claims"), then `activation_trace`, then `valid_activation_trace`'s four clauses side by side with
+`cstep`'s three rules, then `node_collect`. Contexts come second, as a *separate*
+layer: relation, `activation_context_rel`, `activation_collect`, cover-not-partition.
 Then the five obligations, each with the one sentence saying what goes wrong
 without it — `RETURN` is the load-bearing one (a return may only compose a
 callee whose context came from the caller it is resuming) and `TOTAL` is what
@@ -1323,11 +1325,11 @@ thesis section → theories → central definitions → central theorems.
 | 3.5 | `Voblint_CFG.CFG_Def`, `CFG_Transfer`, `CFG_Exec` | `cfg_node`, `edge_action`, `call_action`, `intra`, `calls`, `wf_cfg`, `edge_step`, `edge_collect`, `call_enter`, `combine_collect`, `cstep` | `cfg_nodes_finite` |
 | 3.6 | `Voblint_Compile.VIMP_Proc_to_CFG` | `compile`, `compile_proc`, `compile_prog`, `prog_cfg` | — |
 | 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location` | `csim`, `control_at`, `procs_embedded` | `csim_step`, `csim_star`, `procs_embedded_compile_prog` |
-| 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_ltr_entry_result_eq`, `prog_live_reaches` |
-| 4.2–4.4 | `Voblint_CFG.LTR_Def`, `LTR_Collect` | `ltr`, `path`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_ltr`, `ltr_collect` | `ltr_collect_I`, `ltr_collect_E` |
-| 4.5–4.6 | `Voblint_CFG.LTR_Activation_Context` | `call_context_rel`, `call_context_rel_of_fun`, `admits_call_context`, `trace_context`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
-| 4.7–4.8 | `Voblint_CFG.LTR_Abstract`, `Voblint_Framework.Activation_Backbone` | locale `ltr_coverage`, `trace_covered` | `valid_ltr_covered_at`, `ltr_collect_semantic_postfix`, `ltr_collect_eq_Union_activation_collect`, `activation_collect_sound` |
-| 4.10 | `Voblint_Compile.Source_To_Trace` | `stack_repr` | `source_run_has_ltr`, `source_reaches_ltr_collect` |
+| 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_activation_trace_entry_result_eq`, `prog_live_reaches` |
+| 4.2–4.4 | `Voblint_CFG.Activation_Trace_Def`, `Activation_Trace_Collect` | `activation_trace`, `activation_path`, `path_of`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_activation_trace`, `node_collect` | `node_collect_I`, `node_collect_E` |
+| 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `call_context_rel`, `call_context_rel_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
+| 4.7–4.8 | `Voblint_CFG.Activation_Trace_Abstract`, `Voblint_Framework.Activation_Backbone` | locale `activation_coverage`, `trace_covered` | `valid_activation_trace_covered_at`, `node_collect_semantic_postfix`, `node_collect_eq_Union_activation_collect`, `activation_collect_sound` |
+| 4.10 | `Voblint_Compile.Source_To_Trace` | `stack_repr` | `source_run_has_activation_trace`, `source_reaches_node_collect` |
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Numeric_Queries`, `Backward_Numeric_Queries` | locale `sound_refinement`, `afilter`, `bfilter`, `branch_lifted`, locale `sound_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
@@ -1335,7 +1337,7 @@ thesis section → theories → central definitions → central theorems.
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Indexed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `global_unknown` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
-| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
+| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_node_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
@@ -1396,7 +1398,7 @@ Where each chapter uses it:
 | --- | --- |
 | 1 | the analyzer's output on it, with the trust boundary drawn |
 | 3 | its AST, one `pstep` sequence, its compiled CFG with node numbers |
-| 4 | one `ltr` for the second `bump` activation, drawn as a tree; the hand-built cover in §4.9 |
+| 4 | one `activation_trace` for the second `bump` activation, drawn as a tree; the hand-built cover in §4.9 |
 | 6 | what `assign#`, `branch#`, `enter#`, `combine_assign#` do at three of its edges |
 | 7 | its full equation system at `Ctx_None`, then the two `bump` contexts under `Ctx_CallString 1` |
 | 8 | the solver's iteration at the loop head, with and without widening |
@@ -1430,10 +1432,10 @@ Prefer generated over drawn wherever the infrastructure already exists
    important figure in the thesis.
 2. **The session graph** (Ch. 1 or Appendix A), generated by
    `isabelle build -g`.
-3. **`cstep`'s three rules beside `valid_ltr`'s four clauses** (Ch. 4) — the
+3. **`cstep`'s three rules beside `valid_activation_trace`'s four clauses** (Ch. 4) — the
    correspondence is the chapter's core and reads far better as a table of
    rule shapes than as prose.
-4. **An `ltr` as a tree** (Ch. 4): `Resume (Call (Root …) …) …` with the
+4. **An `activation_trace` as a tree** (Ch. 4): `Resume (Call (Root …) …) …` with the
    caller chain drawn, for the second `bump` activation.
 5. **The five obligations as a commuting diagram** (Ch. 4): concrete step on
    one axis, `cover` membership on the other. `commute` handles this.
@@ -1528,7 +1530,7 @@ examiner asks.
 
 **U7 — How much of the compiler chapter survives the page budget.** 5 813
 lines, and it contributes exactly two facts to the spine (`csim_star` and
-`source_run_has_ltr`) plus the structural certificates. It is defensible to
+`source_run_has_activation_trace`) plus the structural certificates. It is defensible to
 compress Ch. 3.6–3.8 heavily. Decide once a page count exists.
 
 **U8 — Evaluation content.** §12.5 ("runtime behaviour") is currently
@@ -1687,7 +1689,7 @@ link to the rendered theory HTML).
 **B. `content/03-gallery.typ` — 823 lines, 14 sections, one worked instance of
 every figure kind.** It already covers: the pipeline with its trust boundary,
 source/CFG/AST triptych, a Graphviz CFG laid out inline, transfer-function
-right-hand sides, `valid_ltr` as four inference rules, Hasse diagrams plus a
+right-hand sides, `valid_activation_trace` as four inference rules, Hasse diagrams plus a
 Galois square, a widening/narrowing plot, solver-state Euler regions and graph,
 a solver computation trace table, the `TD_side` algorithm, a locale hierarchy,
 an instantiation matrix, a module graph, a verbatim theory snippet, a
@@ -1834,7 +1836,7 @@ colours, with no linked assets.
 | Figure | What is wrong | Work |
 | --- | --- | --- |
 | class hierarchy (`class_deps`) | the ML query returns the *transitive* supers, so 33 classes yield ~50 edges and an unreadable graph | transitive reduction, and a fragment filter down to `numeric_domain`, `executable_domain`, `warrowing`, `widening`, `narrowing`, `bounded_semilattice_sup_bot` |
-| locale graph | four nodes come out isolated (`numeric_domain`, `ltr_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
+| locale graph | four nodes come out isolated (`numeric_domain`, `activation_coverage`, `nonrelational_transfer`, `analysis_surface`) because they are reached by interpretation rather than inheritance | widen the fragment list, or draw interpretations as a second edge kind — `lib/figures.typ` already distinguishes three |
 | `cost-nodes` / `cost-contexts` | the bar values are the explainer's, not measured here | re-derive from the regression runner (U8) and keep the extracted figure as the layout |
 | `strata` | eleven session colours collapse to a depth ramp, which is right for print but drops the identity the web version carries | add a legend, or label each stratum |
 | `iceberg`, `export-lane` | vendor logos dropped (Typst cannot nest an SVG) | fine as is; the shapes still read |
@@ -1845,9 +1847,9 @@ Nothing else has a source. These four must be drawn:
 
 | Figure | Chapter | Payload comes from |
 | --- | --- | --- |
-| `cstep`'s three rules beside `valid_ltr`'s four clauses | 4.3 | `CFG_Exec.thy`, `LTR_Def.thy`; `curryst` |
-| one `ltr` as a tree, with the `caller_of` chain | 4.2 | the running program; `syntree` or `fletcher` |
-| the five obligations as commuting squares | 4.7 | `ltr_coverage` in `LTR_Abstract.thy`; `simulation` generalizes |
+| `cstep`'s three rules beside `valid_activation_trace`'s four clauses | 4.3 | `CFG_Exec.thy`, `Activation_Trace_Def.thy`; `curryst` |
+| one `activation_trace` as a tree, with the `caller_of` chain | 4.2 | the running program; `syntree` or `fletcher` |
+| the five obligations as commuting squares | 4.7 | `activation_coverage` in `Activation_Trace_Abstract.thy`; `simulation` generalizes |
 | `abs_state` ↔ `default_st` and one commuting transfer | 8.5 | `Default_St_Transfer.thy`; `simulation` + `annotation-grid` |
 
 Three further figures the explainer has and the thesis cannot lift, with the
@@ -1893,7 +1895,7 @@ will silently go stale.**
    greyscale. Build that map once, in the extractor, not per figure.
 
 4. **Hand-drawn in `fletcher`/`cetz`/`curryst`.** Only for figures with no
-   generable source: the pipeline diagram, the five obligations, the `ltr` tree,
+   generable source: the pipeline diagram, the five obligations, the `activation_trace` tree,
    the rule correspondence, the executable/abstract square. *Rule for these:
    every identifier goes through `isathm`/`isaconst`/`isatype`/`isalocale`, so
    `thesis-refs` sees it.* That single discipline would have caught six of the
@@ -1946,7 +1948,7 @@ Filtered, the headline rests on exactly five project facts:
 run_voblint_certified_source_sound
   ├─ Compile_Invariants.wf_program_compile_input_exec_sound
   ├─ Compile_Invariants.prog_cfg_def
-  ├─ Source_Activation_Sound.source_reaches_ltr_collect
+  ├─ Source_Activation_Sound.source_reaches_node_collect
   ├─ Analysis_Certified.run_voblint_AnalysedE
   └─ Analysis_Certified.run_voblint_sound_at
 ```
@@ -2009,8 +2011,8 @@ cannot leave a figure on the site silently wrong. Treating it as a source of
 figures only, as §12 did, undersells it.
 
 The prose was checked against the current theories while building this map. It
-is accurate — it names `pstep`, `cstep`, `valid_ltr`, `csim_step`,
-`source_run_has_ltr`, `part_post_solution_of_solve_c`, `gamma_reader_eq_lookup`
+is accurate — it names `pstep`, `cstep`, `valid_activation_trace`, `csim_step`,
+`source_run_has_activation_trace`, `part_post_solution_of_solve_c`, `gamma_reader_eq_lookup`
 and the five headline theorems correctly, and its statements of them match
 `Analysis_Certified.thy`. Where a section simplifies it says so.
 
@@ -2077,14 +2079,14 @@ for a check real runs violate and nobody looks again.*
 definition first. Voblint gives three, one per layer.*
 → **Ch. 3.2, Ch. 4.3.**
 → **Reuse the concept, and prefer it to the plan's current order.** §7 currently
-introduces `pstep` in 3.2, `cstep` in 3.5 and `valid_ltr` in 4.3, three chapters
+introduces `pstep` in 3.2, `cstep` in 3.5 and `valid_activation_trace` in 4.3, three chapters
 apart. The site introduces all three *together*, as three answers to one
 question, and then says the proofs connect them one step at a time. That is
 better, and it is what §9.2's missing figure (`cstep`'s rules beside
-`valid_ltr`'s clauses) was reaching for. Recommendation: keep the definitions
+`valid_activation_trace`'s clauses) was reaching for. Recommendation: keep the definitions
 where they are, but open §3.2 with the three-way statement so the reader knows
 two more are coming.
-→ Re-verify: nothing; `csim_step` and `source_run_has_ltr` are stated correctly.
+→ Re-verify: nothing; `csim_step` and `source_run_has_activation_trace` are stated correctly.
 
 **`chain` — "The proof chain: each set inside the next"**
 → *Soundness is a chain of set inclusions: the stores real runs have, the stores
@@ -2263,11 +2265,11 @@ can only cost precision.
    removed (2026-07-20), no external reference semantics cross-checks it.
    Everything rests on this and it should be stated outright rather than
    discovered. See §15.4.
-2. **`valid_ltr`'s four rules against `cstep`'s three.** Does the trace
+2. **`valid_activation_trace`'s four rules against `cstep`'s three.** Does the trace
    semantics admit exactly the graph's runs? Too few and soundness is vacuous
    where it matters; too many and it is unprovable. Ch. 4's two figures exist to
    make this checkable side by side.
-3. **The five `ltr_coverage` obligations.** They are proved *sufficient*. The
+3. **The five `activation_coverage` obligations.** They are proved *sufficient*. The
    reviewer's question is whether any one is *vacuous* for the shipped
    instances — particularly `TOTAL`, which is conditional on the claim itself.
 4. **`config_terminates`.** The one analyzer-side premise, discharged per

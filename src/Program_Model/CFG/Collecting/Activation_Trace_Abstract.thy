@@ -7,7 +7,7 @@ section \<open>What an analysis must satisfy to be sound\<close>
 text \<open>
   An analysis claims: "at node \<open>v\<close>, in context \<open>c\<close>, only these stores can occur".  This
   theory says what such a claim must satisfy to be believed, and proves that satisfying it
-  is enough --- every valid trace's final store really does lie in the set claimed for its
+  is enough --- every valid activation trace's final store really does lie in the set claimed for its
   own node and every context it carries.  No domain, solver or dependency graph appears
   here; they instantiate this.
 
@@ -26,7 +26,7 @@ text \<open>
   \<open>TOTAL\<close> is what makes the buckets meaningful rather than merely safe.  A resumed caller
   may carry a context under which its callee was never assigned one; the callee's exit
   store would then be bounded by no bucket, and the combined store by nothing.  With it,
-  every valid trace carries some context, so the context-insensitive collection is exactly
+  every valid activation trace carries some context, so the context-insensitive collection is exactly
   the union of the buckets.
 
   A context is not claimed to identify an activation: two activations may carry the same
@@ -65,7 +65,7 @@ locale activation_coverage =
 begin
 
 text \<open>The trace-level objects at the locale's fixed arguments: the collection \<open>\<C>\<close>, the
-  valid traces \<open>\<T>\<close>, the context relation \<open>carries\<close>, the buckets \<open>\<A>\<close>, and the
+  valid activation traces \<open>\<T>\<close>, the context relation \<open>carries\<close>, the buckets \<open>\<A>\<close>, and the
   admitted call contexts \<open>admits\<close>.\<close>
 abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
   where "\<C> \<equiv> node_collect \<G> g S"
@@ -244,7 +244,7 @@ next
     by (rule return_covered[OF cv cof res e ih_caller ih_callee])
 qed
 
-text \<open>Every valid trace carries a context, and its sink lies in every slot it carries:
+text \<open>Every valid activation trace carries a context, and its sink lies in every slot it carries:
   \<^const>\<open>valid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
 theorem valid_activation_trace_covered: "t \<in> \<T> \<Longrightarrow> trace_covered t"
 proof -

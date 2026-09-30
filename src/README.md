@@ -4,7 +4,7 @@ A machine-checked abstract interpreter for VIMP, sound from the source operation
 semantics to the *computed* analysis result:
 
 ```text
-VIMP source -> CFG -> activation-local trace -> collecting semantics
+VIMP source -> CFG -> activation trace -> collecting semantics
             -> D/G equation system -> verified TD side solver
             -> abstract post-solution -> source-level soundness
 ```
@@ -23,8 +23,8 @@ the folder tree and the session graph are the same thing. `ROOTS` lists them all
 | [`Program_Model/VIMP/`](Program_Model/VIMP/) | `Voblint_VIMP` | source syntax, small-step semantics, procedures, the globals/locals split |
 | [`Abstract_Interpreter/Domain/`](Abstract_Interpreter/Domain/) | `Voblint_Domain` | what an abstract value and an abstract state are: sound-domain classes, concretization, the dead-code lift, pointwise states |
 | [`Abstract_Interpreter/Solver/`](Abstract_Interpreter/Solver/) | `Voblint_Solver` | the strategy-tree equation language of the vendored solver, its monotonicity and post-solution vocabulary. Never sees a CFG. |
-| [`Program_Model/CFG/`](Program_Model/CFG/) | `Voblint_CFG` | the graph model and its activation-local collecting semantics — what a soundness claim is stated *about*. Never mentions the compiler. |
-| [`Program_Model/Compile/`](Program_Model/Compile/) | `Voblint_Compile` | the VIMP-to-CFG compiler, its structural invariants, forward simulation, and the bridge from a source run to a valid local trace |
+| [`Program_Model/CFG/`](Program_Model/CFG/) | `Voblint_CFG` | the graph model and its activation-trace collecting semantics — what a soundness claim is stated *about*. Never mentions the compiler. |
+| [`Program_Model/Compile/`](Program_Model/Compile/) | `Voblint_Compile` | the VIMP-to-CFG compiler, its structural invariants, forward simulation, and the bridge from a source run to a valid activation trace |
 | [`Abstract_Interpreter/Framework/`](Abstract_Interpreter/Framework/) | `Voblint_Framework` | the D/G analysis framework: transfer contract, equation generator, collecting soundness for an arbitrary CFG. No domain, no compiler. |
 | [`Abstract_Interpreter/Exec/`](Abstract_Interpreter/Exec/) | `Voblint_Exec` | the executable carrier, and transport from the solver's association lists to the function-valued states soundness is stated over |
 | [`Analyses/`](Analyses/) | `Voblint_Analysis_*` | one session per domain over a shared base — see below |
