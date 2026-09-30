@@ -127,23 +127,28 @@ matches its constructors, and install it where the context mode fixes the
 type. The renderer tells an activation seed from the analysis global through
 that decoder only.
 
-`tests/solver-trace/` holds the whole compact and JSON Lines traces of the
-command above; `pixi run solver-trace-check` compares them, and
+`tests/solver-trace/` holds the whole compact, verbose and JSON Lines traces of
+the command above; `pixi run solver-trace-check` compares them, and
 `UPDATE_TRACE_EXPECT=1` rewrites them from a live run.
 
 Events are recorded during the solve and rendered after `run_voblint`
 returns, inside the contained child. A run killed by `--timeout` leaves no
 trace.
 
-The playground offers the same compact trace. `cli/entry/voblint_web.ml`
-takes a seventh argument, `trace`; when it is true the answer gains a `trace`
-field holding the text `Solver_trace.emit` writes, and when it is false the
-answer is unchanged. The browser module outlives a run, so the adapter sets
-the hook's switch on every call and `Solver_trace_hook.recorded` empties the
-event list it hands over. `pixi run browser-trace-check` runs the wasm build
-under Node and compares its trace of the command above with
-`tests/solver-trace/contexts.compact.expected`, whose program name it swaps for
-`browser.vimp`.
+The playground offers the same traces. `cli/entry/voblint_web.ml` takes a
+seventh argument, `trace`, naming the form as the flags do: `"compact"`,
+`"verbose"` or `"jsonl"` add a `trace` field holding the text
+`Solver_trace.emit` writes in that form, and `"off"` leaves the answer as it
+was before the tracer existed. The page shows the compact or the full
+(verbose) text above the graph, lays out its first 400 lines until the reader
+asks for all of them, and saves the whole text; its JSON Lines download solves
+the shown run again in `"jsonl"` mode. Share links carry the form as
+`trace=compact` or `trace=verbose`; `trace=1` still opens the compact one. The
+browser module outlives a run, so the adapter sets the hook's switch on every
+call and `Solver_trace_hook.recorded` empties the event list it hands over.
+`pixi run browser-trace-check` runs the wasm build under Node and compares
+each form's trace of the command above with its file in `tests/solver-trace/`,
+whose program name it swaps for `browser.vimp`.
 
 JSON Lines schema 1. The first line is the run header; every solver event
 carries an increasing `step`; check records and an `end` record with counts
