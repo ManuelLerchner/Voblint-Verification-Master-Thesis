@@ -506,8 +506,8 @@ elements for one local and one global.
       "⊥⊥": 0,
       "e⊥": -1.5,
       "o⊥": -0.5,
-      "⊥e": 0.5,
-      "⊥o": 1.5,
+      "⊥e": 1.5,
+      "⊥o": 0.5,
       "⊤⊥": -2.5,
       "ee": -1.5,
       "eo": -0.5,
@@ -565,7 +565,7 @@ elements for one local and one global.
       // A state with two overrides, beside the lattice: its set is over all
       // names, since the overrides pin two locations and the defaults the rest.
       node(
-        (4.3, 2),
+        (3.6, 2),
         align(center, text(size: 6.5pt)[
           $
             ⟪ & "even", ltop, \
@@ -578,11 +578,19 @@ elements for one local and one global.
                    & forall "local" y != x. med s(y) mod 2 = 0}
             $
           ]]),
+        name: <cl-ov>,
         stroke: 0.6pt + vb.muted,
         fill: white,
         corner-radius: 3pt,
         inset: 2.5pt,
       ),
+      // Order, not covering: infinitely many override states lie in between.
+      edge(label("cl-⊥e"), <cl-ov>, stroke: (paint: vb.muted, thickness: 0.4pt, dash: "dashed")),
+      edge(<cl-ov>, (3.6, 0), label("cl-⊤⊤"), stroke: (
+        paint: vb.muted,
+        thickness: 0.4pt,
+        dash: "dashed",
+      )),
       ..states
         .map(a => states
           .filter(b => covers(a, b))
@@ -605,7 +613,8 @@ elements for one local and one global.
     also identifies with $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Right: a state
     with two overrides, its set written over all names. The overrides pin $x$
     and $g$, every other local takes the local default, and the other globals
-    are unconstrained.],
+    are unconstrained. Its dashed edges are order, not covering: infinitely
+    many override states lie between it and its neighbours.],
 ) <fig:carrier-lattice>
 
 
