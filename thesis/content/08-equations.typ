@@ -150,8 +150,8 @@ example is the program of @fig:program-to-equations, repeated in
 The intraprocedural recipe of @ch:background keeps one unknown per graph node.
 Extended naively to calls, the entry of `bump` joins both call sites and holds
 $n in {4, 5}$ at best, the return at $italic("pp3")$ assigns $a in {5, 6}$, and the check
-`a == 6` fails although every execution satisfies it. With the join update rule
-(@sec:update-rules) the analyzer without contexts reports exactly this, with the verdicts of
+`a == 6` fails although every execution satisfies it. With the update rule
+that joins every contribution (@sec:td) the analyzer without contexts reports exactly this, with the verdicts of
 @fig:intro-answers:
 #_cli("pg-contexts-none-join", "a == 6", 3) with
 #_cli("pg-contexts-none-join", "a == 6", 4). The default rule, warrowing, reports
@@ -625,17 +625,17 @@ $c' = ctxh(u, c, e)$ and continuation $k$, a post-solution satisfies
 #[
   #show math.equation: set block(breakable: true)
   $
-    sol(v_0, c_0) & gt.eq d_0 & wide (1) \
-    sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide (2) \
-    sol(italic("Seed")(p, c')) & gt.eq e & wide (3) \
-    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(italic("Seed")(p, c')) & wide (4) \
-    sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide (5) \
-    forall s in conc_(M)(sol(u, c)). & med exists c'. med R(u, c, s, s', c') & wide (6)
+    sol(v_0, c_0) & gt.eq d_0 & wide #ineq-tag(1) \
+    sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide #ineq-tag(2) \
+    sol(italic("Seed")(p, c')) & gt.eq e & wide #ineq-tag(3) \
+    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(italic("Seed")(p, c')) & wide #ineq-tag(4) \
+    sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide #ineq-tag(5) \
+    forall s in conc_(M)(sol(u, c)). & med exists c'. med R(u, c, s, s', c') & wide #ineq-tag(6)
   $
 ]
-Line (6) is not an inequality of the system but the totality premise of
+Line #ineq(6) is not an inequality of the system but the totality premise of
 @sec:eq-routing, where $s'$ is the store the call enters from $s$.
-Lines (3) and (4) are #isathm("routed_seed_publish_bound_seed") and
+Lines #ineq(3) and #ineq(4) are #isathm("routed_seed_publish_bound_seed") and
 #isathm("routed_seed_read_bound"). Each obligation follows from one line by the
 same step: the line holds, and
 the operation on its right is sound, so the concrete step lands in the
@@ -649,13 +649,15 @@ concretization of its left side.
     table.hline(),
     [*obligation*], [*uses*], [*and the soundness fact*],
     table.hline(stroke: 0.5pt),
-    [#oblig("INIT")], [(1)], [$d_0$ covers the initial stores],
-    [#oblig("INTRA")], [(2)], [the edge transfer is sound (the contract's #oblig("INTRA"))],
-    [#oblig("CALL")], [(3), (4)], [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
+    [#oblig("INIT")], [#ineq(1)], [$d_0$ covers the initial stores],
+    [#oblig("INTRA")], [#ineq(2)], [the edge transfer is sound (the contract's #oblig("INTRA"))],
+    [#oblig("CALL")],
+    [#ineq(3), #ineq(4)],
+    [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
     [#oblig("RETURN")],
-    [(5)],
+    [#ineq(5)],
     [the return stages are sound (the contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
-    [#oblig("TOTAL")], [(6)], [none beyond the premise itself],
+    [#oblig("TOTAL")], [#ineq(6)], [none beyond the premise itself],
     table.hline(),
   ),
   placement: none,
@@ -719,15 +721,17 @@ The second unknown depends on the value of the first, so the equation cannot
 be handed to the solver as a function of a fixed list of arguments.
 
 A strategy tree states exactly this. It queries one unknown, receives its
-value, and decides from it what to do next. A call becomes the tree
+value, and decides from it what to do next. In the notation of @sec:td, the
+contribution $italic("call")_u (c)$ of @sec:eq-call becomes the tree
 $
-  & #ctor("QueryL") (u, c) --> #ctor("Side") (italic("Seed")(p, c'), e) \
-  & --> #ctor("QueryL") (ctor("FunctionResult") thin p, c')
-    --> #ctor("Answer") (sh("combine") (q, r)),
+  italic("call")_u (c) = #ctor("QueryL") ( & (u, c), lambda d. \
+                                           & #ctor("Side") ( italic("Seed")(p, c'), e, \
+                                           & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
+                                               #ctor("Answer") (sh("combine") (q, r)) ) ) ),
 $
-where each arrow hands the value just read to the rest of the tree:
-$(q, e) = enterh$ of the caller's value, $c' = ctxh(u, c, e)$,
-and $r$ is the value of the second query. These are lines (3) and (5) of
+where each continuation receives the value just read: $d$ is the caller's
+value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$, and $r$ is the callee's
+result. These are lines #ineq(3) and #ineq(5) of
 @sec:eq-discharge in an order the solver can execute
 (#isaconst("routed_callee_call_program"), plus the bottom test of
 @sec:eq-call). The analyzer runs a buffered form of this tree
@@ -735,7 +739,7 @@ and $r$ is the value of the second query. These are lines (3) and (5) of
 
 === Publishing to local entries through activation seeds <sec:eq-seed-global>
 
-Line (4) of @sec:eq-discharge lets the callee's entry take in the entry value
+Line #ineq(4) of @sec:eq-discharge lets the callee's entry take in the entry value
 $e$ the call computed. The natural encoding is a side effect of the call into
 the entry unknown $(ctor("FunctionEntry") thin p, c')$, as Apinis et al. write
 it @apinis12[§6] and as Goblint does with its local side effect `sidel`
@@ -816,23 +820,23 @@ $
 $
 The vendored solver joins the publications of one evaluation, but it applies
 the update rule at every #ctor("Side"), first to $a$ and then to
-$a union.sq b$. The per-origin rules of @sec:update-rules keep one
-contribution per publishing unknown, so in every re-evaluation the recorded
+$a union.sq b$. The per-origin rules (@sec:update-rules) keep one record
+per origin (@sec:td), so in every re-evaluation the recorded
 contribution first shrinks to $a$ and then grows back to $a union.sq b$. Under
 warrowing the shrinking step narrows and the growing step widens again, and
 the solve need not stabilize. #isaconst("buffer_sides") gives the update rule
 only complete joins: it collects the publications of one right-hand side,
 joins those to the same target, and issues one #ctor("Side") per target when
-the right-hand side has answered. As a consequence every publication is
+the right-hand side has answered, which is the input the update rules of
+Stemmler et al. assume @stemmler25[§3]. As a consequence every publication is
 delayed behind the queries of its equation, so a newly routed callee context
 is first read with an empty seed and the flush destabilizes it for a second
 pass (@sec:eq-example). Goblint's narrowing rule for globals, which also keeps
 one contribution per origin, joins the side effects of an evaluation before
 updating
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L116")[`td3UpdateRule.ml`]).
-The analyzer runs the buffered generator, and
-#isathm("part_post_solution_routed_node_rhs_buffered") transfers the
-post-solution certificate to the direct generator the proof speaks about.
+The analyzer runs the buffered generator, and @sec:cert-param carries its
+certificate to the direct generator the proof speaks about.
 @sec:outlook-extending discusses a solver extension that would make seeds and
 buffering unnecessary.
 

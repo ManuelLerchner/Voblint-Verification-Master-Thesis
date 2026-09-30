@@ -29,14 +29,13 @@
 This chapter answers what the analyzer's output guarantees about the
 executions of the source program. The previous chapters supply the pieces: the
 compiler simulation, the trace semantics, equation soundness and the solver
-certificate. Chaining them leaves three gaps. The certificate covers only the
-unknowns the solver reached, closed backward from the query, while an execution
-moves forward into unknowns the query need not depend on. The client reads a
-table and one verdict per check, not a solver valuation per context. And a
-verdict needs a precise meaning, since a check that no execution reaches makes
-every condition true there. @sec:chain assembles the pieces, @sec:headline
-states the theorem about the exported analyzer #isaconst("run_voblint") that
-they must yield, and the remaining sections close the three gaps.
+certificate, closed forward over every unknown an execution visits
+(@sec:cert-forward). Chaining them leaves two gaps. The client reads a table
+and one verdict per check, not a solver valuation per context. And a verdict
+needs a precise meaning, since a check that no execution reaches makes every
+condition true there. @sec:chain assembles the pieces, @sec:headline states
+the theorem about the exported analyzer #isaconst("run_voblint") that they
+must yield, and @sec:verdicts closes the two gaps.
 
 == The chain at one check <sec:chain>
 
@@ -203,60 +202,24 @@ component of @ch:cooperation, and a single analysis is the list of length one.
     conclusions follow from all four premises together.],
 ) <tab:headline>
 
-Two gaps separate the chain of @sec:chain from this statement. The certificate
-bounds only the unknowns the solver reached (@sec:live-keys), and the client
-reads a table with one verdict per check instead of a solver valuation per
-context (@sec:verdicts).
+Two gaps separate the chain of @sec:chain from this statement: the client
+reads a table instead of a solver valuation, and one verdict per check instead
+of one per context (@sec:verdicts).
 
-== From certified unknowns to the published table <sec:live-keys>
-
-Equation soundness bounds only the unknowns in the certified set $V$. A
-concrete execution may visit any node in any admitted context, so the proof
-needs $V$ to be closed _forward_: along intraprocedural edges, from a call site
-to its continuation, and into the callee's entry under the context the call
-selects. The certificate provides the opposite closure. An equation reads its
-predecessors, so $V$ is closed _backward_ from the query at the exit of `main`.
-A statement compiled after a `return` shows that the two differ: it can be
-solved, yet nothing the query depends on reads its successors.
-
-The fix restricts attention to _live_ unknowns (#isaconst("live_unknowns")): solved unknowns whose node is live in a procedure whose result is solved in the same
-context. Liveness (#isaconst("prog_live")) is defined on the program text: a
-statement is live if no command before it in its sequence cannot fall through.
-The semantic alternative, that the node can still reach its procedure's result,
-is not preserved along the edges of an arbitrary graph, and control after a
-`return` can run into a node with no way out. The syntactic notion has the two
-properties the argument needs. Every live node reaches the procedure's result
-along the steps an equation reads backwards, and every edge out of a live node
-lands on a live node. A successor of a live unknown therefore reaches a solved
-result, and backward closure from that result puts the successor into $V$.
-
-The call case has one more condition. The callee's entry is covered only when
-the state the call enters is not #ctor("Bot"), because only then does the
-solve select a callee context and demand its result. An execution that makes
-the call enters with a store that this state describes, so the state is not
-#ctor("Bot") in the cases the proof needs. #isathm("live_unknowns_cover")
-derives the forward closure from well-formedness and termination alone, so
-coverage is not a premise of the final theorem.
+== Verdicts <sec:verdicts>
 
 The solver returns a valuation over its unknowns, but the client reads a table
 indexed by node and context through #isaconst("lookup_context"). The theorem
 #isathm("gamma_reader_eq_lookup") states that both describe the same stores at
-every node and context. Unsolved unknowns read as unreachable. This is sound
-because every unknown an execution visits is live, and live unknowns are solved.
-
-A reached store is covered at its node _in some context_:
+every node and context. Unsolved unknowns read as unreachable, which is sound
+because every unknown an execution visits is solved (@sec:cert-forward). A
+reached store is covered at its node _in some context_:
 $ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A) $
 (#isaconst("table_covers")).
 The quantifier cannot become universal. Under entry-state routing the test in
 `f` is analyzed in one context per recursion depth, and a store with $n = 2$
-lies in the bucket of the outer call only. For entry-state policies the
-relation $R$ that indexes the buckets is #isaconst("admitted_contexts"), the
-instance of the solution-dependent relation of @sec:eq-routing. The
-source-level theorem is stated over the context-free collection
-#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"), so this dependence on the solution
-does not enter its statement.
-
-== Verdicts <sec:verdicts>
+lies in the bucket of the outer call only, a bucket of the solution-dependent
+relation #isaconst("admitted_contexts") (@sec:eq-entry-routing).
 
 A check has one verdict per node, while the table may hold several contexts
 there. Each context whose state is not #ctor("Bot") is classified as proved,
@@ -270,7 +233,7 @@ holds in every store the state describes (#isathm("mcp_classify_proved"),
 unknown, so the classification never yields `DEAD`.
 
 The per-context verdicts are joined in the flat order in which unknown is the
-top. The join follows from the existential context of @sec:live-keys: the theorem
+top. The join follows from the existential context above: the theorem
 does not say which context covers a store, so the node verdict may claim only
 what every contributing context claims, and a proved and a refuted context
 give unknown. A context whose state is #ctor("Bot") denotes no store and
@@ -280,7 +243,7 @@ verdict type lifted by a bottom element, and that bottom is `DEAD`, the unit of
 the join. A node is `DEAD` exactly when every context the table holds there is
 #ctor("Bot"). The join ranges over the contexts solved at the node, a finite
 set because a terminating solve returns a finite set of unknowns
-(#isathm("finite_stabl_solve"), @sec:termination).
+(#isathm("finite_stabl_solve"), @sec:cert-param).
 
 Each verdict below has a meaning only under the premises of the theorem
 (@tab:headline): the abstract solve terminates, and #isaconst("run_voblint")
@@ -421,7 +384,7 @@ could not exclude a zero divisor.
 Four features of the theorem are forced. The node is existential because a
 source configuration does not determine its CFG node (@ch:traces), the context
 because a store is covered in some context only, and coverage of the solved
-unknowns is absent because it is derived (@sec:live-keys). Termination of the
+unknowns is absent because it is derived (@sec:cert-forward). Termination of the
 abstract solve is the one premise not discharged in general (@sec:termination),
 so the theorem is a partial-correctness result, and the analyzed program need
 not terminate. #isathm("certificate_demo_source_certified") discharges every

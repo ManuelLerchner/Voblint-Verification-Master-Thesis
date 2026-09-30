@@ -49,7 +49,7 @@ Functional policies embed as relations and satisfy it directly
 flow-sensitive local state lets the contract name a single global. The
 flow-insensitive placement loses precision on the `set`/`get` program
 (@sec:mixed-flow), and the cost of neither placement was measured. Consuming
-the solver only through #isaconst("part_post_solution") makes soundness
+the solver only through #isaconst("part_post_solution", thy: "Basics_side") makes soundness
 independent of the update rule (@sec:update-rules), but says nothing about
 termination or about which post-solution is returned (@sec:certificate). Exporting one dispatcher makes
 the constant of the theorem the one the tools run (@sec:codegen).

@@ -49,6 +49,14 @@ css = ["island"]
 chapter = "3.1"
 why = "VIMP as a fragment of the C Goblint analyzes; the omitted constructs as the regions around it."
 
+
+[figures.infinite]
+aria_prefix = "A grid drawn only at the coordinates it names"
+scene = "scene-infinite"
+css = ["infinite"]
+chapter = "9.1"
+why = "The equation system is a function on infinitely many unknowns; a solve reaches finitely many (docs/readme-figures/infinite.vimp, claim infinite-contexts)."
+
 # ---------------------------------------------------------------- Part II --
 
 [figures.strata]

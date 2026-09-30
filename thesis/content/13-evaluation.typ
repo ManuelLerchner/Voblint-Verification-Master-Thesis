@@ -99,7 +99,7 @@ scope.
 #let _oracles(name) = _facts.at(name).at("oracles", default: none)
 #let _unexported = _audited.filter(n => _oracles(n) == none)
 
-For the main theorems, supporting lemmas of the proof chain, and six
+For the main theorems, supporting lemmas of the proof chain, and seven
 witnesses and counterexamples, the dependence on oracles is
 exported from the built session by Isabelle's #isacmd("thm_oracles")
 (@tab:oracles-audit). A `sorry` would appear there as Pure's skip-proof oracle,
@@ -139,7 +139,7 @@ way inherits the code generator's oracle whether or not it is listed.
     table.hline(),
   ),
   caption: [Oracle audit of the main theorems, supporting lemmas of the proof
-    chain, and six witnesses and counterexamples, exported from the built
+    chain, and seven witnesses and counterexamples, exported from the built
     session.],
 ) <tab:oracles-audit>
 
@@ -226,7 +226,7 @@ at the next boundary, as a local specification that satisfies
 soundness contract #isalocale("analysis_contract") (@ch:cooperation). The routing
 obligations are discharged once for all domains
 (#isathm("activation_collect_dg_sound")). The solver is consumed only through
-the post-solution certificate #isaconst("part_post_solution")
+the post-solution certificate #isaconst("part_post_solution", thy: "Basics_side")
 (@sec:certificate), so the four selectable update rules share one proof
 (@sec:update-rules). Analyses combine without reference to one another: each
 proves the laws of its local specification against every channel that holds, and

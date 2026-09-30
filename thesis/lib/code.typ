@@ -250,18 +250,39 @@
 
 // Formal entities require links. Command syntax and repository paths are
 // code labels and have no project-definition anchor.
-#let entity(name, color, kind: none, display: none) = {
-  let href = if kind == none { none } else { _url(kind, name) }
+// An Isabelle name as it prints: `dep\<^sub>L` shows its subscript.
+#let _isa-display(name) = {
+  let parts = name.split("\<^sub>")
+  if parts.len() == 1 { name } else {
+    parts.first()
+    for p in parts.slice(1) {
+      let cs = p.clusters()
+      sub(cs.first())
+      cs.slice(1).join()
+    }
+  }
+}
+// `thy:` names the theory when several theories define the same short name;
+// thesis-links refuses an unqualified citation of such a name.
+#let entity(name, color, kind: none, display: none, thy: none) = {
+  let key = if thy == none { name } else { thy + "." + name }
+  let href = if kind == none { none } else { _url(kind, key) }
   let fill = if href == none { vb.plain } else { color }
   let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if display == none {
-    name
+    _isa-display(name)
   } else { display })
   if href == none { body } else { link(href, body) }
 }
-#let isathm(name, display: none) = entity(name, vb.thm, kind: "thm", display: display)
-#let isaconst(name) = entity(name, vb.const, kind: "const")
-#let isatype(name) = entity(name, vb.type, kind: "type")
-#let isalocale(name) = entity(name, vb.locale, kind: "locale")
+#let isathm(name, display: none, thy: none) = entity(
+  name,
+  vb.thm,
+  kind: "thm",
+  display: display,
+  thy: thy,
+)
+#let isaconst(name, thy: none) = entity(name, vb.const, kind: "const", thy: thy)
+#let isatype(name, thy: none) = entity(name, vb.type, kind: "type", thy: thy)
+#let isalocale(name, thy: none) = entity(name, vb.locale, kind: "locale", thy: thy)
 #let isacmd(name) = entity(name, vb.trusted)   // an Isabelle command
 #let isasession(n) = entity(n, vb.muted, kind: "session")
 #let isafile(p) = entity(p, vb.muted)

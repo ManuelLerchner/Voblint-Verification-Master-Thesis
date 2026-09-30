@@ -113,23 +113,10 @@ classifier. Even the bottom state is a parameter, because a least element
 taken from a type class would have to be executable at a function type.
 #isalocale("dg_analysis") imports it and adds the contracts, among them
 soundness of the component (#isaconst("sound_local_spec")) and of the initial
-state, exact emptiness tests, a single entry pair, seeds distinct from the analysis global, the solver certificate, that a
-successful executable run lies in the solver's domain, and correctness of the
-check classifier.
-
-For a numeric domain, #isalocale("dg_analysis_exec") derives the component
-contracts from the domain's certified operations (@sec:instances-supply), and
-#isathm("sound_nonrelational_ops.dg_analysis_execI") discharges all of them at
-once. Six obligations remain: the routing agreement, that the seeds differ from
-the analysis global, three facts about the solver (its result is a partial
-post-solution, its solved domain is finite, and a successful executable run
-lies in that domain), and soundness of the initial state. Only the last is a
-fact about the domain's values (for Parity, #isathm("parity_cinit_gamma")).
-Each numeric domain has a generated registration that discharges them at the
-unit context. Interval is also registered at the entry-state and call-string
-contexts. The analyzer does not run these registrations. The combined state
-runs each numeric field's component #isaconst("exec_spec") itself and cites
-the registration's soundness facts for that component and its initial state.
+state, exact emptiness tests, a single entry pair, seeds distinct from the
+analysis global, the three solver contracts of @sec:cert-param, and
+correctness of the check classifier. @sec:instances-supply shows how a numeric
+domain discharges them.
 
 The analyzer interprets #isalocale("dg_analysis") once per context family for
 the combination #isaconst("mcp_comp") of any activation list (@fig:assembly),

@@ -77,7 +77,7 @@ topological orderings in Coq and make them compatible with that interface, so
 CompCert's analyses can use them unchanged #_todo[check claim.]. Both works are intraprocedural.
 Voblint consumes its solver through a fixpoint guarantee in the same way, for
 side-effecting, context-indexed systems, where the certificate
-#isaconst("part_post_solution") also accounts for contributions to global
+#isaconst("part_post_solution", thy: "Basics_side") also accounts for contributions to global
 unknowns.
 
 == Mechanized abstract interpretation
@@ -206,13 +206,13 @@ Voblint includes a copy of the solver of @tilscher26; the algorithm, the update
 rules and their proofs belong to that work. The copy carries local
 refactorings, such as renamings and an interface theory (@sec:upstream-td). A solver theorem speaks about
 arbitrary right-hand sides and gives the equations no meaning. Voblint supplies that
-meaning for its language: the certificate #isaconst("part_post_solution")
+meaning for its language: the certificate #isaconst("part_post_solution", thy: "Basics_side")
 implies coverage of the concrete traces, and compiler correctness transfers the
 coverage to source executions. The solver Voblint runs warrows every local
 unknown at a widening point, whichever of the four selectable update rules
 merges the global contributions. The least-solution theorem therefore does not
 apply, and Voblint uses only partial correctness and claims no optimality for
-its results. Soundness rests on #isaconst("part_post_solution") alone, for all
+its results. Soundness rests on #isaconst("part_post_solution", thy: "Basics_side") alone, for all
 four selectable rules (@sec:update-rules). Voblint's precision statements are strict inequalities
 between the results of named solves.
 

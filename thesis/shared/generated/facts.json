@@ -203,6 +203,12 @@
       "statement": "(\\<lambda>_. 0)(STR ''a'' := 1)\n\\<in> \\<A>\\<^bsub>declared_global\n                   ret_prog,tot_R,0,prog_cfg\n                                     ret_prog,cinit_stores\n         (declared_global ret_prog)\\<^esub>\n       (Statement 3) 0 \\<and>\n(\\<lambda>_. 0)(STR ''a'' := 1) \\<notin> tot_cover (Statement 3) 0",
       "theory": "Example_Non_Vacuity",
       "why": "Chapter 4: dropping TOTAL is unsound."
+    },
+    "update_rules_example": {
+      "oracles": [],
+      "statement": "map (\\<lambda>r.\n        update_steps r \\<bottom> init_basic_ug_state example_contribs)\n [Globals_Join, Globals_Per_Origin, Globals_Warrow,\n  Globals_Warrow_Per_Origin] =\n[[Ivl (Fin 0) (Fin 3), Ivl (Fin 0) (Fin 4), Ivl (Fin 0) (Fin 4),\n  Ivl (Fin 0) (Fin 8)],\n [Ivl (Fin 0) (Fin 3), Ivl (Fin 0) (Fin 4), Ivl (Fin 1) (Fin 4),\n  Ivl (Fin 0) (Fin 8)],\n [Ivl (Fin 0) (Fin 3), Ivl (Fin 0) PlusInf, Ivl (Fin 0) (Fin 4),\n  Ivl (Fin 0) PlusInf],\n [Ivl (Fin 0) (Fin 3), Ivl (Fin 0) (Fin 4), Ivl (Fin 0) (Fin 4),\n  Ivl (Fin 0) PlusInf]]",
+      "theory": "Example_Update_Rule_Steps",
+      "why": "Solving chapter, update-rule figure: one global under each rule after each of four contributions."
     }
   },
   "session": "Voblint_CLI",

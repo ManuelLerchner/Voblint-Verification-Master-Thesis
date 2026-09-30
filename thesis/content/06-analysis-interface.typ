@@ -202,8 +202,9 @@ The manager is a record of type #isatype("man"):
 Here `'dl` and `'dg` are the local and the global lattice, $D_L$ and $D_G$,
 and `'v` names the analysis globals. #isaconst("man_local") is the current
 local value. A #isatype("strategy_program") is a program that may read and
-publish values before it yields its result, and `'x` and `'k` name the
-unknowns it reads (@sec:eq-encoding). The framework builds the manager
+publish values before it yields its result, a strategy tree of @sec:td
+(@fig:strategy-trees) that hands this result to a continuation, and `'x` and
+`'k` name the unknowns it reads. The framework builds the manager
 (#isaconst("mk_dg_man")): #isaconst("man_global") $v$ reads the current value
 of the analysis global $v$, and #isaconst("man_sideg") $v$ $g$ publishes $g$
 to it. Its #isaconst("man_ask") answers every query with $ltop$, and the
@@ -215,8 +216,9 @@ transfer built with #isaconst("local_transfer") from a function on local values
 reads only the value at the edge's source and publishes nothing
 (#isathm("sp_compile_transfer_program_local_transfer")). The numeric analyses
 are built this way, so for them the manager changes nothing about the
-equations. In the solver, analysis globals become global unknowns next to the
-framework's own activation seeds (@sec:global-unknowns).
+equations. In the solver, analysis globals become global unknowns, next to
+the seeds through which @ch:equations passes entry values to callees
+(@sec:global-unknowns).
 
 == The specification record <sec:spec-record>
 
@@ -278,6 +280,13 @@ however its reads and publications are arranged. The solver's certificate
 bounds each analysis global by every publication to it (@sec:certificate), and
 the solved values inherit the coverage.
 
+The locale fixes the type of analysis-global names to `unit`, so an analysis
+has exactly one global unknown, and $conc_(D G)(d, g)$ takes one value $g$.
+@sec:mixed-flow shows what this single slot costs when several program globals
+share it. Otherwise the contract asks the carriers only for a join semilattice
+with a least element and $conc_(D G)$ only for monotonicity. It never requires
+a map from variables to abstract values (@sec:relational).
+
 The contract covers #oblig("INTRA") and #oblig("RETURN"), the two obligations
 of @ch:traces that involve no context. @ch:equations derives the other three
 from further premises. #oblig("CALL"), that the callee's entry covers the
@@ -287,113 +296,3 @@ policy. #oblig("TOTAL"), that every covered call reaches some context, comes
 from the policy alone. #oblig("INIT") needs the initial abstract state to
 cover the initial stores, an assumption the analysis's registration discharges
 (#isathm("dg_analysis.init_sound")).
-
-The locale fixes the type of analysis-global names to `unit`, so an analysis
-has exactly one global unknown, and $conc_(D G)(d, g)$ takes one value $g$.
-@sec:mixed-flow shows what this single slot costs when several program globals
-share it. Otherwise the contract asks the carriers only for a join semilattice
-with a least element and $conc_(D G)$ only for monotonicity. It never requires
-a map from variables to abstract values, so the order analysis with an
-analysis global, #isaconst("rel_order_spec"), meets it over the relational
-carrier of @sec:relational without a change to the framework.
-
-== Local specifications <sec:whole-state>
-
-Most analyses use no analysis global. For them the framework offers a simpler
-interface, the _local specification_ #isatype("local_spec"), whose operations
-work on local values and on the answers of other analyses (@ch:cooperation),
-with soundness laws stated directly over stores
-(#isaconst("sound_local_spec")). #isaconst("dg_spec_of") turns a local
-specification into a #isatype("dg_spec") that never touches the analysis
-global, and a sound local specification meets the contract
-(#isathm("dg_spec_of_contract")). The analyzer runs local specifications only
-(@ch:executable). @fig:contract-routes shows how the analyses of this thesis
-reach the contract. A numeric domain certifies its primitive operations once,
-which yields one rule per operation (#isalocale("sound_nonrelational_transfer"))
-and makes its executed local specification #isaconst("exec_spec") sound
-(#isathm("dg_domain_exec.exec_spec_sound")).
-
-#let _cbox(pos, name, body) = node(
-  pos,
-  text(size: 8pt, body),
-  name: name,
-  inset: 4pt,
-  stroke: 0.6pt + vb.neutral,
-  shape: rect,
-  corner-radius: 2pt,
-)
-#let _clab(body) = text(size: 7pt, body)
-#figure(
-  diagram(
-    spacing: (26mm, 6mm),
-    _cbox((0, 0), <c-prim>, [primitive operations \ #isatype("nonrelational_ops")]),
-    _cbox((0, 1), <c-cert>, [certificate, once per domain \ #isalocale("sound_nonrelational_ops")]),
-    _cbox((0, 2), <c-rules>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
-    _cbox((0, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
-    _cbox((0, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
-    _cbox((1, 3), <c-order>, [order analysis \ #isaconst("order_spec")]),
-    _cbox(
-      (1, 4),
-      <c-relspec>,
-      [order analysis with an analysis global \ #isaconst("rel_order_spec")],
-    ),
-    edge(
-      <c-prim>,
-      <c-cert>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab[one interpretation per domain],
-      label-side: left,
-    ),
-    edge(
-      <c-cert>,
-      <c-rules>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer")),
-      label-side: left,
-    ),
-    edge(
-      <c-rules>,
-      <c-local>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab[#isathm("dg_domain_exec.exec_spec_sound"), at #isaconst("exec_spec")],
-      label-side: left,
-    ),
-    edge(
-      <c-local>,
-      <c-contract>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab[#isathm("dg_spec_of_contract"), through #isaconst("dg_spec_of")],
-      label-side: left,
-    ),
-    edge(
-      <c-order>,
-      <c-local>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab(isathm("order_spec_sound")),
-      label-side: right,
-    ),
-    edge(
-      <c-relspec>,
-      <c-contract>,
-      "->",
-      stroke: 0.6pt + vb.neutral,
-      label: _clab[interpretation],
-      label-side: left,
-    ),
-  ),
-  kind: image,
-  placement: none,
-  caption: [How the analyses of this thesis reach the analysis soundness
-    contract. An arrow leads from what an analysis supplies to what it thereby
-    establishes, and its label names the Isabelle fact. A numeric domain
-    certifies its record of primitive operations once, which yields one rule
-    per operation; these rules make its executed local specification sound.
-    The order analysis is a sound local specification by its own proof. Every
-    sound local specification meets the contract through
-    #isaconst("dg_spec_of"). The order analysis with an analysis global is not a local specification and interprets the contract itself.],
-) <fig:contract-routes>

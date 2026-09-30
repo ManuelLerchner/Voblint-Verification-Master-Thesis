@@ -9,6 +9,7 @@
 #   concept  what a reader looks the item up by
 #   kind     const | thm | type | locale
 #   name     the Isabelle name
+#   thy      its theory, when several theories define the name
 
 [[anchor]]
 chapter = "ch:program-model"
@@ -183,12 +184,14 @@ chapter = "ch:solving"
 concept = "Strategy trees"
 kind = "type"
 name = "strategy_tree"
+thy = "Basics_side"
 
 [[anchor]]
 chapter = "ch:solving"
 concept = "Partial post-solution"
 kind = "const"
 name = "part_post_solution"
+thy = "Basics_side"
 
 [[anchor]]
 chapter = "ch:solving"

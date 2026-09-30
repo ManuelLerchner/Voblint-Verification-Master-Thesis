@@ -165,7 +165,7 @@ preservation argument at every layer (@ch:conclusion discusses the heap).
 Two of these omissions matter in later chapters. Without pointers, concrete
 memory is a store from variable names to integers. The non-relational analyses
 of @ch:domains lift it pointwise to one abstract value per variable.
-@sec:relational gives a carrier that is not pointwise. Without `break`,
+@sec:rel-state gives a carrier that is not pointwise. Without `break`,
 `continue` and `goto`, every command has at most one normal continuation. So
 the compiler of @sec:compile passes down a single continuation, and a
 #keyw("return") ignores it.
@@ -415,9 +415,9 @@ finds a solution. This design requires the compiler, the simulation proof of
 this chapter and the coverage layer of @ch:traces. The benefit is that the
 argument about programs ends at a certificate, namely a post-solution of the
 equations (@sec:certificate). The solver that produces it is a verified
-component @tilscher26. We reuse it with two local changes. It was ported to
-Isabelle2025, and an unused class assumption was removed
-(@sec:trust-boundary). @ch:related returns to the comparison.
+component @tilscher26. We reuse it with two local changes (@sec:upstream-td):
+its build is restored under Isabelle2025-2, and assumptions that only its
+termination proofs use are removed from two of its classes. @ch:related returns to the comparison.
 
 === Nodes and edges <sec:cfg>
 

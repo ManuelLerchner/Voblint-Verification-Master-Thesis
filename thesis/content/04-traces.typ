@@ -218,7 +218,7 @@ We turn the grouping of @fig:flat-nested into a datatype.
     },
     kind: image,
     placement: none,
-    caption: [The declarations of #isatype("trace") and #isatype("ltr"), lifted from the theory. A #isatype("trace") is a local path, a list of pairs of a CFG node and a store.],
+    caption: [The declarations of #isatype("trace", thy: "LTR_Def") and #isatype("ltr"), lifted from the theory. A #isatype("trace", thy: "LTR_Def") is a local path, a list of pairs of a CFG node and a store.],
   ) <fig:ltr>
 ]
 
@@ -257,7 +257,7 @@ activation has already made and returned from. The definition mentions no
 calling context. @sec:contexts reads the context off the trace instead of
 storing it there. A stored context would make the concrete semantics depend on
 the analysis. When the context is chosen from the entry state, the admissible contexts
-even depend on the solved table (@sec:eq-routing). Reading the context off the trace lets
+even depend on the solved table (@sec:eq-entry-routing). Reading the context off the trace lets
 every policy share one semantics.
 
 === Valid traces <sec:valid>
@@ -419,7 +419,7 @@ the caller's store and the entered store. Ordinary context functions are the
 special case that admits exactly one context
 (#isaconst("call_context_rel_of_fun")). Both stores are present because an entry-state policy admits a context only
 for a call whose caller store and entered store the analysis's entry covers
-(@sec:eq-routing). #isaconst("admits_call_context") holds for a call site
+(@sec:eq-entry-routing). #isaconst("admits_call_context") holds for a call site
 $u$, a caller context, a callee $p$, a caller store $s$, an entered store and a
 callee context $c'$ when some #isaconst("calls") edge from $u$ enters $p$ with
 exactly this entered store and $R$ admits $c'$ for that edge. The context of a
@@ -697,7 +697,7 @@ running example, the policy that gives each call of `bump` the context of its
 argument is such a function: `bump(5)` enters context $5$ and `bump(4)` enters
 context $4$, whatever the claim is. A relational policy such as entry-state
 routing reads the admitted contexts off the computed claim and has to discharge
-the condition against it. For entry-state routing this follows from entry coverage (@sec:eq-routing).
+the condition against it. For entry-state routing this follows from entry coverage (@sec:eq-entry-routing).
 
 Isabelle states the obligations as the assumptions of the locale
 #isalocale("ltr_coverage") (@fig:ltr-coverage).

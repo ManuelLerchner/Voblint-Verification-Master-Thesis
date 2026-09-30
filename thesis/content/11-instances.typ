@@ -108,8 +108,21 @@ computed from the same primitives and agree on every live store
 transfers from certified value operations follows Nipkow and Klein
 @nipkow14[Sect. 13.5, 13.7]. TODO: check Nipkow and Klein §13.6 before
 calling the executable counterpart new. @fig:instance-pipeline shows the chain.
-@sec:engineering describes how the certificate becomes a sound field of the
-combined state of @ch:cooperation.
+
+The certificate makes the domain a sound field of the combined state of
+@ch:cooperation. For a numeric domain, the locale #isalocale("dg_analysis_exec")
+derives the contracts of the pipeline locale #isalocale("dg_analysis")
+(@sec:cert-param) that concern the component from the certificate, and
+#isathm("sound_nonrelational_ops.dg_analysis_execI") discharges all of them at
+once. Six obligations remain: the routing agreement, that the seeds differ from
+the analysis global, the three solver contracts of @sec:cert-param, and
+soundness of the initial state. Only the last is a fact about the domain's
+values (for Parity, #isathm("parity_cinit_gamma")). Each numeric domain has a
+generated registration that discharges them at the unit context. Interval is
+also registered at the entry-state and call-string contexts. The analyzer does
+not run these registrations. The combined state runs each numeric field's
+component #isaconst("exec_spec") itself and cites the registration's soundness
+facts for that component and its initial state.
 
 #figure(
   {
@@ -144,7 +157,7 @@ combined state of @ch:cooperation.
         (1, 3),
         <ip-reg>,
         [registration #isalocale("dg_analysis_exec") \
-          #note[from the certificate and six obligations (@sec:engineering)]],
+          #note[from the certificate and six obligations]],
         color: vb.proved,
       ),
       step((1, 4), <ip-field>, [sound local specification \
@@ -426,7 +439,7 @@ discharges.
 
 Five domains prove the laws of @ch:domains with facts about integers alone.
 Each supplies one operation record and proves one certificate about it, and
-its generated registration discharges the rest (@sec:engineering). The source-level theorem covers it as a field of the combined
+its generated registration discharges the rest (@sec:instances-supply). The source-level theorem covers it as a field of the combined
 state under every context policy (#isathm("run_voblint_certified_source_sound")). The instances show that the interface admits
 the identity for any inverse operator (Sign and Interval for arithmetic, Parity
 and Congruence for comparisons), needs no monotone reduction (Int in the

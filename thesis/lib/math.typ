@@ -85,3 +85,8 @@
 // HOL's function update.
 #let upd(f, x, v) = $#f (#x := #v)$
 #let restrict(f, s) = $#f harpoon.tr_#s$
+
+// The numbered inequalities of the equation-soundness proof (@sec:eq-discharge):
+// `ineq-tag(n)` sets the number at its line, `ineq(n)` links back to it.
+#let ineq-tag(n) = [#metadata(n)#label("ineq-" + str(n))] + "(" + str(n) + ")"
+#let ineq(n) = link(label("ineq-" + str(n)), "(" + str(n) + ")")

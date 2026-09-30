@@ -365,7 +365,7 @@ point of their order, which can be less precise than the combination over all
 paths @kam77. Nielson et al. present data-flow analysis,
 constraint-based analysis and abstract interpretation side by side
 @nielson99[Chs. 2--4]. A solver receives the analysis in this form, and the verified solver certifies a
-partial post-solution, #isaconst("part_post_solution"), which holds on the
+partial post-solution, #isaconst("part_post_solution", thy: "Basics_side"), which holds on the
 unknowns it has solved (@sec:td).
 
 #subfigures(
@@ -479,7 +479,7 @@ If the assignments `g = 5` and `g = 4` contribute $[5, 5]$ and $[4, 4]$ to
 the unknown of a flow-insensitive global `g`, that unknown must bound their
 join $[4, 5]$.
 The _certificate_ property established for the solver's result,
-#isaconst("part_post_solution"), requires them only on
+#isaconst("part_post_solution", thy: "Basics_side"), requires them only on
 the part of the system the query depends on (@sec:certificate).
 
 A _local_ solver produces such a partial certificate. With contexts as
@@ -505,7 +505,8 @@ unknown that read it is marked unstable (destabilized) and evaluated again. At u
 a read closes a cycle, TD combines the old and the new value with warrowing
 instead of replacing it (@fig:td-trace). Side contributions to a global are
 merged into its value by an update rule (#isalocale("update_rule"),
-@sec:update-rules). The run ends once the
+@sec:update-rules), which keeps one record per _origin_, the unknown whose
+right-hand side published the contribution. The run ends once the
 discovered dependency closure of the query is stable, and it returns the set $S$ of stable unknowns together
 with the valuation $sol$.
 
@@ -650,7 +651,7 @@ with the valuation $sol$.
 
 The formalization splits the unknowns into _local_ unknowns $Unk$, which have a
 right-hand side, and _global unknowns_ $G$, which receive only side contributions. A global unknown is not a global variable of the program. A
-right-hand side is a _strategy tree_ (#isatype("strategy_tree")), which
+right-hand side is a _strategy tree_ (#isatype("strategy_tree", thy: "Basics_side")), which
 exposes every read and every side effect to the solver:
 $
   tau ::= ctor("Answer")(d) | ctor("QueryL")(y, k) | ctor("QueryG")(g, k)
@@ -661,7 +662,7 @@ and a continuation $k : A -> tau$ that receives the value read. $ctor("Answer")(
 returns $d$ as the value of the right-hand side, $ctor("QueryL")$ and
 $ctor("QueryG")$ read a local or a global unknown, and $ctor("Side")(g, d, tau)$
 contributes $d$ to $g$ before continuing with $tau$. Evaluating $tau$ against $sol$ follows the queries and
-yields a value $italic("eval")(tau, sol)$ (#isaconst("traverse_rhs")), the set $italic("dep")(tau, sol)$ of local unknowns it
+yields a value $italic("eval")(tau, sol)$ (#isaconst("traverse_rhs", thy: "Basics_side")), the set $italic("dep")(tau, sol)$ of local unknowns it
 reads, and the join $italic("side")(tau, sol)$ of its side contributions per global
 (#isaconst("sides_of_rhs")). @fig:strategy-trees shows two
 right-hand sides in both forms.
@@ -735,7 +736,7 @@ Voblint's main theorem.
 
 Voblint instantiates the solver's locale #isalocale("TD_side_upd_rule") with
 its own equation system. The soundness proof meets the solver at
-#isaconst("part_post_solution"): the equation generator shows that any
+#isaconst("part_post_solution", thy: "Basics_side"): the equation generator shows that any
 valuation satisfying it over-approximates the semantics, and the solver
 theorem shows that a terminating run provides one (@sec:certificate).
 

@@ -22,7 +22,7 @@
 #let _trace = "Traces, contexts and the coverage contract"
 #let _dom = "Abstract domains"
 #let _eq = "Analysis interface and equations"
-#let _solve = "Solving and the executable carrier"
+#let _solve = "Solver certificates and executable states"
 #let _res = "Results and verdicts"
 #let _trust = "Isabelle, evidence and the trust boundary"
 #let _group-order = (_ai, _prog, _trace, _dom, _eq, _solve, _res, _trust)
@@ -545,7 +545,7 @@
     "strategy-tree",
     "strategy tree",
     _eq,
-    isa: [#isatype("strategy_tree"), #isatype("strategy_program")],
+    isa: [#isatype("strategy_tree", thy: "Basics_side"), #isatype("strategy_program")],
     see: <sec:eq-call>,
   )[
     The solver's form of a right-hand side: an answer, a local or global query
@@ -625,7 +625,7 @@
     "certificate",
     "partial post-solution",
     _solve,
-    isa: isaconst("part_post_solution"),
+    isa: isaconst("part_post_solution", thy: "Basics_side"),
     see: <sec:certificate>,
   )[
     The solver's certificate for a query $x$ and a set $V$ of local unknowns

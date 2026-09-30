@@ -130,3 +130,8 @@ theory = "Voblint_Framework.MCP_Spec"
 why = "Cooperation chapter: independent sound components combine into a sound component."
 session = "Voblint_Framework"
 theory = "Voblint_Framework.MCP_Spec"
+
+[facts.update_rules_example]
+why = "Solving chapter, update-rule figure: one global under each rule after each of four contributions."
+session = "Voblint_Examples_Tooling"
+theory = "Voblint_Examples_Tooling.Example_Update_Rule_Steps"

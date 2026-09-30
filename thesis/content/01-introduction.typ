@@ -258,7 +258,7 @@ system @apinis12 @seidl26. A side effect lets the right-hand side of one
 unknown contribute to others (@sec:side-effects). An Isabelle/HOL formalization of Goblint's top-down
 solver has been verified, including its extension to side effects @stade24
 @tilscher26. When it terminates, the verified solver returns a partial
-post-solution (#isaconst("part_post_solution")) of the equation system it receives: a valuation that bounds the
+post-solution (#isaconst("part_post_solution", thy: "Basics_side")) of the equation system it receives: a valuation that bounds the
 right-hand side and side contributions of every unknown it has solved (@sec:td). Whether that system describes
 the program, and whether the verdicts read off its solution hold, is outside
 the solver's theorem. Its example analyses supply equations, written by hand or generated

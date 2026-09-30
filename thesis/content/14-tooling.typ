@@ -284,7 +284,7 @@ its source printer are generated, so the parser the proof trusts
 analysis manifest names each analysis, the type of its abstract values, the
 prefix its constants and facts share, and the theories that prove it sound. From
 an entry the generator writes the registrations of a numeric domain, whose
-proofs @sec:engineering describes, citing the domain's facts under names the
+proofs @sec:instances-supply describes, citing the domain's facts under names the
 prefix determines. The
 generator also writes the combined state of @ch:cooperation with its dispatch
 equations. It only places names, and Isabelle checks every generated proof. Some

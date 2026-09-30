@@ -72,6 +72,14 @@ satisfied, which made the theorem vacuous until the solver run was redesigned. A
 batch builds found these errors, and the non-vacuity witnesses of
 @sec:nonvacuity now show that the premises of the main theorems can be met.
 
+Much of the deterministic tooling around the formalization was itself written
+by agents: the drift checks that regenerate theorem statements, snippets and
+analyzer output and fail on a difference, the link and reference checks, and
+the solver tracer (@ch:tooling). These checks turned out to be the most useful
+form of assistance. They replaced review of each change by a condition every
+change had to meet, and they found errors that reading had missed. This, too,
+is the experience of one project, not a measured result.
+
 The table below quantifies the recorded part of the assistance, following the
 session-log analysis of #cite(<bryant26munkres>, form: "prose", supplement: [Section 5]).
 The counts measure interaction with the tools, not authorship or the share of

@@ -20,8 +20,8 @@
 
 = How Analyses Cooperate <ch:cooperation>
 
-@ch:analysis-interface fixed what one analysis supplies: a local
-specification whose operations are proved sound one by one. Some facts need two
+@ch:analysis-interface fixed what one analysis supplies: a record of
+operations whose soundness is proved operation by operation. Some facts need two
 analyses: one that knows the fact and one whose transfer can use it. In the
 program below both guards hold at the assignment, so $x = y$ and `z` is $1$.
 
@@ -208,9 +208,11 @@ soundness follows the same pattern (#isathm("rel_learn_sound")).
 === Local specifications with channels <sec:coop-local-spec>
 
 Every operation may need its partners' answers, so every operation must
-receive a channel. The local specification of @sec:whole-state
-(#isatype("local_spec"), @fig:local-spec) therefore takes one as each
-operation's first argument, of type #isatype("answers"): a handler
+receive a channel. Most analyses use no analysis global, and for them the
+framework offers a simpler interface than the record of @sec:spec-record, the
+_local specification_ #isatype("local_spec") (@fig:local-spec). Its operations
+work on local values, and each takes a channel as its first argument, of type
+#isatype("answers"): a handler
 #isaconst("ls_query") that answers queries about a state, one transfer per kind
 of edge, entry, and the two return stages. The step #isaconst("ls_step") on an
 arbitrary edge dispatches to the edge transfers.
@@ -327,7 +329,8 @@ the state before the edge, so its answers describe the predecessor state, as
 in Goblint.
 
 The equations consume the record of @sec:spec-record, so a local
-specification must become one. #isaconst("dg_spec_of") does this. It computes the channel of each state
+specification must become one. #isaconst("dg_spec_of") does this, and the
+record it builds never touches the analysis global. It computes the channel of each state
 with #isaconst("ls_channel") and passes it to the operation, so its transfers
 leave the manager's #isaconst("man_ask") unused. With the theorem above,
 #isathm("dg_spec_of_contract") obtains the analysis soundness contract
@@ -395,7 +398,7 @@ manifest (@ch:tooling).
 A non-relational numeric domain never states these laws itself. It certifies
 its primitive operations once (#isalocale("sound_nonrelational_ops"),
 @sec:instances-supply). From that certificate the framework proves the
-domain's executable analysis #isaconst("exec_spec") of @sec:whole-state a sound
+domain's executable analysis #isaconst("exec_spec") a sound
 local specification (#isathm("sound_nonrelational_ops.dg_analysis_execI")),
 and #isathm("ask_assign_sound") keeps it sound under the wrapper. The domain's
 own handler answers $ltop$. The analyzer replaces it by one that reads answers
@@ -418,15 +421,102 @@ unreachable or a set of pairs $(x, y)$, and it describes the stores $s$ with
 $s(x) lt.eq s(y)$ for every pair. It replaces the default handler, which now
 answers comparisons between variables it has ordered
 (#isathm("rel_qry_sound")), and the default branch. It asks at assignments (@sec:coop-any-channel) and enters and returns
-with no facts (#isathm("order_spec_sound")). No theorem of the framework
-changed to admit it.
+with no facts (#isathm("order_spec_sound")). @fig:contract-routes collects
+the routes by which the analyses of this thesis reach the analysis soundness
+contract.
+
+#let _cbox(pos, name, body) = node(
+  pos,
+  text(size: 8pt, body),
+  name: name,
+  inset: 4pt,
+  stroke: 0.6pt + vb.neutral,
+  shape: rect,
+  corner-radius: 2pt,
+)
+#let _clab(body) = text(size: 7pt, body)
+#figure(
+  diagram(
+    spacing: (26mm, 6mm),
+    _cbox((0, 0), <c-prim>, [primitive operations \ #isatype("nonrelational_ops")]),
+    _cbox((0, 1), <c-cert>, [certificate, once per domain \ #isalocale("sound_nonrelational_ops")]),
+    _cbox((0, 2), <c-rules>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
+    _cbox((0, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
+    _cbox((0, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
+    _cbox((1, 3), <c-order>, [order analysis \ #isaconst("order_spec")]),
+    _cbox(
+      (1, 4),
+      <c-relspec>,
+      [order analysis with an analysis global \ #isaconst("rel_order_spec")],
+    ),
+    edge(
+      <c-prim>,
+      <c-cert>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[one interpretation per domain],
+      label-side: left,
+    ),
+    edge(
+      <c-cert>,
+      <c-rules>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("sound_nonrelational_ops.is_sound_nonrelational_transfer")),
+      label-side: left,
+    ),
+    edge(
+      <c-rules>,
+      <c-local>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[#isathm("dg_domain_exec.exec_spec_sound"), at #isaconst("exec_spec")],
+      label-side: left,
+    ),
+    edge(
+      <c-local>,
+      <c-contract>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[#isathm("dg_spec_of_contract"), through #isaconst("dg_spec_of")],
+      label-side: left,
+    ),
+    edge(
+      <c-order>,
+      <c-local>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab(isathm("order_spec_sound")),
+      label-side: right,
+    ),
+    edge(
+      <c-relspec>,
+      <c-contract>,
+      "->",
+      stroke: 0.6pt + vb.neutral,
+      label: _clab[interpretation],
+      label-side: left,
+    ),
+  ),
+  kind: image,
+  placement: auto,
+  caption: [How the analyses of this thesis reach the analysis soundness
+    contract. An arrow leads from what an analysis supplies to what it thereby
+    establishes, and its label names the Isabelle fact. A numeric domain
+    certifies its record of primitive operations once, which yields one rule
+    per operation; these rules make its executed local specification sound.
+    The order analysis is a sound local specification by its own proof. Every
+    sound local specification meets the contract through
+    #isaconst("dg_spec_of"). The order analysis with an analysis global is not a local specification and interprets the contract itself.],
+) <fig:contract-routes>
 
 == What the combination leaves out <sec:coop-limits>
 
 Components cannot read or publish analysis globals (@sec:analysis-globals).
 Every fact a selectable analysis keeps therefore lives in its flow-sensitive
 local state, program globals included. The only values published in an analyzer
-run are the framework's activation seeds (@sec:global-unknowns). An analysis
+run are the entry values that calls publish to their callees' seeds
+(@sec:eq-seed-global). An analysis
 with an analysis global, such as #isaconst("rel_order_spec"), is proved sound
 on its own but cannot be selected. The analyzer runs a local variant of it,
 the order analysis, instead. Goblint allows analysis globals in its MCP by

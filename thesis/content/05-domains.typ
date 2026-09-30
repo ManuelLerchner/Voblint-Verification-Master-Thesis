@@ -809,7 +809,7 @@ unreachability, so it needs no lifting.
 The type instantiates the solver's classes and
 #isalocale("executable_domain"). It is not a numeric domain, since its
 concretization yields sets of stores rather than sets of integers. Its laws are
-stated per transfer in the analysis interface (@ch:analysis-interface). @sec:relational turns #isatype("relc") into a local specification of its own
+stated per transfer in the analysis interface (@ch:analysis-interface). @sec:coop-catalogue turns #isatype("relc") into a local specification of its own
 (#isaconst("order_spec")).
 
 == Evaluating expressions <sec:domain-forward>
@@ -988,7 +988,8 @@ that lies below both operands, a lower bound that need not be the greatest one
 filter needs only the inclusion. The lower bound serves the executable filter,
 which stops as soon as a refinement step empties the state: each later step
 returns a state below its input, and a state below an empty one is empty, so
-stopping early agrees with the full refinement (@sec:readback). The carrier
+stopping early agrees with the full refinement
+(#isathm("sound_refinement.afilter_st_lift_correct")). The carrier
 classes require a join but no meet.
 
 In Sign, the refined value is the meet of the old value with what the guard
@@ -1178,8 +1179,7 @@ _primitives_ describe the program's operations: evaluation, the truth test and
 inverse operators and the intersection (@sec:branches). A non-relational
 domain hands its primitives over as one record, #isatype("nonrelational_ops"),
 and certifies them once by interpreting #isalocale("sound_nonrelational_ops")
-(@fig:domain-carrier). The guard filters, the branch transfer, the check
-classifier and the transfer of every edge are derived from that certificate
+(@fig:domain-carrier), from which the framework derives every transfer
 (@sec:instances-supply). For Interval, the record #isaconst("ivl_ops")
 collects the operations above. Its one interpretation proves the monotone form
 (#isalocale("mono_nonrelational_ops")), and everything of
