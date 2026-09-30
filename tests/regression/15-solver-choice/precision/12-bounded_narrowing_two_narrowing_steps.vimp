@@ -1,0 +1,24 @@
+// PARAM: --analysis interval --globals bounded-narrowing
+// The call p(k, k2) is one origin of p's FunctionEntry seed. The loop head
+// widens both arguments to [0,+inf], then narrows k2 one round before k,
+// because k copies k2's value from the previous iteration. So the origin's
+// contribution shrinks in two steps: [0,+inf] x [0,2], then [0,2] x [0,2].
+// Both steps fall in the origin's first switch from widening to narrowing,
+// and at the default bound 5 the rule takes both.
+// known-imprecision/05-bounded_narrowing_bound_one.vimp is the same program
+// at --narrow-bound 1, which stops after the first step.
+fun p(a, b) {
+  __voblint_check(a <= 2); // PROVED
+  __voblint_check(b <= 2); // PROVED
+}
+fun main() {
+  i = 0;
+  k = 0;
+  k2 = 0;
+  while (i < 3) {
+    p(k, k2);
+    k = k2;
+    k2 = i;
+    i = i + 1;
+  }
+}

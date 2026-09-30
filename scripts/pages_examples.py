@@ -21,7 +21,6 @@ from pathlib import Path
 
 from vimp_fixture import (
     ARITHMETIC_HEADER,
-    DEFAULT_NARROW_BOUND,
     GRAPH_BEGIN,
     analysis_settings,
     param_args,
@@ -115,6 +114,7 @@ PLAYGROUND_KEYS = {
     "context_depth": "k",
     "globals": "globals",
     "int_refinement": "refinement",
+    "narrow_bound": "narrow",
 }
 
 
@@ -151,11 +151,6 @@ def example(path: Path) -> dict[str, object]:
     if args is None:
         raise ValueError(f"{path.relative_to(REPO_ROOT)}: no PARAM header")
     settings = analysis_settings(args)
-    if settings.get("narrow_bound", DEFAULT_NARROW_BOUND) != DEFAULT_NARROW_BOUND:
-        raise ValueError(
-            f"{path.relative_to(REPO_ROOT)}: the playground runs bounded-narrowing"
-            f" only at its default bound {DEFAULT_NARROW_BOUND}"
-        )
     lines = path.read_text().splitlines()
     relative = path.relative_to(CORPUS)
     playground = (

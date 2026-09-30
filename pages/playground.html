@@ -153,6 +153,24 @@
                 </select>
               </div>
 
+              <div class="control-group" id="narrow-bound-group" hidden>
+                <label for="narrow-bound">Narrowing bound</label>
+                <input
+                  id="narrow-bound"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value="5"
+                  inputmode="numeric"
+                  aria-describedby="narrow-bound-help"
+                >
+                <span id="narrow-bound-help" class="visually-hidden">
+                  Switches from widening to narrowing after which an origin takes one narrowing
+                  step per switch, from 0 to 100.
+                </span>
+              </div>
+
               <div class="control-group" id="int-refinement-group" hidden>
                 <label for="int-refinement-select">Int refinement</label>
                 <select id="int-refinement-select" aria-describedby="int-refinement-help">

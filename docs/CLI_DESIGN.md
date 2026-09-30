@@ -66,7 +66,8 @@ voblint --help
   `0` does not disable narrowing, it only stops narrowing after the first step
   of each switch.
   `--narrow-bound` is rejected with any other rule. The playground offers the
-  rule at the default bound only. Local unknowns are warrowed at widening points
+  bound as a control from 0 to 100 while that rule is selected, and a link
+  carries it as `narrow=N` when it is not 5. Local unknowns are warrowed at widening points
   under every rule. The default is `warrow` for every domain,
   chosen in `cli/entry/voblint.ml`; Isabelle's `run_voblint` takes the rule as
   an argument and has no default. Every output mode renders the table the

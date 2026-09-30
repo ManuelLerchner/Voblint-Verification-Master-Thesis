@@ -114,6 +114,7 @@ PLAYGROUND_KEYS = {
     "fixture",
     "analysis",
     "globals",
+    "narrow",
     "context",
     "k",
     "refinement",
@@ -156,9 +157,11 @@ def playground_vocabulary() -> dict[str, object]:
         else set()
     )
     depth = re.search(r"^const MAX_CONTEXT_DEPTH = (\d+);", script, re.M)
+    bound = re.search(r"^const MAX_NARROW_BOUND = (\d+);", script, re.M)
     return {
         "options": options,
         "max_depth": int(depth.group(1)) if depth else 0,
+        "max_narrow": int(bound.group(1)) if bound else 0,
     }
 
 
@@ -186,6 +189,12 @@ def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> li
     for value in query.get("k", []):
         if not value.isdigit() or int(value) > vocabulary["max_depth"]:
             problems.append(f"k={value} is outside 0..{vocabulary['max_depth']}")
+
+    for value in query.get("narrow", []):
+        if not value.isdigit() or int(value) > vocabulary["max_narrow"]:
+            problems.append(f"narrow={value} is outside 0..{vocabulary['max_narrow']}")
+    if "narrow" in query and query.get("globals") != ["bounded-narrowing"]:
+        problems.append("narrow= is only read with globals=bounded-narrowing")
 
     for path in query.get("fixture", []):
         if not (REGRESSION / path).is_file():

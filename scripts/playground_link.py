@@ -46,8 +46,13 @@ def link(
     base: str = PLAYGROUND,
     refinement: str | None = None,
     trace: str | None = None,
+    narrow: int | None = None,
 ) -> str:
-    settings = [("analysis", analysis), ("globals", globals_rule), ("context", context)]
+    settings = [("analysis", analysis), ("globals", globals_rule)]
+    # The playground runs bounded-narrowing at the default bound when `narrow` is absent.
+    if narrow is not None and narrow != vimp_fixture.DEFAULT_NARROW_BOUND:
+        settings.append(("narrow", str(narrow)))
+    settings.append(("context", context))
     if k is not None:
         settings.append(("k", str(k)))
     if refinement is not None:
@@ -116,12 +121,9 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
         raise ValueError(
             f"{program}: no --analysis given and no // PARAM: header names one"
         )
-    if settings.get("narrow_bound", vimp_fixture.DEFAULT_NARROW_BOUND) != (
-        vimp_fixture.DEFAULT_NARROW_BOUND
-    ):
+    if "narrow_bound" in settings and settings.get("globals") != "bounded-narrowing":
         raise ValueError(
-            f"{program}: the playground runs bounded-narrowing only at its default"
-            f" bound {vimp_fixture.DEFAULT_NARROW_BOUND}"
+            f"{program}: --narrow-bound is only valid with --globals bounded-narrowing"
         )
 
     return link(
@@ -133,6 +135,7 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
         base,
         settings.get("int_refinement"),
         trace,
+        settings.get("narrow_bound"),
     )
 
 
