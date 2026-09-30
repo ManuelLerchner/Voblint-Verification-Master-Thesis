@@ -81,8 +81,8 @@ Entry describes the two stores that exist at the call `y = inc(x)`, each by an
 abstract value, an element of the domain $D_L$ of values the analysis keeps
 per program point. The _entry value_ $e$
 describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
-value_ $q$ describes the caller's store (`x = 5`, `g = 1`), which the return
-later combines with the callee's exit (the theories call $q$ the
+value_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine
+later merges with the callee's exit (the theories call $q$ the
 continuation). Usually $q$ is the caller's own abstract value at the call, but
 an analysis may weaken it there, for example by forgetting facts the callee
 may invalidate. @fig:return-stores shows both values and what the return makes
@@ -130,7 +130,7 @@ of them.
     above, and the concrete store each abstract value must describe
     (schematic: the body of `inc` is drawn as one edge). Entry answers the
     resume value $q$ and the entry value $e$; after the callee is analyzed,
-    return combines $q$ with the callee's exit value $t^sharp$. The combined
+    combine merges $q$ with the callee's exit value $t^sharp$. The combined
     value must describe the caller's locals (blue) together with the callee's
     globals and result (green), as #isaconst("combine_collect") does.],
 ) <fig:return-stores>

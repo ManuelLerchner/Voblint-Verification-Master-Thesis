@@ -367,6 +367,8 @@
     "thm:DG_Analysis.dg_analysis.pp_routed": "Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.pp_routed%7Cfact",
     "thm:DG_Live_Unknowns.dg_analysis.live_unknowns_cover": "Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact",
     "thm:DG_Live_Unknowns.dg_analysis.routed_analysis_sound_live_unknowns": "Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.routed_analysis_sound_live_unknowns%7Cfact",
+    "thm:Routed_Context.routed_context.routed_entry_cover": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact",
+    "thm:Routed_Context.routed_context.routed_entry_total": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_total%7Cfact",
     "thm:TD_side_upd_rule.TD_side_upd_rule.partial_post_solution": "Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact",
     "thm:activation_collect_dg_sound": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact",
     "thm:activation_collect_of_fun": "Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect_of_fun%7Cfact",

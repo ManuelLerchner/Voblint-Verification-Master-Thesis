@@ -6,16 +6,15 @@ Abstract interpretation is a static program analysis technique that
 over-approximates every execution of a program. One way to implement it is to
 reduce the program to a system of equations over abstract values and hand it
 to a generic fixpoint solver. Goblint, a static analyzer for C, works this way
-@vojdani16 @seidl26. The soundness of such an analyzer depends on every step of this
-pipeline: the equations must describe the program, the solver's result must
+@vojdani16 @seidl26. The soundness of such an analyzer depends on three steps: the equations must describe the program, the solver's result must
 satisfy them,
 and the reported verdicts must follow from the solution. For Goblint's
 top-down solver, only the middle step had been verified @stade24 @tilscher26.
 Applying that result to program analysis still required a separate argument
 that the equations soundly describe the program.
 
-We show that the analysis pipeline can be verified from source executions to
-the reported verdicts. We build Voblint, an Isabelle/HOL formalization of a
+We show that such an analysis can be verified from source executions to the
+reported verdicts. We build Voblint, an Isabelle/HOL formalization of a
 constraint-based, context-sensitive interprocedural analyzer for VIMP, a small
 C-like language with global and local integer variables and recursive
 procedures with parameters and return values. Voblint compiles the syntax

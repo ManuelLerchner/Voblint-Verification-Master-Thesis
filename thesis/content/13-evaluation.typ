@@ -217,7 +217,7 @@ states facts about integers and stores, none of which mentions a context, a
 routing policy or a solver. The guard, the check classifier, the transfer
 functions and procedure entry are derived from the record once for every
 domain, and #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges
-every obligation the executed pipeline places on the domain. A domain's
+every obligation the executed analysis places on the domain. A domain's
 generated registration adds only the premises that belong to the routing
 policy, the solver and the initial state. The numeric domains therefore differ
 in their primitive records and certificates alone. A relational analysis enters

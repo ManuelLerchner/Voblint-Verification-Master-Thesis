@@ -107,12 +107,12 @@ computed from the same primitives and agree on every live store
 #isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
 transfers from certified value operations follows Nipkow and Klein
 @nipkow14[Sect. 13.5, 13.7]. TODO: check Nipkow and Klein §13.6 before
-calling the executable counterpart new. @fig:instance-pipeline shows the chain.
+calling the executable counterpart new. @fig:instance-chain shows the chain.
 
 The certificate makes the domain a sound field of the combined state of
 @ch:cooperation. For a numeric domain, the locale #isalocale("dg_analysis_exec")
-derives the contracts of the pipeline locale #isalocale("dg_analysis")
-(@sec:cert-param) that concern the component from the certificate, and
+derives the contracts of the analysis locale #isalocale("dg_analysis")
+(@sec:cert-param) that concern the component from that proof, and
 #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges all of them at
 once. Six obligations remain: the routing agreement, that the seeds differ from
 the analysis global, the three solver contracts of @sec:cert-param, and
@@ -185,7 +185,7 @@ facts for that component and its initial state.
   caption: [How a numeric domain becomes a field of the combined state
     (schematic). The dotted arrow is the commutation of abstract and executable
     operations. The order analysis supplies its local specification directly.],
-) <fig:instance-pipeline>
+) <fig:instance-chain>
 
 Every domain refines guards with the same generic filter, so the domains'
 guard precision differs only in which refinement operations are precise

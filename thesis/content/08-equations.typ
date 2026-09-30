@@ -140,8 +140,8 @@ example is the program of @fig:program-to-equations, repeated in
     depends on its contexts (@sec:eq-unknowns, @sec:eq-example). Blue dashed arrows
     are call edges, dotted ones connect a call with its continuation. Purple
     dashed arrows are the result reads: a call is not a pair of edges, and each
-    continuation reads the exit of `bump` in its own equation. The entry and
-    exit of a procedure $p$ are the nodes $ctor("FunctionEntry") thin p$ and
+    continuation reads the result node of `bump` in its own equation. The entry
+    node and result node of a procedure $p$ are the nodes $ctor("FunctionEntry") thin p$ and
     $ctor("FunctionResult") thin p$, printed #raw("entry_p") and #raw("exit_p").],
 ) <fig:eq-running>
 
@@ -286,7 +286,7 @@ reads the caller's value at $(u, c)$ and applies the entry operation, which
 yields a list of entry pairs, each a resume value $q$ and an entry value $e$.
 Each pair is routed separately, so we follow one. The call computes
 $c' = ctxh(u, c, e)$, publishes $e$ to $ctor("Activation_Seed") thin p space c'$, reads the
-callee's result $r$ directly from its exit unknown
+callee's result $r$ directly from the unknown of its result node
 $(ctor("FunctionResult") thin p, c')$ in the context it just computed, and
 returns the combined value to $(k, c)$. The caller treats the callee as a
 black box: its equation touches only the callee's seed and result, never the
@@ -378,18 +378,20 @@ With the soundness of the entry transfer, every concrete entered store in the
 bucket of $c'$ is then covered by the value published for $c'$. Two properties
 make this precise.
 
-- _Totality_: $R$ admits at least one context for every concrete call from a
+- _Totality_ (#isathm("routed_context.routed_entry_total", thy: "Routed_Context", display: "routed_entry_total")):
+  $R$ admits at least one context for every concrete call from a
   store that the caller's solved value covers, so no such activation is
   missing from the context-indexed collecting semantics.
-- _Adequacy_: whenever $R$ admits $c'$ for a concrete call from a store that
+- _Adequacy_ (#isathm("routed_context.routed_entry_cover", thy: "Routed_Context", display: "routed_entry_cover")):
+  whenever $R$ admits $c'$ for a concrete call from a store that
   the caller's value covers, the caller's entry pair $(q, e)$ covers that store
   and the entered one (@sec:calls), $e$ routes to $c'$, and the entry unknown
   at $c'$ is among the solved unknowns.
 
 Both are assumptions of the routed soundness theorem (@sec:eq-discharge),
 proved once for each context policy. Adequacy gives #oblig("CALL") and
-#oblig("RETURN"), since the return reads the callee's result at the same
-$c'$, and totality gives #oblig("TOTAL") of @sec:contract.
+#oblig("RETURN"), since the call's continuation reads the callee's result at
+the same $c'$, and totality gives #oblig("TOTAL") of @sec:contract.
 
 #figure(
   {
@@ -1130,7 +1132,7 @@ calls publish to one seed, and `bump` is solved once for both.
     phases of the table. Arrows labelled with two phases are taken twice: the
     first pass through a copy of `bump` reads an empty seed, the flush fills
     it, and the second pass repeats the queries and publishes again without
-    change. The solve runs backwards from the exit of `main` and demands the
+    change. The solve runs backwards from the result node of `main` and demands the
     copies of `bump` for $c_1$ (right) and $c_2$ (left) as those contexts are
     discovered. Generated from the same solver trace as @tab:eq-trace.],
 ) <fig:eq-walk>

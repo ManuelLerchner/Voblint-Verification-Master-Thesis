@@ -48,15 +48,15 @@ right-hand side to every pair of a graph node and a context
 (#isaconst("compiled_routed_eqs_for")), so the system is total over
 node-context pairs; for a policy with an infinite context type, such as
 entry-state contexts over intervals, it has infinitely many unknowns. The solver starts from a
-single query, the exit of `main` in the root context (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query")),
+single query, the result node of `main` in the initial context $c_0$ (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query")),
 evaluates its right-hand side, and solves every unknown that right-hand side
-reads, recursively @seidl21 @tilscher26. Starting from the exit of `main`, it
+reads, recursively @seidl21 @tilscher26. Starting from the result node of `main`, it
 follows the predecessor and call dependencies that the evaluated right-hand
 sides expose, in each context the solve discovers, and a terminating solve
 reaches finitely many unknowns in total. Apinis et al.
 start local solving from the same unknown @apinis12[§3]. @fig:solve-infinite
 draws the system of a five-procedure program and marks the part one solve
-reaches. Unknowns from which the exit cannot be reached, such as code after a
+reaches. Unknowns from which the result node cannot be reached, such as code after a
 `return`, are handled in @sec:cert-forward.
 
 // The figure is drawn by hand for the explainer page; these checks pin the
@@ -93,8 +93,8 @@ reaches. Unknowns from which the exit cannot be reached, such as code after a
     Under entry-state contexts with Interval, a column label lists a
     procedure's argument values: (3) is the entry state with argument
     $[3, 3]$, (1,0) that of `g` with arguments $[1, 1]$ and $[0, 0]$, and ()
-    the root context. Filled cells are the unknowns one solve reaches, starting
-    from the ringed query at the exit of `main`; hollow orange cells are read
+    the initial context. Filled cells are the unknowns one solve reaches, starting
+    from the ringed query at the result node of `main`; hollow orange cells are read
     and answer #lbot; grey cells are never reached. Dashed arrows are the publications to callee seeds, solid arrows the
     result reads. Axis breaks marked $infinity$ stand for the rows and columns
     left out, including procedures and contexts this program never uses.
@@ -149,10 +149,10 @@ unknown, its valuation is #lbot and the bound holds trivially.
 
 #[
   #set enum(numbering: n => "(C" + str(n) + ")")
-  + puts the query into the certified set. In the running example the query is
+  + puts the query into the solved set. In the running example the query is
     $(italic("exit")_"main", c_0)$.
-  + closes $V$ under reading: every local unknown a certified equation reads is
-    itself certified. Which unknowns a right-hand side reads can depend on the
+  + closes $V$ under reading: every local unknown that the equation of a solved
+    unknown reads is itself solved. Which unknowns a right-hand side reads can depend on the
     values it reads (@sec:eq-trees), so the dependencies are taken under the
     final valuation. In the running example $V$ holds the #_local-unknowns local
     unknowns the solve of @sec:eq-example reached, and the tree of
@@ -189,13 +189,13 @@ with premises on entry and routing. @sec:cert-forward obtains such a set from
 
 === From backward to forward closure <sec:cert-forward>
 
-Equation soundness bounds only the unknowns in the certified set $V$. A
+Equation soundness bounds only the unknowns in the solved set $V$. A
 concrete execution may visit any node in any admitted context, so the proof
 needs $V$ to be closed _forward_: along intraprocedural edges, from a call site
 to its continuation, and into the callee's entry under the context the call
 selects. The certificate provides the opposite closure. An equation reads its
-predecessors, so by (C2) $V$ is closed _backward_ from the query at the exit of
-`main`.
+predecessors, so by (C2) $V$ is closed _backward_ from the query at the result node
+of `main`.
 Code after a `return` shows why backward closure alone does not suffice: such
 an unknown may be solved, yet its successors need not lie on any dependency
 path back from the procedure's result.
@@ -222,12 +222,12 @@ coverage is not a premise of the final theorem.
 
 === The solver as a parameter <sec:cert-param>
 
-The pipeline locale #isalocale("dg_analysis") takes the solver as a
+The analysis locale #isalocale("dg_analysis") takes the solver as a
 parameter, together with its domain predicate, the arguments on which its
 recursion terminates (@sec:termination), and its executable form. It extends
 the locale #isalocale("certified_solver"), which states three contracts about
 them. First, a solve whose recursion is defined on the query returns a
-post-solution on its stabilized set; the vendored theorem
+post-solution on the set of unknowns it solved; the vendored theorem
 #isathm("TD_side_upd_rule.partial_post_solution", thy: "TD_side_upd_rule") provides this.
 Second, such a solve returns a finite set of unknowns
 (#isathm("finite_stabl_solve"), proved once from the solver's stable-set
@@ -237,13 +237,13 @@ executable solver that returns a result lies in that domain
 (#isathm("solve_dom_of_solve_c")). #isathm("td_certified_solver") composes
 these facts into one interpretation of #isalocale("certified_solver") for the
 vendored solver at every update rule, and every registration of an analysis
-with the pipeline cites it. Domain membership for the program's query is the
+with #isalocale("dg_analysis") cites it. Domain membership for the program's query is the
 termination premise of @sec:termination. None of the contracts refers to how
 the solver computes. Another solver, for instance one with local side effects
 (@sec:outlook-extending), attaches to Voblint by interpreting
 #isalocale("certified_solver").
 
-The certificate is what the pipeline hands to the soundness theorem of
+The certificate is what the analysis locale hands to the soundness theorem of
 @ch:equations. For a terminating solve,
 #isathm(
   "dg_analysis.routed_analysis_sound_live_unknowns",
@@ -261,7 +261,7 @@ that contains the query. The solver certifies the buffered generator of
 @sec:eq-buffer, which the analyzer runs, while the soundness theorem speaks
 about the direct generator. #isathm("part_post_solution_routed_node_rhs_buffered")
 carries a certificate from the one to the other, and
-#isathm("dg_analysis.pp_routed", thy: "DG_Analysis", display: "pp_routed") applies it to the pipeline's
+#isathm("dg_analysis.pp_routed", thy: "DG_Analysis", display: "pp_routed") applies it to the analysis locale's
 equations.
 
 #figure(
@@ -319,8 +319,9 @@ therefore decides how a callee's entry state accumulates across call sites
 
 Per-origin warrowing helps when several origins feed one global, as Seidl et
 al. show on a global that receives one constant per location @seidl26[§1]. A
-recursive call that feeds its own seed is a single origin. There the rule gains
-nothing and can lose precision, as on the shrinking recursion of
+recursive call that feeds its own seed is a single origin. Distinguishing
+contributions by origin gains nothing when the recursive call is the only
+origin, and the rule can lose precision, as on the shrinking recursion of
 @fig:rules-programs (@sec:eval-rq4).
 
 The choice of rule also affects termination. The two joining rules never widen
@@ -471,7 +472,7 @@ A carrier state means what its represented function means. @sec:nonrel-state con
 function state $f$ to the stores whose every variable lies in the
 concretization of its value, $sem(f) = setcomp(s, forall x. s(x) in conc(f(x)))$
 (#isaconst("gamma_state")). The carrier's concretization
-(#isaconst("default_st_gamma")) is that set after readback:
+(#isaconst("default_st_gamma")) is the concretization of its function:
 $ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
 It depends on $cal(G)$, which decides where each name's value is stored.
 Within the refinement locale #isalocale("dg_domain_exec"), which fixes

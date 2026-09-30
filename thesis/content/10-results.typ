@@ -30,7 +30,7 @@ This chapter answers what the analyzer's output guarantees about the
 executions of the source program. The previous chapters supply the pieces: the
 compiler simulation, the trace semantics, equation soundness and the solver
 certificate, closed forward over every unknown an execution visits
-(@sec:cert-forward). Chaining them leaves two gaps. The client reads a table
+(@sec:cert-forward). Chaining them leaves two gaps. The client reads a result table
 and one verdict per check, not a solver valuation per context. And a verdict
 needs a precise meaning, since a check that no execution reaches makes every
 condition true there. @sec:chain assembles the pieces, @sec:headline states
@@ -50,7 +50,7 @@ $
   quad => quad "verdict at" v
 $
 (#isathm("source_reaches_node_collect"), #isathm("node_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
-Here $A_(v,c)$ is the lifted abstract state the published table holds for $v$
+Here $A_(v,c)$ is the lifted abstract state the result table holds for $v$
 in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
 unreachable state #ctor("Bot"). Each later set in the chain may contain stores that no execution
 reaches. Soundness requires only that it contains the set before it.
@@ -139,13 +139,14 @@ fun main() {
 @fig:chain draws the chain for two context policies. Rows 1 and 2 do not
 depend on the policy, and every inclusion holds under both. The policy only decides
 how far the abstract rows exceed row 2.
-Without contexts, the two activations of `f` share one entry and one exit. The
-combine after the recursive call reads the returned value from that same exit,
-so the value `f` returns is computed from itself. The solver widens around this
-cycle through exit and combine, and the value is lost.
+Without contexts, the two activations of `f` share one entry node and one
+result node. The combine after the recursive call reads the returned value from
+that same result node, so the value `f` returns is computed from itself. The
+solver widens around this cycle through the result node and combine, and the
+value is lost.
 Widening the entry is not the cause: under the joining update rule the check
 is still #raw(chain-join.at(3)) with #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
-its own entry and exit, and the result stays exact.
+its own entry and result node, and the result stays exact.
 
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the collection into context
@@ -153,7 +154,7 @@ buckets is #isathm("node_collect_eq_Union_activation_collect"), which rests on
 #oblig("TOTAL"): every covered call reaches some context. Equation soundness
 (@ch:equations) bounds each bucket by the solver's valuation, given the
 certificate of @ch:solving. What the chain should deliver to a client is this:
-every store a finite source run reaches is covered by the published table at a
+every store a finite source run reaches is covered by the result table at a
 node that simulates the run, in some context, and every definite verdict listed
 there holds of the store.
 
@@ -188,7 +189,7 @@ component of @ch:cooperation, and a single analysis is the list of length one.
 
     [#isaconst("config_terminates"): the solver's recursion is defined on this
       program's query under this configuration.],
-    [The typed table covers $s$ at $v$ in some context, before its abstract
+    [The typed result table covers $s$ at $v$ in some context, before its abstract
       values are printed (@sec:codegen).],
 
     [The analyzer returned an answer. Malformed programs are rejected, so
@@ -208,8 +209,8 @@ of one per context (@sec:verdicts).
 
 == Verdicts <sec:verdicts>
 
-The solver returns a valuation over its unknowns, but the client reads a table
-indexed by node and context through #isaconst("lookup_context"). The theorem
+The solver returns a valuation over its unknowns, but the client reads the result
+table, indexed by node and context, through #isaconst("lookup_context"). The theorem
 #isathm("gamma_reader_eq_lookup") states that both describe the same stores at
 every node and context. Unsolved unknowns read as unreachable, which is sound
 because every unknown an execution visits is solved (@sec:cert-forward). A
@@ -217,11 +218,12 @@ reached store is covered at its node _in some context_:
 $
   exists c, A. quad #isaconst("lookup_context") thin r thin v thin c = ctor("Lifted") A and s in sem(A)
 $
-for the published table $r$ (#isaconst("table_covers")).
+for the result table $r$ (#isaconst("table_covers")).
 The quantifier cannot become universal. Under entry-state routing the test in
 `f` is analyzed in one context per recursion depth, and a store with $n = 2$
-lies in the bucket of the outer call only, a bucket of the solution-dependent
-relation #isaconst("admitted_contexts") (@sec:eq-entry-routing).
+is admitted in the context of the outer call only. The relation is the
+solution-dependent #isaconst("admitted_contexts"), the #isalocale("dg_analysis")
+instance of #isaconst("routed_entry_context_rel") (@sec:eq-entry-routing).
 
 A check has one verdict per node, while the table may hold several contexts
 there. Each context whose state is not #ctor("Bot") is classified as proved,

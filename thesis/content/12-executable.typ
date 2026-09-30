@@ -97,7 +97,7 @@ function into sets of integers, such as the residue class of a congruence, has
 no executable code equation in general. The domain classes therefore split
 (@fig:domain-carrier): #isalocale("executable_domain") holds the runtime
 operations and #isalocale("numeric_domain") adds the concretization and its
-laws. The executable pipeline mentions only the former. The solver asks for
+laws. The executable analysis mentions only the former. The solver asks for
 less: #isalocale("bounded_semilattice_sup_bot") and #isalocale("warrowing"),
 both of which #isalocale("executable_domain") extends. A type has at most one
 instance of each class, while transfer functions, routing policy and solver
@@ -212,7 +212,7 @@ unverified OCaml surrounds it on both sides (@fig:intro-trust). Before it, an
 `ocamllex` lexer and a Menhir parser turn source text into an
 #isatype("imp_prog") and write each check's source position into its label.
 After it, rendering code prints values, builds the contextual graph from the
-published routes, prints each check row at the position its label carries, and
+routes the answer reports, prints each check row at the position its label carries, and
 places arithmetic diagnostics by statement order. For a
 #isaconst("Malformed_Program") answer it names the first well-formedness
 conjunct the program breaks. The rejection itself is decided by the generated

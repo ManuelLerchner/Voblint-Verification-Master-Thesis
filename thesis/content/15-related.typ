@@ -498,7 +498,7 @@ this chapter, and none is a priority claim.
   operation bundle, the abstract transfer and the executable transfer the
   analyzer runs are derived together and proved to agree on every live store
   (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and one rule
-  registers the bundle with the context-indexed pipeline
+  registers the domain with #isalocale("dg_analysis_exec")
   (#isathm("sound_nonrelational_ops.dg_analysis_execI")).
 - *Precision.* We found no strict precision separation between configurations
   of one analyzer that is checked in a proof assistant. Ours is evaluated
