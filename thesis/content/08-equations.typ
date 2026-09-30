@@ -282,7 +282,7 @@ value to the seed, and the entry reads the seed back, so the seed collects
 every entry value routed to $(p, c')$.
 
 A call follows the protocol of @sec:calls (@fig:eq-protocol). Its contribution
-reads the caller's value at $(u, c)$ and applies the entry operation, which
+reads the caller's value at $(u, c)$ and applies enter, which
 yields a list of entry pairs, each a resume value $q$ and an entry value $e$.
 Each pair is routed separately, so we follow one. The call computes
 $c' = ctxh(u, c, e)$, publishes $e$ to $ctor("Activation_Seed") thin p space c'$, reads the
@@ -347,7 +347,7 @@ locale: a value the test classifies as bottom concretizes to the empty set.
     _read((0, 4.4), (0, 5.4), [joined into], side: right),
   )),
   caption: [One call at node $u$ in context $c$, contributing to its
-    continuation $(k, c)$. The entry operation turns the caller value into a
+    continuation $(k, c)$. Enter turns the caller value into a
     resume value $q$ and an entry value $e$, and $e$ selects the callee context
     $c'$. The call publishes $e$ to the seed of $(#_p, c')$ (dashed) and reads
     the callee's result $r$ at $c'$. All steps except the callee body belong to
@@ -375,8 +375,8 @@ context. The two must meet:
 $
   R "admits" c' quad ==> quad e "is routed to" c'.
 $
-With the soundness of the entry transfer, every concrete entered store in the
-bucket of $c'$ is then covered by the value published for $c'$. Two properties
+With the soundness of enter, every concrete entered store filed under $c'$ is
+then covered by the value published for $c'$. Two properties
 make this precise.
 
 - _Totality_ (#isathm("routed_context.routed_entry_total", thy: "Routed_Context", display: "routed_entry_total")):
@@ -435,7 +435,7 @@ Unit and call-string contexts are determined by the call site and the caller
 context, so the concrete call alone fixes its context. Entry-state contexts are
 different: the context is part of the abstract analysis result.
 
-Recall from @sec:calls that entry turns the caller's value into entry pairs
+Recall from @sec:calls that enter turns the caller's value into entry pairs
 $(q, e)$: a resume value $q$ and an entry value $e$, an abstract state of
 the callee. The entry-state policy takes as context the abstract values that
 $e$ gives the callee's formal parameters, written $e|_"formals"$. For
@@ -445,7 +445,7 @@ on the entry value computed from the caller's solved value.
 
 This value cannot be reconstructed from one concrete call. Suppose the
 caller's solved value maps $x$ to $[4, 5]$ and the program calls `bump(x)`.
-Entry produces $e = {n |-> [4, 5]}$, and the equations route the call to the
+Enter produces $e = {n |-> [4, 5]}$, and the equations route the call to the
 context $[[4, 5]]$. One concrete execution described by this call has $x = 4$
 and enters `bump` with $n = 4$:
 $
@@ -661,7 +661,7 @@ concretization of its left side.
     [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
     [#oblig("RETURN")],
     [#ineq(5)],
-    [the return stages are sound (the contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
+    [the combine stages are sound (the contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
     [#oblig("TOTAL")], [#ineq(6)], [none beyond the premise itself],
     table.hline(),
   ),
@@ -669,7 +669,7 @@ concretization of its left side.
   caption: [How #isathm("activation_collect_dg_sound") discharges the five
     obligations of @ch:traces: the inequality of the displayed system each
     one uses, and the soundness fact that turns it into coverage. Here
-    $sh("combine")$ stands for the two return stages of
+    $sh("combine")$ stands for the two combine stages of
     @sec:calls.],
 ) <tab:eq-obligations>
 

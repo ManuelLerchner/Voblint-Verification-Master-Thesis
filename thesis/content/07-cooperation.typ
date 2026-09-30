@@ -216,7 +216,7 @@ _local specification_ #isatype("local_spec") (@fig:local-spec). Its operations
 work on local values, and each takes a channel as its first argument, of type
 #isatype("answers"): a handler
 #isaconst("ls_query") that answers queries about a state, one transfer per kind
-of edge, entry, and the two return stages. The step #isaconst("ls_step") on an
+of edge, enter, and the two combine stages. The step #isaconst("ls_step") on an
 arbitrary edge dispatches to the edge transfers.
 
 #figure(
@@ -228,24 +228,24 @@ arbitrary edge dispatches to the edge transfers.
   placement: auto,
   caption: [The declaration of #isatype("local_spec"), lifted from the theory.
     Every operation receives a channel of type #isatype("answers"), and
-    the first return stage receives two.],
+    the first combine stage receives two.],
 ) <fig:local-spec>
 
 Each operation receives the channel of the store it reasons about. The
-handler, an edge transfer and entry receive the channel of the state they are
-applied to. A return reasons about two stores, the caller's at the call and the
+handler, an edge transfer and enter receive the channel of the state they are
+applied to. Combine reasons about two stores, the caller's at the call and the
 callee's at its exit. It has the two stages of @sec:calls. The first,
 #isaconst("ls_combine_env"), merges the caller's and the callee's environments
 and receives both channels. The second, #isaconst("ls_combine_assign"), writes
 the return value into the destination and receives the callee's channel.
-Goblint's return functions likewise receive the callee's `ask` function as an
+Goblint's combine functions likewise receive the callee's `ask` function as an
 extra argument.
 
 Soundness (#isaconst("sound_local_spec")) asks for a monotone concretization
-and one law per operation (#isathm("sound_local_spec_iff")). The edge, entry
-and return laws are #oblig("INTRA"), entry coverage and #oblig("RETURN") of
+and one law per operation (#isathm("sound_local_spec_iff")). The edge, enter
+and combine laws are #oblig("INTRA"), entry coverage and #oblig("RETURN") of
 @ch:analysis-interface, each with the premise that the channels hold at the
-stores involved. The two return stages share one law for their composition.
+stores involved. The two combine stages share one law for their composition.
 The handler law is new: at every store of $conc(x)$ at which the channel the
 handler receives holds, every answer it gives holds too (#isaconst("sound_query")). It is the analysis's
 promise to its partners, and the only law they rely on.
@@ -275,8 +275,8 @@ field describes. It is a _frame_ for the other fields
 _independent_ (#isathm("mcp_independent_map")).
 
 The combination should be sound whenever its components are sound and
-independent, whatever channel they share. #isaconst("mcp_combine") builds it from a list: the step, entry and
-return run the components in turn, and the handler meets their answers. Every
+independent, whatever channel they share. #isaconst("mcp_combine") builds it from a list: the step, enter and
+the combine stages run the components in turn, and the handler meets their answers. Every
 component receives the same channel, computed from the state before the edge,
 as every Goblint analysis receives the same `ask`. A single component is its
 own combination, so one analysis and an MCP of one analysis are the same
@@ -411,11 +411,11 @@ operators and answers $ltop$ otherwise.
 
 Any other analysis proves its local specification sound directly. Conservative
 defaults (#isaconst("conservative_local_spec")) cover the handler, which
-answers $ltop$, and skip, branch, body, event and the first return stage,
+answers $ltop$, and skip, branch, body, event and the first combine stage,
 which keep the state. They are sound for every concretization
 (#isathm("sound_conservative_local_spec")), so the analysis supplies only
-assignment, special calls, the return-statement transfer, entry and the second
-return stage. Replacing a default later needs only that operation's law
+assignment, special calls, the return-statement transfer, enter and the second
+combine stage. Replacing a default later needs only that operation's law
 (#isathm("sound_local_spec_update")).
 
 The order analysis is built this way. Its state (#isatype("relc")) is
@@ -528,9 +528,9 @@ on its own but cannot be selected. The analyzer runs a local variant of it,
 the order analysis, instead. Goblint allows analysis globals in its MCP by
 tagging each analysis's globals with the analysis's index.
 
-The second return stage receives only the callee's channel. Goblint's second
+The second combine stage receives only the callee's channel. Goblint's second
 stage asks about the state its first stage produced, which describes no
-concrete store here, because soundness is stated only for the composed return.
+concrete store here, because soundness is stated only for the composed combine.
 Since the order analysis keeps no facts across calls, it is coarse there
 (#fixture("25-cooperation/known-imprecision/04-order_forgotten_at_return.vimp", label: "04-order_forgotten_at_return")).
 No theorem says that the combination is more precise than its parts. The two

@@ -58,12 +58,13 @@ transfer that uses only the local value, this is the obligation
 and publishes facts without a program point owes the same with their values
 added on both sides (@sec:shared-facts). The kinds of action give an
 analysis seven edge transfers, named after the methods of Goblint's `Spec`
-with the same role: skip, assign, special, branch, body, return and event.
+with the same role: skip, assign, special, branch, body, return (for the
+return statement) and event.
 
 == The call boundary <sec:calls>
 
 At a call, an analysis supplies two operations, as Goblint's `Spec` does:
-_entry_, which gives the abstract value the callee starts from, and _return_,
+_enter_, which gives the abstract value the callee starts from, and _combine_,
 which gives the caller's value after the call. The solver analyzes the callee
 in between. The concrete semantics of @ch:program-model fixes what the two
 must approximate: #isaconst("call_enter") keeps the globals, resets the
@@ -77,7 +78,7 @@ fun inc(a) { g = g + a; return a - 1; }
 fun main() { g = 1; x = 5; y = inc(x); }
 ```)
 
-Entry describes the two stores that exist at the call `y = inc(x)`, each by an
+Enter describes the two stores that exist at the call `y = inc(x)`, each by an
 abstract value, an element of the domain $D_L$ of values the analysis keeps
 per program point. The _entry value_ $e$
 describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
@@ -85,7 +86,7 @@ value_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine
 later merges with the callee's exit (the theories call $q$ the
 continuation). Usually $q$ is the caller's own abstract value at the call, but
 an analysis may weaken it there, for example by forgetting facts the callee
-may invalidate. @fig:return-stores shows both values and what the return makes
+may invalidate. @fig:return-stores shows both values and what combine makes
 of them.
 
 // The call `y = inc(x)` on the control-flow graph, as the playground draws it,
@@ -128,26 +129,26 @@ of them.
   placement: none,
   caption: [The analysis's operations at the call `y = inc(x)` of the program
     above, and the concrete store each abstract value must describe
-    (schematic: the body of `inc` is drawn as one edge). Entry answers the
+    (schematic: the body of `inc` is drawn as one edge). Enter answers the
     resume value $q$ and the entry value $e$; after the callee is analyzed,
     combine merges $q$ with the callee's exit value $t^sharp$. The combined
     value must describe the caller's locals (blue) together with the callee's
     globals and result (green), as #isaconst("combine_collect") does.],
 ) <fig:return-stores>
 
-The abstract return therefore receives two values, the caller's value and the
+Combine therefore receives two values, the caller's value and the
 callee's exit value, like the abstract `combine` of the functional approach
 @seidl12compiler[§2.6]. As in Goblint, it has two stages:
 #isaconst("dgs_combine_env") merges the two environments, and
 #isaconst("dgs_combine_assign") writes the result into the destination,
 starting from the local value the first stage produced. Only their composition
-carries an obligation, so a specification may do the whole return in either
+carries an obligation, so a specification may do the whole combine in either
 stage.
 
-The callee is analyzed from $e$, and its result is combined with $q$. Entry
+The callee is analyzed from $e$, and its result is combined with $q$. Enter
 must describe both stores: its resume value must cover the caller's store and
 its entry value the entered store (#isaconst("entry_pairs_cover")). The
-formalization, like Goblint's `enter`, lets entry answer a list of such pairs,
+formalization, like Goblint's `enter`, lets enter answer a list of such pairs,
 each analyzed in a context of its own; every analysis in this thesis answers
 one, and we describe that case.
 
@@ -224,8 +225,8 @@ the seeds through which @ch:equations passes entry values to callees
 
 The framework takes an analysis as one parameter, so its operations form
 one record, #isatype("dg_spec"), with one field per operation (@fig:dg-spec). The seven edge transfers of
-@sec:dg have type #isatype("man_transfer"). The entry of @sec:calls answers the
-pair $(q, e)$, and the two return stages also receive the callee's exit value.
+@sec:dg have type #isatype("man_transfer"). Enter (@sec:calls) answers the
+pair $(q, e)$, and the two combine stages also receive the callee's exit value.
 The query handler is the subject of @ch:cooperation. Every field has the role
 of the Goblint method it is named after. A check `__voblint_check(c)` becomes
 an edge whose action is an event (#isatype("analysis_event")), so the event
@@ -242,7 +243,7 @@ transfer sees it; Goblint handles `__goblint_check` in `special` instead.
     Every field except the query handler carries, marked $sharp$, the name of
     the method of Goblint's `Spec` with the same role. A #isatype("call_info")
     names the callee, its formals, the arguments and the destination of a call.
-    Entry, return stages and query handler have their own transfer types over
+    Enter, the combine stages and the query handler have their own transfer types over
     the same manager.],
 ) <fig:dg-spec>
 
@@ -271,7 +272,7 @@ and no solver. It asks for four things:
   (#isathm("analysis_contract.step_sound")).
 + _Sound returns_ (#oblig("RETURN")). Take a caller store covered by the
   resume value and a callee exit store covered by the exit value. The store
-  after the return must be covered by what the two return stages answer and
+  after the return must be covered by what the two combine stages answer and
   publish (#isathm("analysis_contract.combine_sound")). This must hold at arbitrary values, because no unknown holds the
   resume value for the solver to bound.
 
