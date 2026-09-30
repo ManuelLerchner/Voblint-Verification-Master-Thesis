@@ -1645,6 +1645,187 @@ button.solver-global-key:hover {
   cursor: progress;
 }
 
+.solve-replay-body {
+  margin-top: 12px;
+}
+
+.replay-player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.replay-player button {
+  min-width: 36px;
+  height: 34px;
+  padding: 0 10px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.replay-player button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.replay-player button:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.replay-player input[type="range"] {
+  flex: 1 1 200px;
+  min-width: 140px;
+  accent-color: var(--primary);
+}
+
+.replay-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.replay-step {
+  color: var(--text-muted);
+  font: 600 0.8rem var(--mono);
+}
+
+.replay-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 10px 0;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  list-style: none;
+}
+
+.replay-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The swatches repeat the node styles replay.js gives Cytoscape. */
+.replay-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+.replay-swatch.r-unseen {
+  background: var(--surface-muted);
+  border: 1px dashed var(--text-faint);
+}
+
+.replay-swatch.r-solving {
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+}
+
+.replay-swatch.r-current {
+  background: var(--accent-soft);
+  border: 4px solid var(--accent);
+}
+
+.replay-swatch.r-stable {
+  background: var(--primary-soft);
+  border: 2px solid var(--primary);
+}
+
+.replay-swatch.r-destabilized {
+  border: 2px dotted var(--border-strong);
+}
+
+.replay-swatch.r-edge {
+  height: 0;
+  border: 0;
+  border-top: 4px solid var(--accent);
+  border-radius: 0;
+}
+
+.replay-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+  gap: 12px;
+}
+
+.replay-graph {
+  height: clamp(380px, 64vh, 760px);
+}
+
+.replay-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+}
+
+.replay-side h3 {
+  margin: 8px 0 0;
+}
+
+.replay-detail {
+  margin: 0;
+  font-family: var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.replay-global.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Positioned, so a line's offsetTop measures from the pane when it scrolls to the current step. */
+.replay-trace {
+  position: relative;
+  flex: 1 1 240px;
+  min-height: 240px;
+  max-height: clamp(240px, 46vh, 520px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.replay-line {
+  display: block;
+  width: 100%;
+  padding: 1px 10px;
+  color: var(--text);
+  background: none;
+  border: 0;
+  font: 0.72rem / 1.45 var(--mono);
+  text-align: left;
+  white-space: pre;
+  cursor: pointer;
+}
+
+.replay-line:hover {
+  background: var(--surface-hover);
+}
+
+.replay-line.is-current {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+@media (max-width: 860px) {
+  .replay-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .analysis-graph-header {
   margin: 10px 0 12px;
 }

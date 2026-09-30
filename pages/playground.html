@@ -485,6 +485,90 @@
           ></div>
         </details>
 
+        <details id="solve-replay" class="solver-globals solve-replay" hidden>
+          <summary>
+            <span class="eyebrow">Solve replay</span>
+            <span id="solve-replay-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            Steps through the solve on the control-flow graph, one solver step at a time. The
+            solver starts from the program's exit and queries backward toward the entry. Each
+            node shows the value the solver holds for its point in its context box at that step;
+            every context has its own box, so every unknown has its own node. Global unknowns,
+            the analysis global and the activation seeds, are listed beside the graph.
+          </p>
+
+          <p class="solver-globals-note">
+            The replay shows the instrumented, traced executable: the run is solved again by the
+            patched solver with its JSON Lines and text traces, and the page rebuilds each step
+            from those traces. It is not the pristine exported solver, and the instrumentation,
+            the replay and its drawing are outside the proof.
+          </p>
+
+          <p id="solve-replay-message" class="solver-globals-note" hidden></p>
+          <button id="solve-replay-load" class="solver-trace-all" type="button" hidden>Try again</button>
+
+          <div id="solve-replay-body" class="solve-replay-body" hidden>
+            <div class="replay-player" role="group" aria-label="Replay controls">
+              <button id="solve-replay-start" type="button" title="First step (Home)" aria-label="First step">
+                <i class="fa-solid fa-backward-step" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-back" type="button" title="Step back (left arrow)" aria-label="Step back">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-play" type="button" title="Play (space)" aria-label="Play">
+                <i class="fa-solid fa-play" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-forward" type="button" title="Step forward (right arrow)" aria-label="Step forward">
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-end" type="button" title="Last step (End)" aria-label="Last step">
+                <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+              </button>
+              <input id="solve-replay-slider" type="range" min="0" max="0" value="0" aria-label="Step">
+              <label class="replay-speed">
+                <span>Speed</span>
+                <select id="solve-replay-speed">
+                  <option value="2">2 steps/s</option>
+                  <option value="5" selected>5 steps/s</option>
+                  <option value="15">15 steps/s</option>
+                  <option value="50">50 steps/s</option>
+                  <option value="200">200 steps/s</option>
+                </select>
+              </label>
+              <span id="solve-replay-step" class="replay-step" aria-live="polite"></span>
+            </div>
+
+            <ul class="replay-legend" aria-label="Legend">
+              <li><span class="replay-swatch r-unseen"></span>not reached yet</li>
+              <li><span class="replay-swatch r-seen"></span>reached, not stable (value may be ⊥)</li>
+              <li><span class="replay-swatch r-solving"></span>being solved (on the call stack)</li>
+              <li><span class="replay-swatch r-current"></span>solved now</li>
+              <li><span class="replay-swatch r-stable"></span>stable</li>
+              <li><span class="replay-swatch r-destabilized"></span>destabilized by an update</li>
+              <li><span class="replay-swatch r-edge"></span>the step's query, value or call</li>
+            </ul>
+
+            <div class="replay-layout">
+              <div
+                id="solve-replay-graph"
+                class="analysis-graph replay-graph"
+                tabindex="0"
+                aria-label="Control-flow graph at the current solver step. Left and right arrows step."
+              ></div>
+
+              <div class="replay-side">
+                <p id="solve-replay-detail" class="solver-globals-note replay-detail"></p>
+                <h3 class="eyebrow">Global unknowns</h3>
+                <ul id="solve-replay-globals" class="solver-globals-list"></ul>
+                <h3 class="eyebrow">Trace</h3>
+                <div id="solve-replay-trace" class="replay-trace" tabindex="0" aria-label="Trace around the current step. Click a line to go to its step."></div>
+              </div>
+            </div>
+          </div>
+        </details>
+
       </div>
     </section>
 

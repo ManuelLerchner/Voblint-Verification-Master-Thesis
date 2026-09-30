@@ -168,6 +168,13 @@ the shown run again in `"jsonl"` mode. Share links carry the form as
 `trace=compact` or `trace=verbose`; `trace=1` still opens the compact one. The
 browser module outlives a run, so the adapter sets the hook's switch on every
 call and `Solver_trace_hook.recorded` empties the event list it hands over.
+The page's **Solve replay** section, when opened, solves the shown run again in
+`"jsonl"` mode, and in `"verbose"` mode unless the run already showed that
+text, then steps through the events on its own drawing of the graph
+(`pages/replay.js`). It rebuilds each step's values, call stack, stable set and
+destabilized readers from the events, following the solver's `destab_opt`
+through the influence sets the queries record. Like the trace, it shows the
+patched build and is outside the proof.
 `pixi run browser-trace-check` runs the wasm build under Node and compares
 each form's trace of the command above with its file in `tests/solver-trace/`,
 whose program name it swaps for `browser.vimp`.

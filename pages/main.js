@@ -24,6 +24,7 @@ import {
 import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
+import { createSolveReplay } from "./replay.js";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -1973,6 +1974,21 @@ async function downloadSolverTraceJsonl() {
   }
 }
 
+/*
+ * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
+ * its graph, from a run solved again with its traces.
+ */
+const solveReplay = createSolveReplay({
+  solve: runAnalysisInWorker,
+  getGraphLibraries,
+  graphElements,
+  nodeBox,
+  layoutGraph,
+  graphStyle,
+  applyGraphLayout,
+  cssToken,
+});
+
 function inspectGraphNode(id) {
   const node = analysisModel?.nodes.get(id);
 
@@ -2147,11 +2163,18 @@ function nodeLabelLines(node) {
   ];
 }
 
+/* The size of a node whose label is [lines]. */
+function nodeBox(lines) {
+  const nodeFont = `${NODE_FONT_SIZE}px ${cssToken("--mono")}`;
+  const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
+  const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
+
+  return { width: Math.ceil(width), height: Math.ceil(height) };
+}
+
 /* A node's label names its point and findings; the full state is the hover tooltip. */
 function graphElements(result) {
-  const mono = cssToken("--mono");
-  const nodeFont = `${NODE_FONT_SIZE}px ${mono}`;
-  const edgeFont = `${EDGE_FONT_SIZE}px ${mono}`;
+  const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
   const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
   const parentOf = new Map();
   const elements = [];
@@ -2170,8 +2193,6 @@ function graphElements(result) {
 
   for (const node of nodesById.values()) {
     const lines = nodeLabelLines(node);
-    const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
-    const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
     const status = node.status ?? (node.kind === "point" ? "plain" : "boundary");
 
     elements.push({
@@ -2180,8 +2201,7 @@ function graphElements(result) {
         id: node.id,
         parent: parentOf.get(node.id),
         label: lines.join("\n"),
-        width: Math.ceil(width),
-        height: Math.ceil(height),
+        ...nodeBox(lines),
       },
       classes: `point ${status}`,
     });
@@ -2597,12 +2617,12 @@ function segmentStyle(points, source, target) {
  * back edges put theirs on top of each other. The inner pass reserves room for each
  * label and places it, so the label keeps that place as an offset from the midpoint.
  */
-function applyGraphLayout({ centers, routes, labels }) {
-  cy.batch(() => {
-    cy.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
+function applyGraphLayout(view, { centers, routes, labels }) {
+  view.batch(() => {
+    view.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
     for (const [id, points] of routes) {
-      const edge = cy.getElementById(id);
+      const edge = view.getElementById(id);
       const style = segmentStyle(
         points,
         centers.get(edge.data("source")),
@@ -2615,9 +2635,9 @@ function applyGraphLayout({ centers, routes, labels }) {
     }
   });
 
-  cy.batch(() => {
+  view.batch(() => {
     for (const [id, place] of labels) {
-      const edge = cy.getElementById(id);
+      const edge = view.getElementById(id);
       const midpoint = edge.midpoint();
 
       edge
@@ -3151,7 +3171,7 @@ async function renderGraph(result, runGeneration) {
       autounselectify: true,
     });
 
-    applyGraphLayout(layout);
+    applyGraphLayout(cy, layout);
     attachGraphInteraction();
     applyGraphSelection();
     fitGraphZoom({ animate: false });
@@ -3389,6 +3409,7 @@ function failPendingAnalysis(error) {
 }
 
 function clearResults() {
+  solveReplay.clear();
   clearGraph();
   clearTiming();
   clearAnalysisView();
@@ -3546,9 +3567,9 @@ async function run() {
     return;
   }
 
-  /* Only a JSON Lines trace download can be pending here; a new run replaces it. */
+  /* Only a trace for a download or the replay can be pending here; a new run replaces it. */
   if (pendingAnalysis) {
-    retireActiveRun("Trace download cancelled: a new run started.");
+    retireActiveRun("Trace request cancelled: a new run started.");
   }
 
   const runGeneration = ++analysisRunGeneration;
@@ -3621,6 +3642,11 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
         showDiagnosticsSummary(result);
+        solveReplay.offer({
+          configuration,
+          source,
+          verboseTrace: configuration.trace === "verbose" ? result.trace : null,
+        });
       }
     } else {
       /*
