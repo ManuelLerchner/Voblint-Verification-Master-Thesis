@@ -211,13 +211,13 @@ reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
   placement: auto,
   scale(80%, reflow: true, diagram(
     spacing: (18mm, 8mm),
-    _seed((0, 0), $italic("Seed")(#_b, c_1)$),
+    _seed((0, 0), $ctor("Activation_Seed") thin #_b space c_1$),
     _loc((0, 1), $(italic("entry")_"bump", c_1)$),
     _loc((0, 2), $(italic("exit")_"bump", c_1)$),
     _loc((1.3, 0), $(italic("pp2"), c_0)$),
     _loc((1.3, 2), $(italic("pp3"), c_0)$),
     _loc((1.3, 5), $(italic("pp4"), c_0)$),
-    _seed((2.6, 3), $italic("Seed")(#_b, c_2)$),
+    _seed((2.6, 3), $ctor("Activation_Seed") thin #_b space c_2$),
     _loc((2.6, 4), $(italic("entry")_"bump", c_2)$),
     _loc((2.6, 5), $(italic("exit")_"bump", c_2)$),
     _read((1.3, 0), (1.3, 2), [caller]),
@@ -274,7 +274,9 @@ which call sites route to $c'$ is known only once their callers are solved.
 Side-effecting systems reverse the direction: each caller contributes to the
 callee's entry while it evaluates its own equation (@ch:background). Voblint
 adds one global unknown per callee entry and context, the _seed_
-$italic("Seed")(p, c')$, which receives these contributions
+$ctor("Activation_Seed") thin p space c'$ (a #isatype("global_unknown"), keyed
+by the callee's entry node, which we name by its procedure $p$), which
+receives these contributions
 (@sec:eq-seed-global explains why they do not target the entry directly). Every call routed to $(p, c')$ publishes its entry
 value to the seed, and the entry reads the seed back, so the seed collects
 every entry value routed to $(p, c')$.
@@ -283,7 +285,7 @@ A call follows the protocol of @sec:calls (@fig:eq-protocol). Its contribution
 reads the caller's value at $(u, c)$ and applies the entry operation, which
 yields a list of entry pairs, each a resume value $q$ and an entry value $e$.
 Each pair is routed separately, so we follow one. The call computes
-$c' = ctxh(u, c, e)$, publishes $e$ to $italic("Seed")(p, c')$, reads the
+$c' = ctxh(u, c, e)$, publishes $e$ to $ctor("Activation_Seed") thin p space c'$, reads the
 callee's result $r$ directly from its exit unknown
 $(ctor("FunctionResult") thin p, c')$ in the context it just computed, and
 returns the combined value to $(k, c)$. The caller treats the callee as a
@@ -323,7 +325,7 @@ locale: a value the test classifies as bottom concretizes to the empty set.
     _loc((0, 0), $(u, c)$),
     _step((0, 1), $enterh: (q, e)$),
     _step((1.2, 1), $c' = ctxh(u, c, e)$),
-    _seed((1.2, 2), $italic("Seed")(#_p, c')$),
+    _seed((1.2, 2), $ctor("Activation_Seed") thin #_p space c'$),
     _loc((2.4, 2), $(ctor("FunctionEntry") thin #_p, c')$),
     _loc((2.4, 3.4), $(ctor("FunctionResult") thin #_p, c')$),
     _step((0, 4.4), $combineassignh(combineenvh(q, r), r)$),
@@ -627,8 +629,8 @@ $c' = ctxh(u, c, e)$ and continuation $k$, a post-solution satisfies
   $
     sol(v_0, c_0) & gt.eq d_0 & wide #ineq-tag(1) \
     sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide #ineq-tag(2) \
-    sol(italic("Seed")(p, c')) & gt.eq e & wide #ineq-tag(3) \
-    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(italic("Seed")(p, c')) & wide #ineq-tag(4) \
+    sol(ctor("Activation_Seed") thin p space c') & gt.eq e & wide #ineq-tag(3) \
+    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(ctor("Activation_Seed") thin p space c') & wide #ineq-tag(4) \
     sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide #ineq-tag(5) \
     forall s in conc_(M)(sol(u, c)). & med exists c'. med R(u, c, s, s', c') & wide #ineq-tag(6)
   $
@@ -725,9 +727,9 @@ value, and decides from it what to do next. In the notation of @sec:td, the
 contribution $italic("call")_u (c)$ of @sec:eq-call becomes the tree
 $
   italic("call")_u (c) = #ctor("QueryL") ( & (u, c), lambda d. \
-                                           & #ctor("Side") ( italic("Seed")(p, c'), e, \
-                                           & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
-                                               #ctor("Answer") (sh("combine") (q, r)) ) ) ),
+    & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
+      & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
+        #ctor("Answer") (sh("combine") (q, r)) ) ) ),
 $
 where each continuation receives the value just read: $d$ is the caller's
 value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$, and $r$ is the callee's
@@ -749,10 +751,10 @@ global unknowns. Allowing local targets would mean changing the solver and
 redoing its correctness proof.
 
 The seeds of @sec:eq-call are Voblint's way around this restriction. A seed
-$italic("Seed")(p, c')$ is a global unknown and acts as a mailbox: the call
+$ctor("Activation_Seed") thin p space c'$ is a global unknown and acts as a mailbox: the call
 publishes $e$ to it with #ctor("Side"), and the entry equation of
 $(ctor("FunctionEntry") thin p, c')$ reads it with #ctor("QueryG"). In the
-running example `bump(5)` publishes ${n |-> 5}$ to $italic("Seed")(#_b, c_1)$,
+running example `bump(5)` publishes ${n |-> 5}$ to $ctor("Activation_Seed") thin #_b space c_1$,
 and $(italic("entry")_"bump", c_1)$ reads it back (@fig:eq-unknowns).
 Publishing alone does not demand `bump`, since the solver solves only unknowns
 that some tree queries. The result query does: solving
@@ -812,11 +814,11 @@ One right-hand side can publish to the same seed twice. The generator already
 folds the node's own publications to the analysis global into one, but two
 call edges that resume at the same node are separate contributions, and when
 both are routed to the same callee context they write the same seed
-$italic("Seed")(p, c')$. Declaratively the two writes mean one bound:
+$ctor("Activation_Seed") thin p space c'$. Declaratively the two writes mean one bound:
 $
-  #ctor("Side") (italic("Seed")(p, c'), a); #ctor("Side") (italic("Seed")(p, c'), b)
+  #ctor("Side") (ctor("Activation_Seed") thin p space c', a); #ctor("Side") (ctor("Activation_Seed") thin p space c', b)
   quad "means" quad
-  sol(italic("Seed")(p, c')) gt.eq a union.sq b.
+  sol(ctor("Activation_Seed") thin p space c') gt.eq a union.sq b.
 $
 The vendored solver joins the publications of one evaluation, but it applies
 the update rule at every #ctor("Side"), first to $a$ and then to
@@ -857,15 +859,15 @@ satisfies
   #show math.equation: set block(breakable: true)
   #set text(size: 10pt)
   $
-    sol(italic("entry")_"main", c_0) & gt.eq d_0 union.sq sol(italic("Seed")(italic("main"), c_0)) & quad & "initial state and seed" \
+    sol(italic("entry")_"main", c_0) & gt.eq d_0 union.sq sol(ctor("Activation_Seed") thin italic("main") space c_0) & quad & "initial state and seed" \
     sol(italic("pp2"), c_0) & gt.eq sh(f)_("body(main)") (sol(italic("entry")_"main", c_0)) & & "local edge" \
-    sol(italic("Seed")(#_b, c_1)) & gt.eq e_1 & & "call 1 publishes" \
-    sol(italic("entry")_"bump", c_1) & gt.eq sol(italic("Seed")(#_b, c_1)) & & "entry reads its seed" \
+    sol(ctor("Activation_Seed") thin #_b space c_1) & gt.eq e_1 & & "call 1 publishes" \
+    sol(italic("entry")_"bump", c_1) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_1) & & "entry reads its seed" \
     sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_1)) & & "local edge" \
     sol(italic("exit")_"bump", c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
     sol(italic("pp3"), c_0) & gt.eq sh("combine") (q_1, sol(italic("exit")_"bump", c_1)) & & "call 1 returns" \
-    sol(italic("Seed")(#_b, c_2)) & gt.eq e_2 & & "call 2 publishes" \
-    sol(italic("entry")_"bump", c_2) & gt.eq sol(italic("Seed")(#_b, c_2)) & & "entry reads its seed" \
+    sol(ctor("Activation_Seed") thin #_b space c_2) & gt.eq e_2 & & "call 2 publishes" \
+    sol(italic("entry")_"bump", c_2) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_2) & & "entry reads its seed" \
     sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_2)) & & "local edge" \
     sol(italic("exit")_"bump", c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
     sol(italic("pp4"), c_0) & gt.eq sh("combine") (q_2, sol(italic("exit")_"bump", c_2)) & & "call 2 returns" \
@@ -894,7 +896,7 @@ second pass computes the real result.
 #let _tnode(key) = {
   let (n, c) = key.split("@")
   if n.starts-with("Seed(") {
-    $italic("Seed")(italic(#n.slice(5, -1)), #_tctx(c))$
+    $ctor("Activation_Seed") thin italic(#n.slice(5, -1)) space #_tctx(c)$
   } else { raw(n) }
 }
 #let _tunk(key) = {
@@ -1077,18 +1079,33 @@ calls publish to one seed, and `bump` is solved once for both.
     diagram(
       spacing: (17mm, 7mm),
       wnode((0, 0), "entry_main@c0", raw("entry_main")),
-      wnode((-1.0, 0), "Seed(main)@c0", [$italic("Seed")(italic("main"))$], color: vb.called),
+      wnode(
+        (-1.0, 0),
+        "Seed(main)@c0",
+        [$ctor("Activation_Seed") thin italic("main") space c_0$],
+        color: vb.called,
+      ),
       wnode((0, 1), "pp2@c0", raw("pp2")),
       wnode((0, 2), "pp3@c0", raw("pp3")),
       wnode((0, 3), "pp4@c0", raw("pp4")),
       wnode((0, 4), "pp5@c0", raw("pp5")),
       wnode((0, 5), "pp6@c0", raw("pp6")),
       wnode((0, 6), "exit_main@c0", raw("exit_main")),
-      wnode((1.6, 0), "Seed(bump)@c1", [$italic("Seed")(c_1)$], color: vb.called),
+      wnode(
+        (1.6, 0),
+        "Seed(bump)@c1",
+        [$ctor("Activation_Seed") thin #_b space c_1$],
+        color: vb.called,
+      ),
       wnode((1.6, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
       wnode((1.6, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
       wnode((1.6, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
-      wnode((-1.6, 1.8), "Seed(bump)@c2", [$italic("Seed")(c_2)$], color: vb.called),
+      wnode(
+        (-1.6, 1.8),
+        "Seed(bump)@c2",
+        [$ctor("Activation_Seed") thin #_b space c_2$],
+        color: vb.called,
+      ),
       wnode((-1.6, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
       wnode((-1.6, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
       wnode((-1.6, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),

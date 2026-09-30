@@ -174,8 +174,8 @@ unknown, its valuation is #lbot and the bound holds trivially.
     through it. It gives the seed inequality #ineq(3) of
     @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
-    ${n |-> [5, 5]} lle sol(italic("Seed")(italic("bump"), c_1))$ and
-    ${n |-> [4, 4]} lle sol(italic("Seed")(italic("bump"), c_2))$, the entry
+    ${n |-> [5, 5]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$ and
+    ${n |-> [4, 4]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_2)$, the entry
     values of `a = bump(5)` and `b = bump(4)` (@sec:eq-example).
 ]
 

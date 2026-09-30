@@ -214,8 +214,10 @@ indexed by node and context through #isaconst("lookup_context"). The theorem
 every node and context. Unsolved unknowns read as unreachable, which is sound
 because every unknown an execution visits is solved (@sec:cert-forward). A
 reached store is covered at its node _in some context_:
-$ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A) $
-(#isaconst("table_covers")).
+$
+  exists c, A. quad #isaconst("lookup_context") thin r thin v thin c = ctor("Lifted") A and s in sem(A)
+$
+for the published table $r$ (#isaconst("table_covers")).
 The quantifier cannot become universal. Under entry-state routing the test in
 `f` is analyzed in one context per recursion depth, and a store with $n = 2$
 lies in the bucket of the outer call only, a bucket of the solution-dependent

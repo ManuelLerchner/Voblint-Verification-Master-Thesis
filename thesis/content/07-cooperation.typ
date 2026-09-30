@@ -187,11 +187,13 @@ sets $z$ to $ivl(1, 1)$, which is right only if the answer is true. Proving
 that from the order analysis's invariant would couple the two proofs.
 
 Voblint makes the channel an argument of the transfer and the truth of its
-answers a premise of the proof. The transfer $"step"(A, a, x)$ receives a
-channel $A$ besides the action $a$ and the value $x$ before the edge. Soundness
+answers a premise of the proof. The transfer
+$#isaconst("ls_step") thin c thin A thin a thin x$ of a local specification $c$
+receives a channel $A$ besides the action $a$ and the value $x$ before the
+edge. Soundness
 is the condition of @sec:dg with one extra premise: for every channel $A$,
 every $s in conc(x)$ _at which $A$ holds_, and every
-$s' in$ #isai("edge_step a s"), $s' in conc("step"(A, a, x))$
+$s' in$ #isai("edge_step a s"), $s' in conc(#isaconst("ls_step") thin c thin A thin a thin x)$
 (#isaconst("sound_local_spec"), #isathm("ls_step_sound_iff")). In the example, the premise excludes the stores
 where $x != y$, at which the answer $1$ is false. At the others $e$ evaluates
 to $1$, so the analysis's soundness for the literal $1$ gives soundness for
