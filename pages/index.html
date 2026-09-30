@@ -4693,18 +4693,14 @@ fun main() {
           The playground's <strong>Solver trace</strong> setting, like <code>voblint --trace</code>
           on the command line, lists what the solver did: each unknown it solves, each query and
           the value it returns, each side effect into a seed, each update and the readers it
-          destabilizes, and the context each call is routed to. The full form indents every step
-          by the solver's call depth.
+          destabilizes, and the context each call is routed to. The full form writes one line per
+          step as Goblint's solver trace does, indented by the solver's query depth.
         </p>
         <p>
-          The export records no trace. Before compiling <code>Voblint_CLI.ml</code>, the build
-          passes it through a <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/cli/trace/patch_generated.ml" target="_blank" rel="noreferrer">patch program</a>
-          that inserts guarded calls to a recorder at the solver's steps. The command line and
-          the browser both run this patched copy, with the trace on or off; off, the hooks record
-          nothing. No theorem says the hooks leave the computed values alone. That rests on
-          reading the patch and on tests that compare traced with untraced output, so the patch
-          belongs with the handwritten OCaml outside the green box, and a bug in it could change a
-          result even with the trace off.
+          Tracing is part of the exported code: the trace calls come from code equations proved
+          equal to the untraced ones, and the only added trusted piece is the mapping of the
+          trace primitive to the OCaml recorder, in the same class as the other
+          target-language mappings.
         </p>
         <p>
           The playground's <strong>Solve replay</strong> section draws the same steps on the
@@ -4720,9 +4716,8 @@ fun main() {
         <figcaption>
           The solve replay on the context example, one frame per solver step. Dashed nodes are
           not reached yet, orange ones are being solved, the thick one is solved now, and dark
-          ones are stable. The replay shows the instrumented, traced executable, solved again
-          with its traces, not the pristine exported solver; the instrumentation and the replay
-          are outside the proof.
+          ones are stable. The replay solves the run again with its trace; the replay itself is
+          outside the proof.
           <a class="try-link" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Run it ↗</a>
         </figcaption>
       </figure>

@@ -394,17 +394,16 @@
             and whether it changed the seed, the restarts that change causes, and what the
             caller returns, so a program without calls shows little more than its checks. The
             full form, <code>--verbose</code>, lists every solver step: each unknown solved,
-            each query with the value it returns, each side effect, each update, and each
-            call's routing, each step indented by the solver's call depth.
+            each query with the value it returns, each side effect, each update, each
+            destabilization and each call's routing, in the form of Goblint's solver trace,
+            indented by the solver's query depth.
           </p>
 
           <p class="solver-globals-note">
-            The trace is recorded by hooks that the build patches into the generated OCaml
-            solver. The page runs that patched solver whether the trace is on or off; off, the
-            hooks record nothing. The patch is outside the proof: that it changes no computed
-            value rests on review and on tests comparing traced with untraced runs, and a bug
-            in it could change a result. With the trace on, the page's verdicts, values and
-            graph come from the same run as this trace.
+            Tracing is part of the exported code: the trace calls come from code equations proved
+            equal to the untraced ones, and the only added trusted piece is the mapping of the
+            trace primitive to the OCaml recorder, like the other target-language
+            mappings.
           </p>
 
           <div class="solver-trace-tools">
@@ -500,10 +499,8 @@
           </p>
 
           <p class="solver-globals-note">
-            The replay shows the instrumented, traced executable: the run is solved again by the
-            patched solver with its JSON Lines and text traces, and the page rebuilds each step
-            from those traces. It is not the pristine exported solver, and the instrumentation,
-            the replay and its drawing are outside the proof.
+            The run is solved again with its JSON Lines trace, and the page rebuilds each step
+            from those events. The replay and its drawing are outside the proof.
           </p>
 
           <p id="solve-replay-message" class="solver-globals-note" hidden></p>

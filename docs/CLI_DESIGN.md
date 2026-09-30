@@ -113,41 +113,125 @@ subprocess below), not new proof work.
 
 `--trace` writes the solver's steps to stderr, or to `--output FILE`. Standard
 output is byte-identical with and without it. `--compact` (the default) tells
-the interprocedural story per call; `--verbose` lists every step; `--format
-jsonl` is the machine-readable form. Each of `--compact`, `--verbose`,
-`--format` and `--output` implies `--trace`; none of these names is used by
-another option.
-
-The verbose text indents each step by the solver's call depth, two spaces per
-level, like the indentation Goblint's tracing library keeps between `tracei`
-and `traceu`. A `SOLVE` that a query reaches sits one level below the querying
-unknown, and every later step of that unknown returns to its level. The
-renderer reads the depth off the event order; the JSON Lines events carry no
-depth field.
+the interprocedural story per call; `--verbose` lists every step in the form of
+Goblint's `--trace` output; `--trace-sys SYS[,...]` limits the verbose form to
+those subsystems; `--format jsonl` is the machine-readable form. Each of
+`--compact`, `--verbose`, `--trace-sys`, `--format` and `--output` implies
+`--trace`; none of these names is used by another option.
 
 ```text
 voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
 ```
 
-The hooks are inserted at build time: `cli/trace/patch_generated.ml` copies
-the generated `Voblint_CLI.ml` into the build with guarded calls into
-`cli/trace/solver_trace_hook.ml`. Each patch names generated text that must
-occur exactly once (a per-mode patch: once per context mode that uses it), so
-a regeneration that moves one fails the build with the patch's name. Neither
-the Isabelle sources nor the checked-in export change, but the CLI and the
-browser module compile the patched copy, so every run executes the hooks'
-guards, traced or not. With `--trace` off every hook is one branch on a
-reference. That no hook changes a computed value is a property of the patch,
-checked by review and by the tests that compare traced with untraced output;
-no theorem covers it. The patch and the tracer are outside the proof like the
-rest of the CLI.
+### Where the events come from
 
-The solver is polymorphic in its unknowns, so events hold them untyped. The
-patches also define, next to each generated global-unknown datatype
-(`global_unknown`, and `call_string_gk` under call strings), a decoder that
-matches its constructors, and install it where the context mode fixes the
-type. The renderer tells an activation seed from the analysis global through
-that decoder only.
+Tracing is part of the exported code. `Voblint_Solver.Solver_Trace` defines
+`trace_event :: String.literal => (unit => 'e) => unit` as `()` and gives the
+exported solver alternative code equations with `trace_event` calls at its steps:
+`solve` (start and stop of one solve), `solve_rec_c` (query, iterate, one
+evaluation of the right-hand side, each strategy-tree instruction) and
+`destab_opt`/`destab_iter_opt` (destabilization). `Voblint_CLI.Trace_Run` does
+the same for the three routing policies and for `analysis_result`, which hands
+the trace the run's readers for contexts, global unknowns and values before the
+solve. Each equation is proved equal to the vendored or original equation it
+replaces by unfolding `trace_event`, and the originals are removed from code
+export with `[code del]`; the vendored definitions and proofs are untouched. The
+code the CLI and the browser run is therefore the code of proved equations.
+
+`Trace_Run` maps `trace_event` to `Solver_trace_hook.emit` with `code_printing`.
+That mapping is the one trusted addition, of the same kind as the other
+target-language mappings: `emit` must return `()`, raise nothing, and leave the
+solver's values alone. It forces the suspended event only when tracing is on, so
+an untraced run builds no event. There is no mapping for the Eval target, so
+proofs by evaluation run the logical equation.
+
+The solver is generic in its unknowns and values, so the hook keeps events as
+`Obj.t` under their channel (`solver`, `route`, `run`). `cli/render/solver_trace.ml`
+reads them back after the run with the readers the `run` event carried, the one
+place that casts. Route events outside the solve's start and stop events are the
+result being read back and are dropped.
+
+### Verbose form and Goblint
+
+The verbose form writes one line per solver event as Goblint's tracing library
+(`src/util/tracing/goblint_tracing.ml`) does: indentation, then
+`%%% <subsystem>: <message>`; a message's continuation lines start at column 0.
+Subsystems and messages follow Goblint's `td_simplified.ml`, the side-effecting
+top-down solver whose `query`/`iterate`/`side`/`destabilize` structure matches the
+vendored solver's `Q`/`I`/`E`/`destab_opt`; `td3.ml` contributes the `sol`
+value report. Checked against the local Goblint checkout at `0dc12d355`
+(`src/solver/td_simplified.ml`, `src/solver/td3.ml`); the registered revision
+`5320a6b7` was not re-checked for these files.
+
+| Voblint event (`solver_event`) | Line | `td_simplified.ml` | `td3.ml` (`sol2` unless noted) |
+| --- | --- | --- | --- |
+| `Ev_Start x` | `multivar: solving for x` | 174 | none |
+| `Ev_Query y x st cl` | `solver_query: entering query for x; stable st; called cl` | 68 | 454 `eval %a ## %a` |
+| `Ev_Query_Wpoint x w` | `wpoint: query adding wpoint x` (unless `w`) | 80 | 468 `eval adding wpoint` |
+| `Ev_Iterate_From_Query x` | `iter: iterate called from query` | 76 | none |
+| `Ev_Add_Infl y x` | `infl: add_infl y x` | 37 | 305 |
+| `Ev_Answer y x d` | `answer: exiting query for x` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
+| `Ev_Query_Global x g` | `solver_query: entering query for g` | 68 | 454 |
+| `Ev_Answer_Global x g d` | `answer: exiting query for g` / `answer: d` | 85 | 473 |
+| `Ev_Iterate x cl st wp` | `iter: begin iterate x, called: cl, stable: st, wpoint: wp` | 111 | 351 `solve %a, phase ...` |
+| `Ev_Eq x` | `eq: eq x` | 50 | 430 |
+| `Ev_Still_Unstable x` | `iter: iterate still unstable x` | 137 | 412 |
+| `Ev_Widen x wp` | `wpoint: widen x` (if `wp`) | 122 | none |
+| `Ev_Sol x wp old eqd new` | `sol: Var: x (wp: wp)` / `Old value` / `Eqd` / `New value` | none | 396 (`sol`) |
+| `Ev_Wpoint_Remove x wp` | `wpoint: iterate removing wpoint x` (if `wp`) | 141 | 423 |
+| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx): old -> new` (unless old is ⊥) | 127 | 404 (`solchange`) |
+| `Ev_Iterate_Changed x` | `iter: iterate changed x` | 131 | none |
+| `Ev_Side x g d` | `side: side to g from x; value: d` | 89 | 476 |
+| `Ev_Update_Global x g bot old new` | `update: side to g from x new: new` (unless old is ⊥) | 102 | 498 (`solside`) |
+| `Ev_Destabilize y` | `destab: destabilize y` | 57 | 551 |
+| `Ev_Stable_Remove x` | `destab: stable remove x` | 61 | 555 |
+| `Ev_Stop` | no line | `stop_event`, not a trace | none |
+| `Ev_Rhs x d` | `rhs: x = d` | Voblint only | Voblint only |
+| `Ev_Route (u, c) d c'` | `route: call at (u, c): entry d -> context c'` | Voblint only | Voblint only |
+
+Differences, each deliberate or forced by the vendored solver:
+
+- Indentation. `td_simplified.ml` traces with plain `trace`, which never
+  indents. Voblint indents as if entering a query were a `tracei` and its answer
+  a `traceu`: the entering line is printed, then the level grows by two; the
+  answer is printed at the inner level, then it shrinks. The level is the
+  solver's query depth. As in Goblint, an unselected subsystem prints nothing and
+  changes no indentation.
+- Unknowns print as `(node, context)`, Goblint's `dbg.trace.context` form,
+  without the `on <location>` suffix. A global prints as `Global` or
+  `Seed(procedure, context)`.
+- `update` prints `old -> new` where Goblint prints `pretty_diff`.
+- A query of a global unknown prints no `stable`/`called` flags: the vendored
+  solver keeps neither set for globals. `side` and the global `update` print no
+  `wpx`: globals are merged by the chosen update rule and never become widening
+  points.
+- The vendored solver repeats a right-hand side whose unknown lost stability
+  inside the evaluation (`R`) before comparing values, so `iterate still
+  unstable` is followed by a new `eq`, not by a new `begin iterate`. An
+  iteration entered for a stable unknown also clears its widening point, which
+  `td_simplified.ml` does not; no line reports it.
+- `--trace-sys` stands for Goblint's repeatable `--trace SYS`, which needs a
+  Goblint built in the `trace` profile; `--tracevars` and `--tracelocs` have no
+  counterpart.
+
+Goblint traces with no counterpart here: `init` (the vendored solver's value map
+is total, ⊥ by default), `side widen` and `side adding wpoint` (no widening
+points for globals), and the `td3.ml`-only steps of features the vendored solver
+does not have: widening gas (`widengas`), the narrowing phase (`solve switching
+to narrow`, `eq reused`), widening-point restarts (`wpoint restart`), the side
+and incremental destabilizations (`destabilize_vs`, `destabilize_with_side`,
+`destabilize_leaf`, `Restarting to bot`), weak dependencies (`demand weak
+dep`), the local cache (`cache`), start values (`set_start`), `stable add`,
+the postsolver's `restored var`, and `td3UpdateRule.ml`'s divided side effects.
+
+### Compact form, JSON Lines, playground
+
+The compact form and JSON Lines are read off the same events and keep the
+vocabulary they had before the solver reported further steps: `solve`/`resolve`
+is an iteration of an unstable unknown, `query_local`/`value_local` a query and
+its answer, `query_global` a global's answer, `answer` the `rhs` value, and so
+on; destabilization, `eq`, `sol` and widening-point events appear only in the
+verbose form.
 
 `tests/solver-trace/` holds the whole compact, verbose and JSON Lines traces of
 the command above; `pixi run solver-trace-check` compares them, and
@@ -169,12 +253,11 @@ the shown run again in `"jsonl"` mode. Share links carry the form as
 browser module outlives a run, so the adapter sets the hook's switch on every
 call and `Solver_trace_hook.recorded` empties the event list it hands over.
 The page's **Solve replay** section, when opened, solves the shown run again in
-`"jsonl"` mode, and in `"verbose"` mode unless the run already showed that
-text, then steps through the events on its own drawing of the graph
+`"jsonl"` mode and steps through the events on its own drawing of the graph
 (`pages/replay.js`). It rebuilds each step's values, call stack, stable set and
 destabilized readers from the events, following the solver's `destab_opt`
-through the influence sets the queries record. Like the trace, it shows the
-patched build and is outside the proof.
+through the influence sets the queries record, and writes each step's line
+from the event itself.
 `pixi run browser-trace-check` runs the wasm build under Node and compares
 each form's trace of the command above with its file in `tests/solver-trace/`,
 whose program name it swaps for `browser.vimp`.

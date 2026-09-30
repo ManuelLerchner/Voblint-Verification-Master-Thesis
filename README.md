@@ -85,13 +85,16 @@ a report.
 
 `--trace` also writes the solver's steps to stderr: per call, the context it is
 routed to, what the callee's entry reads from its seed, and which publications
-restart the caller. `--verbose` lists every step, `--format jsonl` emits JSON
-Lines and `--output FILE` writes to a file; standard output stays the same.
-The playground's **Solver trace** setting shows the compact or the full
-(`--verbose`) trace above the graph, with downloads of the whole text and of
-its JSON Lines form. The recording hooks are patched into the generated OCaml
-at build time, and every build runs the patched copy; the patch is outside the
-proof ([`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md#solver-trace---trace)).
+restart the caller. `--verbose` lists every step in the form of Goblint's
+solver trace (`%%% iter: begin iterate ...`), `--trace-sys iter,side` selects
+subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
+file; standard output stays the same. The playground's **Solver trace** setting
+shows the compact or the full (`--verbose`) trace above the graph, with
+downloads of the whole text and of its JSON Lines form. Tracing is part of the
+exported code: the trace calls come from code equations proved equal to the
+untraced ones, and the only added trusted piece is the `code_printing` mapping
+of `trace_event` to the OCaml hook
+([`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md#solver-trace---trace)).
 
 ```bash
 pixi run voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
@@ -100,7 +103,7 @@ pixi run voblint --analysis interval --context entry-state --trace docs/readme-f
 The playground's **Solve replay** section steps through the same solve on the
 graph: the value each unknown holds, the unknowns being solved, the stable
 ones, and the edge each query follows backward from the exit. It replays the
-traces of the patched build, so it shares the trace's trust boundary.
+run's JSON Lines trace; the replay itself is outside the proof.
 `node scripts/capture_readme_figures.mjs solve-replay` regenerates the
 animation below from the playground.
 
