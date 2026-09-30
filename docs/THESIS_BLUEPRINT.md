@@ -1137,8 +1137,6 @@ section of Related Work, and the part pages stay.
 
 **Unlabelled questions (2026-09-23, author decision).** The RQ1-RQ4 and K1-K4 labels are dropped. Section 1.2 states the four questions as prose bullets, Section 1.4 lists the contributions as short bullets pointing to their chapters, and the prior-work comparison per contribution lives only in Section 13.6 (`sec:where-voblint-sits`). Chapter 12 keeps one section per question, titled by the question itself, and Chapter 14 answers each under its question.
 
-**Unlabelled questions (2026-09-23, author decision).** The RQ1-RQ4 and K1-K4 labels are dropped. Section 1.2 states the four questions as prose bullets, Section 1.4 lists the contributions as short bullets pointing to their chapters, and the prior-work comparison per contribution lives only in Section 13.6 (`sec:where-voblint-sits`). Chapter 12 keeps one section per question, titled by the question itself, and Chapter 14 answers each under its question.
-
 **Research-question pass (2026-09-22, author decision).** Chapter 12 is organized by research question (RQ1-RQ4; for each, its evidence, the evidence kind, and its limits) and closes with one added section, "What the mechanization revealed" (`sec:revealed`), which the author approved as an exception to the frozen structure: seven design constraints exposed by the proofs, each with its evidence kind and a pointer to the chapter that states it. Chapter 1 states RQ1-RQ4 and contributions K1-K4; each core chapter opens with its problem and closes with its result.
 
 ```text

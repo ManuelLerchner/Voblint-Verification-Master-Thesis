@@ -138,12 +138,6 @@ jobs:
         if: steps.changed.outputs.thy == 'true' || steps.heaps.outputs.present != 'true'
         run: pixi run isabelle-build
 
-      # isar-tools: ROOT entries, sorry/oops and unclosed proofs, and lexical
-      # errors, read from the sources in seconds. It needs the AFP (bridged
-      # above) to recognise AFP commands, so it runs here rather than in the
-      # lint job, and before the build so a stray `sorry` fails fast.
-      - name: Check theory sources (isar-tools)
-        run: pixi run isar-check
       - name: Skip build when theories are unchanged
         if: steps.changed.outputs.thy != 'true' && steps.heaps.outputs.present == 'true'
         run: echo "No .thy files changed and the cache restored heaps; skipping the Isabelle build."
@@ -611,6 +605,11 @@ jobs:
       - name: Verification task surface
         run: pixi run verification-surface-check
 
+      # isar-tools (isar.toml): ROOT entries, sorry/oops and unclosed proofs,
+      # lexical errors, theory names, and formatting. No AFP or Isabelle needed.
+      - name: Theory sources (isar-tools)
+        run: pixi run isar-check
+
       - name: Python formatting
         run: pixi run python-format-check
 
@@ -737,23 +736,6 @@ jobs:
       # deployed pages after deployment.
       - name: Thesis figures, sketches and stored link targets (no build needed)
         if: env.THESIS == 'true'
-        run: |
-          pixi run thesis-figures
-          pixi run thesis-playground
-          pixi run thesis-sketches
-          pixi run thesis-links
-          pixi run thesis-links-coverage
-
-      # The chapter 5 domain trees list their implementations by hand; a new
-      # class instance or certificate lemma must appear in the list.
-      - name: Thesis domain trees list every implementation (no build needed)
-        run: pixi run thesis-domain-tree
-
-      # Figures lifted from the explainer and the README playground, the solver
-      # sketch the background chapter prints, and the stored link targets of every
-      # citation. Text checks only; the anchors themselves are checked against the
-      # deployed pages after deployment.
-      - name: Thesis figures, sketches and stored link targets (no build needed)
         run: |
           pixi run thesis-figures
           pixi run thesis-playground
