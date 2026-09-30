@@ -64,10 +64,10 @@
 
 // ================================================ D/G specification fields ===
 // The mixfix syntax of the dg_spec record fields and of routed_context's route.
-#let enterh = $italic("enter")^\#$
-#let combineenvh = $italic("combine_env")^\#$
-#let combineassignh = $italic("combine_assign")^\#$
-#let ctxh = $italic("context")^\#$
+#let enterh = sh("enter")
+#let combineenvh = sh("combine_env")
+#let combineassignh = sh("combine_assign")
+#let ctxh = sh("context")
 
 // =============================================================== domains ====
 // Sign values are constructors printed as +, ≥0, ...; the chip keeps them

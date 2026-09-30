@@ -4,7 +4,7 @@
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge
-#import "../lib/claims.typ": claim-snapshot, snapshot-cluster-of, snapshot-verdict
+#import "../lib/claims.typ": claim-snapshot, claim-trace, snapshot-cluster-of, snapshot-verdict
 #import "../lib/sources.typ": proved, thy
 
 // A verdict or state of a registered CLI claim (shared/claims.toml), read from
@@ -43,16 +43,17 @@ The goal is a solution $sol$ that over-approximates the buckets of
 $
   #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
-where $conc_(M)$ reads a solved local unknown together with the solved
-analysis global: it gives the stores that the local half of $sol(v, c)$
-describes jointly with the global half of the analysis global's unknown
-(@sec:global-unknowns), and the empty set for unknowns outside the solved set.
-The main result (#isathm("activation_collect_dg_sound"), @sec:eq-discharge) shows that every post-solution
-of the equations meets this goal, for every domain and context policy,
-provided the analysis is sound and the policy routes every concrete call to
-a context that the concrete semantics also admits for it (@sec:eq-routing). Whether a solve terminates is a separate premise
-(@sec:termination). The
-running example is the program of @fig:program-to-equations, repeated in
+where $conc_(M)$ is the concretization $conc_(D G)(d, g)$ of @sec:sound-core applied to
+the local half $d$ of $sol(v, c)$ and the global half $g$ of the analysis
+global's unknown (@sec:global-unknowns), and the empty set for unknowns
+outside the solved set. The main result (#isathm("activation_collect_dg_sound"),
+@sec:eq-discharge) shows that every post-solution of the equations meets this
+goal, for every domain and context policy, provided the analysis is sound and
+routing agrees with the concrete semantics: every callee context the concrete
+semantics admits for a covered call is one the equations route that call to,
+and every covered call is admitted in some context (@sec:eq-routing). Whether
+a solve terminates is a separate premise (@sec:termination). The running
+example is the program of @fig:program-to-equations, repeated in
 @fig:eq-running with the names this chapter gives its calls.
 
 #figure(
@@ -109,12 +110,14 @@ running example is the program of @fig:program-to-equations, repeated in
         pt((0, 3), raw("pp4"), ""),
         pt((0, 4), [], "pp5"),
         pt((0, 5), [], "pp6"),
+        entry-node((0, 6), text(size: 7pt, raw("exit_main"))),
         entry-node((1.7, 0.6), text(size: 7pt, raw("entry_bump"))),
         pt((1.7, 1.8), [], "pp0"),
         entry-node((1.7, 3), text(size: 7pt, raw("exit_bump"))),
         intra-edge((0, 0), (0, 1)),
         intra-edge((0, 3), (0, 4), label: [check(a == 6)], label-side: left),
         intra-edge((0, 4), (0, 5), label: [check(b == 5)], label-side: left),
+        intra-edge((0, 5), (0, 6), label: [return], label-side: left),
         intra-edge((1.7, 0.6), (1.7, 1.8)),
         intra-edge((1.7, 1.8), (1.7, 3), label: [return n + 1], label-side: left),
         call-edge((0, 1), (1.7, 0.6), label: [bump(5)], label-side: left, label-pos: 0.4),
@@ -135,7 +138,9 @@ running example is the program of @fig:program-to-equations, repeated in
     depends on its contexts (@sec:eq-unknowns, @sec:eq-example). Blue dashed arrows
     are call edges, dotted ones connect a call with its continuation. Purple
     dashed arrows are the result reads: a call is not a pair of edges, and each
-    continuation reads the exit of `bump` in its own equation.],
+    continuation reads the exit of `bump` in its own equation. The entry and
+    exit of a procedure $p$ are the nodes $ctor("FunctionEntry") thin p$ and
+    $ctor("FunctionResult") thin p$, printed #raw("entry_p") and #raw("exit_p").],
 ) <fig:eq-running>
 
 == Context-indexed unknowns <sec:eq-unknowns>
@@ -205,14 +210,14 @@ reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
   scale(80%, reflow: true, diagram(
     spacing: (18mm, 8mm),
     _seed((0, 0), $italic("Seed")(#_b, c_1)$),
-    _loc((0, 1), $(ctor("FunctionEntry") thin #_b, c_1)$),
-    _loc((0, 2), $(ctor("FunctionResult") thin #_b, c_1)$),
+    _loc((0, 1), $(italic("entry")_"bump", c_1)$),
+    _loc((0, 2), $(italic("exit")_"bump", c_1)$),
     _loc((1.3, 0), $(italic("pp2"), c_0)$),
     _loc((1.3, 2), $(italic("pp3"), c_0)$),
     _loc((1.3, 5), $(italic("pp4"), c_0)$),
     _seed((2.6, 3), $italic("Seed")(#_b, c_2)$),
-    _loc((2.6, 4), $(ctor("FunctionEntry") thin #_b, c_2)$),
-    _loc((2.6, 5), $(ctor("FunctionResult") thin #_b, c_2)$),
+    _loc((2.6, 4), $(italic("entry")_"bump", c_2)$),
+    _loc((2.6, 5), $(italic("exit")_"bump", c_2)$),
     _read((1.3, 0), (1.3, 2), [caller]),
     _read((1.3, 2), (1.3, 5), [caller], side: right),
     _read((0, 0), (0, 1), [seed read], side: right),
@@ -225,7 +230,9 @@ reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
     _pub((1.3, 5), (2.6, 3), $n = 4$),
   )),
   caption: [Unknowns of the running example when the two calls reach
-    different contexts $c_1 != c_2$ (`main` runs in $c_0$). A solid arrow: the
+    different contexts $c_1 != c_2$ (`main` runs in $c_0$). Rounded purple
+    nodes are seeds, the global unknowns through which a call hands its entry
+    value to the callee (@sec:eq-call). A solid arrow: the
     right-hand side at its head reads the unknown at its tail. A dashed arrow:
     the right-hand side at its tail publishes to the global unknown at its head.
     Under the unit context the two copies coincide and one seed receives both
@@ -243,38 +250,59 @@ $
   lJoin_(u in italic("calls")(v)) italic("call")_u (c) union.sq
   italic("seed")(v, c):
 $
-the initial state if $v$ is the program entry, the transfer along each
-incoming local edge, the contribution $italic("call")_u (c)$ of each call node
-$u$ whose continuation is $v$ (the set $italic("calls")(v)$), and the seed if
-$v$ is a callee entry. A transfer that uses analysis globals also
-reads and publishes them (@sec:manager).
+the initial abstract state $d_0$ of the analysis (@sec:sound-core) if $v$ is
+the program entry, the transfer along each incoming local edge, the
+contribution $italic("call")_u (c)$ of each call node $u$ whose continuation
+is $v$ (the set $italic("calls")(v)$), and the seed if $v$ is a callee entry.
+A transfer that uses analysis globals also reads and publishes them
+(@sec:manager).
 
 Local edges keep the context. An activation keeps its context from entry to
 return (@sec:contexts), so a local edge never changes it, and #oblig("INTRA")
 follows from edge-transfer soundness before any context
 policy is chosen.
 
+Calls are where contexts change, and the callee context depends on a value.
+The context policy supplies a function $ctxh$ that maps the call node $u$, the
+caller context $c$ and the abstract entry value $e$ to the callee context
+$c' = ctxh(u, c, e)$. Since $e$ is computed from the caller's value, the
+equations cannot wire callers to callee entries in advance, and the entry
+unknown $(ctor("FunctionEntry") thin p, c')$ cannot list its contributors:
+which call sites route to $c'$ is known only once their callers are solved.
+Side-effecting systems reverse the direction: each caller contributes to the
+callee's entry while it evaluates its own equation (@ch:background). Voblint
+adds one global unknown per callee entry and context, the _seed_
+$italic("Seed")(p, c')$, which receives these contributions
+(@sec:eq-seed-global explains why they do not target the entry directly). Every call routed to $(p, c')$ publishes its entry
+value to the seed, and the entry reads the seed back, so the seed collects
+every entry value routed to $(p, c')$.
+
 A call follows the protocol of @sec:calls (@fig:eq-protocol). Its contribution
 reads the caller's value at $(u, c)$ and applies the entry operation, which
-yields the resume value $q$ and the entry value $e$. The entry value selects
-the callee context $c' = ctxh(u, c, e)$. The call publishes $e$ to the callee's
-entry in $c'$, reads the callee's result $r$ directly from its exit unknown
+yields a list of entry pairs, each a resume value $q$ and an entry value $e$.
+Each pair is routed separately, so we follow one. The call computes
+$c' = ctxh(u, c, e)$, publishes $e$ to $italic("Seed")(p, c')$, reads the
+callee's result $r$ directly from its exit unknown
 $(ctor("FunctionResult") thin p, c')$ in the context it just computed, and
-returns the combined value to $(k, c)$. The caller treats the callee as a black
-box: its equation touches only the callee's entry and result, never the body.
-The body's unknowns have their own equations, and the solver evaluates them
-when the caller first reads the result. In @fig:eq-unknowns the continuation
-$(italic("pp3"), c_0)$ reads $(italic("pp2"), c_0)$, computes $c_1$ from the entry value $n = 5$,
-publishes that value to the seed of `bump` in $c_1$, and reads
-$(ctor("FunctionResult") thin #_b, c_1)$.
+returns the combined value to $(k, c)$. The caller treats the callee as a
+black box: its equation touches only the callee's seed and result, never the
+body. The body's unknowns have their own equations, and the solver evaluates
+them when the caller first reads the result. Since a call never enters the
+callee's body, recursion needs no special case. In @fig:eq-unknowns the
+continuation $(italic("pp3"), c_0)$ reads $(italic("pp2"), c_0)$, computes
+$c_1$ from the entry value $n = 5$, publishes that value to the seed of `bump`
+in $c_1$, and reads $(italic("exit")_"bump", c_1)$.
 
 When the entry value is bottom, no store enters the callee. The call then
 publishes nothing, reads no result, and combines $q$ with a bottom callee
-result. Apinis et al. add the same test so that procedures which are not called
-are not analyzed @apinis12[§7], and Goblint's
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244")[call handling] applies it
-as well. The test needs one assumption of the routed locale: a value it
-classifies as bottom concretizes to the empty set.
+result. Apinis et al. use a similar test so that procedures which are not
+called are not analyzed, but their call constraint then contributes bottom
+without combining @apinis12[§7]. Goblint's
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244",
+)[call handling]
+applies the test as Voblint does. It needs one assumption of the routed
+locale: a value the test classifies as bottom concretizes to the empty set.
 
 #let _step(pos, body) = node(
   pos,
@@ -323,28 +351,6 @@ classifies as bottom concretizes to the empty set.
     equations.],
 ) <fig:eq-protocol>
 
-
-== Dynamic call routing <sec:eq-seed>
-
-Which unknown a call reads last depends on the value it read first: the callee
-context $c'$ is computed from the entry value. The equations therefore cannot
-wire callers to callee entries in advance. For the same reason the entry
-unknown $(ctor("FunctionEntry") thin p, c')$ cannot list its contributors,
-because which call sites route to $c'$ is known only once their callers are
-solved. Side-effecting systems reverse the direction: each caller contributes
-to the callee's entry while it evaluates its own equation (@ch:background).
-
-Voblint adds one _seed_ $italic("Seed")(p, c')$ per callee entry and context.
-Every call routed to $(p, c')$ publishes its entry value $e$ to the seed, and
-the entry reads the seed back, so a post-solution satisfies
-$
-  e lle sol(italic("Seed")(p, c')) quad "and" quad
-  sol(italic("Seed")(p, c')) lle sol(ctor("FunctionEntry") thin p, c')
-$
-(#isathm("routed_seed_publish_bound_seed"), #isathm("routed_seed_read_bound")).
-The seed thus collects every entry value routed to $(p, c')$. Since a call
-never enters the callee's body, recursion needs no special case.
-
 == Relating routing to concrete activations <sec:eq-routing>
 
 The equations route each call to a callee context. Soundness requires this
@@ -354,29 +360,32 @@ The concrete side is the relation $R$ of @sec:contexts. It is the context
 policy's rule for concrete calls: given the call site $u$, the caller's
 context $c$, the caller's store $s$ and the entered store $s'$, it says which
 callee contexts $c'$ the new activation gets. We write "$R$ admits $c'$" when
-$R(u, c, s, s', c')$ holds. The trace semantics applies $R$ at every call, and
+$R(u, c, s, s', c')$ holds. The Isabelle relation also receives the call's
+static description (#isatype("call_info")), which we leave implicit. The trace semantics applies $R$ at every call, and
 the stores of the activation belong to the bucket of each admitted $c'$. Under
 call strings of length one, for instance, $R$ admits exactly $[italic("pp2")]$ for the
 call `bump(5)` from `main`. The analyzer never sees $s'$. It computes an abstract entry value $e$,
-chooses a context from $e$, and publishes $e$ to the callee's entry unknown for
-that context. The two must meet:
+chooses a context from $e$, and publishes $e$ to the callee's seed for that
+context. The two must meet:
 $
   R "admits" c' quad ==> quad e "is routed to" c'.
 $
 With the soundness of the entry transfer, every concrete entered store in the
-bucket of $c'$ is then covered by the value published to the entry unknown at
-$c'$. Two properties make this precise.
+bucket of $c'$ is then covered by the value published for $c'$. Two properties
+make this precise.
 
-- _Totality_: $R$ admits at least one context for every concrete call, so no
-  activation is missing from the context-indexed collecting semantics.
+- _Totality_: $R$ admits at least one context for every concrete call from a
+  store that the caller's solved value covers, so no such activation is
+  missing from the context-indexed collecting semantics.
 - _Adequacy_: whenever $R$ admits $c'$ for a concrete call from a store that
   the caller's value covers, the caller's entry pair $(q, e)$ covers that store
   and the entered one (@sec:calls), $e$ routes to $c'$, and the entry unknown
   at $c'$ is among the solved unknowns.
 
 Both are assumptions of the routed soundness theorem (@sec:eq-discharge),
-proved once for each context policy. Adequacy gives #oblig("CALL"), and
-totality gives #oblig("TOTAL") of @sec:contract.
+proved once for each context policy. Adequacy gives #oblig("CALL") and
+#oblig("RETURN"), since the return reads the callee's result at the same
+$c'$, and totality gives #oblig("TOTAL") of @sec:contract.
 
 #figure(
   {
@@ -419,8 +428,8 @@ Unit and call-string contexts are determined by the call site and the caller
 context, so the concrete call alone fixes its context. Entry-state contexts are
 different: the context is part of the abstract analysis result.
 
-Recall from @sec:calls that entry turns the caller's value into a pair
-$(q, e)$: the resume value $q$ and the entry value $e$, an abstract state of
+Recall from @sec:calls that entry turns the caller's value into entry pairs
+$(q, e)$: a resume value $q$ and an entry value $e$, an abstract state of
 the callee. The entry-state policy takes as context the abstract values that
 $e$ gives the callee's formal parameters, written $e|_"formals"$. For
 `bump(n)` with $e = {n |-> [4, 5]}$, the context is $e|_"formals" = [[4, 5]]$,
@@ -461,11 +470,10 @@ Totality follows from entry coverage (@sec:calls): every concrete call covered
 by the caller's value has a covering entry pair and therefore an admitted
 context.
 
-The consequence is that $R$ depends on the solved analysis, and so do the
-buckets: whether a concrete call belongs to the context $[[4, 5]]$ is decided
-by the entry value computed from the caller's solved value. This is not
-circular. The proof first fixes a post-solution $sol$, then defines $R$ from
-$sol$, and finally proves that $sol(v, c)$ covers the bucket this $R$ induces.
+So $R$ depends on the solved analysis, as @sec:contexts anticipated, and so do
+the buckets. This is not circular: the proof first fixes a post-solution
+$sol$, then defines $R$ from $sol$, and finally proves that $sol(v, c)$ covers
+the bucket this $R$ induces.
 
 The dependence is necessary for entry-state contexts. Taking the context
 directly from the concrete entered store gives $[[4, 4]]$ in the example,
@@ -474,12 +482,9 @@ whose concretization contains the entered store does not help: it also admits
 $[[4, 4]]$ and $[[top]]$. Adequacy would then demand coverage at unknowns the
 equations never fill.
 
-The dependence disappears in the source-level result. By totality, the union of
-the buckets at a node is exactly the context-free collecting semantics there
-(#isathm("ltr_collect_eq_Union_activation_collect")). The source-level theorem
-of @ch:results uses only this union, so it does not depend on how concrete
-calls were split into contexts: every reachable store is covered in some
-context.
+The dependence disappears in the source-level result, which uses only the
+union of the buckets at a node. By totality this union is the context-free
+collecting semantics (@sec:consequences), whatever the split into contexts.
 
 The policy still affects precision, because it decides which calls share an
 unknown (@fig:eq-policies). A call string of length one separates the two
@@ -571,8 +576,9 @@ between call-string lengths one and two.
   },
   kind: image,
   placement: none,
-  caption: [Procedure copies under four context policies for the playground's
-    default program (@fig:pg-overview): `scale(v)` returns `2 * v`, `wrap(w)`
+  caption: [Procedure copies under four context policies. The running example
+    has no nested call, so this figure uses the playground's default program
+    (@fig:pg-overview): `scale(v)` returns `2 * v`, `wrap(w)`
     returns `scale(w)` from #_site("scale(w)"), and `main` calls `a = wrap(1)`
     at #_site("wrap(1)") and `b = wrap(4)` at #_site("wrap(4)"), then checks
     `a == 2`. Boxes are procedure copies labelled with their contexts as the
@@ -591,7 +597,8 @@ soundness contract and the routing properties of @sec:eq-routing.
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
   Let $sol$ be a post-solution of the generated equations. Suppose the solved
   set contains the program entry in the initial context and is closed under
-  local edges and call continuations, the initial abstract state covers the
+  local edges out of unknowns whose value describes some store and under call
+  continuations, the initial abstract state covers the
   initial stores, the analysis satisfies #isalocale("analysis_contract"), the
   callee list at each call site contains every callee a covered call can
   enter, and routing is adequate and total. Then for every node $v$ and
@@ -602,8 +609,8 @@ soundness contract and the routing properties of @sec:eq-routing.
 ]
 
 The solved value at $(v, c)$ thus covers every concrete store that reaches $v$
-in context $c$. Since $conc_(M)$ is empty outside the solved set, no concrete
-activation reaches an unknown outside it either. @tab:eq-obligations shows how
+in context $c$. In particular, no concrete activation reaches an unknown
+outside the solved set. @tab:eq-obligations shows how
 the proof meets each obligation of @ch:traces.
 
 The proof reads the obligations off the equations. A post-solution satisfies
@@ -611,7 +618,7 @@ $italic("rhs")(v, c) lle sol(v, c)$ at every solved unknown and bounds every
 publication. Unfolding the right-hand side of @sec:eq-call gives one inequality
 per term. Write $v_0$ for the program entry and $c_0$ for the initial context. For a
 local edge $u ->^a v$, and for a call at $u$ in context $c$ to $p$ with entry
-pair $(q, e) = italic("enter")^sharp (sol(u, c))$, routed context
+pair $(q, e) = enterh (sol(u, c))$, routed context
 $c' = ctxh(u, c, e)$ and continuation $k$, a post-solution satisfies
 #[
   #show math.equation: set block(breakable: true)
@@ -620,7 +627,7 @@ $c' = ctxh(u, c, e)$ and continuation $k$, a post-solution satisfies
     sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide (2) \
     sol(italic("Seed")(p, c')) & gt.eq e & wide (3) \
     sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(italic("Seed")(p, c')) & wide (4) \
-    sol(k, c) & gt.eq italic("combine")^sharp (q, sol(ctor("FunctionResult") thin p, c')) & wide (5) \
+    sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide (5) \
     forall s in conc_(M)(sol(u, c)). & med exists c'. med R(u, c, s, s', c') & wide (6)
   $
 ]
@@ -643,7 +650,9 @@ concretization of its left side.
     [#oblig("INIT")], [(1)], [$d_0$ covers the initial stores],
     [#oblig("INTRA")], [(2)], [the edge transfer is sound (the contract's #oblig("INTRA"))],
     [#oblig("CALL")], [(3), (4)], [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
-    [#oblig("RETURN")], [(5)], [the return stages are sound (the contract's #oblig("RETURN"))],
+    [#oblig("RETURN")],
+    [(5)],
+    [the return stages are sound (the contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
     [#oblig("TOTAL")], [(6)], [none beyond the premise itself],
     table.hline(),
   ),
@@ -651,7 +660,7 @@ concretization of its left side.
   caption: [How #isathm("activation_collect_dg_sound") discharges the five
     obligations of @ch:traces: the inequality of the displayed system each
     one uses, and the soundness fact that turns it into coverage. Here
-    $italic("combine")^sharp$ stands for the two return stages of
+    $sh("combine")$ stands for the two return stages of
     @sec:calls.],
 ) <tab:eq-obligations>
 
@@ -703,7 +712,7 @@ Most right-hand sides read a fixed set of unknowns: a local edge reads its
 predecessor. A call does not. In the running example the continuation
 $(italic("pp3"), c_0)$ first reads the caller $(italic("pp2"), c_0)$. Only from that value does it
 learn the entry value $n = 5$ and with it the context $c_1$, and only then
-does it know which result to read, $(ctor("FunctionResult") thin #_b, c_1)$.
+does it know which result to read, $(italic("exit")_"bump", c_1)$.
 The second unknown depends on the value of the first, so the equation cannot
 be handed to the solver as a function of a fixed list of arguments.
 
@@ -712,16 +721,15 @@ value, and decides from it what to do next. A call becomes the tree
 $
   & #ctor("QueryL") (u, c) --> #ctor("Side") (italic("Seed")(p, c'), e) \
   & --> #ctor("QueryL") (ctor("FunctionResult") thin p, c')
-    --> #ctor("Answer") (italic("combine")^sharp (q, r)),
+    --> #ctor("Answer") (sh("combine") (q, r)),
 $
 where each arrow hands the value just read to the rest of the tree:
-$(q, e) = italic("enter")^sharp$ of the caller's value, $c' = ctxh(u, c, e)$,
+$(q, e) = enterh$ of the caller's value, $c' = ctxh(u, c, e)$,
 and $r$ is the value of the second query. These are lines (3) and (5) of
 @sec:eq-discharge in an order the solver can execute
 (#isaconst("routed_callee_call_program"), plus the bottom test of
-@sec:eq-call). The analyzer runs the buffered form of this tree
-(@sec:eq-buffer), which moves the #ctor("Side") behind the result query, so a
-newly routed callee is first queried with an empty seed (@sec:eq-example).
+@sec:eq-call). The analyzer runs a buffered form of this tree
+(@sec:eq-buffer).
 
 === Publishing to local entries through activation seeds <sec:eq-seed-global>
 
@@ -734,18 +742,15 @@ local unknown, though, and the vendored solver's #ctor("Side") accepts only
 global unknowns. Allowing local targets would mean changing the solver and
 redoing its correctness proof.
 
-Voblint therefore passes the value through a mailbox. For each callee entry
-and context there is a global unknown $italic("Seed")(p, c')$, the activation
-seed. The call publishes $e$ to the seed with #ctor("Side"), and the entry
-equation of $(ctor("FunctionEntry") thin p, c')$ reads the seed with
-#ctor("QueryG"). In the running example `bump(5)` publishes ${n |-> 5}$ to
-$italic("Seed")(#_b, c_1)$, and $(ctor("FunctionEntry") thin #_b, c_1)$ reads it
-back (@fig:eq-unknowns). Publishing alone does not demand `bump`, since the
-solver solves only unknowns that some tree queries. The result query does:
-solving $(ctor("FunctionResult") thin #_b, c_1)$ reaches the entry, which
-queries its seed. In the buffered analyzer this first query sees the old seed
-value. The publication is flushed afterwards and, since it grows the seed,
-destabilizes the entry for another evaluation (@sec:eq-buffer).
+The seeds of @sec:eq-call are Voblint's way around this restriction. A seed
+$italic("Seed")(p, c')$ is a global unknown and acts as a mailbox: the call
+publishes $e$ to it with #ctor("Side"), and the entry equation of
+$(ctor("FunctionEntry") thin p, c')$ reads it with #ctor("QueryG"). In the
+running example `bump(5)` publishes ${n |-> 5}$ to $italic("Seed")(#_b, c_1)$,
+and $(italic("entry")_"bump", c_1)$ reads it back (@fig:eq-unknowns).
+Publishing alone does not demand `bump`, since the solver solves only unknowns
+that some tree queries. The result query does: solving
+$(italic("exit")_"bump", c_1)$ reaches the entry, which queries its seed.
 
 Because seeds are global unknowns, they inherit the update rule for globals:
 without contexts, warrowing widens the one seed of `bump` to the lower bound
@@ -797,32 +802,37 @@ lattice structure keeps the Isabelle proofs simple.
 
 === Buffering repeated publications <sec:eq-buffer>
 
-A node all of whose incoming edges publish the analysis global writes the same
-global unknown $kappa$ twice (@sec:mixed-flow). Declaratively the two writes
-mean one bound:
+One right-hand side can publish to the same seed twice. The generator already
+folds the node's own publications to the analysis global into one, but two
+call edges that resume at the same node are separate contributions, and when
+both are routed to the same callee context they write the same seed
+$italic("Seed")(p, c')$. Declaratively the two writes mean one bound:
 $
-  #ctor("Side") (kappa, a); #ctor("Side") (kappa, b)
+  #ctor("Side") (italic("Seed")(p, c'), a); #ctor("Side") (italic("Seed")(p, c'), b)
   quad "means" quad
-  sol(kappa) gt.eq a union.sq b.
+  sol(italic("Seed")(p, c')) gt.eq a union.sq b.
 $
-The solver's per-origin update rules keep one record per publishing equation
-(@sec:update-rules), so the second write updates the record of the first, and
-under warrowing repeated evaluations may alternate between the two recorded
-contributions instead of converging.
-#isaconst("buffer_sides") restores the declarative meaning: it collects the
-publications of one right-hand side, joins those to the same target, and
-issues one $#ctor("Side") (kappa, a union.sq b)$ when the right-hand side has
-answered. This also delays every publication behind the queries of its
-equation. In the running example a new callee context is therefore first
-read with an empty seed, and the flush destabilizes it for a second pass
-(@sec:eq-example). Goblint's per-origin update rule does
-the same join inside the solver
+The vendored solver joins the publications of one evaluation, but it applies
+the update rule at every #ctor("Side"), first to $a$ and then to
+$a union.sq b$. The per-origin rules of @sec:update-rules keep one
+contribution per publishing unknown, so in every re-evaluation the recorded
+contribution first shrinks to $a$ and then grows back to $a union.sq b$. Under
+warrowing the shrinking step narrows and the growing step widens again, and
+the solve need not stabilize. #isaconst("buffer_sides") gives the update rule
+only complete joins: it collects the publications of one right-hand side,
+joins those to the same target, and issues one #ctor("Side") per target when
+the right-hand side has answered. As a consequence every publication is
+delayed behind the queries of its equation, so a newly routed callee context
+is first read with an empty seed and the flush destabilizes it for a second
+pass (@sec:eq-example). Goblint's narrowing rule for globals, which also keeps
+one contribution per origin, joins the side effects of an evaluation before
+updating
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L116")[`td3UpdateRule.ml`]).
-The analyzer runs the buffered generator, and #isathm("part_post_solution_routed_node_rhs_buffered")
-transfers the post-solution certificate to the direct one the proof speaks
-about. A verified solver with local side effects and per-evaluation joining,
-as Goblint's solvers provide, would make seeds and buffering unnecessary
-(@sec:outlook-extending).
+The analyzer runs the buffered generator, and
+#isathm("part_post_solution_routed_node_rhs_buffered") transfers the
+post-solution certificate to the direct generator the proof speaks about.
+@sec:outlook-extending discusses a solver extension that would make seeds and
+buffering unnecessary.
 
 == The running example, solved <sec:eq-example>
 
@@ -833,8 +843,8 @@ unknown. The solver does not enumerate them. Which context-indexed unknowns it
 demands depends on values it computes: $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$
 become known only after the caller values at `pp2` and `pp3` have been read. We
 therefore write out the finite fragment this run reaches. The calls have the
-entry pairs $(q_1, e_1) = italic("enter")^sharp (sol(italic("pp2"), c_0))$ with
-$e_1 = {n |-> [5, 5]}$ and $(q_2, e_2) = italic("enter")^sharp (sol(italic("pp3"), c_0))$
+entry pairs $(q_1, e_1) = enterh (sol(italic("pp2"), c_0))$ with
+$e_1 = {n |-> [5, 5]}$ and $(q_2, e_2) = enterh (sol(italic("pp3"), c_0))$
 with $e_2 = {n |-> [4, 4]}$. With $c_0$ the initial context, every post-solution
 satisfies
 #[
@@ -844,15 +854,15 @@ satisfies
     sol(italic("entry")_"main", c_0) & gt.eq d_0 union.sq sol(italic("Seed")(italic("main"), c_0)) & quad & "initial state and seed" \
     sol(italic("pp2"), c_0) & gt.eq sh(f)_("body(main)") (sol(italic("entry")_"main", c_0)) & & "local edge" \
     sol(italic("Seed")(#_b, c_1)) & gt.eq e_1 & & "call 1 publishes" \
-    sol(ctor("FunctionEntry") thin #_b, c_1) & gt.eq sol(italic("Seed")(#_b, c_1)) & & "entry reads its seed" \
-    sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin #_b, c_1)) & & "local edge" \
-    sol(ctor("FunctionResult") thin #_b, c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
-    sol(italic("pp3"), c_0) & gt.eq italic("combine")^sharp (q_1, sol(ctor("FunctionResult") thin #_b, c_1)) & & "call 1 returns" \
+    sol(italic("entry")_"bump", c_1) & gt.eq sol(italic("Seed")(#_b, c_1)) & & "entry reads its seed" \
+    sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_1)) & & "local edge" \
+    sol(italic("exit")_"bump", c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
+    sol(italic("pp3"), c_0) & gt.eq sh("combine") (q_1, sol(italic("exit")_"bump", c_1)) & & "call 1 returns" \
     sol(italic("Seed")(#_b, c_2)) & gt.eq e_2 & & "call 2 publishes" \
-    sol(ctor("FunctionEntry") thin #_b, c_2) & gt.eq sol(italic("Seed")(#_b, c_2)) & & "entry reads its seed" \
-    sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin #_b, c_2)) & & "local edge" \
-    sol(ctor("FunctionResult") thin #_b, c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
-    sol(italic("pp4"), c_0) & gt.eq italic("combine")^sharp (q_2, sol(ctor("FunctionResult") thin #_b, c_2)) & & "call 2 returns" \
+    sol(italic("entry")_"bump", c_2) & gt.eq sol(italic("Seed")(#_b, c_2)) & & "entry reads its seed" \
+    sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_2)) & & "local edge" \
+    sol(italic("exit")_"bump", c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
+    sol(italic("pp4"), c_0) & gt.eq sh("combine") (q_2, sol(italic("exit")_"bump", c_2)) & & "call 2 returns" \
     sol(italic("pp5"), c_0) & gt.eq sh(f)_("check(a == 6)") (sol(italic("pp4"), c_0)) & & "local edge" \
     sol(italic("pp6"), c_0) & gt.eq sh(f)_("check(b == 5)") (sol(italic("pp5"), c_0)) & & "local edge" \
     sol(italic("exit")_"main", c_0) & gt.eq sh(f)_("return") (sol(italic("pp6"), c_0)) & & "local edge"
@@ -865,13 +875,105 @@ and the initial state $d_0$ supplies the value. The bottom test is omitted.
 
 @tab:eq-trace shows how the solver reaches this fragment, condensed into
 phases, and @fig:eq-walk draws the same phases on the unknowns. Both are
-recorded from an instrumented run of the generated solver (Interval, the
-warrowing update rule). Two things stand out. The seed of a new context is read
-before anything is published to it, because the analyzer runs the buffered
-form of the call (@sec:eq-buffer): the publication is flushed only after the
-result query has returned. The first pass through `bump` therefore reads
-$lbot$ and returns $lbot$. The flush then destabilizes the entry, and a second
-pass computes the real result.
+generated from the solver trace of the executable analyzer (`--trace`,
+Interval, the warrowing update rule), stored as a checked claim. The trace
+shows the delay of @sec:eq-buffer at work: the seed of a new context is read
+before anything is published to it, because the publication is flushed only
+after the result query has returned. The first pass through `bump` therefore
+reads $lbot$ and returns $lbot$. The flush then destabilizes the entry, and a
+second pass computes the real result.
+
+#let _trace = claim-trace("pg-contexts-trace")
+#let _tctx(c) = $c_#c.slice(1)$
+#let _tnode(key) = {
+  let (n, c) = key.split("@")
+  if n.starts-with("Seed(") {
+    $italic("Seed")(italic(#n.slice(5, -1)), #_tctx(c))$
+  } else { raw(n) }
+}
+#let _tunk(key) = {
+  let (n, c) = key.split("@")
+  if n.starts-with("Seed(") { _tnode(key) } else { $(#raw(n), #_tctx(c))$ }
+}
+// A value as the trace prints it: bottom, a routed entry value e_i, or the
+// bindings the analyzer shows.
+#let _tval(v, route: none) = if v == "⊥" { $lbot$ } else if route != none and v == route.entry {
+  $e_#route.context.slice(1)$
+} else { raw(v) }
+#let _tbind(v) = v.matches(regex("([a-z]\w*)=(\[[^\]]*\])")).map(m => m.text)
+#let _tfind(p, pred) = p.events.find(pred)
+
+#let _trows = {
+  let rows = ()
+  let routed = ()
+  for (i, p) in _trace.phases.enumerate() {
+    let evs = p.events
+    let (who, what) = if p.kind == "descent" {
+      let qs = evs.filter(e => e.event == "query_local")
+      let path = qs.map(e => _tnode(e.target))
+      (
+        [#_tnode(qs.first().current) to #_tnode(qs.last().current)],
+        [the root query at #_tnode(qs.first().current) queries back through
+          #path.slice(0, -1).join(", ", last: " and ") to #path.last()],
+      )
+    } else if p.kind == "root-seed" {
+      let q = _tfind(p, e => e.event == "query_global")
+      (_tnode(q.current), [#ctor("QueryG") reads #_tunk(q.target) $=$ #_tval(q.value), joins $d_0$])
+    } else if p.kind == "flush" {
+      let sd = _tfind(p, e => e.event == "side")
+      let up = _tfind(p, e => e.event == "update_global")
+      let r = rows.last().route
+      (
+        _tnode(sd.current),
+        [flushes #ctor("Side") $(#_tunk(sd.target), #_tval(sd.value, route: r))$: the seed grows
+          from #_tval(up.old) and its reader, the entry, is destabilized],
+      )
+    } else {
+      let r = p.route
+      let res = _tfind(p, e => e.event == "value_local" and e.target.starts-with("exit_"))
+      let cur = res.current
+      let seed = _tfind(p, e => e.event == "query_global")
+      let again = r.context in routed
+      // The bindings the call adds to what the continuation read before it.
+      let ans = _tfind(p, e => e.event == "answer" and e.current == cur)
+      let before = _tfind(p, e => (
+        e.event == "value_local" and e.current == cur and not e.target.starts-with("exit_")
+      ))
+      let fresh = if again { _tbind(ans.value).filter(b => b not in _tbind(before.value)) } else {
+        ()
+      }
+      // Unknowns that change after the continuation answers: the answer
+      // travelling back to the root query.
+      let done = evs.position(e => e.event == "answer" and e.current == cur)
+      let up = if done == none { () } else {
+        evs
+          .slice(done)
+          .filter(e => e.event == "update_local" and e.unknown != cur)
+          .map(e => e.unknown)
+      }
+      let unchanged = evs.any(e => e.event == "side")
+      (
+        [#_tnode(cur)#if again [, again]],
+        if again [
+          re-reads #_tnode(before.target) and the result, whose entry now reads
+          #_tval(seed.value, route: r): #fresh.map(raw).join(", ")#if unchanged [. The second flush changes nothing]#if up.len() > 1 [. The answers then propagate up through #up.slice(0, -1).map(_tnode).join(" and ") to #_tnode(up.last())]
+        ] else [
+          computes #_tval(r.entry, route: r) and routes to the new context #_tctx(r.context),
+          queries #_tunk(res.target), which queries back to the entry, which reads
+          #_tunk(seed.target) $=$ #_tval(seed.value, route: r): the result is #_tval(res.value)
+        ],
+      )
+    }
+    if p.kind == "pass" and p.route.context not in routed { routed.push(p.route.context) }
+    rows.push((
+      route: if p.kind == "pass" { p.route } else if rows.len() > 0 { rows.last().route } else {
+        none
+      },
+      cells: ([#(i + 1)], who, what),
+    ))
+  }
+  rows.map(r => r.cells).flatten()
+}
 
 #[
   #set text(size: 9pt)
@@ -884,39 +986,19 @@ pass computes the real result.
       table.hline(),
       [*phase*], [*evaluating*], [*what happens*],
       table.hline(stroke: 0.5pt),
-      [1],
-      [#raw("exit_main") to `pp2`],
-      [the root query at #raw("exit_main") queries back through `pp6`, `pp5`, `pp4` and `pp3` to `pp2`],
-      [2],
-      [#raw("entry_main")],
-      [#ctor("QueryG") reads $italic("Seed")(italic("main"), c_0) = lbot$, joins $d_0$],
-      [3],
-      [`pp3`],
-      [computes $e_1$ and routes to the new context $c_1$, queries $(ctor("FunctionResult") thin #_b, c_1)$, which queries back to the entry, which reads $italic("Seed")(#_b, c_1) = lbot$: the result is $lbot$],
-      [4],
-      [`pp3`],
-      [flushes #ctor("Side") $(italic("Seed")(#_b, c_1), e_1)$: the seed grows and its reader, the entry, is destabilized],
-      [5],
-      [`pp3`, again],
-      [re-reads `pp2` and the result, whose entry now reads $e_1$: $a = 6$. The second flush changes nothing],
-      [6],
-      [`pp4`],
-      [as phase 3 for the second call: routes to $c_2$, reads $italic("Seed")(#_b, c_2) = lbot$],
-      [7], [`pp4`], [flushes $e_2$ to $italic("Seed")(#_b, c_2)$, destabilizing its entry],
-      [8],
-      [`pp4`, again],
-      [second pass: $b = 5$. The answers then propagate up through `pp5` and `pp6` to #raw("exit_main")],
+      .._trows,
       table.hline(),
     ),
     placement: none,
     caption: [The solve of the running example under entry-state contexts,
-      condensed into phases. Recorded from an instrumented run of the generated
-      solver. Each phase evaluates the right-hand side of the unknown in the
-      second column.],
+      condensed into phases. Generated from the solver trace (claim
+      `pg-contexts-trace`); the phase numbers are assigned when the thesis
+      renders the trace. Each phase evaluates the right-hand side of the
+      unknown in the second column.],
   ) <tab:eq-trace>
 ]
 
-At `pp4` the two checks read the solution: the analyzer reports
+At `pp4` and `pp5` the checks read the solution: the analyzer reports
 #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
 #_cli("pg-contexts-entry", "a == 6", 4) and
 #_cli("pg-contexts-entry", "b == 5", 3) for `b == 5` with
@@ -926,18 +1008,18 @@ calls publish to one seed, and `bump` is solved once for both.
 #figure(
   {
     set text(size: 7pt)
-    let wnode(pos, name, body, color: vb.neutral) = node(
+    let wnode(pos, key, body, color: vb.neutral) = node(
       pos,
       body,
-      name: name,
+      name: label(key),
       stroke: 0.7pt + color,
       fill: color.lighten(92%),
       corner-radius: 5pt,
       inset: 3pt,
     )
     let cfg(a, b, lab: none, side: left) = edge(
-      a,
-      b,
+      label(a),
+      label(b),
       "-|>",
       stroke: 0.6pt + vb.muted,
       label: if lab == none { none } else {
@@ -945,65 +1027,76 @@ calls publish to one seed, and `bump` is solved once for both.
       },
       label-side: side,
     )
-    let step(a, b, n, bend: 30deg, side: left, pos: 0.5) = edge(
-      a,
-      b,
-      "-|>",
-      stroke: (paint: vb.accent, thickness: 0.8pt, dash: "dashed"),
-      bend: bend,
-      label: box(
-        fill: white,
-        inset: 1pt,
-        text(size: 6.5pt, weight: "bold", fill: vb.accent, if type(n) == str { n } else { str(n) }),
-      ),
-      label-side: side,
-      label-pos: pos,
+    // Layout of each solver step the trace records; the phases on the
+    // arrows come from the trace.
+    let styles = (
+      "exit_main@c0 -> pp6@c0": (bend: 45deg),
+      "pp6@c0 -> pp5@c0": (bend: 45deg),
+      "pp5@c0 -> pp4@c0": (bend: 45deg),
+      "pp4@c0 -> pp3@c0": (bend: -45deg, side: right, pos: 0.25),
+      "pp3@c0 -> pp2@c0": (bend: -45deg, side: right),
+      "pp2@c0 -> entry_main@c0": (bend: -45deg, side: right),
+      "entry_main@c0 -> Seed(main)@c0": (bend: 0deg),
+      "pp3@c0 -> Seed(bump)@c1": (bend: 25deg),
+      "pp3@c0 -> exit_bump@c1": (bend: -20deg, side: right),
+      "exit_bump@c1 -> pp0@c1": (bend: -45deg, side: right),
+      "pp0@c1 -> entry_bump@c1": (bend: -45deg, side: right),
+      "entry_bump@c1 -> Seed(bump)@c1": (bend: -45deg, side: right),
+      "pp4@c0 -> Seed(bump)@c2": (bend: -25deg, side: right),
+      "pp4@c0 -> exit_bump@c2": (bend: 40deg),
+      "exit_bump@c2 -> pp0@c2": (bend: 45deg),
+      "pp0@c2 -> entry_bump@c2": (bend: 45deg),
+      "entry_bump@c2 -> Seed(bump)@c2": (bend: 45deg),
     )
+    for k in styles.keys() { assert(k in _trace.arrows, message: "the trace no longer takes " + k) }
+    let step(key, phases) = {
+      let st = styles.at(key, default: none)
+      assert(st != none, message: "no layout for the solver step " + key)
+      let (a, b) = key.split(" -> ")
+      edge(
+        label(a),
+        label(b),
+        "-|>",
+        stroke: (paint: vb.accent, thickness: 0.8pt, dash: "dashed"),
+        bend: st.at("bend", default: 30deg),
+        label: box(
+          fill: white,
+          inset: 1pt,
+          text(size: 6.5pt, weight: "bold", fill: vb.accent, phases.map(str).join(", ")),
+        ),
+        label-side: st.at("side", default: left),
+        label-pos: st.at("pos", default: 0.5),
+      )
+    }
     diagram(
       spacing: (17mm, 7mm),
-      wnode((0, 0), <m-e>, raw("entry_main")),
-      wnode((-1.0, 0), <sm>, [$italic("Seed")(italic("main"))$], color: vb.called),
-      wnode((0, 1), <m-u1>, raw("pp2")),
-      wnode((0, 2), <m-k1>, raw("pp3")),
-      wnode((0, 3), <m-k2>, raw("pp4")),
-      wnode((0, 4), <m-p5>, raw("pp5")),
-      wnode((0, 5), <m-p6>, raw("pp6")),
-      wnode((0, 6), <m-x>, raw("exit_main")),
-      wnode((1.6, 0), <s1>, [$italic("Seed")(c_1)$], color: vb.called),
-      wnode((1.6, 1), <b1e>, [entry, $c_1$]),
-      wnode((1.6, 2), <b1p>, [#raw("pp0"), $c_1$]),
-      wnode((1.6, 3), <b1x>, [result, $c_1$]),
-      wnode((-1.6, 1.8), <s2>, [$italic("Seed")(c_2)$], color: vb.called),
-      wnode((-1.6, 2.8), <b2e>, [entry, $c_2$]),
-      wnode((-1.6, 3.8), <b2p>, [#raw("pp0"), $c_2$]),
-      wnode((-1.6, 4.8), <b2x>, [result, $c_2$]),
-      cfg(<m-e>, <m-u1>, lab: [body(main)], side: right),
-      cfg(<m-k2>, <m-p5>, lab: [check(a == 6)], side: left),
-      cfg(<m-p5>, <m-p6>, lab: [check(b == 5)], side: left),
-      cfg(<m-p6>, <m-x>, lab: [return], side: left),
-      cfg(<s1>, <b1e>, lab: [seed read], side: right),
-      cfg(<b1e>, <b1p>, lab: [body(bump)], side: right),
-      cfg(<b1p>, <b1x>, lab: [return n + 1], side: right),
-      cfg(<s2>, <b2e>, lab: [seed read], side: left),
-      cfg(<b2e>, <b2p>, lab: [body(bump)], side: left),
-      cfg(<b2p>, <b2x>, lab: [return n + 1], side: left),
-      step(<m-x>, <m-p6>, "1", bend: 45deg),
-      step(<m-p6>, <m-p5>, "1", bend: 45deg),
-      step(<m-p5>, <m-k2>, "1", bend: 45deg),
-      step(<m-k2>, <m-k1>, "1, 8", bend: -45deg, side: right, pos: 0.25),
-      step(<m-k1>, <m-u1>, "1, 5", bend: -45deg, side: right),
-      step(<m-u1>, <m-e>, "1", bend: -45deg, side: right),
-      step(<m-e>, <sm>, "2", bend: 0deg),
-      step(<m-k1>, <s1>, "4", bend: 25deg),
-      step(<m-k1>, <b1x>, "3, 5", bend: -20deg, side: right),
-      step(<b1x>, <b1p>, "3, 5", bend: -45deg, side: right),
-      step(<b1p>, <b1e>, "3, 5", bend: -45deg, side: right),
-      step(<b1e>, <s1>, "3, 5", bend: -45deg, side: right),
-      step(<m-k2>, <s2>, "7", bend: -25deg, side: right),
-      step(<m-k2>, <b2x>, "6, 8", bend: 40deg),
-      step(<b2x>, <b2p>, "6, 8", bend: 45deg),
-      step(<b2p>, <b2e>, "6, 8", bend: 45deg),
-      step(<b2e>, <s2>, "6, 8", bend: 45deg),
+      wnode((0, 0), "entry_main@c0", raw("entry_main")),
+      wnode((-1.0, 0), "Seed(main)@c0", [$italic("Seed")(italic("main"))$], color: vb.called),
+      wnode((0, 1), "pp2@c0", raw("pp2")),
+      wnode((0, 2), "pp3@c0", raw("pp3")),
+      wnode((0, 3), "pp4@c0", raw("pp4")),
+      wnode((0, 4), "pp5@c0", raw("pp5")),
+      wnode((0, 5), "pp6@c0", raw("pp6")),
+      wnode((0, 6), "exit_main@c0", raw("exit_main")),
+      wnode((1.6, 0), "Seed(bump)@c1", [$italic("Seed")(c_1)$], color: vb.called),
+      wnode((1.6, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
+      wnode((1.6, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
+      wnode((1.6, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
+      wnode((-1.6, 1.8), "Seed(bump)@c2", [$italic("Seed")(c_2)$], color: vb.called),
+      wnode((-1.6, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
+      wnode((-1.6, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
+      wnode((-1.6, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),
+      cfg("entry_main@c0", "pp2@c0", lab: [body(main)], side: right),
+      cfg("pp4@c0", "pp5@c0", lab: [check(a == 6)], side: left),
+      cfg("pp5@c0", "pp6@c0", lab: [check(b == 5)], side: left),
+      cfg("pp6@c0", "exit_main@c0", lab: [return], side: left),
+      cfg("Seed(bump)@c1", "entry_bump@c1", lab: [seed read], side: right),
+      cfg("entry_bump@c1", "pp0@c1", lab: [body(bump)], side: right),
+      cfg("pp0@c1", "exit_bump@c1", lab: [return n + 1], side: right),
+      cfg("Seed(bump)@c2", "entry_bump@c2", lab: [seed read], side: left),
+      cfg("entry_bump@c2", "pp0@c2", lab: [body(bump)], side: left),
+      cfg("pp0@c2", "exit_bump@c2", lab: [return n + 1], side: left),
+      .._trace.arrows.pairs().map(((k, ph)) => step(k, ph)),
     )
   },
   kind: image,
@@ -1012,11 +1105,11 @@ calls publish to one seed, and `bump` is solved once for both.
     the edges of the graph, including a seed feeding its entry. Blue dashed
     arrows are the solver's queries and publications, labelled with the
     phases of the table. Arrows labelled with two phases are taken twice: the
-    first pass through a copy of `bump` reads an empty seed, the flush (4, 7)
-    fills it, and the second pass (5, 8) repeats the queries. The solve runs
-    backwards from the exit of `main` and demands the copies of `bump` for
-    $c_1$ (right) and $c_2$ (left) as those contexts are discovered. Recorded from an
-    instrumented run],
+    first pass through a copy of `bump` reads an empty seed, the flush fills
+    it, and the second pass repeats the queries and publishes again without
+    change. The solve runs backwards from the exit of `main` and demands the
+    copies of `bump` for $c_1$ (right) and $c_2$ (left) as those contexts are
+    discovered. Generated from the same solver trace as @tab:eq-trace.],
 ) <fig:eq-walk>
 
 By the soundness theorem of @sec:eq-discharge, every post-solution of this

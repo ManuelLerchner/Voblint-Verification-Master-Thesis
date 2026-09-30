@@ -28,7 +28,7 @@ remains to decide which inequalities the certificate states, and for which
 unknowns.
 
 The solver has to accept side contributions, because a callee's entry equation
-cannot enumerate its contributors (@sec:eq-seed). Voblint therefore reuses the
+cannot enumerate its contributors (@sec:eq-call). Voblint therefore reuses the
 side-effecting top-down solver of Tilscher et al., which is proved partially
 correct for such systems @tilscher26.
 

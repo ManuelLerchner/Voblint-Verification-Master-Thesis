@@ -607,7 +607,7 @@ names the kind of its evidence and the section that argues it.
 
 + *Context selection and seed publication must use the same entered value.*
   _Evaluated_ for one call (#isathm("w0_seed_at_entered_frame"),
-  #isathm("w0_no_seed_at_caller_frame")). @sec:eq-seed.
+  #isathm("w0_no_seed_at_caller_frame")). @sec:eq-call.
 
 + *A right-hand side may publish to a global unknown only once per evaluation*, because
   the update rules record one contribution per origin. _Evaluated_ for the

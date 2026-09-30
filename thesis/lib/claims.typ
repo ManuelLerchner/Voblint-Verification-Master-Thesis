@@ -80,3 +80,69 @@
     upper(marks.first())
   } else { "UNKNOWN" }
 }
+
+// A `--trace --format jsonl` report, split into the phases a thesis table
+// narrates. Phase boundaries follow the solver's own structure:
+//   descent    the first queries, before any global is read
+//   root-seed  the program entry reads its seed
+//   pass       one evaluation of a call's continuation (starts at a route, or
+//              at the re-evaluation after a flush)
+//   flush      a buffered side effect that changes its seed
+// Contexts are named c0, c1, ... in order of appearance; `arrows` maps
+// "source -> target" (queries and side effects) to the phases that took it.
+#let claim-trace(name) = {
+  let events = claim-text(name)
+    .split("\n")
+    .filter(l => l.starts-with("{\"step\""))
+    .map(l => json(bytes(l)))
+  let ctx-key(c) = c.at("values", default: ()).join(",", default: "")
+  let ctxs = ()
+  for ev in events {
+    for f in ("current", "target", "unknown", "call", "context") {
+      let v = ev.at(f, default: none)
+      let c = if v == none { none } else if f == "context" { v } else {
+        v.at("context", default: none)
+      }
+      if c != none and ctx-key(c) not in ctxs { ctxs.push(ctx-key(c)) }
+    }
+  }
+  let ctx(c) = "c" + str(ctxs.position(k => k == ctx-key(c)))
+  let unknown(u) = if u.kind == "local" { u.node + "@" + ctx(u.context) } else if (
+    u.kind == "activation_seed"
+  ) { "Seed(" + u.procedure + ")@" + ctx(u.context) } else { u.kind }
+  let phases = ()
+  let arrows = (:)
+  for (i, ev) in events.enumerate() {
+    let k = ev.event
+    let last = if phases.len() > 0 { phases.last() } else { none }
+    let next = events.at(i + 1, default: (event: none)).event
+    let start = if last == none { "descent" } else if (
+      k == "query_global" and last.kind == "descent"
+    ) {
+      "root-seed"
+    } else if k == "route" and not (last.kind == "pass" and last.route == none) {
+      "pass"
+    } else if k == "query_local" and last.kind == "flush" { "pass" } else if (
+      k == "side" and next == "update_global"
+    ) { "flush" } else { none }
+    if start != none {
+      phases.push((kind: start, route: none, events: ()))
+    }
+    let ev = ev
+    for f in ("current", "target", "unknown", "call") {
+      if f in ev { ev.insert(f, unknown(ev.at(f))) }
+    }
+    if k == "route" {
+      ev.insert("context", ctx(ev.context))
+      phases.last().route = ev
+    }
+    phases.last().events.push(ev)
+    if k in ("query_local", "query_global", "side") {
+      let key = ev.current + " -> " + ev.target
+      let seen = arrows.at(key, default: ())
+      if phases.len() not in seen { seen.push(phases.len()) }
+      arrows.insert(key, seen)
+    }
+  }
+  (phases: phases, arrows: arrows)
+}

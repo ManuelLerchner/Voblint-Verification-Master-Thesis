@@ -35,7 +35,7 @@
     "corpus.lines": 14450,
     "eval_witnesses": 422,
     "generated_ocaml": 13225,
-    "handwritten_ocaml": 4018,
+    "handwritten_ocaml": 4092,
     "isabelle.code": 41841,
     "isabelle.defs": 1480,
     "isabelle.directories.Abstract_Interpreter": 20789,

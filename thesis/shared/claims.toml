@@ -70,6 +70,21 @@ argv = [
 ]
 why = "With entry-state contexts both checks are PROVED."
 
+[claims.pg-contexts-trace]
+argv = [
+  "--analysis",
+  "interval",
+  "--globals",
+  "warrow",
+  "--context",
+  "entry-state",
+  "--trace",
+  "--format",
+  "jsonl",
+  "docs/readme-figures/contexts.vimp",
+]
+why = "The solver trace behind tab:eq-trace and fig:eq-walk: each new callee context is first read with an empty seed, the buffered publication is flushed after the result query, and a second pass computes a = 6 and b = 5."
+
 [claims.pg-while-loop]
 argv = [
   "--analysis",

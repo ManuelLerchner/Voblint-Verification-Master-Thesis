@@ -381,6 +381,15 @@
       "globals": "join"
     }
   },
+  "pg-contexts-trace": {
+    "fixture": "docs/readme-figures/contexts.vimp",
+    "program": "fun bump(n) {\n  return n + 1;\n}\n\nfun main() {\n  a = bump(5);\n  b = bump(4);\n  __voblint_check(a == 6);\n  __voblint_check(b == 5);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "entry-state",
+      "globals": "warrow"
+    }
+  },
   "pg-division-definite": {
     "fixture": "docs/readme-figures/division-definite.vimp",
     "program": "fun main() {\n  divisor = 0;\n  quotient = 7 / divisor;\n  remainder = 7 % divisor;\n  __voblint_check(quotient == 0);\n  __voblint_check(remainder == 7);\n}",
