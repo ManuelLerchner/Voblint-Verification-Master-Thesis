@@ -193,6 +193,16 @@
                 </span>
               </div>
 
+              <div class="control-group">
+                <label class="control-toggle" for="trace-toggle">
+                  <input id="trace-toggle" type="checkbox" aria-describedby="trace-help">
+                  Record solver trace
+                </label>
+                <span id="trace-help" class="visually-hidden">
+                  Also list what the solver did for each call, shown under the results.
+                </span>
+              </div>
+
               <button id="run-analysis" type="button" disabled>
                 <i
                   id="run-analysis-icon"
@@ -408,6 +418,29 @@
             aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
           ></div>
         </section>
+
+        <details id="solver-trace" class="solver-globals solver-trace" hidden>
+          <summary>
+            <span class="eyebrow">Solver trace</span>
+            <span id="solver-trace-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            The run's solver steps per call, as <code>voblint --trace</code> prints them:
+            the context each call is routed to, the query of the callee's result, what the
+            callee's entry reads from its seed, each publication into a seed and whether it
+            changed the seed, the restarts that change causes, and what the caller returns.
+            Steps between plain program points are left out. The hooks that record them
+            change no computed value; the trace is presentation outside the proof.
+          </p>
+
+          <pre id="solver-trace-text" class="solver-trace-text"></pre>
+
+          <p id="solver-trace-cut" class="solver-globals-note" hidden>
+            <span id="solver-trace-cut-label"></span>
+            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
+          </p>
+        </details>
 
       </div>
     </section>

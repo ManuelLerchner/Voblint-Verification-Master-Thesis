@@ -87,6 +87,8 @@ a report.
 routed to, what the callee's entry reads from its seed, and which publications
 restart the caller. `--verbose` lists every step, `--format jsonl` emits JSON
 Lines and `--output FILE` writes to a file; standard output stays the same.
+The playground shows the same compact trace under its results when
+**Record solver trace** is ticked.
 
 ```bash
 pixi run voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp

@@ -78,6 +78,8 @@ const contextDepthGroup = query("#context-depth-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
+const traceToggle = query("#trace-toggle");
+
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -106,6 +108,13 @@ const graphSaveImage = query("#graph-save-image");
 const solverGlobals = query("#solver-globals");
 const solverGlobalsCount = query("#solver-globals-count");
 const solverGlobalsList = query("#solver-globals-list");
+
+const solverTrace = query("#solver-trace");
+const solverTraceCount = query("#solver-trace-count");
+const solverTraceText = query("#solver-trace-text");
+const solverTraceCut = query("#solver-trace-cut");
+const solverTraceCutLabel = query("#solver-trace-cut-label");
+const solverTraceAll = query("#solver-trace-all");
 
 const rawResult = query("#raw-result");
 const rawResultEmpty = query("#raw-result-empty");
@@ -1261,6 +1270,7 @@ function showAnalysisView(result) {
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
   showSolverGlobals(analysisModel ? result.seeds : null);
+  showSolverTrace(analysisModel ? result.trace : null);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1288,6 +1298,7 @@ function clearAnalysisView() {
   hoveredSpan = null;
 
   showSolverGlobals(null);
+  showSolverTrace(null);
 
   editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
 
@@ -1811,6 +1822,40 @@ function showSolverGlobals(seeds) {
     item.append(key, seedLines(seed));
     solverGlobalsList.append(item);
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Solver trace                                                               */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * A recursive program under a deep call string can trace tens of thousands of
+ * lines, and laying all of them out at once stalls the page. The panel shows the
+ * head; the reader asks for the rest.
+ */
+const TRACE_PREVIEW_LINES = 400;
+
+let solverTraceLines = [];
+
+function showSolverTraceLines(count) {
+  solverTraceText.textContent = solverTraceLines.slice(0, count).join("\n");
+  solverTraceCut.hidden = count >= solverTraceLines.length;
+  solverTraceCutLabel.textContent = `Showing the first ${count} of ${solverTraceLines.length} lines.`;
+}
+
+/* The compact text the CLI's --trace prints; null when the run recorded none. */
+function showSolverTrace(trace) {
+  solverTraceLines = typeof trace === "string" ? trace.replace(/\n$/, "").split("\n") : [];
+  solverTrace.hidden = solverTraceLines.length === 0;
+
+  if (solverTrace.hidden) {
+    solverTraceText.textContent = "";
+    solverTraceCut.hidden = true;
+    return;
+  }
+
+  solverTraceCount.textContent = `${solverTraceLines.length} lines`;
+  showSolverTraceLines(Math.min(TRACE_PREVIEW_LINES, solverTraceLines.length));
 }
 
 function inspectGraphNode(id) {
@@ -3104,6 +3149,7 @@ function readConfiguration() {
     context,
     contextDepth,
     intRefinement,
+    trace: traceToggle.checked,
   };
 }
 
@@ -3307,6 +3353,7 @@ function runAnalysisInWorker(configuration, source) {
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
+        trace: configuration.trace,
         source,
       });
     } catch (error) {
@@ -3553,9 +3600,12 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
+  traceToggle,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
+
+solverTraceAll.addEventListener("click", () => showSolverTraceLines(solverTraceLines.length));
 
 for (const box of analysisChoices) {
   box.addEventListener("change", updateIntRefinementControls);
@@ -3930,6 +3980,10 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
+  if (settings.trace !== undefined) {
+    traceToggle.checked = settings.trace === "1";
+  }
+
   const depth = parseContextDepth(settings.k);
 
   if (depth !== null) {
@@ -3976,7 +4030,7 @@ function selectIfOffered(select, value) {
  * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
-const LINK_SETTINGS = ["analysis", "globals", "context", "k", "refinement"];
+const LINK_SETTINGS = ["analysis", "globals", "context", "k", "refinement", "trace"];
 
 const shareButton = query("#share-link");
 const shareLabel = query("#share-link-label");
@@ -4067,6 +4121,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
+    ...(traceToggle.checked ? [linkParam("trace", "1")] : []),
   ];
   const url = new URL(location.href);
 
