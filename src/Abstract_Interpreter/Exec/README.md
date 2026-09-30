@@ -21,7 +21,7 @@ refinement layer, not as part of the framework.
 | `Spec/DG_Local_State_Exec.thy` | The executable Base-style D/G construction: definitions and their selector equations |
 | `Refinement/DG_Local_State_Exec_Refinement.thy` | `dg_domain_exec`: soundness at the executable carrier, pulled back along the readback |
 | `Refinement/Routed_Exec_Refinement.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
-| `State/Exec_Result_Readback.thy` | `readback_result_value`: reading a solved local unknown back as an abstract state |
+| `State/Exec_Result_Publication.thy` | `result_value_to_abs`: publishing a solved local unknown as the abstract state it represents |
 
 Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 

@@ -131,7 +131,7 @@ definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" w
      (let sol = result_demo_ivl_sol (\<lambda>_. False);
           gl = declared_global_vars result_demo_prog
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. readback_result_value (declared_global result_demo_prog)
+           (\<lambda>v ctx. result_value_to_abs (declared_global result_demo_prog)
                       (canonicalize_lift (default_st_is_bot_for gl)
                         (dg_local (snd sol (Inl (v, ctx)))))))"
 
@@ -344,7 +344,7 @@ subsection \<open>Sign and int_dom: the same abstraction, one live and one dead 
 text \<open>
   Deliberately lighter than the Interval coverage above: these two only have
   to witness that their adapters feed the same generic
-  \<^const>\<open>readback_result_value\<close>/\<^const>\<open>lookup_context\<close> surface, not to re-exercise
+  \<^const>\<open>result_value_to_abs\<close>/\<^const>\<open>lookup_context\<close> surface, not to re-exercise
   the reachability case analysis a third and fourth time.
 \<close>
 

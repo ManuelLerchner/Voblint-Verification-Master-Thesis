@@ -44,7 +44,7 @@ text \<open>
   The two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for hold for
   this reader by construction, given only that the joint concretization ignores
   its global argument (which is what \<open>gammaDG_rd\<close> already says) and that the
-  readback takes \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the
+  publication map takes \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the
   context policy, so no instance need prove them again.
 \<close>
 

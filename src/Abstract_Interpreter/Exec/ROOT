@@ -20,4 +20,4 @@ session Voblint_Exec in "." = "Voblint_Framework" +
     DG_Local_State_Exec
     DG_Local_State_Exec_Refinement
     Routed_Exec_Refinement
-    Exec_Result_Readback
+    Exec_Result_Publication

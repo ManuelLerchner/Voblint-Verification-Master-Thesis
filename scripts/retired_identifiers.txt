@@ -3981,3 +3981,7 @@ entry_state_routed_analysis_sound_live_unknowns
 # --- The carrier map default_st_to_fun is "the function a state represents",
 # Concrete Semantics' fun_rep, not a readback (2026-10-01). ---
 gamma_lift_default_st_gamma_readback
+
+# --- Result publication named after what it does (2026-10-01). ---
+readback_result_value
+Exec_Result_Readback

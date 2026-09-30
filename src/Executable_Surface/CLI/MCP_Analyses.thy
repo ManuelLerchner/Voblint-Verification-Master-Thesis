@@ -27,7 +27,7 @@ subsection \<open>Each analysis answers what it knows\<close>
 
 text \<open>
   While the system is solved, a field answers a query as its published value
-  does: from its own readback, through the answer its analysis registers for
+  does: from its own publication map, through the answer its analysis registers for
   checks. An analysis written without a query handler thereby becomes a
   provider on the combined state, as every Goblint analysis answers
   \<open>EvalInt\<close> from its own domain. The answer is sound for the stores the
@@ -110,7 +110,7 @@ subsection \<open>What the combined state publishes\<close>
 
 text \<open>
   A solved combined state is published field by field, each through its
-  analysis's own readback. Its concretization is the intersection over the
+  analysis's own publication map. Its concretization is the intersection over the
   active fields, and a check is decided from the meet of the active analyses'
   answers.
 \<close>

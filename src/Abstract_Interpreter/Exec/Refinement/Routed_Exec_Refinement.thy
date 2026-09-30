@@ -178,7 +178,7 @@ text \<open>The routed extra-goal list commutes elementwise, for the same reason
 
 text \<open>
   The buffered generator a domain actually solves, reconciled with the unbuffered one
-  the framework is stated over --- at the executable spec, before any readback.
+  the framework is stated over --- at the executable spec, before publication.
 
   Both reshaping hooks are the identity here. The buffered generator only ever asks a
   hook to hoist what it publishes at the buffered key \<open>analysis_global\<close>; this spec is local-only,

@@ -239,7 +239,7 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
 text \<open>
   The result table and the global unknowns beside it, off one solve. The second
   component reads the analysis-wide global, the third reads the seed a call
-  published at a procedure entry under a context. Both are read back exactly as a
+  published at a procedure entry under a context. Both are published exactly as a
   table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
 
   The fourth is what one edge's local step makes of a point's solved state: the term
@@ -373,7 +373,7 @@ subsection \<open>The contracts\<close>
 
 text \<open>
   What an instance owes, and nothing more: its component is sound for the
-  concretization its readback induces, its entry answers one alternative, its two
+  concretization its publication map induces, its entry answers one alternative, its two
   emptiness tests are exact, its seed keys are distinct from the analysis-wide
   global, its solver is a \<^locale>\<open>certified_solver\<close> (a post-solution over
   finitely many keys once it terminates), its classifier is correct, and its entry
@@ -472,7 +472,7 @@ begin
 abbreviation (input) pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_global p"
   \<comment> \<open>input-only, so interpreted facts print \<open>declared_global p\<close>\<close>
 
-text \<open>What a carrier state describes, read back and concretized.\<close>
+text \<open>What a carrier state describes, published and concretized.\<close>
 
 abbreviation cgam :: "'s lifted \<Rightarrow> store set" where
   "cgam d \<equiv> gamma_lift gamma\<^sub>V (map_lift (rd pgs) d)"
@@ -488,7 +488,7 @@ text \<open>
   key. A caller states soundness against \<^const>\<open>lookup_context\<close> of the result
   table, while the routed endpoints are stated against the reader; this is the
   equation between them, and it needs no coverage premise. At a covered key it
-  is the readback commuting with the normalization; at an uncovered one it is
+  is publication commuting with the normalization; at an uncovered one it is
   \<^const>\<open>Bot\<close> against \<^const>\<open>Bot\<close>, and both describe nothing.
 \<close>
 

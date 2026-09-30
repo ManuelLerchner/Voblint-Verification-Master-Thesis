@@ -10,7 +10,7 @@ text \<open>
   The \<open>twice\<close> program calls one procedure from two sites.  The theorems below connect each
   source configuration to the solved reader of Interval's entry-state registration
   \<open>interval_es_rule\<close> at \<^const>\<open>Globals_Warrow\<close>, for an activation admitted for the
-  trace that produced it, read back and then through the lifted concretization
+  trace that produced it, published and then through the lifted concretization
   \<^const>\<open>gamma_state_lift\<close>.  The admitted-context relation
   \<^const>\<open>dg_analysis.admitted_contexts\<close> keeps the two calls separate while the
   source/CFG simulation preserves the concrete frame stack; being a relation rather than a

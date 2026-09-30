@@ -17,7 +17,7 @@ text \<open>
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a
   context instance (an interpretation of \<^locale>\<open>routed_context\<close>),
-  and the published value (a readback \<open>rd\<close> from the solver's carrier into a
+  and the published value (a publication map \<open>rd\<close> from the solver's carrier into a
   value type \<open>'v\<close> with its own concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness
   test \<open>empty\<^sub>V\<close>; a non-relational analysis publishes its abstract store),
   leaving solver choice orthogonal: which concrete solver produced
@@ -77,7 +77,7 @@ text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>dg_result_for\<close> builds an
   \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
-  The solved local unknown is read back into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
+  The solved local unknown is published into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
   one collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
   \<open>empty\<^sub>V\<close>, so a \<^const>\<open>Lifted\<close> payload that denotes no store without
   the solver's own \<^const>\<open>Bot\<close> tag reads as \<^const>\<open>Bot\<close> here, matching \<^const>\<open>classify_point\<close>'s

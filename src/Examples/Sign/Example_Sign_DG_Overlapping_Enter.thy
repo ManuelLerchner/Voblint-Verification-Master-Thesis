@@ -208,7 +208,7 @@ definition ov_sol ::
 
 definition ov_result :: "(sign list, sign abs_state) analysis_result" where
   "ov_result = Analysis_Result (fst ov_sol)
-     (\<lambda>v ctx. readback_result_value ov_gs (canonicalize_lift ov_ep (dg_local (snd ov_sol (Inl (v, ctx))))))"
+     (\<lambda>v ctx. result_value_to_abs ov_gs (canonicalize_lift ov_ep (dg_local (snd ov_sol (Inl (v, ctx))))))"
 
 abbreviation ov_read :: "cfg_node \<Rightarrow> sign list \<Rightarrow> vname \<Rightarrow> sign lifted" where
   "ov_read v ctx x \<equiv> map_lift (\<lambda>st. st x) (lookup_context ov_result v ctx)"
@@ -244,7 +244,7 @@ text \<open>The solver result is evaluated once. Every executable observation be
 lemma ov_solution_snapshot_raw:
   "(let sol = ov_sol;
         result = Analysis_Result (fst sol)
-          (\<lambda>v ctx. readback_result_value ov_gs
+          (\<lambda>v ctx. result_value_to_abs ov_gs
             (canonicalize_lift ov_ep (dg_local (snd sol (Inl (v, ctx))))));
         read = (\<lambda>v ctx x. map_lift (\<lambda>st. st x) (lookup_context result v ctx));
         seed = (\<lambda>ctx x. map_lift (\<lambda>s. default_st_to_fun ov_gs s x)
