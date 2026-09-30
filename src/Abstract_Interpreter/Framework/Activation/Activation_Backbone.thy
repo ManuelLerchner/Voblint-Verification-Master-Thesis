@@ -14,10 +14,11 @@ text \<open>
   and one activation may be collected under several contexts.  The buckets of a node cover
   its stores; they need not partition them.
 
-  \<open>cover v c\<close> is the set of stores that table admits at node \<open>v\<close> in context \<open>c\<close>.  Given five
-  local obligations on it --- \<open>INIT\<close> for the seed stores, \<open>INTRA\<close> per intra edge, \<open>CALL\<close> per
-  call and admitted context, \<open>RETURN\<close> per return, \<open>TOTAL\<close> for at least one admitted context
-  per covered call --- \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
+  \<open>cover v c\<close> is the set of stores that table admits at node \<open>v\<close> in context \<open>c\<close>.  Given the
+  five local obligations of \<^locale>\<open>ltr_coverage\<close> on it --- \<open>INIT\<close> for the seed stores,
+  \<open>INTRA\<close> per intra edge, \<open>CALL\<close> per call and admitted context, \<open>RETURN\<close> per return,
+  \<open>TOTAL\<close> for at least one admitted context per covered call ---
+  \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
   of stores some valid trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
   twin of \<open>ltr_collect_semantic_postfix\<close> and shares its proof shape: interpret
   \<^locale>\<open>ltr_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_ltr_covered_at\<close>.
@@ -31,31 +32,10 @@ text \<open>
 \<close>
 
 theorem activation_collect_sound:
-  fixes cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    and R :: "'c call_context_rel" and c\<^sub>0 :: 'c
-    and \<G> :: "vname \<Rightarrow> bool"
-  assumes INIT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
-    and INTRA: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> cover v c"
-    and CALL: "\<And>u dst pars args p cont c c' s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> cover u c
-        \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) s
-              (call_enter \<G> (CallEdge dst pars args) s) c'
-        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s
-              \<in> cover (FunctionEntry p) c'"
-    and RETURN: "\<And>cl dst pars args p cont c1 c' p' s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> cover cl c1
-        \<Longrightarrow> admits_call_context \<G> g R cl c1 p' s es c'
-        \<Longrightarrow> t \<in> cover (FunctionResult p) c'
-        \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
-    and TOTAL: "call_context_total_on cover R \<G> g"
+  assumes "ltr_coverage g S cover R c\<^sub>0 \<G>"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx \<subseteq> cover v ctx"
 proof -
-  interpret G: ltr_coverage g S cover R c\<^sub>0 \<G>
-    by (standard; blast intro: INIT INTRA CALL RETURN TOTAL)
+  interpret G: ltr_coverage g S cover R c\<^sub>0 \<G> by (fact assms)
   show ?thesis
   proof (rule subsetI)
     fix st assume "st \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx"

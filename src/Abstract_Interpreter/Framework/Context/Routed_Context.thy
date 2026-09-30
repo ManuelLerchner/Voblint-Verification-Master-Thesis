@@ -539,7 +539,7 @@ subsection \<open>Activation-collect soundness against the routed local unknown\
 text \<open>
   Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
-  \<open>activation_collect_sound\<close> are this locale's own facts: the two entry bounds discharge
+  \<^locale>\<open>ltr_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
   \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routed_entry_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
@@ -570,7 +570,7 @@ lemma activation_collect_dg_sound:
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
-proof (rule activation_collect_sound[where cover = "cover"])
+proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
     by (rule pp_entry_s0d_bound[OF entry_cov])

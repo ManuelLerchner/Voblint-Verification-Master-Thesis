@@ -100,7 +100,7 @@ proof -
     by (standard; blast intro: ENTRY_G EDGE CALL COMB TOTAL)
   have cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
-    by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB TOTAL])
+    by (rule activation_collect_sound[OF G.ltr_coverage_axioms])
   have has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
                    \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
     using G.valid_ltr_has_context by blast
