@@ -4,6 +4,15 @@ begin
 
 section \<open>A solver trace inside the exported code\<close>
 
+text \<open>The vendored interface hides the solver's state fields (\<open>TD_side_Interface\<close>).
+  The traced equations below restate the solver's own terms, so this theory names
+  those fields again, as input abbreviations of the hidden constants.\<close>
+
+abbreviation (input) point where "point \<equiv> TD_side_upd_rule.state.point"
+abbreviation (input) point_update where "point_update \<equiv> TD_side_upd_rule.state.point_update"
+abbreviation (input) \<sigma> where "\<sigma> \<equiv> TD_side.state.\<sigma>"
+abbreviation (input) \<sigma>_update where "\<sigma>_update \<equiv> TD_side.state.\<sigma>_update"
+
 text \<open>
   The executable solver can report its steps. \<open>trace_event\<close> is the identity on
   the logic's side: it takes a channel name and a suspended event and returns
