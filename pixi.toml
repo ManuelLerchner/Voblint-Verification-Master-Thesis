@@ -498,13 +498,10 @@ verify = { depends-on = [
   "theory-prose-check",
   "retired-identifiers-check",
   "locale-parameters-check",
-  "thesis-refs",
-  "thesis-snippets",
 
   # ------------------------------------------------------------------------
   # Cheap standalone builds / generated-code consumers
   # ------------------------------------------------------------------------
-  "thesis-typst",
   "codegen-regression",
 
   # ------------------------------------------------------------------------
@@ -519,18 +516,16 @@ verify = { depends-on = [
   "html-report-structure-check",
   "html-report-corpus-audit",
   "html-report-config-audit",
-  "thesis-claims",
 
   # ------------------------------------------------------------------------
   # Isabelle-dependent checks
   #
-  # Keep the main build before consumers such as thesis-facts/codegen so
+  # Keep the main build before consumers such as codegen-check so
   # they can reuse the populated heap store.
   # ------------------------------------------------------------------------
   "isar-check",
   "isabelle-build",
   "reelaboration-check",
-  "thesis-facts",
   "codegen-check",
 
   # ------------------------------------------------------------------------

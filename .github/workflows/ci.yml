@@ -20,6 +20,13 @@ on:
   pull_request:
     types: [ opened, synchronize ]
 
+# The thesis is written on `writing`; main keeps a frozen copy of thesis/ that
+# the thesis checks no longer describe. Thesis steps run only for that branch:
+# a push to it, a pull request from it, or a pull request into it. Steps
+# read this flag; a job-level `if` cannot read `env`, so it repeats the test.
+env:
+  THESIS: ${{ github.ref == 'refs/heads/writing' || github.head_ref == 'writing' || github.base_ref == 'writing' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -337,9 +344,11 @@ jobs:
       # authoritative check is thesis-links-live, which runs after the pages
       # are actually published.
       - name: Regenerate thesis link map from the fresh HTML
+        if: env.THESIS == 'true'
         run: pixi run thesis-links-write
 
       - name: Report link-map drift (advisory)
+        if: env.THESIS == 'true'
         run: |
           if ! git diff --quiet -- thesis/shared/generated/links.json; then
             echo "::warning::thesis/shared/generated/links.json is out of date."
@@ -398,6 +407,7 @@ jobs:
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Digest what the facts check compares
+        if: env.THESIS == 'true'
         id: sources
         shell: bash
         run: |
@@ -406,6 +416,7 @@ jobs:
           echo "Facts input digest: $digest"
 
       - name: Restore the marker of an earlier passing run
+        if: env.THESIS == 'true'
         id: facts-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -413,17 +424,17 @@ jobs:
           key: thesis-facts-${{ runner.os }}-${{ runner.arch }}-${{ steps.sources.outputs.digest }}
 
       - name: Setup Isabelle
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Download exact heap state from isabelle-build
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: isabelle-heaps
@@ -433,23 +444,23 @@ jobs:
       # session and diffed. This is the Typst template's replacement for
       # Isabelle's @{thm} antiquotation, so it needs the heaps this job has.
       - name: Thesis theorem statements match what Isabelle proves
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         run: pixi run thesis-facts
 
       - name: Report the reused result
         if: steps.facts-cache.outputs.cache-hit == 'true'
         run: echo "Inputs unchanged since these checks passed; skipping them."
 
-      # Written only after the check passed, and only from main, so a marker can
-      # never outrun the result it stands for.
+      # Written only after the check passed, and only from a push to writing, so
+      # a marker can never outrun the result it stands for.
       - name: Record the passing run
-        if: steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/writing'
         run: |
           mkdir -p "$RUNNER_TEMP/ci-marker"
           echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-marker/thesis-facts"
 
       - name: Save the marker for later runs
-        if: steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/writing'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/ci-marker/thesis-facts
@@ -660,12 +671,14 @@ jobs:
       # theories fails here instead of leaving the thesis describing something
       # that no longer exists. Reads .thy sources directly -- no Isabelle.
       - name: Thesis references resolve against the theories (no build needed)
+        if: env.THESIS == 'true'
         run: pixi run thesis-refs
 
       # Declarations the thesis shows are lifted out of the theories by name.
       # Text extraction only, so this catches an edited definition without
       # waiting for Isabelle.
       - name: Thesis snippets match the theories (no build needed)
+        if: env.THESIS == 'true'
         run: pixi run thesis-snippets
 
       # check_thy_prose_refs resolves a cited name against every .thy under src/
@@ -744,6 +757,7 @@ jobs:
       # fails here, naming the claim, instead of silently making the figure a
       # record of how the analyzer used to behave.
       - name: Thesis claims still match the CLI
+        if: env.THESIS == 'true'
         run: pixi run thesis-claims
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
@@ -854,7 +868,10 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # Also on every run that assembles the site, which publishes this PDF and
+  # needs it; skipping it would skip pages-site with it.
   thesis-pdf:
+    if: github.ref == 'refs/heads/writing' || github.head_ref == 'writing' || github.base_ref == 'writing' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Goblint Formalization
@@ -996,6 +1013,7 @@ jobs:
       # Pages serves a new deployment with a short delay; the checker retries
       # with backoff rather than failing on the first miss.
       - name: Thesis links reach their definition on the published site
+        if: env.THESIS == 'true'
         run: pixi run thesis-links-live
 
       - name: Site page links reach their targets on the published site
