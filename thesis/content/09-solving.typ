@@ -54,7 +54,7 @@ their predecessors, so a demand-driven solve evaluates the unknowns its query
 transitively reads. From the exit of `main` these include every node from which
 the exit can be reached, in each context the solve discovers for it. A single
 solve therefore takes the place of one query per program point. Apinis
-et al. start local solving from the same unknown @apinis12 (TODO: check locator). Unknowns that cannot reach the exit, such as code after a `return`, are the subject of
+et al. start local solving from the same unknown @apinis12[§3]. Unknowns that cannot reach the exit, such as code after a `return`, are the subject of
 @sec:live-keys. The certificate names the set $V$ of local unknowns the solve
 reached:
 
@@ -116,8 +116,7 @@ receive contributions, because the selectable analyses use no analysis globals
 accumulates across call sites (@fig:update-rules).
 
 Per-origin warrowing helps when several origins feed one global, as Seidl et
-al. show on a global that receives one constant per location @seidl26 (TODO:
-check locator). A recursive call that feeds a growing value back into its own
+al. show on a global that receives one constant per location @seidl26[§1]. A recursive call that feeds a growing value back into its own
 seed is a single origin, where the rule gains nothing and can lose precision
 (@sec:eval-rq4).
 

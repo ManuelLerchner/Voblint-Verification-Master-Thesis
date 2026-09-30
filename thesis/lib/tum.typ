@@ -199,7 +199,7 @@
   set math.equation(numbering: none)
   show math.equation: set text(font: "Latin Modern Math")
   // Web links are blue and underlined. Links into the rendered theories (the
-  // project's and HOL's) and
+  // project's, the vendored solver's and HOL's) and
   // the listings' playground tags keep their own styling, and internal
   // references (citations, cross-references, contents) stay black.
   show link: it => {
@@ -207,6 +207,7 @@
       type(it.dest) == str
         and not it.dest.contains("/Voblint/")
         and not it.dest.contains("/HOL/")
+        and not it.dest.contains("/TD/")
         and not it.dest.contains("#code=")
     )
     if web {

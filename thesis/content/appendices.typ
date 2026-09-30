@@ -40,8 +40,8 @@ The shipped analyses keep program globals in the flow-sensitive local value of
 every unknown, next to the locals. Goblint's base analysis makes the same
 choice for single-threaded programs: it reads globals from its local state and
 publishes nothing (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml")[`base.ml`]). Seidl et
-al. present the flow-insensitive treatment of a global as a choice made for
-efficiency @seidl26 (TODO: check locator). The following program
+al. note that global store widening improves scalability and also helps
+incremental analysis @seidl26[§1]. The following program
 compares the two placements:
 
 #listing(lang: "c", claim: "mixed-flow-sign", ```
@@ -99,8 +99,8 @@ unknown (@fig:shared-deps). A write to `g` therefore re-evaluates a node that
 reads only `h`. The update rule also decides between widening and narrowing
 for the whole store (@sec:update-rules): while `g` still grows, $kappa$ is
 widened, and `h` cannot be narrowed until `g` has stabilized. Apinis et al.,
-Seidl et al. and Goblint keep one unknown per global @apinis12 @seidl26
-(TODO: check locators). The manager is already generic in the name type.
+Seidl et al. and Goblint keep one unknown per global @apinis12[§5]
+@seidl26[§3]. The manager is already generic in the name type.
 
 // A straight-line procedure over two flow-insensitive globals g and h: which
 // right-hand sides read (grey) and publish to (double tip) the global unknowns,

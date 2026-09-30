@@ -172,6 +172,14 @@ Generalizing #isaconst("trace_context") to such abstractions over
 activation-local traces would allow path- or history-sensitive unknowns, each
 with its own admissibility conditions.
 
+*Solver.* Voblint adapts its equations to the interface of the vendored solver
+(@sec:eq-encoding). A version of the solver that side-effects local unknowns
+and joins the writes of one evaluation per target, as Goblint's solvers do,
+would let callers publish into callee entries directly and make activation
+seeds and buffering unnecessary. It would need its partial-correctness proof
+redone for local side effects. The rest of the chain consumes the solver only
+through the post-solution certificate (@sec:certificate).
+
 *Guarantees.* A termination theorem would remove the per-program premise. The
 total-correctness result of #cite(<tilscher26jar>, form: "prose") covers the
 top-down solver without side effects, with finitely many unknowns and a

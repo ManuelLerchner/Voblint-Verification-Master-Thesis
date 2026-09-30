@@ -26,8 +26,8 @@ We represent executions by _activation-local traces_. A trace follows one
 procedure activation. A callee trace keeps the caller that created it, and a
 resumed trace keeps the callee it has completed. We read calling contexts from
 this structure and do not store them in the execution semantics. Context
-membership is a relation, so one concrete call may be admitted under several
-contexts.
+membership is a relation: a concrete call may be admitted under no context, one,
+or several, and which ones may depend on the analysis's result.
 
 From this semantics we derive a local _coverage contract_. Its obligations are
 the concrete interface that the abstract analyses and the equation system of
@@ -386,13 +386,16 @@ contexts _activation-stable_ for this reason. The classical designs differ in wh
 resulting callee entry state to the analysis's `context` operation
 (@app:goblint-alignment), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
 
-Voblint models context membership as a relation. With entry-state contexts,
-the context of a call is an abstract value the analysis computes, so which
-context a concrete call belongs to depends on the analysis's result and not on
-the execution alone (@sec:eq-routing). A relation lets the concrete semantics
-admit exactly the contexts the analysis assigns. For the shipped policies, a
-concrete call admits at most one callee context from a fixed caller context
-(@sec:eq-routing).
+Voblint models context membership as a relation, for two reasons. First,
+with entry-state contexts the context of a call is an abstract value the
+analysis computes, so which context a concrete call belongs to depends on the
+analysis's result and not on the execution alone (@sec:eq-entry-routing).
+Second, the relation may admit no context for a call, for instance a call the
+analysis's entry does not cover. A context function would have to return one.
+Keeping this case expressible lets the contract state separately, as
+#oblig("TOTAL") (@sec:contract), that every covered call is admitted
+somewhere. For the shipped policies, a concrete call admits at most one callee
+context from a fixed caller context.
 
 #block(breakable: false)[
   #definition(name: [Call-context relation], isa: "call_context_rel", cmd: "type_synonym")[
