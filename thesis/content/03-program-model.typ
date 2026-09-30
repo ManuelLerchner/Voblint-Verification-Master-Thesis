@@ -688,10 +688,10 @@ counterpart can only make the analysis less precise.
 ) <fig:csim>
 
 @fig:csim lists the three rules. Each rule locates one activation with two
-predicates. #isaconst("control_at") $Pi$ $p$ $c_0$ $k$ $n$ $r$ $v$ says that the
-residual $r$ of the body $c_0$, compiled at offset $n$ with continuation node
-$k$, is at node $v$. #isaconst("compiled_at") $Pi$ $g$ $p$ $c_0$ $k$ $n$ says
-that $c_0$ is the body of procedure $p$ and that its compilation at that offset
+predicates. #isaconst("control_at") $Pi$ $p$ $b$ $k$ $n$ $r$ $v$ says that the
+residual $r$ of the body $b$, compiled at offset $n$ with continuation node
+$k$, is at node $v$. #isaconst("compiled_at") $Pi$ $g$ $p$ $b$ $k$ $n$ says
+that $b$ is the body of procedure $p$ and that its compilation at that offset
 lies in $g$, together with its epilogue edge when the body can fall through.
 The rules differ in the stacks. $sans("Base")$ relates a single
 activation with both stacks empty. $sans("Nested")$ adds one suspended caller
