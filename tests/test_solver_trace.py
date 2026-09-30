@@ -1,6 +1,6 @@
 """The solver tracer (`voblint --trace`): hooks, option handling, output
 separation, the order of events on the context-sensitive running example, and
-its whole compact and JSON Lines traces against tests/solver-trace/.
+its whole compact, verbose and JSON Lines traces against tests/solver-trace/.
 
 Run after `pixi run cli-build`; a missing executable is a failed prerequisite.
 """
@@ -90,7 +90,11 @@ def test_output_implies_trace(tmp_path):
 
 @pytest.mark.parametrize(
     "name, trace_args",
-    [("contexts.compact", ["--trace"]), ("contexts.jsonl", ["--format", "jsonl"])],
+    [
+        ("contexts.compact", ["--trace"]),
+        ("contexts.verbose", ["--trace", "--verbose"]),
+        ("contexts.jsonl", ["--format", "jsonl"]),
+    ],
 )
 def test_expected_trace(name, trace_args):
     """Whole-trace expectations. UPDATE_TRACE_EXPECT=1 rewrites them from a live
