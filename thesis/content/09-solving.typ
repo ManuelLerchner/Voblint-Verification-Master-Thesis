@@ -541,7 +541,7 @@ elements for one local and one global.
           let den = if "⊥" in st { $emptyset$ } else if cons.len() == 0 {
             ${s | "true"}$
           } else {
-            let conds = cons.map(((v, a)) => $s(#v) mod 2 = #rem.at(a)$)
+            let conds = cons.map(((v, a)) => $s(#v) "is" #spell(a)$)
             if conds.len() == 1 { ${s | #conds.first()}$ } else {
               // Conditions stacked on the & so both start in the same column.
               $
@@ -565,17 +565,14 @@ elements for one local and one global.
       // A state with two overrides, beside the lattice: its set is over all
       // names, since the overrides pin two locations and the defaults the rest.
       node(
-        (3.6, 2),
+        (4.0, 2),
         align(center, text(size: 6.5pt)[
-          $
-            ⟪ & "even", ltop, \
-              & [(ctor("Local_Location") thin x, "odd"), \
-              & #h(0.3em) (ctor("Global_Location") thin g, "even")]⟫
-          $
+          ⟪even, ⊤, #linebreak() [(#ctor("Local_Location") $x$, odd),
+          #linebreak() (#ctor("Global_Location") $g$, even)]⟫ \
           #text(size: 6pt, fill: vb.muted)[
             $
-              {s | & s(x) mod 2 = 1 and s(g) mod 2 = 0 and \
-                   & forall "local" y != x. med s(y) mod 2 = 0}
+              {s | & s(x) "is odd" and s(g) "is even" and \
+                   & forall y != x "local". med s(y) "is even"}
             $
           ]]),
         name: <cl-ov>,
@@ -585,11 +582,11 @@ elements for one local and one global.
         inset: 2.5pt,
       ),
       // Order, not covering: infinitely many override states lie in between.
-      edge(label("cl-⊥e"), <cl-ov>, stroke: (paint: vb.muted, thickness: 0.4pt, dash: "dashed")),
-      edge(<cl-ov>, (3.6, 0), label("cl-⊤⊤"), stroke: (
-        paint: vb.muted,
-        thickness: 0.4pt,
-        dash: "dashed",
+      ..((label("cl-⊥e"), -15deg), (label("cl-⊤⊤"), 20deg)).map(((other, bend)) => edge(
+        other,
+        <cl-ov>,
+        bend: bend,
+        stroke: (paint: vb.muted, thickness: 0.4pt, dash: "dashed"),
       )),
       ..states
         .map(a => states
