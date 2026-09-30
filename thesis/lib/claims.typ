@@ -95,7 +95,13 @@
     .split("\n")
     .filter(l => l.starts-with("{\"step\""))
     .map(l => json(bytes(l)))
-  let ctx-key(c) = c.at("values", default: ()).join(",", default: "")
+  let ctx-key(c) = if c.kind == "entry_state" {
+    "entry:" + c.values.join(",", default: "")
+  } else if (
+    c.kind == "call_string"
+  ) { "call:" + c.sites.join(",", default: "") } else if c.kind == "unit" { "unit" } else {
+    panic("unknown trace context kind: " + c.kind)
+  }
   let ctxs = ()
   for ev in events {
     for f in ("current", "target", "unknown", "call", "context") {

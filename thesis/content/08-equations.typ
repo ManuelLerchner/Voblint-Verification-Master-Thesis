@@ -993,8 +993,8 @@ second pass computes the real result.
     caption: [The solve of the running example under entry-state contexts,
       condensed into phases. Generated from the solver trace (claim
       `pg-contexts-trace`); the phase numbers are assigned when the thesis
-      renders the trace. Each phase evaluates the right-hand side of the
-      unknown in the second column.],
+      renders the trace. The second column names the unknown, or the chain of
+      unknowns, whose right-hand side the phase evaluates.],
   ) <tab:eq-trace>
 ]
 
