@@ -454,6 +454,18 @@ CASES = [
         0,
         "digraph",
     ),
+    (
+        "unknown --format value is rejected",
+        ["--analysis", "sign", "--trace", "--format", "xml", SANITY_FILE],
+        1,
+        "unknown --format value",
+    ),
+    (
+        "--trace writes a trace",
+        ["--analysis", "sign", "--trace", SANITY_FILE],
+        0,
+        "Trace complete:",
+    ),
 ]
 
 

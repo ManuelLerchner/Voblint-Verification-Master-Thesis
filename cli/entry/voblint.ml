@@ -29,7 +29,9 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin] [--int-refinement \
-   never|once|fixpoint] [--dot] [--timeout SECONDS] FILE.vimp\n\
+   never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+  \  [--trace [--verbose|--compact] [--format text|jsonl] [--output FILE]]\n\
+  \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\n\
    Options:\n\
@@ -120,6 +122,17 @@ let usage =
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
   \                             containment note), so it runs in a killable\n\
   \                             child process rather than in-process.\n\
+  \  --trace                    Also write a trace of the solver's steps to\n\
+  \                             stderr (or --output FILE). Standard output is\n\
+  \                             unchanged. The trace is written once the\n\
+  \                             solve finishes; a killed run leaves none.\n\
+  \  --compact                  Trace per call: routing, the result query,\n\
+  \                             seed reads, flushed publications, restarts\n\
+  \                             and returns (default).\n\
+  \  --verbose                  Trace every solver step: solve, local and\n\
+  \                             global query, side effect, answer, update.\n\
+  \  --format text|jsonl        Trace as text (default) or JSON Lines.\n\
+  \  --output FILE              Write the trace to FILE instead of stderr.\n\
   \  --help                     Show this message.\n\n\
    Trust boundary: results are sound for the program this file's unverified\n\
   \  parser actually built, not a guarantee that the parser read your source\n\
@@ -391,6 +404,11 @@ let () =
   let parse_only = ref false in
   let ast = ref false in
   let timeout = ref 10.0 in
+  let trace = ref false in
+  let trace_verbose = ref false in
+  let trace_format = ref Solver_trace.Text in
+  let trace_output = ref None in
+  let globals_name = ref "warrow" in
   let file = ref None in
   let rec parse_args = function
     | [] -> ()
@@ -428,6 +446,7 @@ let () =
            exit 1);
         parse_args rest
     | "--globals" :: v :: rest ->
+        globals_name := v;
         (match v with
         | "join" -> globals := Voblint_CLI.Generated.Globals_Join
         | "per-origin" -> globals := Voblint_CLI.Generated.Globals_Per_Origin
@@ -459,6 +478,26 @@ let () =
         parse_args rest
     | "--ast" :: rest ->
         ast := true;
+        parse_args rest
+    | "--trace" :: rest ->
+        trace := true;
+        parse_args rest
+    | "--verbose" :: rest ->
+        trace_verbose := true;
+        parse_args rest
+    | "--compact" :: rest ->
+        trace_verbose := false;
+        parse_args rest
+    | "--format" :: v :: rest ->
+        (match v with
+        | "text" -> trace_format := Solver_trace.Text
+        | "jsonl" -> trace_format := Solver_trace.Jsonl
+        | _ ->
+            prerr_endline ("unknown --format value: " ^ v);
+            exit 1);
+        parse_args rest
+    | "--output" :: v :: rest ->
+        trace_output := Some v;
         parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v
@@ -569,6 +608,28 @@ let () =
     exit 1
   end;
   let label = String.concat "," (List.map A.analysis_label domains) in
+  Solver_trace_hook.enabled := !trace;
+  (* Written by the contained child after the solve: the recorded events live
+     in its memory, and a killed child has nothing complete to show. *)
+  let emit_trace result =
+    let context_name =
+      match context with
+      | C.Ctx_None -> "none"
+      | C.Ctx_EntryState -> "entry-state"
+      | C.Ctx_CallString k -> "call-string:" ^ string_of_int (A.int_of_nat k)
+    in
+    let write out =
+      Solver_trace.emit ~out ~format:!trace_format ~verbose:!trace_verbose
+        ~analyses:(List.map A.analysis_label domains)
+        ~context:context_name ~globals:!globals_name ~program:path result;
+      flush out
+    in
+    match !trace_output with
+    | None -> write stderr
+    | Some f ->
+        let oc = open_out_bin f in
+        Fun.protect ~finally:(fun () -> close_out oc) (fun () -> write oc)
+  in
   let solve () =
     match
       Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
@@ -576,6 +637,7 @@ let () =
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.Analysed result ->
+        if !trace then emit_trace result;
         if !html || !dot || !graph_snapshot then
           print_diagnostics path label stmt_positions (C.res_diagnostics result);
         result

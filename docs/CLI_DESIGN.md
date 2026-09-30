@@ -98,6 +98,60 @@ The parser is the only unverified component in this chain. Everything from
 host-language plumbing over it (argument parsing, file I/O, the containment
 subprocess below), not new proof work.
 
+## Solver trace (`--trace`)
+
+`--trace` writes the solver's steps to stderr, or to `--output FILE`. Standard
+output is byte-identical with and without it. `--compact` (the default) tells
+the interprocedural story per call; `--verbose` lists every step; `--format
+jsonl` is the machine-readable form.
+
+```text
+voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
+```
+
+The hooks are inserted at build time: `cli/trace/patch_generated.ml` copies
+the generated `Voblint_CLI.ml` into the build with guarded calls into
+`cli/trace/solver_trace_hook.ml`. Each patch names generated text that must
+occur exactly once, so a regeneration that moves one fails the build with the
+patch's name. Neither the Isabelle sources nor the export change, and no hook
+changes a computed value; the tracer is outside the proof like the rest of the
+CLI. With `--trace` off every hook is one branch on a reference.
+
+Events are recorded during the solve and rendered after `run_voblint`
+returns, inside the contained child. A run killed by `--timeout` leaves no
+trace.
+
+JSON Lines schema 1. The first line is the run header; every solver event
+carries an increasing `step`; check records and an `end` record with counts
+follow. No timestamps, so equal runs give equal traces.
+
+```text
+{"event":"run","schema":1,"analysis":[..],"context_policy":..,"update_rule":..,"program":..}
+{"step":n,"event":"solve"|"resolve","unknown":L}
+{"step":n,"event":"query_local","current":L,"target":L}
+{"step":n,"event":"value_local","current":L,"target":L,"value":V}
+{"step":n,"event":"query_global","current":L,"target":G,"value":V}
+{"step":n,"event":"side","current":L,"target":G,"value":V}
+{"step":n,"event":"update_global","unknown":G,"old":V,"new":V}
+{"step":n,"event":"update_local","unknown":L,"old":V,"new":V}
+{"step":n,"event":"answer","current":L,"value":V}
+{"step":n,"event":"route","call":L,"entry":V,"context":C}
+{"event":"check","point":..,"condition":..,"verdict":..}
+{"event":"end","local_unknowns":n,"global_unknowns":n}
+
+L = {"kind":"local","node":"pp3"|"entry_f"|"exit_f","context":C}
+G = {"kind":"activation_seed","procedure":f,"context":C} | {"kind":"analysis_global"}
+C = {"kind":"unit"} | {"kind":"entry_state","values":[..]} | {"kind":"call_string","sites":[..]}
+V = the value as the text report prints it, "⊥" for bottom
+```
+
+`query_global` carries the value the solver held for the global when it was
+read. `side` is the solver's `Side` step, which is where buffered
+publications are flushed; the buffering itself happens in a tree
+transformation that keeps no origin, so there is no separate buffer event.
+`update_*` means the value changed and the unknown's readers were
+destabilized; the reader set itself is not listed.
+
 ## Trust boundary
 
 Stated in the CLI's own `--help` output too:

@@ -5,11 +5,26 @@
 
 (include_subdirs unqualified)
 
+;; The generated module, with the solver tracer's hooks inserted (trace/). The
+;; hooks are guarded no-ops unless --trace is given; patch_generated fails the
+;; build if the generated text it anchors on has changed.
+
+(executable
+ (name patch_generated)
+ (modules patch_generated))
+
+(library
+ (name voblint_trace_hook)
+ (wrapped false)
+ (modules solver_trace_hook))
+
 (rule
  (targets Voblint_CLI.ml)
  (deps ../codegen/generated/ml/Voblint_CLI.ml)
  (action
-  (copy %{deps} %{targets})))
+  (with-stdout-to
+   %{targets}
+   (run %{exe:patch_generated.exe} %{deps}))))
 
 (library
  (name voblint_positions)
@@ -25,7 +40,7 @@
  (name voblint_grammar)
  (wrapped false)
  (modules Voblint_CLI vimp_parser vimp_lexer)
- (libraries voblint_positions menhirLib str zarith)
+ (libraries voblint_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))
 
@@ -48,8 +63,9 @@
   render_json
   render_xml
   wf_explain
-  report_dir)
- (libraries voblint_frontend))
+  report_dir
+  solver_trace)
+ (libraries voblint_frontend voblint_trace_hook))
 
 (executable
  (name voblint)

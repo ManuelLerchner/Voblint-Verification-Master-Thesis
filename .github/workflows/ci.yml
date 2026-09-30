@@ -729,6 +729,9 @@ jobs:
       - name: Arithmetic diagnostics and annotated warning expectations
         run: pixi run arithmetic-diagnostics-check
 
+      - name: Solver trace hooks and output separation
+        run: pixi run solver-trace-check
+
       - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
         run: pixi run cli-smoke
 
