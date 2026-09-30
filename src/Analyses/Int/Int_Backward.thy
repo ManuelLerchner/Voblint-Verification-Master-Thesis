@@ -537,8 +537,8 @@ lemma int_eq_false_sound:
 
 global_interpretation int_dom_numeric_queries:
   numeric_query_judgments int_less_true int_less_false int_eq_true int_eq_false
-  defines int_less = int_dom_numeric_queries.less
-    and int_eq = int_dom_numeric_queries.eq
+  defines int_less = int_dom_numeric_queries.query_less
+    and int_eq = int_dom_numeric_queries.query_eq
   by unfold_locales
      (fact int_less_true_sound, fact int_less_false_sound,
       fact int_eq_true_sound, fact int_eq_false_sound)

@@ -131,8 +131,8 @@ text \<open>
 
 global_interpretation sign_numeric_queries:
   numeric_query_judgments sign_less_true sign_less_false sign_eq_true sign_eq_false
-  defines sign_less = sign_numeric_queries.less
-    and sign_eq = sign_numeric_queries.eq
+  defines sign_less = sign_numeric_queries.query_less
+    and sign_eq = sign_numeric_queries.query_eq
   by unfold_locales
      (auto intro: sign_less_true_sound sign_eq_true_sound
             dest: sign_less_false_sound sign_eq_false_sound)

@@ -108,8 +108,8 @@ text \<open>
 global_interpretation parity_numeric_queries:
   numeric_query_judgments
     parity_less_true parity_less_false parity_eq_true parity_eq_false
-  defines parity_less = parity_numeric_queries.less
-    and parity_eq = parity_numeric_queries.eq
+  defines parity_less = parity_numeric_queries.query_less
+    and parity_eq = parity_numeric_queries.query_eq
   by unfold_locales
      (auto intro: parity_less_true_sound parity_eq_true_sound
             dest: parity_less_false_sound parity_eq_false_sound)
