@@ -136,7 +136,7 @@ domains:
       read: $f
       published_gamma: '\<lbrakk>$v\<rbrakk>'
       published_empty: ($v = RelBot)
-      answer: rel_qry $v $q
+      answer: relc_qry $v $q
       display: Field_Whole (OrderValue (order_pairs $v))
       init: '(\<top> :: relc)'
       route: "[]"
@@ -144,4 +144,4 @@ domains:
       component_sound: order_spec_sound
       single_entry: single_entry_order_spec
       init_sound: ""
-      answer_sound: rel_qry_sound
+      answer_sound: relc_qry_sound

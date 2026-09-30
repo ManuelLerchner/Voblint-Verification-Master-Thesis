@@ -339,7 +339,7 @@ fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<R
 | "val_answer Congruence_Analysis v q =
      (case (slot7 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)"
 | "val_answer Order_Analysis v q =
-     rel_qry (slot8 v) q"
+     relc_qry (slot8 v) q"
 
 fun field_of ::
   "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname list \<Rightarrow> abstract_value field_state" where
@@ -468,6 +468,7 @@ lemma val_answer_sound: "s \<in> val_gamma a v \<Longrightarrow> eval_holds q (v
      (auto split: lifted.splits intro: sign_tf.check.eval_answer_sound
        ivl_tf.check.eval_answer_sound parity_tf.check.eval_answer_sound
        int_tf.check.eval_answer_sound int_tf.check.eval_answer_sound
-       int_tf.check.eval_answer_sound congruence_tf.check.eval_answer_sound rel_qry_sound)
+       int_tf.check.eval_answer_sound congruence_tf.check.eval_answer_sound
+       relc_qry_sound)
 
 end

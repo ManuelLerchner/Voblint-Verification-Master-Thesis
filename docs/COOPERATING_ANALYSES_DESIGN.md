@@ -97,7 +97,7 @@ ordered pair the generated carrier nests.
   component's own assignment. It replaces the assign field only, so its
   soundness is `assign_ask_sound` plus the update lemma.
 - `order_spec` (`Rel_Order_Local.thy`): the order carrier `relc`. Its
-  handler `rel_qry` answers comparisons between variables it has ordered with
+  handler `relc_qry` answers comparisons between variables it has ordered with
   the exact integers `1` or `0`, everything else `⊤`. At `x = e` it asks the
   channel `e <= y` and `y <= e` for each tracked `y` and records a pair on the
   exact answer `1`. At calls it enters with the empty relation and combines to

@@ -7,7 +7,7 @@ cannot be decomposed variable by variable.
 | Theory | Role |
 | --- | --- |
 | `Rel_Order_Domain` | The transfers, with a precise assume refinement on bare-variable comparisons, run through the same equation generator, routed spine and vendored solver as every other domain. It proves that the generic pipeline never assumed pointwise states |
-| `Rel_Order_Local` | The same analysis as a component of the combined state: it answers comparisons (`rel_qry`) and, at an assignment, asks how the new value compares with the other variables. The CLI runs it as `--analysis order` |
+| `Rel_Order_Local` | The same analysis as a component of the combined state: it answers comparisons (`relc_qry`) and, at an assignment, asks how the new value compares with the other variables. The CLI runs it as `--analysis order` |
 
 ## Why this is a session and not an example
 

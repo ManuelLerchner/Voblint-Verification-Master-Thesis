@@ -74,7 +74,7 @@ lemma bot_relc_eq [simp]: "(\<bottom> :: relc) = RelBot"
   by (simp add: bot_relc_def)
 
 text \<open>\<open>\<top>\<close> is the empty constraint set: vacuously true of every pair, so its
-  concretization is \<open>UNIV\<close> (\<open>gamma_rel_top\<close>).\<close>
+  concretization is \<open>UNIV\<close> (\<open>gamma_relc_top\<close>).\<close>
 
 instantiation relc :: order_top
 begin
@@ -117,16 +117,16 @@ end
 
 subsection \<open>Concretization\<close>
 
-fun gamma_rel :: "relc \<Rightarrow> store set" where
-  "gamma_rel RelBot = {}"
-| "gamma_rel (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
+fun gamma_relc :: "relc \<Rightarrow> store set" where
+  "gamma_relc RelBot = {}"
+| "gamma_relc (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
 
-adhoc_overloading gamma_S == gamma_rel
+adhoc_overloading gamma_S == gamma_relc
 
-lemma gamma_rel_top [simp]: "\<lbrakk>\<top> :: relc\<rbrakk> = UNIV"
+lemma gamma_relc_top [simp]: "\<lbrakk>\<top> :: relc\<rbrakk> = UNIV"
   unfolding top_relc_def by simp
 
-lemma gamma_rel_mono:
+lemma gamma_relc_mono:
   fixes d d' :: relc
   assumes "d \<le> d'"
   shows "\<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>d'\<rbrakk>"

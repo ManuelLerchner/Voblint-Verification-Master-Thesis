@@ -98,7 +98,7 @@ field runs `ask_assign (exec_spec ...)`, which asks for the value of an
 assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
-`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
+`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `relc_qry`, and
 keys no context. The generator also emits `local_spec_of_silent`: every
 pointwise field's own component answers every query with `\<top>`.
 `MCP_Analyses.thy` replaces each field's handler with the answer the field
