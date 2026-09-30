@@ -678,8 +678,8 @@ jobs:
         if: env.THESIS == 'true'
         run: pixi run thesis-alignment
 
-      # check_thy_prose_refs resolves a cited name against every .thy under src/
-      # AND vendor/, so prose naming a vendored TD constant
+      # theory-prose-check resolves a cited name against the declarations of
+      # src/ AND vendor/td-verification, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
       # dangling unless the submodule is present. The checkout above is
       # submodules: false, so it has to be initialised here -- after the

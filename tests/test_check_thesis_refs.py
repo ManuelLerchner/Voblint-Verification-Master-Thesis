@@ -17,11 +17,16 @@ def inventory(tmp_path, monkeypatch):
     checker = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(checker)
     monkeypatch.setattr(checker, "REPO", tmp_path)
+    # HOL's own theories are not what these tests are about, and slow to read.
+    monkeypatch.setattr(checker, "isabelle_home", lambda: None)
     source = tmp_path / "src/Example.thy"
     source.parent.mkdir()
+    (tmp_path / "ROOT").write_text(
+        'session Test = HOL + directories "src" theories Example\n'
+    )
 
     def scan(text):
-        source.write_text(text)
+        source.write_text(f"theory Example imports Main begin\n{text}\nend\n")
         return checker.build_inventory()[0]
 
     return scan
@@ -159,3 +164,19 @@ def test_display_and_thy_keep_the_cited_name(tmp_path, monkeypatch):
         ("type", "loc.t"),
         ("locale", "loc.l"),
     ]
+
+
+def test_consts_selectors_and_definition_facts(inventory):
+    kinds = inventory(r"""
+consts gamma\<^sub>S :: "'s => nat set"
+datatype trace = Root | Call (ltr_caller: trace) nat
+class c = fixes op :: "'a => nat"
+instantiation nat :: c begin
+definition op_nat [simp]: "op (n::nat) = n"
+instance ..
+end
+""")
+    assert kinds["gamma\\<^sub>S"] == {"const"}
+    assert kinds["Root"] == kinds["Call"] == kinds["ltr_caller"] == {"const"}
+    # `definition name [simp]: "eq"` names the defining fact, not a constant.
+    assert "const" not in kinds.get("op_nat", set())

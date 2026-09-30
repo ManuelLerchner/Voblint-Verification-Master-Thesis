@@ -57,7 +57,7 @@ stable gates for assessing a change.
 
 ```bash
 rg -n '^\s*(sorry|oops)\b' src/
-python3 scripts/check_isabelle_ascii.py
+pixi run isabelle-ascii-check
 pixi run vendor-init
 AFP=/path/to/afp/thys pixi run isabelle-build
 ```

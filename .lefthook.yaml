@@ -350,7 +350,9 @@ pre-commit:
           # ----------------------------------------------------------------
 
           - name: theory-prose-check
-            glob: "src/**/*.thy"
+            glob:
+              - "src/**/*.thy"
+              - "isar.toml"
             run: pixi run theory-prose-check
 
           - name: retired-identifiers-check

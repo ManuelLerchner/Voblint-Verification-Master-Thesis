@@ -17,3 +17,34 @@ exclude = [
 [fmt]
 # The limit `isar stats style` (pixi run theory-stats style) reports.
 max-line-length = 100
+
+[check]
+# `isar check --group retired`: names this tree removed on purpose, which must
+# not come back (a deleted constant in an assumption is a free variable).
+retired-file = "scripts/retired_identifiers.txt"
+
+# `isar check --group prose` (and `locales`): prose names that resolve outside
+# the project's sessions. Anything else a plain cartouche names must be declared.
+allow = [
+  # Isabelle library names this tree does not use formally.
+  "Abs_State",                # HOL-IMP theory, compared in Exec_St_Base
+  "Bit_Shifts",               # HOL code module (Code_Numeral), emitted by codegen
+  "Str_Literal",              # HOL code module (String), emitted by codegen
+  "Finite_Set.fold_infinite", # HOL lemma: an infinite set folds to the start value
+
+  # Goblint vocabulary (goblint/analyzer), cited for comparison.
+  "ID.of_int",         # base.ml's int domain: integer to abstract value
+  "ID.to_bool",        # base.ml's int domain: abstract value to truth value
+  "ID.to_int",         # base.ml's int domain: abstract value to integer
+  "Queries.eval_bool", # queries.ml: the assert analysis's check query
+  "bot_of",            # intDomain0.ml: the canonical bottom of Std
+  "eval_rv",           # base.ml: rvalue evaluation in Base.branch
+  "f_ask",             # Spec.combine_*: the callee's query channel
+  "id_binary_log",     # base.ml: binary logical operator on int domains
+  "id_binary_pred",    # base.ml: comparison on int domains
+  "id_unary_log",      # base.ml: logical negation on int domains
+  "inner_man",         # mCP.ml: a component's view of the manager
+  "inv_exp",           # baseInvariant.ml: backward refinement of a guard
+  "of_bool",           # intDomain_intf.ml: truth value to abstract value
+  "to_bool",           # intDomain_intf.ml: abstract value to truth value
+]

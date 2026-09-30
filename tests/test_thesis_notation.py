@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parent.parent
-THY = REPO / "src" / "Fake.thy"
 
 
 @pytest.fixture(scope="module")
@@ -19,8 +18,19 @@ def tool():
     return module
 
 
-def texts(body):
-    return [(THY, "theory Fake\n  imports Main\nbegin\n\n" + body + "\nend\n")]
+@pytest.fixture
+def rows(tool, tmp_path, monkeypatch):
+    """The `names` rows of a one-theory project around `body`."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "ROOT").write_text("session Fake = HOL + theories Fake\n")
+
+    def declared(body):
+        (tmp_path / "Fake.thy").write_text(
+            "theory Fake\n  imports Main\nbegin\n\n" + body + "\nend\n"
+        )
+        return tool.names(str(tmp_path), statements=True)
+
+    return declared
 
 
 def test_mixfix_slots_then_applied_arguments(tool):
@@ -40,17 +50,8 @@ def test_mixfix_slots_then_applied_arguments(tool):
     assert tool.fill(None, "carries", ["t", "c"]) == "carries t c"
 
 
-def test_scope_tracks_locale_blocks(tool):
-    text = texts(
-        'locale L =\n  fixes x :: nat\nbegin\nabbreviation a where "a \\<equiv> x"\nend\n'
-        'definition d :: nat where "d = 0"'
-    )[0][1]
-    assert tool.scope_at(text, text.index("abbreviation")) == "L"
-    assert tool.scope_at(text, text.index("definition")) == "global"
-
-
-def test_local_abbreviation_print_mode_and_expansion(tool):
-    src = texts(
+def test_local_abbreviation_print_mode_and_expansion(tool, rows):
+    src = rows(
         "locale L =\n  fixes g :: nat\nbegin\n"
         'abbreviation (input) cover :: "nat" where "cover \\<equiv> f g"\nend'
     )
@@ -59,14 +60,14 @@ def test_local_abbreviation_print_mode_and_expansion(tool):
     assert decl["expands"] == "f g"
 
 
-def test_missing_mixfix_fails_with_its_location(tool):
-    src = texts('definition ltr_collect :: "nat" where "ltr_collect = 0"')
-    with pytest.raises(tool.NotationError, match=r"no mixfix at src/Fake\.thy:5"):
+def test_missing_mixfix_fails_with_its_location(tool, rows):
+    src = rows('definition ltr_collect :: "nat" where "ltr_collect = 0"')
+    with pytest.raises(tool.NotationError, match=r"no mixfix at \S*Fake\.thy:5"):
         tool.find_global("ltr_collect", src, want_mixfix=True)
 
 
-def test_abbreviation_in_the_wrong_locale_fails(tool):
-    src = texts(
+def test_abbreviation_in_the_wrong_locale_fails(tool, rows):
+    src = rows(
         'locale M =\n  fixes g :: nat\nbegin\nabbreviation a where "a \\<equiv> g"\nend'
     )
     with pytest.raises(tool.NotationError, match="expected one"):
@@ -77,3 +78,15 @@ def test_html_rendering_sets_scripts(tool):
     assert tool.isa_html(r"\<C>\<^bsub>\<G>,g,S\<^esub>") == "𝒞<sub>𝒢,g,S</sub>"
     assert tool.isa_html(r"\<gamma>\<^sub>D\<^sub>G") == "γ<sub>DG</sub>"
     assert tool.prose_html("stores _s_ in {\\<gamma> a}") == "stores <em>s</em> in γ a"
+
+
+def test_parameters_fields_and_infix(tool, rows):
+    src = rows(
+        'class w = fixes widen :: "\'a => \'a => \'a" (infixl "\\<nabla>" 65)\n'
+        'record r = fld :: nat ("fld\\<^sup>#")\n'
+        'locale L = fixes x :: nat\n  for route ("context\\<^sup>#")'
+    )
+    assert tool.find_class_param("widen", "w", src)["mixfix"] == "_ \\<nabla> _"
+    assert tool.find_record_field("fld", "r", src)["mixfix"] == "fld\\<^sup>#"
+    with pytest.raises(tool.NotationError, match="has no field"):
+        tool.find_record_field("other", "r", src)

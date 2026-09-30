@@ -19,7 +19,7 @@ python = ">=3.11"
 # `isar stats`, `isar project extract|names`). Pure Python, no Isabelle or AFP
 # needed; configured in isar.toml.
 [pypi-dependencies]
-isar-tools = ">=0.2.0,<0.3"
+isar-tools = ">=0.3.0,<0.4"
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
 # lint/test/grammar concern -- its own dependency pair, needed by every
 # environment a contributor would actually install, so it stays composed
@@ -166,7 +166,7 @@ pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", descript
 pages-stats = { cmd = "python3 scripts/check_pages_stats.py", description = "Check that the site's repository figures are derived (data-stat) and the sources keep their neutral fallback." }
 pages-terms = { cmd = "python3 scripts/check_pages_terms.py", description = "Check that every Isabelle name the site pages set in code is linked into the theory HTML." }
 check-ref = { cmd = "bash scripts/mk/check-ref.sh", description = "Run the fast source checks against a committed ref instead of the working tree: pixi run check-ref <ref>." }
-theory-anchors-check = { cmd = "python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
+theory-anchors-check = { cmd = "isar check --group links . pages/*.html && python3 scripts/check_theory_anchors.py", description = "Check site links' theory anchors against the theory sources, including locale qualification, without building the site." }
 pages-site-links = { cmd = "python3 scripts/check_pages_links.py --site build/github-pages", description = "Check the site pages' internal links and theory anchors against the assembled site." }
 pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", description = "Check every link the site pages carry, internal and external, against the published site." }
 
@@ -190,8 +190,8 @@ thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-
 
 # Declarations the thesis shows are lifted out of the theories by name, never
 # retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
-thesis-snippets = { cmd = "python3 thesis/tools/snippets.py --check", description = "Check thesis Isabelle snippets against their source declarations." }
-thesis-snippets-write = { cmd = "python3 thesis/tools/snippets.py --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
+thesis-snippets = { cmd = "bash scripts/mk/thesis-snippets.sh --check", description = "Check thesis Isabelle snippets against their source declarations." }
+thesis-snippets-write = { cmd = "bash scripts/mk/thesis-snippets.sh --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
 thesis-domain-tree = { cmd = "python3 thesis/tools/domain_tree.py", description = "Check that the chapter 5 domain trees list every implementation of a drawn interface." }
 
 # Theorem statements are exported from a built session, which is what gives the
@@ -397,7 +397,7 @@ codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", desc
 # A slashed theory entry in a ROOT fails the whole session at load, so jEdit
 # will not start and the mistake presents as a dead editor rather than as an
 # error in the file that caused it. Needs no Isabelle.
-sessions-check = { cmd = "python3 scripts/check_root_entries.py", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
+sessions-check = { cmd = "isar check --group project .", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
 # A session inherits its parent chain's heaps and nothing else: a theory of a
 # library session that is no ancestor is re-elaborated inside every session
 # that imports it. The build stays green; only the clock shows it (19% of a
@@ -457,15 +457,21 @@ docs-coverage-check = { cmd = "isar check docs src", description = "Check docume
 
 # Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
-# describing something that no longer exists. Gating: the backlog is cleared.
-theory-prose-check = { cmd = "python3 scripts/check_thy_prose_refs.py", description = "Check that identifiers cited in Isabelle prose still exist." }
+# describing something that no longer exists. A cited name must resolve to a
+# declaration of the project or the vendored solver, or be listed under
+# `check.allow` in isar.toml; the same group rejects raw `_` in document text,
+# which breaks the LaTeX build. The solver is initialized first: without it,
+# every prose reference to a TD name would read as dangling.
+theory-prose-check = { cmd = "isar check --group prose src", depends-on = [
+  "vendor-init",
+], description = "Check that identifiers cited in Isabelle prose resolve and that document prose is LaTeX-safe." }
 
 # An identifier removed together with its theory stays legal inside `assumes`,
 # where Isabelle reads it as a free variable -- so a locale keeps building with
 # an assumption that has quietly stopped constraining anything. Only an
 # explicit list of retired names catches that; scripts/retired_identifiers.txt
-# holds it.
-retired-identifiers-check = { cmd = "python3 scripts/check_retired_identifiers.py", description = "Check that deliberately retired Isabelle identifiers remain absent." }
+# holds it (isar.toml points `isar check --group retired` at it).
+retired-identifiers-check = { cmd = "isar check --group retired src", description = "Check that deliberately retired Isabelle identifiers remain absent." }
 
 # The general form of the same failure: any identifier left free in a locale
 # assumption, whether or not it was ever a constant here. Isabelle generalizes
@@ -489,7 +495,7 @@ theory-stats = { cmd = "isar stats", description = "Report theory, session, proo
 grammar-id-position-check = { cmd = "python3 -m pytest tests/test_gen_isabelle_id_position.py", description = "Check Isabelle grammar identifier position and markup generation." }
 
 # Fast repository checks used directly by hooks and CI.
-isabelle-ascii-check = { cmd = "python3 scripts/check_isabelle_ascii.py", description = "Check Isabelle theory sources for forbidden Unicode syntax." }
+isabelle-ascii-check = { cmd = "isar check --group symbols src", description = "Check Isabelle theory sources for forbidden Unicode syntax." }
 # Takes the artifact name (html, pdf, thesis-facts, codegen). CI reads the
 # cache key from here so the input set of each cached artifact is stated
 # once, in a file that can be read and run locally.

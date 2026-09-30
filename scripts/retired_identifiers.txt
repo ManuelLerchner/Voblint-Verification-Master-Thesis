@@ -102,7 +102,7 @@
 # `analysis_surface.report` instead, and Int_Checks.thy already does the same,
 # `dgs_`-prefixed field name, and `src/Abstract_Interpreter/Framework/README.md` documents that
 # `local_state_dg_spec_for`/`_lifted`), and `sound_transfer_for` fixes those
-# `scripts/check_retired_identifiers.py` fails the commit when any of these
+# `pixi run retired-identifiers-check` fails the commit when any of these
 # `top`. The abstract-only `enter_D`/`enter_ci_D` pair is gone. ---
 # a strategy_program, not a tree ---
 # alias with no consumer, or a definition supporting only its own lemmas. None

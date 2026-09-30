@@ -35,87 +35,16 @@ import shutil
 import subprocess
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import tomllib
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from isar_json import base_name, names, project_directories  # noqa: E402
+from isar_json import sessions as isar_sessions  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
-
-SKIP_PARTS = {".git", ".claude/worktrees", "_build", "docs/history"}
-
-
-def active_path(path: Path) -> bool:
-    """Ignore generated and auxiliary worktrees absent from CI checkouts."""
-    rel = path.relative_to(REPO).as_posix()
-    return not any(rel == part or rel.startswith(f"{part}/") for part in SKIP_PARTS)
-
-
-def mask_comments_and_strings(text: str, strings: bool = True) -> str:
-    """Blank out (* ... *) comment bodies and "..." string bodies so command
-    keywords appearing in prose or as quoted type names (e.g. instance "fun")
-    are not mistaken for actual commands. Preserves length and newlines so
-    line numbers and \\<open>/\\<close> cartouche offsets stay valid.
-
-    A cartouche is skipped whole and left unmasked: a quote or comment
-    delimiter inside prose (\\"nonzero\\" in a text block) is not one in
-    Isabelle, and treating it as one would blank every command up to the
-    next stray quote."""
-    out = list(text)
-    n = len(text)
-    i = 0
-    while i < n:
-        if text.startswith("\\<open>", i):
-            i = find_matching_close(text, i)
-        elif text.startswith("(*", i):
-            depth = 1
-            j = i + 2
-            while j < n and depth > 0:
-                if text.startswith("(*", j):
-                    depth += 1
-                    j += 2
-                elif text.startswith("*)", j):
-                    depth -= 1
-                    j += 2
-                else:
-                    j += 1
-            for k in range(i, j):
-                if out[k] != "\n":
-                    out[k] = " "
-            i = j
-        elif text[i] == '"':
-            j = i + 1
-            while j < n:
-                if text[j] == "\\" and j + 1 < n:
-                    j += 2
-                    continue
-                if text[j] == '"':
-                    j += 1
-                    break
-                j += 1
-            if strings:
-                for k in range(i, j):
-                    if out[k] != "\n":
-                        out[k] = " "
-            i = j
-        else:
-            i += 1
-    return "".join(out)
-
-
-def find_matching_close(text: str, open_pos: int) -> int:
-    """Return index just past the \\<close> matching \\<open> at open_pos, honoring nesting."""
-    depth = 1
-    i = open_pos + len("\\<open>")
-    while i < len(text) and depth > 0:
-        if text.startswith("\\<open>", i):
-            depth += 1
-            i += len("\\<open>")
-        elif text.startswith("\\<close>", i):
-            depth -= 1
-            i += len("\\<close>")
-        else:
-            i += 1
-    return i
 
 
 # One kind per declaring command. A name may legitimately hold several kinds
@@ -139,46 +68,6 @@ KIND_COMMANDS = {
     "locale": ("locale", "class"),
 }
 COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmds}
-
-# `record 'a domain_transfer =`, `record 'a::bot t =` and `datatype ('a, 'b) t = ...`
-# put type parameters between the command and the name, so those are skipped first.
-DECL = re.compile(
-    r"^[ \t]*(?:qualified\s+)?("
-    + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
-    + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*(?:::[A-Za-z_][A-Za-z0-9_]*)?)\s+)*"
-    # A name may carry Isabelle subscripts, as in dep\<^sub>L.
-    + r"([A-Za-z](?:[A-Za-z0-9_']|\\<\^sub>)*)",
-    re.M,
-)
-# `lemma foo:` and `lemma foo [simp]:` both declare foo; `lemma "..."` does not.
-ANON = re.compile(r'^\s*(?:lemma|theorem|corollary)\s+["\\]', re.M)
-# `  field :: "type"` lines inside a record / datatype body.
-FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
-
-# A datatype's constructors are constants too, and prose cites them as often as
-# it cites the type: `EA_Assign`, `Root`, `CallEdge`.  They are capitalised and
-# introduced after `=` or after a `|`, which may sit mid-line when several
-# nullary constructors share one (`Sign_Analysis | Interval_Analysis | ...`).
-CONSTRUCTOR = re.compile(r"(?:=|\|)\s*([A-Z][A-Za-z0-9_']*)")
-
-# Bound bodies by commands, not indentation: constructors may start a line,
-# while the next declaration may itself be indented inside a context.
-BODY_END = re.compile(
-    r"^[ \t]*(?:"
-    + "|".join(COMMAND_KIND)
-    + r"|begin|end|context|instantiation|instance|interpretation|sublocale"
-    + r"|text|text_raw|chapter|section|subsection|subsubsection|paragraph)\b",
-    re.M,
-)
-CLASS_FIX = re.compile(r"\b(?:fixes|and)\s+([A-Za-z][A-Za-z0-9_']*)\s*::")
-# `assumes gamma_mono: "..."` or `and narrow_le [simp]: "..."` in a locale or
-# class body names a fact of that locale, which prose cites as a law.
-ASSUMPTION = re.compile(
-    r"\b(?:assumes|and)\s+([A-Za-z][A-Za-z0-9_']*)\s*(?:\[[^\]]*\])?\s*:(?!:)"
-)
-# `Assign: "..."` or `| Call: "..."` in an inductive body names the fact
-# `pstep.Call`, which a theorem statement cites.
-RULE_LABEL = re.compile(r"^\s*(?:\|\s*)?([A-Za-z][A-Za-z0-9_']*)\s*:(?!:)", re.M)
 
 # `thy:` and `display:` (either order) change the link target and printed text,
 # not the cited name.
@@ -252,6 +141,50 @@ def isabelle_commands() -> set[str] | None:
     return names or None
 
 
+# isar-tools' kinds, in the thesis's vocabulary.
+ISAR_KIND = {
+    "fact": "thm",
+    "constant": "const",
+    "type": "type",
+    "locale": "locale",
+    "class": "locale",
+}
+# Names a declaration derives that prose cites: `f.simps` of a function, and
+# the rules of an inductive (`pstep.Seq2`) but not its generated `.intros`.
+FUNCTIONS = ("fun", "primrec", "function")
+INDUCTIVES = ("inductive", "inductive_set")
+INDUCTIVE_FACTS = (".intros", ".cases", ".induct", ".simps")
+
+
+def add_name(
+    row: dict, kinds: dict[str, set[str]], declared_by: dict[str, set[str]]
+) -> None:
+    """Record one `isar project names --derived` row, as far as prose cites it."""
+    command, name = row["command"], base_name(row)
+    if row["derived_from"]:
+        suffix = name.rsplit(".", 1)[-1]
+        if (command in FUNCTIONS and suffix == "simps") or (
+            command in INDUCTIVES and "." in name and not name.endswith(INDUCTIVE_FACTS)
+        ):
+            kinds[name].add("thm")
+        return
+    kind = ISAR_KIND.get(row["kind"])
+    if kind is None:
+        return
+    if command in COMMAND_KIND and kind == COMMAND_KIND[command]:
+        kinds[name].add(kind)
+        declared_by[name].add(command)
+    # Record fields, and datatype constructors, discriminators and selectors.
+    elif command in ("record", "datatype") and kind == "const":
+        kinds[name].add(kind)
+    elif command == "assumes":  # a named locale or class assumption
+        kinds[name].add(kind)
+    # Type-class parameters become overloaded global constants, named in the
+    # class's `c_class` locale. Arbitrary locale fixes do not.
+    elif command == "fixes" and row["name"].rsplit(".", 2)[-2].endswith("_class"):
+        kinds[name].add(kind)
+
+
 def build_inventory() -> tuple[
     dict[str, set[str]], set[str], set[str], dict[str, set[str]]
 ]:
@@ -261,52 +194,18 @@ def build_inventory() -> tuple[
     # The background chapter cites HOL's own order and lattice classes, which
     # live in the top-level theories of the HOL session.
     home = isabelle_home()
-    library = sorted((home / "src" / "HOL").glob("*.thy")) if home else []
-    paths = [p for root in ("src", "vendor") for p in (REPO / root).rglob("*.thy")]
-    for group in (paths, library):
-        for path in group:
-            original = path.read_text(errors="ignore")
-            text = mask_comments_and_strings(original)
-            # Cartouches contain documentation and terms, not declarations.
-            # Preserve offsets/newlines while excluding their apparent commands.
-            start = 0
-            while (start := text.find("\\<open>", start)) != -1:
-                end = find_matching_close(text, start)
-                text = (
-                    text[:start] + re.sub(r"[^\n]", " ", text[start:end]) + text[end:]
-                )
-                start = end
-            for m in DECL.finditer(text):
-                if ANON.match(original, m.start()):
-                    continue
-                kinds[m.group(2)].add(COMMAND_KIND[m.group(1)])
-                declared_by[m.group(2)].add(m.group(1))
-                stop = BODY_END.search(text, m.end())
-                body = text[m.end() : stop.start() if stop else len(text)]
-                # Selectors belong only to this declaration, not every later
-                # indented type annotation or proof-local variable in the file.
-                if m.group(1) in ("record", "datatype"):
-                    for f in FIELD.finditer(body):
-                        kinds[f.group(1)].add("const")
-                if m.group(1) == "datatype":
-                    for c in CONSTRUCTOR.finditer(body):
-                        kinds[c.group(1)].add("const")
-                    # Named selectors, `Call (activation_trace_caller: activation_trace) activation_path`.
-                    for sel in re.finditer(r"\(([A-Za-z][A-Za-z0-9_']*)\s*:", body):
-                        kinds[sel.group(1)].add("const")
-                # Type-class parameters become overloaded global constants.
-                # Arbitrary locale fixes do not declare such constants.
-                if m.group(1) == "class":
-                    for f in CLASS_FIX.finditer(body):
-                        kinds[f.group(1)].add("const")
-                if m.group(1) in ("locale", "class"):
-                    for a in ASSUMPTION.finditer(body):
-                        kinds[a.group(1)].add("thm")
-                if m.group(1) in ("fun", "primrec", "function"):
-                    kinds[f"{m.group(2)}.simps"].add("thm")
-                if m.group(1) in ("inductive", "inductive_set"):
-                    for r in RULE_LABEL.finditer(body):
-                        kinds[f"{m.group(2)}.{r.group(1)}"].add("thm")
+    library = (
+        sorted(str(p) for p in (home / "src" / "HOL").glob("*.thy")) if home else []
+    )
+    sources = [(d,) for d in project_directories(REPO)] + (
+        [tuple(library)] if library else []
+    )
+    # One isar run per project and one for HOL's theories, side by side.
+    with ThreadPoolExecutor() as pool:
+        found = pool.map(lambda paths: names(*paths, derived=True), sources)
+    for rows in found:
+        for row in rows:
+            add_name(row, kinds, declared_by)
 
     # Without an Isabelle installation the HOL sources are not readable. The
     # committed link map was generated from HOL's rendered theories and records
@@ -326,16 +225,9 @@ def build_inventory() -> tuple[
         path.stem for root in ("src", "vendor") for path in (REPO / root).rglob("*.thy")
     }
 
-    sessions: set[str] = set()
-    for roots in REPO.rglob("ROOT"):
-        if not active_path(roots):
-            continue
-        for m in re.finditer(
-            r"^\s*session\s+\"?([A-Za-z0-9_]+)\"?",
-            roots.read_text(errors="ignore"),
-            re.M,
-        ):
-            sessions.add(m.group(1))
+    sessions = {
+        s["session"] for d in project_directories(REPO) for s in isar_sessions(d)
+    }
     return kinds, sessions, theories, declared_by
 
 

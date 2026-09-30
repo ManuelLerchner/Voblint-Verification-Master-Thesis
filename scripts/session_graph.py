@@ -7,11 +7,10 @@ draws the development as strata, one layer above the highest session each
 session rests on; computing that from the sources keeps the drawing from
 drifting when a session moves or an import is added.
 
-Sessions, their theories, and resolved imports come from isar-tools' project
-model (`isar project sessions|graph`), which reads ROOTS and ROOT files as
-`isabelle build -D` does; sizes come from `isar stats sessions`, so they agree
-with `pixi run theory-stats`. The vendored TD session is included when
-vendor/td-verification is checked out.
+The strata and relations come from `isar project graph --layers`, which reads
+ROOTS and ROOT files as `isabelle build -D` does, with the vendored TD session
+the project rests on (isar.toml includes vendor/td-verification); sizes come
+from `isar stats sessions`, so they agree with `pixi run theory-stats`.
 
 Run directly to print the layers and any import that leaves what its ROOT makes
 available.
@@ -20,85 +19,61 @@ available.
 import sys
 
 from isar_json import (
-    TD_DIR,
     THEOREM_COMMANDS,
     command_counts,
     graph,
+    project_directories,
     session_sizes,
     sessions,
 )
 
 
-def _directories() -> list[str]:
-    return ["."] + (["vendor/td-verification"] if (TD_DIR / "ROOT").is_file() else [])
-
-
 def collect() -> list[dict]:
-    """Every session with its declared relations, imports, depth and size."""
-    by_name: dict[str, dict] = {}
+    """Every session with its declared relations, imports, layer and size."""
+    layered = graph(layers=True)
+    info: dict[str, dict] = {}
     sizes: dict[str, dict] = {}
     commands: dict[str, dict[str, int]] = {}
-    for directory in _directories():
-        for s in sessions(directory):
-            by_name.setdefault(
-                s["session"],
-                {
-                    "name": s["session"],
-                    "dir": s["directory"],
-                    "parent": s["parent"],
-                    "sessions": [],
-                    "imports": set(),
-                },
-            )
+    listed: dict[str, list[str]] = {}
+    for directory in project_directories():
+        info.update({s["session"]: s for s in sessions(directory)})
         sizes.update(session_sizes(directory))
         commands.update(command_counts(directory))
-    # Relations only after every session is known: `.` imports TD's theories.
-    for directory in _directories():
+        # `sessions` entries as the ROOT lists them, also of sessions outside
+        # the graph (HOL-Library); the layered graph keeps its own nodes only.
         for edge in graph(directory)["edges"]:
-            if edge["kind"] == "sessions" and edge["from"] in by_name:
-                by_name[edge["from"]]["sessions"].append(edge["to"])
-        # A theory edge between two sessions is an import of the other session.
-        for edge in graph(directory, theories=True)["edges"]:
-            source = edge["from"].split(".", 1)[0]
-            target = edge["to"].split(".", 1)[0]
-            if source in by_name and target in by_name and target != source:
-                by_name[source]["imports"].add(target)
-
-    def rests_on(s: dict) -> set[str]:
-        return {n for n in {s["parent"], *s["sessions"], *s["imports"]} if n in by_name}
-
-    depth: dict[str, int] = {}
-
-    def depth_of(name: str) -> int:
-        if name not in depth:
-            depth[name] = 1 + max(
-                (depth_of(n) for n in rests_on(by_name[name])), default=0
-            )
-        return depth[name]
+            if edge["kind"] == "sessions":
+                listed.setdefault(edge["from"], []).append(edge["to"])
+    related: dict[str, dict[str, list[str]]] = {
+        n: {"imports": [], "rests_on": []} for n in layered["nodes"]
+    }
+    for edge in layered["edges"]:
+        if edge["from"] not in related:
+            continue
+        if edge["kind"] == "imports":
+            related[edge["from"]]["imports"].append(edge["to"])
+        if edge["to"] in related:
+            related[edge["from"]]["rests_on"].append(edge["to"])
 
     def size(name: str, key: str) -> int:
         return sizes.get(name, {}).get(key, 0)
 
     return [
         {
-            "name": s["name"],
-            "dir": s["dir"],
-            "parent": s["parent"],
-            "sessions": s["sessions"],
-            "imports": sorted(s["imports"]),
-            "rests_on": sorted(rests_on(s)),
-            "depth": depth_of(s["name"]),
-            "theories": size(s["name"], "theories"),
-            "lines": size(s["name"], "lines"),
-            "code": size(s["name"], "code_lines"),
-            "doc": size(s["name"], "doc_lines"),
-            "proofs": sum(
-                commands.get(s["name"], {}).get(c, 0) for c in THEOREM_COMMANDS
-            ),
+            "name": name,
+            "dir": info[name]["directory"],
+            "parent": info[name]["parent"],
+            "sessions": listed.get(name, []),
+            "imports": sorted(set(related[name]["imports"]) - {name}),
+            "rests_on": sorted(set(related[name]["rests_on"]) - {name}),
+            "depth": layered["layers"][name],
+            "theories": size(name, "theories"),
+            "lines": size(name, "lines"),
+            "code": size(name, "code_lines"),
+            "doc": size(name, "doc_lines"),
+            "proofs": sum(commands.get(name, {}).get(c, 0) for c in THEOREM_COMMANDS),
         }
-        for s in sorted(
-            by_name.values(), key=lambda s: (depth_of(s["name"]), s["name"])
-        )
+        for name in sorted(layered["nodes"], key=lambda n: (layered["layers"][n], n))
     ]
 
 
@@ -106,11 +81,13 @@ def imported_theories(session: str) -> list[str]:
     """The theories of `session` that other sessions reach: their imports,
     closed under the imports among the session's own theories. Qualified names."""
     own_directory = next(
-        d for d in _directories() if any(s["session"] == session for s in sessions(d))
+        d
+        for d in project_directories()
+        if any(s["session"] == session for s in sessions(d))
     )
     todo = [
         edge["to"]
-        for directory in _directories()
+        for directory in project_directories()
         if directory != own_directory
         for edge in graph(directory, theories=True)["edges"]
         if edge["to"].startswith(session + ".")
