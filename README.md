@@ -97,6 +97,20 @@ proof ([`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md#solver-trace---trace)).
 pixi run voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
 ```
 
+The playground's **Solve replay** section steps through the same solve on the
+graph: the value each unknown holds, the unknowns being solved, the stable
+ones, and the edge each query follows backward from the exit. It replays the
+traces of the patched build, so it shares the trace's trust boundary.
+`node scripts/capture_readme_figures.mjs solve-replay` regenerates the
+animation below from the playground.
+
+<p align="center">
+  <a href="docs/images/solve-replay.gif">
+    <img src="docs/images/solve-replay.gif" width="720" alt="The playground's solve replay on the context example: the solver starts at the exit of main, queries backward to its entry, routes each call of bump to its own context, and fills in every node's interval step by step, with the indented trace beside the graph">
+  </a>
+  <br><sub>The context example solved step by step. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open this run</a>.</sub>
+</p>
+
 ### Arithmetic diagnostics
 
 Every analysis also checks the divisors of `/` and `%` against the solved state

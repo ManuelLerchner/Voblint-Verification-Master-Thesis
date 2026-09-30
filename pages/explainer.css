@@ -469,6 +469,14 @@
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* A captured figure, such as the solve replay's animation, keeps its own size at most. */
+.scene > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
 /* Below the prose column the labels would shrink past reading size, so the figure
    keeps a floor and the frame scrolls, as the timeline axis already does. */
 @media (max-width: 720px) {

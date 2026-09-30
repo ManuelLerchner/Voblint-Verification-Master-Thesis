@@ -4706,7 +4706,26 @@ fun main() {
           belongs with the handwritten OCaml outside the green box, and a bug in it could change a
           result even with the trace off.
         </p>
+        <p>
+          The playground's <strong>Solve replay</strong> section draws the same steps on the
+          graph. The solver starts at the exit of <code>main</code> and queries backward; each
+          call is routed to a context of its own, and every node fills in with the value the
+          solver holds for it at that step.
+        </p>
       </div>
+
+      <figure class="scene scene-replay">
+        <img src="assets/solve-replay.gif" width="720" height="606" loading="lazy"
+          alt="The solve replay on the context example: the solver starts at the exit of main, queries backward to its entry, routes each call of bump to its own context, and fills in every node's interval step by step, with the indented trace beside the graph.">
+        <figcaption>
+          The solve replay on the context example, one frame per solver step. Dashed nodes are
+          not reached yet, orange ones are being solved, the thick one is solved now, and dark
+          ones are stable. The replay shows the instrumented, traced executable, solved again
+          with its traces, not the pristine exported solver; the instrumentation and the replay
+          are outside the proof.
+          <a class="try-link" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Run it ↗</a>
+        </figcaption>
+      </figure>
 
 
     </section>
