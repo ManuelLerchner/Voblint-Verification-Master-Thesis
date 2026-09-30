@@ -170,8 +170,6 @@ of @ch:domains lift it pointwise to one abstract value per variable.
 the compiler of @sec:compile passes down a single continuation, and a
 #keyw("return") ignores it.
 
-=== Expressions and commands
-
 Expressions are integer-valued. As in C11, comparisons and logical operators
 yield $0$ or $1$ (#c11("6.5.8p6"), #c11("6.5.9p3"), #c11("6.5.3.3p5"), #c11("6.5.13p3"), #c11("6.5.14p3")), and a
 condition holds when it is non-zero (#isaconst("truthy"), #c11("6.8.4.1p2"),
@@ -304,15 +302,15 @@ body.
     callee, and a #ctor("Check") names its source position.],
 ) <fig:vimp-ast>
 
-The static contract #isaconst("wf_source_program") on a program has several
-parts. Every call names either a declared procedure with matching arity or a
+The theorems must exclude programs whose calls cannot step or whose results
+are undefined. The static contract #isaconst("wf_source_program") does this in
+several parts. Every call names either a declared procedure with matching arity or a
 library function with suitable arguments and a destination. Formals are
-distinct valid locals (#isaconst("valid_formal")). `main` takes no arguments
+distinct valid locals. `main` takes no arguments
 and contains no #keyw("return"). No declared name is a library name. The
-result variable #isaconst("ret_var") is reserved. It is not global
-(#isaconst("reserved_ret_var")), and no source expression reads it or
-assignment writes it (#isaconst("source_exp")). Finally, a call that stores a
-result names a _value-providing_ callee (#isaconst("value_providing")). This
+result variable #isaconst("ret_var") is reserved: it is not global, and no
+source expression reads it or assignment writes it. Finally, a call that
+stores a result names a _value-providing_ callee. This
 syntactic condition forbids falling through and #keyw("return") without a
 value, and it requires a #keyw("return") with a value. So every completed
 activation of the callee supplies a value. The callee may still diverge. In
@@ -370,7 +368,6 @@ only a store and a destination. The
 )[explainer page]
 animates these steps.
 
-
 A call evaluates the actuals in the caller's store, resets the locals, binds
 the formals (#isaconst("enter_state"), #isaconst("bind_formals")) and pushes a
 frame. A `return e` writes the value of $e$ to #isaconst("ret_var").
@@ -390,123 +387,6 @@ step (#isathm("pstep_Unwind_stuck")). For this reason the contract rejects
 
 A source run starts from the configuration $(#isaconst("main_body") thin Pi,
   s_0, [])$, with an initial store $s_0$ in #isaconst("cinit_stores") (@sec:vimp-vs-c).
-
-=== Adequacy of the source semantics <sec:vimp-vs-c>
-
-#isaconst("pstep") is the reference semantics of VIMP. We interpret every
-source-level guarantee in this thesis against the executions that it
-generates. These guarantees therefore cannot show that #isaconst("pstep")
-describes the intended language. This can only be argued.
-
-*Where shared constructs diverge.* A statement that is true of a VIMP program
-need not hold for the corresponding C program. @tab:vimp-vs-c compares VIMP
-with C11 @iso-c11 and cites clauses of the committee draft N1570.
-
-#figure(
-  {
-    set text(size: 9pt)
-    table(
-      columns: (auto, auto, 1fr),
-      align: (left, left, left),
-      stroke: none,
-      inset: (x: 3.5pt, y: 2.2pt),
-      table.hline(),
-      [], [*VIMP*], [*C11*],
-      table.hline(stroke: 0.5pt),
-      [integers], [unbounded],
-      [signed overflow undefined (#c11("6.5p5"))],
-      [], [], [unsigned arithmetic wraps (#c11("6.2.5p9"))],
-      [`a / 0`, `a % 0`], [$0$ and $a$], [undefined (#c11("6.5.5p5"))],
-      [`/`, `%`, $b != 0$], [truncated; $(a "/" b) dot b + a % b = a$],
-      [the same where $a "/" b$ is representable (#c11("6.5.5p6"))],
-      [`&&`, `||`], [both operands evaluated],
-      [second operand only if needed (#c11("6.5.13p4"), #c11("6.5.14p4"))],
-      [initial values], [globals $0$, `main`'s locals arbitrary],
-      [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
-      [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
-      [checks], [never stop the run],
-      [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
-      [`main`], [no explicit `return`], [`return` gives the exit status (#c11("5.1.2.2.3"))],
-      table.hline(),
-    )
-  },
-  placement: none,
-  caption: [Constructs that both languages have but model differently. The VIMP
-    rows restate #isaconst("c_div"), #isaconst("c_mod"), #isaconst("aval"),
-    #isaconst("cinit_stores"), #isaconst("enter_state") and #isaconst("pstep").],
-) <tab:vimp-vs-c>
-
-
-*Division by zero.* Division by zero can flip a verdict, and so can integer
-overflow: C11 leaves signed overflow undefined
-(#c11("6.5p5")), while the integers of VIMP are unbounded. For division by
-zero, VIMP defines what C11 leaves undefined (#c11("6.5.5p5")). After `z = 5 / 0;` the check `z == 0`
-holds in VIMP. So a `PROVED` verdict on a program that divides by zero says
-nothing about the corresponding C program. A separate arithmetic diagnostic
-reports when the analysis cannot exclude a zero divisor; its absence at a
-reached node proves the divisor nonzero there
-(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). As expressions are total and effect-free,
-evaluating both operands of `&&` gives the short-circuit value; only the
-diagnostic differs: it warns about the divisor in `x != 0 && 10 / x > 1` (claim
-`and-divisor-warning`). In Goblint's CFG the division lies behind the guard's
-`Test` edge: CIL lowers `&&` and `||` to branches unless `useLogicalOperators`
-is set, which Goblint does only for witnesses.
-
-*Initial values.* At program entry the globals are $0$, as C11 initializes
-static objects, and the locals of `main` are arbitrary mathematical integers
-(#isaconst("cinit_stores")). We do not model the indeterminate values of C11,
-some reads of which are undefined (#c11("6.3.2.1p2")). Every source-level theorem assumes an initial store from
-this set. The locals of a callee start at $0$ on every entry
-(#isaconst("enter_state")), a value C11 does not fix. No shipped analysis uses
-it. The abstract
-entry resets locals to $top$ (#isaconst("enter_binding")), so a check `y == 0`
-on an unassigned callee local `y` is
-#raw(check-row("callee-uninit-local", cond: "y == 0").verdict). An analysis
-that proved it would still be sound for VIMP, but the claim would not follow
-for C.
-
-*Checks do not prune executions.* A failing check does not end the run. So
-VIMP continues executions that an aborting `assert` would stop, and the verdict
-for one check does not depend on an earlier one. Goblint's `__goblint_check`
-behaves the same way. Its library table classifies it as checked and not used
-for refinement
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml")[`libraryFunctions.ml`]).
-VIMP has no `assume`; only the guards of `if` and `while` prune executions.
-`min` and `max` have no C11 counterpart and are defined by
-#isaconst("special_table") alone.
-
-*Well-formed runs do not get stuck.* A stuck configuration would make every later program
-point unreachable under #isaconst("pstep"), so `DEAD` verdicts and
-reachability-conditional `PROVED` verdicts there would hold vacuously. For a
-program satisfying #isaconst("wf_source_program"), every reachable
-configuration has either finished, as #skipC with an empty frame stack, or can
-step:
-
-#proved("source_progress")
-
-The theorem is about the source alone; its premise mentions no compiled graph.
-The contract rules out the structural reasons why a call rule can fail: an
-undeclared callee, an arity mismatch, repeated formals, and a library call with
-unsuitable arguments or without a destination.
-Every classified library call has a result (#isathm("special_result_ex")). The
-proof reuses the invariant behind the simulation relation of @sec:csim.
-
-*A fragment of Goblint's input.* Goblint analyzes C after its CIL front end
-@necula02 has normalized it. Expressions in CIL have no side effects. A call is
-a separate instruction, `Call`, with an optional destination, a callee and its
-actuals
-(#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.mli")[`cil.mli`]
-at the revision Goblint pins). VIMP makes the same choice. Every edge kind of
-Goblint's CFG except inline assembly and in-place declarations has a VIMP
-counterpart (@tab:cfg-edges), so calls and returns are represented by
-corresponding kinds of CFG edges. The local/global split lives in the call and
-return transfers. No translation from C to VIMP is formalized.
-
-*No second semantics.* No external semantics cross-checks #isaconst("pstep");
-IMP2 and Simpl would each need a translation and its own adequacy argument
-(@ch:related).
-
-
 
 == The procedure-aware control-flow graph <sec:graph>
 
@@ -660,16 +540,17 @@ graph. @fig:cfgmap shows each of these properties.
 
 === Compiling a command <sec:compile>
 
-The compiler (#isaconst("compile") for commands, #isaconst("compile_proc")
-and #isaconst("compile_prog") for procedures and programs) is
-_continuation-passing_. The node that a fragment falls through to is an input.
 A straightforward compiler that insists on one normal exit node per fragment
 has two problems.
 First, it needs either a more complex result type or a synthetic exit for
 #keyw("return"). A #keyw("return") has no exit, and no execution reaches such
 a synthetic exit. Second, it joins sequenced fragments by no-op edges between
-two nodes that denote the same program point. With the continuation as input,
-a node is a program point between two transfers, as in Goblint's CFG. There is
+two nodes that denote the same program point. Voblint's compiler therefore
+takes the node a fragment falls through to as an input: it is
+_continuation-passing_ (#isaconst("compile") for commands,
+#isaconst("compile_proc") and #isaconst("compile_prog") for procedures and
+programs). A node is then a program point between two transfers, as in
+Goblint's CFG. There is
 no join node after a conditional, because both branches are compiled against
 the same continuation. A loop compiles its body against the loop head. The
 compiled counting loop of @fig:counting-loop therefore has no node $t$ and no
@@ -688,13 +569,14 @@ $ctor("FunctionResult") thin p$ is a return edge. The epilogue is added only
 when the body can fall through (#isaconst("falls_through")), as
 @fig:compile-proc shows.
 
-Every compiled graph satisfies the structural contract #isaconst("wf_cfg"),
-without premises (#isathm("compile_prog_wf")). Call edges enter procedure
+Routing and the executable enumeration of edges need a well-formed graph
+with finite edge sets. Every compiled graph provides one: it satisfies the
+structural contract #isaconst("wf_cfg") without premises
+(#isathm("compile_prog_wf")). Call edges enter procedure
 entries, no local edge enters one, and a return edge ends at the result node of
 its own procedure. The entry of the graph is the $ctor("FunctionEntry")$ node
 of `main` (#isathm("cfg_entry_compile_prog")). Its edge sets are finite
-(#isathm("compile_prog_finite")). The routing and the executable enumeration
-of edges need finite edge sets.
+(#isathm("compile_prog_finite")).
 
 The compiler reads the program as a table $Pi$ and a callee list $italic("ps")$,
 the declared procedures other than `main`. The contract
@@ -868,3 +750,117 @@ matched by a graph run that holds the same store. Because
 #isaconst("run_voblint") returns an analysis result only after its executable
 well-formedness check succeeds, the end-to-end theorem needs no separate
 #isaconst("wf_compile_input") premise.
+
+== Adequacy of the source semantics <sec:vimp-vs-c>
+
+A source-level guarantee means only as much as the semantics it is stated
+over. We interpret every guarantee in this thesis against the executions of
+#isaconst("pstep"), the reference semantics of VIMP. These guarantees therefore cannot show that #isaconst("pstep")
+describes the intended language. This can only be argued.
+
+*Where shared constructs diverge.* A statement that is true of a VIMP program
+need not hold for the corresponding C program. @tab:vimp-vs-c compares VIMP
+with C11 @iso-c11 and cites clauses of the committee draft N1570.
+
+#figure(
+  {
+    set text(size: 9pt)
+    table(
+      columns: (auto, auto, 1fr),
+      align: (left, left, left),
+      stroke: none,
+      inset: (x: 3.5pt, y: 2.2pt),
+      table.hline(),
+      [], [*VIMP*], [*C11*],
+      table.hline(stroke: 0.5pt),
+      [integers], [unbounded],
+      [signed overflow undefined (#c11("6.5p5"))],
+      [], [], [unsigned arithmetic wraps (#c11("6.2.5p9"))],
+      [`a / 0`, `a % 0`], [$0$ and $a$], [undefined (#c11("6.5.5p5"))],
+      [`/`, `%`, $b != 0$], [truncated; $(a "/" b) dot b + a % b = a$],
+      [the same where $a "/" b$ is representable (#c11("6.5.5p6"))],
+      [`&&`, `||`], [both operands evaluated],
+      [second operand only if needed (#c11("6.5.13p4"), #c11("6.5.14p4"))],
+      [initial values], [globals $0$, `main`'s locals arbitrary],
+      [static $0$, automatic indeterminate (#c11("6.7.9p10"))],
+      [callee locals], [$0$ on every entry], [indeterminate (#c11("6.7.9p10"))],
+      [checks], [never stop the run],
+      [`assert` aborts on $0$ unless `NDEBUG` (#c11("7.2p1"), #c11("7.2.1.1"))],
+      [`main`], [no explicit `return`], [`return` gives the exit status (#c11("5.1.2.2.3"))],
+      table.hline(),
+    )
+  },
+  placement: none,
+  caption: [Constructs that both languages have but model differently. The VIMP
+    rows restate #isaconst("c_div"), #isaconst("c_mod"), #isaconst("aval"),
+    #isaconst("cinit_stores"), #isaconst("enter_state") and #isaconst("pstep").],
+) <tab:vimp-vs-c>
+
+*Division by zero.* Division by zero can flip a verdict, and so can integer
+overflow: C11 leaves signed overflow undefined
+(#c11("6.5p5")), while the integers of VIMP are unbounded. For division by
+zero, VIMP defines what C11 leaves undefined (#c11("6.5.5p5")). After `z = 5 / 0;` the check `z == 0`
+holds in VIMP. So a `PROVED` verdict on a program that divides by zero says
+nothing about the corresponding C program. A separate arithmetic diagnostic
+reports when the analysis cannot exclude a zero divisor; its absence at a
+reached node proves the divisor nonzero there
+(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). As expressions are total and effect-free,
+evaluating both operands of `&&` gives the short-circuit value; only the
+diagnostic differs: it warns about the divisor in `x != 0 && 10 / x > 1` (claim
+`and-divisor-warning`). In Goblint's CFG the division lies behind the guard's
+`Test` edge: CIL lowers `&&` and `||` to branches unless `useLogicalOperators`
+is set, which Goblint does only for witnesses.
+
+*Initial values.* At program entry the globals are $0$, as C11 initializes
+static objects, and the locals of `main` are arbitrary mathematical integers
+(#isaconst("cinit_stores")). We do not model the indeterminate values of C11,
+some reads of which are undefined (#c11("6.3.2.1p2")). Every source-level theorem assumes an initial store from
+this set. The locals of a callee start at $0$ on every entry
+(#isaconst("enter_state")), a value C11 does not fix. No shipped analysis uses
+it. The abstract
+entry resets locals to $top$ (#isaconst("enter_binding")), so a check `y == 0`
+on an unassigned callee local `y` is
+#raw(check-row("callee-uninit-local", cond: "y == 0").verdict). An analysis
+that proved it would still be sound for VIMP, but the claim would not follow
+for C.
+
+*Checks do not prune executions.* A failing check does not end the run. So
+VIMP continues executions that an aborting `assert` would stop, and the verdict
+for one check does not depend on an earlier one. Goblint's `__goblint_check`
+behaves the same way. Its library table classifies it as checked and not used
+for refinement
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/util/library/libraryFunctions.ml")[`libraryFunctions.ml`]).
+VIMP has no `assume`; only the guards of `if` and `while` prune executions.
+`min` and `max` have no C11 counterpart and are defined by
+#isaconst("special_table") alone.
+
+*Well-formed runs do not get stuck.* A stuck configuration would make every later program
+point unreachable under #isaconst("pstep"), so `DEAD` verdicts and
+reachability-conditional `PROVED` verdicts there would hold vacuously. For a
+program satisfying #isaconst("wf_source_program"), every reachable
+configuration has either finished, as #skipC with an empty frame stack, or can
+step:
+
+#proved("source_progress")
+
+The theorem is about the source alone; its premise mentions no compiled graph.
+The contract rules out the structural reasons why a call rule can fail: an
+undeclared callee, an arity mismatch, repeated formals, and a library call with
+unsuitable arguments or without a destination.
+Every classified library call has a result (#isathm("special_result_ex")). The
+proof reuses the invariant behind the simulation relation of @sec:csim.
+
+*A fragment of Goblint's input.* Goblint analyzes C after its CIL front end
+@necula02 has normalized it. Expressions in CIL have no side effects. A call is
+a separate instruction, `Call`, with an optional destination, a callee and its
+actuals
+(#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.mli")[`cil.mli`]
+at the revision Goblint pins). VIMP makes the same choice. Every edge kind of
+Goblint's CFG except inline assembly and in-place declarations has a VIMP
+counterpart (@tab:cfg-edges), so calls and returns are represented by
+corresponding kinds of CFG edges. The local/global split lives in the call and
+return transfers. No translation from C to VIMP is formalized.
+
+*No second semantics.* No external semantics cross-checks #isaconst("pstep");
+IMP2 and Simpl would each need a translation and its own adequacy argument
+(@ch:related).

@@ -1,12 +1,15 @@
 #import "../lib/code.typ": *
+#import "../lib/theme.typ": vb
+
+#let _todo(body) = text(fill: vb.unproved)[TODO: #body]
 
 = Related Work <ch:related>
 
 We compare Voblint with prior systems along three design choices: the
 semantics an analyzer is proved against, how its fixpoint is computed, and how
-much of the delivered tool the proof covers. For each work we report its
-authors' claims before relating them to this thesis, and each section ends with
-the consequences for the contributions of @sec:contributions. The
+much of the delivered tool the proof covers. Each section opens with the
+question it compares and Voblint's answer, then reports each work's own claims
+before relating them to this thesis. The
 comparisons are based on a web and OpenAlex search with full-text reads of the
 closest papers, not on a systematic review, so a work that search missed could
 narrow the scoped claims below. Several comparisons depend on how the fixpoint
@@ -15,6 +18,10 @@ analyzers of Nipkow and Klein and of Franceschino et al. are syntax-directed (@s
 
 == Verified analyzers: Verasco and the CompCert line
 
+Can a soundness theorem be about the tool that users run? CompCert and Verasco
+show how, and Voblint follows their pattern for a language with recursive
+procedures and context-sensitive calls.
+
 CompCert is a compiler from Clight, a large subset of C, to PowerPC assembly,
 programmed and proved correct in Coq, now Rocq @leroy09. Its theorem is semantic
 preservation: the compiled code behaves as the source semantics specifies, so
@@ -22,12 +29,11 @@ safety properties proved of the source hold for the executable. The executable
 compiler is extracted from Coq to Caml and linked with handwritten, unverified
 parts, and Leroy lists what remains trusted: the source and target semantics,
 the parser, assembler and linker, the extraction and the Caml compiler and
-runtime, and Coq itself @leroy09. AbsInt now distributes CompCert under licence
-from INRIA. Its product page states that the proof covers the whole
-translation of the abstract syntax tree into machine code, that an external C
-preprocessor, assembler, linker and C libraries are required, and reports a
-certification of control software under IEC 60880 and IEC 61508-3:2010 that
-used it @absint-compcert. Voblint's guarantee has the same shape: a theorem
+runtime, and Coq itself @leroy09 #_todo[check the target and the trusted list
+  against the paper.]. AbsInt distributes CompCert commercially and
+reports its use in the certification of control software @absint-compcert
+#_todo[check claim.].
+Voblint's guarantee has the same shape: a theorem
 about the function the tool runs, code generated from the prover, and an
 explicit list of trusted components (@sec:trust-boundary). Voblint's parser
 corresponds to CompCert's parser, its code generator and OCaml toolchain to
@@ -43,7 +49,7 @@ intermediate language. Modular interfaces separate the abstract state from an
 extensible combination of numerical domains, and CompCert's semantic
 preservation extends the guarantee to compiled code. Functions are reanalyzed at
 every call site up to a fuel bound, and a possible recursive call raises an
-alarm.
+alarm #_todo[check scope, fuel and recursion alarm against @jourdan15.].
 
 Verasco covers a far larger language, so the comparison concerns design only.
 Voblint's language is small, but recursion and context-sensitive calls are
@@ -56,7 +62,7 @@ Both specify abstract operations through concretization alone.
 The earlier value analysis of #cite(<blazy13>, form: "prose") does not verify
 its fixpoint iterator. An untrusted OCaml implementation of Bourdoncle's
 iteration strategy @bourdoncle93 computes a candidate, and a verified checker
-accepts it as a post-fixpoint or falls back to top. Voblint instead runs a
+accepts it as a post-fixpoint or falls back to top #_todo[check claim.]. Voblint instead runs a
 solver whose partial correctness is proved @tilscher26. The checker leaves the
 iteration heuristics free and tests every result at run time. A verified solver
 needs no such test, and its proof holds for that one algorithm.
@@ -66,21 +72,19 @@ CompCert hides its dataflow solvers behind a common Coq module type
 abstract values, and clients rely on three properties: the result satisfies
 the dataflow inequations, satisfies the entry constraint, and preserves every
 property that holds for bottom and is preserved by join and the transfer
-functions. #cite(<laspina25>, form: "prose") verify two solvers based on weak
+functions #_todo[check the three properties.]. #cite(<laspina25>, form: "prose") verify two solvers based on weak
 topological orderings in Coq and make them compatible with that interface, so
-CompCert's analyses can use them unchanged. Both works are intraprocedural.
-
-For end-to-end soundness, CompCert is the precedent for stating the theorem about the delivered
-executable and naming its trusted base. Verasco is the closest mechanized
-analyzer that ships an executable. It reanalyzes each call up to a fuel bound and raises an alarm where a recursive
-call can occur, whereas Voblint's theorem covers recursive procedures under
-each of its context policies. For compositionality, CompCert's interface is the precedent
-for consuming a solver through its fixpoint guarantee alone. Voblint applies
-the same discipline to side-effecting, context-indexed systems, where the
-certificate #isaconst("part_post_solution") has to account for contributions
-to global unknowns.
+CompCert's analyses can use them unchanged #_todo[check claim.]. Both works are intraprocedural.
+Voblint consumes its solver through a fixpoint guarantee in the same way, for
+side-effecting, context-indexed systems, where the certificate
+#isaconst("part_post_solution") also accounts for contributions to global
+unknowns.
 
 == Mechanized abstract interpretation
+
+How have abstract interpreters been mechanized, and how are their proofs
+factored for reuse? Voblint follows the design of Nipkow and Klein's generic
+interpreter for its domains and splits the rest into analysis, context policy and solver.
 
 Nipkow and Klein develop abstract interpretation in Isabelle/HOL over annotated
 commands of the While language IMP @nipkow12 @nipkow14. A collecting semantics
@@ -90,23 +94,24 @@ intraprocedural. Its interpreter is parametric in a domain of abstract values:
 the domain supplies abstract operations and inverse operations with their
 soundness laws, and the interpreter derives forward evaluation, the backward
 filtering of guards and the step of each command generically
-@nipkow14[Sects. 13.5--13.7]. Voblint's non-relational domains follow this
+@nipkow14[Sects. 13.5--13.7] #_todo[check locator.]. Voblint's non-relational domains follow this
 pattern. Each supplies one record of primitive operations
 (#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
 derives the transfer, branch, entry and check classifier from it and proves
 them sound once (@sec:instances-supply). Voblint keeps the separation between collecting semantics and
 abstraction. Its collecting semantics ranges over activation-local traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
-which caller resumes. Their executable abstract state reads every variable it
-does not list as top. Voblint's carrier needs one default for local and one
-for global names: the entry state reads every global as zero, and the global
-half of a published state reads every local as bottom (@ch:solving).
+which caller resumes. Their executable abstract state lists some variables and
+reads every other variable as top. Voblint's executable state also lists only
+some names, but it needs two defaults, because the states it stores fill
+unlisted names in two ways: the entry state reads every unlisted global as
+zero, and the global half of a published state reads every local as bottom
+(@sec:readback).
 
-We did not state the theorem against IMP2 @lammich19imp2, the Isabelle
-formalization of an imperative language with procedures. Its semantics is
-deterministic, so it cannot express VIMP's nondeterministic input, its
-procedures take no arguments and return no value, and its program logic
-covers only terminating runs (@sec:vimp).
+IMP2 @lammich19imp2, an Isabelle language with procedures, did not fit: its
+semantics is deterministic, its procedures take no arguments and return no
+value, and its program logic covers only terminating runs (@sec:vimp)
+#_todo[check claim.].
 
 Three works factor the soundness proof of an analyzer for reuse.
 #cite(<michelland24>, form: "prose") build abstract interpreters in Coq from
@@ -119,7 +124,8 @@ its soundness to lemmas about the two instances of that interface.
 #cite(<darais15>, form: "prose") make context, path and heap sensitivity monad
 transformers that are proved sound once, on paper, and composed into an
 analyzer. In Voblint, the certificates of a non-relational domain play a
-similar role for the generic transfer builder of Nipkow and Klein. The analysis
+similar role for the generic transfer builder, which follows the design of
+Nipkow and Klein. The analysis
 specification it yields instantiates the equation generator of @ch:equations,
 and the solver is a third, separately verified component.
 
@@ -137,9 +143,6 @@ interpreter for a small imperative language in F\*, using refinement types and
 SMT automation instead of interactive proof. Their analyzer runs in a browser,
 and Verasco ships an extracted command-line analyzer @jourdan15, so an
 executable or interactive verified analyzer is not new with this thesis.
-Deductive verifiers such as Velvet @velvet26 check user-supplied contracts and
-loop invariants. Voblint computes invariants without annotations, but only
-those its abstract domain can express.
 
 Interprocedural analyses have been verified in Isabelle before, without a
 context abstraction. #cite(<lammich07afp>, form: "prose") prove soundness and
@@ -154,7 +157,7 @@ control-flow analysis for a continuation-passing functional language in
 Isabelle/HOLCF and proves it correct with respect to an exact nonstandard
 semantics. There the analysis is parametric in its contours through a type
 class, which plays the role a context policy plays here. The entries' pages
-do not claim an extracted analyzer. Code generated from an Isabelle proof has
+do not claim an extracted analyzer #_todo[check the four AFP entries' claims.]. Code generated from an Isabelle proof has
 replaced an unverified compiler component before:
 #cite(<buchwald16>, form: "prose") define SSA construction over an abstract
 control-flow graph fixed by a locale, instantiate it for a While language, and
@@ -173,6 +176,10 @@ one program.
 
 == Verified fixpoint solvers <sec:rel-solvers>
 
+What does a verified solver guarantee, and what must an analyzer add? Voblint
+reuses the solver of #cite(<tilscher26>, form: "prose") and supplies the
+meaning of the equations it solves.
+
 #cite(<hofmann10>, form: "prose") verify the local generic solver RLD in Coq;
 like the top-down solver, it records dependencies between unknowns while it
 evaluates right-hand sides. #cite(<stade24>, form: "prose") prove the top-down
@@ -183,7 +190,7 @@ mixed flow-sensitive analyses. They verify $"TD"_"side"$, which accepts
 contributions to global unknowns during iteration, against a generic interface
 for update rules, prove five update rules of
 #cite(<stemmler25>, form: "prose") sound, and refine the solver to executable
-code. For precise updates without widening and narrowing, they also prove that
+code #_todo[check "five update rules" and the scope.]. For precise updates without widening and narrowing, they also prove that
 the solver returns the least partial post-solution, provided it terminates and
 the equation system satisfies their monotonicity conditions.
 #cite(<tilscher26jar>, form: "prose") treat the top-down solver without side
@@ -192,10 +199,12 @@ narrowing phases. They prove that the warrowing variant returns partial
 post-solutions and that the phased variant terminates when the set of unknowns
 is finite. The two variants are equivalent under three assumptions: the widening
 operator is precise, and the right-hand sides are monotonic and have monotonic
-dependencies. Total correctness of both follows.
+dependencies. Total correctness of both follows #_todo[check the three
+  assumptions.].
 
 Voblint includes a copy of the solver of @tilscher26; the algorithm, the update
-rules and their proofs belong to that work. A solver theorem speaks about
+rules and their proofs belong to that work. The copy carries local
+refactorings, such as renamings and an interface theory (@sec:upstream-td). A solver theorem speaks about
 arbitrary right-hand sides and gives the equations no meaning. Voblint supplies that
 meaning for its language: the certificate #isaconst("part_post_solution")
 implies coverage of the concrete traces, and compiler correctness transfers the
@@ -203,15 +212,14 @@ coverage to source executions. The solver Voblint runs warrows every local
 unknown at a widening point, whichever of the four selectable update rules
 merges the global contributions. The least-solution theorem therefore does not
 apply, and Voblint uses only partial correctness and claims no optimality for
-its results.
-
-For compositionality, soundness is derived from
-#isaconst("part_post_solution") alone, so the four selectable update rules need
-no separate soundness argument on the Voblint side. For precision, the
-least-solution theorem is a general result. Voblint's precision statements are
-strict inequalities between the results of named solves.
+its results. Soundness rests on #isaconst("part_post_solution") alone, for all
+four selectable rules (@sec:update-rules). Voblint's precision statements are strict inequalities
+between the results of named solves.
 
 == Goblint, local traces, and thread-modular analysis <sec:rel-goblint>
+
+Voblint follows Goblint's architecture and the local-trace semantics of its
+research line. This section names what it adopts and where it departs.
 
 Side-effecting constraint systems let one equation both define a local unknown
 and contribute to global unknowns @apinis12. #cite(<seidl26>, form: "prose")
@@ -240,7 +248,8 @@ through queries.
 
 Verasco combines its numerical domains through the channels of @sec:coop-oracle
 for the same reason: reduced products tend to be specific to the two domains
-combined and scale poorly beyond two @jourdan15[§7] @cousot07astree[§5.2]. Its
+combined and scale poorly beyond two @jourdan15[§7] @cousot07astree[§5.2]
+#_todo[check claim.]. Its
 combinator threads the channels so that the second domain can query the state
 the first has just computed. Voblint's answers describe the predecessor state
 only, as Goblint's do. Voblint combines any list of components on the fields of
@@ -266,14 +275,15 @@ the two semantics equivalent with respect to reachability and derive a
 relational interprocedural analysis from the local semantics. Their motive is
 pointers into the stack, which VIMP lacks. For activation-local traces, Voblint
 proves only the direction soundness needs: every graph run is represented by a
-valid trace (@sec:valid).
+valid trace (@sec:valid). #_todo[check the equivalence claim of @sotin11.]
 
 A digest is a total function on local traces that splits the unknowns $[u]$
 into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. Seidl et
 al. @seidl26[§4] describe digests as generalizing calling contexts, but the
-local-trace semantics of that line has no procedures @schwarz25phd[§8].
-#isaconst("trace_context") (@sec:contexts) takes the digest's place for
-sequential activations. It is a relation, because an entry-state context is
+local-trace semantics of that line has no procedures @schwarz25phd[§8]
+#_todo[check this first: strongest claim.].
+In Voblint, the context relation #isaconst("trace_context") (@sec:contexts)
+takes the digest's place for sequential activations. It is a relation, because an entry-state context is
 read off the analysis's result.
 
 Mixed flow sensitivity has been mechanized before.
@@ -282,7 +292,7 @@ of Carmel, an intermediate representation of Java Card bytecode, is sound with
 respect to a small-step operational semantics. It keeps one flow-insensitive
 heap and flow-sensitive local variables and operand stacks per program point,
 is context-insensitive, and solves ordinary inequations with a verified
-round-robin solver extracted to OCaml. #cite(<dabrowski09>, form: "prose")
+round-robin solver extracted to OCaml #_todo[check claim.]. #cite(<dabrowski09>, form: "prose")
 prove sound in Coq a context-sensitive points-to analysis with a
 flow-insensitive heap, a component of their certified data race analyzer. They
 instrument the concrete semantics with contexts through a Coq functor over a
@@ -290,7 +300,7 @@ module type of contexts, whose call-context function computes the context
 of a callee from the call site, the caller's context and the receiver, and
 they instantiate it, among others, with $k$-object sensitivity. The authors
 state that the specification is not executable: the analyses are sets of
-constraints, and no solver computes them. Voblint's instance with
+constraints, and no solver computes them #_todo[check claim.]. Voblint's instance with
 flow-insensitive program globals, and the exact scope of its proof, are
 described in @sec:mixed-flow.
 
@@ -305,23 +315,27 @@ to activations has no mechanized predecessor that we found.
 
 == Context sensitivity and trace partitioning
 
+How have calling contexts been defined, and what does a relational context
+add? Voblint's contexts index a collecting semantics, as trace partitioning
+does, and one activation may belong to several of them.
+
 #cite(<sharir81>, form: "prose") introduce the two classical approaches to
 interprocedural analysis. The functional approach establishes input-output
 relations for procedures and treats calls as super operations, and the
 call-string approach tags propagated information with an encoded history of
 the calls encountered, so that a return propagates only information whose
-history matches @sharir81[pp. 191--192]. For recursive programs, both may fail
+history matches @sharir81[pp. 191--192] #_todo[check locator.]. For recursive programs, both may fail
 to yield an effective solution for problems such as constant propagation
 @sharir81[p. 192]. #cite(<knoop92>, form: "prose") extend the coincidence
 theorem to recursive procedures with local variables. Their return function
 combines the information before the call with the callee's exit information,
 because the local variables must be reset to their values at call time
-@knoop92[§4.1]. Voblint's return step has the same shape, combining the
+@knoop92[§4.1] #_todo[check locator.]. Voblint's return step has the same shape, combining the
 caller's pre-call state with the callee's result (@sec:calls).
 #cite(<reps95>, form: "prose") solve interprocedural problems with finite fact
 sets and distributive transfer functions precisely, as reachability over
 interprocedurally valid paths, and state that semantic correctness is an
-orthogonal issue @reps95[§2]. Voblint's domains need not be finite or
+orthogonal issue @reps95[§2] #_todo[check locator.]. Voblint's domains need not be finite or
 distributive, and Voblint proves no precision. It proves the semantic
 correctness that these frameworks leave to the encoding.
 
@@ -331,8 +345,8 @@ and coverings, in which one trace may belong to several indices, and present
 calling-context sensitivity as one such indexing; keeping the full stack amounts
 to inlining and works only for nonrecursive calls. They also note that the
 function mapping tokens to tokens in a covering may be replaced by a relation
-@rival07[Rem. 3.2.4]. Voblint's context-indexed collecting semantics is a
-covering of this relational kind, since a context relation may admit one
+@rival07[Rem. 3.2.4] #_todo[check locator.]. Voblint's context-indexed
+collecting semantics is a covering of this relational kind, since a context relation may admit one
 activation in several contexts. Voblint mechanizes the indexing over
 activation-local traces and proves that the solved, routed result bounds every
 admitted bucket.
@@ -340,20 +354,16 @@ admitted bucket.
 Contexts also determine how many unknowns a solve creates. The context lifters
 of #cite(<erhard25>, form: "prose") bound the number of contexts on the fly and
 guarantee finitely many contexts whenever the solver updates each unknown
-finitely often. Voblint's entry-state policy has no such bound
-(@sec:eq-finite).
-
-For the context semantics, trace partitioning already allows overlapping, relational indices on
-paper. Voblint adds their mechanization over activation-local traces together
-with the exhaustiveness theorem. For end-to-end soundness, the missing context bound is
-one reason the termination of the solve stays a per-program premise.
+finitely often #_todo[check claim.]. Voblint's entry-state policy has no such bound, which is one reason the
+termination of the solve stays a per-program premise (@sec:termination).
 
 == Unverified analyzers and their testing <sec:rel-testing>
 
-Most abstract interpreters in use are not mechanized. Astrée proves the absence
+Most abstract interpreters in use are not mechanized, and they earn trust by
+testing. Astrée proves the absence
 of run-time errors in safety-critical C programs of up to 132,000 lines, with
 few or no false alarms, by refining a general analyzer for a program family
-@blanchet03. It analyzes a call by abstract execution of the body at the call
+@blanchet03 #_todo[check the line count.]. It analyzes a call by abstract execution of the body at the call
 point, which is equivalent to inlining since the programs do not use recursion
 @blanchet03[§5.4]. #cite(<livshits15>, form: "prose") observe that realistic
 whole-program analyses purposely make unsound choices and ask authors to state
@@ -397,8 +407,13 @@ the nature and extent of the unsoundness explicitly.
     _calls_, inlining re-analyzes the callee at every call, a summary is
     computed once per procedure, and _per context_ means one unknown per
     program point and context. _Recursion_ says how a recursive call is
-    treated. _Combination_ names how domains exchange facts, and _mechanized_
-    records what a proof assistant has checked.],
+    treated, and _covered_ means Voblint's theorem includes recursive calls.
+    _Combination_ names how domains exchange facts, and _mechanized_ records
+    what a proof assistant has checked. _End to end_ means from source
+    executions to the verdicts of the exported function, under a per-program
+    termination premise and with the trusted components of
+    @sec:trust-boundary. #_todo[check the IKOS and Pulse-X cells against
+      @brat14 and @le22.]],
 ) <tab:production-analyzers>
 
 @tab:production-analyzers compares Voblint with six analyzers that have no
@@ -417,8 +432,8 @@ terminate on them
 at revision `5320a6b7`). Voblint's theorem covers recursive procedures under
 each policy, with the termination of the solve as a premise.
 
-Pulse-X, which represents Infer, is the one tool with a soundness theorem. It
-is proved on paper for a formal model and states that reported errors are real
+Pulse-X, which represents Infer, is the one tool whose whole analysis has a
+soundness theorem. It is proved on paper for a formal model and states that reported errors are real
 within that model @le22[pp. 81:2--81:3], an under-approximating guarantee. For
 Goblint, the partial correctness of the top-down solver is proved in
 Isabelle/HOL @stade24 @tilscher26 for a formulation of the algorithm, not for
@@ -427,10 +442,10 @@ executable runs, with the trusted components of @sec:trust-boundary.
 
 Testing checks such tools against executions. #cite(<cuoq12>, form: "prose")
 compare Frama-C's value analysis with compiled execution on programs generated
-by Csmith and report fifty bugs found and fixed.
+by Csmith and report fifty bugs found and fixed #_todo[check number.].
 #cite(<klinger19>, form: "prose") find soundness or precision issues in four
 of six analyzers, and #cite(<kaindlstorfer24>, form: "prose") find 16
-soundness issues in seven of eight, including MOPSA. A test exposes a defect on
+soundness issues in seven of eight, including MOPSA #_todo[check numbers.]. A test exposes a defect on
 one program and cannot show its absence. Voblint's regression corpus is testing
 of this kind (@sec:eval-corpus), and the Goblint defect replayed in
 @sec:eval-1161 is the kind of transfer-function error that a per-operation
@@ -457,26 +472,27 @@ value operations follows the generic abstract interpreter of Nipkow and Klein
 @schwarz21 to procedure activations, and the context-indexed collecting
 semantics is a relational covering in the sense of @rival07. Compared with
 the works above, the scoped claims of @sec:contributions are the following.
+Each records an absence of evidence in the search described at the start of
+this chapter, and none is a priority claim.
 
 - *End-to-end soundness.* No mechanized analyzer we found proves soundness of its exported
   executable for a language with recursive procedures under configurable
   context sensitivity. Verasco raises an alarm on recursion, the analyzer of
   #cite(<cachera05>, form: "prose") is context-insensitive, and the analysis of #cite(<dabrowski09>, form: "prose") is not
   executable.
-- *Context semantics.* The relational context semantics with its totality condition extends
-  the functional context module of @dabrowski09 and mechanizes, over
-  activation-local traces, the relational coverings that @rival07 describe on
-  paper.
+- *Context semantics.* The relational context semantics with its totality
+  condition differs from the functional context module of @dabrowski09 in
+  admitting several contexts per call. Over activation-local traces, it
+  mechanizes a relational variant of coverings that @rival07 mention.
 - *Composition.* The certificate-based solver interface follows CompCert's. The
-  three-way composition mechanizes a modular separation of the kind that
-  @darais15 prove on paper for monadic interpreters. From one certified
+  three-way composition separates analysis, context policy and solver.
+  @darais15 separate sensitivities as monad transformers, proved on paper, which
+  is a different split. From one certified
   operation bundle, the abstract transfer and the executable transfer the
   analyzer runs are derived together and proved to agree on every live store
   (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and one rule
   registers the bundle with the context-indexed pipeline
   (#isathm("sound_nonrelational_ops.dg_analysis_execI")).
-- *Precision.* We found no machine-checked strict precision separation between
-  configurations of one analyzer.
-
-Each claim records an absence of evidence in the search described at the start
-of this chapter. None of them is a priority claim.
+- *Precision.* We found no strict precision separation between configurations
+  of one analyzer that is checked in a proof assistant. Ours is evaluated
+  (#isathm("sign_k2_strictly_more_precise_than_k1_at_g")).

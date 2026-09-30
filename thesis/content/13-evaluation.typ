@@ -6,33 +6,29 @@
 
 = Evaluation <ch:evaluation>
 
-For each of the four questions of @sec:rqs, this chapter gives the evidence
-the thesis offers, its kind, and what it does not show. Later sections relate
-the results to Goblint, list evidence the thesis does not supply, collect the
-threats to validity, and record design constraints that the formal statements
-expose.
+Each section below answers one question of @sec:rqs, gives the evidence and
+its kind, and states what the evidence does not show. The chapter closes with
+the relation to Goblint, the evidence the thesis does not supply, and the
+design constraints the formal statements exposed.
 
-== Kinds of evidence
-
-A _machine-checked_ result is an Isabelle theorem. It holds for every input its
-statement ranges over, under its stated premises. An _evaluated_ result is an
-Isabelle lemma proved by `eval`, which runs the generated code of a concrete
-solve; it is checked by Isabelle but trusts the code generator, and it concerns
-the one input it evaluates. An _executable_ result records that one program,
-run at one configuration, produces one answer; it also exercises the parser and
-renderer, which lie outside the theorem (@sec:trust-boundary). An
-_illustrative_ result, such as a playground screenshot, lets a reader inspect
-the others and adds no guarantee. A _repository measurement_ counts lines and
-files with a script and supports statements about size only. A _source
-inspection_ reads the theories, their session structure, or Goblint's code, and
-supports statements about structure only. An _argument_ is reasoning in the
-text that no theorem checks; we mark it where a claim rests on one.
+The kinds of evidence differ in strength. A _machine-checked_ result is an
+Isabelle theorem and holds for every input its statement ranges over, under its
+premises. An _evaluated_ result is an Isabelle lemma proved by `eval`, which
+runs the generated code of a concrete solve: Isabelle checks it, but it trusts
+the code generator and concerns one input. An _executable_ result records that
+one program, run at one configuration, produces one answer, and it also
+exercises the parser and renderer outside the theorem (@sec:trust-boundary). An
+_illustrative_ result, such as a screenshot, lets a reader inspect the others
+and adds no guarantee. A _repository measurement_ supports statements about
+size, a _source inspection_ statements about structure. An _argument_ is
+reasoning no theorem checks, and we mark it where a claim rests on one.
 
 == Is the analysis sound from source executions to verdicts? <sec:eval-rq1>
 
-The first question asks whether soundness can be machine-checked from source executions to
-the verdicts of the exported executable, and which premises and trusted
-components remain.
+Can soundness be machine-checked from source executions to the verdicts of
+the exported executable, and which premises and trusted components remain? It
+can, for partial correctness, with a per-program termination premise and a
+trusted toolchain below the exported constant.
 
 _Evidence: machine-checked._ #isathm("run_voblint_certified_source_sound")
 (@sec:headline) is stated once for every domain, global update rule and
@@ -42,8 +38,8 @@ forward simulation #isathm("csim_star") from source runs to graph runs
 (@sec:csim) and ends at the verdict semantics of @sec:verdicts, where `PROVED`,
 `REFUTED` and `DEAD` are constrained and `UNKNOWN` is not. The premises can be
 met together: @sec:nonvacuity instantiates the theorem on concrete programs
-with every premise discharged. The oracle audit below shows that the chain
-itself rests on no oracle.
+with every premise discharged. The oracle audit below shows which theorems of the
+chain rest on an oracle.
 
 _Limits._ The result is partial correctness. #isaconst("config_terminates") is
 a per-program premise, discharged by evaluation where it is discharged at all:
@@ -54,7 +50,7 @@ the executable may fail to return: in the fixpoint mode, which the analyzer
 uses, the generated code iterates until the value stops changing, and that it
 stops is not proved (@sec:reduced-product). The delivered guarantee also trusts the parser, the code
 generator, the compilers, runtimes and renderer of @sec:trust-boundary, which
-are tested below and proved nowhere. Whether #isaconst("pstep") models the
+are tested (@sec:eval-corpus) and proved nowhere. Whether #isaconst("pstep") models the
 intended language is argued in @sec:vimp-vs-c and cannot be proved from the
 same definitions. A verdict about a VIMP program does not transfer to a C
 program with the same text.
@@ -101,8 +97,8 @@ scope.
 #let _oracles(name) = _facts.at(name).at("oracles", default: none)
 #let _unexported = _audited.filter(n => _oracles(n) == none)
 
-For the main theorems, supporting lemmas of the proof chain, and three
-witnesses, the dependence on oracles is
+For the main theorems, supporting lemmas of the proof chain, and six
+witnesses and counterexamples, the dependence on oracles is
 exported from the built session by Isabelle's #isacmd("thm_oracles")
 (@tab:oracles-audit). A `sorry` would appear there as Pure's skip-proof oracle,
 and a proof by `eval` as the code generator's evaluation oracle.
@@ -114,8 +110,8 @@ and a proof by `eval` as the code generator's evaluation oracle.
 ] else [
   Of the audited theorems, only
   #_audited.filter(n => _oracles(n).len() > 0).map(isathm).join(", ", last: ", and ")
-  depend on an oracle, the code generator's evaluation oracle: they are
-  witnesses on fixed programs and discharge their premises by `eval`.
+  depend on an oracle, the code generator's evaluation oracle: they concern
+  fixed programs and prove facts about them by `eval`.
 ]
 The audit covers only the theorems listed. The example theories contain
 #stat("eval_witnesses") occurrences of `by eval`, and every witness proved that
@@ -141,52 +137,75 @@ way inherits the code generator's oracle whether or not it is listed.
     table.hline(),
   ),
   caption: [Oracle audit of the main theorems, supporting lemmas of the proof
-    chain, and three witnesses, exported from the built session.],
+    chain, and six witnesses and counterexamples, exported from the built
+    session.],
 ) <tab:oracles-audit>
 
-=== Tests of the unverified frontend
+=== Tests of the unverified parts <sec:eval-corpus>
 
-_Evidence: executable._ The parser and the printer of VIMP syntax trees are
-both generated from one grammar description. Property tests print randomly
-generated syntax trees and require the parser to read back the same tree, and
-they feed mutated programs to the parser and require it to finish without a
-crash. The regression runner of @sec:eval-corpus matches every reported check
-to its source line, which tests the position bookkeeping of @sec:ocaml-boundary.
-CI runs both on every pull request and push to the main branch. A round trip
-cannot detect a misreading of the grammar that parser and printer share, and no
-test relates the parsed tree to the program a user meant to write.
+_Evidence: executable._ The parts outside the theorem are tested: a regression
+corpus runs the analyzer end to end, and property tests exercise the frontend.
+The corpus holds #stat("corpus.cases") VIMP fixtures in
+#stat("corpus.groups") groups. Each fixture states its command-line flags and
+the verdict expected at each check. Cases in `precision/` must obtain a
+definite answer. In `soundness/`, the program has executions on both sides of
+the check, so `UNKNOWN` is the only sound answer. In `known-imprecision/`, the
+concrete result is fixed but the abstraction cannot establish it, and the
+header names the mechanism that loses the information; these two categories
+separate genuine variation among executions from lost abstract information.
+The remaining #stat("corpus.kinds.other") fixtures pin output other than a
+definite verdict: snapshots of the rendered graph or state, rejection of
+malformed input, and solves expected not to finish within their time limit.
+The runner matches results by source line, which tests the position
+bookkeeping of @sec:ocaml-boundary, and distinguishes a missing report row
+from a `DEAD` one, so a check the compiler dropped cannot pass as proved
+unreachable. Some fixtures pin the conventions of @tab:vimp-vs-c at the
+analyzer's output, for instance
+#fixture("10-arithmetic/precision/07-signed_division_totalization.vimp") (truncating
+division and remainder) and #fixture("04-globals/precision/01-global_default_zero.vimp")
+(zero-initialized globals); they check verdicts, not concrete runs
+(@sec:eval-absent).
+
+The parser and the printer of VIMP syntax trees are both generated from one
+grammar description. Property tests print randomly generated syntax trees and
+require the parser to read back the same tree, and they feed mutated programs
+to the parser and require it to finish without a crash. A round trip cannot
+detect a misreading of the grammar that parser and printer share, and no test
+relates the parsed tree to the program a user meant to write. CI runs the
+corpus and the property tests on every pull request and push to the main
+branch.
 
 == What does a calling context mean? <sec:eval-rq2>
 
-A calling context needs a concrete meaning, and context indexing needs a
-condition under which it loses no executions when one call may be admitted at
-several contexts.
+What does a calling context mean concretely, and when does indexing by context
+lose no executions? A context is read off the trace of an activation, and
+indexing loses nothing under the totality obligation #oblig("TOTAL").
 
 _Evidence: machine-checked._ The meaning is the relation
 #isaconst("trace_context") of @sec:contexts, which reads a context off an
-activation-local trace at the call that created the activation;
-The condition is #oblig("TOTAL")
+activation-local trace at the call that created the activation. The
+condition is #oblig("TOTAL")
 (#isaconst("call_context_total_on")), stated relative to the claim: under the
 five coverage obligations, #isathm("activation_collect_sound") bounds each
 context's bucket, and #isathm("ltr_collect_eq_Union_activation_collect") shows
 that the buckets together are the context-free collection. The link to the
 executable analyzer is #isathm("activation_collect_dg_sound"), which
-discharges all five obligations for every routing policy and domain
-(@sec:eq-discharge). _Evidence: executable and illustrative._ The two calls of
+discharges all five obligations in every domain, for every policy that
+proves its routing adequacy and totality (@sec:eq-discharge). _Evidence: executable and illustrative._ The two calls of
 `bump` show what indexing changes on one program (@sec:eq-call).
 
-_Limits._ That #oblig("TOTAL") is needed is machine-checked on
-one program (#isathm("total_dropped_unsound"), @sec:falsification); an
-evaluated analyzer run shows the same failure at the executable level
-(#isathm("ov_empty_continuation_bot")). The buckets are defined over valid traces, and that every
+_Limits._ That #oblig("TOTAL") is needed is evaluated on
+one program (#isathm("total_dropped_unsound"), @sec:falsification). An
+evaluated solve leaves a continuation at bottom when no context is admitted
+(#isathm("ov_empty_continuation_bot")); that a run reaches it is argued. The buckets are defined over valid traces, and that every
 valid trace arises from a graph run is not proved (@sec:valid); soundness needs
 only the forward direction.
 
 == Do the ingredients discharge their obligations independently? <sec:eval-rq3>
 
-The claim is that the abstract domain, the context policy and the solver
-discharge their obligations independently, and that one composition theorem
-covers every configuration.
+Do the domain, the context policy and the solver discharge their obligations
+independently? They do: each proves facts that mention none of the others, and
+one composition theorem covers every configuration.
 
 _Evidence: machine-checked._ A non-relational domain supplies one record of
 primitive operations, #isatype("nonrelational_ops"): its evaluator, comparison
@@ -208,7 +227,7 @@ obligations are discharged once for all domains
 the post-solution certificate #isaconst("part_post_solution")
 (@sec:certificate), so the four selectable update rules share one proof
 (@sec:update-rules). Analyses combine without reference to one another: each
-proves its component obligation against every sound query channel, and
+proves the laws of its local specification against every channel that holds, and
 #isathm("mcp_combine_sound") composes any list of independent components
 (@ch:cooperation). The assembly interprets #isalocale("dg_analysis")
 once per context family for the combination, with the activation list, the
@@ -226,12 +245,10 @@ builds on #isasession("Voblint_Exec") and does not import
 No theory of the framework or of the numeric domains refers to these analyses
 outside document text.
 Making the carrier selectable as the order analysis took three proofs about
-its local specification, soundness (#isathm("order_spec_sound")), a single entry pair (#isathm("single_entry_order_spec")) and sound query answers
-(#isathm("rel_qry_sound")), and an entry in the analysis manifest. An entry
-names the analysis, its value type, its constant prefix and its theories, and
-the generator derives the registrations and the combined state from it. The
-command-line tool's name tables and the display of an order value are still
-written by hand. On the non-relational side, Parity's refinement operations
+its local specification, soundness (#isathm("order_spec_sound")), a single
+entry pair (#isathm("single_entry_order_spec")) and sound query answers
+(#isathm("rel_qry_sound")), and an entry in the analysis manifest
+(@ch:tooling). On the non-relational side, Parity's refinement operations
 (#isaconst("parity_refine_ops")) reach the analyzer only as a field of its
 record #isaconst("parity_ops"), and no theory outside Parity's own names them.
 The statistics tooling measures
@@ -240,21 +257,23 @@ directories, not sessions, so we give no line count for either extension.
 _Limits._ Precision depends on how the ingredients combine. Which update
 rule decides a check depends on the program (@fig:rules-programs), and whether
 a call-string depth decides the `down` recursion below depends on widening. In
-every selectable analysis the shared component carries only entry seeds;
-program globals in a flow-insensitive unknown are proved sound for one program
-only (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow). A component of the
+every selectable analysis the global unknowns carry only activation seeds.
+Program globals in a flow-insensitive unknown are proved sound end to end for
+one program only (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow). A component of the
 combined state cannot read or publish globals, so an analysis with its own analysis globals cannot join it (@sec:coop-limits).
 
 == Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
 
-The last question asks which proof obligations are necessary, and whether precision
-differences and non-vacuity can be established as theorems about computed
-results rather than by testing.
+Are the obligations necessary, and do the theorems say something about
+computed results? Selected obligations are shown necessary by falsification
+lemmas, the end-to-end theorem is shown non-vacuous, and precision differences
+are proved for single programs.
 
 === Necessity: falsification lemmas <sec:falsification>
 
-_Evidence: machine-checked._ Following
-#cite(<kim26regulatory>, form: "prose", supplement: [§6]), we separate two
+_Evidence: machine-checked and evaluated._ Following
+#cite(<kim26regulatory>, form: "prose", supplement: [§6])
+#text(fill: vb.unproved)[TODO: check locator.], we separate two
 questions. A _non-vacuity_ witness shows that the premises hold together on a
 concrete input (@sec:nonvacuity). _Falsification_ evidence removes or weakens
 a condition and shows that its consumer then fails on a concrete execution, so
@@ -276,8 +295,78 @@ that admits no context lets a claim meet #oblig("INIT"), #oblig("INTRA"),
 #oblig("CALL") and #oblig("RETURN") while a store collected at a continuation
 lies outside it (#isathm("total_dropped_unsound"), @sec:contract). These are
 direct mutations of conditions we selected; they do not show that every
-premise of the development is needed.
+premise of the development is needed. The three counterexamples on concrete
+programs prove facts about them by `eval` and are therefore evaluated.
 
+
+=== A real unsoundness, replayed: Goblint pull request 1161 <sec:eval-1161>
+
+_Evidence: executable, against a defect documented upstream._ Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue
+  1156] reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although
+C's truncating remainder gives $-1$ for both values (@ch:intro). #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+  1161] restricted the cases in which the congruence domain returns a constant
+remainder and added the program as regression test
+`37-congruence/14-negative.c` @goblint1161. That test marks the first check as
+unknown, and the second check, `c % 2 == -1`, as not yet provable.
+
+Our fixture transliterates the test into VIMP, whose remainder also truncates
+toward zero. @fig:goblint-1161 shows the result. Congruence alone knows only
+$c in 1 + 2ZZ$ and decides neither check. The Int product also knows that $c$
+lies in $[-7, -5]$, refutes the first check, and proves the second.
+
+#figure(
+  {
+    set text(size: 8pt)
+    set par(first-line-indent: 0pt, justify: false)
+    show raw: set text(size: 7.5pt)
+    let program = json("/shared/generated/vimp-claims.json").at("goblint-1161-int").program
+    // Verdict and state of one check, as the registered claim prints them;
+    // the product's state is broken at its components.
+    let cell(name, cond) = {
+      let r = claim-check(name, cond)
+      let tone = if r.at(3) == "PROVED" { vb.proved } else if r.at(3) == "REFUTED" {
+        vb.unproved
+      } else { vb.unstable }
+      [#text(fill: tone, weight: "bold", r.at(3)) \ #r.at(4).split("; ").map(raw).join(linebreak())]
+    }
+    let conds = ("c % 2 == 1", "c % 2 == -1")
+    grid(
+      columns: (58mm, 1fr),
+      column-gutter: 10pt,
+      align: horizon,
+      listing(program, lang: "c", claim: "goblint-1161-int"),
+      table(
+        columns: (auto, auto, auto),
+        inset: (x: 4pt, y: 3pt),
+        table.hline(stroke: 0.5pt),
+        [*check*], [*Congruence*], [*Int product*],
+        table.hline(stroke: 0.4pt),
+        ..conds
+          .map(c => (
+            raw(c),
+            cell("goblint-1161-congruence", c),
+            cell("goblint-1161-int", c),
+          ))
+          .flatten(),
+        table.hline(stroke: 0.5pt),
+      ),
+    )
+  },
+  kind: image,
+  caption: [Goblint's regression test for #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] in VIMP, and the
+    verdict and state at each check with Congruence alone and with the Int
+    product, both without contexts. Concretely, `c % 2` evaluates to $-1$ on
+    both executions.],
+) <fig:goblint-1161>
+
+The issue documents the defect and the pull request the repair; we did not
+re-run a pre-fix Goblint binary, and the example does not show that Voblint is
+more precise than current Goblint. The formalization adds the obligation
+behind the verdict. For Congruence it is
+#isathm("congruence_mod_sound"): the truncating remainder of any two concrete
+values lies in the concretization of the abstract remainder. The constant 1 for
+$(1 + 2ZZ) mod 2$ violates it at $-5$ (#isathm("prefix_congruence_mod_unsound")),
+so the pre-fix answer is not available to the verified domain.
 
 === Non-vacuity <sec:nonvacuity>
 
@@ -285,7 +374,8 @@ _Evidence: machine-checked, with the concrete solves evaluated._ A theorem
 whose premises no configuration meets holds vacuously. The end-to-end
 theorem assumes an initial store, a source run, a terminating solve and an
 #isaconst("Analysed") answer. As in
-#cite(<marmsoler26stark>, form: "prose", supplement: [§9]), one small
+#cite(<marmsoler26stark>, form: "prose", supplement: [§9])
+#text(fill: vb.unproved)[TODO: check locator.], one small
 executable instance shows that the assumptions can be met together.
 
 The instance is the two-call program of @fig:program-to-equations under
@@ -307,7 +397,7 @@ and `DEAD`, which #isathm("unknown_everywhere_sound") shows to be the
 non-trivial ones. Non-vacuity is a property of the premises: the witnesses do
 not show that #isaconst("pstep") is the intended semantics of VIMP.
 
-=== Precision witnesses: contexts, update rules, products, cooperation
+=== Precision witnesses
 
 Each witness below fixes the concrete behaviour first, then shows what one
 mechanism keeps or loses, and supports a claim about its program only.
@@ -322,8 +412,8 @@ strict separation on one program: the Sign value of a parameter at a procedure
 entry is strictly lower under call strings of length 2 than under length 1,
 with the component values computed by `eval`. The witness uses Sign because
 its widening is its join and its narrowing returns the current value, so the
-difference cannot come from widening. The gain from contexts is not
-proportional to their cost. `down(100)` recurses to `down(0)`, so `n >= 0`
+difference cannot come from widening. On one pair of configurations, the gain
+from contexts is not proportional to their cost. `down(100)` recurses to `down(0)`, so `n >= 0`
 holds at every call. Call strings of length 100 give
 #_k100.clusters.len() procedure copies, and the check is
 #snapshot-verdict(_k100, "n >= 0"). Length 99 gives #_k99.clusters.len() copies, but one context still
@@ -415,12 +505,10 @@ in each direction. #isathm("coop_demo_needs_both") and
 #isathm("order_asks_order_alone")) state the verdicts of #isaconst("run_voblint")
 for all three activation lists and are proved by `eval`.
 
-=== Known imprecision, with mechanisms named
-
 #let _sign = claim-check("sign-cannot-bound-magnitude", "total < 100")
 
-_Evidence: executable, except where marked._ Sign has no magnitude: in the
-claim `sign-cannot-bound-magnitude`, `total` is 7 in every execution, and at
+*Known imprecision.* _Evidence: executable, except where marked._ Sign has no
+magnitude: in the claim `sign-cannot-bound-magnitude`, `total` is 7 in every execution, and at
 the check `total < 100` Sign reports #raw(_sign.at(4)) and the verdict
 #raw(_sign.at(3)). _Argument:_ no context policy or update rule can change this
 verdict, because Sign's comparison query decides nothing for a positive value
@@ -430,100 +518,7 @@ stores lose relations between variables (@sec:relational). The order analysis
 recovers some of them, within the limits of @sec:coop-limits. A call string of
 length $k$ merges paths deeper than $k$, as in `down` above.
 
-=== A real unsoundness, replayed: Goblint pull request 1161 <sec:eval-1161>
-
-_Evidence: executable, against a defect documented upstream._ Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue
-  1156] reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although
-C's truncating remainder gives $-1$ for both values (@ch:intro). #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
-  1161] restricted the cases in which the congruence domain returns a constant
-remainder and added the program as regression test
-`37-congruence/14-negative.c` @goblint1161. That test marks the first check as
-unknown, and the second check, `c % 2 == -1`, as not yet provable.
-
-Our fixture transliterates the test into VIMP, whose remainder also truncates
-toward zero. @fig:goblint-1161 shows the result. Congruence alone knows only
-$c in 1 + 2ZZ$ and decides neither check. The Int product also knows that $c$
-lies in $[-7, -5]$, refutes the first check, and proves the second.
-
-#figure(
-  {
-    set text(size: 8pt)
-    set par(first-line-indent: 0pt, justify: false)
-    show raw: set text(size: 7.5pt)
-    let program = json("/shared/generated/vimp-claims.json").at("goblint-1161-int").program
-    // Verdict and state of one check, as the registered claim prints them;
-    // the product's state is broken at its components.
-    let cell(name, cond) = {
-      let r = claim-check(name, cond)
-      let tone = if r.at(3) == "PROVED" { vb.proved } else if r.at(3) == "REFUTED" {
-        vb.unproved
-      } else { vb.unstable }
-      [#text(fill: tone, weight: "bold", r.at(3)) \ #r.at(4).split("; ").map(raw).join(linebreak())]
-    }
-    let conds = ("c % 2 == 1", "c % 2 == -1")
-    grid(
-      columns: (58mm, 1fr),
-      column-gutter: 10pt,
-      align: horizon,
-      listing(program, lang: "c", claim: "goblint-1161-int"),
-      table(
-        columns: (auto, auto, auto),
-        inset: (x: 4pt, y: 3pt),
-        table.hline(stroke: 0.5pt),
-        [*check*], [*Congruence*], [*Int product*],
-        table.hline(stroke: 0.4pt),
-        ..conds
-          .map(c => (
-            raw(c),
-            cell("goblint-1161-congruence", c),
-            cell("goblint-1161-int", c),
-          ))
-          .flatten(),
-        table.hline(stroke: 0.5pt),
-      ),
-    )
-  },
-  kind: image,
-  caption: [Goblint's regression test for #link("https://github.com/goblint/analyzer/pull/1161")[pull request 1161] in VIMP, and the
-    verdict and state at each check with Congruence alone and with the Int
-    product, both without contexts. Concretely, `c % 2` evaluates to $-1$ on
-    both executions.],
-) <fig:goblint-1161>
-
-The issue documents the defect and the pull request the repair; we did not
-re-run a pre-fix Goblint binary, and the example does not show that Voblint is
-more precise than current Goblint. The formalization adds the obligation
-behind the verdict. For Congruence it is
-#isathm("congruence_mod_sound"): the truncating remainder of any two concrete
-values lies in the concretization of the abstract remainder. The constant 1 for
-$(1 + 2ZZ) mod 2$ violates it at $-5$ (#isathm("prefix_congruence_mod_unsound")),
-so the pre-fix answer is not available to the verified domain.
-
-=== The regression suite <sec:eval-corpus>
-
-_Evidence: executable._ The corpus holds #stat("corpus.cases") VIMP fixtures in
-#stat("corpus.groups") groups. Each fixture states its command-line flags and
-the verdict expected at each check. Cases in `precision/` must obtain a
-definite answer. In `soundness/`, the program has executions on both sides of
-the check, so `UNKNOWN` is the only sound answer. In `known-imprecision/`, the
-concrete result is fixed but the abstraction cannot establish it, and the
-header names the mechanism that loses the information; these two categories
-separate genuine variation among executions from lost abstract information.
-The remaining #stat("corpus.kinds.other") fixtures pin output other than a
-definite verdict: snapshots of the rendered graph or state, rejection of
-malformed input, and solves expected not to finish within their time limit.
-The runner matches results by source line and distinguishes a missing report
-row from a `DEAD` one, so a check the compiler dropped cannot pass as proved
-unreachable. Some fixtures pin the conventions of @tab:vimp-vs-c at the
-analyzer's output, for instance
-#fixture("10-arithmetic/precision/07-signed_division_totalization.vimp") (truncating
-division and remainder) and #fixture("04-globals/precision/01-global_default_zero.vimp")
-(zero-initialized globals); they check verdicts, not concrete runs
-(@sec:eval-absent). CI runs the whole corpus on every pull request and push to
-the main branch.
-
-_Limits of the evidence on necessity and precision._ Every precision witness concerns one program at
-fixed configurations, and the evaluated ones trust the code generator. The
+_Limits._ Every precision witness concerns one program at fixed configurations, and the evaluated ones trust the code generator. The
 development proves no general precision or optimality theorem, and a
 separation shown on one program does not order two configurations on all
 programs. The concrete behaviour a fixture header states is the author's
@@ -572,13 +567,16 @@ configuration flags per test.
 No time or memory measurement is reported. The executable keeps the data
 representations the proofs use: finite sets are unordered lists and the
 solver's value table is a function, so membership, insertion and lookup take
-linear time @haftmann10. _Evidence: measured once on one machine, not a
+linear time @haftmann10 #text(fill: vb.unproved)[TODO: check that the
+  cited work states this.]. _Evidence: measured once on one machine, not a
 benchmark._ On a chain of assignments, each doubling of its length multiplied
-the running time by about 7, close to the cubic factor of 8, mostly from the
+the running time by about 7, close to the cubic factor of 8
+#text(fill: vb.unproved)[TODO: register the command, input and data.], mostly from the
 list unions in #isaconst("compile"). A data refinement to red-black trees
 would remove these costs. Isabelle's library and the Isabelle Collections
 Framework provide such implementations with proofs that they refine the
-abstract types @lammich26collections[§1.1]. The refinement would change the
+abstract types @lammich26collections[§1.1]
+#text(fill: vb.unproved)[TODO: check locator.]. The refinement would change the
 state of the vendored solver, so its proof would have to be redone, while the
 rest of the chain uses the solver only through its certificate
 (@sec:certificate). It is not done.
@@ -586,7 +584,7 @@ rest of the chain uses the solver only through its certificate
 No test runs VIMP programs concretely. The development contains no executable
 form of #isaconst("pstep"), so the adequacy of the source semantics rests on
 the comparison with C11 in @sec:vimp-vs-c alone. The playground
-(@sec:playground) is illustrative, and no study measures whether it helps a
+(@sec:ocaml-boundary) is illustrative, and no study measures whether it helps a
 reader.
 
 == What the mechanization revealed <sec:revealed>
@@ -601,11 +599,11 @@ names the kind of its evidence and the section that argues it.
   the situation. @sec:why-traces.
 
 + *Totality is a premise of the per-context theorem*, and for entry-state
-  routing it must be discharged against the computed result. _Machine-checked_
-  (#isathm("total_dropped_unsound")), with one evaluated analyzer run
+  routing it must be discharged against the computed result. _Evaluated_
+  on one program (#isathm("total_dropped_unsound")), with one evaluated solve
   (#isathm("ov_empty_continuation_bot")). @sec:contexts, @sec:contract.
 
-+ *A callee's result must be read at the callee's own context.* This fixes the shape of #oblig("RETURN"). _Machine-checked_ (#isathm("return_at_caller_context_unsound")). @sec:contract.
++ *A callee's result must be read at the callee's own context.* This fixes the shape of #oblig("RETURN"). _Evaluated_ on one program (#isathm("return_at_caller_context_unsound")). @sec:contract.
 
 + *Context selection and seed publication must use the same entered value.*
   _Evaluated_ for one call (#isathm("w0_seed_at_entered_frame"),

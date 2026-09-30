@@ -4,6 +4,7 @@
 #import "../lib/sources.typ": thy
 #import "../lib/figures.typ": subfigures
 #import "../lib/theme.typ": vb
+#import "../lib/claims.typ": claim-snapshot
 #import "@preview/cetz:0.5.2"
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
@@ -349,7 +350,8 @@ precisely at $h$ and $e$, so a solution need not be least.
 In general, let $Unk$ be a set of unknowns and $sol : Unk -> A$ a valuation.
 Each unknown $x$ has a right-hand side $rhs(x)$, a function of the valuation,
 and $sol$ is a _post-solution_ if
-$ rhs(x)(sol) lle sol(x) quad "for every unknown" x. $
+$ rhs(x)(sol) lle sol(x) quad "for every unknown" x $
+(#isaconst("post_solution")).
 For the loop head, $rhs(h)(sol) = [0, 0] ljoin sol(t)$. The argument of
 @sec:abs-int applies to all unknowns at once, so a post-solution bounds the
 reachable states at every program point. Such systems are often called
@@ -456,39 +458,10 @@ bounds the candidate (#isathm("warrowing_properties")). The solver does not rely
 on the narrowing argument above: its result is a post-solution because every
 returned unknown is stable (@sec:td).
 
-The strategies need not agree for arbitrary iteration schemes. Tilscher et al.
-prove them equivalent for TD without side effects under precise widening and
-monotonic right-hand sides and dependencies @tilscher26jar[Thm. 3]. The system below
-satisfies these assumptions, but the solver of @fig:solver-sketch runs one
-global widening phase and lies outside that theorem. On the system
-$
-  x gt.eq [0, 0] ljoin (y lmeet [-infinity, 5]), quad
-  y gt.eq (x lmeet [-infinity, 9]) ljoin ((y lmeet [-infinity, 5]) sh(+) [2, 2]),
-$
-solved round robin in the order $x$, $y$ with extrapolation at both
-unknowns, they differ. Widening until nothing changes and then narrowing yields
-the least solution $x = [0, 5]$, $y = [0, 7]$. Warrowing narrows $y$ to
-$[0, 9]$ while $x$ is still $[0, infinity]$. Once $x$ settles at $[0, 5]$,
-the candidate for $y$ is $[0, 7]$, but interval narrowing only refines infinite
-bounds, so $y$ stays at $[0, 9]$. On other systems warrowing is the more precise one, because narrowing one
-unknown early can give another a smaller candidate before its infinite bound
-is replaced. For $x gt.eq (y lmeet [-infinity, 10]) sh(+) [2, 2]$ and
-$y gt.eq [0, 0] ljoin ((y lmeet [0, 7]) sh(+) [2, 2])$, the phased run gives
-$x = [2, 12]$ and warrowing the least $x = [2, 11]$.
-
-// The listing is long, so it may continue on the next page.
-#show figure.where(kind: raw): set block(breakable: true)
-#figure(
-  {
-    // The file keeps PEP 8's double blank lines; the listing drops them.
-    show raw: set text(size: 5.3pt)
-    raw(read("/shared/code/solver_sketch.py").replace("\n\n\n", "\n"), lang: "python", block: true)
-  },
-  kind: raw,
-  caption: [An unverified round-robin solver over intervals, run with widening and
-    then narrowing, and with warrowing, on the first two-unknown system of
-    @sec:widening.],
-) <fig:solver-sketch>
+Tilscher et al. prove the two strategies equivalent for TD without side
+effects under precise widening and monotonic right-hand sides and dependencies
+@tilscher26jar[Thm. 3]. Outside these assumptions they can reach different
+solutions.
 
 == Side-effecting constraint systems <sec:side-effects>
 
@@ -496,17 +469,15 @@ An analysis with one unknown per program point is _flow-sensitive_: its value
 holds whenever execution is at that point. A _flow-insensitive_ analysis associates one abstract
 value with an aspect of the state independently of the current program point,
 for example one range for a global variable across the program. Mixed analyses
-choose per aspect of the state @seidl26 (@sec:mixed-flow). Such a fact is an unknown without a
+choose per aspect of the state @seidl26. Such a fact is an unknown without a
 program point, and every point that changes it must contribute to it.
 Side-effecting systems let a right-hand side make such contributions to other
-unknowns during its evaluation @apinis12. A call site, for instance, publishes
-the callee's entry value to a seed unknown (#isaconst("Activation_Seed")) that
-the callee's entry reads (@sec:eq-seed). If evaluating the right-hand side for $x$ returns $d$ and emits
+unknowns during its evaluation @apinis12. If evaluating the right-hand side for $x$ returns $d$ and emits
 contributions $(y_i, d_i)$, a post-solution must bound all of them:
 $ d lle sol(x), quad d_i lle sol(y_i) " for every emitted contribution". $
-In the running example of @fig:program-to-equations, without contexts, the
-call nodes of `bump(5)` and `bump(4)` emit ${n |-> [5, 5]}$ and ${n |-> [4, 4]}$ to
-`bump`'s seed, which must then bound their join ${n |-> [4, 5]}$.
+If the assignments `g = 5` and `g = 4` contribute $[5, 5]$ and $[4, 4]$ to
+the unknown of a flow-insensitive global `g`, that unknown must bound their
+join $[4, 5]$.
 The _certificate_ property established for the solver's result,
 #isaconst("part_post_solution"), requires them only on
 the part of the system the query depends on (@sec:certificate).
@@ -538,8 +509,147 @@ merged into its value by an update rule (#isalocale("update_rule"),
 discovered dependency closure of the query is stable, and it returns the set $S$ of stable unknowns together
 with the valuation $sol$.
 
+#let _td = (
+  // (evaluating, event, pp0, pp1, pp2, pp3, being computed, loop points),
+  // transcribed from query/iterate of TD_side_upd_rule for this system.
+  ("pp3", [put on $c$; its equation reads `pp1`], "⊥", "⊥", "⊥", "⊥", "pp3", ""),
+  ("pp1", [not on $c$: computed now; reads `pp0`, then `pp2`], "⊥", "⊥", "⊥", "⊥", "pp3 pp1", ""),
+  ("pp0", [reads nothing; stable at once], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", ""),
+  (
+    "pp2",
+    [reads `pp1`, which is on $c$: gets its current value; `pp1` becomes a loop point],
+    "⊤",
+    "⊥",
+    "⊥",
+    "⊥",
+    "pp3 pp1 pp2",
+    "pp1",
+  ),
+  ("pp2", [evaluates to its current value; done], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", "pp1"),
+  (
+    "pp1",
+    [evaluates to `[0,0]`; the round began before the loop point was found, so no widening; `pp2` is destabilized],
+    "⊤",
+    "[0,0]",
+    "⊥",
+    "⊥",
+    "pp3 pp1",
+    "pp1",
+  ),
+  ("pp2", [recomputed from `pp1`], "⊤", "[0,0]", "[0,0]", "⊥", "pp3 pp1", "pp1"),
+  (
+    "pp1",
+    [equation gives `[0,1]`; a loop point that grew is widened],
+    "⊤",
+    "[0,+∞]",
+    "[0,0]",
+    "⊥",
+    "pp3 pp1",
+    "pp1",
+  ),
+  ("pp2", [`i < 5` filters `[0,+∞]`], "⊤", "[0,+∞]", "[0,4]", "⊥", "pp3 pp1", "pp1"),
+  (
+    "pp1",
+    [equation gives `[0,5]`, below the value: narrowed],
+    "⊤",
+    "[0,5]",
+    "[0,4]",
+    "⊥",
+    "pp3 pp1",
+    "pp1",
+  ),
+  ("pp1", [one more round changes nothing; stable], "⊤", "[0,5]", "[0,4]", "⊥", "pp3", ""),
+  ("pp3", [`i >= 5` filters `[0,5]`; every unknown stable], "⊤", "[0,5]", "[0,4]", "[5,5]", "", ""),
+)
+// The rows the figure prints: loop-point detection, widening, narrowing and the
+// final state. The full run is kept so the numbering stays that of the solver.
+#let _shown = (0, 3, 5, 7, 9, 11)
+// The trace is transcribed by hand; its end state must be the analyzer's.
+#let _loop = claim-snapshot("counting-loop-snapshot")
+#for (i, point) in ("pp0", "pp1", "pp2", "pp3").enumerate() {
+  let n = _loop.nodes.values().find(n => n.label == point)
+  assert(
+    n.lines.first() == "i=" + _td.last().at(2 + i),
+    message: "solver trace ends off the analyzer's value at " + point,
+  )
+}
+
+#figure(
+  {
+    set par(first-line-indent: 0pt, justify: false)
+    set text(size: 8pt)
+    show raw: set text(size: 7.5pt)
+    let eq(l, r) = (raw(l), [$=$], r)
+    align(center, grid(
+      columns: 3,
+      column-gutter: 4pt,
+      row-gutter: 5pt,
+      align: (right, center, left),
+      ..eq("pp0", [#raw("⊤") #h(4pt) #text(fill: vb.muted)[(the stores entering `main`)]]),
+      ..eq("pp1", [`[i := 0] pp0` $union.sq$ `[i := i + 1] pp2`]),
+      ..eq("pp2", [`assume (i < 5) pp1`]),
+      ..eq("pp3", [`assume (¬ i < 5) pp1`]),
+    ))
+    v(4pt)
+    let val(v) = if v == "⊥" { text(fill: vb.muted, raw(v)) } else { raw(v) }
+    table(
+      columns: (auto, auto, 1fr, auto, auto, auto, auto, auto, auto),
+      align: (right, left, left, center, center, center, center, left, left),
+      stroke: none,
+      inset: (x: 3pt, y: 2.2pt),
+      table.hline(stroke: 0.5pt),
+      [*\#*],
+      [*runs*],
+      [*event*],
+      [*`pp0`*],
+      [*`pp1`*],
+      [*`pp2`*],
+      [*`pp3`*],
+      [*on $c$*],
+      [*loop pts*],
+      table.hline(stroke: 0.4pt),
+      .._td
+        .enumerate()
+        .filter(((i, r)) => i in _shown)
+        .map(((i, r)) => (
+          [#(i + 1)],
+          raw(r.at(0)),
+          r.at(1),
+          ..r.slice(2, 6).map(val),
+          raw(r.at(6)),
+          raw(r.at(7)),
+        ))
+        .flatten(),
+      table.hline(stroke: 0.5pt),
+    )
+    v(3pt)
+    align(center, grid(
+      columns: 2,
+      column-gutter: 6pt,
+      row-gutter: 4pt,
+      align: (right, left),
+      text(fill: vb.muted)[post-solution:],
+      $[i := 0] top union.sq [i := i + 1] [0, 4] = [0, 5] subset.eq.sq sigma(#raw("pp1"))$,
+
+      [], $"assume"(i < 5) [0, 5] = [0, 4] subset.eq.sq sigma(#raw("pp2"))$,
+      [], $"assume"(i >= 5) [0, 5] = [5, 5] subset.eq.sq sigma(#raw("pp3"))$,
+    ))
+  },
+  kind: image,
+  placement: auto,
+  caption: [The top-down solver on the compiled counting loop of
+    @fig:counting-loop, where #raw("pp0") is the start and #raw("pp1"),
+    #raw("pp2"), #raw("pp3") are $h$, $b$, $e$, simplified to four local unknowns without contexts or side effects. Each row
+    is one evaluation of a right-hand side, numbered in run order (six
+    intermediate evaluations are omitted), with the values $sigma$ after it,
+    the unknowns being computed ($c$, in call order) and the loop points, as in
+    the vendored solver. A loop point is warrowed: widened while it
+    grows, narrowed once it shrinks. Transcribed by hand; the final values are
+    checked against the analyzer and form a post-solution (last line).],
+) <fig:td-trace>
+
 The formalization splits the unknowns into _local_ unknowns $Unk$, which have a
-right-hand side, and _global unknowns_ $G$, which receive only side contributions. A global unknown is not a global variable of the program, although @sec:mixed-flow stores the program's globals in one global unknown. A
+right-hand side, and _global unknowns_ $G$, which receive only side contributions. A global unknown is not a global variable of the program. A
 right-hand side is a _strategy tree_ (#isatype("strategy_tree")), which
 exposes every read and every side effect to the solver:
 $
@@ -593,51 +703,35 @@ right-hand sides in both forms.
       rows: (auto, auto),
       row-gutter: 5mm,
       align: center,
-      [publish ${n |-> [5, 5]}$ to the seed of `bump`, \ then answer the caller's state $q$],
+      [read $u$, publish $[5, 5]$ to $g$, \ then answer the value read],
       _tree((
-        ($ctor("Side")(italic("Seed")(italic("bump")), {n |-> [5, 5]})$, none),
-        ($ctor("Answer")(q)$, none),
+        ($ctor("QueryL")(u)$, $v$),
+        ($ctor("Side")(g, [5, 5])$, none),
+        ($ctor("Answer")(v)$, none),
       )),
     ),
-    caption: [the call `bump(5)`, simplified],
+    caption: [a flow-insensitive `g = 5` after $u$],
   ),
   <fig:tree-call>,
   columns: (1fr, 1fr),
   align: bottom,
   caption: [Right-hand sides and their strategy trees. Each query names the
     unknown it reads and passes the value on, and $ctor("Side")$ records a
-    contribution to a global. @sec:eq-call gives the full tree of a call, which
-    also reads the caller's state and the callee's result, answers their
-    combination and selects the callee's context.],
+    contribution to a global. @sec:eq-encoding gives the tree of a procedure
+    call, which reads the caller's value, publishes the callee's entry value and
+    reads the callee's result.],
   label: <fig:strategy-trees>,
 )
 
-The solver is defined as mutually recursive functions without a termination
-proof. Isabelle's function package then supplies a domain predicate $D$,
-which holds exactly for the query unknowns on which the
-recursion terminates. The main theorem, #isathm("partial_post_solution"),
-states partial correctness for a system with right-hand sides $rhs(u)$,
-$u in Unk$:
-$
-  D(x) and italic("solve")(x) = (S, sol) ==> x in S and forall u in S. \
-  italic("dep")(rhs(u), sol) subset.eq S and
-  italic("eval")(rhs(u), sol) lle sol(u) and italic("side")(rhs(u), sol) lle sol
-$
-Together with $x in S$, the three conditions for all $u in S$ are
-#isaconst("part_post_solution"), the last compared pointwise over the
-globals. $S$, the _key set_, contains
-the query and is closed under the local reads of its right-hand sides, and on $S$
-the valuation is a post-solution in the sense above, side contributions
-included. The theorem needs no monotonicity of the right-hand sides and says
-nothing about unknowns outside $S$. The executable solver #isaconst("solve_c")
-returns an optional result and is proved equivalent to the solver on the
-domain predicate and to return the same valuation there
-(#isathm("term_equivalence"), #isathm("value_equivalence")), and Voblint's corollary
-#isathm("solve_dom_of_solve_c") concludes that a run that returns a result
-satisfies the domain predicate. The Isabelle
-formalization contains no general machine-checked termination theorem for the
-side-effecting solver, so termination remains a premise of Voblint's main
-theorem (#isaconst("config_terminates"), @sec:termination).
+The solver is defined without a termination proof. Its main theorem,
+#isathm("partial_post_solution"), states partial correctness: if the recursion
+terminates on the query $x$ and returns the set $S$ of _solved unknowns_ and the
+valuation $sol$, then $S$ contains $x$, is closed under the local reads of its
+right-hand sides, and on $S$ the valuation is a post-solution, side
+contributions included. The theorem needs no monotonicity of the right-hand
+sides and says nothing about unknowns outside $S$. @sec:certificate states it
+precisely, and @sec:termination explains why termination remains a premise of
+Voblint's main theorem.
 
 Voblint instantiates the solver's locale #isalocale("TD_side_upd_rule") with
 its own equation system. The soundness proof meets the solver at

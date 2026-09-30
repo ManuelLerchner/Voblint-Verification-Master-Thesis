@@ -25,9 +25,10 @@
 
 = From Formalization to Executable Analyzer <ch:executable>
 
-The theorems of @ch:results are about #isaconst("run_voblint"), a HOL function
-from a VIMP syntax tree and a configuration to an analysis answer. A user has
-source text and wants a report. Code generation, a compiler, a parser, and a renderer lie
+What does a user actually run, and where does the proof stop? The theorems of
+@ch:results are about #isaconst("run_voblint"), a HOL function from a VIMP
+syntax tree and a configuration to an analysis answer. A user has source text
+and wants a report. Code generation, a compiler, a parser, and a renderer lie
 between the two, and the theorem covers none of them. The delivered tools run
 the constant the theorem is about, which gives the executable half of the
 end-to-end result. @sec:trust-boundary states where the proof ends and which
@@ -55,8 +56,9 @@ then checks the structural conditions compilation requires
 #isaconst("Malformed_Program") on failure. Otherwise it compiles and solves, and
 #isaconst("Analysed") carries a #isatype("run_result") record: the CFG, the
 contexts, one state per solved point and context with its verdicts and
-arithmetic diagnostics, the call routes, the check rows, and the solved global
-unknowns.
+arithmetic diagnostics, the call routes, the check rows, the solved global
+unknowns, and the program's arithmetic diagnostics, which
+#isathm("run_voblint_arithmetic_safe") reads.
 
 The verdicts are values of a HOL datatype, computed in HOL and constrained by
 the theorem. The abstract values are not: #isaconst("run_voblint") maps each
@@ -71,10 +73,13 @@ carrier #isatype("resolved_st_q"). The solver specification, a recursion whose
 termination is not known in general, gets the vendored solver's executable
 version as its code equation, which the vendored library proves from their
 agreement wherever the specification is defined @tilscher26. Outside that
-domain the equation aborts. Both replacements are proved, and neither proves
-termination (@sec:termination). One #isacmd("export_code")
+domain the generated solve does not return. Both replacements are proved, and
+neither proves termination (@sec:termination). One #isacmd("export_code")
 declaration then emits #isaconst("run_voblint") and the constructors and
-selectors a caller needs as the OCaml module `Generated`.
+selectors a caller needs as the OCaml module `Generated`. It also exports a few
+program-inspection functions (#isaconst("prog_table"),
+#isaconst("declared_global_vars"), #isaconst("cfg_intra_list")) that the
+renderer calls outside #isaconst("run_voblint").
 
 Because the export is the theorem's own constant, no handwritten entry point
 needs an agreement argument. One exported entry point per domain and context
@@ -108,8 +113,9 @@ classifier. Even the bottom state is a parameter, because a least element
 taken from a type class would have to be executable at a function type.
 #isalocale("dg_analysis") imports it and adds the contracts, among them
 soundness of the component (#isaconst("sound_local_spec")) and of the initial
-state, exact emptiness tests, a single entry pair, seeds distinct from the analysis global, the solver certificate, discharge of the termination
-premise by a finished executable run, and correctness of the check classifier.
+state, exact emptiness tests, a single entry pair, seeds distinct from the analysis global, the solver certificate, that a
+successful executable run lies in the solver's domain, and correctness of the
+check classifier.
 
 For a numeric domain, #isalocale("dg_analysis_exec") derives the component
 contracts from the domain's certified operations (@sec:instances-supply), and
@@ -129,10 +135,10 @@ The analyzer interprets #isalocale("dg_analysis") once per context family for
 the combination #isaconst("mcp_comp") of any activation list (@fig:assembly),
 and every run inherits the argument of @ch:results from these interpretations.
 The order analysis has no registration: it supplies its local specification
-#isaconst("order_spec") directly, with #isathm("order_spec_sound"). A new
-analysis is one entry in the analysis manifest, from which its registration
-and its field of the combined state (#isaconst("local_spec_of")) are generated
-(@ch:tooling).
+#isaconst("order_spec") directly, with #isathm("order_spec_sound"). For a new
+analysis, the analysis manifest generates its registration and its field of
+the combined state (#isaconst("local_spec_of")). A few tables are still edited
+by hand (@sec:pipeline).
 
 #figure(
   {
@@ -191,10 +197,7 @@ and its field of the combined state (#isaconst("local_spec_of")) are generated
         (2.4, 2),
         "->",
         stroke: 0.6pt + vb.muted,
-        label: lab(isathm(
-          "sound_nonrelational_ops.dg_analysis_execI",
-          display: "dg_analysis_execI",
-        )),
+        label: lab[certificate discharges contracts],
         label-side: right,
       ),
       edge(
@@ -202,7 +205,7 @@ and its field of the combined state (#isaconst("local_spec_of")) are generated
         (0.4, 2),
         "->",
         stroke: 0.6pt + vb.muted,
-        label: lab[field, #isathm("order_spec_sound")],
+        label: lab[field, proved directly],
         label-side: left,
       ),
     )
@@ -210,52 +213,45 @@ and its field of the combined state (#isaconst("local_spec_of")) are generated
   kind: image,
   caption: [The analysis assembly. Solid arrows are locale extension, the dashed
     arrow a sublocale proof, dotted arrows global interpretations, and thin grey
-    arrows name what one object supplies to another. The analyzer interprets
-    #isalocale("dg_analysis") once per context family for the combined
-    component, with the activation list, the global update rule and, for call
-    strings, the depth $k$ as parameters. The numeric registrations supply the
-    soundness facts of their fields. The order analysis supplies its field
-    directly.],
+    arrows name what one object supplies to another. The interpretations of
+    the combined component take the activation list, the global update rule
+    and, for call strings, the depth $k$ as parameters.],
 ) <fig:assembly>
 
-== The OCaml and browser boundary <sec:ocaml-boundary>
+== The frontend and the browser artifact <sec:ocaml-boundary>
 
 The generated module takes a syntax tree and returns a typed answer, so
-unverified OCaml surrounds it on both sides (@fig:intro-trust). Before it, an `ocamllex` lexer and a Menhir parser, which a
-project script emits from a grammar description, turn source text into an
+unverified OCaml surrounds it on both sides (@fig:intro-trust). Before it, an
+`ocamllex` lexer and a Menhir parser turn source text into an
 #isatype("imp_prog") and write each check's source position into its label.
 After it, rendering code prints values, builds the contextual graph from the
 published routes, prints each check row at the position its label carries, and
 places arithmetic diagnostics by statement order. For a
 #isaconst("Malformed_Program") answer it names the first well-formedness
-conjunct the program breaks. The rejection itself is decided by the generated test.
-Integers in the export are arbitrary-precision Zarith integers, matching VIMP's
-mathematical integers and not C11's finite ones (@sec:vimp-vs-c).
+conjunct the program breaks. The rejection itself is decided by the generated
+test. Integers in the export are arbitrary-precision Zarith integers, matching
+VIMP's mathematical integers (@sec:vimp-vs-c).
 
 The command-line tool and the browser adapter link the same generated module
-and frontend (@sec:pipeline). The browser adapter's only exported function
-calls #isaconst("run_voblint") once and returns the report, the graph, and the
-raw typed answer as one JSON string. No theorem states that the graph and the
+and frontend (@sec:pipeline). The adapter's only exported function calls
+#isaconst("run_voblint") once and returns the report, the graph and the typed
+answer, decoded by handwritten code, as one JSON string. No theorem states that the graph and the
 report come from the same answer. We establish this by reading the adapter.
-
-== An interactive analyzer artifact <sec:playground>
 
 The playground,
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[`manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html`],
-is a static page that runs the generated analyzer in the reader's browser. Its
-toolbar selects exactly the arguments of #isaconst("run_voblint"), so every
-selectable run lies within the configurations covered by
+is a static page that runs this adapter in the reader's browser. Its toolbar
+selects exactly the arguments of #isaconst("run_voblint"), so every selectable
+run lies within the configurations covered by
 #isathm("run_voblint_certified_source_sound"), subject to its input and
-termination premises. Verdicts and value hints appear in the source, a state
-inspector shows the abstract state at the cursor in every context, and the
-graph draws one box per procedure and context. @fig:pg-overview shows every
-kind of answer for the default program under call strings of depth one: a
+termination premises. @fig:pg-overview shows every kind of answer for the
+default program under call strings of depth one: a
 #cli-verdict("pg-overview", "i == 5") check, a
 #cli-verdict("pg-overview", "i < 5") check, an
 #cli-verdict("pg-overview", "a == 2") check, a possible division by zero, and a
-`DEAD` statement. The screenshot is illustrative evidence (@ch:evaluation).
-The verdicts quoted here come from command-line runs of the same generated
-core, registered as claims and re-executed by the build.
+`DEAD` statement. The screenshot is illustrative evidence (@ch:evaluation). The
+verdicts quoted here come from command-line runs of the same generated core,
+registered as claims and re-executed by the build.
 
 #playground-figure(
   "overview",
@@ -274,15 +270,15 @@ core, registered as claims and re-executed by the build.
 Three questions determine what a run of the delivered analyzer establishes, and
 @fig:intro-trust places each component under one of them.
 
-*What is proved.* Take an initial store from #isaconst("cinit_stores"), a
-finite source execution from it to any point, the termination premise
+*What is proved.* Every store a finite source run reaches is covered by the
+typed result table at a simulating graph node, in some context
+(#isaconst("analysis_result_covers")), and there no listed check is `DEAD`,
+every `PROVED` condition holds and every `REFUTED` condition fails
+(#isaconst("checks_sound_at")). This is
+#isathm("run_voblint_certified_source_sound") (@sec:headline). It assumes an
+initial store from #isaconst("cinit_stores"), the termination premise
 #isaconst("config_terminates"), and an #isaconst("Analysed") answer of
-#isaconst("run_voblint"). Then #isathm("run_voblint_certified_source_sound")
-(@sec:headline) gives a graph node that simulates the reached configuration,
-at which the store is collected and covered by the typed result table in some
-context (#isaconst("analysis_result_covers")), and at which no listed check is
-`DEAD`, every `PROVED` condition holds and every `REFUTED` condition fails
-(#isaconst("checks_sound_at")). #isathm("run_voblint_dead_check_unreached") and
+#isaconst("run_voblint"). #isathm("run_voblint_dead_check_unreached") and
 #isathm("run_voblint_arithmetic_safe") give `DEAD` and the absence of an
 arithmetic diagnostic their meaning. The proved side includes the compiler,
 the well-formedness test, the vendored solver with its executable refinement,
@@ -290,7 +286,9 @@ and the finite carrier. The vendored solver's changes (@sec:upstream-td) are
 checked by Isabelle like every other theory. The proved side ends at three points: the syntax tree
 #isaconst("run_voblint") receives, the typed result before its abstract values
 are printed by #isaconst("string_of_abstract_value") (@sec:codegen), and the
-termination premise, which only a finished run discharges (@sec:termination).
+termination premise. Inside Isabelle, evaluation discharges it for one program
+at a time (@sec:termination). A finished command-line or browser run is
+evidence of termination only through the trusted code generator.
 No theorem constrains `UNKNOWN` verdicts or warnings.
 
 *What is trusted.* The delivered guarantee also relies on the following
@@ -305,11 +303,13 @@ components, which the theorem does not mention.
   non-vacuity instances of @sec:nonvacuity and the one-program bound of
   @sec:mixed-flow, trust the same generator inside Isabelle
   (@tab:oracles-audit).
-- The OCaml compiler and runtime, #raw("wasm_of_ocaml", lang: "sh"), Zarith
-  with its JavaScript stubs, and the browser. They run the generated code.
-- The handwritten adapter and rendering code. They print values, draw the
-  graph, print each check row at its label and place arithmetic diagnostics
-  at statement positions. A fault in the parser's labels or in this placement
+- The OCaml compiler and runtime, #raw("wasm_of_ocaml", lang: "sh") with the
+  #raw("js_of_ocaml", lang: "sh") runtime library, Zarith with its JavaScript stubs, and the
+  browser. They run the generated code.
+- The handwritten adapter and rendering code. They decode the answer, print
+  values, draw the graph, print each check row at its label and place
+  arithmetic diagnostics at statement positions. The message naming the first
+  broken well-formedness conjunct restates the conjuncts by hand. A fault in the parser's labels or in this placement
   can show a correct answer at the wrong line, and a rendering fault can show
   a wrong state in the inspector. The page's editor and graph libraries only display their output.
 
@@ -335,8 +335,9 @@ contradicts nothing, since termination is a premise. A timeout establishes only
 that the run did not finish within its budget. It yields no verdict and does
 not show that the solver diverges. A hang may come from the solve, from the
 fixpoint reduction of the Int product (@ch:instances), or from the toolchain
-and the browser. An abort branch of a code equation, such as the solver's
-outside its domain, raises an exception and yields no answer.
+and the browser. An abort branch of a code equation, such as the query
+recursion exceeding #isaconst("query_depth") (@sec:coop-channel), raises an
+exception and yields no answer.
 
 The delivered tools run the constant the source-level theorem is about, through
 code equations that are theorems. The trust boundary consists of the frontend, the code generator's

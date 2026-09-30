@@ -1,4 +1,4 @@
-#import "../lib/code.typ": isaconst, isalocale, isathm, isatype
+#import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype
 #import "../lib/sources.typ": thy
 #import "../lib/math.typ": lbot, lle, ltop, sem, sol
 #import "../lib/theme.typ": vb
@@ -6,19 +6,19 @@
 
 = Solving and the Executable Carrier <ch:solving>
 
-The equation-soundness theorem of @ch:equations,
-#isathm("activation_collect_dg_sound"), holds for any valuation that satisfies
-the generated constraints. For a compositional proof the solver should enter the argument only
-through such a statement, so that replacing its algorithm or update rule
-leaves the rest of the proof unchanged. The obvious statement has two problems. A
-bound on every unknown's local result allows a valuation that claims a called
-procedure never runs, and a bound over all unknowns cannot come from a solver
-that evaluates only the unknowns its query demands (@sec:certificate). A third
-obstacle is executability: the proofs speak about states on infinitely many
-variable names, which a solver cannot compare. This chapter fixes the
-certificate, shows that one proof covers every update rule, gives the finite
-carrier the solver computes on, and explains why termination of the solve
-remains a premise.
+This chapter answers what the solver must guarantee so that the rest of the
+proof can use its result, and how an executable solver provides it. The
+equation-soundness theorem of @ch:equations holds for any valuation that
+satisfies the generated constraints (#isathm("activation_collect_dg_sound")). For a compositional proof the solver
+should enter the argument only through such a statement, so that replacing its
+algorithm or update rule leaves the rest of the proof unchanged. The obvious
+statement has two problems. A bound on every unknown's local result allows a
+valuation that claims a called procedure never runs, and a bound over all
+unknowns cannot come from a solver that evaluates only the unknowns its query
+demands (@sec:certificate). A third obstacle is executability: the proofs speak
+about states on infinitely many variable names, which a solver cannot compare
+(@sec:readback). Termination of the solve remains a premise
+(@sec:termination).
 
 == The certificate between solver and semantics <sec:certificate>
 
@@ -27,16 +27,13 @@ least solution by design, so it also makes a post-solution necessary. It
 remains to decide which inequalities the certificate states, and for which
 unknowns.
 
-The solver has to accept side contributions. A callee's entry equation cannot
-enumerate its contributors (@sec:eq-seed): under entry-state routing it would
-join over every call site and every caller context whose entered state selects
-the callee's context. Such a right-hand side reads unboundedly many unknowns,
-and a local solver cannot evaluate it @apinis12. Voblint therefore reuses the
+The solver has to accept side contributions, because a callee's entry equation
+cannot enumerate its contributors (@sec:eq-seed). Voblint therefore reuses the
 side-effecting top-down solver of Tilscher et al., which is proved partially
 correct for such systems @tilscher26.
 
 Write $T(u)$ for the right-hand side of an unknown $u$: the strategy tree of
-@sec:eq-call, which reads unknowns, emits side contributions and returns a
+@sec:eq-trees, which reads unknowns, emits side contributions and returns a
 local result $"eval"(T(u), sol)$. Bounding only that result,
 $"eval"(T(u), sol) lle sol(u)$, fails at the first call. The caller publishes
 the callee's entry state as a side contribution to the seed of
@@ -57,14 +54,16 @@ their predecessors, so a demand-driven solve evaluates the unknowns its query
 transitively reads. From the exit of `main` these include every node from which
 the exit can be reached, in each context the solve discovers for it. A single
 solve therefore takes the place of one query per program point. Apinis
-et al. start local solving from the same unknown @apinis12. Unknowns that cannot reach the exit, such as code after a `return`, are the subject of
+et al. start local solving from the same unknown @apinis12 (TODO: check locator). Unknowns that cannot reach the exit, such as code after a `return`, are the subject of
 @sec:live-keys. The certificate names the set $V$ of local unknowns the solve
 reached:
 
 #thy("part_post_solution")
 
 It requires the query $x$ to lie in $V$ and, for every $u in V$, three facts.
-The local dependencies of $u$ under the final valuation stay inside $V$, so
+Which unknowns a right-hand side reads can depend on the values it reads
+(@sec:eq-trees), so the dependencies are taken under the final valuation. The
+local dependencies of $u$ stay inside $V$, so
 every value a certified equation reads is itself certified. Without this
 conjunct a certified equation could read an unknown outside $V$ whose value is
 arbitrary, for instance #lbot, and the bound on its result would say nothing
@@ -72,151 +71,10 @@ about the executions that pass through the unknown it read. The local result of
 $T(u)$ is bounded by $sol(u)$. The side contributions of $T(u)$, joined per target global unknown, are bounded by #sol pointwise. Global unknowns are constrained only
 in this way.
 
-@fig:td-trace shows where $V$ comes from. The solver starts from the query,
-evaluates a right-hand side only when some evaluation reads its unknown, and
-marks a loop point when a read reaches an unknown that is still being computed.
-Among local unknowns only loop points are widened and narrowed; contributions to
-global unknowns are merged by the update rule of @sec:update-rules. The
-unknowns the solver stabilized form $V$.
-
-#let _td = (
-  // (evaluating, event, pp0, pp1, pp2, pp3, being computed, loop points),
-  // transcribed from query/iterate of TD_side_upd_rule for this system.
-  ("pp3", [put on $c$; its equation reads `pp1`], "⊥", "⊥", "⊥", "⊥", "pp3", ""),
-  ("pp1", [not on $c$: computed now; reads `pp0`, then `pp2`], "⊥", "⊥", "⊥", "⊥", "pp3 pp1", ""),
-  ("pp0", [reads nothing; stable at once], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", ""),
-  (
-    "pp2",
-    [reads `pp1`, which is on $c$: gets its current value; `pp1` becomes a loop point],
-    "⊤",
-    "⊥",
-    "⊥",
-    "⊥",
-    "pp3 pp1 pp2",
-    "pp1",
-  ),
-  ("pp2", [evaluates to its current value; done], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", "pp1"),
-  (
-    "pp1",
-    [evaluates to `[0,0]`; the round began before the loop point was found, so no widening; `pp2` is destabilized],
-    "⊤",
-    "[0,0]",
-    "⊥",
-    "⊥",
-    "pp3 pp1",
-    "pp1",
-  ),
-  ("pp2", [recomputed from `pp1`], "⊤", "[0,0]", "[0,0]", "⊥", "pp3 pp1", "pp1"),
-  (
-    "pp1",
-    [equation gives `[0,1]`; a loop point that grew is widened],
-    "⊤",
-    "[0,+∞]",
-    "[0,0]",
-    "⊥",
-    "pp3 pp1",
-    "pp1",
-  ),
-  ("pp2", [`i < 5` filters `[0,+∞]`], "⊤", "[0,+∞]", "[0,4]", "⊥", "pp3 pp1", "pp1"),
-  (
-    "pp1",
-    [equation gives `[0,5]`, below the value: narrowed],
-    "⊤",
-    "[0,5]",
-    "[0,4]",
-    "⊥",
-    "pp3 pp1",
-    "pp1",
-  ),
-  ("pp1", [one more round changes nothing; stable], "⊤", "[0,5]", "[0,4]", "⊥", "pp3", ""),
-  ("pp3", [`i >= 5` filters `[0,5]`; every unknown stable], "⊤", "[0,5]", "[0,4]", "[5,5]", "", ""),
-)
-// The rows the figure prints: loop-point detection, widening, narrowing and the
-// final state. The full run is kept so the numbering stays that of the solver.
-#let _shown = (0, 3, 5, 7, 9, 11)
-// The trace is transcribed by hand; its end state must be the analyzer's.
-#let _loop = claim-snapshot("counting-loop-snapshot")
-#for (i, point) in ("pp0", "pp1", "pp2", "pp3").enumerate() {
-  let n = _loop.nodes.values().find(n => n.label == point)
-  assert(
-    n.lines.first() == "i=" + _td.last().at(2 + i),
-    message: "solver trace ends off the analyzer's value at " + point,
-  )
-}
-
-#figure(
-  {
-    set par(first-line-indent: 0pt, justify: false)
-    set text(size: 8pt)
-    show raw: set text(size: 7.5pt)
-    let eq(l, r) = (raw(l), [$=$], r)
-    align(center, grid(
-      columns: 3,
-      column-gutter: 4pt,
-      row-gutter: 5pt,
-      align: (right, center, left),
-      ..eq("pp0", [#raw("⊤") #h(4pt) #text(fill: vb.muted)[(the stores entering `main`)]]),
-      ..eq("pp1", [`[i := 0] pp0` $union.sq$ `[i := i + 1] pp2`]),
-      ..eq("pp2", [`assume (i < 5) pp1`]),
-      ..eq("pp3", [`assume (¬ i < 5) pp1`]),
-    ))
-    v(4pt)
-    let val(v) = if v == "⊥" { text(fill: vb.muted, raw(v)) } else { raw(v) }
-    table(
-      columns: (auto, auto, 1fr, auto, auto, auto, auto, auto, auto),
-      align: (right, left, left, center, center, center, center, left, left),
-      stroke: none,
-      inset: (x: 3pt, y: 2.2pt),
-      table.hline(stroke: 0.5pt),
-      [*\#*],
-      [*runs*],
-      [*event*],
-      [*`pp0`*],
-      [*`pp1`*],
-      [*`pp2`*],
-      [*`pp3`*],
-      [*on $c$*],
-      [*loop pts*],
-      table.hline(stroke: 0.4pt),
-      .._td
-        .enumerate()
-        .filter(((i, r)) => i in _shown)
-        .map(((i, r)) => (
-          [#(i + 1)],
-          raw(r.at(0)),
-          r.at(1),
-          ..r.slice(2, 6).map(val),
-          raw(r.at(6)),
-          raw(r.at(7)),
-        ))
-        .flatten(),
-      table.hline(stroke: 0.5pt),
-    )
-    v(3pt)
-    align(center, grid(
-      columns: 2,
-      column-gutter: 6pt,
-      row-gutter: 4pt,
-      align: (right, left),
-      text(fill: vb.muted)[post-solution:],
-      $[i := 0] top union.sq [i := i + 1] [0, 4] = [0, 5] subset.eq.sq sigma(#raw("pp1"))$,
-
-      [], $"assume"(i < 5) [0, 5] = [0, 4] subset.eq.sq sigma(#raw("pp2"))$,
-      [], $"assume"(i >= 5) [0, 5] = [5, 5] subset.eq.sq sigma(#raw("pp3"))$,
-    ))
-  },
-  kind: image,
-  placement: auto,
-  caption: [The top-down solver on the compiled counting loop of
-    @fig:counting-loop, where #raw("pp0") is the start and #raw("pp1"),
-    #raw("pp2"), #raw("pp3") are $h$, $b$, $e$, simplified to four local unknowns without contexts or side effects. Each row
-    is one evaluation of a right-hand side, numbered in run order (six
-    intermediate evaluations are omitted), with the values $sigma$ after it,
-    the unknowns being computed ($c$, in call order) and the loop points, as in
-    the vendored solver. A loop point is warrowed: widened while it
-    grows, narrowed once it shrinks. Transcribed by hand; the final values are
-    checked against the analyzer and form a post-solution (last line).],
-) <fig:td-trace>
+$V$ is the set of unknowns the solver stabilized, starting from the query
+(@sec:td, @fig:td-trace). Among local unknowns only loop points are widened and
+narrowed. Contributions to global unknowns are merged by the update rule of
+@sec:update-rules.
 
 The collecting-soundness argument uses no other fact about the solver. It
 assumes the bounds on any set containing the query, so replacing the solver
@@ -238,49 +96,36 @@ termination premise, and @sec:termination explains why it stays a premise.
 
 The solver merges each side contribution into its global unknown, and the
 merge affects both precision and termination. Voblint offers several merges
-and proves the solver sound for all of them at once. A merge is an _update
+and proves the solver sound for all of them at once (#isathm("update_rule_update_global_of")). A merge is an _update
 rule_.
-Stemmler et al. proposed such rules @stemmler25, and Tilscher et al. formalize a
+Stemmler et al. proposed such rules @stemmler25 (TODO: check locator), and Tilscher et al. formalize a
 generic update-rule interface and prove five of them sound against it
-@tilscher26. Every rule records each origin's latest contribution, where the
-origin is the unknown whose equation published it, and a newer contribution
-replaces the older one from the same origin. The rules differ in how they form
-the new value of the global. Voblint exposes four of them: join the
+@tilscher26. Every rule keeps one record per origin, the unknown whose equation
+published the contribution. Most rules store the origin's latest contribution
+there; per-origin warrowing stores the old record warrowed with the new
+contribution. The rules differ in what they record and in how they form the
+new value of the global. Voblint exposes four of them: join the
 contribution into the value, join the recorded contributions, warrow the value
 toward that join, or warrow the origin's own record and then join the records.
 The fifth vendored rule, which bounds narrowing by a counter, is not selectable.
 Voblint also proves sound a keyed combination that joins at entry seeds and
 warrows elsewhere; only examples use it.
 In #isaconst("run_voblint") the entry seeds are the only global unknowns that
-receive contributions (@sec:mixed-flow), so the rule decides how a callee's
-entry state accumulates across call sites (@fig:update-rules).
+receive contributions, because the selectable analyses use no analysis globals
+(@sec:coop-limits). The rule therefore decides how a callee's entry state
+accumulates across call sites (@fig:update-rules).
 
-Per-origin warrowing targets a global that receives one constant from each of
-several locations. Seidl et al. show on such a global that widening the
-accumulated interval loses both bounds, while per origin each record holds a
-single value and nothing is widened @seidl26. The gain is limited to the case where
-several origins feed one unknown. A recursive call that feeds a growing value back
-into the seed it reads is a single origin, so per-origin warrowing gains nothing
-there. It can lose precision instead: widening the recursive call's own record
-ignores the other contributions that plain warrowing joins in first, as the last
-row of @fig:rules-programs shows.
+Per-origin warrowing helps when several origins feed one global, as Seidl et
+al. show on a global that receives one constant per location @seidl26 (TODO:
+check locator). A recursive call that feeds a growing value back into its own
+seed is a single origin, where the rule gains nothing and can lose precision
+(@sec:eval-rq4).
 
 The choice of rule also affects termination. The two joining rules never widen
-a seed. On the interval domain, the recursion `f(x) { f(x + 1) }` entered with
-$x = 0$ contributes the entries $[0, 0], [0, 1], [0, 2], dots$ to the one seed of
-`f`, a strictly ascending chain. Under join and per-origin the solve does not
-finish within the 5 s limit of @fig:rules-programs, while both warrowing rules
-widen the entry to $[0, +infinity]$ and return. Either kind of rule can be more
-precise: the same table contains a program on which the joining rules are exact
-and warrowing is not.
-
-No solver fact is proved per rule. The datatype #isatype("globals_rule")
-names the four rules, #isaconst("update_global_of") selects the vendored
-implementation, and one interpretation of the solver locale takes the rule as a
-parameter, so every solver fact, the certificate included, holds for all four
-at once. Only #isathm("update_rule_update_global_of"), which shows that the
-selected function meets the update-rule interface, splits on the rule and cites
-the four vendored interpretations.
+a seed, so a recursion that enters with a growing argument can keep the solve
+running (@sec:termination), while both warrowing rules widen the entry and
+return. Either kind of rule can be more precise: @fig:rules-programs contains a
+program on which the joining rules are exact and warrowing is not.
 
 #figure(
   {
@@ -341,13 +186,20 @@ the four vendored interpretations.
     from no program.],
 ) <fig:update-rules>
 
+No solver fact is proved per rule. The datatype #isatype("globals_rule")
+names the four rules, #isaconst("update_global_of") selects the vendored
+implementation, and one interpretation of the solver locale takes the rule as a
+parameter, so every solver fact, the certificate included, holds for all four
+at once. Only #isathm("update_rule_update_global_of"), which shows that the
+selected function meets the update-rule interface, splits on the rule and cites
+the four vendored interpretations.
+
+
 == An executable state with two defaults <sec:readback>
 
 The pointwise numeric analyses state soundness over states $"Var" -> A$,
 functions on an infinite set of names whose equality is not executable, while
-the solver compares values at every update. The relational order analysis keeps
-its own state type, a set of variable pairs (#isatype("relc")), and this
-section does not apply to it. A sparse map that reads every unlisted variable as #ltop is the
+the solver compares values at every update. A sparse map that reads every unlisted variable as #ltop is the
 smaller representation, but three states the analysis uses do not fit it. The
 solver starts every unknown at the everywhere-#lbot state, which such a map
 cannot represent at all. The initial state maps every global to the abstraction
@@ -395,6 +247,9 @@ with readback. A state the test keeps is then known to be nonempty
 (#isaconst("live_resolved_st_q")), and the numeric transfer commutes with
 readback only on such states.
 
+The relational order analysis keeps its own state type, a set of variable pairs
+(#isatype("relc")), so this section does not apply to it.
+
 == Why termination stays a premise <sec:termination>
 
 The vendored solver is a recursive HOL function whose termination is not known
@@ -412,13 +267,28 @@ into domain membership. A premise of this shape can therefore be discharged by
 evaluating the solve for one program.
 
 We do not expect a theorem that discharges the premise for every program,
-because we expect termination to fail for some configurations. Under
-entry-state contexts on the interval domain, a recursion that changes its
-argument at every level meets a fresh context at every level, and widening
-bounds the values of existing unknowns without bounding how many are created
-(@sec:eq-finite). Under the joining update rules, the growing recursion of
-@sec:update-rules contributes a strictly ascending chain of entry states that no
-rule widens. Neither divergence is machine-checked. Their regression programs
+because we expect termination to fail for some configurations. A terminating
+solve visits finitely many unknowns, and whether the space of unknowns is
+finite depends on the context policy. Under the unit context the solved unknowns are finite as soon
+as their nodes belong to the compiled program
+(#isathm("compiled_unit_vars_finite")). Call strings of length at most $k$ over
+a compiled program form a finite space (#isathm("compiled_call_strings_finite")),
+which bounds the solved unknowns if they lie in it, a hypothesis of
+#isathm("compiled_call_string_vars_finite"). An entry-state context is a list of
+abstract values at the callee's arity. For Sign and Parity that space is
+finite, an argument we have not mechanized. For Interval, Congruence and the
+Int product it is not: under entry-state contexts, a recursion that changes its
+argument at every level meets a fresh context at every level,
+and widening bounds the values of existing unknowns without bounding how many
+are created (#fixture(
+  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
+  label: "01-unbounded_context_chain_diverges",
+)). A finite space of unknowns does not force termination either. Without
+contexts, the interval recursion `f(x) { f(x + 1) }` entered with $x = 0$
+contributes the entries $[0, 0], [0, 1], [0, 2], dots$ to the one seed of `f`,
+and under the joining update rules this strictly ascending chain is never
+widened (@fig:rules-programs). Neither
+divergence is machine-checked. Their regression programs
 do not finish within their time limits, and the argument above is why we expect
 divergence. A timeout alone would not prove it (@sec:trust-boundary).
 
@@ -427,16 +297,14 @@ side-effecting solver is proved partially correct only. The vendored
 termination theorems cover top-down variants without side effects and assume a
 finite type of unknowns @tilscher26. Voblint's unknowns pair a graph node
 with a context, and the node type alone is infinite, since a statement node
-carries any natural number. This already excludes the finite domains and
-finite context spaces, where a restricted theorem would be plausible. Seidl
-and Vogler prove termination of their side-effecting variant on paper whenever
-only finitely many unknowns are encountered @seidl21[Thm. 5]. Mechanizing a result of
-that kind for the vendored solver, relative to the unknowns a program creates, is
+carries any natural number. This already excludes the case where a restricted theorem would be most
+plausible, even Sign under the unit context. The
+paper result of Seidl and Vogler (@sec:side-effects) needs only finitely many
+encountered unknowns. Mechanizing a result of that kind for the vendored solver, relative to the unknowns a program creates, is
 future work. The end-to-end theorem is therefore a partial-correctness result
 with a per-program premise (@sec:headline).
 
-The solver thus enters the argument through three contracts of
-#isalocale("dg_analysis"), the certificate, the finite stabilized set and
-domain membership after a finished run, which one interpretation of the solver
-locale discharges for all four update rules at once
-(#isathm("update_rule_update_global_of")).
+The solver thus enters the argument only through the three contracts of
+#isalocale("dg_analysis") in @sec:certificate, discharged once for all four
+update rules. @ch:results chains them with equation soundness into the
+source-level theorem.

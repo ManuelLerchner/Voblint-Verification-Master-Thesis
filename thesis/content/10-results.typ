@@ -26,88 +26,31 @@
 
 = The Source-Level Soundness Theorem <ch:results>
 
-@sec:headline states one theorem about the answers of the exported analyzer
-#isaconst("run_voblint"), from source executions to verdicts. Chaining the preceding results does not yet give it. Equation
-soundness bounds only the unknowns the solver certified, and the certificate
-is closed backward from the query, while an execution moves forward into unknowns the query need not depend on. The client reads a table and a
-verdict per check, not a solver valuation per context (@sec:live-keys). A verdict
-also needs a precise meaning: a check that no execution reaches makes every
-condition true there (@sec:verdicts).
-
-== The source-level theorem <sec:headline>
-
-The theorem is stated once for every list of activated analyses, global update
-rule and context policy that #isaconst("run_voblint") accepts. Its first argument
-$"as"$ is the activation list: the analyses run together as the combined
-component of @ch:cooperation, and a single analysis is the list of length one.
-#proved("run_voblint_certified_source_sound", note: [Source-level soundness of
-  the analyzer.])
-
-#figure(
-  table(
-    columns: (1fr, 1fr),
-    align: (left, left),
-    stroke: none,
-    inset: (x: 6pt, y: 4pt),
-    table.hline(),
-    [*What it assumes*], [*What it establishes*],
-    table.hline(stroke: 0.5pt),
-    [$s_0 in #isaconst("cinit_stores")$, the initial stores $S$ of
-      @ch:traces: $s_0$ zeroes every global; locals are unconstrained.],
-    [A CFG node $v$ and stack that #isaconst("csim") relates to the source
-      configuration.],
-
-    [A finite source execution from `main` reaches $("residual", s, "frs")$.
-      Any stopping point is allowed, so nonterminating programs are covered
-      through their prefixes.],
-    [#isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node.],
-
-    [#isaconst("config_terminates"): the solver's recursion is defined on this
-      program's query under this configuration.],
-    [The typed table covers $s$ at $v$ in some context, before its abstract
-      values are printed (@sec:codegen).],
-
-    [The analyzer returned an answer. Malformed programs are rejected, so
-      well-formedness is not a separate premise.],
-    [Every check listed at $v$ is not `DEAD`; `PROVED` holds and `REFUTED`
-      fails in $s$.],
-    table.hline(),
-  ),
-  caption: [The premises and conclusions of
-    #isathm("run_voblint_certified_source_sound"). The rows are not paired: the
-    conclusions follow from all four premises together.],
-) <tab:headline>
-
-Four features of the statement are forced. The node is existential because a
-source configuration does not determine its CFG node (@ch:traces), the context
-because a store is covered in some context only, and coverage of
-the solved unknowns is absent because it is derived (@sec:live-keys). Termination is a
-premise of its own, separate from the answer, because #isaconst("run_voblint")
-is a total HOL function that denotes an unspecified answer where the solve does
-not terminate (@sec:termination).
-
-Termination of the abstract solve is the one premise not discharged in
-general, so the theorem is a partial-correctness result, and the analyzed
-program need not terminate (@sec:termination).
-#isathm("certificate_demo_source_certified") instantiates the theorem with
-every premise discharged, by evaluation, for one program and configuration.
-
-The theorem is about the HOL constant #isaconst("run_voblint"). The delivered
-tool also relies on the parser, Isabelle's code generator, the OCaml toolchain
-and the rendering code, which @sec:trust-boundary lists as trusted. What its
-verdicts mean, including why `REFUTED` is no counterexample and `DEAD` the only
-reachability claim, is defined in @sec:verdicts.
+This chapter answers what the analyzer's output guarantees about the
+executions of the source program. The previous chapters supply the pieces: the
+compiler simulation, the trace semantics, equation soundness and the solver
+certificate. Chaining them leaves three gaps. The certificate covers only the
+unknowns the solver reached, closed backward from the query, while an execution
+moves forward into unknowns the query need not depend on. The client reads a
+table and one verdict per check, not a solver valuation per context. And a
+verdict needs a precise meaning, since a check that no execution reaches makes
+every condition true there. @sec:chain assembles the pieces, @sec:headline
+states the theorem about the exported analyzer #isaconst("run_voblint") that
+they must yield, and the remaining sections close the three gaps.
 
 == The chain at one check <sec:chain>
 
-At a CFG node $v$ the proof of the theorem is a chain of inclusions between
-sets of stores, followed by one implication. Writing $C_c$ for
-#isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"),
+At a CFG node $v$, the argument that a verdict is sound is a chain of
+inclusions between sets of stores, followed by one implication. Writing $C_c$ for
+#isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"), the stores of the
+valid traces that end at $v$ and carry context $c$ under the policy's relation
+$R$, with `main` in the initial context #isai("startcontext") (@sec:contexts),
 $
   "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
   = union.big_c C_c, quad C_c subset.eq sem(A_(v, c))_bot
-  quad => quad "verdict at" v.
+  quad => quad "verdict at" v
 $
+(#isathm("source_reaches_ltr_collect"), #isathm("ltr_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
 Here $A_(v,c)$ is the lifted abstract state the published table holds for $v$
 in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
 unreachable state #ctor("Bot"). Each later set in the chain may contain stores that no execution
@@ -199,7 +142,8 @@ depend on the policy, and every inclusion holds under both. The policy only deci
 how far the abstract rows exceed row 2.
 Without contexts, the two activations of `f` share one entry and one exit. The
 combine after the recursive call reads the returned value from that same exit,
-so the value `f` returns is computed from itself, and the analysis loses it.
+so the value `f` returns is computed from itself. The solver widens around this
+cycle through exit and combine, and the value is lost.
 Widening the entry is not the cause: under the joining update rule the check
 is still #raw(chain-join.at(3)) with #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
 its own entry and exit, and the result stays exact.
@@ -207,10 +151,62 @@ its own entry and exit, and the result stays exact.
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the collection into context
 buckets is #isathm("ltr_collect_eq_Union_activation_collect"), which rests on
-#oblig("TOTAL"). Equation soundness (@ch:equations) bounds each bucket by the
-solver's valuation, given the certificate of @ch:solving. Two steps remain:
-coverage of every unknown an execution visits, and the passage from the solver's
-valuation to the table a client reads.
+#oblig("TOTAL"): every covered call reaches some context. Equation soundness
+(@ch:equations) bounds each bucket by the solver's valuation, given the
+certificate of @ch:solving. What the chain should deliver to a client is this:
+every store a finite source run reaches is covered by the published table at a
+node that simulates the run, in some context, and every definite verdict listed
+there holds of the store.
+
+== The source-level theorem <sec:headline>
+
+One theorem establishes this for the exported analyzer. It is stated once for
+every list of activated analyses, global update rule and context
+policy that #isaconst("run_voblint") accepts. Its first argument
+$"as"$ is the activation list: the analyses run together as the combined
+component of @ch:cooperation, and a single analysis is the list of length one.
+#proved("run_voblint_certified_source_sound", note: [Source-level soundness of
+  the analyzer.])
+
+#figure(
+  table(
+    columns: (1fr, 1fr),
+    align: (left, left),
+    stroke: none,
+    inset: (x: 6pt, y: 4pt),
+    table.hline(),
+    [*What it assumes*], [*What it establishes*],
+    table.hline(stroke: 0.5pt),
+    [$s_0 in #isaconst("cinit_stores")$, the initial stores $S$ of
+      @ch:traces: $s_0$ zeroes every global; locals are unconstrained.],
+    [A CFG node $v$ and stack that #isaconst("csim") relates to the source
+      configuration.],
+
+    [A finite source execution from `main` reaches $("residual", s, "frs")$.
+      Any stopping point is allowed, so nonterminating programs are covered
+      through their prefixes.],
+    [#isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node.],
+
+    [#isaconst("config_terminates"): the solver's recursion is defined on this
+      program's query under this configuration.],
+    [The typed table covers $s$ at $v$ in some context, before its abstract
+      values are printed (@sec:codegen).],
+
+    [The analyzer returned an answer. Malformed programs are rejected, so
+      well-formedness is not a separate premise.],
+    [Every check listed at $v$ is not `DEAD`; `PROVED` holds and `REFUTED`
+      fails in $s$.],
+    table.hline(),
+  ),
+  caption: [The premises and conclusions of
+    #isathm("run_voblint_certified_source_sound"). The rows are not paired: the
+    conclusions follow from all four premises together.],
+) <tab:headline>
+
+Two gaps separate the chain of @sec:chain from this statement. The certificate
+bounds only the unknowns the solver reached (@sec:live-keys), and the client
+reads a table with one verdict per check instead of a solver valuation per
+context (@sec:verdicts).
 
 == From certified unknowns to the published table <sec:live-keys>
 
@@ -249,7 +245,8 @@ every node and context. Unsolved unknowns read as unreachable. This is sound
 because every unknown an execution visits is live, and live unknowns are solved.
 
 A reached store is covered at its node _in some context_:
-$ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A). $
+$ exists c, A. quad "lookup"(v, c) = ctor("Lifted") A and s in sem(A) $
+(#isaconst("table_covers")).
 The quantifier cannot become universal. Under entry-state routing the test in
 `f` is analyzed in one context per recursion depth, and a store with $n = 2$
 lies in the bucket of the outer call only. For entry-state policies the
@@ -263,13 +260,13 @@ does not enter its statement.
 
 A check has one verdict per node, while the table may hold several contexts
 there. Each context whose state is not #ctor("Bot") is classified as proved,
-refuted or unknown from the answers of @sec:coop-mcp: the check asks the
-truth value of its condition, every active analysis answers from its
-#isaconst("check_query") on its field, and #isaconst("answer_check") reads the
-meet of these answers. An exact $1$ proves the check, an exact $0$ refutes it,
-and every other answer leaves it unknown. Proved and refuted are sound because
-a definite answer holds in every store the state describes
-(#isathm("check_query_sound")). An answer that admits no value also gives
+refuted or unknown from the answers of @sec:coop-examples: the check asks the
+truth value of its condition, every active analysis answers this query from
+its field, and #isaconst("answer_check") reads the meet of these answers. An
+exact $1$ proves the check, an exact $0$ refutes it, and every other answer
+leaves it unknown. Proved and refuted are sound because a definite answer
+holds in every store the state describes (#isathm("mcp_classify_proved"),
+#isathm("mcp_classify_refuted")). An answer that admits no value also gives
 unknown, so the classification never yields `DEAD`.
 
 The per-context verdicts are joined in the flat order in which unknown is the
@@ -293,14 +290,14 @@ stopped at any point. Except for `DEAD`, the meaning is conditional on
 reaching the check:
 
 - `PROVED`: whenever a covered execution reaches the check, the condition
-  holds. It does not assert that the check is reached.
+  holds (#isathm("run_voblint_check_sound")).
 - `REFUTED`: whenever a covered execution reaches the check, the condition
-  fails. It is not a verified counterexample. The abstraction admits stores no
+  fails (#isathm("run_voblint_check_sound")). It is not a verified counterexample. The abstraction admits stores no
   run has, so a condition that fails at every admitted store does not imply
   that any admitted store is reached.
 - `UNKNOWN`: the abstraction decides neither.
 - `DEAD`: the trace collecting semantics at the node is empty, so no covered
-  execution reaches the check. This is the one reachability claim. The other
+  execution reaches the check (#isathm("run_voblint_dead_check_unreached")). This is the one reachability claim. The other
   three verdicts constrain each store at the node and hold vacuously when there
   is none. `DEAD` constrains the whole set.
 
@@ -327,8 +324,7 @@ fun main() {
 Conditions are evaluated in the VIMP semantics, so a `PROVED` verdict can
 depend on its convention for division by zero (@sec:vimp-vs-c).
 
-Only `DEAD` answers a reachability question. In
-@fig:verdict-regions no run reaches either check, yet the interval analysis
+In @fig:verdict-regions no run reaches either check, yet the interval analysis
 marks only one of them `DEAD`.
 
 #listing(lang: "c", claim: "verdicts-mult3-interval", ```
@@ -406,7 +402,9 @@ For a source run about to execute a check,
 #isathm("run_voblint_check_sound") finds a listed check with the same label
 and condition at a node where the store is collected, and that check's verdict
 holds of the store. The label is the check's source position, written by the
-parser. When the labels of a result are distinct,
+parser, which is trusted to write it correctly. When the labels of a result are
+distinct, and the command-line tool refuses to print a result where they are
+not,
 #isathm("run_voblint_labelled_check_sound") shows that every row with that
 label is this check, so the verdict printed at a position belongs to the check
 written there. The listed check is existential because a source state does not
@@ -419,15 +417,15 @@ diagnostics are stated per node as well. By
 divisors in every collected store. A warning only means that the abstraction
 could not exclude a zero divisor.
 
-The theorem of @sec:headline is the end-to-end soundness result. Each of its conclusions
-rests on one step of this chapter: collection at a simulating node on the
-compiler simulation and the trace construction (@sec:chain), coverage by the
-published table on the live unknowns and the readback (@sec:live-keys), and the verdict conclusions on the join over contexts
-(@sec:verdicts). Well-formedness and the closure of the certified unknowns are
-derived. Termination of the abstract solve stays a per-program premise, so the
-result is partial correctness, and the delivered tool adds the trusted
-components of @sec:trust-boundary. #isathm("certificate_demo_source_certified")
-shows for one program and configuration that the premises can be met, a
-non-vacuity witness. @ch:instances compares what the shipped
-domains can prove under this theorem, and @ch:executable draws the boundary
-between the proved constant and the delivered tool.
+
+Four features of the theorem are forced. The node is existential because a
+source configuration does not determine its CFG node (@ch:traces), the context
+because a store is covered in some context only, and coverage of the solved
+unknowns is absent because it is derived (@sec:live-keys). Termination of the
+abstract solve is the one premise not discharged in general (@sec:termination),
+so the theorem is a partial-correctness result, and the analyzed program need
+not terminate. #isathm("certificate_demo_source_certified") discharges every
+premise by evaluation for one program and configuration, a non-vacuity witness.
+@ch:instances compares what the shipped domains can prove under the theorem,
+and @ch:executable draws the boundary between #isaconst("run_voblint") and the
+delivered tool.

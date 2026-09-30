@@ -182,10 +182,10 @@ compiles the program to a control-flow graph, solves equations over abstract
 states and reports a verdict per check, and each change of representation could
 lose concrete behavior. The argument therefore follows one store that an
 execution reaches through every representation (@fig:intro-nest). The compiler
-simulation places it at a graph node $v$, the reached graph state is covered by a valid
+simulation places it at a graph node $v$ (#isathm("csim_star")), the reached graph state is covered by a valid
 activation-local trace (#isaconst("valid_ltr"), #isathm("source_reaches_ltr_collect")), and under the totality condition that trace falls
-into a context bucket whose solved value admits the store. A `PROVED` check at
-$v$ holds for every admitted store. Each check row of the result carries its source position, which
+into a context bucket (#isathm("ltr_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
+$v$ holds for every admitted store (#isathm("run_voblint_sound_at")). Each check row of the result carries its source position, which
 the unverified parser writes (@sec:trust-boundary).
 Each outer set in @fig:intro-nest may add stores that no execution reaches,
 which costs precision. Soundness needs only that it contains the set inside it.
@@ -246,7 +246,7 @@ which costs precision. Soundness needs only that it contains the set inside it.
   kind: image,
   placement: auto,
   caption: [Soundness at a program point $v$ as nested sets. Each inclusion is
-    proved under the premises of the main theorem (@ch:results).],
+    proved under the premises of the main theorem (#isathm("run_voblint_sound_at"), @ch:results).],
 ) <fig:intro-nest>
 
 == The verified solver and the open questions <sec:rqs>
@@ -421,7 +421,7 @@ a side-effecting constraint system, in which right-hand sides contribute to glob
 systems. In Voblint, every call publishes its callee's entry state as a side
 effect to a global unknown (@sec:eq-seed), and the
 end-to-end theorem covers this for every accepted program whose solve
-terminates. The contributions below address this gap.
+terminates (#isathm("run_voblint_certified_source_sound")). The contributions below address this gap.
 
 == Contributions <sec:contributions>
 
@@ -448,7 +448,9 @@ answers one of the questions of @sec:rqs.
   operations only, and its transfer functions, with the executable versions
   the analyzer runs, are derived from them and proved sound once
   (#isalocale("sound_nonrelational_ops")). One theorem discharges the coverage contract for every policy
-  that proves its routing adequacy and totality, in every domain
+  that proves two facts about the contexts it chooses for calls, in every
+  domain: they agree with the contexts the concrete semantics admits
+  (adequacy), and every call gets one (totality)
   (#isathm("activation_collect_dg_sound"), @sec:eq-discharge), and the
   source-level theorem covers every configuration. Analyses that exchange facts
   through Goblint-style queries are verified separately too: each proves its

@@ -31,9 +31,11 @@ by its pull requests, since the recipes still await review.
 
 == Source tooling for Isabelle <sec:isar-tools>
 
-`isar-tools` @isartools is a command-line tool for Isabelle/Isar projects. It
-reads `.thy` and `ROOT` files as text and never runs Isabelle, so its checks
-finish before the batch build has loaded its first session. It replaces
+Formatting and simple source checks should not wait for a batch build that
+loads every session first. `isar-tools` @isartools is a command-line tool for
+Isabelle/Isar projects that reads `.thy` and `ROOT` files as text and never
+runs Isabelle, so its checks finish before the build has loaded its first
+session. It replaces
 Python scripts this repository used before, and it is published under the MIT
 license on PyPI, with a conda-forge recipe under review.
 
@@ -72,7 +74,7 @@ builds with must exist on conda-forge for the three platforms the repository
 supports.
 
 @fig:conda-forge shows what that takes. The native analyzer needs only the
-compiler, Dune, Menhir and Zarith. The browser build adds `js_of_ocaml` and // thesis-refs: ignore
+compiler, Dune, findlib, Menhir, and Zarith with the GMP library. The browser build adds `js_of_ocaml` and // thesis-refs: ignore
 `wasm_of_ocaml` with a chain of libraries below them, and the formatter
 `ocamlformat` needs a few more. Most of these libraries were not on
 conda-forge, and two of the existing packages were outdated or missing on
@@ -161,10 +163,12 @@ the build environment, so Dune did not find OCaml libraries installed in the
 host environment @cfdune19. And `ocamlcommon.cmxa` kept a path to its installation
 prefix, which conda's relocation padded with NUL bytes, so that `ocamlopt`
 later passed an invalid argument to the linker @cfocaml132. The maintainer fixed both
-within a day. The one package still blocked holds the JavaScript stubs of Zarith: the
-analyzer's WebAssembly build needs an unreleased upstream commit, and
-conda-forge builds from releases, so we asked upstream for a release
-@zarithstubs16.
+within a day. At the date of @fig:conda-forge the rest of the stack is still
+unpublished: the libraries of the two submitted recipes, findlib and Zarith,
+which even the native build needs, and the browser and formatter chain. The
+JavaScript stubs of Zarith are blocked in addition: the analyzer's WebAssembly
+build needs an unreleased upstream commit, and conda-forge builds from
+releases, so we asked upstream for a release @zarithstubs16.
 
 == Changes to the verified solver <sec:upstream-td>
 
@@ -176,11 +180,15 @@ solver's #isalocale("widening") and #isalocale("narrowing") classes @td13 and ke
 locales that prove termination. Those assumptions say that widening and
 narrowing stabilize, which only termination proofs use. Partial correctness
 needs the four order laws alone, and this is why a domain need not provide a
-stabilizing widening (@sec:domain-contract).
+stabilizing widening (@sec:domain-carrier-laws).
 Without the change, every domain instance would have to prove a
 stabilization property that no soundness theorem of this thesis uses
 (@sec:termination). The vendored submodule carries both changes, and both
-upstream pull requests await review.
+upstream pull requests await review. It also carries local refactorings that
+were not proposed upstream: renamed constructors and fields, an interface
+theory per solver family that hides generic record field names, the operator
+classes moved out of the update-rule theory, and a build on the HOL-Library
+heap.
 
 == From sources to the site and the thesis <sec:pipeline>
 
@@ -275,11 +283,9 @@ its source printer are generated, so the parser the proof trusts
 (@sec:trust-boundary) and the syntax the theories use describe one language. The
 analysis manifest names each analysis, the type of its abstract values, the
 prefix its constants and facts share, and the theories that prove it sound. From
-an entry the generator writes the registrations of a numeric domain
-(@sec:engineering). Each proof applies the certificate of the domain's operation
-bundle (#isathm("sound_nonrelational_ops.dg_analysis_execI")) and discharges the
-remaining obligations for routing, the seeds, the solver and the initial
-state by citing the domain's facts under names the prefix determines. The
+an entry the generator writes the registrations of a numeric domain, whose
+proofs @sec:engineering describes, citing the domain's facts under names the
+prefix determines. The
 generator also writes the combined state of @ch:cooperation with its dispatch
 equations. It only places names, and Isabelle checks every generated proof. Some
 parts are still written by hand: the key that orders an analysis's values for
@@ -288,8 +294,7 @@ that map an analysis name to its constructor, and the test that lists the
 analyses independently of the manifest. A new analysis therefore needs its own
 theories, a manifest entry and these edits.
 
-The command-line tool and the browser adapter link the same exported module
-and frontend. The command-line tool runs the analysis in a child process with a
+The command-line tool runs the analysis in a child process with a
 wall-clock budget and reports a run that exceeds it as unfinished, with no
 verdicts. For the browser, #raw("wasm_of_ocaml", lang: "sh") compiles the
 adapter into a WebAssembly module that runs in a Web Worker the user can

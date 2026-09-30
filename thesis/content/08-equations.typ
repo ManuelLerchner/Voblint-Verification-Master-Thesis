@@ -1,13 +1,10 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": fixture, isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
-#import "../lib/figures.typ": (
-  dep-edge, global-unk, intra-edge, ppoint, side-edge, snapshot-var, subfigures, unk,
-)
+#import "../lib/figures.typ": call-edge, entry-node, intra-edge
 #import "../lib/claims.typ": claim-snapshot, snapshot-cluster-of, snapshot-verdict
-#import "../lib/sources.typ": proved
 
 // A verdict or state of a registered CLI claim (shared/claims.toml), read from
 // the checked output rather than typed.
@@ -22,91 +19,128 @@
 
 = Equations, Contexts, and Routing <ch:equations>
 
+The previous chapters fixed what each operation of an analysis must guarantee:
 @ch:traces reduced soundness to five local obligations on a claim
-#isai("cover v c"). @ch:analysis-interface supplied the abstract operations,
-and @ch:cooperation showed that several analyses combine into one
-specification with the same contract, so the equations below need not know how
-many analyses run. Computing the claim raises three problems. One unknown per node, the intraprocedural recipe, merges the
-calls of a procedure and loses facts that every execution satisfies
-(@sec:eq-unknowns). A callee's entry cannot list the calls that reach it,
-because which calls route to a context is known only once their callers are
-solved (@sec:eq-seed). The equations compute contexts from abstract entry
-values, while the obligations speak about contexts that the relation $R$
-admits for concrete calls (@sec:eq-routing). This chapter builds an equation
-system that meets all three, for every domain and context policy, whose
-post-solutions $sol$ satisfy, for every node $v$ and context $c$,
+#isai("cover v c"), @ch:analysis-interface gave the operations an analysis
+supplies, and @ch:cooperation combined several analyses into one. This chapter
+connects those operations into a whole-program analysis whose result is such a
+claim.
+
+For a program without procedures, one abstract state per graph node suffices.
+Procedures break this: the same node is reached by different activations, and
+merging them loses facts. Voblint therefore keeps one unknown per node and
+_context_. Local edges pass values between unknowns of the same context. Calls
+are harder, because the context in which the callee runs can depend on an
+abstract value that is known only once the caller is solved. The equations
+discover such calls while they are solved: each call chooses a context of the
+callee from its entry value, sends the entry value there, and reads the
+callee's result back at its continuation. We call this choice _routing_, and
+the context policy decides it.
+
+The goal is a solution $sol$ that over-approximates the buckets of
+@sec:contexts: for every node $v$ and context $c$,
 $
   #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
-where $conc_(M)$ gives the stores that the solver's value at an unknown describes.
-It links computed contexts to admitted ones and proves the obligations once
-for all policies. The running example is
-`bump(5); bump(4)` of @fig:program-to-equations, with call nodes $u_1$, $u_2$
-(`pp2`, `pp3`) and continuations $k_1 = u_2$, $k_2$ (`pp4`).
+where $conc_(M)$ reads a solved local unknown together with the solved
+analysis global: it gives the stores that the local half of $sol(v, c)$
+describes jointly with the global half of the analysis global's unknown
+(@sec:global-unknowns), and the empty set for unknowns outside the solved set.
+The main result (#isathm("activation_collect_dg_sound"), @sec:eq-discharge) shows that every post-solution
+of the equations meets this goal, for every domain and context policy,
+provided the analysis is sound and the policy routes every concrete call to
+a context that the concrete semantics also admits for it (@sec:eq-routing). Whether a solve terminates is a separate premise
+(@sec:termination). The
+running example is the program of @fig:program-to-equations, repeated in
+@fig:eq-running with the names this chapter gives its calls.
 
-== Unknowns indexed by node and context <sec:eq-unknowns>
+#figure(
+  {
+    set text(size: 8pt)
+    set par(first-line-indent: 0pt, justify: false)
+    let pt(pos, name, pp) = node(
+      pos,
+      [#name #text(size: 6.5pt, fill: vb.muted, raw(pp))],
+      stroke: 0.8pt + vb.neutral,
+      fill: white,
+      corner-radius: 6pt,
+      inset: 3.5pt,
+    )
+    let resume(from, to) = edge(
+      from,
+      to,
+      "-|>",
+      stroke: (paint: vb.muted, thickness: 0.7pt, dash: "dotted"),
+      label: text(size: 6.5pt, fill: vb.muted)[resumes],
+      label-side: right,
+      bend: -40deg,
+    )
+    grid(
+      columns: (auto, auto),
+      column-gutter: 8mm,
+      align: horizon,
+      block(width: 56mm, listing(lang: "c", claim: "pg-contexts-entry", ```
+      fun bump(n) {
+        return n + 1;
+      }
 
-The intraprocedural recipe of @ch:background keeps one unknown per CFG node.
+      fun main() {
+        a = bump(5);
+        b = bump(4);
+        __voblint_check(a == 6);
+        __voblint_check(b == 5);
+      }
+      ```)),
+      diagram(
+        spacing: (14mm, 6mm),
+        entry-node((0, 0), text(size: 7pt, raw("entry_main"))),
+        pt((0, 1), $u_1$, "pp2"),
+        pt((0, 2), $u_2 = k_1$, "pp3"),
+        pt((0, 3), $k_2$, "pp4"),
+        entry-node((1.4, 1), text(size: 7pt, raw("entry_bump"))),
+        entry-node((1.4, 2.4), text(size: 7pt, raw("exit_bump"))),
+        intra-edge((0, 0), (0, 1)),
+        intra-edge((1.4, 1), (1.4, 2.4), label: [return n + 1], label-side: left),
+        call-edge((0, 1), (1.4, 1), label: [bump(5)], label-side: left),
+        call-edge((0, 2), (1.4, 1), label: [bump(4)], label-side: right),
+        resume((0, 1), (0, 2)),
+        resume((0, 2), (0, 3)),
+      ),
+    )
+  },
+  kind: image,
+  placement: none,
+  caption: [The running example of this chapter. Call $u_1$ enters `bump`
+    with argument 5 and resumes at $k_1$, which is the second call $u_2$. It
+    enters `bump` with 4 and resumes at $k_2$, where the checks start. Dashed
+    arrows are call edges, dotted ones connect a call with its continuation.],
+) <fig:eq-running>
+
+== Context-indexed unknowns <sec:eq-unknowns>
+
+The intraprocedural recipe of @ch:background keeps one unknown per graph node.
 Extended naively to calls, the entry of `bump` joins both call sites and holds
 $n in {4, 5}$ at best, the return at $k_1$ assigns $a in {5, 6}$, and the check
 `a == 6` fails although every execution satisfies it. With the join update rule
-the analyzer without contexts reports exactly this,
+(@sec:update-rules) the analyzer without contexts reports exactly this, with the verdicts of
+@fig:intro-answers:
 #_cli("pg-contexts-none-join", "a == 6", 3) with
-#_cli("pg-contexts-none-join", "a == 6", 4). The default rule reports
-#_cli("pg-contexts-none", "a == 6", 4); its lower bound $-infinity$ comes from
-widening the shared entry value (@sec:eq-seed). The collecting semantics
-already assigns the two activations to different contexts
-(@sec:contexts), and the fix gives the unknowns the same index.
+#_cli("pg-contexts-none-join", "a == 6", 4). The default rule, warrowing, reports
+#_cli("pg-contexts-none", "a == 6", 4)\; its lower bound $-infinity$ comes from
+widening the shared entry value (@sec:eq-seed-global). The concrete semantics keeps
+the two calls apart: the collecting semantics of @sec:contexts files each
+activation of `bump` under its own context. Voblint indexes the unknowns by the
+same contexts.
 
-A local unknown is a pair $(v, c)$, and $sol(v, c)$ is the state claimed for
-activations of context $c$ at node $v$. Contexts are activation-stable
-(@sec:contexts), so the right-hand side of $(v, c)$ reads its local predecessors
-at the same $c$, and #oblig("INTRA") follows from edge-transfer soundness
-before any context policy is chosen. The generator #isaconst("routed_node_rhs")
-joins one contribution per incoming local edge, one per call whose continuation
-is $v$, the initial state at the program entry, and, at a callee entry, the
-read of its seed (@sec:eq-seed). The call contributions decide where the
-second index comes from.
-
-The index also fixes how a return finds its caller. The contribution of a call
-at $u$ to its continuation $(k, c)$ reads the caller's value at $(u, c)$, an unknown
-that already exists because the caller was analyzed there. The return
-therefore resumes the caller's context and never reconstructs it from the
-callee's. For call strings of length $k$, truncation drops the
-oldest call site, and recovering it on return would require joining every
-caller compatible with the truncated string. Keeping the caller's context in
-the continuation's unknown removes that step. Goblint's local unknowns have the
-same shape, a node paired with a context (@app:goblint-alignment).
-
-== A call reads and writes several unknowns <sec:eq-call>
-
-A call contributes to its continuation $(k_1, c)$ by the protocol of
-@sec:calls. The unknown it reads last depends on the caller
-value it read first, so a dependency graph derived from CFG edges cannot list
-it. The solver's equations are therefore #isatype("strategy_tree")s: an answer,
-a local or shared query followed by a function of the value read, or a side
-effect followed by a further tree. Each contribution of the generator is
-written as a small program over reads of unknowns (#isatype("strategy_program")),
-and the generator joins their results and compiles them into one tree. For a
-single callee the call contribution is
-$
-  italic("call") & = #ctor("QueryL") thin (u_1, c) thin (lambda d. thick
-                     scripts(lJoin)_((q, e) in enterh(d)) thin t_(q, e)), \
-        t_(q, e) & = #ctor("Side") thin (italic("Seed")(italic("bump"), c'), e) thin
-                   (#ctor("QueryL") thin (ctor("FunctionResult") thin italic("bump"), c') \
-                 & #h(4em) (lambda r. thick
-                     #ctor("Answer") thin combineassignh(combineenvh(q, r))))
-$
-with $c' = ctxh(u_1, c, e)$. Generating this equation never enters the callee:
-it names the callee's unknowns and nothing else, so recursion needs no special
-case. When the entry value $e$ is bottom, the call publishes no seed and reads no exit; its program combines $q$ with a bottom callee result. Apinis et
-al. add the same test so that procedures which are not called are not analyzed
-@apinis12, and Goblint's call handling applies it as well. The shortcut needs
-one assumption of the routed locale: a value the test classifies as bottom
-concretizes to the empty set, so the test never skips a concrete call.
-@fig:eq-unknowns shows the resulting unknowns. Under entry-state contexts
-the analyzer separates the two copies and reports
-#_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
+A local unknown is a pair $(v, c)$, the index $[v, c]$ of the claims of
+@ch:traces, and $sol(v, c)$ is the state claimed for activations of context $c$
+at node $v$. Goblint's local unknowns have the
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape], a node paired
+with a context. @fig:eq-unknowns shows the unknowns of the
+running example when `main` runs in context $c_0$ and the two calls enter
+`bump` in contexts $c_1$ and $c_2$. Each call gets its own copy of `bump`.
+Under entry-state contexts the analyzer separates the copies this way and
+reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
 #_cli("pg-contexts-entry", "a == 6", 4), and likewise for `b == 5`.
 
 #let _loc(pos, body) = node(
@@ -145,7 +179,7 @@ the analyzer separates the two copies and reports
 #let _b = $italic("bump")$
 
 #figure(
-  placement: auto,
+  placement: none,
   diagram(
     spacing: (18mm, 8mm),
     _seed((0, 0), $italic("Seed")(#_b, c_1)$),
@@ -176,150 +210,171 @@ the analyzer separates the two copies and reports
     publications. Drawn from the equation definitions.],
 ) <fig:eq-unknowns>
 
-== The callee entry reads a published seed <sec:eq-seed>
+== Interprocedural equations <sec:eq-call>
 
-The entry unknown $(ctor("FunctionEntry") thin p, c')$ has no local
-predecessors, and which call sites route to $c'$ is known only once their
-caller values are, so its right-hand side cannot enumerate its contributors.
-Side-effecting systems reverse the direction: each caller contributes to the
-callee's entry while evaluating its own equation (@ch:background).
+For a post-solution to cover the bucket of $(v, c)$, the right-hand side of
+$(v, c)$ must join everything that can reach $v$ in context $c$
+(#isaconst("routed_node_rhs")). Schematically,
+$
+  italic("rhs")(v, c) = italic("init")(v) union.sq
+  lJoin_(u ->^a v) sh(f)_a (sol(u, c)) union.sq
+  lJoin_(u in italic("calls")(v)) italic("call")_u (c) union.sq
+  italic("seed")(v, c):
+$
+the initial state if $v$ is the program entry, the transfer along each
+incoming local edge, the contribution $italic("call")_u (c)$ of each call node
+$u$ whose continuation is $v$ (the set $italic("calls")(v)$), and the seed if
+$v$ is a callee entry. A transfer that uses analysis globals also
+reads and publishes them (@sec:manager).
 
-Apinis et al. side-effect the entered state directly into the start unknown of
-the callee in the selected context @apinis12, and Goblint does the same with a
-side effect on a local unknown. The reused solver's #ctor("Side") targets global unknowns only, and adding local side effects would mean forking the solver
-and redoing its partial-correctness proof. Voblint instead publishes
-$e$ at a global unknown #isaconst("Activation_Seed") indexed by callee entry and
-context, written $italic("Seed")(p, c')$, and the entry equation reads it back.
-The seed is a shared substitute for the start unknown.
+Local edges keep the context. An activation keeps its context from entry to
+return (@sec:contexts), so a local edge never changes it, and #oblig("INTRA")
+follows from edge-transfer soundness before any context
+policy is chosen.
 
-Publishing does not make the solver analyze the callee. #ctor("Side") joins its
-value into the seed and destabilizes the seed's readers. It reads nothing, and
-the solver adds an unknown to the demanded set only when some right-hand side
-reads it. The callee is demanded by the exit read that follows the
-publication, #ctor("QueryL") $(ctor("FunctionResult") thin p, c')$. Solving
-that unknown reaches the entry through local dependencies, and the entry
-equation reads the seed, which the publication has already filled.
+A call follows the protocol of @sec:calls (@fig:eq-protocol). Its contribution
+reads the caller's value at $(u, c)$ and applies the entry operation, which
+yields the resume value $q$ and the entry value $e$. The entry value selects
+the callee context $c' = ctxh(u, c, e)$. The call publishes $e$ to the callee's
+entry in $c'$, reads the callee's result $r$ at $c'$, and returns the combined
+value to $(k, c)$. In @fig:eq-unknowns the continuation $(k_1, c_0)$ reads
+$(u_1, c_0)$, publishes $n = 5$ to the seed of `bump` in $c_1$ and reads the
+result there.
 
-Context selection and publication use the same entered value $e$. A route
-computed from any other value, such as the caller's own state or a frame
-entered against bottom globals, stores the seed at a context its value does
-not belong to whenever the entry transfer reads globals. The regressions
-#isathm("w0_seed_at_entered_frame") and #isathm("w0_no_seed_at_caller_frame")
-evaluate one call with such an entry transfer: the seed is published at the context of
-the entered frame, and nothing is published at the context the caller's state would
-select.
+When the entry value is bottom, no store enters the callee. The call then
+publishes nothing, reads no result, and combines $q$ with a bottom callee
+result. Apinis et al. add the same test so that procedures which are not called
+are not analyzed @apinis12 (TODO: check locator), and Goblint's
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244")[call handling] applies it
+as well. The test needs one assumption of the routed locale: a value it
+classifies as bottom concretizes to the empty set.
 
-The seed adds one global unknown per callee entry and context and one update
-per call, and it changes where widening happens. A
-seed has no equation of its own, and #isaconst("run_voblint") merges
-contributions into it with the update rule selected for global unknowns, so under
-a warrowing rule a seed can be widened. In @sec:eq-unknowns the first call
-contributes ${n |-> [5, 5]}$ to the one seed of `bump` and the second
-${n |-> [4, 4]}$. Their join ${n |-> [4, 5]}$ is not below ${n |-> [5, 5]}$, so the rule widens
-the lower bound to $-infinity$. Neither contribution changes afterwards, and the
-rule leaves the seed untouched when an origin repeats its contribution, so no
-narrowing step recovers the bound. No operational equivalence with Goblint's
-fixpoint is claimed; @app:goblint-alignment records the deviation.
-
-== Routing a concrete activation to a context <sec:eq-routing>
-
-#oblig("CALL") and #oblig("TOTAL") refer to the relation $R$ of @sec:contexts,
-which admits contexts for concrete calls, while the equations publish only at
-contexts that $ctxh$ computes from abstract entry values. The locale
-#isalocale("routed_context_base_hetero") links the two by two per-instance
-obligations. _Adequacy_: whenever $R$ admits $c'$ for a real call from a covered
-caller store $s$, the entry answer $(q, e)$ covers $s$ and the entered store (@sec:calls), and its entry value routes to exactly $c'$, a context whose callee entry is solved. _Totality_:
-every covered call admits some context.
-
-A functional policy computes the callee context from the call site and the
-caller's context alone, and $R$ is the graph of the corresponding function on
-concrete calls (#isaconst("call_context_rel_of_fun")). Totality is then
-immediate, and so is the part of adequacy that fixes the context. The unit
-policy #isaconst("route_unit") sends every call to $()$, and so does its
-concrete counterpart #isaconst("enterc_unit"). A call string of length $k$ is
-updated by #isaconst("cs_route") from the call site and the caller's context,
-and the concrete context function #isaconst("cs_context") applies the same
-term (#isathm("cs_route_context_agree")), so the entry value routes to the admitted context. The rest of adequacy still needs a proof: the entry answer must cover the caller store and the entered store, which is the entry coverage of @ch:analysis-interface, and the routed entry unknown must be solved. Both functional policies reach the analyzer through one theorem,
-#isathm("fun_route_activation_collect_sound"), whose only policy-specific
-premise is that the route ignores the abstract state it is given.
-
-An entry-state context is the list of abstract values of the callee's formal
-parameters in the entered state (#isaconst("formals_context"), applied at the
-executable carrier by #isaconst("exec_formals_route")). Globals and
-other locals do not take part. This is an instance of the partial contexts of
-Apinis et al., where calls are distinguished by one component of the reaching
-abstract state and merged on the others @apinis12. Such a context cannot be a
-function of the concrete call. Abstracting the concrete entered store would
-select a context at which no seed was published. If the caller's solved value
-maps $n$ to $[4, 5]$, a concrete call with $n = 4$ is routed to the context
-$[4, 5]$, while its own entered store abstracts to $[4, 4]$.
-
-The relation #isaconst("routed_entry_context_rel") therefore reads the contexts
-off the solution. It takes the solved table as a parameter and admits $c'$ for
-a concrete call exactly when the entry answer at the caller's solved value covers the call and routes to $c'$. No decoder of
-concrete stores is needed, and a seed exists at every admitted context because
-the analyzer published one there. The covering and routing parts of adequacy
-hold by definition, the solved part follows from closure of the solved unknowns, and
-totality is entry coverage. For the entry-state policy, the shipped
-relation #isaconst("admitted_contexts") instantiates it with the single entry answer of every selectable analysis (#isaconst("single_entry"),
-@ch:cooperation), and #isathm("entry_state_activation_collect_sound") is the
-corresponding endpoint (@fig:eq-routes). For entry-state policies the context-indexed
-collecting semantics that the theorem below bounds is thus indexed by the
-analyzer's own solution. The source-level theorem of @ch:results is stated over
-the context-free collecting semantics, so this dependence does not reach it.
-
-#let _rbox(pos, name, body) = node(
+#let _step(pos, body) = node(
   pos,
-  text(size: 7pt, body),
-  name: name,
-  inset: 4pt,
+  text(0.8em, body),
   stroke: 0.6pt + vb.neutral,
-  shape: rect,
+  fill: white,
   corner-radius: 2pt,
+  inset: 4pt,
 )
-#let _rlab(body) = text(size: 6.5pt, body)
-#let _redge(a, b, lab, side: left) = edge(
-  a,
-  b,
-  "->",
-  stroke: 0.6pt + vb.neutral,
-  label: _rlab(lab),
-  label-side: side,
-)
+#let _p = $p$
 
 #figure(
-  diagram(
-    spacing: (6mm, 9mm),
-    _rbox((0, 0), <r-unit>, [unit context \ #isaconst("route_unit")]),
-    _rbox((1, 0), <r-cs>, [call strings \ #isaconst("cs_route")]),
-    _rbox((2, 0), <r-es>, [entry states \ #isaconst("formals_context")]),
-    _rbox((0, 1), <r-fun>, [graph of a function \ #isaconst("call_context_rel_of_fun")]),
-    _rbox((2, 1), <r-adm>, [read off the solution \ #isaconst("admitted_contexts")]),
-    _rbox((1, 2), <r-dg>, [post-solutions of #isaconst("routed_node_rhs") \
-      #isathm("activation_collect_dg_sound")]),
-    _rbox((0, 3), <r-funend>, [functional policies \
-      #isathm("fun_route_activation_collect_sound")]),
-    _rbox((1, 3), <r-ltr>, [coverage contract \ #isalocale("ltr_coverage")]),
-    _rbox((2, 3), <r-esend>, [entry-state policy \
-      #isathm("entry_state_activation_collect_sound")]),
-    _redge(<r-unit>, <r-fun>, isaconst("enterc_unit"), side: right),
-    _redge(<r-cs>, <r-fun>, isaconst("cs_context"), side: right),
-    _redge(<r-es>, <r-adm>, [solved table], side: right),
-    _redge(<r-fun>, <r-dg>, $R$),
-    _redge(<r-adm>, <r-dg>, $R$, side: right),
-    _redge(<r-dg>, <r-funend>, [instance], side: right),
-    _redge(<r-dg>, <r-ltr>, [discharges]),
-    _redge(<r-dg>, <r-esend>, [instance]),
-  ),
-  kind: image,
   placement: auto,
-  caption: [How the three context policies reach the coverage contract. Top:
-    the route of each policy. Middle: the call-context relation $R$ it induces
-    and the routed soundness theorem of @sec:eq-discharge, which discharges
-    #isalocale("ltr_coverage") at that $R$. Bottom left and right: its instances
-    for the analyzer. Arrow labels name the concrete context function or the
-    role of the arrow.],
-) <fig:eq-routes>
+  diagram(
+    spacing: (16mm, 7.5mm),
+    _loc((0, 0), $(u, c)$),
+    _step((0, 1), $enterh: (q, e)$),
+    _step((1.2, 1), $c' = ctxh(u, c, e)$),
+    _seed((1.2, 2), $italic("Seed")(#_p, c')$),
+    _loc((2.4, 2), $(ctor("FunctionEntry") thin #_p, c')$),
+    _loc((2.4, 3.4), $(ctor("FunctionResult") thin #_p, c')$),
+    _step((0, 4.4), $combineassignh(combineenvh(q, r), r)$),
+    _loc((0, 5.4), $(k, c)$),
+    _read((0, 0), (0, 1), [caller value], side: right),
+    _read((0, 1), (1.2, 1), $e$),
+    _pub((1.2, 1), (1.2, 2), [publish $e$], side: left),
+    _read((1.2, 2), (2.4, 2), [seed read]),
+    edge(
+      (2.4, 2),
+      (2.4, 3.4),
+      "-|>",
+      stroke: (paint: vb.neutral, thickness: 0.7pt, dash: "dotted"),
+      label: text(7.5pt, fill: vb.neutral)[callee body],
+      label-side: left,
+    ),
+    _read((2.4, 3.4), (0, 4.4), $r$),
+    _read((0, 1), (0, 4.4), $q$, side: right),
+    _read((0, 4.4), (0, 5.4), [joined into], side: right),
+  ),
+  caption: [One call at node $u$ in context $c$, contributing to its
+    continuation $(k, c)$. The entry operation turns the caller value into a
+    resume value $q$ and an entry value $e$, and $e$ selects the callee context
+    $c'$. The call publishes $e$ to the seed of $(#_p, c')$ (dashed) and reads
+    the callee's result $r$ at $c'$. All steps except the callee body belong to
+    the right-hand side of $(k, c)$. The callee's unknowns have their own
+    equations.],
+) <fig:eq-protocol>
+
+
+== Dynamic call routing <sec:eq-seed>
+
+Which unknown a call reads last depends on the value it read first: the callee
+context $c'$ is computed from the entry value. The equations therefore cannot
+wire callers to callee entries in advance. For the same reason the entry
+unknown $(ctor("FunctionEntry") thin p, c')$ cannot list its contributors,
+because which call sites route to $c'$ is known only once their callers are
+solved. Side-effecting systems reverse the direction: each caller contributes
+to the callee's entry while it evaluates its own equation (@ch:background).
+
+Voblint adds one _seed_ $italic("Seed")(p, c')$ per callee entry and context.
+Every call routed to $(p, c')$ publishes its entry value $e$ to the seed, and
+the entry reads the seed back, so a post-solution satisfies
+$
+  e lle sol(italic("Seed")(p, c')) quad "and" quad
+  sol(italic("Seed")(p, c')) lle sol(ctor("FunctionEntry") thin p, c')
+$
+(#isathm("routed_seed_publish_bound_seed"), #isathm("routed_seed_read_bound")).
+The seed thus collects every entry value routed to $(p, c')$. Routing and
+publication use the same value $e$. A route computed from any other value,
+such as the caller's own state, could file the seed under a context the entry
+value does not belong to, because entry changes the state, for instance by
+binding the formals. A call's contribution names the callee's unknowns and
+never enters the callee, so recursion needs no special case.
+
+== Relating routing to concrete activations <sec:eq-routing>
+
+The equations route calls by abstract entry values, while #oblig("CALL") and
+#oblig("TOTAL") speak about the relation $R$ of @sec:contexts, which admits
+contexts for concrete calls. Two per-instance obligations connect them.
+_Adequacy_: whenever $R$ admits $c'$ for a real call from a covered caller
+store $s$, the entry answer $(q, e)$ covers $s$ and the entered store
+(@sec:calls), its entry value routes to exactly $c'$, and the callee entry at
+$c'$ is solved. _Totality_: every covered call admits some context.
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    align: (left, left, left),
+    stroke: none,
+    table.hline(),
+    [*policy*], [*callee context*], [*relation $R$*],
+    table.hline(stroke: 0.5pt),
+    [unit], [always $()$ (#isaconst("route_unit"))],
+    [graph of #isaconst("enterc_unit")],
+    [call strings], [site and caller context (#isaconst("cs_route"))],
+    [graph of #isaconst("cs_context")],
+    [entry states], [the formals' abstract values in $e$ \ (#isaconst("formals_context"))],
+    [read off the solution \ (#isaconst("admitted_contexts"))],
+    table.hline(),
+  ),
+  placement: none,
+  caption: [The three context policies. The first two are _functional_: the
+    context ignores abstract values, and $R$ is the graph of the same function
+    on concrete calls.],
+) <tab:eq-policies>
+
+For a functional policy $R$ is the graph of the context function on concrete
+calls (#isaconst("call_context_rel_of_fun")), so totality is immediate. For
+call strings, the concrete function applies the same term as the route
+(#isathm("cs_route_context_agree")), so the entry value routes to the admitted
+context. The rest of adequacy is the entry coverage of @sec:calls and closure
+of the solved unknowns.
+
+An entry-state context is the list of abstract values of the callee's formal
+parameters in the entered state, an instance of the partial contexts of Apinis
+et al. @apinis12 (TODO: check locator). Such a context cannot be computed from the concrete call.
+If the entry value computed from the caller's solved value maps $n$ to
+$[4, 5]$, a concrete call with $n = 4$
+is routed to the context $[4, 5]$, while abstracting its own entered store
+gives $[4, 4]$, a context at which no seed was published. The relation
+#isaconst("routed_entry_context_rel") therefore reads the contexts off the
+solution: it admits $c'$ for a concrete call exactly when the entry answer at
+the caller's solved value covers the call and routes to $c'$. Adequacy then
+holds by definition and closure, and totality is entry coverage. The
+context-indexed collecting semantics is thus indexed by the analyzer's own
+solution. The source-level theorem of @ch:results is stated over the
+context-free collecting semantics, so this dependence does not reach it.
 
 The policy decides which calls share an unknown, and with it what the analysis
 can prove (@fig:eq-policies). A call string of length one keeps the two calls
@@ -421,224 +476,177 @@ lengths one and two for one program.
     the analyzer's solved graph (Interval, claims `ctx-demo-*`).],
 ) <fig:eq-policies>
 
-== Discharging the contract <sec:eq-discharge>
+== Soundness of the generated system <sec:eq-discharge>
 
-The routed locale proves that post-solutions of the generated system meet the
-coverage contract, discharging the five obligations once for all policies and domains.
+The equations were built so that $sol(v, c)$ covers the bucket of $c$ at $v$.
+The routed locale #isalocale("routed_context_base_hetero") proves this for
+every post-solution, discharging the five obligations once for all policies
+and domains. Adequacy and totality are assumptions of that locale.
 
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
-  Let $sol$ be a post-solution of the generated system on a set of unknowns that
-  contains the program entry in the initial context and is closed under local
-  edges and call continuations. Let the initial stores be covered by the initial
-  abstract state, the specification satisfy the analysis soundness contract
-  #isalocale("analysis_contract"), the callee list the generator uses at each
-  call site include every callee a covered call can enter, and routing be
-  adequate and total. Then #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") $subset.eq
-  conc_(M)(sol(v, c))$ for every node $v$ and context $c$, and the left-hand side is
-  empty outside that set.
+  Every post-solution $sol$ of the generated system satisfies
+  #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") $subset.eq
+  conc_(M)(sol(v, c))$ for every node $v$ and context $c$, and the left-hand
+  side is empty outside the solved set, provided: the solved set contains the
+  program entry in the initial context and is closed under local edges and call
+  continuations; the initial abstract state covers the initial stores; the
+  specification satisfies the analysis soundness contract
+  #isalocale("analysis_contract"); the callee list the generator uses at each
+  call site includes every callee a covered call can enter; and routing is
+  adequate and total.
 ]
 
 The statement paraphrases the lemma together with the assumptions of its
-locale #isalocale("routed_context_base_hetero"). It omits the soundness of the
-bottom test of @sec:eq-call, well-formedness of the generated call and seed
-programs, and assumptions that every compiled program and routed type of global unknowns satisfy: finitely many local and call edges, one call edge per call node
-(#isaconst("calls_source_unique")), and seeds distinct from the global unknown of the analysis's own globals. Closure under local edges is required only from unknowns
-whose claim is nonempty. The analyzer's specification is
-#isaconst("dg_spec_of") applied to the combined local specification of
-@ch:cooperation, and #isathm("dg_spec_of_contract") derives
-#isalocale("analysis_contract") for it from #isaconst("sound_local_spec"). The
-theorem uses nothing else about the analysis.
+locale. "Post-solution" means a bound on the solved set only: every local
+right-hand side and every publication there is bounded by $sol$
+(#isaconst("post_bounded")), and closure is the separate premise above. The
+statement omits the soundness of the bottom test of @sec:eq-call,
+well-formedness of the generated programs, and assumptions that every compiled
+program satisfies: finitely many local and call edges, one call edge per call
+node (#isaconst("calls_source_unique")), and seeds distinct from the global
+unknown of the analysis's own globals. Closure under local edges is required
+only from unknowns whose claim is nonempty. The analyzer's specification meets the contract through
+#isathm("dg_spec_of_contract") (@sec:whole-state), and the theorem uses nothing
+else about the analysis. The functional policies reach the analyzer through
+#isathm("fun_route_activation_collect_sound"), the entry-state policy through
+#isathm("entry_state_activation_collect_sound"). @tab:eq-obligations shows where
+each obligation comes from.
 
-#oblig("INIT") comes from the initial state at the entry, #oblig("INTRA") from
-edge-transfer soundness at a fixed context (@sec:eq-unknowns), and
-#oblig("TOTAL") from routing totality. #oblig("CALL") passes through the seed:
-the continuation's equation publishes $e$, the post-solution bounds the seed,
-and the entry equation reads it back. #oblig("RETURN") uses the context $c'$ that adequacy returns: the program reads the result at $c'$ and combines it with $q$.
-
-== One publication per global unknown <sec:eq-buffer>
-
-One right-hand side can publish to the same global unknown twice: in the analysis of @sec:mixed-flow every incoming edge of a node publishes to one global unknown.
-Declaratively, the contributions are joined, but a solver applies its update rule per publication,
-and every rule records the latest contribution of each origin, the unknown
-whose equation published (@sec:update-rules). Two publications from one
-right-hand side have the same origin, so the second replaces the first in that
-record. Under #isaconst("update_global_warrowing_apinis") the key is then
-warrowed toward the join of the recorded contributions, which no longer
-contains the first one. If the value drops, its readers are re-evaluated,
-the first publication differs from the record again, and the two publications
-can alternate without converging. The regression theory defines such an
-unbuffered equation but does not evaluate it, because it is expected not to
-terminate. This non-termination is not proved.
-
-#isaconst("buffer_sides") accumulates the publications of one right-hand side
-per global unknown and flushes each once, so an update rule only sees completed
-contributions.
-#isathm("keyed_multiwrite_buffered_terminates") shows by evaluation that the
-buffered version terminates under the warrowing rule, and for a node with two
-real predecessor edges #isathm("merge_global_value") shows that the flushed value is the join of
-both contributions. The executable analyses run the buffered generator, which
-also defers the node's own publication until its contributions are folded. The
-soundness proof speaks about the direct generator, and
-#isathm("part_post_solution_routed_node_rhs_buffered") transfers the
-certificate between them. Their correspondence is declarative: equal answers,
-publications and dependencies at each valuation. Whether the two schedules
-reach the same solution is left to the regression corpus.
-
-== Program globals as flow-insensitive unknowns <sec:mixed-flow>
-
-// A value at `pp7`, after both calls, from the flow-sensitive Sign run.
-#let _mf(var) = snapshot-var("mixed-flow-sign", "main_pp7_ctx0", var)
-
-The shipped analyses keep program globals in the flow-sensitive local value of
-every unknown, next to the locals. Goblint's base analysis makes the same
-choice for single-threaded programs: it reads globals from its local state and publishes nothing
-(@app:goblint-alignment). Seidl et al. present the flow-insensitive treatment
-of a global as a choice made for efficiency @seidl26. The following program
-compares the two placements:
-
-#listing(lang: "c", claim: "mixed-flow-sign", ```
-global Gx;
-fun set() { Gx = 1; }
-fun get() { return Gx; }
-fun main() { x = 1; set(); y = get(); }
-```)
-
-Flow-sensitively, the value of `Gx` travels with the state. It enters `set`
-with the caller's state, comes back through the return combination and enters
-`get` from `main`'s continuation, so every procedure's unknowns carry every
-global. An analysis may instead keep one fact per global that holds throughout
-the run: a flow-insensitive unknown written by side effects (@ch:background),
-which the certificate (@sec:certificate) makes bound everything published to
-it. The write in `set` then reaches the read in `get` through that fact. This
-loses precision, because the fact must cover the initial `Gx = 0` as well as
-the written 1. Sign can only claim #signval("≥0") for `Gx` and for `y` after
-`y = get()`, although every run ends with `y = 1`. A flow-sensitive analysis
-carries #signval("+") from `set`'s exit into `get`'s entry and derives
-#signval(_mf("y")) for `y` (claim `mixed-flow-sign`).
-
-The lifter #isaconst("ownership_split_lift") adds one global unknown
-$kappa = #isaconst("Analysis_Global") thin ()$ whose value is an abstract
-store for all VIMP globals together. Apinis et al. and Goblint keep one
-unknown per global instead @apinis12 (@app:goblint-alignment). Every lifted
-transfer reads the globals from $kappa$ and publishes the global half of its
-result there, so $sol(kappa)$ describes the globals of every store reached
-anywhere (#isaconst("gamma_ownership_split")).
-
-For every non-relational transfer bundle that satisfies
-#isalocale("sound_nonrelational_transfer"),
-#isathm("ownership_split_lift_contract") establishes the analysis soundness
-contract for the lifted specification. The routed obligations of
-@sec:eq-routing are discharged only for the program above, under the unit
-context and the join update rule, from facts evaluated on its solved table
-with the code-generator oracle (@ch:executable). They bound the stores at
-`pp7`, the node after both calls:
-
-#proved("mf_after_calls")
-
-The bound on `y` is what the flow-insensitive `Gx` leaves. The analysis is not
-selectable in #isaconst("run_voblint"), and no theorem discharges its routed
-obligations for every program.
-
-All program globals share $kappa$ because #isalocale("analysis_contract")
-fixes the type of analysis-global names to `unit` (@sec:sound-core). Several
-names would need a concretization over an environment that maps each name to
-its value. The values of different globals stay apart inside $kappa$, since
-joins and widening act on each entry of the store, but the solver sees one
-unknown (@fig:shared-deps). A write to `g` therefore re-evaluates a node that
-reads only `h`. The update rule also decides between widening and narrowing
-for the whole store (@sec:update-rules): while `g` still grows, $kappa$ is
-widened, and `h` cannot be narrowed until `g` has stabilized. Seidl et al. and
-Goblint keep one unknown per global @seidl26. The manager is already generic
-in the name type.
-
-// A straight-line procedure over two flow-insensitive globals g and h: which
-// right-hand sides read (grey) and publish to (double tip) the global unknowns,
-// and which nodes the solver re-evaluates when g = g + 1 publishes (orange).
-// (a) Voblint keeps all analysis globals in one global unknown; (b) one global
-// unknown per global, as Goblint does.
-#let _deps(split) = {
-  set text(size: 8pt)
-  let hot = if split { (2,) } else { (2, 3) }
-  let pt(i) = if i in hot {
-    unk((0, i), $u_#i$, state: "unstable", name: label("u" + str(i)))
-  } else { ppoint((0, i), $u_#i$, name: label("u" + str(i))) }
-  let edges = (
-    intra-edge(<u0>, <u1>, label: "x = x + 1", label-side: right),
-    intra-edge(<u1>, <u2>, label: "g = g + 1", label-side: right),
-    intra-edge(<u2>, <u3>, label: "y = h", label-side: right),
-  )
-  if split {
-    diagram(
-      spacing: (10mm, 9mm),
-      ..range(4).map(pt),
-      global-unk((1.5, 1.6), $kappa_g$, name: <kg>),
-      global-unk((1.5, 3), $kappa_h$, name: <kh>),
-      ..edges,
-      dep-edge(<kg>, <u2>, bend: 18deg),
-      side-edge(<u2>, <kg>, bend: 18deg),
-      dep-edge(<kh>, <u3>, bend: 18deg),
-    )
-  } else {
-    diagram(
-      spacing: (10mm, 9mm),
-      ..range(4).map(pt),
-      global-unk((1.5, 2), $kappa$, name: <k>),
-      ..range(4).map(i => node((-0.75, i), text(fill: vb.muted, $(d_#i, bot)$))),
-      node((2.1, 2), text(fill: vb.muted, $(bot, v)$)),
-      ..edges,
-      dep-edge(<k>, <u2>, bend: 18deg),
-      side-edge(<u2>, <k>, bend: 18deg),
-      dep-edge(<k>, <u3>, bend: 18deg),
-    )
-  }
-}
-
-#subfigures(
-  figure(_deps(false), caption: [one global unknown $kappa$ for `g` and `h`]),
-  <fig:shared-deps-one>,
-  figure(_deps(true), caption: [one global unknown per global]),
-  <fig:shared-deps-per>,
-  columns: (1.2fr, 1fr),
+#figure(
+  table(
+    columns: (auto, auto),
+    align: (left, left),
+    stroke: none,
+    table.hline(),
+    [*obligation*], [*where the equations meet it*],
+    table.hline(stroke: 0.5pt),
+    [#oblig("INIT")], [the initial state joined at the program entry],
+    [#oblig("INTRA")], [the local-edge terms, at a fixed context],
+    [#oblig("CALL")],
+    [the call publishes $e$ to the seed, the post-solution
+      bounds the seed, and the callee entry reads it],
+    [#oblig("RETURN")],
+    [the call reads the result at the context $c'$ that
+      adequacy returns and combines it with $q$],
+    [#oblig("TOTAL")], [routing totality],
+    table.hline(),
+  ),
   placement: auto,
-  caption: [The right-hand sides that depend on the global unknowns of two
-    flow-insensitive globals `g` and `h` (schematic). Grey arrows are reads
-    (#ctor("QueryG")), purple double-tipped arrows publications (#ctor("Side")),
-    and orange nodes are re-evaluated when `g = g + 1` enlarges the value of
-    `g`; $u_1$, after `x = x + 1`, depends on no global. Voblint keeps all
-    analysis globals in one global unknown (a), so the write to `g` also
-    re-evaluates $u_3$, which reads only `h`. With one global unknown per global
-    (b), as in Goblint, it does not. In (a) each unknown holds a
-    #isatype("dg_state") (grey).],
-  label: <fig:shared-deps>,
-)
+  caption: [How the generated equations discharge the five obligations of
+    @ch:traces in #isathm("activation_collect_dg_sound").],
+) <tab:eq-obligations>
 
-The shipped analyzer makes little use of the global unknowns. In
-#isaconst("run_voblint") side effects write only to the activation seeds:
-every run of #isaconst("run_voblint") instantiates #isaconst("analysis_spec")
-with the combined component of @ch:cooperation, which never writes $kappa$ and
-whose concretization ignores it. @ch:related compares the instance with
-earlier mechanizations of mixed flow sensitivity.
+== Encoding the equations in the solver <sec:eq-encoding>
 
-== Finite context spaces <sec:eq-finite>
+The construction above is independent of how the equations are solved. This
+section describes how it is represented for the reused TD solver of
+@sec:td.
 
-A terminating solve visits finitely many unknowns, but a finite context space
-does not force termination: values can ascend forever inside a finite space of unknowns. Under the unit context the solved unknowns are finite as soon as their
-nodes belong to the compiled program (#isathm("compiled_unit_vars_finite")).
-Call strings of length at most $k$ over a compiled program form a finite space
-(#isathm("compiled_call_strings_finite")), which bounds the solved unknowns
-if they lie in it, a hypothesis of #isathm("compiled_call_string_vars_finite").
-An entry-state context is a list of abstract
-values at the callee's arity. For Sign and Parity that space is finite. For
-Interval, Congruence and the Int product it is not, and widening bounds the
-values of existing unknowns without bounding how many are created: the regression #fixture(
-  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
-  label: "01-unbounded_context_chain_diverges",
-)
-recurses with a fresh argument per level and does not finish within its time
-limit. The end-to-end theorem therefore keeps a per-program termination premise
-(@sec:termination).
+=== Value-dependent reads <sec:eq-trees>
 
-With the obligations discharged once for every domain and policy
-(@sec:eq-discharge), @ch:solving must supply the post-solution and its
-unknowns, and @ch:results must derive the closure of that set, which the
-solver does not provide directly.
+A call reads an unknown chosen by a value it read first, so the solver must see
+the reads one at a time. The reused solver therefore takes each right-hand side
+as a strategy tree (#isatype("strategy_tree"), @sec:td). The
+generator writes each contribution as a small program over reads of unknowns
+(#isatype("strategy_program")), joins their results and compiles them into one
+tree. For a single callee the call contribution (#isaconst("routed_callee_call_program")) is
+$
+  italic("call") & = #ctor("QueryL") thin (u, c) thin (lambda d. thick t_(q, e)),
+                   quad (q, e) = enterh(d), \
+        t_(q, e) & = #ctor("Side") thin (italic("Seed")(p, c'), e) thin
+                   (#ctor("QueryL") thin (ctor("FunctionResult") thin p, c') \
+                 & #h(4em) (lambda r. thick
+                     #ctor("Answer") thin combineassignh(combineenvh(q, r), r)))
+$
+with $c' = ctxh(u, c, e)$, plus the bottom test of @sec:eq-call. The entry
+operation is itself a small program, since it may read analysis globals. The
+solver records the reads of each evaluation and re-evaluates their readers
+when a value grows (@sec:td).
+
+=== Activation seeds <sec:eq-seed-global>
+
+Apinis et al. side-effect the entered state directly into the start unknown of
+the callee @apinis12 (TODO: check locator), and Goblint does the same with a side effect on a local
+unknown. The reused solver's #ctor("Side") targets global unknowns only, and
+adding local side effects would mean forking the solver and redoing its
+partial-correctness proof, so the seed is a global unknown. Publishing does not
+make the solver analyze the callee: #ctor("Side") joins its value into the seed
+and destabilizes the seed's readers, and the solver demands an unknown only
+when some right-hand side reads it. The callee is demanded by the result read
+that follows the publication. Solving that unknown reaches the entry through
+local dependencies, and the entry equation reads the seed, which the
+publication has already filled. The regressions
+#isathm("w0_seed_at_entered_frame") and #isathm("w0_no_seed_at_caller_frame")
+evaluate one call whose entry reads a global: the seed is published at the
+context of the entered frame and nowhere else.
+
+Being a global unknown, a seed is merged with the update rule selected for
+global unknowns, so under a warrowing rule it can be widened. In the example
+without contexts the first call contributes ${n |-> [5, 5]}$ to the one seed of
+`bump` and the second ${n |-> [4, 4]}$. Their join is not below ${n |-> [5, 5]}$,
+so the rule widens the lower bound to $-infinity$. Neither contribution changes
+afterwards, and the rule leaves the seed untouched when an origin repeats its
+contribution, so no narrowing step recovers the bound. No operational
+equivalence with Goblint's fixpoint is claimed. @app:goblint-alignment records
+the deviation.
+
+=== Global unknowns and the manager <sec:global-unknowns>
+
+Seeds are not the only global unknowns. An analysis global of
+@sec:analysis-globals is one as well. Goblint also keeps
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L55",
+)[one global unknown per function]
+next to the analysis's globals, but its value is the set of contexts the
+function is called in, not an entry state. Voblint names its global unknowns
+by the datatype #isatype("global_unknown"): #isaconst("Analysis_Global") wraps
+the name of an analysis global, and #isaconst("Activation_Seed") is the seed of
+@sec:eq-seed for one callee entry and context.
+
+The vendored solver requires all unknowns to share one value type, whereas
+local unknowns and analysis globals range over different domains. Every unknown
+therefore holds a pair #isatype("dg_state") of a local and a global component,
+#isaconst("dg_local") and #isaconst("dg_global"). A local unknown
+or a seed uses the local half, an analysis global the global half, and the
+unused half is $lbot$. Transfers never see the pair: #isaconst("man_local") and
+#isaconst("man_global") hand them the half they need. Goblint's solvers also
+need one value type and use a #link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30")[lifted sum] of the two lattices
+instead. Voblint deviates here on purpose. A sum needs an extra top element where a
+local and a global value meet, and every proof that reads an unknown would have
+to handle it. With the pair, all lattice operations work componentwise, so the
+solver's requirements on the value type follow from those on the two halves.
+
+The manager of @sec:manager maps the name of an analysis global to its global
+unknown. In the manager #isaconst("mk_dg_man") builds, #isaconst("man_global")
+$v$ compiles to a #ctor("QueryG") of that unknown, and #isaconst("man_sideg")
+$v$ $g$ compiles to a #ctor("Side") to it. A transfer names its analysis
+globals and never their global unknowns, so the framework's seeds are out of
+its reach. The analyses of this thesis keep program globals in the
+flow-sensitive local state. @sec:mixed-flow shows a lifter that keeps them in
+an analysis global instead, proved sound at the level of the analysis
+soundness contract.
+
+=== One publication per global unknown <sec:eq-buffer>
+
+A right-hand side can publish to the same global unknown twice, for instance
+when every incoming edge of a node publishes the analysis global
+(@sec:mixed-flow). The update rules record the latest contribution of each
+origin, the unknown whose equation published (@sec:update-rules), so the second
+publication replaces the first, and under a warrowing rule the two can
+alternate without converging. The regression theory defines such an unbuffered
+equation but does not evaluate it, and this non-termination is not proved.
+#isaconst("buffer_sides") therefore joins the publications of one right-hand
+side per global unknown and flushes each once.
+#isathm("keyed_multiwrite_buffered_terminates") shows by evaluation, on a
+two-edge example, that the buffered version terminates under the warrowing
+rule, and for a node with two
+predecessor edges #isathm("merge_global_value") shows that the flushed value is
+the join of both contributions. The executable analyses run the buffered generator. The
+soundness proof speaks about the direct one, and
+#isathm("part_post_solution_routed_node_rhs_buffered") transfers the
+certificate between them. Whether the two schedules reach the same solution is
+left to the regression corpus.
+
+@ch:solving proves that a terminating solve returns a
+post-solution of the generated equations, which is what the theorem of
+@sec:eq-discharge consumes.

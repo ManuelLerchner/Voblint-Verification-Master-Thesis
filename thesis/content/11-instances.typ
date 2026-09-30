@@ -20,12 +20,12 @@
 
 = Five Domains and an Order Analysis <ch:instances>
 
-@ch:domains claimed that a numeric domain must prove laws about integers only, with no
-reference to contexts, routing or the solver. This chapter tests that claim on the
-instances. Five domains prove the laws, and each is
-interpreted into the analysis assembly of @sec:engineering, so the source-level
-theorem of @sec:headline covers it under every context policy and update rule.
-Each domain tests a different part of the interface. Sign is finite, so
+Does the domain interface of @ch:domains admit real domains, and what does
+each gain? The interface asks a numeric domain to prove laws about integers
+only, with no reference to contexts, routing or the solver. Five domains prove
+them, and the source-level theorem (#isathm("run_voblint_certified_source_sound"), @sec:headline) covers each under every
+context policy and update rule. Each domain tests a different part of the
+interface. Sign is finite, so
 its join serves as its widening. Interval is infinite and needs widening and
 narrowing. Parity refines guards through parity alone. Congruence has an exact meet. The
 product Int combines the four under a partial reduction. A relational carrier
@@ -35,21 +35,19 @@ queries of @ch:cooperation.
 
 Precision is compared on regression programs where the difference decides a
 check. Every quoted verdict and state is analyzer output, executable evidence
-in the sense of @ch:evaluation, and each shows a gain on one program only. Goblint's integer
-domain is a tuple of optional components, among them definite values with
-exclusion sets, intervals and congruences. Sign and Parity have no upstream
-counterpart, and exclusion sets, enumerations, interval sets and bitfields have
-none here (@app:goblint-alignment). Exclusion sets are ruled out by the
-least-upper-bound requirement of @ch:domains.
+in the sense of @ch:evaluation, and each shows a gain on one program only.
+Goblint's integer domain has components Voblint lacks, among them definite
+values with exclusion sets, which the least-upper-bound requirement of
+@ch:domains rules out. Sign and Parity have no counterpart among Goblint's
+integer domains. Goblint ships Sign only as a tutorial analysis
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/tutorials/signs.ml")[`signs.ml`]).
 
 == What an instance supplies <sec:instances-supply>
 
-A numeric domain supplies its operations as one record of primitive choices,
-#isatype("nonrelational_ops"): the evaluator, the two comparison queries, the
-refinement operations of @ch:domains (a truth test, one inverse each for `<`,
-`==`, `+`, `-` and `*`, and an intersection), the abstract `min` and `max`, and
-the whole-value element. @fig:gamma shows one value of each carrier and the
-integers it denotes.
+What must a new numeric domain prove before the source-level theorem covers
+it? It supplies the record #isatype("nonrelational_ops") of
+@sec:domain-contract and proves one certificate about it. @fig:gamma shows one
+value of each carrier and the integers it denotes.
 
 #figure(
   {
@@ -101,24 +99,16 @@ both operands (#isalocale("sound_refinement")), the queries are sound checks
 over the evaluator (#isalocale("sound_check_query")), and the abstract `min`
 and `max` are sound (#isalocale("sound_minmax_ops")). Everything else is
 derived once from the record: the guard filters, the branch transfer, the
-check classifier, the transfer of every edge, procedure entry, and executable
-versions of the transfer and entry. The abstract and executable versions are
+check classifier, the transfer of every edge, procedure entry, and their
+executable versions. The abstract and executable versions are
 computed from the same primitives and agree on every live store
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
 #isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
 transfers from certified value operations follows Nipkow and Klein
-@nipkow14[Sect. 13.5, 13.7]. The executable counterpart and its commutation
-are Voblint's. @fig:instance-pipeline shows the chain, and @sec:engineering
-describes how each domain's generated registration turns the certificate into
-a sound field of the combined state of @ch:cooperation.
-
-The certificate asks for soundness alone. #isalocale("mono_nonrelational_ops")
-adds monotone operations and derives monotone transfers
-(#isathm("mono_refinement.branch_mono")). Sign, Interval, Parity and
-Congruence interpret it. For Int, monotonicity is proved in the two modes
-without fixpoint iteration (#isathm("int_dom_mono_ops"), @sec:reduced-product). No soundness
-theorem uses these facts. They serve only the vendored least-solution theorem
-for the solver without widening, which the analyzer does not run.
+@nipkow14[Sect. 13.5, 13.7]. TODO: check Nipkow and Klein §13.6 before
+calling the executable counterpart new. @fig:instance-pipeline shows the chain.
+@sec:engineering describes how the certificate becomes a sound field of the
+combined state of @ch:cooperation.
 
 #figure(
   {
@@ -153,7 +143,7 @@ for the solver without widening, which the analyzer does not run.
         (1, 3),
         <ip-reg>,
         [registration #isalocale("dg_analysis_exec") \
-          #note[by #isathm("sound_nonrelational_ops.dg_analysis_execI") and six obligations]],
+          #note[from the certificate and six obligations (@sec:engineering)]],
         color: vb.proved,
       ),
       step((1, 4), <ip-field>, [sound local specification \
@@ -172,8 +162,8 @@ for the solver without widening, which the analyzer does not run.
       ),
       arrow(<ip-abs>, <ip-reg>),
       arrow(<ip-exec>, <ip-reg>),
-      arrow(<ip-reg>, <ip-field>, label: lab(isaconst("exec_spec")), label-side: left),
-      arrow(<ip-order>, <ip-field>, label: lab(isathm("order_spec_sound")), label-side: right),
+      arrow(<ip-reg>, <ip-field>, label: lab[runs as a field], label-side: left),
+      arrow(<ip-order>, <ip-field>, label: lab[proved directly], label-side: right),
     )
   },
   kind: image,
@@ -195,7 +185,8 @@ equality, a sum, a difference or a product can fix one operand's class from the
 other's (#isaconst("parity_refine_ops")). In both, an equality refines only
 when it held. Parity refines a product only when it is odd, since then both
 factors are odd (#isaconst("inv_times_parity")). Int refines through its
-components; its arithmetic inverses are those of its Parity and Congruence components.
+components: its arithmetic inverses are those of its Parity and Congruence
+components, followed by reduction in the chosen mode (@sec:reduced-product).
 
 #figure(
   {
@@ -228,10 +219,11 @@ components; its arithmetic inverses are those of its Parity and Congruence compo
 The loop below is the fixture #fixture("12-widening/known-imprecision/05-mine_ex410_stride2_parity.vimp", label: "05-mine_ex410_stride2_parity.vimp"), adapted
 from Goblint's regression test #link("https://github.com/goblint/analyzer/blob/d155e9e/tests/regression/56-witness/29-mine-tutorial-ex4.10.c")[`56-witness/29-mine-tutorial-ex4.10.c`] (revision
 `d155e9e`), which names Example 4.10 of Miné's tutorial @mine17 as its source.
-Goblint's test asserts only bounds on $v$ and, according to its comment, reads
-an invariant from a witness file "to have no narrowing". The VIMP fixture has
-no witness input, so Interval must recover the bound $52$ by narrowing; the
-check `v == 51` is added here. Concretely, $v$ runs through the odd numbers
+Goblint's test, marked `SKIP`, asserts only bounds on $v$. It runs Apron
+polyhedra, according to its comment "to have no narrowing", and reads an
+invariant from a witness file. The VIMP fixture has no witness input, so
+Interval must recover the bound $52$ by narrowing. The check `v == 51` is added
+here. Concretely, $v$ runs through the odd numbers
 $1, 3, dots, 51$ and the loop exits with $v = 51$, so every check holds.
 
 #listing(lang: "c", claim: "dom-stride2-int", ```
@@ -281,9 +273,7 @@ fun main() {
     Congruence have the oddness. The reduced product `int` combines them.],
 ) <fig:stride2>
 
-Sign is finite, so a plain join serves as its widening. Finiteness does not
-discharge the termination premise, because no vendored termination theorem
-covers the side-effecting solver (@sec:termination).
+Sign is finite, so a plain join serves as its widening.
 
 An interval with possibly infinite ends records a range, which makes the
 carrier infinite: the loop head sees $ivl(1, 1)$, $ivl(1, 3)$, $ivl(1, 5)$,
@@ -310,7 +300,10 @@ does (#verdict("dom-disjunct-sign", "13:5")).
 
 Congruence analysis goes back to Granger @granger89. A value denotes
 $setcomp(n, n equiv c med (mod m))$, with $m = 0$ meaning the single integer
-$c$; Parity is the case $m = 2$. Larger moduli matter when classes meet: under
+$c$. Parity is the case $m = 2$. The carrier is infinite, yet its widening is
+the join (#isaconst("widen_congruence")): a strictly larger class has a
+modulus that properly divides the previous one, so ascending chains are
+finite. The argument is not machine-checked. Larger moduli matter when classes meet: under
 `x == y` with $x = 4n + 1$ and $y = 6m + 3$, the common value is
 $9 med (mod 12)$ by the Chinese remainder theorem, so a nested test `x == 13`
 is unreachable. Parity knows only that both are odd and answers
@@ -335,7 +328,7 @@ the upper bound from 52 to 51, and the product reports #_s("int", "25:3") and
 The reduction is partial. One round applies #isaconst("refine_interval"),
 which tightens Sign, Interval and Parity from the interval bounds, and then
 #isaconst("refine_congruence"), which tightens Interval, Parity and Congruence
-from the residue class. No step refines Congruence from Interval or Sign from
+from the residue class and the parity. No step refines Congruence from Interval or Sign from
 Congruence.
 
 The policy #isatype("refine_mode") chooses no reduction, one round, or rounds
@@ -355,8 +348,9 @@ know of. A chain of refinements is at most two rounds long, since Congruence
 never learns from Interval and Parity learns from Interval only at a singleton.
 A guard refines twice, once in its inverse operator and once in the
 intersection, and the bounds of an arithmetic result already agree with its
-congruence. The difference one round leaves shows only on operands no stored
-state has (#isathm("mode_never_ne_fixpoint")). No reduction at all differs
+congruence. One round and the fixpoint do differ on some operands
+(#isathm("arithmetic_once_result"), #isathm("arithmetic_fixpoint_result")). We
+argue that no stored state has such operands, but this is not checked. No reduction at all differs
 visibly: the regression fixtures
 #fixture(
   "16-composite-domain/precision/12-refinement_never_keeps_guard_facts_apart.vimp",
@@ -367,8 +361,7 @@ to
   "16-composite-domain/precision/14-refinement_fixpoint_agrees_with_once.vimp",
   label: "…/14",
 )
-leave a check unproved without reduction that one round proves. This argument
-is not machine-checked. Checks themselves do not reduce: as in Goblint's
+leave a check unproved without reduction that one round proves. Checks themselves do not reduce: as in Goblint's
 `IntDomTuple`, a comparison is decided when one component decides it on its own
 value (#isaconst("int_less_true")), so the mode reaches a check only through the
 values the transfers stored. Without reduction, a remainder that is $[0, 5]$ in
@@ -382,34 +375,23 @@ while the generated code iterates until the value stops changing. That it
 always stops is not proved, so reduction is a second place, besides the solve,
 where the executable may fail to return (@sec:trust-boundary).
 
-== Why narrowing does not reduce <sec:no-refining-narrow>
-
-Reducing after every operation, including narrowing, would break the solver's
-narrowing law, which requires $b lle a narrow b lle a$ whenever $b lle a$.
-Reduction only moves down, so the upper half survives; the lower half fails
-whenever reduction lowers the narrowed value below $b$. Take $a = ltop$ and let
-$b$ hold Sign $signval(top)$, interval $ivl(-1, 0)$ and even parity. Together these
-denote only zero, but Sign still says $signval(top)$. Componentwise narrowing returns a
-value between $b$ and $a$, and one round of reduction afterwards lowers its
-Sign component below $b$'s $signval(top)$. The lemma
-#isathm("post_narrow_refinement_would_violate_narrow_ge") checks this by
-evaluation.
-
-A stability argument would fix the step if every value reaching narrowing
-were already reduced: then monotone reduction would keep $b$ below the result.
-The carrier does not maintain that invariant. Join and widening do not reduce,
-so a value that reaches narrowing through a widened solver state need not be
-stable, and a narrowing built on the invariant would violate the class law at
-the instance. The instance therefore narrows componentwise and reduces only
-inside transfers and filters. The solver's narrowing law thus determines
-where the product may reduce.
+Reduction also stops at narrowing. Reducing after a narrowing would break
+the solver's narrowing law, which requires $b lle a narrow b lle a$ whenever
+$b lle a$: reduction moves down and can push the narrowed value below $b$. Take
+$a = ltop$ and let $b$ hold Sign $signval(top)$, interval $ivl(-1, 0)$ and even
+parity, which together denote only zero. Componentwise narrowing returns a value
+between $b$ and $a$, and one round of reduction then lowers its Sign component
+below $b$'s $signval(top)$
+(#isathm("post_narrow_refinement_would_violate_narrow_ge"), checked by
+evaluation). Join and widening do not reduce, so values reaching narrowing need
+not be reduced, and the instance narrows componentwise and reduces only inside
+transfers and filters.
 
 == A relational carrier <sec:relational>
 
 Every domain so far is pointwise. The relational state #isatype("relc") of
 @sec:rel-state tests whether a relational local state needs any change to the
-generic interface. No function from variables to abstract integers appears in
-it.
+generic interface.
 
 The specification #isaconst("rel_order_spec") discharges the analysis soundness
 contract #isalocale("analysis_contract") of the numeric analyses without any
@@ -422,35 +404,30 @@ while the relational carrier records $(x, y)$ there
 generated solver inside Isabelle. The analysis forgets a variable on
 assignment and everything across calls, and its carrier does not close its
 pairs under transitivity, so it is not a useful analysis. It only shows that the proved
-interface admits a relational local state. Its session
+interface admits a relational local state.
+
+The specification #isaconst("rel_order_spec") reads and publishes an analysis
+global, so it cannot join the combined state of @ch:cooperation. The analyzer
+runs the same carrier in a local form, the order analysis
+(#isaconst("order_spec"), @sec:coop-catalogue). Alone it proves little, since
+it cannot compare a variable with a constant. Its use is as a partner of
+Interval (@sec:coop-examples). Its session
 #isasession("Voblint_Analysis_Relational") builds on
 #isasession("Voblint_Exec") and does not import
 #isasession("Voblint_Nonrelational"), which holds the pointwise transfer
 theories the numeric domains share.
 
-The specification #isaconst("rel_order_spec") reads and publishes the shared
-component, so it cannot join the combined state of @ch:cooperation, whose
-components are pure. The same carrier therefore has a second, local form, the
-order analysis (#isaconst("order_spec")), which the analyzer runs as
-`order`. It is a local specification directly, built from the conservative
-defaults of #isaconst("conservative_local_spec"), with its own soundness
-theorem (#isathm("order_spec_sound")); it has no operation record and no
-registration of its own (@fig:instance-pipeline). It answers comparisons between variables it has ordered, and at an
-assignment $x := e$ it asks the other active analyses how $e$ compares with
-each variable and records the pairs the answers confirm (@sec:coop-catalogue).
-At calls it keeps no facts, so that it isolates cooperation from relational
-call boundaries. Alone it proves little: it cannot compare a variable with a
-constant. Its use is as a partner of Interval, in both directions
-(#isathm("coop_demo_needs_both"), #isathm("order_asks_needs_both")).
+All five domains also have monotone operations
+(#isalocale("mono_nonrelational_ops"), for Int without fixpoint iteration,
+#isathm("int_dom_mono_ops")). No soundness theorem uses them. They would serve
+only the vendored least-solution theorem, whose hypotheses no shipped analysis
+discharges.
 
 Five domains prove the laws of @ch:domains with facts about integers alone.
-Each supplies one operation record, proves one certificate about it and is
-registered once; the source-level theorem covers it as a field of the combined
-state under every context policy. The instances show that the interface admits
+Each supplies one operation record and proves one certificate about it, and
+its generated registration discharges the rest (@sec:engineering). The source-level theorem covers it as a field of the combined
+state under every context policy (#isathm("run_voblint_certified_source_sound")). The instances show that the interface admits
 the identity for any inverse operator (Sign and Interval for arithmetic, Parity
 and Congruence for comparisons), needs no monotone reduction (Int in the
 fixpoint mode) and needs no pointwise store (#isaconst("rel_order_spec"),
-#isaconst("order_spec")). The solver's narrowing law restricts where the
-product may reduce. The precision differences of this chapter are
-executable evidence about single programs; @ch:evaluation collects them with
-the machine-checked precision witnesses.
+#isaconst("order_spec")).

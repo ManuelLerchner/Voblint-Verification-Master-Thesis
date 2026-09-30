@@ -106,6 +106,54 @@ definition is needed (Tao's "digestion", Sanderson's "motivated explanation").
   defense without notes or AI assistance. If a passage only restates an
   Isabelle name, it is not finished.
 
+### Chapter and section order
+
+Each chapter answers one reader question, stated in its opening. Its sections
+follow the reader's problems, not the order of the Isabelle theories. Inside a
+chapter, and inside each section, the levels come in this order and do not
+interleave:
+
+1. problem and running example: what goes wrong without the construction;
+2. the construction as a mathematical idea (a displayed equation, a figure);
+3. the theorem that makes it sound, with its assumptions;
+4. the Isabelle and solver encoding: identifiers, locales, strategy trees,
+   `QueryL`/`QueryG`/`Side`, value-type plumbing;
+5. engineering rationale and caveats forced by reused components.
+
+Consequences:
+
+- Collect an interface into its record or locale only after each operation has
+  been motivated by use (chapter 5 derives the domain interface, then shows the
+  record).
+- Put optional capabilities after what every instance needs (chapter 6: edge
+  transfers and calls before analysis globals).
+- Give encoding material one home: chapter 8's encoding section owns how the
+  equation construction maps to the TD solver; chapter 2 owns the generic
+  solver notions; chapter 9 owns the certificate. Other chapters point there.
+- Side results, extensions and limitations leave the main construction: an
+  appendix (mixed-flow globals), the termination section (finite context
+  spaces), or the chapter's closing limitations section.
+- End a chapter on its result or the handoff to the next chapter, never on an
+  implementation caveat.
+- Prefer a few figures that carry the architecture (state space, protocol,
+  precision payoff) to long prose or large formulas. Theorem-composition
+  diagrams with Isabelle names on arrows do not qualify.
+- A section earns its heading with its own question. Merge sections under
+  ~200 words into a neighbour, and do not leave a lone subsection.
+- Early chapters (introduction, background, chapter openings) may state
+  results as plain mathematics. Each such statement still cites, in brackets
+  right after it, the Isabelle theorem or definition that establishes it, even
+  when that is a forward reference (`(#isathm("..."))`). Readers can click
+  through, and the citation is where we check that the prose formula says what
+  the formal statement says. If the prose simplifies notation, the simplification
+  must preserve the meaning; otherwise fix the prose.
+- The same order holds inside a paragraph: state the goal (the property we
+  want, as a formula or a sentence) before the result that achieves it and its
+  assumptions. "The goal is a σ with 𝒜 v c ⊆ γ(σ(v, c)). The main result shows
+  every post-solution meets it, provided …", not "The main result holds for
+  every domain, provided …. Every post-solution covers …". Chapter and
+  section openings are where this slips most often.
+
 ## Typography
 
 The template reproduces the TUM Informatics LaTeX thesis (KOMA scrbook, 11pt),

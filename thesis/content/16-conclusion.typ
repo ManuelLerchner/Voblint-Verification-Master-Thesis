@@ -1,4 +1,7 @@
 #import "../lib/code.typ": isaconst, isalocale, isathm, isatype, oblig
+#import "../lib/theme.typ": vb
+
+#let _todo(body) = text(fill: vb.unproved)[TODO: #body]
 
 = Conclusion <ch:conclusion>
 
@@ -23,16 +26,19 @@ context buckets jointly equal the context-free trace collection
 (#isathm("ltr_collect_eq_Union_activation_collect"), @sec:eval-rq2).
 
 *Can the ingredients be verified separately?* Yes. Domains, context policies
-and the solver prove their obligations without each other, and one theorem
-discharges the coverage contract for all policies and domains
-(#isathm("activation_collect_dg_sound"), @sec:eval-rq3). Cooperating analyses
+and the solver prove their obligations without each other. One theorem
+discharges the coverage contract in every domain, for every policy that proves
+its routing adequacy and totality (#isathm("activation_collect_dg_sound"),
+@sec:eval-rq3). Cooperating analyses
 each prove obligations that name no partner (#isathm("mcp_combine_sound")).
 
 *Is the theorem informative?* Partly. Counterexample theorems show that
-dropping selected obligations admits unsound claims, evaluation discharges
-every premise of the main theorem for named programs, and one strict precision
-separation between call strings holds on one program. No general precision
-result is proved (@sec:eval-rq4).
+dropping selected obligations admits unsound claims. One named program meets
+every premise of the main theorem, with termination and the answer
+established by evaluation. Evaluated precision separations hold on single
+programs, between call-string lengths, between update rules, and between a
+combination of analyses and its parts. No general precision result is proved
+(@sec:eval-rq4).
 
 == Discussion <sec:discussion>
 
@@ -43,9 +49,9 @@ Functional policies embed as relations and satisfy it directly
 flow-sensitive local state lets the contract name a single global. The
 flow-insensitive placement loses precision on the `set`/`get` program
 (@sec:mixed-flow), and the cost of neither placement was measured. Consuming
-the solver only through #isaconst("part_post_solution") lets one proof cover
-four update rules, but says nothing about termination or about which
-post-solution is returned (@sec:certificate). Exporting one dispatcher makes
+the solver only through #isaconst("part_post_solution") makes soundness
+independent of the update rule (@sec:update-rules), but says nothing about
+termination or about which post-solution is returned (@sec:certificate). Exporting one dispatcher makes
 the constant of the theorem the one the tools run (@sec:codegen).
 
 *Generalizability.* Goblint analyzes C after CIL normalization, with pointers,
@@ -109,15 +115,16 @@ arises.
 + *Trust.* The delivered tools rest on the trusted components of
   @sec:trust-boundary, and every witness proved by evaluation trusts the code
   generator (@tab:oracles-audit).
-+ *Running time.* The executable keeps the data representations of the
-  proofs: finite sets and maps are lists, and the solver's value table is a
-  function. On one chain of assignments, the measured running time grew
-  roughly cubically with its length. No benchmark exists, and the data
-  refinement to red-black trees that would remove these costs is not done
++ *Running time.* The executable keeps the proofs' list-based data
+  representations. It was measured once and is not benchmarked
   (@sec:eval-absent).
 + *Analysis globals.* The analysis soundness contract admits a single global
   name (@sec:sound-core). The selectable analyses keep program globals in the
-  flow-sensitive local state, and the flow-insensitive placement is proved sound for every program at the level of the analysis soundness contract (#isathm("ownership_split_lift_contract")), but end to end only for one program, whose routing obligations are evaluated (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
+  flow-sensitive local state. The flow-insensitive placement is proved sound at
+  the level of the contract for every program
+  (#isathm("ownership_split_lift_contract")), but end to end only for one
+  program whose routing obligations are evaluated
+  (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
 + *Coverage of the configuration space.* The combined state admits
   only components without globals, so #isaconst("rel_order_spec") is not
   selectable; its local form, the order analysis, is (@sec:relational).
@@ -145,32 +152,34 @@ obligations that @sec:discussion names for machine integers, pointers, a heap
 and threads, and a semantics and a preservation argument per construct at
 every layer.
 
-*Analyses.* The order analysis forgets a variable on assignment and everything
-across calls. A useful relational domain needs its own transfer proofs, and
+*Analyses.* The order analysis drops the pairs of an assigned variable before
+relearning some by asking, and it keeps nothing across calls. A useful relational domain needs its own transfer proofs, and
 through the query channel it could answer the numeric analyses at branches as
 well as at assignments (@sec:relational). The combined state admits one query
 kind and components without globals (@sec:coop-limits). Further query kinds
 need their own truth relation, and a component with globals needs the
-combination to route each analysis's analysis globals, as Goblint's MCP tags
-them with the analysis they belong to. In the shipped analyzer the global unknowns carry only callee-entry seeds. One unknown per program global needs a
-concretization over an environment of analysis-global values in place of the single
-global name of the analysis soundness contract. Threads and locks with a
+combination to keep each analysis's globals apart, as Goblint's MCP tags them
+with the analysis they belong to. In the shipped analyzer the global unknowns
+carry only activation seeds. One unknown per program global needs a
+concretization over an environment of analysis-global values in place of the
+single global name of the analysis soundness contract. Threads and locks with a
 thread-local trace semantics would then allow the thread-modular uses of
 globals discussed in @sec:mixed-flow.
 
 The context relation reads only how an activation was entered. Digests refine
-unknowns by other abstractions of a local trace, such as held locks or thread
-identifiers @schwarz24digest. Generalizing #isaconst("trace_context") to such
-history abstractions over activation-local traces would allow path- or
-history-sensitive unknowns. Each abstraction would need its own admissibility
-conditions in place of the context clauses of the coverage contract.
+unknowns by other abstractions of a local trace (@sec:rel-goblint).
+Generalizing #isaconst("trace_context") to such abstractions over
+activation-local traces would allow path- or history-sensitive unknowns, each
+with its own admissibility conditions.
 
 *Guarantees.* A termination theorem would remove the per-program premise. The
 total-correctness result of #cite(<tilscher26jar>, form: "prose") covers the
-top-down solver without side effects and with finitely many unknowns, and even
-finitely many unknowns admit values that increase forever, because
-stabilization is not a law of #isalocale("warrowing") (@sec:termination,
-@sec:eq-finite).
+top-down solver without side effects, with finitely many unknowns and a
+widening that stabilizes ascending chains
+#_todo[check the assumptions against the paper.]. The vendored class
+#isalocale("warrowing") states no stabilization law (@sec:widening), so even
+finitely many unknowns may take values that increase forever
+(@sec:termination).
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
@@ -180,20 +189,16 @@ trusted base: the code generator, the target toolchain or the handwritten
 OCaml, and the parser if the evaluator reads the source independently. Comparing its runs with a
 C compiler on the common subset would test the adequacy argument itself.
 
-A faster executable needs the data refinement outlined in @sec:eval-absent,
-which changes the vendored solver's state and hence its proof but leaves the
-rest of the chain, which sees the solver only through its certificate.
+A faster executable needs the data refinement of @sec:eval-absent.
 
 === Voblint and Goblint <sec:outlook-goblint>
 
 Within the architectural correspondence of @app:goblint-alignment, Voblint can serve as an executable specification of the
 architecture with proved soundness obligations. From Goblint to Voblint, a
 Goblint feature gives the design that an extension follows, as the query
-mechanism did for @ch:cooperation, and the feature often has an obvious place in the formalization. A
-documented Goblint defect can be replayed as a regression fixture and as a
-counterexample theorem that shows the defective operation violating an
-obligation. The congruence remainder of @sec:eval-1161 was replayed in both
-forms (#isathm("prefix_congruence_mod_unsound")). The same obligations could
+mechanism did for @ch:cooperation. A documented Goblint defect can be replayed
+as a regression fixture and as a counterexample theorem, as the congruence
+remainder was (@sec:eval-1161). The same obligations could
 be consulted before a change to Goblint lands: a proposed domain operation with
 a counterpart in Voblint would be transliterated by hand and checked against
 the obligation that counterpart meets, as #isathm("congruence_mod_sound")
@@ -226,10 +231,13 @@ The thesis shows that the soundness of a Goblint-style analyzer with contexts,
 side effects and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function, for a scalar language
 with recursive procedures and under a per-program termination premise. The
-proof factors into a trace semantics with contexts read off activations, a
-coverage contract that one theorem discharges from separate obligations of
-analysis and context policy, and a certificate through which the solver enters.
-A non-relational domain supplies only certified primitive operations, from
-which a generic builder in the style of Nipkow and Klein derives its analysis. Analyses that answer one
-another's queries combine under the same theorem, each proving one obligation
-that names no partner.
+proof follows one chain. Graph runs simulate source executions, and valid
+activation-local traces represent graph runs, sorted into buckets by the
+context read off each activation. Context-indexed equations with routed calls
+cover every bucket, provided the analysis and the context policy meet their
+separate obligations. The solver enters only through a post-solution
+certificate, and the source-level theorem reads the verdicts off its result. A
+non-relational domain supplies only certified primitive operations, from which
+a generic builder in the style of Nipkow and Klein derives its analysis.
+Analyses that answer one another's queries combine under the same theorem, each
+proving one obligation that names no partner.
