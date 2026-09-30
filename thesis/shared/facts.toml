@@ -6,7 +6,7 @@
 # reported as unresolved rather than silently dropped.
 
 session = "Voblint_CFG"
-theory = "Voblint_CFG.LTR_Abstract"
+theory = "Voblint_CFG.Activation_Trace_Abstract"
 
-[facts.ltr_collect_semantic_postfix]
+[facts.node_collect_semantic_postfix]
 why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."

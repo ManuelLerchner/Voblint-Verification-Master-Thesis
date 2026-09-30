@@ -109,7 +109,7 @@
 
 // One of a locale's named assumptions, such as INIT of the coverage locale: small
 // capitals in the locale colour, linking to the assumption's own anchor.
-#let oblig(name, of: "ltr_coverage") = {
+#let oblig(name, of: "activation_coverage") = {
   let href = _url("thm", of + "." + name)
   // Latin Modern's small capitals are a face of their own, as cmcsc10 is.
   let body = text(

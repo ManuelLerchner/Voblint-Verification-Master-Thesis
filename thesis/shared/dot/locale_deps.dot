@@ -10,7 +10,7 @@ digraph locales {
   "analysis_contract" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "sound_local_dg_spec" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "pure_entry_routed_context" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
-  "ltr_coverage" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
+  "activation_coverage" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "nonrelational_transfer" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_analysis_sound" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];
   "routed_context_base_hetero" [shape=box, style=rounded, fontname="DejaVu Sans Mono", fontsize=10];

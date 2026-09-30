@@ -82,7 +82,7 @@ between two proved stages is a gap, visible at a glance.
     flow((3.2, 1.2), (4.8, 1.2), label: "TD_side"),
     flow((4.8, 1.2), (0, 2.4), label: "solver_correct", bend: -12deg),
     flow((0, 2.4), (1.6, 2.4), label: "analysis_contract"),
-    flow((1.6, 2.4), (3.2, 2.4), label: "ltr_collect"),
+    flow((1.6, 2.4), (3.2, 2.4), label: "node_collect"),
     flow((3.2, 2.4), (0, 3.6), bend: -12deg),
     flow((0, 3.6), (1.6, 3.6)),
 
@@ -234,8 +234,8 @@ Between the two sits the abstract syntax the compiler actually consumes.
     )),
   ),
   kind: image,
-  caption: [The activation-local trace semantics #isaconst("valid_ltr"). Every
-    rule matches one constructor of #isatype("ltr"), so the induction
+  caption: [The activation-local trace semantics #isaconst("valid_activation_trace"). Every
+    rule matches one constructor of #isatype("activation_trace"), so the induction
     principle in the proofs has exactly these four cases.],
 ) <fig:validltr>
 
@@ -529,7 +529,7 @@ them, and decoded at render time with Isabelle's own symbol table.
     reader check the obligations a domain must discharge.],
 ) <fig:isasnippet>
 
-#proved("ltr_collect_semantic_postfix", note: [
+#proved("node_collect_semantic_postfix", note: [
   The bridge from a semantic post-fixpoint to the compiled program's collecting
   semantics.
 ])
@@ -545,8 +545,8 @@ them, and decoded at render time with Isabelle's own symbol table.
     [endpoint], [session], [oracles], [`sorry`],
     table.hline(stroke: 0.5pt),
     [#isathm("source_sound")], [#isasession("Voblint_CLI")], [none], yes,
-    [#isathm("ltr_collect_semantic_postfix")], [#isasession("Voblint_CFG")], [none], yes,
-    [#isathm("source_completes_ltr_collect_exit")], [#isasession("Voblint_CFG")], [none], yes,
+    [#isathm("node_collect_semantic_postfix")], [#isasession("Voblint_CFG")], [none], yes,
+    [#isathm("source_completes_node_collect_exit")], [#isasession("Voblint_CFG")], [none], yes,
     [#isathm("source_activation_sound")], [#isasession("Voblint_Result")], [none], yes,
     table.hline(),
   ),
@@ -685,7 +685,7 @@ material this chapter quotes, so it grows when a new snippet does.
   columns: (1fr, 1fr),
   align: top,
   caption: [The same runtime stack under two semantics.
-    #isaconst("valid_ltr") keeps only the active frame and a pointer to its
+    #isaconst("valid_activation_trace") keeps only the active frame and a pointer to its
     caller, which is what makes the collecting semantics finite per activation
     and what #isaconst("combine_env") has to restore on return.],
   label: <fig:stack>,
