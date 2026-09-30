@@ -29,6 +29,12 @@
     pair.at(0) + m.captures.at(0).replace("\n", pair.at(1) + "\n" + pair.at(0)) + pair.at(1)
   )
   let out = s
+  // A subscript digit has its own glyph. Using it keeps `c\<^sub>0` intact
+  // inside a `\<^bsub>…\<^esub>` group and inside highlighted strings, where
+  // the bracketing markers would nest or be split across tokens.
+  out = out.replace(regex("\\\\<\\^sub>([0-9])"), m => "₀₁₂₃₄₅₆₇₈₉"
+    .clusters()
+    .at(int(m.captures.at(0))))
   out = out.replace(regex("(?s)\\\\<\\^bsub>(.*?)\\\\<\\^esub>"), wrap(_sub))
   out = out.replace(regex("\\\\<\\^sub>" + _script-arg), wrap(_sub))
   out = out.replace(regex("\\\\<\\^sup>" + _script-arg), wrap(_sup))
