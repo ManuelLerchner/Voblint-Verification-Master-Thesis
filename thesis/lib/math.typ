@@ -46,9 +46,11 @@
 // A constructor links to its definition when thesis-links resolved it; notation
 // for something the theories do not define stays plain.
 #let _ctor-links = json("/shared/generated/links.json")
-#let ctor(x) = {
+// `thy:` names the theory when two datatypes share the constructor name.
+#let ctor(x, thy: none) = {
   let body = text(font: "Latin Modern Sans", fill: vb.type, x)
-  let key = "ctor:" + if type(x) == str { x } else { "" }
+  let name = if type(x) != str { "" } else if thy == none { x } else { thy + "." + x }
+  let key = "ctor:" + name
   if _ctor-links.base != "" and key in _ctor-links.links {
     link(_ctor-links.base + _ctor-links.links.at(key), body)
   } else { body }
@@ -63,7 +65,7 @@
 
 // ======================================================= trace constructors ====
 #let Root(p) = $ctor("Root") thick #p$
-#let CallT(t, p) = $ctor("Call") thick #t med #p$
+#let CallT(t, p) = $ctor("Call", thy: "Activation_Trace_Def") thick #t med #p$
 #let ResumeT(t, u, p) = $ctor("Resume") thick #t med #u med #p$
 
 // ========================================== equation system and solver ======

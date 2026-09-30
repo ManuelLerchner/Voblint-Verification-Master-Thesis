@@ -298,7 +298,7 @@ body.
     declares no globals. The playground passes this value to
     #isaconst("run_voblint") and shows it in its _Generated core_ panel. For
     this program the panel is reached via the `VIMP` link of
-    @fig:program-to-equations. A #ctor("Call") names its destination and
+    @fig:program-to-equations. A #ctor("Call", thy: "VIMP_Proc") names its destination and
     callee, and a #ctor("Check") names its source position.],
 ) <fig:vimp-ast>
 

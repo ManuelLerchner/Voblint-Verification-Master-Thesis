@@ -114,7 +114,7 @@ An equation system $T$ (#isatype("eqsT", thy: "Basics_side")) maps each unknown 
 right-hand side $T med u$, a strategy tree (@sec:eq-trees). The certificate
 reads off three things the tree does under the valuation #sol. Each follows the path the
 queries select, feeding each continuation the value #sol gives the unknown it
-reads. #isaconst("traverse_rhs", thy: "Basics_side") returns the value of the #ctor("Answer") at
+reads. #isaconst("traverse_rhs", thy: "Basics_side") returns the value of the #ctor("Answer", thy: "Basics_side") at
 the end of that path, the value the equation computes, and
 $#isaconst("eq", thy: "Basics_side") med T med u med sol$ abbreviates
 $#isaconst("traverse_rhs", thy: "Basics_side") med (T med u) med sol$.

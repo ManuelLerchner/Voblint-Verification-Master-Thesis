@@ -241,7 +241,7 @@ procedure (#isathm("valid_activation_trace_frag_callers")). A call creates a sep
 for the callee, which holds its caller as a field. When the callee finishes, a
 $ctor("Resume")$ creates a new trace for the continued caller, which keeps both
 the frozen caller and the finished callee. A whole run is therefore a family of
-traces linked by these fields. A $ctor("Call")$ stores its caller exactly,
+traces linked by these fields. A $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller exactly,
 frozen at the call node. So a finished callee composes back into the activation
 that created it, and no search for a compatible stack frame is needed. Validity
 forces the frozen caller of a $ctor("Resume")$ to be exactly the creating
@@ -330,7 +330,7 @@ The traces are meant to describe the runs of the compiled graph, and through
 
 For a well-formed compiled program (#isaconst("wf_compile_input")), the
 correspondence is lock-step. A local graph step extends the current trace, a
-call creates a $ctor("Call")$ trace, and a return creates a $ctor("Resume")$
+call creates a $ctor("Call", thy: "Activation_Trace_Def")$ trace, and a return creates a $ctor("Resume")$
 trace (#isathm("cstep_preserves_activation_trace_repr")). The initial configuration is
 represented by a $ctor("Root")$ trace (#isathm("located_activation_trace_entry")). Hence
 every configuration that a graph run of such a program reaches has a
@@ -446,7 +446,7 @@ whole trace is built from these calls.
 ]
 
 A $ctor("Root")$ carries only the initial context #isai("c\<^sub>0"). A
-$ctor("Call")$ trace whose path starts at #isai("FunctionEntry p") with entered
+$ctor("Call", thy: "Activation_Trace_Def")$ trace whose path starts at #isai("FunctionEntry p") with entered
 store #isai("es") carries every context that is admitted, from some context of its
 caller, for a call to $p$ with this entered store. Admission is checked at the
 caller's last node and store. A $ctor("Resume")$ carries the contexts of the

@@ -291,7 +291,7 @@
     see: <sec:activation-trace>,
   )[
     A record of one activation: #ctor("Root") for the initial activation,
-    #ctor("Call") for a callee holding its creating caller, #ctor("Resume")
+    #ctor("Call", thy: "Activation_Trace_Def") for a callee holding its creating caller, #ctor("Resume")
     for a caller continued past a finished callee. The construction adapts the
     local traces of @schwarz21 from threads to procedure activations.
   ],
@@ -353,7 +353,7 @@
   )[
     The inductive relation stating which contexts a trace carries. A
     #ctor("Root") carries the initial context #isai("c\<^sub>0") (Goblint's `startcontext`,
-    printed as `root`), a #ctor("Call") any context admissible from a context
+    printed as `root`), a #ctor("Call", thy: "Activation_Trace_Def") any context admissible from a context
     of its caller, a #ctor("Resume") whatever the resumed trace carries.
   ],
   term(

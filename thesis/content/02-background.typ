@@ -654,11 +654,11 @@ right-hand side, and _global unknowns_ $G$, which receive only side contribution
 right-hand side is a _strategy tree_ (#isatype("strategy_tree", thy: "Basics_side")), which
 exposes every read and every side effect to the solver:
 $
-  tau ::= ctor("Answer")(d) | ctor("QueryL")(y, k) | ctor("QueryG")(g, k)
+  tau ::= ctor("Answer", thy: "Basics_side")(d) | ctor("QueryL")(y, k) | ctor("QueryG")(g, k)
   | ctor("Side")(g, d, tau)
 $
 with a local unknown $y in Unk$, a global $g in G$, an abstract value $d in A$
-and a continuation $k : A -> tau$ that receives the value read. $ctor("Answer")(d)$
+and a continuation $k : A -> tau$ that receives the value read. $ctor("Answer", thy: "Basics_side")(d)$
 returns $d$ as the value of the right-hand side, $ctor("QueryL")$ and
 $ctor("QueryG")$ read a local or a global unknown, and $ctor("Side")(g, d, tau)$
 contributes $d$ to $g$ before continuing with $tau$. Evaluating $tau$ against $sol$ follows the queries and
@@ -693,7 +693,7 @@ right-hand sides in both forms.
       $rhs(h)(sol) = [0, 0] ljoin sol(t)$,
       _tree((
         ($ctor("QueryL")(t)$, $v$),
-        ($ctor("Answer")([0, 0] ljoin v)$, none),
+        ($ctor("Answer", thy: "Basics_side")([0, 0] ljoin v)$, none),
       )),
     ),
     caption: [the loop head $h$],
@@ -708,7 +708,7 @@ right-hand sides in both forms.
       _tree((
         ($ctor("QueryL")(u)$, $v$),
         ($ctor("Side")(g, [5, 5])$, none),
-        ($ctor("Answer")(v)$, none),
+        ($ctor("Answer", thy: "Basics_side")(v)$, none),
       )),
     ),
     caption: [a flow-insensitive `g = 5` after $u$],

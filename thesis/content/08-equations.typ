@@ -729,7 +729,7 @@ $
   italic("call")_u (c) = #ctor("QueryL") ( & (u, c), lambda d. \
     & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
       & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
-        #ctor("Answer") (sh("combine") (q, r)) ) ) ),
+        #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ),
 $
 where each continuation receives the value just read: $d$ is the caller's
 value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$, and $r$ is the callee's
