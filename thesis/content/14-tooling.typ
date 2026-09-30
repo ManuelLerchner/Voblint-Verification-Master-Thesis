@@ -306,9 +306,10 @@ update, and each routing decision, as text or as JSON Lines. The hooks are not
 part of the theories or the export. The build copies the exported module and
 inserts guarded calls at named places in its text, each of which must occur
 exactly once, so a regeneration that moves one fails the build instead of
-silently losing events. The hooks only observe, and without the flag the
-output is unchanged, which a test checks. The tracer is outside the proof like
-the rest of the tool. The playground shows the same trace in a panel when the
+silently losing events. The command-line tool and the WebAssembly module run
+this patched copy on every invocation, and without the flag the hooks record
+nothing. The hooks only observe, and a test checks that the untraced output is
+unchanged. The insertion is outside the proof (@sec:trust-boundary). The playground shows the same trace in a panel when the
 reader asks for it. @tab:eq-trace and @fig:eq-walk are generated from such a
 trace, registered as a claim.
 
