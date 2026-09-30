@@ -2795,16 +2795,6 @@ let rec top_query_lifta _A = QTop;;
 
 let rec top_query_lift _A = ({top = top_query_lifta _A} : 'a query_lift top);;
 
-type location = Local_Location of string | Global_Location of string;;
-
-let rec equal_locationa
-  x0 x1 = match x0, x1 with Local_Location x1, Global_Location x2 -> false
-    | Global_Location x2, Local_Location x1 -> false
-    | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
-    | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
-
-let equal_location = ({equal = equal_locationa} : location equal);;
-
 type 'a lifted = Bot | Lifted of 'a;;
 
 let rec equal_lifteda _A x0 x1 = match x0, x1 with Bot, Lifted x2 -> false
@@ -2929,26 +2919,25 @@ let rec map_of _A
   x0 k = match x0, k with [], k -> None
     | (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k);;
 
-let rec default_st_rep_get _A
-  (dl, (dg, ps)) loc =
-    (match map_of equal_location ps loc
-      with None ->
-        (match loc with Local_Location _ -> dl | Global_Location _ -> dg)
-      | Some a -> a);;
+let rec default_dict_get
+  (d, ps) x = (match map_of equal_literal ps x with None -> d | Some a -> a);;
+
+let rec le_default_dict _A
+  (d, ps) (e, qs) =
+    less_eq _A.preorder_order.ord_preorder d e &&
+      list_all
+        (fun x ->
+          less_eq _A.preorder_order.ord_preorder (default_dict_get (d, ps) x)
+            (default_dict_get (e, qs) x))
+        (map fst ps @ map fst qs);;
 
 let rec le_default_st_rep_code _A
-  s t = (let (dl, (dg, ps)) = s in
-         let (el, (eg, qs)) = t in
-          less_eq _A.order_order_bot.preorder_order.ord_preorder dl el &&
-            (less_eq _A.order_order_bot.preorder_order.ord_preorder dg eg &&
-              list_all
-                (fun loc ->
-                  less_eq _A.order_order_bot.preorder_order.ord_preorder
-                    (default_st_rep_get _A.bot_order_bot (dl, (dg, ps)) loc)
-                    (default_st_rep_get _A.bot_order_bot (el, (eg, qs)) loc))
-                (map fst ps @ map fst qs)));;
+  (l1, g1) (l2, g2) =
+    le_default_dict _A.order_order_bot l1 l2 &&
+      le_default_dict _A.order_order_bot g1 g2;;
 
-type 'a default_st = Abs_default_st of ('a * ('a * (location * 'a) list));;
+type 'a default_st =
+  Abs_default_st of (('a * (string * 'a) list) * ('a * (string * 'a) list));;
 
 let rec less_eq_default_st _A
   (Abs_default_st xb) (Abs_default_st x) = le_default_st_rep_code _A xb x;;
@@ -2964,18 +2953,16 @@ let rec remdups _A
     | x :: xs ->
         (if membera _A xs x then remdups _A xs else x :: remdups _A xs);;
 
-let rec support2_default_st_rep _A
-  (uu, (uv, ps1)) (uw, (ux, ps2)) =
-    remdups equal_location (map fst ps1 @ map fst ps2);;
+let rec map2_default_dict
+  f (d1, ps1) (d2, ps2) =
+    (f d1 d2,
+      map (fun x ->
+            (x, f (default_dict_get (d1, ps1) x)
+                  (default_dict_get (d2, ps2) x)))
+        (remdups equal_literal (map fst ps1 @ map fst ps2)));;
 
 let rec map2_default_st_rep _A
-  f (dl1, (dg1, ps1)) (dl2, (dg2, ps2)) =
-    (f dl1 dl2,
-      (f dg1 dg2,
-        map (fun loc ->
-              (loc, f (default_st_rep_get _A (dl1, (dg1, ps1)) loc)
-                      (default_st_rep_get _A (dl2, (dg2, ps2)) loc)))
-          (support2_default_st_rep _A (dl1, (dg1, ps1)) (dl2, (dg2, ps2)))));;
+  f (l1, g1) (l2, g2) = (map2_default_dict f l1 l2, map2_default_dict f g1 g2);;
 
 let rec merge_default_st_rep _A
   s t = map2_default_st_rep
@@ -2989,7 +2976,7 @@ let rec sup_default_sta _A
 
 let rec sup_default_st _A = ({sup = sup_default_sta _A} : 'a default_st sup);;
 
-let rec bot_default_sta _A = Abs_default_st (bot _A, (bot _A, []));;
+let rec bot_default_sta _A = Abs_default_st ((bot _A, []), (bot _A, []));;
 
 let rec bot_default_st _A = ({bot = bot_default_sta _A} : 'a default_st bot);;
 
@@ -4074,6 +4061,8 @@ type ('a, 'b, 'c, 'd) state_ext =
     'a set * (('a, 'b) sum, ('a list)) fmap * 'a set * (('a, 'b) sum -> 'c) *
       'd;;
 
+type location = Local_Location of string | Global_Location of string;;
+
 type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
   Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
 
@@ -4774,6 +4763,10 @@ let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 let rec location_of
   g x = (if g x then Global_Location x else Local_Location x);;
 
+let rec default_st_rep_get _A
+  x0 x1 = match x0, x1 with (l, g), Local_Location x -> default_dict_get l x
+    | (l, g), Global_Location x -> default_dict_get g x;;
+
 let rec default_st_get _A (Abs_default_st x) = default_st_rep_get _A x;;
 
 let rec default_st_to_fun _A g s x = default_st_get _A s (location_of g x);;
@@ -5027,23 +5020,13 @@ let abort_empty_set _ = failwith "List.abort_empty_set";;
 let rec declared_global_vars
   (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
 
-let rec location_vname = function Local_Location x1 -> x1
-                         | Global_Location x2 -> x2;;
-
-let rec canonical_location
-  g loc = equal_locationa (location_of g (location_vname loc)) loc;;
-
 let rec default_st_rep_is_bot _A
-  g s = (let (dl, (_, ps)) = s in
-          is_empty _A dl ||
-            list_ex
-              (fun loc ->
-                is_empty _A
-                  (default_st_rep_get
-                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    s loc) &&
-                  canonical_location g loc)
-              (map fst ps));;
+  g ((dl, ls), (dg, gs)) =
+    is_empty _A dl ||
+      (list_ex (fun x -> not (g x) && is_empty _A (default_dict_get (dl, ls) x))
+         (map fst ls) ||
+        list_ex (fun x -> g x && is_empty _A (default_dict_get (dg, gs) x))
+          (map fst gs));;
 
 let rec default_st_rep_is_bot_for _A
   globals g s =
@@ -5195,7 +5178,8 @@ let rec field_of
         Field_Whole (OrderValue (order_pairs (slot8 v)));;
 
 let rec initial_default_st _A
-  local_value global_value = Abs_default_st (local_value, (global_value, []));;
+  local_value global_value =
+    Abs_default_st ((local_value, []), (global_value, []));;
 
 let top_relc : relc = RelC bot_set;;
 
@@ -5439,20 +5423,19 @@ let rec map_local_spec
           (ls_combine_env c)
           (fun b ci x de -> k (ls_combine_assign c b ci x de));;
 
-let rec location_is_global = function Local_Location x -> false
-                             | Global_Location x -> true;;
-
-let rec enter_frame_D_default_st_rep _A
-  top_val s =
-    (let (_, (dg, ps)) = s in
-      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
+let rec enter_frame_D_default_st_rep _A top_val s = ((top_val, []), snd s);;
 
 let rec enter_frame_D_default_st _A
   xa (Abs_default_st x) =
     Abs_default_st (enter_frame_D_default_st_rep _A xa x);;
 
+let rec default_dict_set
+  (d, ps) x a = (d, (x, a) :: delete equal_literal x ps);;
+
 let rec default_st_rep_set _A
-  (dl, (dg, ps)) loc a = (dl, (dg, (loc, a) :: delete equal_location loc ps));;
+  x0 x1 a = match x0, x1, a with
+    (l, g), Local_Location x, a -> (default_dict_set l x a, g)
+    | (l, g), Global_Location x, a -> (l, default_dict_set g x a);;
 
 let rec bind_formals_default_st_rep _A
   g xs avs s =
@@ -6233,15 +6216,7 @@ let rec combine_assign_default_st _A
   xc xb xa (Abs_default_st x) =
     Abs_default_st (combine_assign_default_st_rep _A xc xb xa x);;
 
-let rec location_is_local = function Local_Location x -> true
-                            | Global_Location x -> false;;
-
-let rec combine_default_st_rep _A
-  sc se =
-    (let (dlc, (_, psc)) = sc in
-     let (_, (dge, pse)) = se in
-      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
-                    filtera (fun p -> location_is_global (fst p)) pse)));;
+let rec combine_default_st_rep _A sc se = (fst sc, snd se);;
 
 let rec combine_default_st _A
   (Abs_default_st xa) (Abs_default_st x) =
