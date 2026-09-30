@@ -26,7 +26,9 @@ text \<open>
   One event per solver step that Goblint's tracing of its top-down solvers
   reports (\<open>td_simplified.ml\<close>, \<open>td3.ml\<close>), plus two with no counterpart there:
   \<open>Ev_Rhs\<close>, the value a right-hand side returns, and the start and end of one
-  solve. A local unknown is \<open>'x\<close>, a global one \<open>'g\<close>, a value \<open>'d\<close>. Booleans are
+  solve, and \<open>Ev_Wpoint_Clear\<close>, an iteration of an already stable unknown
+  dropping it from the widening points. A local unknown is \<open>'x\<close>, a global one
+  \<open>'g\<close>, a value \<open>'d\<close>. Booleans are
   the solver's own sets read at the step: \<open>called\<close>, \<open>stabl\<close>, and \<open>point\<close>, the
   widening points, and whether an old value is \<open>\<bottom>\<close>.
 \<close>
@@ -48,6 +50,7 @@ datatype ('x, 'g, 'd) solver_event =
   | Ev_Widen 'x bool
   | Ev_Sol 'x bool 'd 'd 'd
   | Ev_Wpoint_Remove 'x bool
+  | Ev_Wpoint_Clear 'x bool
   | Ev_Update 'x bool bool 'd 'd
   | Ev_Iterate_Changed 'x
   | Ev_Side 'x 'g 'd
@@ -139,8 +142,10 @@ lemma solve_rec_c_traced:
              TD_side_rule_Interp_solve_rec_c r T (I (x, state1\<lparr> infl := infl1, stabl := stabl1,
                \<sigma> := (\<sigma> state1)(Inl x := d_new') \<rparr>, ug_state1))))
       else
-        Some ((\<sigma> state) (Inl x), state\<lparr> called := called state - {x}, point := (point state) - {x}\<rparr>,
-          ug_state))
+        (let _ = trace_event STR ''solver''
+                   (\<lambda>_. (Ev_Wpoint_Clear x (x \<in> point state) :: ('x, 'g, 'd) solver_event)) in
+         Some ((\<sigma> state) (Inl x), state\<lparr> called := called state - {x}, point := (point state) - {x}\<rparr>,
+          ug_state)))
   | R (x, state, ug_state) \<Rightarrow>
       (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Eq x :: ('x, 'g, 'd) solver_event)) in
        Option.bind (

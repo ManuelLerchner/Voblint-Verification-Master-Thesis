@@ -155,7 +155,8 @@ export_code
   \<comment> \<open>Trace: the events the solver reports and the readers a run hands the tracer\<close>
   Ev_Start Ev_Stop Ev_Query Ev_Query_Wpoint Ev_Iterate_From_Query Ev_Add_Infl Ev_Answer
   Ev_Query_Global Ev_Answer_Global Ev_Iterate Ev_Eq Ev_Rhs Ev_Still_Unstable Ev_Widen Ev_Sol
-  Ev_Wpoint_Remove Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global Ev_Destabilize
+  Ev_Wpoint_Remove Ev_Wpoint_Clear Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global
+    Ev_Destabilize
   Ev_Stable_Remove
   Ev_Route Trace_Printers string_of_abstract_value Inl Inr
 
