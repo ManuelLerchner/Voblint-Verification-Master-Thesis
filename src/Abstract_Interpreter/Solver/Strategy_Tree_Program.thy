@@ -1,5 +1,5 @@
 theory Strategy_Tree_Program
-  imports "HOL-Library.Monad_Syntax" Strategy_Tree_Properties
+  imports "TD.Basics_side" "HOL-Library.Monad_Syntax"
 begin
 
 section \<open>A typed frontend over the homogeneous vendor tree\<close>
