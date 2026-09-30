@@ -426,43 +426,48 @@ type of its abstract values (@ch:background). It works like a default dictionary
 answers every missing key with a default, and it represents a total function
 exactly. It makes the existing abstraction computable and adds no new one.
 
-Voblint's carrier keeps two defaults, one for locals and one for globals, next
-to a list of overrides at _locations_, which tag a name as local or global
-(#isatype("default_st_rep"), #isatype("location")). Isabelle writes the carrier
-state with local default $l$, global default $g$ and override list $"ps"$ as
-the triple $⟪l, g, "ps"⟫$ (#isaconst("default_st_mk")), and so do we. A map
-over a fixed #ltop cannot express two states the analysis needs. VIMP
-initializes variables as C does: globals start at zero and the locals of
-`main` are arbitrary (@sec:vimp-vs-c, #c11("6.7.9p10")). The initial state is
-$⟪ltop, 0^sharp, []⟫$ (#isaconst("initial_default_st"); for Sign,
-#isaconst("cinit_sign_st")), where $0^sharp$ is the domain's abstract value of
-the constant $0$: every local is #ltop and every global $0^sharp$, without
-listing the declared globals. The solver's lattice interface also asks for a
-least element, here $⟪lbot, lbot, []⟫$ (#isaconst("bot_default_st")), and
-the mixed-flow extension of @sec:mixed-flow stores states whose locals are all
-#lbot. In
+Voblint's carrier keeps one default dictionary per partition: a local
+dictionary for the names the program treats as local and a global dictionary
+for the globals. Each dictionary is a default value paired with a finite list
+of overrides, pairs of a name and its value (#isatype("default_dict")), and a
+carrier state is the pair of the two, local first (#isatype("default_st_rep")).
+Isabelle writes the state with local dictionary $(d_l, "ls")$ and global
+dictionary $(d_g, "gs")$ as $⟪(d_l, "ls"), (d_g, "gs")⟫$
+(#isaconst("default_st_mk")), and so do we. A map over a fixed #ltop cannot
+express two states the analysis needs. VIMP initializes variables as C does:
+globals start at zero and the locals of `main` are arbitrary (@sec:vimp-vs-c,
+#c11("6.7.9p10")). The initial state is $⟪(ltop, []), (0^sharp, [])⟫$
+(#isaconst("initial_default_st"); for Sign, #isaconst("cinit_sign_st")),
+where $0^sharp$ is the domain's abstract value of the constant $0$: every local
+is #ltop and every global $0^sharp$, without listing the declared globals. The
+solver's lattice interface also asks for a least element, here
+$⟪(lbot, []), (lbot, [])⟫$ (#isaconst("bot_default_st")), and the mixed-flow
+extension of @sec:mixed-flow stores states whose locals are all #lbot. In
 #isaconst("run_voblint") the solver's values are lifted states, which start at
 #ctor("Bot") below every carrier state.
 
-Different lists can describe the same state: overrides at distinct locations
-may appear in any order, and an override equal to its default changes nothing.
-A _quotient type_ (@sec:isabelle) makes these descriptions one value. Its
-elements are the classes of representations that answer every lookup alike:
+Different pairs of dictionaries can describe the same state: overrides of
+distinct names may appear in any order, and an override equal to its default
+changes nothing. A _quotient type_ (@sec:isabelle) makes these descriptions one
+value. Its elements are the classes of representations that answer every lookup
+alike:
 
 #thy("default_st")
 
 Two elements are therefore equal exactly when every lookup agrees
 (#isathm("default_st_eq_iff")). A finite test decides this.
 #isathm("le_default_st_rep_code_raw_iff") shows that comparing the two defaults and
-the finitely many listed locations decides the order, and the executable
+the finitely many listed names of each dictionary decides the order, and the executable
 equality (#isaconst("equal_default_st")) tests the order in both
 directions. An operation is defined on the finite representation and lifted to
 the quotient once it is shown to give equal results on equal descriptions.
 
-Such an element is used like a map. The lookup $d⟨l⟩$
-(#isaconst("default_st_get")) returns the override of location $l$, or the
-default for its tag if there is none; the update $d⟨l := a⟩$
-(#isaconst("default_st_set")) records an override. The function a state represents, $rho_(cal(G))(d)$
+Such an element is used like a map. Lookup and update take a _location_, a
+name tagged as local or global (#isatype("location")). The lookup $d⟨l⟩$
+(#isaconst("default_st_get")) reads the dictionary of the partition $l$ names:
+the override of its name, or that dictionary's default if there is none. The
+update $d⟨l := a⟩$ (#isaconst("default_st_set")) records an override in the
+same dictionary. The function a state represents, $rho_(cal(G))(d)$
 (#isaconst("default_st_to_fun")), is lookup on every variable: the total
 function on variable names that the specification uses. It looks each name $x$ up at its location $ell(x)$, the
 local or global location that the program's global-variable classifier
@@ -491,7 +496,7 @@ bottom pointwise from HOL, as $"Var" -> A$ from $A$, but no widening or
 narrowing. The carrier instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the solver runs on it
 unchanged. The carrier lattice is infinite, since the overrides range over
-infinitely many locations. @fig:carrier-lattice shows its override-free
+infinitely many names. @fig:carrier-lattice shows its override-free
 elements for one local and one global.
 
 #figure(
@@ -521,7 +526,7 @@ elements for one local and one global.
       "⊤⊤": 0,
     )
     let key(st) = st.at(0) + st.at(1)
-    let pos(st) = (xpos.at(key(st)) * 0.9, 4 - lvl.at(st.at(0)) - lvl.at(st.at(1)))
+    let pos(st) = (xpos.at(key(st)), 4 - lvl.at(st.at(0)) - lvl.at(st.at(1)))
     let covers(a, b) = {
       // a is covered by b when one variable moves up one level.
       let up(u, v) = (u == "⊥" and (v == "e" or v == "o")) or ((u == "e" or u == "o") and v == "⊤")
@@ -550,25 +555,27 @@ elements for one local and one global.
               $
             }
           }
-          align(center, text(size: 6.5pt)[⟪#spell(st.at(0)), #spell(st.at(1)), []⟫ \ #text(
+          align(center, text(
+            size: 6.5pt,
+          )[⟪(#spell(st.at(0)), []), \ (#spell(st.at(1)), [])⟫ \ #text(
               size: 6pt,
               fill: vb.muted,
               den,
             )])
         },
         name: label("cl-" + key(st)),
+        shape: rect,
         stroke: 0.6pt + mark.at(key(st), default: vb.muted),
         fill: if key(st) in mark { mark.at(key(st)).lighten(88%) } else { white },
         corner-radius: 3pt,
         inset: 2.5pt,
       )),
       // A state with two overrides, beside the lattice: its set is over all
-      // names, since the overrides pin two locations and the defaults the rest.
+      // names, since the overrides pin two names and the defaults the rest.
       node(
         (4.0, 2),
         align(center, text(size: 6.5pt)[
-          ⟪even, ⊤, #linebreak() [(#ctor("Local_Location") $x$, odd),
-          #linebreak() (#ctor("Global_Location") $g$, even)]⟫ \
+          ⟪(even, [($x$, odd)]), #linebreak() (⊤, [($g$, even)])⟫ \
           #text(size: 6pt, fill: vb.muted)[
             $
               {s | & s(x) "is odd" and s(g) "is even" and \
@@ -602,12 +609,12 @@ elements for one local and one global.
   kind: image,
   placement: auto,
   caption: [The override-free carrier states over Parity, part of an infinite
-    lattice. A node shows its representation (local default, global default,
-    overrides) and, below it, its concretization $sem(d)$ restricted to
+    lattice. A node shows its representation (the local dictionary, then the
+    global one, each a default and its overrides) and, below it, its concretization $sem(d)$ restricted to
     one local $x$ and one global $g$. Edges are the carrier order. Purple is the
-    least element $⟪lbot, lbot, []⟫$; blue is the initial state
-    $⟪ltop, "even", []⟫$ (#isaconst("cinit_parity_st")), which the quotient
-    also identifies with $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Right: a state
+    least element $⟪(lbot, []), (lbot, [])⟫$; blue is the initial state
+    $⟪(ltop, []), ("even", [])⟫$ (#isaconst("cinit_parity_st")), which the
+    quotient also identifies with $⟪(ltop, []), ("even", [(g, "even")])⟫$. Right: a state
     with two overrides, its set written over all names. The overrides pin $x$
     and $g$, every other local takes the local default, and the other globals
     are unconstrained. Its dashed edges are order, not covering: infinitely
@@ -617,13 +624,13 @@ elements for one local and one global.
 
 The figure shows two ways in which states can be alike. The quotient
 identifies representations that answer every lookup alike, such as
-$⟪ltop, "even", []⟫$ and $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Distinct carrier
+$⟪(ltop, []), ("even", [])⟫$ and $⟪(ltop, []), ("even", [(g, "even")])⟫$. Distinct carrier
 elements can still denote the same stores: every node with a #lbot component
 has $sem(d) = emptyset$. These nodes represent distinct functions, so the quotient keeps them apart, and a higher node denotes at least
 the stores of a lower one.
 
 Each operation is computed with the value domain's operation on the two
-defaults and on each listed location, so under lookup it agrees with the
+defaults and on each listed name, so under lookup it agrees with the
 pointwise operation on functions: for the join,
 #isathm("default_st_get_sup") states
 $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and

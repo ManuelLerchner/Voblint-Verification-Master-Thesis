@@ -158,7 +158,7 @@ why = "The certificate between the vendored solver and the semantic proof (solvi
 [snippets.default_st_rep_get]
 why = "The executable carrier's lookup: one default dictionary per partition (solving chapter)."
 [snippets.default_st_rep_get]
-why = "The executable carrier's lookup: two defaults and an override list (solving chapter)."
+why = "The executable carrier's lookup: one default dictionary per partition (solving chapter)."
 
 [snippets.run_voblint]
 why = "The public operation and its type: what the executable chapter says the browser and CLI call."
