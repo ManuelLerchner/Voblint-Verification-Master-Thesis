@@ -46,8 +46,8 @@ None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ---------
-8:3       pp3    0 < x      PROVED   x=[10,10]
+--------  -----  ---------  -------  -------------------
+8:3       pp3    0 < x      PROVED   interval: x=[10,10]
 ```
 
 The [browser playground](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html) runs the same generated analyzer on a program
@@ -142,8 +142,8 @@ playground.
 A [`valid_activation_trace`](src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy) trace records one
 procedure activation's view of a run, and
 [`node_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy) gathers every
-store such traces hold at each CFG node, adapting Goblint's thread-modular local
-traces from threads to procedure activations.
+store such traces hold at each CFG node, adapting thread-modular local traces
+(see [Foundations](#foundations)) from threads to procedure activations.
 
 ### The headline theorem
 
@@ -258,8 +258,9 @@ theorem run_voblint_arithmetic_safe:
 
 The result is partial correctness: termination is a premise per program, which a
 single solve can discharge by evaluation, and nothing proves it for every
-program. Neither verdict establishes reachability, so `REFUTED` is not a verified
-counterexample.
+program. Neither `PROVED` nor `REFUTED` establishes that its point is reachable,
+so `REFUTED` is not a verified counterexample. `DEAD` is the only reachability
+claim: no covered execution reaches the point.
 
 | Covered by the proof | Outside the proof |
 | --- | --- |
@@ -297,17 +298,17 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
 | 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
-| 𝒜<sub>𝒢,R,startcontext,g,S</sub> v c<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒜 v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst) | the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _startcontext_ |
+| 𝒜<sub>𝒢,R,c₀,g,S</sub> v c<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒜 v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst) | the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _c₀_ |
 
 These names are local abbreviations available while writing proofs in the indicated locales. They are not new definitions: they unfold when parsed, and outside those locale contexts Isabelle shows the underlying expressions.
 
 | Shorthand | Stands for | Locale |
 | --- | --- | --- |
-| [`carries t c`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | trace&#95;context 𝒢 R startcontext g | `activation_coverage` |
+| [`carries t c`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | activation&#95;context&#95;rel 𝒢 R c<sub>0</sub> g | `activation_coverage` |
 | [`admits u ctx p s es ctx'`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.admits%7Cconst) | admits&#95;call&#95;context 𝒢 g R | `activation_coverage` |
 | [`admits u ctx p s es ctx'`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.admits%7Cconst) | admits&#95;call&#95;context 𝒢 g R | `routed_context` (input only) |
-| [`gamma_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.gamma_at%7Cconst) | γ<sub>DG</sub> (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr analysis_global))) | `dg_context_activation` (input only) |
-| [`man_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.man_at%7Cconst) | mk&#95;dg&#95;man (locals (sigma (Inl (v, ctx)))) (λ&#95;. analysis_global) | `dg_context_activation` (input only) |
+| [`gamma_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.gamma_at%7Cconst) | γ<sub>DG</sub> (dg&#95;local (sigma (Inl (v, ctx)))) (dg&#95;global (sigma (Inr analysis&#95;global))) | `dg_context_activation` (input only) |
+| [`man_at v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_context_activation.man_at%7Cconst) | mk&#95;dg&#95;man (dg&#95;local (sigma (Inl (v, ctx)))) (λ&#95;. analysis&#95;global) | `dg_context_activation` (input only) |
 | [`cover v ctx`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst) | γ<sub>M</sub> (sg (Inl (v, ctx))) | `routed_context` (input only) |
 
 <!-- notation:end -->
@@ -340,11 +341,12 @@ settings.
   </tr>
 </table>
 
-The gain does not come from a better interval transfer. Interval's backward step
-for `+` is the conservative identity, so the guard `y + 1 == 3` tells it nothing,
-and Sign and Parity likewise. Congruence, the fourth component, carries the only
-real arithmetic inversion; the composite's reduction then re-derives the other
-three views from that tightened operand, giving `y = [2,2]`, `+`, `2ℤ`, `2`
+The gain does not come from a better interval transfer. Sign and Interval invert
+`+` conservatively, so the guard `y + 1 == 3` tells them nothing about `y`.
+Parity inverts it and learns only that `y` is even. Congruence, the fourth
+component, inverts `+` precisely enough to prove the check on its own. Inside `int`,
+the reduction re-derives the Sign, Interval and Parity views from the operand
+Congruence tightened
 ([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
 [`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
 
@@ -352,14 +354,49 @@ three views from that tightened operand, giving `y = [2,2]`, `+`, `2ℤ`, `2`
 
 Analyses are factored the way Goblint factors them: **D** holds the abstract facts
 attached to program points, **G** the information published and consumed across
-points. An analysis supplies the Isabelle counterpart of Goblint's
+points. The framework's interface is
+[`dg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
+counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
-interface (transfer, entry, combine and communication), and the framework supplies
-routed equation generation, solver integration, and the lifting to source-level
-soundness. A new domain carries its own obligations (lattice, concretization,
-transfer soundness, an executable refinement, context coverage) but no
-source-level reasoning; see
+(transfer, entry, combine and communication). Equation generation with context
+routing, solver integration and the lifting to source-level soundness are proved
+once, for any `dg_spec` with an
+[`analysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
+relating it to concrete stores; see
 [`src/Abstract_Interpreter/Framework/README.md`](src/Abstract_Interpreter/Framework/README.md).
+Specifications that read or publish globals, such as the relational
+`rel_order_spec` and the mixed-flow examples, instantiate `dg_spec` directly.
+
+Every analysis selectable through `run_voblint` enters through a smaller
+interface, a [`local_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
+one transfer per edge kind plus entry and combine, over local state only, with
+the soundness condition `sound_local_spec`. `dg_spec_of` lifts it to a `dg_spec`,
+and `dg_spec_of_contract` supplies the contract.
+
+A numeric domain supplies one record of value operations,
+[`nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Ops.thy):
+an abstract evaluator, the comparison queries `<` and `==`, backward refinement
+operators, `min`/`max` and top. It proves one certificate,
+[`sound_nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Transfer.thy);
+Sign, Interval, Parity and Congruence also prove their operations monotone.
+Everything else is derived from that record: the guard filter and branch
+transfer, the check classifier, the assignment and entry transfers, and their
+executable versions. Abstract and executable versions come from the same
+operations and agree on live stores, so there is no second implementation to
+prove equal. One rule, `dg_analysis_execI`, discharges the registration's
+transfer and classifier obligations from the certificate. The
+relational Order analysis writes its `local_spec` by hand
+([`order_spec`](src/Analyses/Relational/Rel_Order_Local.thy)). Deriving
+transfer functions from certified value operations follows Nipkow's Isabelle
+abstract interpreter (see [Foundations](#foundations)).
+
+The registrations and the combined analyzer state are generated from
+[`manifests/analyses.yaml`](manifests/analyses.yaml) by
+`pixi run assembly-generate`. A new numeric domain needs its lattice with
+widening and narrowing, its concretization, the certified operation record, a
+lemma that the initial state covers the initial stores, and a manifest entry.
+The CLI's analysis names are still added by hand. No step needs source-level
+reasoning.
 
 ## Building
 
@@ -367,12 +404,16 @@ Requirements: **Isabelle2025-2**, an **[AFP](https://www.isa-afp.org/)** checkou
 **[pixi](https://pixi.sh/)**, and OCaml via opam for the CLI.
 
 ```bash
-./scripts/setup.sh                             # pixi and OCaml environments
+./scripts/setup.sh                             # pixi, OCaml and developer tooling
 pixi run vendor-init                           # fetch the TD solver submodule
 AFP=/path/to/afp/thys pixi run isabelle-build  # check the formalization
 ```
 
-`pixi task list` lists everything else.
+On a fresh clone without parent heaps, run `pixi run isabelle-bootstrap` first,
+with the same `AFP` setting.
+`pixi run isar-check` checks ROOT entries, unfinished proofs, theory syntax and
+formatting with isar-tools, without Isabelle or the AFP. `pixi task list` lists
+everything else.
 
 > The vendored solver is pinned to a private fork of
 > [stilscher/td-verification](https://github.com/stilscher/td-verification); CI

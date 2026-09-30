@@ -4798,7 +4798,7 @@ fun main() {
                   A post-solution whenever the solve terminates
                   (the vendored <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact"><code>partial_post_solution</code></a>, with termination discharged by
                   <a href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.TD_side_rule_Interp.solve_dom_of_solve_c%7Cfact"><code>solve_dom_of_solve_c</code></a>),
-                  published as the result the analyzer reports
+                  read back as the result the analyzer reports
                   (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.gamma_reader_eq_lookup%7Cfact"><code>gamma_reader_eq_lookup</code></a>).
                 </p>
               </div>
@@ -4886,7 +4886,7 @@ fun main() {
 
         <div class="bridge-toggles" role="group" aria-label="Pillars">
           <button type="button" data-pillar="1" aria-pressed="true"><b>1</b> Compiler simulation <code>csim_step</code></button>
-          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_nonrelational_transfer</code></button>
+          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_local_spec</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
           <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
@@ -4899,17 +4899,27 @@ fun main() {
 
         <figcaption>
           Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler; it also needs the other
-          half of the simulation, which carries a source run into a valid activation trace. Pillars 2 and 5,
-          <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale"><code>sound_nonrelational_transfer</code></a>
-          and <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
-          are obligations each domain discharges, pillar 3,
+          half of the simulation, which carries a source run into a valid activation trace. Pillar 2,
+          <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>,
+          is what every analysis the analyzer can select must prove about its transfers, and
+          pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
+          what its check classifier must satisfy. A numeric domain proves neither by hand: it
+          certifies one bundle of value operations once, in
+          <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale"><code>sound_nonrelational_ops</code></a>,
+          and both follow from that certificate. The order analysis proves pillar 2 directly
+          (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>).
+          Pillar 3,
           <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
-          one that each context policy discharges.
+          is one that each context policy discharges.
           Pillar 4 bridges to the vendored solver's own theorem, and it promises a post-solution
           only for a solve that terminates, which is why every flagship soundness theorem below
           assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>. Two more obligations do not appear here: that the
-          initial state covers the initial stores, and that the executable transfers and routes agree,
-          on the functions the states represent, with those these theorems are stated over. The failures shown are what the
+          initial state covers the initial stores, and that the executable states read back to the
+          transfers and routes these theorems are stated over. For a numeric domain the transfer
+          half of the second also comes from the bundle: the executable transfer and the one the proofs use are
+          built from the same operations, and
+          <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact"><code>tf_st_for_commute</code></a>
+          shows they agree on every live state. The failures shown are what the
           obligations rule out, not bugs anyone has found in Voblint.
         </figcaption>
       </figure>
@@ -5290,9 +5300,11 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                 <p>
                   The analysis says PROVED only when every store its state <code>d</code> describes
                   satisfies the check. At the check, <code>d</code> is <code>i ∈ [5, 5]</code>: one
-                  value, and it is <code>5</code>.
+                  value, and it is <code>5</code>. The classifier is not Interval's own code: it is
+                  built from the two comparison queries of Interval's operation bundle, and this
+                  lemma is proved once for every domain that supplies such a bundle.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Transfer.html#Interval_Transfer.ivl_tf.check.classify_check_proved%7Cfact">ivl_tf.check.classify_check_proved ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Framework/Abstract_Checks.html#Abstract_Checks.sound_check_query.classify_check_proved%7Cfact">classify_check_proved ↗</a>
               </li>
 
               <li class="zoom-level" data-level="3">
@@ -5320,26 +5332,26 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="5">
                 <p class="zoom-kicker">One step: the edge <code>i := i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := ⟦a⟧<sub>e</sub> s) ∈ ⟦asn x a σ⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := ⟦a⟧<sub>e</sub> s) ∈ ⟦assign x a σ⟧</pre>
                 <p>
                   On its last pass the run is at <code>B</code> with <code>i = 4</code>, inside
                   <code>σ(B) = [0, 4]</code>. This is the contract every transfer meets: the
-                  assignment must cover the store after the step, <code>i = 5</code>. The
-                  non-relational domains discharge it once, in
-                  <code>sound_nonrelational_ops.assign_sound</code>.
+                  assignment must cover the store after the step, <code>i = 5</code>. No domain
+                  writes its assignment transfer by hand: it is built from the domain's evaluator,
+                  and this lemma is proved once for every certified bundle.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer.tf_sound_assign_for%7Cfact">tf_sound_assign_for ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.assign_sound%7Cfact">sound_nonrelational_ops.assign_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="6">
                 <p class="zoom-kicker">The right-hand side <code>i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">(∀x. s x ∈ γ (σ x)) ⟹ ⟦e⟧<sub>e</sub> s ∈ γ (ev e σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ ⟦e⟧<sub>e</sub> s ∈ γ (aval_abs e σ)</pre>
                 <p>
                   If every variable's value is covered by the abstract state, evaluating the
                   expression abstractly covers evaluating it concretely: <code>4 + 1 = 5</code>
                   lies in <code>γ([0, 4] + [1, 1])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Backward.html#Interval_Backward.ivl_arith.aval_dom_sound%7Cfact">ivl_arith.aval_dom_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Backward.html#Interval_Backward.ivl_arith.aval_abs_sound%7Cfact">ivl_arith.aval_abs_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="7">
@@ -5419,12 +5431,12 @@ qed</code></pre>
 
       <figure class="scene scene-metro">
         <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; a short branch carrying the order analysis joins the domain line at the interchange where the analyses meet; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
           <g class="metro-lines">
             <path class="line-sem" d="M70 70 H 700 V 336"/>
             <path class="line-comp" d="M70 165 H 960 V 380"/>
-            <path class="line-dom" d="M70 270 H 490 V 350"/>
-            <path class="line-fw" d="M70 350 H 700"/>
+            <path class="line-dom" d="M70 270 H 490 V 350 M390 222 H 490 V 270"/>
+            <path class="line-fw" d="M55 350 H 700"/>
             <path class="line-sol" d="M70 470 H 560 L 640 440 H 700"/>
             <path class="line-res" d="M700 395 L 800 440 H 900 M900 440 L 960 380 H 1010 M900 440 H 1010 M900 440 L 960 500 H 1010"/>
           </g>
@@ -5459,21 +5471,27 @@ qed</code></pre>
             <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_node_collect%7Cfact" data-name="source_reaches_node_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
               <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_node_collect</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain%7Cclass" data-name="numeric_domain" data-theory="Voblint_Domain.Abstract_Domain" data-info="What an abstract value is: a concretization γ that is monotone, empty at ⊥ and full at ⊤.">
-              <circle cx="70" cy="270" r="8"/><text x="70" y="296">numeric_domain</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Abstract_Arithmetic.html#Abstract_Arithmetic.sound_arith_ops%7Clocale" data-name="sound_arith_ops" data-theory="Voblint_Nonrelational.Abstract_Arithmetic" data-info="One soundness lemma per arithmetic operator and comparison, such as ivl_plus_sound.">
-              <circle cx="230" cy="270" r="8"/><text x="230" y="296">sound_arith_ops</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Domain/Backward_Domain.html#Backward_Domain.sound_refinement%7Clocale" data-name="sound_refinement" data-theory="Voblint_Domain.Backward_Domain" data-info="Guards: the backward filter keeps every store the condition admits.">
-              <circle cx="390" cy="270" r="8"/><text x="390" y="296">sound_refinement</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale" data-name="sound_nonrelational_transfer" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
-              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_nonrelational_transfer</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Ops.html#Nonrelational_Ops.nonrelational_ops%7Ctype" data-name="nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Ops" data-info="All a numeric domain writes: one bundle of value operations. An evaluator for expressions, two comparison queries, the refinement operations guards use, min and max, and the top value.">
+              <circle cx="70" cy="270" r="8"/><text x="70" y="296">nonrelational_ops</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale" data-name="sound_nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The certificate, proved once per domain: the evaluator and min/max are sound, refining never drops a store the condition admits, and the queries answer truthfully. The transfers, the guard filter, procedure entry and the check classifier are built from the bundle, and their soundness follows from this one certificate.">
+              <circle cx="230" cy="270" r="8"/><text x="230" y="296">sound_nonrelational_ops</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact" data-name="tf_st_for_commute" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The executable transfer the analyzer runs and the one the proofs reason about are built from the same bundle. This theorem shows they agree on every live state, so there is no second implementation to keep in step.">
+              <circle cx="390" cy="270" r="8"/><text x="390" y="296">tf_st_for_commute</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact" data-name="order_spec_sound" data-theory="Voblint_Analysis_Relational.Rel_Order_Local" data-info="The order analysis joins without a bundle. It records pairs x ≤ y instead of one value per variable, and proves its local specification sound directly.">
+              <circle cx="390" cy="222" r="8"/><text x="390" y="248">order_spec_sound</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst" data-name="sound_local_spec" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses: what every analysis the analyzer can select proves about its transfers, its query answers, procedure entry and return. The numeric domains get it from their certificate; the order analysis proves it by hand. A local specification reads and publishes no globals.">
+              <circle cx="490" cy="270" r="11"/><text x="512" y="275" text-anchor="start">sound_local_spec</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign. Goblint's Spec, in Isabelle.">
-              <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign, plus a query handler. Goblint's Spec, in Isabelle.">
+              <circle cx="55" cy="350" r="8"/><text x="55" y="376">dg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale" data-name="analysis_contract" data-theory="Voblint_Framework.DG_Spec_Sound" data-info="The boundary of the proof: a dg_spec with a soundness assumption per transfer. Equations, routing and solver soundness are proved once for any analysis meeting it. An analysis that uses globals, such as the order domain of Rel_Order_Domain, meets it directly, without a local specification.">
+              <circle cx="160" cy="350" r="8"/><text x="160" y="376">analysis_contract</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
-              <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
+              <circle cx="285" cy="350" r="8"/><text x="285" y="376">routed_node_rhs</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
-              <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
+              <circle cx="415" cy="350" r="8"/><text x="415" y="376">routed_entry_cover</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of_contract%7Cfact" data-name="dg_spec_of_contract" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses and the framework: a sound local specification, lifted to a dg_spec, meets analysis_contract. This is where every analysis the analyzer runs enters the proof.">
+              <circle cx="490" cy="350" r="11"/><text x="512" y="332" text-anchor="start">dg_spec_of_contract</text></a>
 
             <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
               <circle cx="70" cy="470" r="8"/><text x="70" y="496">strategy_tree</text></a>
@@ -5490,7 +5508,7 @@ qed</code></pre>
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result published from the solve covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
@@ -5522,8 +5540,9 @@ qed</code></pre>
           to each other on a line says only that two stations belong to the same layer. The map
           follows the session structure: the semantics line lives in <code>Voblint_VIMP</code>
           and <code>Voblint_CFG</code>, the compiler in <code>Voblint_Compile</code>, the domain
-          and framework lines in <code>Voblint_Domain</code>,
-          <code>Voblint_Nonrelational</code> and <code>Voblint_Framework</code>, the solver in the
+          line in <code>Voblint_Nonrelational</code> and, for its branch,
+          <code>Voblint_Analysis_Relational</code>, the framework line in
+          <code>Voblint_Framework</code>, the solver in the
           vendored <code>TD</code> session, <code>Voblint_Solver</code> and
           <code>Voblint_Exec</code>, and the result line in <code>Voblint_Routing</code>,
           <code>Voblint_Result</code> and <code>Voblint_CLI</code>.
@@ -5703,7 +5722,12 @@ qed</code></pre>
           with it and no change to the framework, and
           <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html"><code>Rel_Order_Local</code></a>
           runs the same carrier inside the combined state next to the other analyses. There it
-          answers comparisons from the pairs it records and, at an assignment, asks the others how
+          plugs in where every analysis the analyzer can select does: it supplies a
+          <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype"><code>local_spec</code></a>
+          and proves it sound
+          (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>),
+          the same interface the five pointwise analyses reach from their certified operation
+          bundles. It answers comparisons from the pairs it records and, at an assignment, asks the others how
           the new value compares with each variable. It stays small on purpose: no transitive
           closure, and calls enter and return with no facts. Run with Interval, it proves checks
           neither analysis proves alone.
@@ -5954,73 +5978,73 @@ qed</code></pre>
           <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
             aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI, code export, and the example sessions at the surface. Thickness grows with line count.">
               <g class="stratum stratum-examples" data-layer="examples">
-                <text class="stratum-name" x="236" y="52" text-anchor="end">Examples and regressions</text>
-                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="10 sessions · 65 theories · 14,382 lines · 877 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="250.0" y="14" width="720.0" height="68"></rect><text x="610.0" y="52">10 example sessions</text></a>
+                <text class="stratum-name" x="306" y="52" text-anchor="end">Examples and regressions</text>
+                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="68"></rect><text x="655.0" y="52">Example sessions</text></a>
               </g>
               <g class="stratum stratum-d11" data-layer="d11">
-                <text class="stratum-name" x="236" y="97" text-anchor="end">Code export</text>
-                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="1 theory · 152 lines · 0 lemmas" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="250.0" y="82" width="720.0" height="22"></rect><text x="610.0" y="97">Codegen</text></a>
+                <text class="stratum-name" x="306" y="97" text-anchor="end">Code export</text>
+                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="—" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="320.0" y="82" width="670.0" height="22"></rect><text x="655.0" y="97">Codegen</text></a>
               </g>
               <g class="stratum stratum-d10" data-layer="d10">
-                <text class="stratum-name" x="236" y="123" text-anchor="end">Entry point</text>
-                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="7 theories · 2,098 lines · 67 lemmas" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="250.0" y="104" width="720.0" height="29"></rect><text x="610.0" y="123">CLI</text></a>
+                <text class="stratum-name" x="306" y="123" text-anchor="end">Entry point</text>
+                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
-                <text class="stratum-name" x="236" y="157" text-anchor="end">Int product</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="12 theories · 5,324 lines · 238 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="250.0" y="133" width="720.0" height="39"></rect><text x="610.0" y="157">Int</text></a>
+                <text class="stratum-name" x="306" y="157" text-anchor="end">Int product</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="320.0" y="133" width="670.0" height="39"></rect><text x="655.0" y="157">Int</text></a>
               </g>
               <g class="stratum stratum-d8" data-layer="d8">
-                <text class="stratum-name" x="236" y="203" text-anchor="end">Per-variable domains</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="12 theories · 3,405 lines · 132 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The congruence domain and its instantiation of the shared endpoints."><rect x="250.0" y="172" width="247.5" height="53"></rect><text x="373.7" y="203">Congruence</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="14 theories · 3,107 lines · 163 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The interval domain with widening and narrowing, and its instantiation of the shared endpoints."><rect x="497.5" y="172" width="225.8" height="53"></rect><text x="610.4" y="203">Interval</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="10 theories · 1,964 lines · 93 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The sign domain and its instantiation of the shared endpoints."><rect x="723.3" y="172" width="142.7" height="53"></rect><text x="794.6" y="203">Sign</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="8 theories · 1,187 lines · 64 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The parity domain and its instantiation of the shared endpoints."><rect x="866.0" y="172" width="104.0" height="53"></rect><text x="918.0" y="203">Parity</text></a>
+                <text class="stratum-name" x="306" y="203" text-anchor="end">Value domains (operation bundles)</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The congruence domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="320.0" y="172" width="230.3" height="53"></rect><text x="435.1" y="203">Congruence</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The interval domain with widening and narrowing, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="550.3" y="172" width="210.1" height="53"></rect><text x="655.4" y="203">Interval</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The sign domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="760.4" y="172" width="132.8" height="53"></rect><text x="826.8" y="203">Sign</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The parity domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="893.2" y="172" width="96.8" height="53"></rect><text x="941.6" y="203">Parity</text></a>
               </g>
               <g class="stratum stratum-d7" data-layer="d7">
-                <text class="stratum-name" x="236" y="243" text-anchor="end">Nonrelational reuse</text>
-                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="5 theories · 1,617 lines · 45 lemmas" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="The reuse locales every per-variable domain interprets: abstract arithmetic, special operations and non-relational transfers."><rect x="250.0" y="225" width="720.0" height="27"></rect><text x="610.0" y="243">Nonrelational</text></a>
+                <text class="stratum-name" x="306" y="243" text-anchor="end">Non-relational analysis builder</text>
+                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="What a per-variable domain reuses: the bundle of value operations it supplies, the certificate that bundle is checked against once, and everything built from it: transfers, guard filtering, procedure entry, the check classifier and their executable versions."><rect x="320.0" y="225" width="670.0" height="27"></rect><text x="655.0" y="243">Nonrelational</text></a>
               </g>
               <g class="stratum stratum-d6" data-layer="d6">
-                <text class="stratum-name" x="236" y="271" text-anchor="end">Result</text>
-                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="6 theories · 2,575 lines · 90 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="250.0" y="252" width="720.0" height="30"></rect><text x="610.0" y="271">Result</text></a>
+                <text class="stratum-name" x="306" y="271" text-anchor="end">Result</text>
+                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="320.0" y="252" width="670.0" height="30"></rect><text x="655.0" y="271">Result</text></a>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
-                <text class="stratum-name" x="236" y="299" text-anchor="end">Routing and relational domain</text>
-                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="4 theories · 649 lines · 10 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="250.0" y="282" width="381.5" height="26"></rect><text x="440.7" y="299">Routing</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="1 theory · 576 lines · 22 lemmas" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable reuse locales are unavailable to it."><rect x="631.5" y="282" width="338.5" height="26"></rect><text x="800.7" y="299">Relational</text></a>
+                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and relational analysis</text>
+                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Relational</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
-                <text class="stratum-name" x="236" y="327" text-anchor="end">Executable carrier</text>
-                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="11 theories · 2,413 lines · 124 lemmas" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="250.0" y="308" width="720.0" height="30"></rect><text x="610.0" y="327">Exec</text></a>
+                <text class="stratum-name" x="306" y="327" text-anchor="end">Executable carrier</text>
+                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="308" width="670.0" height="30"></rect><text x="655.0" y="327">Exec</text></a>
               </g>
               <g class="stratum stratum-d3" data-layer="d3">
-                <text class="stratum-name" x="236" y="376" text-anchor="end">Framework and compiler</text>
-                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="26 theories · 8,471 lines · 366 lemmas" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="250.0" y="338" width="427.0" height="68"></rect><text x="463.5" y="376">Framework</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="10 theories · 5,813 lines · 233 lemmas" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="677.0" y="338" width="293.0" height="68"></rect><text x="823.5" y="376">Compile</text></a>
+                <text class="stratum-name" x="306" y="376" text-anchor="end">Framework and compiler</text>
+                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="—" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="320.0" y="338" width="397.3" height="68"></rect><text x="518.7" y="376">Framework</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="—" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="717.3" y="338" width="272.7" height="68"></rect><text x="853.7" y="376">Compile</text></a>
               </g>
               <g class="stratum stratum-d2" data-layer="d2">
-                <text class="stratum-name" x="236" y="431" text-anchor="end">Values, graph and solver interface</text>
-                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="8 theories · 2,733 lines · 132 lemmas" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering."><rect x="250.0" y="406" width="327.1" height="41"></rect><text x="413.6" y="431">Domain</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="8 theories · 2,023 lines · 112 lemmas" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler."><rect x="577.1" y="406" width="242.2" height="41"></rect><text x="698.2" y="431">CFG</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="7 theories · 1,259 lines · 104 lemmas" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="819.3" y="406" width="150.7" height="41"></rect><text x="894.6" y="431">Solver</text></a>
+                <text class="stratum-name" x="306" y="431" text-anchor="end">Values, graph and solver interface</text>
+                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="—" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering."><rect x="320.0" y="406" width="304.4" height="41"></rect><text x="472.2" y="431">Domain</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="—" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler."><rect x="624.4" y="406" width="225.4" height="41"></rect><text x="737.1" y="431">CFG</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="—" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="849.8" y="406" width="140.2" height="41"></rect><text x="919.8" y="431">Solver</text></a>
               </g>
               <g class="stratum stratum-d1" data-layer="d1">
-                <text class="stratum-name" x="236" y="515" text-anchor="end">Solver and language</text>
-                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="26 theories · 31,328 lines · 541 lemmas" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="250.0" y="447" width="616.0" height="127"></rect><text x="558.0" y="515">TD</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="8 theories · 1,507 lines · 75 lemmas" data-rests="" data-info="The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="866.0" y="447" width="104.0" height="127"></rect><text x="918.0" y="515">VIMP</text></a>
+                <text class="stratum-name" x="306" y="515" text-anchor="end">Solver and language</text>
+                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="—" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="320.0" y="447" width="573.2" height="127"></rect><text x="606.6" y="515">TD</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="—" data-rests="" data-info="The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="893.2" y="447" width="96.8" height="127"></rect><text x="941.6" y="515">VIMP</text></a>
               </g>
               <g class="stratum stratum-bedrock" data-layer="bedrock">
-                <text class="stratum-name" x="236" y="596" text-anchor="end">Bedrock</text>
-                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="250.0" y="574" width="720.0" height="36"></rect><text x="610.0" y="596">Isabelle/HOL · HOL-IMP · Deriving</text></a>
+                <text class="stratum-name" x="306" y="596" text-anchor="end">Bedrock</text>
+                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="320.0" y="574" width="670.0" height="36"></rect><text x="655.0" y="596">Isabelle/HOL · HOL-IMP · Deriving</text></a>
               </g>
           </svg>
 
           <div class="strata-info" aria-live="polite">
             <p class="td-panel-title">Core sample</p>
             <p class="strata-info-name"><code>Voblint_Framework</code></p>
-            <p class="strata-info-meta">26 theories · 8,471 lines · 366 lemmas</p>
+            <p class="strata-info-meta">—</p>
             <p class="strata-info-rests">Rests directly on <code>TD</code>, <code>CFG</code>, <code>Domain</code>, <code>Solver</code>, <code>VIMP</code>, and transitively on 1 more: <code>Isabelle/HOL</code>.</p>
-            <p class="strata-info-text">The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
+            <p class="strata-info-text">The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
             <p class="strata-info-hint">Hover a layer to take a sample: the sessions it rests on light up. Click to open the session.</p>
           </div>
         </div>

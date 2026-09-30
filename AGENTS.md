@@ -295,13 +295,20 @@ Introduce the mathematical or semantic idea before the Isabelle encoding.
 A useful order for an important construction is:
 
 ```text
-problem
+problem and running example
 -> intuition
 -> mathematical object
--> Isabelle representation
 -> key invariant or theorem
+-> Isabelle / solver encoding
+-> engineering rationale and caveats
 -> role in the end-to-end argument
 ```
+
+The same order governs whole chapters: each chapter answers one reader question,
+its sections follow the reader's problems rather than the Isabelle theories, and
+encoding, workarounds for reused components, side results and limitations come
+after the main construction or move elsewhere. `thesis/CLAUDE.md` ("Chapter and
+section order") states the rule and its consequences.
 
 Repository identifiers are anchors for the explanation, not substitutes for it.
 

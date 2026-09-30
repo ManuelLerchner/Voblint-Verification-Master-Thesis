@@ -22,7 +22,7 @@ The supported pipeline is:
 ```text
 VIMP source
   -> procedure-aware CFG
-  -> activation-local collecting semantics
+  -> activation-trace collecting semantics
   -> generic D/G equations
   -> verified side-effecting TD solver
   -> abstract post-solution
@@ -33,7 +33,7 @@ The source language uses explicit procedure calls and returns. Main completes
 only by fall-through. Compiler certificates expose node ownership, local ranges,
 call continuations, and matching result boundaries.
 
-`valid_ltr`, `ltr_collect`, and `activation_collect` are the concrete semantic
+`valid_activation_trace`, `node_collect`, and `activation_collect` are the concrete semantic
 targets. The equation system has three contribution families: ordinary local
 edges, procedure entry, and return combination.
 

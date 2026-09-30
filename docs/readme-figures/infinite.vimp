@@ -1,0 +1,33 @@
+fun h(z) {
+  return z + 1;
+}
+
+fun g(u, v) {
+  r = h(u);
+  return r + v;
+}
+
+fun w(x) {
+  if (x > 0) {
+    y = __voblint_nondet_int();
+    r = w(y);
+    return r;
+  }
+  return 0;
+}
+
+fun f(n) {
+  if (n < 2) {
+    r = g(n, 0);
+    return r;
+  }
+  a = f(n - 1);
+  b = f(n - 2);
+  return a + b;
+}
+
+fun main() {
+  q = __voblint_nondet_int();
+  s = w(q);
+  r = f(3);
+}

@@ -9,8 +9,8 @@ Entry-state and call-string contexts are done for all five domains, from the
 collecting semantics to the CLI:
 
 - **Semantics.** `call_context_rel` admits the contexts of one concrete call,
-  `trace_context` threads them over traces, and `activation_collect` is indexed
-  by them (`LTR_Activation_Context`). A functional policy embeds through
+  `activation_context_rel` threads them over traces, and `activation_collect` is indexed
+  by them (`Activation_Trace_Context`). A functional policy embeds through
   `call_context_rel_of_fun`.
 - **Routing.** `routed_context` (`Routed_Context`) discharges the call
   and combine obligations once for any context type `'c`;
