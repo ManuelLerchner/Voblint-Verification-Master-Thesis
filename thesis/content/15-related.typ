@@ -355,8 +355,8 @@ function mapping tokens to tokens in a covering may be replaced by a relation
 @rival07[Rem. 3.2.4] #_todo[check locator.]. Voblint's context-indexed
 collecting semantics is a covering of this relational kind, since a context relation may admit one
 activation in several contexts. Voblint mechanizes the indexing over
-activation traces and proves that the solved, routed result bounds every
-admitted bucket.
+activation traces and proves that the solved, routed result bounds the activation
+collecting semantics of every admitted context.
 
 Contexts also determine how many unknowns a solve creates. The context lifters
 of #cite(<erhard25>, form: "prose") bound the number of contexts on the fly and

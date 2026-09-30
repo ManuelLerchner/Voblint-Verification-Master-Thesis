@@ -185,7 +185,7 @@ lose concrete behavior. The argument therefore follows one store that an
 execution reaches through every representation (@fig:intro-nest). The compiler
 simulation places it at a graph node $v$ (#isathm("csim_star")), the reached graph state is covered by a valid
 activation trace (#isaconst("valid_activation_trace"), #isathm("source_reaches_node_collect")), and under the totality condition that trace falls
-into a context bucket (#isathm("node_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
+into the activation collecting semantics of some context (#isathm("node_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
 $v$ holds for every admitted store (#isathm("run_voblint_sound_at")). Each check row of the result carries its source position, which
 the unverified parser writes (@sec:trust-boundary).
 Each outer set in @fig:intro-nest may add stores that no execution reaches,
@@ -220,12 +220,12 @@ which costs precision. Soundness needs only that it contains the set inside it.
           (@ch:results)],
         ring(
           vb.cong,
-          [Context buckets],
+          [Activation collection],
           [#isaconst("activation_collect"): stores of valid traces at $v$, per context
             (@ch:traces)],
           ring(
             vb.locale,
-            [Trace collection],
+            [Node collection],
             [#isaconst("node_collect"): stores of valid traces ending at $v$ (@ch:traces)],
             ring(
               vb.called,

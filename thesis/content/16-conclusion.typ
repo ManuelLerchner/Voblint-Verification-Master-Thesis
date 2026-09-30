@@ -22,7 +22,8 @@ parser, code generator, compilers, runtimes and presentation code
 *What does a calling context denote?* A property of an activation trace,
 read off how the activation was entered (@sec:contexts). When every covered
 call admits some callee context (#isaconst("call_context_total_on")), the
-context buckets jointly equal the context-free trace collection
+activation collecting semantics of all contexts jointly equals the node
+collecting semantics
 (#isathm("node_collect_eq_Union_activation_collect"), @sec:eval-rq2).
 
 *Can the ingredients be verified separately?* Yes. Domains, context policies
@@ -61,7 +62,8 @@ coverage contract has one obligation per rule of #isaconst("valid_activation_tra
 refers to VIMP only through the graph, its stores and three step functions,
 #isaconst("edge_step"), #isaconst("call_enter") and #isaconst("combine_collect")
 (@sec:contract). We therefore expect the contract's shape,
-the bucket theorem and the composition of @sec:eq-discharge to carry over to a
+the theorem that the contexts exhaust the node collecting semantics and the
+composition of @sec:eq-discharge to carry over to a
 language whose activations do not interfere, with the step
 functions and every proof that unfolds them redone. Machine integers fit this
 case: they change the step functions, the generic derivation in
@@ -240,9 +242,9 @@ side effects and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function, for a scalar language
 with recursive procedures and under a per-program termination premise. The
 proof follows one chain. Graph runs simulate source executions, and valid
-activation traces represent graph runs, sorted into buckets by the
-context read off each activation. Context-indexed equations with routed calls
-cover every bucket, provided the analysis and the context policy meet their
+activation traces represent graph runs, sorted by the context read
+off each activation into the activation collecting semantics. Context-indexed
+equations with routed calls cover it at every context, provided the analysis and the context policy meet their
 separate obligations. The solver enters only through a post-solution
 certificate, and the source-level theorem reads the verdicts off its result. A
 non-relational domain supplies only certified primitive operations, from which

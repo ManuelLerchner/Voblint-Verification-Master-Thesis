@@ -149,10 +149,11 @@ is still #raw(chain-join.at(3)) with #raw(chain-join.at(4)). With entry-state co
 its own entry and result node, and the result stays exact.
 
 The first link is the compiler simulation of @ch:program-model composed with
-the trace construction of @ch:traces. The split of the collection into context
-buckets is #isathm("node_collect_eq_Union_activation_collect"), which rests on
+the trace construction of @ch:traces. The split of the node collecting semantics by
+context is #isathm("node_collect_eq_Union_activation_collect"), which rests on
 #oblig("TOTAL"): every covered call reaches some context. Equation soundness
-(@ch:equations) bounds each bucket by the solver's valuation, given the
+(@ch:equations) bounds the activation collecting semantics of each context by the
+solver's valuation, given the
 certificate of @ch:solving. What the chain should deliver to a client is this:
 every store a finite source run reaches is covered by the result table at a
 node that simulates the run, in some context, and every definite verdict listed
@@ -263,7 +264,7 @@ reaching the check:
   run has, so a condition that fails at every admitted store does not imply
   that any admitted store is reached.
 - `UNKNOWN`: the abstraction decides neither.
-- `DEAD`: the trace collecting semantics at the node is empty, so no covered
+- `DEAD`: the node collecting semantics at the node is empty, so no covered
   execution reaches the check (#isathm("run_voblint_dead_check_unreached")). This is the one reachability claim. The other
   three verdicts constrain each store at the node and hold vacuously when there
   is none. `DEAD` constrains the whole set.

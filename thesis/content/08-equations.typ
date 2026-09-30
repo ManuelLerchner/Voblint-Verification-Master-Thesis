@@ -40,8 +40,8 @@ callee from its entry value, sends the entry value there, and reads the
 callee's result back at its continuation. We call this choice _routing_, and
 the context policy decides it.
 
-The goal is a solution $sol$ that over-approximates the buckets of
-@sec:contexts: for every node $v$ and context $c$,
+The goal is a solution $sol$ that over-approximates the activation collecting
+semantics of @sec:contexts: for every node $v$ and context $c$,
 $
   #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
@@ -243,7 +243,7 @@ reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
 
 == Interprocedural equations <sec:eq-call>
 
-For a post-solution to cover the bucket of $(v, c)$, the right-hand side of
+For a post-solution to cover the activation collecting semantics at $(v, c)$, the right-hand side of
 $(v, c)$ must join everything that can reach $v$ in context $c$
 (#isaconst("routed_node_rhs")). Schematically,
 $
@@ -366,7 +366,8 @@ context $c$, the caller's store $s$ and the entered store $s'$, it says which
 callee contexts $c'$ the new activation gets. We write "$R$ admits $c'$" when
 $R(u, c, s, s', c')$ holds. The Isabelle relation also receives the call's
 static description (#isatype("call_info")), which we leave implicit. The trace semantics applies $R$ at every call, and
-the stores of the activation belong to the bucket of each admitted $c'$. Under
+the activation collecting semantics files the stores of the activation under
+each admitted $c'$. Under
 call strings of length one, for instance, $R$ admits exactly $[italic("pp2")]$ for the
 call `bump(5)` from `main`. The analyzer never sees $s'$. It computes an abstract entry value $e$,
 chooses a context from $e$, and publishes $e$ to the callee's seed for that
@@ -476,10 +477,10 @@ Totality follows from entry coverage (@sec:calls): every concrete call covered
 by the caller's value has a covering entry pair and therefore an admitted
 context.
 
-So $R$ depends on the solved analysis, as @sec:contexts anticipated, and so do
-the buckets. This is not circular: the proof first fixes a post-solution
+So $R$ depends on the solved analysis, as @sec:contexts anticipated, and so does
+the activation collecting semantics. This is not circular: the proof first fixes a post-solution
 $sol$, then defines $R$ from $sol$, and finally proves that $sol(v, c)$ covers
-the bucket this $R$ induces.
+the activation collecting semantics this $R$ induces.
 
 The dependence is necessary for entry-state contexts. Taking the context
 directly from the concrete entered store gives $[[4, 4]]$ in the example,
@@ -489,7 +490,7 @@ $[[4, 4]]$ and $[[top]]$. Adequacy would then demand coverage at unknowns the
 equations never fill.
 
 The dependence disappears in the source-level result, which uses only the
-union of the buckets at a node. By totality this union is the context-free
+union over all contexts of the activation collecting semantics at a node. By totality this union is the context-free
 collecting semantics (@sec:consequences), whatever the split into contexts.
 
 The policy still affects precision, because it decides which calls share an
@@ -1138,4 +1139,4 @@ calls publish to one seed, and `bump` is solved once for both.
 ) <fig:eq-walk>
 
 By the soundness theorem of @sec:eq-discharge, every post-solution of this
-system covers the buckets of the running example. @ch:solving proves that a terminating solve returns one.
+system covers the activation collecting semantics of the running example. @ch:solving proves that a terminating solve returns one.

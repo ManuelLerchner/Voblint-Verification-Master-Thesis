@@ -188,9 +188,10 @@ _Evidence: machine-checked._ The meaning is the relation
 activation trace at the call that created the activation. The
 condition is #oblig("TOTAL")
 (#isaconst("call_context_total_on")), stated relative to the claim: under the
-five coverage obligations, #isathm("activation_collect_sound") bounds each
-context's bucket, and #isathm("node_collect_eq_Union_activation_collect") shows
-that the buckets together are the context-free collection. The link to the
+five coverage obligations, #isathm("activation_collect_sound") bounds the
+activation collecting semantics of each context, and
+#isathm("node_collect_eq_Union_activation_collect") shows that together they
+are the node collecting semantics. The link to the
 executable analyzer is #isathm("activation_collect_dg_sound"), which
 discharges all five obligations in every domain, for every policy that
 proves its routing adequacy and totality (@sec:eq-discharge). _Evidence: executable and illustrative._ The two calls of
@@ -199,7 +200,7 @@ proves its routing adequacy and totality (@sec:eq-discharge). _Evidence: executa
 _Limits._ That #oblig("TOTAL") is needed is evaluated on
 one program (#isathm("total_dropped_unsound"), @sec:falsification). An
 evaluated solve leaves a continuation at bottom when no context is admitted
-(#isathm("ov_empty_continuation_bot")); that a run reaches it is argued. The buckets are defined over valid traces, and that every
+(#isathm("ov_empty_continuation_bot")); that a run reaches it is argued. The activation collecting semantics is defined over valid traces, and that every
 valid trace arises from a graph run is not proved (@sec:valid); soundness needs
 only the forward direction.
 
