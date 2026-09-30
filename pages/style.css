@@ -1632,53 +1632,33 @@ button.solver-global-key:hover {
   text-decoration: underline;
 }
 
-.analyzer-controls .control-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  user-select: none;
+.solver-trace-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 0;
+  font-size: 0.8rem;
 }
 
-.control-toggle input {
-  margin: 0;
-  accent-color: #8bd5ca;
-}
-
-.analysis-graph-panel {
-  min-width: 0;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
+.solver-trace-tools button:disabled {
+  color: var(--text-muted);
+  cursor: progress;
 }
 
 .analysis-graph-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 14px;
-}
-
-.analysis-graph-header .eyebrow {
-  margin-bottom: 4px;
-  font-size: 0.68rem;
-}
-
-.analysis-graph-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
+  margin: 10px 0 12px;
 }
 
 .analysis-graph-tools {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
 }
 
 .analysis-graph-tools > span {
   color: var(--text-muted);
   font-size: 0.72rem;
-  text-align: right;
 }
 
 .graph-toolbar {
@@ -2354,12 +2334,6 @@ a:focus-visible {
   #program-editor .cm-editor,
   #program-editor .cm-scroller {
     min-height: 420px;
-  }
-
-  .analysis-graph-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
   }
 
   .analysis-graph-tools {

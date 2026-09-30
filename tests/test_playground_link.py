@@ -6,6 +6,8 @@ import sys
 import zlib
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 import playground_link  # noqa: E402
@@ -39,15 +41,24 @@ def test_int_refinement_is_a_setting_of_its_own():
 
 def test_trace_is_a_setting_only_when_on():
     assert "trace" not in playground_link.link("fun main() {}", "interval")
-    url = playground_link.link("fun main() {}", "interval", trace=True)
-    assert "analysis=interval&globals=warrow&context=none&trace=1#" in url
+    url = playground_link.link("fun main() {}", "interval", trace="compact")
+    assert "analysis=interval&globals=warrow&context=none&trace=compact#" in url
 
 
-def test_trace_flag_reaches_the_link(tmp_path):
+@pytest.mark.parametrize(
+    "trace_flags, mode",
+    [
+        (["--trace"], "compact"),
+        (["--compact"], "compact"),
+        (["--trace", "--verbose"], "verbose"),
+        (["--verbose"], "verbose"),
+    ],
+)
+def test_trace_flags_reach_the_link(tmp_path, trace_flags, mode):
     program = tmp_path / "prog.vimp"
     program.write_text("// PARAM: --analysis interval\nfun main() {}\n")
-    path, flags, _, _ = playground_link.parse_command_line([str(program), "--trace"])
-    assert "&trace=1#" in playground_link.program_link(path, flags)
+    path, flags, _, _ = playground_link.parse_command_line([str(program), *trace_flags])
+    assert f"&trace={mode}#" in playground_link.program_link(path, flags)
 
 
 def test_header_int_refinement_reaches_the_link(tmp_path):
@@ -86,8 +97,18 @@ def test_link_check_rejects_what_the_playground_cannot_open():
     figure = next((check.FIGURE_PROGRAMS).glob("*.vimp"))
     good = playground_link.program_link(figure, ["--analysis", "interval"])
     assert check.check_playground(good, "README.md", vocabulary) == []
-    traced = playground_link.program_link(figure, ["--analysis", "interval", "--trace"])
-    assert check.check_playground(traced, "README.md", vocabulary) == []
+    for trace in (["--trace"], ["--trace", "--verbose"]):
+        traced = playground_link.program_link(
+            figure, ["--analysis", "interval", *trace]
+        )
+        assert check.check_playground(traced, "README.md", vocabulary) == []
+    # What the Share button writes for Int, and the compact trace's older name.
+    shared = playground_link.link(
+        figure.read_text(), "int", refinement="once", trace="verbose"
+    )
+    assert check.check_playground(shared, "pages/index.html", vocabulary) == []
+    older = playground_link.link("fun main() {}", "interval").replace("#", "&trace=1#")
+    assert check.check_playground(older, "pages/index.html", vocabulary) == []
 
     other = playground_link.link("fun main() {}", "interval")
     # Derived, not written out: the depth control's bound moves when the
@@ -100,6 +121,8 @@ def test_link_check_rejects_what_the_playground_cannot_open():
         f"playground.html?k={too_deep}": "outside",
         "playground.html?colour=red": "unknown parameter",
         "playground.html?trace=yes": "not a playground option",
+        "playground.html?trace=full": "not a playground option",
+        "playground.html?refinement=twice": "not a playground option",
         "playground.html?analysis=interval#code=!!!": "does not decode",
         "playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp#code="
         + other.split("#code=")[1]: "twice",

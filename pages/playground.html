@@ -194,12 +194,15 @@
               </div>
 
               <div class="control-group">
-                <label class="control-toggle" for="trace-toggle">
-                  <input id="trace-toggle" type="checkbox" aria-describedby="trace-help">
-                  Record solver trace
-                </label>
+                <label for="trace-select">Solver trace</label>
+                <select id="trace-select" aria-describedby="trace-help">
+                  <option value="off" selected>Off</option>
+                  <option value="compact">Compact: calls</option>
+                  <option value="verbose">Full: every step</option>
+                </select>
                 <span id="trace-help" class="visually-hidden">
-                  Also list what the solver did for each call, shown under the results.
+                  Also record what the solver did, shown above the graph: per call, or
+                  every solver step.
                 </span>
               </div>
 
@@ -359,18 +362,54 @@
           <ul id="solver-globals-list" class="solver-globals-list"></ul>
         </details>
 
-        <section
+        <details id="solver-trace" class="solver-globals solver-trace" hidden>
+          <summary>
+            <span class="eyebrow">Solver trace</span>
+            <span id="solver-trace-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            The run's solver steps, as <code>voblint --trace</code> prints them. The compact
+            form follows calls: the context each call is routed to, the query of the callee's
+            result, what the callee's entry reads from its seed, each publication into a seed
+            and whether it changed the seed, the restarts that change causes, and what the
+            caller returns, so a program without calls shows little more than its checks. The
+            full form, <code>--verbose</code>, lists every solver step: each unknown solved,
+            each query with the value it returns, each side effect, each update, and each
+            call's routing. The hooks that record the steps change no computed value; the
+            trace is presentation outside the proof.
+          </p>
+
+          <div class="solver-trace-tools">
+            <button id="solver-trace-download" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              Download trace (.txt)
+            </button>
+            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
+            </button>
+          </div>
+
+          <pre id="solver-trace-text" class="solver-trace-text"></pre>
+
+          <p id="solver-trace-cut" class="solver-globals-note" hidden>
+            <span id="solver-trace-cut-label"></span>
+            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
+          </p>
+        </details>
+
+        <details
           id="analysis-graph-panel"
-          class="analysis-graph-panel"
-          aria-labelledby="analysis-graph-heading"
+          class="solver-globals analysis-graph-panel"
+          open
           hidden
         >
-          <div class="analysis-graph-header">
-            <div>
-              <p class="eyebrow">Solved analysis</p>
-              <h2 id="analysis-graph-heading">Control-flow graph</h2>
-            </div>
+          <summary>
+            <h2 id="analysis-graph-heading" class="eyebrow">Control-flow graph</h2>
+          </summary>
 
+          <div class="analysis-graph-header">
             <div class="analysis-graph-tools">
               <span class="graph-hint">Drag a node or context box to move it · drag the background or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
 
@@ -417,29 +456,6 @@
             tabindex="0"
             aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
           ></div>
-        </section>
-
-        <details id="solver-trace" class="solver-globals solver-trace" hidden>
-          <summary>
-            <span class="eyebrow">Solver trace</span>
-            <span id="solver-trace-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            The run's solver steps per call, as <code>voblint --trace</code> prints them:
-            the context each call is routed to, the query of the callee's result, what the
-            callee's entry reads from its seed, each publication into a seed and whether it
-            changed the seed, the restarts that change causes, and what the caller returns.
-            Steps between plain program points are left out. The hooks that record them
-            change no computed value; the trace is presentation outside the proof.
-          </p>
-
-          <pre id="solver-trace-text" class="solver-trace-text"></pre>
-
-          <p id="solver-trace-cut" class="solver-globals-note" hidden>
-            <span id="solver-trace-cut-label"></span>
-            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
-          </p>
         </details>
 
       </div>
