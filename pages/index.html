@@ -4798,7 +4798,7 @@ fun main() {
                   A post-solution whenever the solve terminates
                   (the vendored <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact"><code>partial_post_solution</code></a>, with termination discharged by
                   <a href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.TD_side_rule_Interp.solve_dom_of_solve_c%7Cfact"><code>solve_dom_of_solve_c</code></a>),
-                  read back as the result the analyzer reports
+                  published as the result the analyzer reports
                   (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.gamma_reader_eq_lookup%7Cfact"><code>gamma_reader_eq_lookup</code></a>).
                 </p>
               </div>
@@ -4908,8 +4908,8 @@ fun main() {
           Pillar 4 bridges to the vendored solver's own theorem, and it promises a post-solution
           only for a solve that terminates, which is why every flagship soundness theorem below
           assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>. Two more obligations do not appear here: that the
-          initial state covers the initial stores, and that the executable states read back to the
-          transfers and routes these theorems are stated over. The failures shown are what the
+          initial state covers the initial stores, and that the executable transfers and routes agree,
+          on the functions the states represent, with those these theorems are stated over. The failures shown are what the
           obligations rule out, not bugs anyone has found in Voblint.
         </figcaption>
       </figure>
@@ -5490,7 +5490,7 @@ qed</code></pre>
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result published from the solve covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>

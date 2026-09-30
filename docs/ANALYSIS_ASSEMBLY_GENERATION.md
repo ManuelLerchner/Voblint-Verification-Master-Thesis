@@ -43,8 +43,8 @@ README.
 
 Generated: the interpretations and their proofs. Each proof applies
 `<impl>_tf.dg_analysis_execI`, which the domain's bundle certificate already
-provides: the transfer, the two readbacks and the classifier are discharged
-once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
+provides: the transfer, the step and entry equations on the represented
+function and the classifier are discharged once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
 obligations remain per registration: the routing agreement, the seed key, the
 three solver contracts and the initial state. Between the contexts only the
 context terms and the routing agreement differ.
