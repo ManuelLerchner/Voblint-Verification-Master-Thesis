@@ -1,5 +1,5 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
-#import "../lib/code.typ": c11, fixture, isaconst, isalocale, isathm, isatype
+#import "../lib/code.typ": c11, fixture, isaconst, isai, isalocale, isathm, isatype
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": conc, ctor, ineq, lbot, lle, ltop, sem, setcomp, sh, sol
 #import "../lib/theme.typ": vb
@@ -132,6 +132,10 @@ $
   forall u in V. med & #isaconst("eq", thy: "Basics_side") med T med u med sol lle sol(u) & wide "(C3)" \
   forall u in V. med & #isaconst("sides_of_rhs") med (T med u) med sol lle sol & wide "(C4)"
 $
+Isabelle keeps local and global unknowns apart in one valuation over their
+disjoint union, so $sol(u)$ in (C3) is #isai("\<sigma> (Inl u)") there. Each
+condition is a lemma about the certificate, cited with its explanation below,
+and #isathm("part_post_solutionI") assembles a certificate from the four.
 (C3) and (C4) compare objects of
 different shape. $#isaconst("eq", thy: "Basics_side") med T med u med sol$ is
 a single value, the answer of the tree of $u$, so (C3) compares it with the
@@ -149,10 +153,10 @@ unknown, its valuation is #lbot and the bound holds trivially.
 
 #[
   #set enum(numbering: n => "(C" + str(n) + ")")
-  + puts the query into the solved set. In the running example the query is
+  + puts the query into the solved set (#isathm("part_post_solution_query")). In the running example the query is
     $(italic("exit")_"main", c_0)$.
   + closes $V$ under reading: every local unknown that the equation of a solved
-    unknown reads is itself solved. Which unknowns a right-hand side reads can depend on the
+    unknown reads is itself solved (#isathm("part_post_solution_closed")). Which unknowns a right-hand side reads can depend on the
     values it reads (@sec:eq-trees), so the dependencies are taken under the
     final valuation. In the running example $V$ holds the #_local-unknowns local
     unknowns the solve of @sec:eq-example reached, and the tree of
@@ -161,7 +165,8 @@ unknown, its valuation is #lbot and the bound holds trivially.
     lie in $V$.
   + is the post-solution inequality of @ch:background for local unknowns: the
     value #sol stores at $u$ is at least what the right-hand side of $u$
-    computes from the values #sol stores for the unknowns it reads. That
+    computes from the values #sol stores for the unknowns it reads
+    (#isathm("part_post_solution_local_bound")). That
     right-hand side joins everything that reaches $u$: the initial state, the
     transfer along each incoming edge, the seed read at a callee entry and each
     call's combined result. So $sol(u)$ over-approximates each of them; these
@@ -171,7 +176,7 @@ unknown, its valuation is #lbot and the bound holds trivially.
     sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
   + carries a call into its callee: it makes the callee's seed hold every
     entry value routed there, and global unknowns receive their values only
-    through it. It gives the seed inequality #ineq(3) of
+    through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of
     @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
     ${n |-> [5, 5]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$ and
