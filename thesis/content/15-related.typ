@@ -190,7 +190,9 @@ mixed flow-sensitive analyses. They verify $"TD"_"side"$, which accepts
 contributions to global unknowns during iteration, against a generic interface
 for update rules, prove five update rules of
 #cite(<stemmler25>, form: "prose") sound, and refine the solver to executable
-code #_todo[check "five update rules" and the scope.]. For precise updates without widening and narrowing, they also prove that
+code. The copy Voblint vendors interprets the update-rule interface once for
+each of the five rules #_todo[check the scope of the executable refinement
+  against @tilscher26.]. For precise updates without widening and narrowing, they also prove that
 the solver returns the least partial post-solution, provided it terminates and
 the equation system satisfies their monotonicity conditions.
 #cite(<tilscher26jar>, form: "prose") treat the top-down solver without side
@@ -209,11 +211,11 @@ arbitrary right-hand sides and gives the equations no meaning. Voblint supplies 
 meaning for its language: the certificate #isaconst("part_post_solution", thy: "Basics_side")
 implies coverage of the concrete traces, and compiler correctness transfers the
 coverage to source executions. The solver Voblint runs warrows every local
-unknown at a widening point, whichever of the four selectable update rules
+unknown at a widening point, whichever of the five selectable update rules
 merges the global contributions. The least-solution theorem therefore does not
 apply, and Voblint uses only partial correctness and claims no optimality for
 its results. Soundness rests on #isaconst("part_post_solution", thy: "Basics_side") alone, for all
-four selectable rules (@sec:update-rules). Voblint's precision statements are strict inequalities
+five selectable rules (@sec:update-rules). Voblint's precision statements are strict inequalities
 between the results of named solves.
 
 == Goblint, local traces, and thread-modular analysis <sec:rel-goblint>

@@ -227,7 +227,7 @@ soundness contract #isalocale("analysis_contract") (@ch:cooperation). The routin
 obligations are discharged once for all domains
 (#isathm("activation_collect_dg_sound")). The solver is consumed only through
 the post-solution certificate #isaconst("part_post_solution", thy: "Basics_side")
-(@sec:certificate), so the four selectable update rules share one proof
+(@sec:certificate), so the five selectable update rules share one proof
 (@sec:update-rules). Analyses combine without reference to one another: each
 proves the laws of its local specification against every channel that holds, and
 #isathm("mcp_combine_sound") composes any list of independent components
@@ -424,7 +424,7 @@ check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") a
 #claim-ref("cost-down-k100")).
 
 *Update rules.* _Evidence: executable, and evaluated for a two-equation
-system._ @fig:rules-programs runs the four update rules of @sec:update-rules on
+system._ @fig:rules-programs runs the five update rules of @sec:update-rules on
 four programs whose checks hold in every execution. In the first row `p(1)`
 and `p(2)` publish to the same entry seed. Warrow joins the two contributions
 before widening, so the second looks like growth and the upper bound goes to
@@ -439,7 +439,9 @@ the division loses all information, while Warrow first joins in `main`'s
 argument $-1$ and keeps the lower bound. On the growing recursion the joining
 rules give no answer within the limit. The argument grows without bound, so we
 expect, without a proof, that their solve diverges (@sec:termination); the
-timeout alone does not show this (@sec:trust-boundary).
+timeout alone does not show this (@sec:trust-boundary). Bounded narrowing, at
+its default bound 5, reaches the verdicts of per-origin warrowing on all four
+programs.
 
 #let _verdict(name, cond) = {
   if claim-timed-out(name) { return text(fill: vb.unproved)[no answer in 5 s] }
@@ -453,7 +455,7 @@ timeout alone does not show this (@sec:trust-boundary).
     set text(size: 8pt)
     set par(first-line-indent: 0pt, justify: false)
     show raw: set text(size: 7.5pt)
-    let rules = ("join", "per-origin", "warrow", "warrow-per-origin")
+    let rules = ("join", "per-origin", "warrow", "warrow-per-origin", "bounded-narrowing")
     let progs = (
       ("two-sites", "x <= 2", [two call sites: `p(1); p(2);`, check `x <= 2` in `p`]),
       ("loop-call", "x < 10", [call in a loop: `g(x)` for `x` from 0 to 9, check `x < 10` in `g`]),
@@ -466,9 +468,10 @@ timeout alone does not show this (@sec:trust-boundary).
       ),
     )
     table(
-      columns: (1.7fr, 1fr, 1fr, 1fr, 1fr),
+      columns: (1.7fr, 1fr, 1fr, 1fr, 1fr, 1fr),
       align: (
         left + horizon,
+        center + horizon,
         center + horizon,
         center + horizon,
         center + horizon,
@@ -478,6 +481,7 @@ timeout alone does not show this (@sec:trust-boundary).
       inset: (x: 3pt, y: 3pt),
       table.hline(stroke: 0.5pt),
       [*program*], [*join*], [*join per origin*], [*warrow*], [*warrow per origin*],
+      [*bounded narrowing*],
       table.hline(stroke: 0.4pt),
       ..progs
         .enumerate()
@@ -491,7 +495,8 @@ timeout alone does not show this (@sec:trust-boundary).
     )
   },
   kind: table,
-  caption: [Update rules on four programs (Interval, no contexts). Each cell is
+  caption: [Update rules on four programs (Interval, no contexts; bounded
+    narrowing at its default bound 5). Each cell is
     the verdict and state of the check row. Every check holds in every execution, so an `UNKNOWN` is lost
     precision. "No answer in 5 s" means the command-line `--timeout 5` stopped
     the solve.],

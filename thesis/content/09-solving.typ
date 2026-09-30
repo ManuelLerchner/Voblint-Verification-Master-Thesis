@@ -224,21 +224,24 @@ coverage is not a premise of the final theorem.
 
 The pipeline locale #isalocale("dg_analysis") takes the solver as a
 parameter, together with its domain predicate, the arguments on which its
-recursion terminates (@sec:termination), and its executable form. It states
-three contracts about them. First, a solve whose recursion is defined on the
-query returns a post-solution on its stabilized set; the vendored theorem
+recursion terminates (@sec:termination), and its executable form. It extends
+the locale #isalocale("certified_solver"), which states three contracts about
+them. First, a solve whose recursion is defined on the query returns a
+post-solution on its stabilized set; the vendored theorem
 #isathm("TD_side_upd_rule.partial_post_solution", thy: "TD_side_upd_rule") provides this.
 Second, such a solve returns a finite set of unknowns
 (#isathm("finite_stabl_solve"), proved once from the solver's stable-set
 invariant). Finiteness lets @ch:results combine the results of the finitely
 many contexts solved at a node into one verdict. Third, a run of the
 executable solver that returns a result lies in that domain
-(#isathm("solve_dom_of_solve_c")). Every registration of an analysis with the
-pipeline discharges the three contracts by citing these facts at its update
-rule. Domain membership for the program's query is the termination premise of
-@sec:termination. None of the contracts refers to how the solver computes.
-Another solver, for instance one with local side effects
-(@sec:outlook-extending), attaches to Voblint by proving these three facts.
+(#isathm("solve_dom_of_solve_c")). #isathm("td_certified_solver") composes
+these facts into one interpretation of #isalocale("certified_solver") for the
+vendored solver at every update rule, and every registration of an analysis
+with the pipeline cites it. Domain membership for the program's query is the
+termination premise of @sec:termination. None of the contracts refers to how
+the solver computes. Another solver, for instance one with local side effects
+(@sec:outlook-extending), attaches to Voblint by interpreting
+#isalocale("certified_solver").
 
 The certificate is what the pipeline hands to the soundness theorem of
 @ch:equations. For a terminating solve,
@@ -291,7 +294,7 @@ certificate: how side contributions update global unknowns
 (@sec:update-rules), and how abstract states are represented as executable
 values (@sec:readback).
 
-== One proof for four update rules <sec:update-rules>
+== One proof for five update rules <sec:update-rules>
 
 The solver merges each side contribution into its global unknown, and the
 merge affects both precision and termination. In the analyzer each right-hand
@@ -299,16 +302,17 @@ side's contributions to one target arrive already joined (@sec:eq-buffer). A
 merge is an _update rule_. Stemmler et al. proposed such rules
 @stemmler25[§3–4], and Tilscher et al. formalize a generic update-rule
 interface and prove five of them sound against it @tilscher26. Every rule
-keeps one record per origin (@sec:td). Voblint exposes four of the five rules:
-join the contribution into the value, join the recorded contributions, warrow
-the value toward that join, or warrow the origin's own record and then join the
-records. The first three record the origin's latest contribution; per-origin
-warrowing records the old record warrowed with the new contribution. The fifth
-vendored rule, which bounds narrowing by a counter, is not selectable. Voblint
-also proves sound a keyed combination that joins at entry seeds and warrows
-elsewhere; only examples use it. Each selectable rule meets the vendored
-interface (#isathm("update_rule_update_global_of")), so the solver is sound
-for all of them at once. In #isaconst("run_voblint") the entry seeds are the
+keeps one record per origin (@sec:td), and Voblint exposes all five. They join
+the contribution into the value, join the recorded contributions, warrow the
+value toward that join, or warrow the origin's own record and then join the
+records. The fifth, bounded narrowing, warrows the origin's record as the
+fourth does but also counts how often that origin has switched from widening
+to narrowing. Once the count has reached a bound, a record in its narrowing
+phase ignores contributions below it, so each switch narrows only once. The first three rules record the origin's latest
+contribution; the two per-origin warrowing rules record the old record warrowed
+with the new contribution. Each rule meets the vendored interface
+(#isathm("update_rule_update_global_of")), so the solver is sound for all of
+them at once. In #isaconst("run_voblint") the entry seeds are the
 only global unknowns that receive contributions (@sec:coop-limits). The rule
 therefore decides how a callee's entry state accumulates across call sites
 (@fig:update-rules).
@@ -321,7 +325,7 @@ nothing and can lose precision, as on the shrinking recursion of
 
 The choice of rule also affects termination. The two joining rules never widen
 a seed, so a recursion that enters with a growing argument can keep the solve
-running (@sec:termination), while both warrowing rules widen the entry seed.
+running (@sec:termination), while the three warrowing rules widen the entry seed.
 No rule is more precise on every program. On the growing recursion of
 @fig:rules-programs only the warrowing rules answer, and each warrowing rule
 loses precision on a program that the joining rules solve exactly.
@@ -347,6 +351,7 @@ loses precision on a program that the joining rules solve exactly.
       rule([join per origin], isaconst("update_global_per_origin")),
       rule([warrow], isaconst("update_global_warrowing_apinis")),
       rule([warrow per origin], isaconst("update_global_warrowing_per_origin")),
+      rule([bounded narrowing, bound 5], isaconst("update_global_bounded_narrowing")),
     )
     table(
       columns: (auto, 1fr, 1fr, 1fr, 1fr),
@@ -374,7 +379,9 @@ loses precision on a program that the joining rules solve exactly.
     the join of each origin's latest contribution, so at step 3 A's
     #raw("[1,1]") replaces #raw("[0,3]"). Warrow widens at step 2, because
     #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3; warrow per
-    origin widens only when A's own contribution grows. A widened bound is set
+    origin widens only when A's own contribution grows. Bounded narrowing
+    agrees with warrow per origin here, since A switches to narrowing once and
+    the bound 5 is never reached. A widened bound is set
     bold and marked $nabla$. The cells are read from
     #isathm("update_rules_example"), which evaluates the vendored rules with
     Voblint's interval operators; the contributions separate the rules and come
@@ -382,12 +389,15 @@ loses precision on a program that the joining rules solve exactly.
 ) <fig:update-rules>
 
 No solver fact is proved per rule. The datatype #isatype("globals_rule")
-names the four rules, #isaconst("update_global_of") selects the vendored
+names the five rules, #isaconst("update_global_of") selects the vendored
 implementation, and one interpretation of the solver locale takes the rule as a
-parameter, so every solver fact, the certificate included, holds for all four
-at once. Only #isathm("update_rule_update_global_of"), which shows that the
-selected function meets the update-rule interface, splits on the rule and cites
-the four vendored interpretations.
+parameter, so every solver fact, the certificate included, holds for all five
+at once. The solver runs on the state of bounded narrowing, which keeps the
+counters beside the recorded contributions, and #isaconst("lift_basic_rule")
+runs each of the other four rules on the contributions alone. Only
+#isathm("update_rule_update_global_of"), which shows that the selected function
+meets the update-rule interface, splits on the rule and cites the five vendored
+interpretations.
 
 The update rule fixes how values are combined. The values themselves still need
 an executable representation, which @sec:readback supplies.

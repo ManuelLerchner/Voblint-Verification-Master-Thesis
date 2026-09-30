@@ -31,7 +31,7 @@ warning.
 
 Inspired by Goblint, the analyzer offers four
 numeric domains (Sign, Interval, Parity and Congruence), their reduced
-product and a relational order analysis, four update rules for the solver's
+product and a relational order analysis, five update rules for the solver's
 global unknowns and three context policies: none, bounded call strings and
 entry-state contexts. As in Goblint's MCP, several analyses can run together
 on one combined state and answer one another's queries. The main theorem covers

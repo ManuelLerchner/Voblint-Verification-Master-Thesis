@@ -123,7 +123,14 @@
   let (lhs, rhs) = st.split("] =")
   let rules = lhs.matches(regex("Globals_\\w+")).map(m => m.text)
   assert(
-    rules == ("Globals_Join", "Globals_Per_Origin", "Globals_Warrow", "Globals_Warrow_Per_Origin"),
+    rules
+      == (
+        "Globals_Join",
+        "Globals_Per_Origin",
+        "Globals_Warrow",
+        "Globals_Warrow_Per_Origin",
+        "Globals_Bounded_Narrowing",
+      ),
     message: "update_rules_example lists the rules in another order",
   )
   let bound(b) = if b == "PlusInf" { "+∞" } else if b == "MinusInf" { "-∞" } else {
@@ -132,6 +139,6 @@
   let cells = rhs
     .matches(regex("Ivl (\\(Fin -?\\d+\\)|PlusInf|MinusInf) (\\(Fin -?\\d+\\)|PlusInf|MinusInf)"))
     .map(m => (bound(m.captures.at(0)), bound(m.captures.at(1))))
-  assert(cells.len() == 16, message: "update_rules_example no longer has four steps per rule")
+  assert(cells.len() == 20, message: "update_rules_example no longer has four steps per rule")
   cells.chunks(4)
 }

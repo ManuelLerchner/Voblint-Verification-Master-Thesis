@@ -721,6 +721,54 @@ argv = [
 ]
 why = "Update-rule table, shrinks program under warrow-per-origin: the verdict and state quoted in its cell."
 
+[claims.rules-two-sites-bounded-narrowing]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/24-site-figures/precision/49-two_sites_bounded_narrowing.vimp",
+]
+why = "Update-rule table, two-sites program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
+
+[claims.rules-loop-call-bounded-narrowing]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/24-site-figures/precision/50-loop_call_bounded_narrowing.vimp",
+]
+why = "Update-rule table, loop-call program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
+
+[claims.rules-grows-bounded-narrowing]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
+]
+why = "Update-rule table, grows program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
+
+[claims.rules-shrinks-bounded-narrowing]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--globals",
+  "bounded-narrowing",
+  "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
+]
+why = "Update-rule table, shrinks program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
+
 [claims.cost-down-k99]
 argv = [
   "--analysis",
