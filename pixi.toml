@@ -67,6 +67,9 @@ property-test = { cmd = "python3 -m pytest tests/property", description = "Build
 arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_arithmetic.py tests/test_arithmetic_diagnostics.py", depends-on = [
   "cli-build",
 ], description = "Check arithmetic warnings, source annotations, and HTML findings." }
+solver-trace-check = { cmd = "python3 -m pytest tests/test_solver_trace.py", depends-on = [
+  "cli-build",
+], description = "Check the --trace hooks, that tracing leaves stdout unchanged, and the event order on the context example." }
 
 # HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
 # renders the CFG the viewer's graph pane loads; the frontend itself is the
@@ -153,6 +156,9 @@ pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
   "vendor-init",
   "browser-build",
 ], description = "Assemble the GitHub Pages site from rendered HTML, PDFs, and the browser analyzer." }
+browser-trace-check = { cmd = "python3 -m pytest tests/test_browser_trace.py", depends-on = [
+  "browser-build",
+], description = "Run the WebAssembly analyzer under Node and check the playground's solver trace against the CLI's, and that tracing off changes nothing." }
 pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
 
 # Source-level and assembled-site link/metadata checks.
@@ -507,6 +513,8 @@ verify = { depends-on = [
   "cli-smoke",
   "cli-test",
   "arithmetic-diagnostics-check",
+  "solver-trace-check",
+  "browser-trace-check",
   "property-test",
   "html-report-structure-check",
   "html-report-corpus-audit",

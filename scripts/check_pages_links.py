@@ -110,7 +110,7 @@ def collected() -> dict[str, set[str]]:
     return links
 
 
-PLAYGROUND_KEYS = {"fixture", "analysis", "globals", "context", "k"}
+PLAYGROUND_KEYS = {"fixture", "analysis", "globals", "context", "k", "trace"}
 PLAYGROUND_SELECTS = {
     "globals": "globals-select",
     "context": "context-select",
@@ -173,6 +173,11 @@ def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> li
     for value in query.get("k", []):
         if not value.isdigit() or int(value) > vocabulary["max_depth"]:
             problems.append(f"k={value} is outside 0..{vocabulary['max_depth']}")
+
+    # The Share button writes trace=1 or leaves the key out.
+    for value in query.get("trace", []):
+        if value != "1":
+            problems.append(f"trace={value} is not a playground option")
 
     for path in query.get("fixture", []):
         if not (REGRESSION / path).is_file():

@@ -70,6 +70,7 @@ self.onmessage = async (event) => {
       request.contextDepth,
       request.intRefinement,
       request.source,
+      request.trace === true,
     );
 
     if (typeof result !== "string") {

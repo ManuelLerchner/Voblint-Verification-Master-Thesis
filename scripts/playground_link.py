@@ -43,12 +43,15 @@ def link(
     k: int | None = None,
     base: str = PLAYGROUND,
     refinement: str | None = None,
+    trace: bool = False,
 ) -> str:
     settings = [("analysis", analysis), ("globals", globals_rule), ("context", context)]
     if k is not None:
         settings.append(("k", str(k)))
     if refinement is not None:
         settings.append(("refinement", refinement))
+    if trace:
+        settings.append(("trace", "1"))
     query = "&".join(f"{key}={quote(value)}" for key, value in settings)
     return f"{base}?{query}#code={pack_source(source)}"
 
@@ -89,7 +92,12 @@ def parse_command_line(argv: list[str]) -> tuple[Path, list[str], str, bool]:
 
 
 def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str:
-    """The link for a program: command-line settings over its header's."""
+    """The link for a program: command-line settings over its header's.
+
+    `--trace` opens the playground with its solver trace switched on.
+    """
+    trace = "--trace" in flags
+    flags = [flag for flag in flags if flag != "--trace"]
     header = vimp_fixture.param_args(program) or []
     settings = vimp_fixture.analysis_settings(header) | vimp_fixture.analysis_settings(
         flags
@@ -108,6 +116,7 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
         settings.get("context_depth"),
         base,
         settings.get("int_refinement"),
+        trace,
     )
 
 

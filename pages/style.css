@@ -1604,6 +1604,47 @@ button.solver-global-key:hover {
   text-decoration: underline;
 }
 
+/* Scrolls inside the panel: a long trace must not stretch the page. */
+.solver-trace-text {
+  max-height: min(560px, 60vh);
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  overflow: auto;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: 0.74rem / 1.5 var(--mono);
+  white-space: pre;
+}
+
+.solver-trace-all {
+  padding: 0;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.solver-trace-all:hover {
+  text-decoration: underline;
+}
+
+.analyzer-controls .control-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.control-toggle input {
+  margin: 0;
+  accent-color: #8bd5ca;
+}
+
 .analysis-graph-panel {
   min-width: 0;
   padding-top: 20px;

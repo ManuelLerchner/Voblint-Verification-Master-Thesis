@@ -37,6 +37,19 @@ def test_int_refinement_is_a_setting_of_its_own():
     assert "analysis=int&globals=warrow&context=none&refinement=never#" in url
 
 
+def test_trace_is_a_setting_only_when_on():
+    assert "trace" not in playground_link.link("fun main() {}", "interval")
+    url = playground_link.link("fun main() {}", "interval", trace=True)
+    assert "analysis=interval&globals=warrow&context=none&trace=1#" in url
+
+
+def test_trace_flag_reaches_the_link(tmp_path):
+    program = tmp_path / "prog.vimp"
+    program.write_text("// PARAM: --analysis interval\nfun main() {}\n")
+    path, flags, _, _ = playground_link.parse_command_line([str(program), "--trace"])
+    assert "&trace=1#" in playground_link.program_link(path, flags)
+
+
 def test_header_int_refinement_reaches_the_link(tmp_path):
     program = tmp_path / "prog.vimp"
     program.write_text(
@@ -73,6 +86,8 @@ def test_link_check_rejects_what_the_playground_cannot_open():
     figure = next((check.FIGURE_PROGRAMS).glob("*.vimp"))
     good = playground_link.program_link(figure, ["--analysis", "interval"])
     assert check.check_playground(good, "README.md", vocabulary) == []
+    traced = playground_link.program_link(figure, ["--analysis", "interval", "--trace"])
+    assert check.check_playground(traced, "README.md", vocabulary) == []
 
     other = playground_link.link("fun main() {}", "interval")
     # Derived, not written out: the depth control's bound moves when the
@@ -84,6 +99,7 @@ def test_link_check_rejects_what_the_playground_cannot_open():
         "playground.html?context=entrystate": "not a playground option",
         f"playground.html?k={too_deep}": "outside",
         "playground.html?colour=red": "unknown parameter",
+        "playground.html?trace=yes": "not a playground option",
         "playground.html?analysis=interval#code=!!!": "does not decode",
         "playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp#code="
         + other.split("#code=")[1]: "twice",

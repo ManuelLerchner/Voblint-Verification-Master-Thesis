@@ -693,8 +693,9 @@ let seeds_json program result (graph : G.t) =
          (List.combine (C.res_globals result) (A.global_rows result)))
   ^ "]"
 
-let result_json analysis_ms program ~stmt_positions ~header_positions ~raw
-    result =
+(* [trace] is the solver trace's text, present only when the run asked for it. *)
+let result_json ?trace analysis_ms program ~stmt_positions ~header_positions
+    ~raw result =
   let checks =
     positioned_checks (C.res_checks result)
     |> List.map (check_json result)
@@ -708,10 +709,13 @@ let result_json analysis_ms program ~stmt_positions ~header_positions ~raw
   let graph = Context_graph.build program result in
   let contexts = Array.of_list (C.res_contexts result) in
   Printf.sprintf
-    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"seeds\":%s,\"raw\":%s,\"graph\":%s}"
+    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"seeds\":%s,\"raw\":%s,\"graph\":%s%s}"
     analysis_ms checks diagnostics
     (json_list statement_json stmt_positions)
     (json_list (procedure_json program (returns_value result)) header_positions)
     (nodes_json result graph (context_key contexts stmt_positions))
     (seeds_json program result graph)
     raw (graph_json graph)
+    (match trace with
+    | Some text -> ",\"trace\":" ^ json_string text
+    | None -> "")
