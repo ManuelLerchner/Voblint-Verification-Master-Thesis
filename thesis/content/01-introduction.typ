@@ -445,8 +445,7 @@ answers one of the questions of @sec:rqs.
   collections together equal the context-free collection
   (#isathm("node_collect_eq_Union_activation_collect"), @sec:consequences).
 - _Compositional soundness._ Domain, context policy and solver are verified
-  separately. A numeric domain proves certificates about its primitive
-  operations only, and its transfer functions, with the executable versions
+  separately. A numeric domain proves only its primitives sound, and its transfer functions, with the executable versions
   the analyzer runs, are derived from them and proved sound once
   (#isalocale("sound_nonrelational_ops")). One theorem discharges the coverage contract for every policy
   that proves two facts about the contexts it chooses for calls, in every
@@ -466,7 +465,7 @@ answers one of the questions of @sec:rqs.
   (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-rq4).
 
 The solver, side-effecting constraint systems, local traces, Goblint's
-analysis architecture and the derivation of transfer functions from certified
+analysis architecture and the derivation of transfer functions from sound
 value operations @nipkow14 come from prior work. @sec:where-voblint-sits lists what
 is new and compares each claim with the closest existing result. The thesis
 claims no verified C frontend, heap analysis, completeness, general termination

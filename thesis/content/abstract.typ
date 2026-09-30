@@ -53,7 +53,7 @@ per-context sets of stores together contain every reachable store.
 
 Each domain, each context policy and the solver prove their own obligations,
 and one theorem combines them for every configuration. A numeric domain
-supplies only certified primitive operations, from which its transfer
+supplies only primitives proved sound, from which its transfer
 functions are derived generically, following Nipkow and Klein @nipkow14. Any
 other analysis proves its operations sound against every sound answer to its
 queries, obligations that name no other analysis, context policy or solver.

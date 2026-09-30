@@ -211,9 +211,9 @@ independently? They do: each proves facts that mention none of the others, and
 one composition theorem covers every configuration.
 
 _Evidence: machine-checked._ A non-relational domain supplies one record of
-primitive operations, #isatype("nonrelational_ops"): its evaluator, comparison
+primitives, #isatype("nonrelational_ops"): its evaluator, comparison
 queries, refinement operations, `min` and `max`, and whole-value element
-(@sec:instances-supply). Its certificate #isalocale("sound_nonrelational_ops")
+(@sec:instances-supply). Its soundness locale #isalocale("sound_nonrelational_ops")
 states facts about integers and stores, none of which mentions a context, a
 routing policy or a solver. The guard, the check classifier, the transfer
 functions and procedure entry are derived from the record once for every
@@ -221,7 +221,7 @@ domain, and #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges
 every obligation the executed analysis places on the domain. A domain's
 generated registration adds only the premises that belong to the routing
 policy, the solver and the initial state. The numeric domains therefore differ
-in their primitive records and certificates alone. A relational analysis enters
+in their primitives and the proofs of their soundness alone. A relational analysis enters
 at the next boundary, as a local specification that satisfies
 #isaconst("sound_local_spec"), from which generic results derive the analysis
 soundness contract #isalocale("analysis_contract") (@ch:cooperation). The routing

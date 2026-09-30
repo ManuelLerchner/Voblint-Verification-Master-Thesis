@@ -397,9 +397,9 @@ specification (@sec:coop-local-spec). The laws mention no other analysis. Its
 field, the lens and the code that reads its answers are generated from the analysis
 manifest (@ch:tooling).
 
-A non-relational numeric domain never states these laws itself. It certifies
-its primitive operations once (#isalocale("sound_nonrelational_ops"),
-@sec:instances-supply). From that certificate the framework proves the
+A non-relational numeric domain never states these laws itself. It proves
+its primitives sound once (#isalocale("sound_nonrelational_ops"),
+@sec:instances-supply). From that proof the framework proves the
 domain's executable analysis #isaconst("exec_local_spec") a sound
 local specification (#isathm("sound_nonrelational_ops.dg_analysis_execI")),
 and #isathm("ask_assign_sound") keeps it sound under the wrapper. The domain's
@@ -440,8 +440,12 @@ contract.
 #figure(
   diagram(
     spacing: (26mm, 6mm),
-    _cbox((0, 0), <c-prim>, [primitive operations \ #isatype("nonrelational_ops")]),
-    _cbox((0, 1), <c-cert>, [certificate, once per domain \ #isalocale("sound_nonrelational_ops")]),
+    _cbox((0, 0), <c-prim>, [primitives \ #isatype("nonrelational_ops")]),
+    _cbox(
+      (0, 1),
+      <c-sound>,
+      [soundness locale, once per domain \ #isalocale("sound_nonrelational_ops")],
+    ),
     _cbox((0, 2), <c-rules>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
     _cbox((0, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
     _cbox((0, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
@@ -453,14 +457,14 @@ contract.
     ),
     edge(
       <c-prim>,
-      <c-cert>,
+      <c-sound>,
       "->",
       stroke: 0.6pt + vb.neutral,
       label: _clab[one interpretation per domain],
       label-side: left,
     ),
     edge(
-      <c-cert>,
+      <c-sound>,
       <c-rules>,
       "->",
       stroke: 0.6pt + vb.neutral,
@@ -505,7 +509,7 @@ contract.
   caption: [How the analyses of this thesis reach the analysis soundness
     contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
-    certifies its record of primitive operations once, which yields one rule
+    proves its primitives sound once, which yields one rule
     per operation; these rules make its executed local specification sound.
     The order analysis is a sound local specification by its own proof. Every
     sound local specification meets the contract through

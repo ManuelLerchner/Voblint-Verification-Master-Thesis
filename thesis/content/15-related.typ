@@ -95,7 +95,7 @@ the domain supplies abstract operations and inverse operations with their
 soundness laws, and the interpreter derives forward evaluation, the backward
 filtering of guards and the step of each command generically
 @nipkow14[Sects. 13.5--13.7] #_todo[check locator.]. Voblint's non-relational domains follow this
-pattern. Each supplies one record of primitive operations
+pattern. Each supplies one record of primitives
 (#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
 derives the transfer, branch, entry and check classifier from it and proves
 them sound once (@sec:instances-supply). Voblint keeps the separation between collecting semantics and
@@ -124,7 +124,7 @@ the abstract semantics, parameterized over an arrow-based interface, and reduce
 its soundness to lemmas about the two instances of that interface.
 #cite(<darais15>, form: "prose") make context, path and heap sensitivity monad
 transformers that are proved sound once, on paper, and composed into an
-analyzer. In Voblint, the certificates of a non-relational domain play a
+analyzer. In Voblint, the soundness proofs of a non-relational domain's primitives play a
 similar role for the generic transfer builder, which follows the design of
 Nipkow and Klein. The analysis
 specification it yields instantiates the equation generator of @ch:equations,
@@ -473,7 +473,7 @@ rules come from #cite(<tilscher26>, form: "prose"), the rules from
 #cite(<stemmler25>, form: "prose"), side-effecting constraint systems from
 #cite(<apinis12>, form: "prose"), and the local/global analysis architecture
 from Goblint. Widening, narrowing and the reduced product are standard
-@cousot77 @cousot79. Deriving forward and backward transfer from certified
+@cousot77 @cousot79. Deriving forward and backward transfer from sound
 value operations follows the generic abstract interpreter of Nipkow and Klein
 @nipkow14[Sects. 13.5--13.7]. The activation traces adapt the local traces of
 @schwarz21 to procedure activations, and the context-indexed collecting
@@ -494,8 +494,8 @@ this chapter, and none is a priority claim.
 - *Composition.* The certificate-based solver interface follows CompCert's. The
   three-way composition separates analysis, context policy and solver.
   @darais15 separate sensitivities as monad transformers, proved on paper, which
-  is a different split. From one certified
-  operation bundle, the abstract transfer and the executable transfer the
+  is a different split. From one record of
+  primitives proved sound, the abstract transfer and the executable transfer the
   analyzer runs are derived together and proved to agree on every live store
   (#isathm("sound_nonrelational_ops.tf_st_for_commute")), and one rule
   registers the domain with #isalocale("dg_analysis_exec")

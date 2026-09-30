@@ -47,7 +47,7 @@ integer domains. Goblint ships Sign only as a tutorial analysis
 
 What must a new numeric domain prove before the source-level theorem covers
 it? It supplies the record #isatype("nonrelational_ops") of
-@sec:domain-contract and proves one certificate about it. @fig:gamma shows one
+@sec:domain-contract and proves it sound. @fig:gamma shows one
 value of each carrier and the integers it denotes.
 
 #figure(
@@ -93,7 +93,7 @@ value of each carrier and the integers it denotes.
     of its components' meanings, here ${1, 5, 9}$.],
 ) <fig:gamma>
 
-The domain proves one certificate about its record,
+The domain proves its primitives sound by interpreting the soundness locale
 #isalocale("sound_nonrelational_ops"), whose parts @fig:domain-carrier draws:
 the refinement operations form a backward domain whose intersection lies below
 both operands (#isalocale("sound_refinement")), the queries are sound checks
@@ -105,11 +105,11 @@ executable versions. The abstract and executable versions are
 computed from the same primitives and agree on every live store
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
 #isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
-transfers from certified value operations follows Nipkow and Klein
+transfers from sound value operations follows Nipkow and Klein
 @nipkow14[Sect. 13.5, 13.7]. TODO: check Nipkow and Klein §13.6 before
 calling the executable counterpart new. @fig:instance-chain shows the chain.
 
-The certificate makes the domain a sound field of the combined state of
+This soundness proof makes the domain a sound field of the combined state of
 @ch:cooperation. For a numeric domain, the locale #isalocale("dg_analysis_exec")
 derives the contracts of the analysis locale #isalocale("dg_analysis")
 (@sec:cert-param) that concern the component from that proof, and
@@ -146,8 +146,8 @@ facts for that component and its initial state.
         #note[evaluator, queries, refinement operations, `min`, `max`, top]]),
       step(
         (1, 1),
-        <ip-cert>,
-        [certificate #isalocale("sound_nonrelational_ops") \
+        <ip-sound>,
+        [soundness locale #isalocale("sound_nonrelational_ops") \
           #note[optionally #isalocale("mono_nonrelational_ops")]],
         color: vb.proved,
       ),
@@ -157,15 +157,15 @@ facts for that component and its initial state.
         (1, 3),
         <ip-reg>,
         [registration #isalocale("dg_analysis_exec") \
-          #note[from the certificate and six obligations]],
+          #note[from the soundness locale and six obligations]],
         color: vb.proved,
       ),
       step((1, 4), <ip-field>, [sound local specification \
         #note[one field of the combined state]]),
       step((2.6, 4), <ip-order>, [order analysis \ #isaconst("order_spec")]),
-      arrow(<ip-ops>, <ip-cert>),
-      arrow(<ip-cert>, <ip-abs>, label: lab[derives], label-side: right),
-      arrow(<ip-cert>, <ip-exec>, label: lab[derives], label-side: left),
+      arrow(<ip-ops>, <ip-sound>),
+      arrow(<ip-sound>, <ip-abs>, label: lab[derives], label-side: right),
+      arrow(<ip-sound>, <ip-exec>, label: lab[derives], label-side: left),
       edge(
         <ip-abs>,
         <ip-exec>,
@@ -438,7 +438,7 @@ only the vendored least-solution theorem, whose hypotheses no shipped analysis
 discharges.
 
 Five domains prove the laws of @ch:domains with facts about integers alone.
-Each supplies one operation record and proves one certificate about it, and
+Each supplies its primitives and proves them sound, and
 its generated registration discharges the rest (@sec:instances-supply). The source-level theorem covers it as a field of the combined
 state under every context policy (#isathm("run_voblint_certified_source_sound")). The instances show that the interface admits
 the identity for any inverse operator (Sign and Interval for arithmetic, Parity

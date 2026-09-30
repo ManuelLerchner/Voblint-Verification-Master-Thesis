@@ -170,7 +170,7 @@ by hand (@sec:pipeline).
       loc(
         (2.4, 3),
         isalocale("sound_nonrelational_ops"),
-        [a domain's certified \ operation bundle],
+        [a domain's primitives, \ proved sound],
         color: vb.proved,
       ),
       loc((0.4, 3), isaconst("order_spec"), [the order analysis's \ local specification]),
@@ -184,7 +184,7 @@ by hand (@sec:pipeline).
         (2.4, 2),
         "->",
         stroke: 0.6pt + vb.muted,
-        label: lab[certificate discharges contracts],
+        label: lab[soundness discharges contracts],
         label-side: right,
       ),
       edge(

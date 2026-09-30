@@ -67,8 +67,9 @@ composition of @sec:eq-discharge to carry over to a
 language whose activations do not interfere, with the step
 functions and every proof that unfolds them redone. Machine integers fit this
 case: they change the step functions, the generic derivation in
-#isalocale("sound_nonrelational_ops") and each domain's certificates for its
-primitive operations, while routing and certificate do not mention arithmetic. The numeric domains
+#isalocale("sound_nonrelational_ops") and each domain's soundness proofs for
+its primitives, while routing and the solver certificate do not mention
+arithmetic. The numeric domains
 themselves would need wrap-around-aware variants, since classical numeric
 domains describe ideal integers @mine13. A possible overflow could then be
 reported like the arithmetic diagnostics of @sec:verdicts. A C-like treatment of
@@ -247,7 +248,7 @@ off each activation into the activation collecting semantics. Context-indexed
 equations with routed calls cover it at every context, provided the analysis and the context policy meet their
 separate obligations. The solver enters only through a post-solution
 certificate, and the source-level theorem reads the verdicts off its result. A
-non-relational domain supplies only certified primitive operations, from which
+non-relational domain supplies only primitives proved sound, from which
 a generic builder in the style of Nipkow and Klein derives its analysis.
 Analyses that answer one another's queries combine under the same theorem, each
 proving one obligation that names no partner.

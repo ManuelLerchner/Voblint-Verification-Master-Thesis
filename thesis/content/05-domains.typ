@@ -1178,7 +1178,7 @@ _primitives_ describe the program's operations: evaluation, the truth test and
 `min` and `max` (@sec:domain-forward), the two queries (@sec:queries), and the
 inverse operators and the intersection (@sec:branches). A non-relational
 domain hands its primitives over as one record, #isatype("nonrelational_ops"),
-and certifies them once by interpreting #isalocale("sound_nonrelational_ops")
+and proves them sound once by interpreting #isalocale("sound_nonrelational_ops")
 (@fig:domain-carrier), from which the framework derives every transfer
 (@sec:instances-supply). For Interval, the record #isaconst("ivl_ops")
 collects the operations above. Its one interpretation proves the monotone form
@@ -1207,7 +1207,7 @@ anyway.
   kind: image,
   placement: top,
   caption: [What a non-relational domain supplies over its carrier type
-    #raw("'a"), down to the certificate #isalocale("sound_nonrelational_ops")
+    #raw("'a"), down to the soundness locale #isalocale("sound_nonrelational_ops")
     an analysis interprets. Each class (solid) or locale (dashed) lists the
     operations and laws it declares, which the declarations below it inherit.
     Solid arrows point to what a declaration extends, dashed ones to the class
