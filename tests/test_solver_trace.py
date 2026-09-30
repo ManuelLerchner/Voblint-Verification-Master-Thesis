@@ -1,6 +1,7 @@
-"""The solver tracer (`voblint --trace`): hooks, option handling, output
-separation, the order of events on the context-sensitive running example, and
-its whole compact, verbose and JSON Lines traces against tests/solver-trace/.
+"""The solver tracer (`voblint --trace`): the trace calls in the exported
+module, option handling, output separation, the order of events on the
+context-sensitive running example, the Goblint-style verbose form, and the whole
+compact, verbose and JSON Lines traces against tests/solver-trace/.
 
 Run after `pixi run cli-build`; a missing executable is a failed prerequisite.
 """
@@ -15,11 +16,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = Path(os.environ.get("VOBLINT_BIN", REPO_ROOT / "cli/voblint"))
-PATCHER = Path(
-    os.environ.get(
-        "VOBLINT_PATCHER", REPO_ROOT / "_build/default/cli/patch_generated.exe"
-    )
-)
 GENERATED = REPO_ROOT / "codegen/generated/ml/Voblint_CLI.ml"
 PROGRAM = "docs/readme-figures/contexts.vimp"
 ARGS = ["--analysis", "interval", "--globals", "warrow", "--context", "entry-state"]
@@ -107,32 +103,69 @@ def test_expected_trace(name, trace_args):
     assert actual == expected.read_text()
 
 
-def test_verbose_indents_by_call_depth():
-    """A query's SOLVE sits one level below the querying unknown; a loop head
-    that destabilized itself is solved again at its own level."""
-    text = voblint(
+GOBLINT_LINE = re.compile(r"^( *)%%% (\w+): (.*)$")
+
+
+def verbose_lines(*args):
+    """(indent, subsystem, message) per trace line; a message's continuation
+    lines start at column 0, as Goblint's printtrace writes them."""
+    text = voblint(*args).stderr
+    return [
+        (len(m[1]), m[2], m[3])
+        for m in (GOBLINT_LINE.match(line) for line in text.splitlines())
+        if m
+    ]
+
+
+def test_verbose_is_goblint_trace_format():
+    lines = verbose_lines(*ARGS, "--trace", "--verbose", PROGRAM)
+    assert lines[0] == (0, "multivar", "solving for (exit_main, root)")
+    assert lines[1][1:] == (
+        "iter",
+        "begin iterate (exit_main, root), called: true, stable: false, wpoint: false",
+    )
+    systems = {sys for _, sys, _ in lines}
+    assert {"solver_query", "answer", "iter", "eq", "side", "destab"} <= systems
+
+
+def test_verbose_indents_between_query_and_answer():
+    """Entering a query indents after its line, like Goblint's tracei; the
+    answer is printed at the inner level and outdents, like traceu."""
+    lines = verbose_lines(
         "--analysis",
         "interval",
         "--trace",
         "--verbose",
         "docs/readme-figures/while-loop.vimp",
-    ).stderr
-    steps = [
-        (len(indent) // 2, label, subject.split(" (readers")[0])
-        for indent, label, subject in re.findall(
-            r"^\[\d{3}\] ( *)(\S+) +(.*)$", text, re.M
-        )
-    ]
-    assert steps[0] == (0, "SOLVE", "(exit_main, unit)")
-    pairs = list(zip(steps, steps[1:], strict=False))
-    queries = [(a, b) for a, b in pairs if a[1] == "QUERY-L" and b[1] == "SOLVE"]
-    again = [
-        (a, b)
-        for a, b in pairs
-        if a[1] == "UPDATE-L" and b[1] == "RESOLVE" and a[2] == b[2]
-    ]
-    assert queries and all(b[0] == a[0] + 1 for a, b in queries)
-    assert again and all(b[0] == a[0] for a, b in again)
+    )
+    depth = 0
+    for indent, sys, msg in lines:
+        assert indent == depth, (indent, sys, msg)
+        if sys == "solver_query":
+            depth += 2
+        elif sys == "answer":
+            depth -= 2
+    assert depth == 0
+
+
+def test_trace_sys_selects_subsystems():
+    lines = verbose_lines(*ARGS, "--trace-sys", "iter,side", PROGRAM)
+    assert lines and {sys for _, sys, _ in lines} == {"iter", "side"}
+    # An unselected subsystem changes no indentation, as in Goblint.
+    assert {indent for indent, _, _ in lines} == {0}
+
+
+def test_trace_sys_rejects_unknown_subsystem():
+    assert VOBLINT.is_file(), "cli/voblint not built -- run `pixi run cli-build`"
+    proc = subprocess.run(
+        [str(VOBLINT), *ARGS, "--trace-sys", "sol2", PROGRAM],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=30,
+    )
+    assert proc.returncode == 1
+    assert "unknown --trace-sys subsystem: sol2" in proc.stderr
 
 
 def test_deterministic():
@@ -208,29 +241,13 @@ def test_compact_names_the_story():
     assert "Trace complete:" in text
 
 
-def test_patch_applies_to_generated_module():
-    assert PATCHER.is_file(), (
-        "patch_generated.exe not built -- run `pixi run cli-build`"
-    )
-    proc = subprocess.run(
-        [str(PATCHER), str(GENERATED)], capture_output=True, text=True, timeout=60
-    )
-    assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.count("Solver_trace_hook.") >= 12
-
-
-def test_patch_fails_loudly_on_missing_anchor(tmp_path):
-    assert PATCHER.is_file(), (
-        "patch_generated.exe not built -- run `pixi run cli-build`"
-    )
-    broken = tmp_path / "Voblint_CLI.ml"
-    broken.write_text(
-        GENERATED.read_text().replace(
-            "E (x, (QueryG (y, g), (sides_a_c_c,", "E (x, (QueryG (y, g), (sides,"
-        )
-    )
-    proc = subprocess.run(
-        [str(PATCHER), str(broken)], capture_output=True, text=True, timeout=60
-    )
-    assert proc.returncode == 2
-    assert 'the anchor for "global query" occurs 0 times' in proc.stderr
+def test_generated_module_carries_trace_calls():
+    """The trace calls come from the exported code equations: the solver's
+    recursion, the solve, destabilization, routing and the run itself."""
+    text = GENERATED.read_text()
+    assert "Solver_trace_hook.emit" in text
+    solver = text[text.index("let rec tD_side_rule_Interp_solve_rec_c") :]
+    solver = solver[: solver.index(";;")]
+    assert solver.count('Solver_trace_hook.emit "solver"') >= 15
+    for channel in ('"solver"', '"route"', '"run"'):
+        assert f"Solver_trace_hook.emit {channel}" in text

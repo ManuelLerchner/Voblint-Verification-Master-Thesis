@@ -26,11 +26,13 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int|parity|congruence|order [--context \
+  "\
    none|entry-state|call-string] [--context-depth K] [--globals \
-   join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
-  \  [--trace] [--verbose|--compact] [--format text|jsonl] [--output FILE]\n\
+   join|per-origin|warrow|warrow-per-origin] [--int-refinement \
+   never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+  \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
+   text|jsonl]\n\
+  \  [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\n\
@@ -136,17 +138,24 @@ let usage =
   \  --compact                  Trace per call: routing, the result query,\n\
   \                             seed reads, flushed publications, restarts\n\
   \                             and returns (default).\n\
-  \  --verbose                  Trace every solver step: solve, local and\n\
-  \                             global query, side effect, answer, update.\n\
+  \  --verbose                  Trace every solver step, one line per step\n\
+  \                             in the form of Goblint's --trace output\n\
+  \                             ('%%% iter: begin iterate ...').\n\
+  \  --trace-sys SYS[,...]      Print only these subsystems of the verbose\n\
+  \                             trace, as Goblint's --trace SYS selects them:\n\
+  \                             multivar, solver_query, wpoint, iter, infl,\n\
+  \                             answer, eq, sol, update, side, destab, and\n\
+  \                             Voblint's own rhs and route. Repeatable;\n\
+  \                             implies --trace --verbose.\n\
   \  --format text|jsonl        Trace as text (default) or JSON Lines.\n\
   \  --output FILE              Write the trace to FILE instead of stderr.\n\
-  \                             Each of --compact, --verbose, --format and\n\
-  \                             --output implies --trace.\n\
+  \                             Each of --compact, --verbose, --trace-sys,\n\
+  \                             --format and --output implies --trace.\n\
   \  --help                     Show this message.\n\n\
    Trust boundary: results are sound for the program this file's unverified\n\
   \  parser actually built, not a guarantee that the parser read your source\n\
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
-  \  machine-checked Isabelle/HOL proof."
+  \ "
 
 module C = Voblint_CLI.Generated
 module A = Result_text
@@ -422,6 +431,7 @@ let () =
   let trace = ref false in
   let trace_verbose = ref false in
   let trace_format = ref Solver_trace.Text in
+  let trace_systems = ref [] in
   let trace_output = ref None in
   let globals_name = ref "warrow" in
   let file = ref None in
@@ -513,6 +523,21 @@ let () =
     | "--compact" :: rest ->
         trace := true;
         trace_verbose := false;
+        parse_args rest
+    | "--trace-sys" :: v :: rest ->
+        trace := true;
+        trace_verbose := true;
+        List.iter
+          (fun s ->
+            if not (List.mem s Solver_trace.subsystems) then begin
+              prerr_endline
+                ("unknown --trace-sys subsystem: " ^ s ^ " (known: "
+                ^ String.concat ", " Solver_trace.subsystems
+                ^ ")");
+              exit 1
+            end;
+            trace_systems := s :: !trace_systems)
+          (String.split_on_char ',' v);
         parse_args rest
     | "--format" :: v :: rest ->
         trace := true;
@@ -656,7 +681,7 @@ let () =
   let emit_trace result =
     let write out =
       Solver_trace.emit ~out:(output_string out) ~format:!trace_format
-        ~verbose:!trace_verbose
+        ~verbose:!trace_verbose ~systems:!trace_systems
         ~analyses:(List.map A.analysis_label domains)
         ~context:(Solver_trace.context_name context)
         ~globals:!globals_name ~program:path result;
