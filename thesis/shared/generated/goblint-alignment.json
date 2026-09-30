@@ -104,7 +104,7 @@
         "refs": [
           {
             "kind": "locale",
-            "name": "routed_context_base_hetero"
+            "name": "routed_context"
           }
         ]
       },
@@ -140,7 +140,7 @@
         "file": "src/solver/td3.ml"
       },
       "voblint": {
-        "label": "Four global update rules",
+        "label": "Five global update rules",
         "refs": [
           {
             "kind": "type",
@@ -335,7 +335,7 @@
     },
     {
       "kind": "locale",
-      "name": "routed_context_base_hetero"
+      "name": "routed_context"
     },
     {
       "kind": "const",
