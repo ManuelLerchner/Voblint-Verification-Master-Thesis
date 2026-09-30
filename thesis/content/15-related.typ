@@ -102,11 +102,12 @@ them sound once (@sec:instances-supply). Voblint keeps the separation between co
 abstraction. Its collecting semantics ranges over activation traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
 which caller resumes. Their executable abstract state lists some variables and
-reads every other variable as top. Voblint's executable state also lists only
+reads every other variable as top; they call the map from such a list to the
+function it represents `fun_rep` @nipkow14[§13.6]. Voblint's executable state also lists only
 some names, but it needs two defaults, because the states it stores fill
 unlisted names in two ways: the entry state reads every unlisted global as
 zero, and the global half of a published state reads every local as bottom
-(@sec:readback).
+(@sec:represented-function).
 
 IMP2 @lammich19imp2, an Isabelle language with procedures, did not fit: its
 semantics is deterministic, its procedures take no arguments and return no

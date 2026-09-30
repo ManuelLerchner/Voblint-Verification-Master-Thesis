@@ -18,7 +18,7 @@ this set is finite and that a finished run of the executable solver lies in the
 domain on which the certificate holds. The proof uses nothing else about the
 solver, so its algorithm and its update rule (@sec:update-rules) can change
 without touching the proof. The solver runs on an executable representation of
-abstract states, and @sec:readback shows that this representation computes the
+abstract states, and @sec:represented-function shows that this representation computes the
 same values as the functions over variable names the analyses are specified
 with. Termination of the solve is a premise, checked per program
 (@sec:termination).
@@ -28,7 +28,7 @@ the executable solver returns for a program, the valuation it returns covers
 every store that reaches each solved unknown in its context. The chapter
 isolates the certificate (@sec:certificate), fixes the two choices needed to
 run the solver, an update rule (@sec:update-rules) and an executable state
-representation (@sec:readback), and accounts for the remaining termination
+representation (@sec:represented-function), and accounts for the remaining termination
 premise (@sec:termination).
 
 == The certificate between solver and semantics <sec:certificate>
@@ -292,7 +292,7 @@ equations.
 Running the solver needs two further choices, neither of which changes the
 certificate: how side contributions update global unknowns
 (@sec:update-rules), and how abstract states are represented as executable
-values (@sec:readback).
+values (@sec:represented-function).
 
 == One proof for five update rules <sec:update-rules>
 
@@ -400,10 +400,10 @@ meets the update-rule interface, splits on the rule and cites the five vendored
 interpretations.
 
 The update rule fixes how values are combined. The values themselves still need
-an executable representation, which @sec:readback supplies.
+an executable representation, which @sec:represented-function supplies.
 
 
-== Executable abstract states <sec:readback>
+== Executable abstract states <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
 $"Var" -> A$. The relational order analysis keeps its own state type, a set of
@@ -461,14 +461,13 @@ the quotient once it is shown to give equal results on equal descriptions.
 Such an element is used like a map. The lookup $d⟨l⟩$
 (#isaconst("default_st_get")) returns the override of location $l$, or the
 default for its tag if there is none; the update $d⟨l := a⟩$
-(#isaconst("default_st_set")) records an override. Readback $rho_(cal(G))$
-(#isaconst("default_st_to_fun")) is lookup on every variable: it turns a
-carrier state into the total function on variable names that the
-specification uses. It looks each name $x$ up at its location $ell(x)$, the
+(#isaconst("default_st_set")) records an override. The function a state represents, $rho_(cal(G))(d)$
+(#isaconst("default_st_to_fun")), is lookup on every variable: the total
+function on variable names that the specification uses. It looks each name $x$ up at its location $ell(x)$, the
 local or global location that the program's global-variable classifier
 $cal(G)$ (@sec:pstep) assigns to $x$.
 
-A carrier state means what its readback means. @sec:nonrel-state concretizes a
+A carrier state means what its represented function means. @sec:nonrel-state concretizes a
 function state $f$ to the stores whose every variable lies in the
 concretization of its value, $sem(f) = setcomp(s, forall x. s(x) in conc(f(x)))$
 (#isaconst("gamma_state")). The carrier's concretization
@@ -477,8 +476,8 @@ $ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)�
 It depends on $cal(G)$, which decides where each name's value is stored.
 Within the refinement locale #isalocale("dg_domain_exec"), which fixes
 $cal(G)$, Isabelle writes it $sem(d)$ like every other concretization of an
-abstract state. Semantic statements about carrier states use it; readback
-relates carrier operations to their counterparts on functions. The solver
+abstract state. Semantic statements about carrier states use it; the represented
+function relates carrier operations to their counterparts on functions. The solver
 never computes $sem(d)$; it uses only the executable lattice operations.
 
 The solver needs a lattice of states: bottom to start every unknown, order and
@@ -619,8 +618,7 @@ The figure shows two ways in which states can be alike. The quotient
 identifies representations that answer every lookup alike, such as
 $⟪ltop, "even", []⟫$ and $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Distinct carrier
 elements can still denote the same stores: every node with a #lbot component
-has $sem(d) = emptyset$. These nodes read back to distinct function
-states, so the quotient keeps them apart, and a higher node denotes at least
+has $sem(d) = emptyset$. These nodes represent distinct functions, so the quotient keeps them apart, and a higher node denotes at least
 the stores of a lower one.
 
 Each operation is computed with the value domain's operation on the two
@@ -633,13 +631,14 @@ $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and
 state the same for bottom, order, widening and narrowing. Point update is not a
 lattice operation; the transfer functions use it for assignments.
 
-The transfer functions must commute with readback,
+The transfer functions must commute with taking the represented function,
 $ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
 and since $sem(d) = sem(rho_(cal(G))(d))$, the soundness facts of
 @ch:analysis-interface for the abstract operation then transport to the
 executable one. The locale #isalocale("dg_analysis_exec") states this
-commutation as its readback contract, for the transfer on nonempty states and
-for procedure entry. For a certified operation bundle both hold without a
+commutation as its commute contract, stated through the represented
+function, for the transfer on nonempty states and
+for procedure entry. For primitives proved sound both hold without a
 per-domain proof, because the abstract and executable steps are derived from
 the same operations (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
 #isathm("sound_nonrelational_ops.enter_st_for_commute"),
@@ -649,7 +648,7 @@ Emptiness, on which `DEAD` rests, is a condition over all names (@ch:domains).
 Unlike the lattice operations, it is not decided by the listed overrides
 alone: an unlisted variable can make the state empty through its default.
 The carrier decides it with a finite test. The test inspects the local
-default, the overrides that readback reads, and each declared global. The
+default, the overrides that the represented function reads, and each declared global. The
 globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
 #isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
@@ -659,9 +658,9 @@ global-variable classifier.
 
 The carrier uses the equivalence in both directions. The specification
 collapses exactly the empty states to #lbot, and because the test is exact the
-executable collapse commutes with readback. A state the test keeps is nonempty
+executable collapse commutes with taking the represented function. A state the test keeps is nonempty
 (#isaconst("live_default_st")), which is where the numeric transfer
-commutes with readback.
+commutes with taking the represented function.
 
 The solver can now compute every operation its interface requires on finite
 carrier values, with the update rule the analyzer selects. The solve is thus

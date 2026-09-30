@@ -726,7 +726,7 @@ describes (#isathm("gamma_state_normalize_lift")), so it cannot make the
 analysis unsound. The construction needs only an emptiness test on whole
 states. For a pointwise state, the test asks whether some variable is empty.
 The variable names form an infinite set, so the executable analyzer decides
-the test on a finite representation of the state (@sec:readback).
+the test on a finite representation of the state (@sec:represented-function).
 
 === A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 

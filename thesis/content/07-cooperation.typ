@@ -394,7 +394,7 @@ analysis likewise reads its verdict off the answer to a value query.
 
 A new analysis joins the combined state by satisfying the laws of its local
 specification (@sec:coop-local-spec). The laws mention no other analysis. Its
-field, the lens and the readback of its answers are generated from the analysis
+field, the lens and the code that reads its answers are generated from the analysis
 manifest (@ch:tooling).
 
 A non-relational numeric domain never states these laws itself. It certifies
