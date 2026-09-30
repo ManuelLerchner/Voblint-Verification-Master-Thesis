@@ -103,7 +103,9 @@ subprocess below), not new proof work.
 `--trace` writes the solver's steps to stderr, or to `--output FILE`. Standard
 output is byte-identical with and without it. `--compact` (the default) tells
 the interprocedural story per call; `--verbose` lists every step; `--format
-jsonl` is the machine-readable form.
+jsonl` is the machine-readable form. Each of `--compact`, `--verbose`,
+`--format` and `--output` implies `--trace`; none of these names is used by
+another option.
 
 ```text
 voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
@@ -112,10 +114,22 @@ voblint --analysis interval --context entry-state --trace docs/readme-figures/co
 The hooks are inserted at build time: `cli/trace/patch_generated.ml` copies
 the generated `Voblint_CLI.ml` into the build with guarded calls into
 `cli/trace/solver_trace_hook.ml`. Each patch names generated text that must
-occur exactly once, so a regeneration that moves one fails the build with the
-patch's name. Neither the Isabelle sources nor the export change, and no hook
-changes a computed value; the tracer is outside the proof like the rest of the
-CLI. With `--trace` off every hook is one branch on a reference.
+occur exactly once (a per-mode patch: once per context mode that uses it), so
+a regeneration that moves one fails the build with the patch's name. Neither
+the Isabelle sources nor the export change, and no hook changes a computed
+value; the tracer is outside the proof like the rest of the CLI. With
+`--trace` off every hook is one branch on a reference.
+
+The solver is polymorphic in its unknowns, so events hold them untyped. The
+patches also define, next to each generated global-unknown datatype
+(`global_unknown`, and `call_string_gk` under call strings), a decoder that
+matches its constructors, and install it where the context mode fixes the
+type. The renderer tells an activation seed from the analysis global through
+that decoder only.
+
+`tests/solver-trace/` holds the whole compact and JSON Lines traces of the
+command above; `pixi run solver-trace-check` compares them, and
+`UPDATE_TRACE_EXPECT=1` rewrites them from a live run.
 
 Events are recorded during the solve and rendered after `run_voblint`
 returns, inside the contained child. A run killed by `--timeout` leaves no

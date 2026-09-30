@@ -1,5 +1,6 @@
-"""The solver tracer (`voblint --trace`): hooks, output separation, and the
-order of events on the context-sensitive running example.
+"""The solver tracer (`voblint --trace`): hooks, option handling, output
+separation, the order of events on the context-sensitive running example, and
+its whole compact and JSON Lines traces against tests/solver-trace/.
 
 Run after `pixi run cli-build`; a missing executable is a failed prerequisite.
 """
@@ -21,6 +22,7 @@ PATCHER = Path(
 GENERATED = REPO_ROOT / "codegen/generated/ml/Voblint_CLI.ml"
 PROGRAM = "docs/readme-figures/contexts.vimp"
 ARGS = ["--analysis", "interval", "--globals", "warrow", "--context", "entry-state"]
+EXPECT_DIR = REPO_ROOT / "tests/solver-trace"
 
 
 def voblint(*args):
@@ -67,6 +69,37 @@ def test_output_file(tmp_path):
     proc = voblint(*ARGS, "--trace", "--format", "jsonl", "--output", str(out), PROGRAM)
     assert proc.stderr == ""
     assert out.read_text().startswith('{"event":"run","schema":1')
+
+
+@pytest.mark.parametrize("flag", [["--compact"], ["--verbose"]])
+def test_style_implies_trace(flag):
+    assert voblint(*ARGS, *flag, PROGRAM).stderr.startswith("Voblint trace\n")
+
+
+def test_format_implies_trace():
+    first = voblint(*ARGS, "--format", "jsonl", PROGRAM).stderr.splitlines()[0]
+    assert json.loads(first)["event"] == "run"
+
+
+def test_output_implies_trace(tmp_path):
+    out = tmp_path / "trace.txt"
+    proc = voblint(*ARGS, "--output", str(out), PROGRAM)
+    assert proc.stderr == ""
+    assert out.read_text().startswith("Voblint trace\n")
+
+
+@pytest.mark.parametrize(
+    "name, trace_args",
+    [("contexts.compact", ["--trace"]), ("contexts.jsonl", ["--format", "jsonl"])],
+)
+def test_expected_trace(name, trace_args):
+    """Whole-trace expectations. UPDATE_TRACE_EXPECT=1 rewrites them from a live
+    run; review the diff before committing."""
+    expected = EXPECT_DIR / f"{name}.expected"
+    actual = voblint(*ARGS, *trace_args, PROGRAM).stderr
+    if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
+        expected.write_text(actual)
+    assert actual == expected.read_text()
 
 
 def test_deterministic():

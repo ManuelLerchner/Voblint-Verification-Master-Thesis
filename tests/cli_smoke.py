@@ -466,6 +466,12 @@ CASES = [
         0,
         "Trace complete:",
     ),
+    (
+        "--verbose implies --trace",
+        ["--analysis", "sign", "--verbose", SANITY_FILE],
+        0,
+        "Trace complete:",
+    ),
 ]
 
 

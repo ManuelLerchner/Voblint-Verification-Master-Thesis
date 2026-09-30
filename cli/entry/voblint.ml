@@ -30,7 +30,7 @@ let usage =
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin] [--int-refinement \
    never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
-  \  [--trace [--verbose|--compact] [--format text|jsonl] [--output FILE]]\n\
+  \  [--trace] [--verbose|--compact] [--format text|jsonl] [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\n\
@@ -133,6 +133,8 @@ let usage =
   \                             global query, side effect, answer, update.\n\
   \  --format text|jsonl        Trace as text (default) or JSON Lines.\n\
   \  --output FILE              Write the trace to FILE instead of stderr.\n\
+  \                             Each of --compact, --verbose, --format and\n\
+  \                             --output implies --trace.\n\
   \  --help                     Show this message.\n\n\
    Trust boundary: results are sound for the program this file's unverified\n\
   \  parser actually built, not a guarantee that the parser read your source\n\
@@ -483,12 +485,15 @@ let () =
         trace := true;
         parse_args rest
     | "--verbose" :: rest ->
+        trace := true;
         trace_verbose := true;
         parse_args rest
     | "--compact" :: rest ->
+        trace := true;
         trace_verbose := false;
         parse_args rest
     | "--format" :: v :: rest ->
+        trace := true;
         (match v with
         | "text" -> trace_format := Solver_trace.Text
         | "jsonl" -> trace_format := Solver_trace.Jsonl
@@ -497,6 +502,7 @@ let () =
             exit 1);
         parse_args rest
     | "--output" :: v :: rest ->
+        trace := true;
         trace_output := Some v;
         parse_args rest
     | "--timeout" :: v :: rest ->
