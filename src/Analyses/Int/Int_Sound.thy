@@ -31,10 +31,8 @@ text \<open>
 \<close>
 
 lemma int_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_int_dom_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      default_st_to_fun_def default_st_to_fun_initial
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_int_dom_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial
       gamma_top [where 'a = int_dom, unfolded gamma_abs_int_dom_ext])
 
 end

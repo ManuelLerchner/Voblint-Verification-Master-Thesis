@@ -1138,9 +1138,7 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
       "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk>
          \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and bot_state_eq: "bot_state = bot"
-    and exec_init_sound:
-      "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+    and exec_init_sound: "\<And>\<G>. cinit_stores \<G> \<subseteq> default_st_gamma \<G> init_st"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
     "\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
@@ -1160,7 +1158,8 @@ proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intr
        (rule tf_commute, assumption,
         rule enter_commute,
         rule default_st_is_bot_for_iff[OF declared_global_iff])
-  show ?case by (rule dom.exec_spec_sound[OF tf_sound])
+  show ?case
+    by (rule dom.exec_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback])
 next
   case (EnterSingle p ci d)
   then show ?case by (simp add: dg_pipeline.entry_of_def)
@@ -1180,8 +1179,19 @@ next
     by (simp add: bot_state_eq is_empty_state_iff_gamma_state_empty[symmetric])
 next
   case (Init p) then show ?case
-    using exec_init_sound[of "declared_global p"] by simp
+    using exec_init_sound[of "declared_global p"] by (simp add: default_st_gamma_def)
 qed
+
+text \<open>
+  The component's soundness at the carrier's own concretization, which is
+  what a caller composing components on the carrier needs.
+\<close>
+
+lemma (in dg_analysis_exec) exec_comp_sound:
+  "sound_local_spec (declared_global p) (gamma_lift (default_st_gamma (declared_global p)))
+     (exec_spec (declared_global p) (default_st_is_bot_for (declared_global_vars p))
+        (tf_st (declared_global p)) (enter_st (declared_global p)))"
+  unfolding gamma_lift_default_st_gamma_readback by (rule comp_sound)
 
 text \<open>
   The state a call enters its callee with, at the executable component: the entry

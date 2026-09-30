@@ -93,6 +93,12 @@ locale dg_domain_exec =
       "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
 begin
 
+text \<open>With \<open>\<G>\<close> fixed, \<open>\<lbrakk>s\<rbrakk>\<close> is the carrier's concretization, for a plain and
+  for a lifted carrier state alike.\<close>
+
+adhoc_overloading gamma_S == "default_st_gamma \<G>"
+adhoc_overloading gamma_S == "gamma_lift (default_st_gamma \<G>)"
+
 abbreviation reader :: "'a default_st lifted \<Rightarrow> 'a abs_state lifted" where
   "reader \<equiv> map_lift (default_st_to_fun \<G>)"
 
@@ -215,8 +221,8 @@ subsection \<open>Soundness at the executable carrier, pulled back along the rea
 
 text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
-  \<open>'a abs_state lifted\<close>: with the concretization read through
-  \<^const>\<open>default_st_to_fun\<close>, the executable Base-style spec is itself a
+  \<open>'a abs_state lifted\<close>: with the carrier's own concretization
+  \<^const>\<open>default_st_gamma\<close>, the executable Base-style spec is itself a
   \<^locale>\<open>analysis_contract\<close>, and the field equations above are all that the proof
   needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
   concretization feeds it the solver's own table and never transports a solved
@@ -224,7 +230,7 @@ text \<open>
 \<close>
 
 definition gamma_exec :: "'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
-  "gamma_exec d g = \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
+  "gamma_exec d g = \<lbrakk>d\<rbrakk>"
 
 lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
@@ -238,18 +244,18 @@ text \<open>
 
 lemma entered_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and s: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
+    and s: "s \<in> \<lbrakk>d\<rbrakk>"
   shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
-  unfolding enter_lift_commute
-  by (rule transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty s])
+           \<in> \<lbrakk>transfer_lift empty_pred (enter_st ci) d\<rbrakk>"
+  using s unfolding gamma_lift_default_st_gamma_readback enter_lift_commute
+  by (intro transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty])
      (simp add: call_enter_CallEdge
        sound_nonrelational_transfer.tf_sound_enter_entry_for[OF tf_sound])
 
 theorem entry_pairs_cover_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and sin: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
-  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>reader d'\<rbrakk>\<^sub>\<bottom>) s
+    and sin: "s \<in> \<lbrakk>d\<rbrakk>"
+  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>d'\<rbrakk>) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (enter_st ci) d)]"
   by (rule entry_pairs_coverI
@@ -257,13 +263,14 @@ theorem entry_pairs_cover_st:
      (simp_all add: sin entered_st[OF tf_sound sin])
 
 text \<open>
-  The executable analysis as a component, read back through \<open>reader\<close>. The
+  The executable analysis as a component, sound for the carrier's
+  concretization. The proof reads each state back through \<open>reader\<close>; the
   contract below is its one-line consequence.
 \<close>
 
 theorem exec_spec_sound:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) (exec_spec \<G> empty_pred tf_st enter_st)"
+  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>) (exec_spec \<G> empty_pred tf_st enter_st)"
 proof -
   have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     for a d
@@ -290,8 +297,9 @@ proof -
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
     by (meson gamma_lift_mono gamma_state_mono map_lift_default_st_to_fun_mono)
   show ?thesis
-    unfolding sound_local_spec_def
-    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step] entered_st[OF tf_sound] comb
+    unfolding sound_local_spec_def gamma_lift_default_st_gamma_readback
+    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step]
+      entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback] comb
     by (auto simp: exec_spec_def)
 qed
 

@@ -223,19 +223,19 @@ fun local_spec_of ::
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot1 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot1 x))"
 | "part_gamma \<G> Interval_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot2 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot2 x))"
 | "part_gamma \<G> Parity_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot3 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot3 x))"
 | "part_gamma \<G> Int_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot4 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot4 x))"
 | "part_gamma \<G> Int_Once_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot5 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot5 x))"
 | "part_gamma \<G> Int_Never_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot6 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot6 x))"
 | "part_gamma \<G> Congruence_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot7 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot7 x))"
 | "part_gamma \<G> Order_Analysis =
      (\<lambda>x. \<lbrakk>(lift_get slot8 x)\<rbrakk>)"
 
@@ -429,13 +429,13 @@ lemma local_spec_of_sound:
   "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
      (local_spec_of (declared_global p) p a)"
   by (cases a; simp only: part_gamma.simps local_spec_of.simps;
-      rule field_component_sound[OF ask_assign_sound[OF sign_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF interval_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF parity_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_once_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_never_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF congruence_rule.comp_sound]]
+      rule field_component_sound[OF ask_assign_sound[OF sign_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF interval_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF parity_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_once_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_never_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF congruence_rule.exec_comp_sound]]
         field_component_sound[OF order_spec_sound];
       auto simp: less_eq_analysis_product_def)
 

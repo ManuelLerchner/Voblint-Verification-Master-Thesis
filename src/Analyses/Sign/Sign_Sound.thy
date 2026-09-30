@@ -55,7 +55,7 @@ subsection \<open>The concretization\<close>
 
 definition sign_conf_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st lifted \<Rightarrow> sign default_st lifted \<Rightarrow> store set" where
-  "sign_conf_gamma \<G> d g = \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>"
+  "sign_conf_gamma \<G> d g = gamma_lift (default_st_gamma \<G>) d"
 
 lemma sign_conf_gamma_Bot [simp]: "sign_conf_gamma \<G> Bot g = {}"
   by (simp add: sign_conf_gamma_def)
@@ -115,9 +115,7 @@ text \<open>
 \<close>
 
 lemma sign_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_sign_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      default_st_to_fun_def default_st_to_fun_initial)
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_sign_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 end

@@ -24,7 +24,7 @@ abbreviation twice_ctx_sg ::
   "twice_ctx_sg \<equiv> interval_es_rule.reader Globals_Warrow twice_gs twice_program"
 
 abbreviation twice_ctx_gamma :: "ivl default_st lifted \<Rightarrow> store set" where
-  "twice_ctx_gamma m \<equiv> \<lbrakk>map_lift (default_st_to_fun twice_gs) m\<rbrakk>\<^sub>\<bottom>"
+  "twice_ctx_gamma m \<equiv> gamma_lift (default_st_gamma twice_gs) m"
 
 text \<open>Context-sensitive source soundness.  Any \<open>twice\<close> run reaches a store bounded at the
   interval slot indexed by some context the trace that produced it admits.\<close>

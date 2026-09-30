@@ -117,13 +117,13 @@ definition sign_nest_S_st ::
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
-text \<open>The executable spec is sound for the concretization that reads a local unknown back
-  through \<^const>\<open>default_st_to_fun\<close> and ignores the inert global slot; Sign's own
+text \<open>The executable spec is sound for the concretization that reads a local unknown
+  through \<^const>\<open>default_st_gamma\<close> and ignores the inert global slot; Sign's own
   primitive commute facts are all the generic engine needs.\<close>
 
 definition sign_nest_gamma ::
     "sign default_st lifted \<Rightarrow> sign default_st lifted \<Rightarrow> store set" where
-  "sign_nest_gamma d g = \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
+  "sign_nest_gamma d g = gamma_lift (default_st_gamma sign_nest_gs) d"
 
 interpretation sign_nest_domain: dg_domain_exec
   sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
@@ -136,7 +136,7 @@ interpretation sign_nest_domain: dg_domain_exec
 
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
   by (intro ext)
-    (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def gamma_dg_local_state_def)
+    (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def)
 
 interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
@@ -275,7 +275,7 @@ interpretation sign_nest_1_cs: call_string_routed_context
     Bot "Lifted cinit_sign_st" Bot
     sigma_1 "fst sign_nest_1_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_1
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "gamma_lift (default_st_gamma sign_nest_gs)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -359,8 +359,7 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 
 lemma sign_nest_cinit_le_cinit_sign_st:
   "cinit_stores sign_nest_gs \<subseteq> sign_nest_gamma (Lifted cinit_sign_st) Bot"
-  by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def default_st_to_fun_def
-                 default_st_to_fun_initial)
+  by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
@@ -369,8 +368,8 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 theorem sign_nest_1_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 1),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun sign_nest_gs)
-           (sign_ctx_sg_1 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> gamma_lift (default_st_gamma sign_nest_gs)
+           (sign_ctx_sg_1 (Inl (v, ctx)))"
   by (rule sign_nest_1_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
 

@@ -142,9 +142,9 @@ theorem rc_activation_collect_sound:
   "\<A>\<^bsub>rc_gs,
      interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program,
      [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub> v ctx
-   \<subseteq> \<lbrakk>map_lift (default_st_to_fun rc_gs)
-       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  unfolding rc_cfg_alt[symmetric]
+   \<subseteq> gamma_lift (default_st_gamma rc_gs)
+       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))"
+  unfolding rc_cfg_alt[symmetric] gamma_lift_default_st_gamma_readback
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
@@ -198,8 +198,8 @@ proof -
     unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def rc_entered rc_empty_pred_def
-             interval_es_rule.sol_env_def\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_readback rc_entered
+             rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
 qed
@@ -213,12 +213,12 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> \<lbrakk>map_lift (default_st_to_fun rc_gs)
-    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))\<rbrakk>\<^sub>\<bottom>"
+  assumes sm: "s \<in> gamma_lift (default_st_gamma rc_gs)
+    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> \<lbrakk>map_lift (default_st_to_fun rc_gs)
+           \<in> gamma_lift (default_st_gamma rc_gs)
                 (interval_es_rule.reader Globals_Warrow rc_gs rc_program
-                  (Inl (FunctionEntry (STR ''p''), ctx_call)))\<rbrakk>\<^sub>\<bottom>"
+                  (Inl (FunctionEntry (STR ''p''), ctx_call)))"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4)
@@ -234,9 +234,10 @@ proof -
     by simp
   show ?thesis
     using interval_es_rule.entry_state_routed_context_call[OF rc_routed_hyps
-          ce[folded rc_cfg_alt] sm[unfolded interval_es_rule.reader_def]
+          ce[folded rc_cfg_alt]
+          sm[unfolded interval_es_rule.reader_def gamma_lift_default_st_gamma_readback]
           rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]]
-    by (simp add: interval_es_rule.reader_def)
+    by (simp add: interval_es_rule.reader_def gamma_lift_default_st_gamma_readback)
 qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the

@@ -509,7 +509,8 @@ lemma ov_call_site_reader:
 
 lemma ov_caller_store_covered:
   "ov_caller_store \<in> sign_conf_gamma ov_gs (dg_local (snd ov_sol (Inl (Statement 3, [])))) g"
-  unfolding sign_conf_gamma_def ov_call_site_reader gamma_lift_Lifted gamma_state_def
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_call_site_reader
+    gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
@@ -578,7 +579,8 @@ lemma ov_cont2_covered:
   "ov_caller_store
      \<in> sign_conf_gamma ov_gs (forget_var ov_gs (STR ''x'') STop (dg_local (snd ov_sol (Inl (Statement 3, [])))))
          g"
-  unfolding sign_conf_gamma_def ov_cont2_reader gamma_lift_Lifted gamma_state_def
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_cont2_reader
+    gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
@@ -593,7 +595,8 @@ lemma ov_entry1_covered:
          (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
             (dg_local (snd ov_sol (Inl (Statement 3, [])))))
          g"
-  unfolding sign_conf_gamma_def ov_entry1_reader gamma_lift_Lifted gamma_state_def
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_entry1_reader
+    gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
@@ -612,7 +615,8 @@ lemma ov_entry2_covered:
            (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
               (dg_local (snd ov_sol (Inl (Statement 3, []))))))
          g"
-  unfolding sign_conf_gamma_def ov_entry2_reader gamma_lift_Lifted gamma_state_def
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_entry2_reader
+    gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
@@ -879,7 +883,7 @@ interpretation ov_routed: routed_context_base_hetero
   "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
-  "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun ov_gs) m\<rbrakk>\<^sub>\<bottom>" ov_R
+  "gamma_lift (default_st_gamma ov_gs)" ov_R
 proof (rule routed_context_base_hetero.intro
     [OF dg_ctx_activation_base.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique

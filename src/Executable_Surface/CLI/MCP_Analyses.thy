@@ -21,7 +21,7 @@ lemma local_spec_of_frame:
       rule field_frame; simp add: lift_get_put_other)
 
 lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
-  by (cases a; cases x) (simp_all add: mcp_rd_def)
+  by (cases a; cases x) (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_readback)
 
 subsection \<open>Each analysis answers what it knows\<close>
 

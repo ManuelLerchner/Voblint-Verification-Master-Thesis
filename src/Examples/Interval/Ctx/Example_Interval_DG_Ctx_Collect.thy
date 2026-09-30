@@ -156,9 +156,9 @@ theorem twice_activation_collect_sound:
   "\<A>\<^bsub>twice_gs,
      interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program,
      [],compile_prog twice_pi twice_procs,cinit_stores twice_gs\<^esub> v ctx
-   \<subseteq> \<lbrakk>map_lift (default_st_to_fun twice_gs)
-       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  unfolding twice_cfg_alt[symmetric]
+   \<subseteq> gamma_lift (default_st_gamma twice_gs)
+       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))"
+  unfolding twice_cfg_alt[symmetric] gamma_lift_default_st_gamma_readback
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF twice_entry_state_hyps])
 
 subsection \<open>The context each call site selects\<close>
@@ -226,8 +226,9 @@ proof -
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_readback
+             twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
+             interval_es_rule.entry_of_exec\<close>)
   thus ?thesis    by (simp add: twice_route_at_call1)
 qed
 
@@ -264,8 +265,9 @@ proof -
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_readback
+             twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
+             interval_es_rule.entry_of_exec\<close>)
   thus ?thesis    by (simp add: twice_route_at_call2)
 qed
 

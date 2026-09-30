@@ -147,7 +147,7 @@ interpretation sign_nest_2_cs: call_string_routed_context
     Bot "Lifted cinit_sign_st" Bot
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "gamma_lift (default_st_gamma sign_nest_gs)"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -240,8 +240,8 @@ section \<open>The headline theorem: 2-call-string activation collecting soundne
 theorem sign_nest_2_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 2),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun sign_nest_gs)
-           (sign_ctx_sg_2 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> gamma_lift (default_st_gamma sign_nest_gs)
+           (sign_ctx_sg_2 (Inl (v, ctx)))"
   by (rule sign_nest_2_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])
 

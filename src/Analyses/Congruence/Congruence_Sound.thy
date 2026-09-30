@@ -24,9 +24,7 @@ text \<open>
 \<close>
 
 lemma congruence_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_congruence_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      default_st_to_fun_def default_st_to_fun_initial)
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_congruence_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 end

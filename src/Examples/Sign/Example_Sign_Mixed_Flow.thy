@@ -18,7 +18,7 @@ abbreviation mf_spec ::
 
 definition split_gamma ::
   "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st \<Rightarrow> sign default_st \<Rightarrow> store set" where
-  "split_gamma \<G> d g = \<lbrakk>default_st_to_fun \<G> (combine_default_st d g)\<rbrakk>"
+  "split_gamma \<G> d g = default_st_gamma \<G> (combine_default_st d g)"
 
 lemma combine_restrict_split [simp]:
   "combine_default_st (restrict_local_resolved_q x) (restrict_global_resolved_q x) = x"
@@ -33,18 +33,18 @@ lemma combine_self_restrict_global [simp]:
   by (rule default_st_eqI) (simp split: location.split)
 
 lemma sign_tf_st_sound:
-  "edge_collect a \<lbrakk>default_st_to_fun \<G> s\<rbrakk>
-     \<subseteq> \<lbrakk>default_st_to_fun \<G> (sign_tf_st_for \<G> a s)\<rbrakk>"
+  "edge_collect a (default_st_gamma \<G> s)
+     \<subseteq> default_st_gamma \<G> (sign_tf_st_for \<G> a s)"
 proof (cases "live_default_st \<G> s")
   case True
   show ?thesis
-    unfolding sign_tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
+    unfolding default_st_gamma_def sign_tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
     by (rule
       sound_nonrelational_transfer.step_sound_for[OF sign_tf.is_sound_nonrelational_transfer])
 next
   case False
-  then have "\<lbrakk>default_st_to_fun \<G> s\<rbrakk> = {}"
-    by (simp add: live_default_st_def is_empty_state_gamma_state_empty)
+  then have "default_st_gamma \<G> s = {}"
+    by (simp add: live_default_st_def default_st_gamma_def is_empty_state_gamma_state_empty)
   then show ?thesis by (simp add: edge_collect_empty_set)
 qed
 
@@ -80,14 +80,14 @@ proof (unfold_locales, goal_cases)
 next
   case (2 d d' g g')
   then show ?case
-    unfolding split_gamma_def default_st_to_fun_combine
+    unfolding split_gamma_def default_st_gamma_def default_st_to_fun_combine
     by (intro gamma_state_mono combine_env_mono default_st_to_fun_mono)
 next
   case (3 a \<tau> src gk)
   show ?case
     unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_st_for
       ownership_split_transfer_st_def split_gamma_def
-    by (simp add: sign_tf_st_sound del: default_st_to_fun_combine)
+    by (simp add: sign_tf_st_sound)
 next
   case (4 s dc \<tau> gk t de ci)
   let ?G = "dg_global (\<tau> (Inr gk))"
@@ -96,14 +96,14 @@ next
     by (rule default_st_eqI) (simp split: location.split)
   have "combine_collect \<G> (ci_dst ci) s t
       \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) (default_st_to_fun \<G> ?x) (default_st_to_fun \<G> ?y)\<rbrakk>"
-    using 4 unfolding split_gamma_def by (intro combine_collect_sound)
+    using 4 unfolding split_gamma_def default_st_gamma_def by (intro combine_collect_sound)
   also have "\<dots> = \<lbrakk>default_st_to_fun \<G>
       (combine_assign_resolved_q \<G> (ci_dst ci) ?y\<langle>location_of \<G> ret_var\<rangle>
          ?x)\<rbrakk>"
     by (subst (2) xy[symmetric]) (simp only: default_st_to_fun_combine_assign)
   finally show ?case
     unfolding dg_spec_combine_transfer_ownership_split_dg_spec_st_for
-      ownership_split_combine_transfer_st_def split_gamma_def
+      ownership_split_combine_transfer_st_def split_gamma_def default_st_gamma_def
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
         del: default_st_to_fun_combine combine_restrict_local_left)
@@ -121,7 +121,7 @@ qed simp
 lemma split_gamma_bot:
   assumes "\<not> \<G> x"
   shows "split_gamma \<G> bot g = {}"
-  unfolding split_gamma_def
+  unfolding split_gamma_def default_st_gamma_def
 proof (rule is_empty_state_gamma_state_empty, rule is_empty_stateI)
   show "is_empty (default_st_to_fun \<G> (combine_default_st bot g) x)"
     using assms by (simp add: combine_env_def is_bottom_sign_def bot_sign_def)
@@ -130,15 +130,15 @@ qed
 lemma split_gamma_restrict_local_combine:
   "split_gamma \<G> (restrict_local_resolved_q (combine_default_st d G)) G = split_gamma \<G> d G"
   unfolding split_gamma_def
-  by (rule arg_cong[where f = gamma_state], rule arg_cong[where f = "default_st_to_fun \<G>"],
-      rule default_st_eqI) (simp split: location.split)
+  by (rule arg_cong[where f = "default_st_gamma \<G>"], rule default_st_eqI)
+     (simp split: location.split)
 
 lemma split_gamma_enter:
   assumes "\<forall>f \<in> set (ci_formals ci). \<not> \<G> f"
   shows "split_gamma \<G>
            (restrict_local_resolved_q (sign_enter_st_for \<G> ci (combine_default_st d G))) G
-         = \<lbrakk>default_st_to_fun \<G> (sign_enter_st_for \<G> ci (combine_default_st d G))\<rbrakk>"
-  unfolding split_gamma_def
+         = default_st_gamma \<G> (sign_enter_st_for \<G> ci (combine_default_st d G))"
+  unfolding split_gamma_def default_st_gamma_def
 proof (rule arg_cong[where f = gamma_state], rule ext)
   fix x
   show "default_st_to_fun \<G> (combine_default_st
@@ -153,13 +153,13 @@ proof (rule arg_cong[where f = gamma_state], rule ext)
 qed
 
 lemma sign_call_enter_sound:
-  assumes "s \<in> \<lbrakk>default_st_to_fun \<G> D\<rbrakk>"
+  assumes "s \<in> default_st_gamma \<G> D"
   shows "call_enter \<G> (CallEdge dst pars args) s
-           \<in> \<lbrakk>default_st_to_fun \<G>
-                (sign_enter_st_for \<G> (call_info_of (CallEdge dst pars args) p) D)\<rbrakk>"
-  unfolding sign_enter_st_for_commute
+           \<in> default_st_gamma \<G>
+                (sign_enter_st_for \<G> (call_info_of (CallEdge dst pars args) p) D)"
+  unfolding default_st_gamma_def sign_enter_st_for_commute
   using sound_nonrelational_transfer.tf_sound_enter_entry_for[OF
-    sign_tf.is_sound_nonrelational_transfer assms,
+    sign_tf.is_sound_nonrelational_transfer assms[unfolded default_st_gamma_def],
       of "call_info_of (CallEdge dst pars args) p"]
   by (simp add: call_enter_CallEdge)
 
@@ -207,7 +207,7 @@ definition mf_reader :: "pp \<times> unit + (unit, unit) global_unknown \<Righta
    | Inr _ \<Rightarrow> Bot)"
 
 abbreviation mf_gammaM :: "sign default_st lifted \<Rightarrow> store set" where
-  "mf_gammaM m \<equiv> \<lbrakk>map_lift (default_st_to_fun mf_gs) m\<rbrakk>\<^sub>\<bottom>"
+  "mf_gammaM m \<equiv> gamma_lift (default_st_gamma mf_gs) m"
 
 lemma mf_snapshot_raw:
   "(let sol = mf_sol;
@@ -264,7 +264,7 @@ next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF mf_pp[unfolded mf_eqs_def]])
 next
   case (SgCov v ctx)
-  thus ?case by (simp add: mf_reader_def split_gamma_def del: default_st_to_fun_combine)
+  thus ?case by (simp add: mf_reader_def split_gamma_def)
 next
   case (SgUncov v ctx)
   thus ?case by (simp add: mf_reader_def)
@@ -329,7 +329,7 @@ subsection \<open>Soundness against the concrete trace semantics\<close>
 lemma mf_cinit_sound:
   "cinit_stores mf_gs \<subseteq> split_gamma mf_gs cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
   using sign_cinit_gamma[of mf_gs]
-  by (simp add: split_gamma_def del: default_st_to_fun_combine)
+  by (simp add: split_gamma_def)
 
 theorem mf_activation_collect_sound:
   "\<A>\<^bsub>mf_gs,call_context_rel_of_fun enterc_unit,(),mf_cfg,cinit_stores mf_gs\<^esub> v ()
@@ -347,7 +347,7 @@ corollary mf_ltr_collect_solved:
   shows "\<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> v
            \<subseteq> split_gamma mf_gs (dg_local (snd mf_sol (Inl (v, ())))) mf_G"
   using mf_ltr_collect_sound[of v] assms
-  by (simp add: mf_reader_def split_gamma_def del: default_st_to_fun_combine)
+  by (simp add: mf_reader_def split_gamma_def)
 
 corollary mf_after_calls:
   assumes "s \<in> \<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> (Statement 7)"
@@ -357,7 +357,7 @@ proof -
     using mf_ltr_collect_solved mf_snapshot assms by blast
   then have mem: "s \<in> \<lbrakk>default_st_to_fun mf_gs
       (combine_default_st (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G)\<rbrakk>"
-    unfolding split_gamma_def .
+    unfolding split_gamma_def default_st_gamma_def .
   have "s (STR ''x'') \<in> \<gamma> SPos"
     using gamma_stateD[OF mem, of "STR ''x''"] mf_snapshot by simp
   moreover have "s (STR ''y'') \<in> \<gamma> SNonNeg"

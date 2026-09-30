@@ -228,7 +228,7 @@ class Domain:
             "component": "ask_assign (exec_spec $G"
             " (default_st_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
-            "gamma": "\\<lbrakk>map_lift (default_st_to_fun $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
+            "gamma": "gamma_lift (default_st_gamma $G) $f",
             "empty": "(case $f of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> default_st_is_bot_for $gs st)",
             "read": "map_lift (default_st_to_fun $G) $f",
@@ -242,7 +242,7 @@ class Domain:
             "init": f"Lifted {bare(r['init_st'])}",
             "route": "exec_formals_route $G u [] $f ca",
             "context_values": f"map {vc} $c",
-            "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
+            "component_sound": f"ask_assign_sound[OF {p}_rule.exec_comp_sound]",
             "single_entry": "single_entry_ask_assign[OF single_entry_exec_spec]",
             "init_sound": f"{p}_rule.init_sound",
             "answer_sound": f"{self.impl}_tf.check.eval_answer_sound",

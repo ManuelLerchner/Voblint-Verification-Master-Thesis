@@ -39,7 +39,7 @@ declare interval_abs_spec_def [code_unfold]
 
 definition interval_gamma ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl default_st lifted \<Rightarrow> ivl default_st lifted \<Rightarrow> store set" where
-  "interval_gamma \<G> d g = \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>"
+  "interval_gamma \<G> d g = gamma_lift (default_st_gamma \<G>) d"
 
 lemma interval_gamma_Bot [simp]: "interval_gamma \<G> Bot g = {}"
   by (simp add: interval_gamma_def)
@@ -98,9 +98,7 @@ text \<open>
 \<close>
 
 lemma interval_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_ivl_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      default_st_to_fun_def default_st_to_fun_initial)
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_ivl_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 end

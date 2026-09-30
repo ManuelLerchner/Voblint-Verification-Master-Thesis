@@ -116,12 +116,12 @@ definition nest_S_st ::
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
-text \<open>The executable spec is sound for the concretization that reads a local unknown back
-  through \<^const>\<open>default_st_to_fun\<close> and ignores the inert global slot; Interval's
+text \<open>The executable spec is sound for the concretization that reads a local unknown
+  through \<^const>\<open>default_st_gamma\<close> and ignores the inert global slot; Interval's
   own primitive commute facts are all the generic engine needs.\<close>
 
 definition nest_gamma :: "ivl default_st lifted \<Rightarrow> ivl default_st lifted \<Rightarrow> store set" where
-  "nest_gamma d g = \<lbrakk>map_lift (default_st_to_fun nest_gs) d\<rbrakk>\<^sub>\<bottom>"
+  "nest_gamma d g = gamma_lift (default_st_gamma nest_gs) d"
 
 interpretation nest_domain: dg_domain_exec
   nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
@@ -133,7 +133,7 @@ interpretation nest_domain: dg_domain_exec
 
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
-  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)
+  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def)
 
 interpretation nest_dg_sound: analysis_contract nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
@@ -305,7 +305,7 @@ interpretation nest_1_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 1 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_1_sol" "fst nest_1_sol" "(cfg_exit nest_cfg, [])" nest_1_sg
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "gamma_lift (default_st_gamma nest_gs)"
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -387,8 +387,7 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 
 lemma nest_cinit_le_cinit_ivl_st:
   "cinit_stores nest_gs \<subseteq> nest_gamma (Lifted cinit_ivl_st) Bot"
-  by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def default_st_to_fun_def
-                 default_st_to_fun_initial)
+  by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
@@ -396,7 +395,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 
 theorem nest_1_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 1),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (default_st_to_fun nest_gs) (nest_1_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> gamma_lift (default_st_gamma nest_gs) (nest_1_sg (Inl (v, ctx)))"
   by (rule nest_1_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])
 
