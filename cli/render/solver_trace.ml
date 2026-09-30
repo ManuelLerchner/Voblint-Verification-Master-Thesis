@@ -30,18 +30,17 @@ let context_label o =
       "[" ^ String.concat " " (List.map A.point_name ps) ^ "]"
 
 (* A local unknown is a (node, context) pair. A global unknown is the
-   analysis's global or the activation seed of a callee entry in a context; the
-   modes use two generated types for it ([global_unknown], and [call_string_gk]
-   under call strings), whose constructor tags differ. In both, and only there,
-   a seed is a two-field block (entry node, context). *)
+   analysis's global or the activation seed of a callee entry in a context,
+   read through the decoder the generated code installed for the run's
+   global-unknown type. *)
 let local_parts (o : Obj.t) : C.cfg_node * Obj.t = Obj.obj o
 
 type global = Analysis_global | Seed of C.cfg_node * Obj.t
 
 let global_of (o : Obj.t) =
-  if Obj.is_block o && Obj.size o = 2 then
-    Seed ((Obj.obj (Obj.field o 0) : C.cfg_node), Obj.field o 1)
-  else Analysis_global
+  match !H.global o with
+  | None -> Analysis_global
+  | Some (n, c) -> Seed (Obj.obj n, c)
 
 let local_text o =
   let n, c = local_parts o in
@@ -286,6 +285,9 @@ let compact events =
               (Printf.sprintf "         %s reads %s = %s" (local_text x)
                  (global_text y) (global_value y d))
         | H.Side (_, y, d) ->
+            (* The solver's Side step (TD_side_upd_rule's eval) decides
+               update_global before it evaluates the rest of the right-hand
+               side, so a change is recorded as the very next event. *)
             let changed =
               match rest with
               | H.Update_global (y', _, _) :: _ when y' = y -> true
@@ -329,6 +331,7 @@ let counts events =
 
 let emit ~out ~format ~verbose ~analyses ~context ~globals ~program result =
   let events = H.recorded () in
+  Hashtbl.reset seen;
   let locals, globals_n = counts events in
   let pr fmt = Printf.fprintf out fmt in
   match format with

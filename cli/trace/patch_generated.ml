@@ -4,14 +4,44 @@
    program. The hooks are guarded calls into Solver_trace_hook (no-ops unless
    tracing is on) and change no value the solver computes; the export itself and
    the Isabelle sources stay untouched. Each patch names a piece of generated
-   text that must occur exactly once: when a regeneration changes it, the build
-   fails here instead of silently dropping an event. *)
+   text that must occur exactly once (a per-mode patch: once per context mode
+   using it): when a regeneration changes it, the build fails here instead of
+   silently dropping an event. *)
 
 let guard call = "(if !Solver_trace_hook.enabled then " ^ call ^ ");"
+
+(* A typed decoder for a global-unknown datatype, defined right after it. The
+   identity wrapper installs it at the call site that fixes the type, so the
+   renderer tells seeds from the analysis global by constructor, not by
+   memory layout. *)
+let decoder name ty global seed =
+  Printf.sprintf
+    "\n\n\
+     let %s (g : %s) =\n\
+    \  Solver_trace_hook.install_global (fun o ->\n\
+    \    match (Obj.obj o : %s) with\n\
+    \    | %s -> None\n\
+    \    | %s (n, c) -> Some (Obj.repr n, Obj.repr c));\n\
+    \  g;;"
+    name ty ty global seed
 
 (* (description, text to find, replacement) *)
 let patches =
   [
+    ( "decoder of the global unknowns",
+      "type ('a, 'b) global_unknown = Analysis_Global of 'a |\n\
+      \  Activation_Seed of cfg_node * 'b;;",
+      "type ('a, 'b) global_unknown = Analysis_Global of 'a |\n\
+      \  Activation_Seed of cfg_node * 'b;;"
+      ^ decoder "trace_global_unknown" "('a, 'b) global_unknown"
+          "Analysis_Global _" "Activation_Seed" );
+    ( "decoder of the call-string global unknowns",
+      "type call_string_gk = Global | Seed of cfg_node * cfg_node list;;",
+      "type call_string_gk = Global | Seed of cfg_node * cfg_node list;;"
+      ^ decoder "trace_call_string_gk" "call_string_gk" "Global" "Seed" );
+    ( "install the call-string decoder",
+      "Global (fun a b -> Seed (a, b))",
+      "(trace_call_string_gk Global) (fun a b -> Seed (a, b))" );
     ( "export the value printer",
       "  val res_diagnostics : ('a, 'b) run_result_ext -> \
        arithmetic_diagnostic list\n",
@@ -103,17 +133,28 @@ let patches =
         \       c) in\n\
         \     let () = Solver_trace_hook.start_solve () in\n\
         \     let sol =\n\
+        \       Stdlib.Fun.protect ~finally:Solver_trace_hook.end_solve (fun \
+         () ->\n\
         \       solution (_A1, _A2) _C comp init_st analysis_global seed route \
          root_ctx\n\
-        \         solve g p\n\
-        \       in\n\
-        \     let () = Solver_trace_hook.end_solve () in\n" );
+        \         solve g p)\n\
+        \       in\n" );
     ( "views, where the result is rendered",
       "     let view = map_lift (render vars) in\n",
       "     let view = map_lift (render vars) in\n\
       \     let () = Solver_trace_hook.install_views\n\
       \       ~view:(fun o -> Obj.repr (view (Obj.obj o)))\n\
       \       ~context:(fun o -> Obj.repr (ctx_view (Obj.obj o))) in\n" );
+  ]
+
+(* (times, patch): the context modes without call strings each pass the
+   analysis global to the solve. *)
+let per_mode_patches =
+  [
+    ( 2,
+      ( "install the decoder of the global unknowns",
+        "(Analysis_Global ())",
+        "(trace_global_unknown (Analysis_Global ()))" ) );
   ]
 
 let occurrences hay needle =
@@ -125,24 +166,35 @@ let occurrences hay needle =
   in
   go 0 []
 
-let apply text (what, find, replace) =
-  match occurrences text find with
-  | [ i ] ->
-      String.sub text 0 i ^ replace
-      ^ String.sub text
-          (i + String.length find)
-          (String.length text - i - String.length find)
-  | found ->
-      Printf.eprintf
-        "patch_generated: the anchor for \"%s\" occurs %d times in the \
-         generated module (expected once). The export changed shape; update \
-         cli/trace/patch_generated.ml.\n"
-        what (List.length found);
-      exit 2
+let apply ?(times = 1) text (what, find, replace) =
+  let found = occurrences text find in
+  if List.length found <> times then begin
+    Printf.eprintf
+      "patch_generated: the anchor for \"%s\" occurs %d times in the generated \
+       module (expected %d). The export changed shape; update \
+       cli/trace/patch_generated.ml.\n"
+      what (List.length found) times;
+    exit 2
+  end;
+  let out = Buffer.create (String.length text + 4096) in
+  let rest =
+    List.fold_left
+      (fun from i ->
+        Buffer.add_substring out text from (i - from);
+        Buffer.add_string out replace;
+        i + String.length find)
+      0 found
+  in
+  Buffer.add_substring out text rest (String.length text - rest);
+  Buffer.contents out
 
 let () =
   let path = Sys.argv.(1) in
   let ic = open_in_bin path in
   let text = really_input_string ic (in_channel_length ic) in
   close_in ic;
-  print_string (List.fold_left apply text patches)
+  let text = List.fold_left (fun t p -> apply t p) text patches in
+  print_string
+    (List.fold_left
+       (fun t (times, p) -> apply ~times t p)
+       text per_mode_patches)

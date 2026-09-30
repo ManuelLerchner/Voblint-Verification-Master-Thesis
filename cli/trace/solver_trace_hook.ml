@@ -40,7 +40,11 @@ let update_global y o n = record (Update_global (y, o, n))
 let update_local x o n = record (Update_local (x, o, n))
 let answer x d = record (Answer (x, d))
 let route u d c = record (Route (u, d, c))
-let start_solve () = solving := true
+
+let start_solve () =
+  events := [];
+  solving := true
+
 let end_solve () = solving := false
 
 (* Readers installed by the generated code. [state_local] and [state_global]
@@ -63,6 +67,15 @@ let install_readers ~state_local:sl ~state_global:sg ~local_part:lp =
     state_global := sg;
     local_part := lp
   end
+
+(* The global unknowns have a generated datatype that depends on the context
+   mode. The generated module installs, where that type is fixed, a decoder by
+   constructor: [None] for the analysis global, [Some (entry node, context)]
+   for an activation seed. *)
+let global : (Obj.t -> (Obj.t * Obj.t) option) ref =
+  ref (fun _ -> failwith "solver trace: global decoder not installed")
+
+let install_global decode = if !enabled then global := decode
 
 let install_views ~view:v ~context:c =
   if !enabled then begin
