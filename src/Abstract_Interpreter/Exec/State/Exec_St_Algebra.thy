@@ -85,10 +85,15 @@ lift_definition sup_resolved_st_q ::
 instance ..
 end
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_sup_resolved_st_q [simp]:
-  "lookup_resolved_st_q (s \<squnion> t) loc =
-     lookup_resolved_st_q s loc \<squnion> lookup_resolved_st_q t loc"
+  "(s \<squnion> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<squnion> t\<langle>loc\<rangle>"
   by transfer (rule lookup_merge_resolved_st)
+
+end
 
 instance resolved_st_q ::
   (bounded_semilattice_sup_bot) semilattice_sup
@@ -166,10 +171,15 @@ proof
 qed
 end
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_widen_resolved_st_q [simp]:
-  "lookup_resolved_st_q (s \<nabla> t) loc =
-     lookup_resolved_st_q s loc \<nabla> lookup_resolved_st_q t loc"
+  "(s \<nabla> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<nabla> t\<langle>loc\<rangle>"
   by (simp add: widen_resolved_st_q_def)
+
+end
 
 definition narrow_resolved_st ::
   "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st =>
@@ -214,10 +224,15 @@ instance
        intro: narrow_ge narrow_le)
 end
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_narrow_resolved_st_q [simp]:
-  "lookup_resolved_st_q (s \<Delta> t) loc =
-     lookup_resolved_st_q s loc \<Delta> lookup_resolved_st_q t loc"
+  "(s \<Delta> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<Delta> t\<langle>loc\<rangle>"
   by (simp add: narrow_resolved_st_q_def)
+
+end
 
 instance resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
 

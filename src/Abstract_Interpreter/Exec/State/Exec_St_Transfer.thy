@@ -169,14 +169,18 @@ lift_definition combine_assign_resolved_q ::
   is combine_assign_resolved
   by (rule eq_resolved_st_combine_assign)
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_combine_assign_resolved_q [simp]:
-  "lookup_resolved_st_q (combine_assign_resolved_q \<G> dst v s) loc =
+  "(combine_assign_resolved_q \<G> dst v s)\<langle>loc\<rangle> =
      (case dst of
-        None => lookup_resolved_st_q s loc
-      | Some x =>
-          if location_of \<G> x = loc then v
-          else lookup_resolved_st_q s loc)"
+        None => s\<langle>loc\<rangle>
+      | Some x => if location_of \<G> x = loc then v else s\<langle>loc\<rangle>)"
   by transfer (auto simp add:combine_assign_resolved_def split:option.splits)
+
+end
 
 lemma fun_of_resolved_st_for_combine_assign [simp]:
   "fun_of_resolved_st_for \<G>
@@ -353,19 +357,25 @@ text \<open>
   space and preserves the default by construction.
 \<close>
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_restrict_local_resolved_q [simp]:
-  "lookup_resolved_st_q (restrict_local_resolved_q s) loc =
+  "(restrict_local_resolved_q s)\<langle>loc\<rangle> =
      (case loc of
-        Local_Location x => lookup_resolved_st_q s loc
+        Local_Location x => s\<langle>loc\<rangle>
       | Global_Location x => bot)"
   by transfer (rule lookup_restrict_local_resolved)
 
 lemma lookup_restrict_global_resolved_q [simp]:
-  "lookup_resolved_st_q (restrict_global_resolved_q s) loc =
+  "(restrict_global_resolved_q s)\<langle>loc\<rangle> =
      (case loc of
         Local_Location x => bot
-      | Global_Location x => lookup_resolved_st_q s loc)"
+      | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_restrict_global_resolved)
+
+end
 
 lemma fun_of_resolved_st_q_for_restrict_local [simp]:
   "fun_of_resolved_st_q_for \<G> (restrict_local_resolved_q s) x =
@@ -412,12 +422,18 @@ lift_definition combine_resolved_st_q ::
   is combine_resolved_st
   by (rule eq_resolved_st_combine)
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_combine_resolved_st_q [simp]:
-  "lookup_resolved_st_q (combine_resolved_st_q sc se) loc =
+  "(combine_resolved_st_q sc se)\<langle>loc\<rangle> =
      (case loc of
-        Local_Location x => lookup_resolved_st_q sc loc
-      | Global_Location x => lookup_resolved_st_q se loc)"
+        Local_Location x => sc\<langle>loc\<rangle>
+      | Global_Location x => se\<langle>loc\<rangle>)"
   by transfer (rule lookup_combine_resolved_st)
+
+end
 
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
@@ -483,12 +499,18 @@ lift_definition enter_frame_D_resolved_q ::
   is enter_frame_D_resolved
   by (rule eq_resolved_st_enter_frame_D)
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_enter_frame_D_resolved_q [simp]:
-  "lookup_resolved_st_q (enter_frame_D_resolved_q top_val s) loc =
+  "(enter_frame_D_resolved_q top_val s)\<langle>loc\<rangle> =
      (case loc of
         Local_Location x => top_val
-      | Global_Location x => lookup_resolved_st_q s loc)"
+      | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_enter_frame_D_resolved)
+
+end
 
 lemma fun_of_resolved_st_for_enter_frame [simp]:
   "fun_of_resolved_st_for \<G> (enter_frame_D_resolved top_val s) =

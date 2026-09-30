@@ -203,7 +203,7 @@ lemma le_resolved_st_code_iff:
     (simp add: le_resolved_st_code_raw_iff)
 
 
-subsection \<open>The extensional quotient\<close>
+subsection \<open>The extensional quotient, lookup and point update\<close>
 quotient_type 'a resolved_st_q =
   "('a::bot) resolved_st" / "eq_resolved_st"
   morphisms rep_resolved_st Abs_resolved_st
@@ -214,9 +214,47 @@ lift_definition lookup_resolved_st_q ::
   is lookup_resolved_st
   by (simp add: eq_resolved_st_def)
 
+fun update_resolved_st ::
+  "('a::bot) resolved_st => location => 'a => 'a resolved_st" where
+  "update_resolved_st (dl, dg, ps) loc a =
+     (dl, dg, (loc, a) # AList.delete loc ps)"
+
+lemma lookup_resolved_st_update [simp]:
+  "lookup_resolved_st (update_resolved_st s loc a) loc' =
+     (if loc = loc' then a else lookup_resolved_st s loc')"
+  by (cases s) (simp add: map_of_resolved_delete)
+
+lemma eq_resolved_st_update:
+  assumes "eq_resolved_st s t"
+  shows "eq_resolved_st (update_resolved_st s loc a)
+      (update_resolved_st t loc a)"
+  by (rule eq_resolved_stI) (simp add: eq_resolved_stD[OF assms])
+
+lift_definition update_resolved_st_q ::
+  "('a::bot) resolved_st_q => location => 'a => 'a resolved_st_q"
+  is update_resolved_st
+  by (rule eq_resolved_st_update)
+
+text \<open>
+  The lemmas characterizing the quotient write lookup as \<open>s\<langle>l\<rangle>\<close> and point
+  update as \<open>s\<langle>l := a\<rangle>\<close>. The notation is a bundle, opened only around those
+  statements, so it neither reaches importing theories nor changes a term.
+  Both forms bind tighter than application, so \<open>f s\<langle>l\<rangle>\<close> reads
+  \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
+\<close>
+
+bundle resolved_st_syntax
+begin
+notation lookup_resolved_st_q ("_\<langle>_\<rangle>" [1000, 0] 1000)
+notation update_resolved_st_q ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
+end
+
+context
+  includes resolved_st_syntax
+begin
+
 lemma lookup_Abs_resolved_st_q [simp]:
-  "lookup_resolved_st_q (Abs_resolved_st s) loc =
-     lookup_resolved_st s loc"
+  "(Abs_resolved_st s)\<langle>loc\<rangle> = lookup_resolved_st s loc"
   by transfer simp
 
 lemma Abs_resolved_st_rep_resolved_st [simp]:
@@ -224,9 +262,18 @@ lemma Abs_resolved_st_rep_resolved_st [simp]:
   by (fact Lifting.Quotient_abs_rep [OF Quotient_resolved_st_q])
 
 lemma lookup_rep_resolved_st_q:
-  "lookup_resolved_st_q s loc =
-     lookup_resolved_st (rep_resolved_st s) loc"
+  "s\<langle>loc\<rangle> = lookup_resolved_st (rep_resolved_st s) loc"
   by (simp add: lookup_resolved_st_q.rep_eq)
+
+text \<open>
+  One lookup equation for the update, rather than a same/different pair: the
+  conditional is what a caller has to reason about anyway, and the two special
+  cases fall out of it by \<^term>\<open>simp\<close>.
+\<close>
+
+lemma lookup_resolved_st_q_update [simp]:
+  "s\<langle>loc := a\<rangle>\<langle>loc'\<rangle> = (if loc = loc' then a else s\<langle>loc'\<rangle>)"
+  by transfer simp
 
 lemma resolved_st_q_eq_iff:
   "s = t \<longleftrightarrow>
@@ -241,9 +288,11 @@ text \<open>
 \<close>
 
 lemma resolved_st_q_eqI:
-  assumes "\<And>loc. lookup_resolved_st_q s loc = lookup_resolved_st_q t loc"
+  assumes "\<And>loc. s\<langle>loc\<rangle> = t\<langle>loc\<rangle>"
   shows "s = t"
   using assms by (simp add: resolved_st_q_eq_iff fun_eq_iff)
+
+end
 
 
 subsection \<open>Order, bottom and executable equality\<close>
@@ -276,12 +325,16 @@ instance ..
 end
 
 
+context
+  includes resolved_st_syntax
+begin
+
 lemma le_resolved_st_q_iff:
   fixes s t :: "('a::order_bot) resolved_st_q"
-  shows "s \<le> t \<longleftrightarrow>
-    (\<forall>loc. lookup_resolved_st_q s loc \<le>
-      lookup_resolved_st_q t loc)"
+  shows "s \<le> t \<longleftrightarrow> (\<forall>loc. s\<langle>loc\<rangle> \<le> t\<langle>loc\<rangle>)"
   by transfer (rule le_resolved_st_code_iff)
+
+end
 
 
 instance resolved_st_q :: (order_bot) order
@@ -299,10 +352,16 @@ proof intro_classes
       resolved_st_q_eq_iff fun_eq_iff intro: order_antisym)
 qed
 
+context
+  includes resolved_st_syntax and lattice_syntax
+begin
+
 lemma lookup_bot_resolved_st_q [simp]:
-  "lookup_resolved_st_q (bot :: ('a::bot) resolved_st_q) loc = bot"
+  "(\<bottom> :: ('a::bot) resolved_st_q)\<langle>loc\<rangle> = \<bottom>"
   unfolding bot_resolved_st_q_def
   by transfer (simp split: location.splits)
+
+end
 
 
 lemma bot_le_resolved_st_q:
@@ -321,39 +380,4 @@ where
 instance
   by standard (auto simp: equal_resolved_st_q_def intro: order_antisym)
 end
-
-subsection \<open>Point updates\<close>
-fun update_resolved_st ::
-  "('a::bot) resolved_st => location => 'a => 'a resolved_st" where
-  "update_resolved_st (dl, dg, ps) loc a =
-     (dl, dg, (loc, a) # AList.delete loc ps)"
-
-text \<open>
-  One lookup equation for the update, rather than a same/different pair: the
-  conditional is what a caller has to reason about anyway, and the two special
-  cases fall out of it by \<^term>\<open>simp\<close>.
-\<close>
-
-lemma lookup_resolved_st_update [simp]:
-  "lookup_resolved_st (update_resolved_st s loc a) loc' =
-     (if loc = loc' then a else lookup_resolved_st s loc')"
-  by (cases s) (simp add: map_of_resolved_delete)
-
-
-lemma eq_resolved_st_update:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (update_resolved_st s loc a)
-      (update_resolved_st t loc a)"
-  by (rule eq_resolved_stI) (simp add: eq_resolved_stD[OF assms])
-
-lift_definition update_resolved_st_q ::
-  "('a::bot) resolved_st_q => location => 'a => 'a resolved_st_q"
-  is update_resolved_st
-  by (rule eq_resolved_st_update)
-
-lemma lookup_resolved_st_q_update [simp]:
-  "lookup_resolved_st_q (update_resolved_st_q s loc a) loc' =
-     (if loc = loc' then a else lookup_resolved_st_q s loc')"
-  by transfer simp
-
 end
