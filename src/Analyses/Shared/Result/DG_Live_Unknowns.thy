@@ -313,14 +313,14 @@ interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
   unfolding analysis_spec_def by (rule dg_spec_of_contract[OF comp_sound])
 
 text \<open>
-  The routed soundness at the live keys, for any relation admitting call contexts.
+  Establishes \<open>routed_analysis\<close> over the live keys, for any relation admitting call contexts.
   Beyond termination and well-formedness a policy owes only its own two facts: an
   admitted context is the one this pipeline routes the entered state to, and every
   concrete call at a live key is admitted somewhere. \<open>live_unknowns_cover\<close> supplies
   callee-entry membership.
 \<close>
 
-lemma routed_analysis_sound_live_unknowns:
+lemma routed_analysis_from_live_unknowns:
   fixes R :: "'c call_context_rel"
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
@@ -462,7 +462,7 @@ proof -
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" R
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule routed_analysis_sound_live_unknowns[where R = R, OF wf solves cover_R total_R])
+    by (rule routed_analysis_from_live_unknowns[where R = R, OF wf solves cover_R total_R])
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
@@ -601,7 +601,7 @@ qed
 
 subsection \<open>Entry-state routing\<close>
 
-lemma entry_state_routed_analysis_sound_live_unknowns:
+lemma entry_state_routed_analysis_from_live_unknowns:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "routed_analysis (analysis_spec (declared_global p) p)
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
@@ -609,7 +609,7 @@ lemma entry_state_routed_analysis_sound_live_unknowns:
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
      (map_lift (rd (declared_global p))) gamma\<^sub>V empty\<^sub>V classify"
-proof (rule routed_analysis_sound_live_unknowns[OF wf solves])
+proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
@@ -654,7 +654,7 @@ proof -
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule entry_state_routed_analysis_sound_live_unknowns[OF wf solves])
+    by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
@@ -685,7 +685,7 @@ proof (rule node_collect_eq_Union_activation_of_has_context)
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule entry_state_routed_analysis_sound_live_unknowns[OF wf solves])
+    by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   fix t
   assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
   then show "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)

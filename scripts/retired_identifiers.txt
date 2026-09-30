@@ -3972,3 +3972,8 @@ trace_context_of_fun_iff
 # --- The functional context of an activation trace is activation_context_of (2026-09-30):
 # the function package reserves activation_context_rel for its termination relation. ---
 activation_context
+
+# --- The live-unknown lemmas establish the routed_analysis locale; they are not
+# its soundness theorem (2026-09-30). ---
+routed_analysis_sound_live_unknowns
+entry_state_routed_analysis_sound_live_unknowns
