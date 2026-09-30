@@ -39,9 +39,10 @@ text \<open>The formals route is generated per analysis registry, so it is wrapp
 
 lemma trace_route:
   fixes route :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
-  assumes "\<And>u ctx d ca. route u ctx d ca = body u ctx d ca"
+    and route_rhs :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
+  assumes "\<And>u ctx d ca. route u ctx d ca = route_rhs u ctx d ca"
   shows "route u ctx d ca =
-    (let c = body u ctx d ca; _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
+    (let c = route_rhs u ctx d ca; _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
   using assms by (simp add: trace_event_def Let_def)
 
 lemmas mcp_formals_route_traced =
