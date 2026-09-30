@@ -38,6 +38,39 @@ lemma tree_covered_atI [intro]:
   "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u) \<Longrightarrow> sides_of_rhs t \<sigma> \<le> \<sigma> \<Longrightarrow> tree_covered_at t \<sigma> u"
   unfolding tree_covered_at_def by simp
 
+subsection \<open>The four conjuncts\<close>
+
+text \<open>
+  \<^const>\<open>part_post_solution\<close> is a vendor abbreviation with four conjuncts: the query
+  is covered, the covered set is closed under local dependencies, and at every covered
+  unknown the valuation bounds the local answer and the side contributions.  Each gets
+  its own name so a proof can cite the obligation it uses.
+\<close>
+
+lemma part_post_solution_query:
+  "part_post_solution T x \<sigma> vars \<Longrightarrow> x \<in> vars"
+  by blast
+
+lemma part_post_solution_closed:
+  "part_post_solution T x \<sigma> vars \<Longrightarrow> u \<in> vars \<Longrightarrow> dep\<^sub>L T \<sigma> u \<subseteq> vars"
+  by blast
+
+lemma part_post_solution_local_bound:
+  "part_post_solution T x \<sigma> vars \<Longrightarrow> u \<in> vars \<Longrightarrow> eq T u \<sigma> \<le> \<sigma> (Inl u)"
+  by blast
+
+lemma part_post_solution_side_bound:
+  "part_post_solution T x \<sigma> vars \<Longrightarrow> u \<in> vars \<Longrightarrow> sides_of_rhs (T u) \<sigma> \<le> \<sigma>"
+  by blast
+
+lemma part_post_solutionI:
+  assumes query: "x \<in> vars"
+    and closed: "\<And>u. u \<in> vars \<Longrightarrow> dep\<^sub>L T \<sigma> u \<subseteq> vars"
+    and local_bound: "\<And>u. u \<in> vars \<Longrightarrow> eq T u \<sigma> \<le> \<sigma> (Inl u)"
+    and side_bound: "\<And>u. u \<in> vars \<Longrightarrow> sides_of_rhs (T u) \<sigma> \<le> \<sigma>"
+  shows "part_post_solution T x \<sigma> vars"
+  using assms by blast
+
 subsection \<open>Equivalent forms\<close>
 
 text \<open>The vendor's own post-solution predicate, restated per unknown.  A proof about one
