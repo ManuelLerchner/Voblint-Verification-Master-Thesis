@@ -530,7 +530,7 @@ elements for one local and one global.
     // The solver start and the initial state, each in its own colour.
     let mark = ("⊥⊥": vb.called, "⊤e": vb.accent)
     diagram(
-      spacing: (12.5mm, 11mm),
+      spacing: (11mm, 10mm),
       ..states.map(st => node(
         pos(st),
         {
@@ -562,6 +562,27 @@ elements for one local and one global.
         corner-radius: 3pt,
         inset: 2.5pt,
       )),
+      // A state with two overrides, beside the lattice: its set is over all
+      // names, since the overrides pin two locations and the defaults the rest.
+      node(
+        (4.3, 2),
+        align(center, text(size: 6.5pt)[
+          $
+            ⟪ & "even", ltop, \
+              & [(ctor("Local_Location") thin x, "odd"), \
+              & #h(0.3em) (ctor("Global_Location") thin g, "even")]⟫
+          $
+          #text(size: 6pt, fill: vb.muted)[
+            $
+              {s | & s(x) mod 2 = 1 and s(g) mod 2 = 0 and \
+                   & forall "local" y != x. med s(y) mod 2 = 0}
+            $
+          ]]),
+        stroke: 0.6pt + vb.muted,
+        fill: white,
+        corner-radius: 3pt,
+        inset: 2.5pt,
+      ),
       ..states
         .map(a => states
           .filter(b => covers(a, b))
@@ -581,13 +602,16 @@ elements for one local and one global.
     one local $x$ and one global $g$. Edges are the carrier order. Purple is the
     least element $⟪lbot, lbot, []⟫$; blue is the initial state
     $⟪ltop, "even", []⟫$ (#isaconst("cinit_parity_st")), which the quotient
-    also identifies with $⟪ltop, "even", [g |-> "even"]⟫$.],
+    also identifies with $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Right: a state
+    with two overrides, its set written over all names. The overrides pin $x$
+    and $g$, every other local takes the local default, and the other globals
+    are unconstrained.],
 ) <fig:carrier-lattice>
 
 
 The figure shows two ways in which states can be alike. The quotient
 identifies representations that answer every lookup alike, such as
-$⟪ltop, "even", []⟫$ and $⟪ltop, "even", [g |-> "even"]⟫$. Distinct carrier
+$⟪ltop, "even", []⟫$ and $⟪ltop, "even", [(ctor("Global_Location") thin g, "even")]⟫$. Distinct carrier
 elements can still denote the same stores: every node with a #lbot component
 has $sem(d) = emptyset$. These nodes read back to distinct function
 states, so the quotient keeps them apart, and a higher node denotes at least
