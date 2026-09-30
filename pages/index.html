@@ -4022,17 +4022,17 @@ fun main() {
           twice, with <code>1</code> and with <code>2</code>, and both publish into the one entry
           key <code>p</code> has. Those two values are what the setting has to combine, and they
           are why <code>x &lt;= 2</code> comes out differently under Warrow than under the other
-          three.
+          four.
         </figcaption>
       </figure>
 
       <div class="prose-block">
         <p>
-          Every key here takes several contributions, so all four settings have something to do, and
+          Every key here takes several contributions, so all five settings have something to do, and
           they do not agree. Warrow widens <code>p</code>'s and <code>g</code>'s entry away and
-          loses both checks. Warrow per origin keeps those two and loses <code>s</code>. Join and Join
-          per origin keep all three, and neither of them finishes on a recursion whose argument
-          climbs, which is why neither is the default. The four-program table further down is
+          loses both checks. Warrow per origin keeps those two and loses <code>s</code>, and so does
+          Bounded narrowing. Join and Join per origin keep all three, and neither of them finishes
+          on a recursion whose argument climbs, which is why neither is the default. The four-program table further down is
           those runs.
         </p>
         <p>
@@ -4046,7 +4046,7 @@ fun main() {
         </p>
       </div>
 
-      <h3 class="setting-title">One key, four rules</h3>
+      <h3 class="setting-title">One key, five rules</h3>
 
       <p class="setting-copy">
         What a site sends is the state its call binds the callee's parameters to, so
@@ -4067,8 +4067,9 @@ fun main() {
       <p class="setting-copy">
         Below, <em>A</em> and <em>B</em> are two writers at one key. The numbers are not the
         program's; they are picked so that <em>A</em> sends three times, smaller and then larger,
-        which is what it takes to tell all four rules apart: step 2 separates Warrow from the rest,
-        step 3 Join from Join per origin, step 4 Join from Warrow per origin. They are intervals
+        which is what it takes to tell the first four rules apart: step 2 separates Warrow from the
+        rest, step 3 Join from Join per origin, step 4 Join from Warrow per origin. Bounded
+        narrowing takes more steps to tell apart from Warrow per origin. They are intervals
         because the rules hold for any domain with a join, a widening and a narrowing, and Interval
         is the one where the widening does something the join does not: Sign and Parity are short
         enough lattices that their widening is defined as the join.
@@ -4120,6 +4121,14 @@ fun main() {
                 <td class="c3"><code>[0, 4]</code></td>
                 <td class="c4 widened"><code>[0, +&#8734;]</code></td>
               </tr>
+              <tr>
+                <th scope="row">Bounded narrowing</th>
+                <td>∇ or Δ inside each call site's value, narrowing bounded per call site; report their join</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2"><code>[0, 4]</code></td>
+                <td class="c3"><code>[0, 4]</code></td>
+                <td class="c4 widened"><code>[0, +&#8734;]</code></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -4131,8 +4140,14 @@ fun main() {
           because <code>[0, 4]</code> outgrows <code>[0, 3]</code>. Join never forgets A's first
           contribution; Join per origin replaces it. At step 4 <em>A</em>'s own contributions climb,
           which is the one thing per-origin widening reacts to, so Warrow per origin jumps to
-          <code>[0, +&#8734;]</code> where Join keeps <code>[0, 8]</code>. The setting governs these procedure entries; loop points always use
-          warrowing.
+          <code>[0, +&#8734;]</code> where Join keeps <code>[0, 8]</code>. Bounded narrowing widens
+          and narrows each origin's value as Warrow per origin does, but counts per origin how often
+          it has switched from widening to narrowing; once that count reaches the bound (5 unless
+          <code>--narrow-bound</code> sets another), each switch takes only its first narrowing
+          step, so a bound of 0 behaves like 1. Here <em>A</em> switches once, at step 3, and the
+          row matches Warrow per origin; the bound changes a result only where an origin needs
+          several narrowing steps in a row. The setting governs these procedure entries; loop points
+          always use warrowing.
         </figcaption>
       </figure>
 
@@ -4142,7 +4157,7 @@ fun main() {
         walked one step at a time and the solver needs a round for each; widening takes the
         same chain in one step. On <code>f(x) { if (x &lt; N) f(x + 1); }</code> from
         <code>f(0)</code> every rule proves <code>x &lt;= N</code>, but as <code>N</code> goes
-        from 64 to 4096 the two joining rules go from 5&nbsp;ms to about 240, while the two
+        from 64 to 4096 the two joining rules go from 5&nbsp;ms to about 240, while the three
         widening rules stay at 4. Take the bound away and that growth has no end, which is the
         <em>no answer</em> in the table below.
       </p>
@@ -4169,7 +4184,8 @@ fun main() {
           <p>
             Try <strong>Warrow per origin</strong>. It widens each call site's contribution on
             its own, so one caller's growth is not blurred into a jump to infinity for all of them.
-            It is not always better: see the last row below.
+            It is not always better: see the last row below. <strong>Bounded narrowing</strong>
+            widens per call site too, and bounds how long each one keeps narrowing.
           </p>
         </article>
         <article class="guide-card caution">
@@ -4184,7 +4200,8 @@ fun main() {
           <p>
             The playground has no timeout; the command-line analyzer takes one with
             <code>--timeout</code>. Press <strong>Cancel</strong>, or change any setting, then pick
-            Warrow or Warrow per origin, and switch entry-state contexts to None or a call string.
+            Warrow, Warrow per origin or Bounded narrowing, and switch entry-state contexts to None
+            or a call string.
           </p>
         </article>
       </div>
@@ -4199,6 +4216,7 @@ fun main() {
                 <th scope="col">Join per origin</th>
                 <th scope="col">Warrow</th>
                 <th scope="col">Warrow per origin</th>
+                <th scope="col">Bounded narrowing</th>
               </tr>
             </thead>
             <tbody>
@@ -4211,6 +4229,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4221,6 +4240,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4231,6 +4251,7 @@ fun main() {
                 <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4241,6 +4262,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
               </tr>
             </tbody>
           </table>
@@ -4255,7 +4277,7 @@ fun main() {
           only the upper bound is widened, and narrowing brings it back to <code>9</code>. Per
           origin, the recursive site's own lower bound drops from <code>9</code> to <code>1</code>
           and is widened to <code>−∞</code>, which narrowing cannot undo once the division has
-          lost everything.
+          lost everything. Bounded narrowing widens per origin as well and gives the same answer.
         </figcaption>
       </figure>
 
@@ -4267,8 +4289,9 @@ fun main() {
         never moves, because this setting adds and removes no unknown. Precision moves both
         ways, and the coarser the context the more damage a widening does &#8212; Warrow proves
         one of the three checks with no contexts and all three once entry states keep the
-        writers apart, while both joining rules prove all three everywhere. The cheapest fully
-        precise cell is <code>None</code> with <code>Join</code>, which is also the combination
+        writers apart, Warrow per origin and Bounded narrowing lose only <code>s</code>'s check
+        and only with no contexts, and both joining rules prove all three everywhere. The
+        cheapest fully precise cell is <code>None</code> with <code>Join</code>, which is also the combination
         that never finishes on a recursion whose argument climbs.
       </p>
 
@@ -4349,6 +4372,7 @@ fun main() {
               <tr><th scope="row">Join per origin</th><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td></tr>
               <tr><th scope="row">Warrow</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
               <tr><th scope="row">Warrow per origin</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
+              <tr><th scope="row">Bounded narrowing</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
             </tbody>
           </table>
         </div>
@@ -5592,7 +5616,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L381-L394" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Widening and narrowing</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype" title="Definition in the formalization">Four global update rules</a>
+            <a class="align-voblint" href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype" title="Definition in the formalization">Five global update rules</a>
             <span class="align-note">Local unknowns are warrowed at widening points under every rule; the merge rule for side-effected globals is chosen once per run, not per unknown.</span>
           </li>
           <li class="align-row simplified">
