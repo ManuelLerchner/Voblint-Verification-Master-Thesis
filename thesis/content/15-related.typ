@@ -281,9 +281,11 @@ valid trace (@sec:valid). #_todo[check the equivalence claim of @sotin11.]
 
 A digest is a total function on local traces that splits the unknowns $[u]$
 into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. Seidl et
-al. @seidl26[§4] describe digests as generalizing calling contexts, but the
-local-trace semantics of that line has no procedures @schwarz25phd[§8]
-#_todo[check this first: strongest claim.].
+al. describe digests as generalizing calling contexts @seidl26[§4, p. 456]. The local-trace semantics itself
+has no procedures: its programs are sets of thread control-flow graphs without
+a call action, and Schwarz lists procedures among the features that Goblint
+implements but the local-trace semantics does not yet support
+@schwarz25phd[§8, p. 277].
 In Voblint, the context relation #isaconst("trace_context") (@sec:contexts)
 takes the digest's place for sequential activations. It is a relation, because an entry-state context is
 read off the analysis's result.
