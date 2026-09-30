@@ -102,7 +102,7 @@ text \<open>
 
 definition initial_default_st :: "'a::bot => 'a => 'a default_st" where
   "initial_default_st local_value global_value =
-     Abs_default_st (local_value, global_value, [])"
+     \<llangle>local_value, global_value, []\<rrangle>"
 
 lemma default_st_get_initial [simp]:
   "default_st_to_fun \<G> (initial_default_st local_value global_value) x =

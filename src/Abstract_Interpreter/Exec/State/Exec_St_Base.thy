@@ -242,12 +242,19 @@ text \<open>
   never changes a term.
   Both forms bind tighter than application, so \<open>f s\<langle>l\<rangle>\<close> reads
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
+  The state with local default \<open>dl\<close>, global default \<open>dg\<close> and overrides \<open>ps\<close>
+  is written \<open>\<llangle>dl, dg, ps\<rrangle>\<close>.
 \<close>
+
+abbreviation default_st_mk ::
+  "('a::bot) => 'a => (location \<times> 'a) list => 'a default_st" where
+  "default_st_mk dl dg ps \<equiv> Abs_default_st (dl, dg, ps)"
 
 bundle default_st_syntax
 begin
 notation default_st_get ("_\<langle>_\<rangle>" [1000, 0] 1000)
 notation default_st_set ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
+notation default_st_mk ("\<llangle>_,/ _,/ _\<rrangle>")
 end
 
 unbundle default_st_syntax
@@ -255,6 +262,15 @@ unbundle default_st_syntax
 lemma default_st_get_Abs [simp]:
   "(Abs_default_st s)\<langle>loc\<rangle> = default_st_rep_get s loc"
   by transfer simp
+
+lemma default_st_get_mk:
+  "\<llangle>dl, dg, ps\<rrangle>\<langle>loc\<rangle> =
+     (case map_of ps loc of
+        Some a => a
+      | None => (case loc of
+          Local_Location x => dl
+        | Global_Location x => dg))"
+  by simp
 
 lemma Abs_default_st_rep_default_st [simp]:
   "Abs_default_st (rep_default_st s) = s"
@@ -299,7 +315,7 @@ begin
 definition bot_default_st ::
   "('a::bot) default_st"
 where
-  "bot_default_st = Abs_default_st (bot, bot, [])"
+  "bot_default_st = \<llangle>bot, bot, []\<rrangle>"
 instance ..
 end
 
