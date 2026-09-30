@@ -3812,3 +3812,12 @@ traverse_rel_transfer
 dg_ctx_activation_base
 routed_analysis_sound
 routed_context_base_hetero
+# --- Interval evaluator comparisons deduplicated (2026-09-30): interval_lt and
+# interval_eqb restated interval_less and interval_eq, the check-layer queries
+# from Interval_Numeric_Queries. The evaluator uses those now. ---
+interval_eqb
+interval_eqb_mono
+interval_eqb_sound
+interval_lt
+interval_lt_mono
+interval_lt_sound

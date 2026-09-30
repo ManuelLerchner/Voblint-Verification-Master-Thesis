@@ -423,7 +423,7 @@ qed
 definition int_dom_lt :: "int_dom => int_dom => bool option" where
   "int_dom_lt d1 d2 =
      first_deciding2
-       [\<lambda>a b. interval_lt (int_ivl a) (int_ivl b),
+       [\<lambda>a b. interval_less (int_ivl a) (int_ivl b),
         \<lambda>a b. sign_lt (int_sign a) (int_sign b),
         \<lambda>a b. parity_lt (int_parity a) (int_parity b),
         \<lambda>a b. congruence_lt (int_congruence a) (int_congruence b)]
@@ -432,7 +432,7 @@ definition int_dom_lt :: "int_dom => int_dom => bool option" where
 definition int_dom_eqb :: "int_dom => int_dom => bool option" where
   "int_dom_eqb d1 d2 =
      first_deciding2
-       [\<lambda>a b. interval_eqb (int_ivl a) (int_ivl b),
+       [\<lambda>a b. interval_eq (int_ivl a) (int_ivl b),
         \<lambda>a b. sign_eqb (int_sign a) (int_sign b),
         \<lambda>a b. parity_eqb (int_parity a) (int_parity b),
         \<lambda>a b. congruence_eqb (int_congruence a) (int_congruence b)]
@@ -475,7 +475,7 @@ proof -
     unfolding int_dom_lt_def
     by (rule first_deciding2_SomeE)
        (auto simp only: list.set insert_iff empty_iff
-          dest: interval_lt_sound[OF _ hx(2) hy(2)] sign_lt_sound[OF _ hx(1) hy(1)]
+          dest: interval_less_ivl_sound[OF _ hx(2) hy(2)] sign_lt_sound[OF _ hx(1) hy(1)]
           parity_lt_sound[OF _ hx(3) hy(3)] congruence_lt_sound[OF _ hx(4) hy(4)])
 qed
 
@@ -493,7 +493,7 @@ proof -
     unfolding int_dom_eqb_def
     by (rule first_deciding2_SomeE)
        (auto simp only: list.set insert_iff empty_iff
-          dest: interval_eqb_sound[OF _ hx(2) hy(2)] sign_eqb_sound[OF _ hx(1) hy(1)]
+          dest: interval_eq_ivl_sound[OF _ hx(2) hy(2)] sign_eqb_sound[OF _ hx(1) hy(1)]
           parity_eqb_sound[OF _ hx(3) hy(3)] congruence_eqb_sound[OF _ hx(4) hy(4)])
 qed
 
@@ -543,7 +543,7 @@ proof -
     using hwide unfolding int_dom_lt_def
     by (rule first_deciding2_mono)
        (auto simp only: list.set insert_iff empty_iff
-          intro: interval_lt_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
+          intro: interval_less_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
           sign_lt_mono[OF nb1(1) nb2(1) le1(1) le2(1)]
           parity_lt_mono[OF nb1(3) nb2(3) le1(3) le2(3)]
           congruence_lt_mono[OF nb1(4) nb2(4) le1(4) le2(4)])
@@ -586,7 +586,7 @@ proof -
     using hwide unfolding int_dom_eqb_def
     by (rule first_deciding2_mono)
        (auto simp only: list.set insert_iff empty_iff
-          intro: interval_eqb_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
+          intro: interval_eq_mono[OF nb1(2) nb2(2) le1(2) le2(2)]
           sign_eqb_mono[OF nb1(1) nb2(1) le1(1) le2(1)]
           parity_eqb_mono[OF nb1(3) nb2(3) le1(3) le2(3)]
           congruence_eqb_mono[OF nb1(4) nb2(4) le1(4) le2(4)])

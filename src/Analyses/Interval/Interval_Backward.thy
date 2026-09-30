@@ -8,26 +8,27 @@ section \<open>Interval backward filtering\<close>
 subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
-  \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
-  \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
-  \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
-  queries \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close>
-  locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
-  it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
+  \<open>Voblint_Nonrelational.Abstract_Arithmetic\<close>'s \<open>sound_arith_ops\<close> locale
+  expects three-valued \<open>bool option\<close> queries: \<open>Some True\<close>/\<open>Some False\<close>
+  when the bound-based table decides it, \<open>None\<close> otherwise. The check layer's
+  \<^const>\<open>interval_less\<close>/\<^const>\<open>interval_eq\<close> are exactly those queries, so the
+  evaluator uses them too. \<open>interval_tobool\<close> is truthiness against the point
   interval \<open>[0,0]\<close>.
 \<close>
 
-definition interval_lt :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "interval_lt a b =
+lemma interval_less_unfold:
+  "interval_less a b =
      (if interval_less_true a b then Some True
       else if interval_less_false a b then Some False
       else None)"
+  by (simp add: interval_less_def numeric_query_judgments.query_less_def)
 
-definition interval_eqb :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "interval_eqb a b =
+lemma interval_eq_unfold:
+  "interval_eq a b =
      (if interval_eq_true a b then Some True
       else if interval_eq_false a b then Some False
       else None)"
+  by (simp add: interval_eq_def numeric_query_judgments.query_eq_def)
 
 definition interval_tobool :: "ivl \<Rightarrow> bool option" where
   "interval_tobool a =
@@ -35,16 +36,16 @@ definition interval_tobool :: "ivl \<Rightarrow> bool option" where
       else if interval_eq_true a (Ivl (Fin 0) (Fin 0)) then Some False
       else None)"
 
-lemma interval_lt_sound:
-  assumes "interval_lt p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
+lemma interval_less_ivl_sound:
+  assumes "interval_less p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
   shows "(i < j) = b"
-  using assms unfolding interval_lt_def
+  using assms unfolding interval_less_unfold
   by (auto split: if_splits dest: interval_less_true_sound interval_less_false_sound)
 
-lemma interval_eqb_sound:
-  assumes "interval_eqb p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
+lemma interval_eq_ivl_sound:
+  assumes "interval_eq p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
   shows "(i = j) = b"
-  using assms unfolding interval_eqb_def
+  using assms unfolding interval_eq_unfold
   by (auto split: if_splits dest: interval_eq_true_sound interval_eq_false_sound)
 
 lemma interval_tobool_sound:
@@ -58,11 +59,11 @@ proof -
     by (auto split: if_splits dest: interval_eq_false_sound interval_eq_true_sound)
 qed
 
-lemma interval_lt_mono:
+lemma interval_less_mono:
   assumes hp: "\<not> is_empty (p1::ivl)" and hq: "\<not> is_empty q1"
       and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
-      and hwide: "interval_lt p2 q2 = Some b"
-  shows "interval_lt p1 q1 = Some b"
+      and hwide: "interval_less p2 q2 = Some b"
+  shows "interval_less p1 q1 = Some b"
 proof -
   obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
   obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
@@ -80,13 +81,13 @@ proof -
     then have "u1' < l2'" using p2_def q2_def ne_p2 ne_q2 by simp
     then have "u1 < l2" using bnds by order
     then have p1q1: "interval_less_true p1 q1" using p1_def q1_def ne_p1 ne_q1 by simp
-    have "interval_lt p2 q2 = Some True" using True unfolding interval_lt_def by simp
+    have "interval_less p2 q2 = Some True" using True unfolding interval_less_unfold by simp
     with hwide have "b = True" by simp
-    then show ?thesis using p1q1 unfolding interval_lt_def by simp
+    then show ?thesis using p1q1 unfolding interval_less_unfold by simp
   next
     case False
     then have hlf: "interval_less_false p2 q2"
-      using hwide unfolding interval_lt_def by (auto split: if_splits)
+      using hwide unfolding interval_less_unfold by (auto split: if_splits)
     then have "u2' \<le> l1'" using p2_def q2_def ne_p2 ne_q2 by simp
     then have hle: "u2 \<le> l1" using bnds by order
     then have p1q1f: "interval_less_false p1 q1" using p1_def q1_def ne_p1 ne_q1 by simp
@@ -96,18 +97,18 @@ proof -
       then have "u1 < l2" using p1_def q1_def ne_p1 ne_q1 by simp
       with hle ne_p1 ne_q1 show False by order
     qed
-    have "interval_lt p2 q2 = Some False" using False hlf unfolding interval_lt_def by simp
+    have "interval_less p2 q2 = Some False" using False hlf unfolding interval_less_unfold by simp
     with hwide have "b = False" by simp
-    then show ?thesis using p1q1f p1q1nt unfolding interval_lt_def by simp
+    then show ?thesis using p1q1f p1q1nt unfolding interval_less_unfold by simp
   qed
 qed
 
 
-lemma interval_eqb_mono:
+lemma interval_eq_mono:
   assumes hp: "\<not> is_empty (p1::ivl)" and hq: "\<not> is_empty q1"
       and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
-      and hwide: "interval_eqb p2 q2 = Some b"
-  shows "interval_eqb p1 q1 = Some b"
+      and hwide: "interval_eq p2 q2 = Some b"
+  shows "interval_eq p1 q1 = Some b"
 proof -
   obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
   obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
@@ -121,7 +122,7 @@ proof -
     using bnds ne_p1 ne_q1 by order+
   show ?thesis
     using hwide ne_p1 ne_q1 ne_p2 ne_q2 bnds
-    unfolding interval_eqb_def p1_def p2_def q1_def q2_def
+    unfolding interval_eq_unfold p1_def p2_def q1_def q2_def
     by (auto split: if_splits; order)
 qed
 
@@ -154,25 +155,25 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
   | "aval_ivl (Mod a b)  \<sigma> = ivl_mod (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
   | "aval_ivl (Less a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
+        else of_bool_option ivl_of_int (interval_less (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
   | "aval_ivl (LessEq a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>))))"
+               (map_option HOL.Not (interval_less (aval_ivl b \<sigma>) (aval_ivl a \<sigma>))))"
   | "aval_ivl (Greater a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_lt (aval_ivl b \<sigma>) (aval_ivl a \<sigma>)))"
+        else of_bool_option ivl_of_int (interval_less (aval_ivl b \<sigma>) (aval_ivl a \<sigma>)))"
   | "aval_ivl (GreaterEq a b)   \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
+               (map_option HOL.Not (interval_less (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
   | "aval_ivl (NotEq a b) \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
+               (map_option HOL.Not (interval_eq (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
   | "aval_ivl (exp.Eq a b) \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
+        else of_bool_option ivl_of_int (interval_eq (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
   | "aval_ivl (exp.Not a)  \<sigma> =
        (if is_empty (aval_ivl a \<sigma>) then bot
         else of_bool_option ivl_of_int (map_option HOL.Not (interval_tobool (aval_ivl a \<sigma>))))"
@@ -187,13 +188,13 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
 
 interpretation ivl_arith: mono_arith_ops
     aval_ivl ivl_of_int "(+)" "(-)" "(*)" ivl_div ivl_mod
-    interval_lt interval_eqb interval_tobool
+    interval_less interval_eq interval_tobool
   by unfold_locales
      (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound ivl_mod_sound
                      ivl_plus_mono ivl_minus_mono ivl_times_mono ivl_div_mono ivl_mod_mono
-                     interval_lt_sound interval_eqb_sound
+                     interval_less_ivl_sound interval_eq_ivl_sound
                      interval_tobool_sound[unfolded truthy_def]
-                     interval_lt_mono interval_eqb_mono interval_tobool_mono
+                     interval_less_mono interval_eq_mono interval_tobool_mono
                      sup_ivl_def)
 
 
