@@ -135,6 +135,16 @@ Events are recorded during the solve and rendered after `run_voblint`
 returns, inside the contained child. A run killed by `--timeout` leaves no
 trace.
 
+The playground offers the same compact trace. `cli/entry/voblint_web.ml`
+takes a seventh argument, `trace`; when it is true the answer gains a `trace`
+field holding the text `Solver_trace.emit` writes, and when it is false the
+answer is unchanged. The browser module outlives a run, so the adapter sets
+the hook's switch on every call and `Solver_trace_hook.recorded` empties the
+event list it hands over. `pixi run browser-trace-check` runs the wasm build
+under Node and compares its trace of the command above with
+`tests/solver-trace/contexts.compact.expected`, whose program name it swaps for
+`browser.vimp`.
+
 JSON Lines schema 1. The first line is the run header; every solver event
 carries an increasing `step`; check records and an `end` record with counts
 follow. No timestamps, so equal runs give equal traces.

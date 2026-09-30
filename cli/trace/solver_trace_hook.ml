@@ -83,4 +83,9 @@ let install_views ~view:v ~context:c =
     context := c
   end
 
-let recorded () = List.rev !events
+(* Hands the events over and forgets them: the browser adapter lives across
+   runs, and the events keep the run's solver values alive. *)
+let recorded () =
+  let es = List.rev !events in
+  events := [];
+  es

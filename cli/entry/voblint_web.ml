@@ -16,12 +16,13 @@
        context,
        context_depth,
        int_refinement,
-       source
+       source,
+       trace
      )
 
    Examples:
 
-     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source)
+     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source, false)
 
      Voblint_run(
        "int",
@@ -29,13 +30,18 @@
        "call-string",
        1,
        "once",
-       source
+       source,
+       true
      )
 
    [context_depth] is ignored unless [context = "call-string"].
 
    [int_refinement] is how the components of int refine each other: "never",
    "once" or "fixpoint". It is ignored unless [analysis] names int.
+
+   [trace] true adds a "trace" field to a successful result: the solver trace
+   in the compact text voblint --trace prints (Solver_trace). With false the
+   answer carries no such field and the solver records nothing.
 
    [globals] names how the solver merges side-effected globals: "join",
    "per-origin", "warrow" or "warrow-per-origin".
@@ -112,8 +118,17 @@ let domains_of_string int_analysis names =
     (if names = "" then [] else String.split_on_char ',' names)
     (Ok [])
 
+let trace_text ~domains ~globals ~context result =
+  let buffer = Buffer.create 4096 in
+  Solver_trace.emit ~out:(Buffer.add_string buffer) ~format:Solver_trace.Text
+    ~verbose:false
+    ~analyses:(List.map Result_text.analysis_label domains)
+    ~context:(Solver_trace.context_name context)
+    ~globals ~program:"browser.vimp" result;
+  Buffer.contents buffer
+
 let run analysis_js globals_js context_js context_depth refinement_js source_js
-    =
+    trace_js =
   let analysis_name = Js.to_string analysis_js in
 
   let refinement_name = Js.to_string refinement_js in
@@ -123,6 +138,11 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
   let context_name = Js.to_string context_js in
 
   let source = Js.to_string source_js in
+
+  let trace = Js.to_bool trace_js in
+
+  (* Set on every call: the worker keeps this module alive between runs. *)
+  Solver_trace_hook.enabled := trace;
 
   let answer =
     match
@@ -165,8 +185,15 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
                   in
                   Render_json.error_json ~raw message
               | C.Analysed result ->
-                  Render_json.result_json analysis_ms program ~stmt_positions
-                    ~header_positions ~raw result
+                  let trace =
+                    if trace then
+                      Some
+                        (trace_text ~domains ~globals:globals_name ~context
+                           result)
+                    else None
+                  in
+                  Render_json.result_json ?trace analysis_ms program
+                    ~stmt_positions ~header_positions ~raw result
             with Vimp_frontend.Parse_error { line; col; msg; _ } ->
               Render_json.parse_error_json ~line ~column:col msg))
   in
@@ -179,4 +206,4 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
  *)
 let () =
   Js.Unsafe.set Js.Unsafe.global (Js.string "Voblint_run")
-    (Js.Unsafe.callback_with_arity 6 run)
+    (Js.Unsafe.callback_with_arity 7 run)

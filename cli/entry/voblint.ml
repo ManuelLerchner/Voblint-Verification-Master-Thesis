@@ -618,16 +618,12 @@ let () =
   (* Written by the contained child after the solve: the recorded events live
      in its memory, and a killed child has nothing complete to show. *)
   let emit_trace result =
-    let context_name =
-      match context with
-      | C.Ctx_None -> "none"
-      | C.Ctx_EntryState -> "entry-state"
-      | C.Ctx_CallString k -> "call-string:" ^ string_of_int (A.int_of_nat k)
-    in
     let write out =
-      Solver_trace.emit ~out ~format:!trace_format ~verbose:!trace_verbose
+      Solver_trace.emit ~out:(output_string out) ~format:!trace_format
+        ~verbose:!trace_verbose
         ~analyses:(List.map A.analysis_label domains)
-        ~context:context_name ~globals:!globals_name ~program:path result;
+        ~context:(Solver_trace.context_name context)
+        ~globals:!globals_name ~program:path result;
       flush out
     in
     match !trace_output with

@@ -329,11 +329,19 @@ let counts events =
     events;
   (Hashtbl.length locals, Hashtbl.length globals)
 
+(* The name the header gives a context mode, as voblint's --context spells it. *)
+let context_name = function
+  | C.Ctx_None -> "none"
+  | C.Ctx_EntryState -> "entry-state"
+  | C.Ctx_CallString k -> "call-string:" ^ string_of_int (A.int_of_nat k)
+
+(* [out] receives the trace piece by piece: a channel for the CLI, a buffer
+   for the browser, which returns the text with the result. *)
 let emit ~out ~format ~verbose ~analyses ~context ~globals ~program result =
   let events = H.recorded () in
   Hashtbl.reset seen;
   let locals, globals_n = counts events in
-  let pr fmt = Printf.fprintf out fmt in
+  let pr fmt = Printf.ksprintf out fmt in
   match format with
   | Jsonl ->
       pr
