@@ -72,16 +72,16 @@
       linkText: "csim",
     },
     coll: {
-      clause: "s ∈ ltr_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
-      text: "The graph's collecting semantics reaches node `v` with store `s`: some valid activation-local trace from an initial store ends there. Every analysis result is judged against this set.",
-      link: isaConst("Voblint_CFG", "LTR_Collect", "ltr_collect"),
-      linkText: "ltr_collect",
+      clause: "s ∈ node_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
+      text: "The graph's collecting semantics reaches node `v` with store `s`: some valid activation trace from an initial store ends there. Every analysis result is judged against this set.",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
     },
     coll2: {
-      clause: "s ∈ ltr_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
+      clause: "s ∈ node_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
       text: "The graph's collecting semantics reaches node `v` with store `s`. Here it is a premise: the theorem speaks about every store the program can really have at `v`.",
-      link: isaConst("Voblint_CFG", "LTR_Collect", "ltr_collect"),
-      linkText: "ltr_collect",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
     },
     cover: {
       clause: "analysis_result_covers D rule ctx p v s",
@@ -103,7 +103,7 @@
     },
     listed: {
       clause:
-        "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ ltr_collect … (check_point c)",
+        "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e ∧ s ∈ node_collect … (check_point c)",
       text: "The result lists a check `c` under the label `l`, with condition `e`, at a node the store `s` really reaches. The report prints each row at its own label, so the verdict shown at a check's line is this row's.",
       link: isaConst("Voblint_CLI", "Analysis_Run_Sound", "check_sites"),
       linkText: "check_sites",
@@ -129,10 +129,10 @@
     },
     empty: {
       clause:
-        "ltr_collect (declared_global p) (prog_cfg p) (cinit_stores …) (check_point chk) = {}",
+        "node_collect (declared_global p) (prog_cfg p) (cinit_stores …) (check_point chk) = {}",
       text: "The collecting semantics has no store at the check's node: no run, starting with its globals at zero, ever gets there.",
-      link: isaConst("Voblint_CFG", "LTR_Collect", "ltr_collect"),
-      linkText: "ltr_collect",
+      link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
+      linkText: "node_collect",
     },
     nodiag: {
       clause: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v",
@@ -208,7 +208,7 @@
     "run_voblint",
     "csim",
     "prog_cfg",
-    "ltr_collect",
+    "node_collect",
     "cinit_stores",
     "analysis_result_covers",
     "checks_sound_at",

@@ -254,7 +254,7 @@ def collect_raw_names(thesis: Path) -> list[tuple[Path, int, str]]:
 
 # A declared name written into prose without the markup that colours and links
 # it. Only names that cannot be English are considered -- an underscore or an
-# inner capital (`valid_ltr`, `EA_Assign`, `FunctionEntry`) -- so a constant
+# inner capital (`valid_activation_trace`, `EA_Assign`, `FunctionEntry`) -- so a constant
 # that is also a word (`intra`, `route`) never fires. Everything the markup
 # helpers wrap is blanked first, as are comments, raw blocks and labels.
 MARKUP_CALL = re.compile(

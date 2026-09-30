@@ -13,7 +13,7 @@
     Voblint_VIMP:
       "The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving.",
     Voblint_CFG:
-      "The graph model: nodes, intra and call edges, graph execution cstep, activation-local traces and the collecting semantics ltr_collect. It never mentions the compiler.",
+      "The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler.",
     Voblint_Domain:
       "What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering.",
     Voblint_Solver:
