@@ -108,7 +108,7 @@ result need semantic premises. #isalocale("dg_pipeline") fixes the
 executable ingredients and assumes nothing, so its definitions become code
 equations directly. The ingredients are a component, which is one analysis's
 local specification or a combination of several, its emptiness test and
-the publication map, the initial state, the global unknowns of the analysis global and of the entry seeds, the routing policy with its initial context, the solver and the check
+the result map, the initial state, the global unknowns of the analysis global and of the entry seeds, the routing policy with its initial context, the solver and the check
 classifier. Even the bottom state is a parameter, because a least element
 taken from a type class would have to be executable at a function type.
 #isalocale("dg_analysis") imports it and adds the contracts, among them
