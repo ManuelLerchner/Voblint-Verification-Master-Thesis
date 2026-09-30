@@ -167,13 +167,13 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
 proof -
-  have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
@@ -207,19 +207,19 @@ text \<open>
 \<close>
 
 lemma analyse_result_lookup_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
   by (rule analyse_result_node_sound[OF entry_cov s0_sound])
 
 lemma analyse_result_covered_unreachable:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and dead: "lookup_context_result analyse_result v ctx = Covered Bot"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx = {}"
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
 
@@ -241,15 +241,15 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_unreachable:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and union: "\<C>\<^bsub>\<G>,g,S0\<^esub> v
-                  = (\<Union>ctx. \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx)"
+                  = (\<Union>ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx)"
     and dead: "result_node_is_bottom analyse_result v"
   shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v = {}"
 proof -
-  have bucket: "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx = {}" for ctx
+  have bucket: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}" for ctx
   proof -
     have bot: "lookup_context analyse_result v ctx = Bot"
     proof (cases "(v, ctx) \<in> vars")
@@ -261,7 +261,7 @@ proof -
       case False
       then show ?thesis unfolding lookup_context_analyse_result by simp
     qed
-    have "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+    have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
             \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
       by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
     then show ?thesis unfolding bot by simp
@@ -281,7 +281,7 @@ definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) 
 subsection \<open>Report soundness\<close>
 
 text \<open>
-  \<open>S0\<close> and \<open>startcontext\<close> are the two facts genuinely external to this
+  \<open>S0\<close> and \<open>c\<^sub>0\<close> are the two facts genuinely external to this
   locale: which concrete stores the analysis actually starts from, and which
   context the solved system covers the entry point under. Every existing
   concrete instance (e.g. Interval's entry-state and call-string contexts)
@@ -299,15 +299,15 @@ text \<open>Both endpoints below reach their classifier obligation the same way,
   \<open>classify_proved\<close> or \<open>classify_refuted\<close> afterwards differs.\<close>
 
 lemma analyse_report_ctx_decided:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided r) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-    and smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
+    and smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
-  have node_sound: "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  have node_sound: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
       \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
@@ -320,30 +320,30 @@ proof -
 qed
 
 theorem analyse_report_ctx_proved_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
 qed
 
 theorem analyse_report_ctx_refuted_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
-    and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound smem]) simp
   thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast

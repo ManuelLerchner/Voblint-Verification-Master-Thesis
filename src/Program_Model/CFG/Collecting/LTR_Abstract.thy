@@ -37,16 +37,16 @@ text \<open>
 subsection \<open>The abstract interface\<close>
 
 text \<open>\<open>cover\<close> is the claim itself, \<open>R\<close> the context policy it is indexed by, and
-  \<open>startcontext\<close> the context the seed stores arrive under.  An analysis interprets this once,
+  \<open>c\<^sub>0\<close> the context the seed stores arrive under.  An analysis interprets this once,
   with its own solved table in place of \<open>cover\<close>; nothing below asks how that table was
   computed.\<close>
 locale ltr_coverage =
   fixes g :: cfg and S :: "store set"
     and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and R :: "'c call_context_rel"
-    and startcontext :: 'c
+    and c\<^sub>0 :: 'c
     and \<G> :: "vname \<Rightarrow> bool"
-  assumes INIT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) startcontext"
+  assumes INIT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
     and INTRA[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> cover v c"
     and CALL[intro]: "\<And>u dst pars args p cont c c' s.
@@ -72,9 +72,9 @@ abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
 abbreviation traces :: "ltr set" ("\<T>")
   where "\<T> \<equiv> valid_ltr \<G> g S"
 abbreviation carries :: "ltr \<Rightarrow> 'c \<Rightarrow> bool"
-  where "carries \<equiv> trace_context \<G> R startcontext g"
+  where "carries \<equiv> trace_context \<G> R c\<^sub>0 g"
 abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set" ("\<A>")
-  where "\<A> \<equiv> activation_collect \<G> R startcontext g S"
+  where "\<A> \<equiv> activation_collect \<G> R c\<^sub>0 g S"
 abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
   where "admits \<equiv> admits_call_context \<G> g R"
 
@@ -103,7 +103,7 @@ lemma trace_coveredD:
 
 subsection \<open>Closure under the four constructor clauses\<close>
 
-text \<open>\<open>init_covered\<close>: the main activation's seed store is admitted at \<open>startcontext\<close>, the
+text \<open>\<open>init_covered\<close>: the main activation's seed store is admitted at \<open>c\<^sub>0\<close>, the
   one context every \<^const>\<open>Root\<close> carries.\<close>
 lemma init_covered: "s \<in> S \<Longrightarrow> trace_covered (Root [(cfg_entry g, s)])"
   by (auto simp: trace_covered_def)

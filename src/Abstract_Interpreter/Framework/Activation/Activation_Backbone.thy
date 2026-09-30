@@ -32,9 +32,9 @@ text \<open>
 
 theorem activation_collect_sound:
   fixes cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    and R :: "'c call_context_rel" and startcontext :: 'c
+    and R :: "'c call_context_rel" and c\<^sub>0 :: 'c
     and \<G> :: "vname \<Rightarrow> bool"
-  assumes INIT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) startcontext"
+  assumes INIT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
     and INTRA: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> cover u c \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> cover v c"
@@ -52,15 +52,15 @@ theorem activation_collect_sound:
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
         \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
     and TOTAL: "call_context_total_on cover R \<G> g"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v ctx \<subseteq> cover v ctx"
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx \<subseteq> cover v ctx"
 proof -
-  interpret G: ltr_coverage g S cover R startcontext \<G>
+  interpret G: ltr_coverage g S cover R c\<^sub>0 \<G>
     by (standard; blast intro: INIT INTRA CALL RETURN TOTAL)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v ctx"
+    fix st assume "st \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx"
     then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-      and sn: "sink_node t = v" and kc: "trace_context \<G> R startcontext g t ctx"
+      and sn: "sink_node t = v" and kc: "trace_context \<G> R c\<^sub>0 g t ctx"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
     have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_ltr_covered_at[OF t kc] .

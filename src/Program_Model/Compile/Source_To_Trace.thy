@@ -239,7 +239,7 @@ text \<open>A callerless activation carries exactly the start context, whatever 
   callerless ancestor. No validity is needed: the two clauses involved name no edge.\<close>
 lemma trace_context_caller_of_None:
   "caller_of t = None
-   \<Longrightarrow> trace_context \<G> R startcontext g t c \<longleftrightarrow> c = startcontext"
+   \<Longrightarrow> trace_context \<G> R c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
   by (induction t) auto
 
 subsection \<open>The source bridge\<close>
@@ -290,10 +290,10 @@ theorem source_store_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext (compile_prog \<Pi> ps) t c"
+                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R startcontext (compile_prog \<Pi> ps) t c
-                   \<and> s \<in> \<A>\<^bsub>\<G>,R,startcontext,compile_prog \<Pi> ps,S\<^esub> v c"
+                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c
+                   \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -302,8 +302,8 @@ proof -
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  from has_ctx[OF tv] obtain c where tc: "trace_context \<G> R startcontext ?g t c" by blast
-  have "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v c"
+  from has_ctx[OF tv] obtain c where tc: "trace_context \<G> R c\<^sub>0 ?g t c" by blast
+  have "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim tc by blast
 qed
@@ -315,8 +315,8 @@ corollary source_store_in_activation_collect_of_fun:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> activation_context f startcontext t = c
-                   \<and> s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,compile_prog \<Pi> ps,S\<^esub> v c"
+                   \<and> activation_context f c\<^sub>0 t = c
+                   \<and> s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -326,10 +326,10 @@ proof -
     and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
   have tc:
-    "trace_context \<G> (call_context_rel_of_fun f) startcontext ?g t (activation_context f startcontext t)"
+    "trace_context \<G> (call_context_rel_of_fun f) c\<^sub>0 ?g t (activation_context f c\<^sub>0 t)"
     by (simp add: trace_context_of_fun_iff[OF tv])
-  have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,startcontext,?g,S\<^esub> v
-              (activation_context f startcontext t)"
+  have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,?g,S\<^esub> v
+              (activation_context f c\<^sub>0 t)"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim by blast
 qed
@@ -342,7 +342,7 @@ theorem source_toplevel_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
   shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, []) \<approx> (v, s, [])
-             \<and> s \<in> \<A>\<^bsub>\<G>,R,startcontext,compile_prog \<Pi> ps,S\<^esub> v startcontext"
+             \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c\<^sub>0"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -353,9 +353,9 @@ proof -
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "trace_context \<G> R startcontext ?g t startcontext"
+  have covered: "trace_context \<G> R c\<^sub>0 ?g t c\<^sub>0"
     by (simp add: trace_context_caller_of_None[OF cof])
-  have "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v startcontext"
+  have "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c\<^sub>0"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

@@ -3725,3 +3725,7 @@ update_resolved_st_q_lift_correct
 widen_on_resolved_st_q
 widen_resolved_st
 widen_resolved_st_q
+
+# --- Root-activation context parameter renamed to its notation c\<^sub>0
+# (2026-09-30); the Goblint name Spec.startcontext stays in prose only. ---
+startcontext

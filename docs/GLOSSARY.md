@@ -45,13 +45,13 @@ layer without embedding line numbers that drift.
 | `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/Program_Model/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | `activation_collect gs R startcontext g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `activation_collect` | `activation_collect gs R c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `ltr_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid trace. | `src/Program_Model/CFG/Collecting/LTR_Abstract.thy` |
-| `trace_context` | Inductive `trace_context gs R startcontext g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `trace_context` | Inductive `trace_context gs R c\<^sub>0 g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 | `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`ltr_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `startcontext` | Context of the root activation, Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `c\<^sub>0` | Context of the root activation (locale parameter, formerly `startcontext`), Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
 
 ## Abstract interpretation
 

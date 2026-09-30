@@ -31,7 +31,7 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | `dgs_*` fields of `dg_spec` | `Spec.*` methods of the same name |
 | `man_local` / `man_global` / `man_sideg` | `man.local` / `man.global` / `man.sideg` |
 | `route` (notation `context#`) | `Spec.context` |
-| `startcontext` | `Spec.startcontext` |
+| `c\<^sub>0` (start context) | `Spec.startcontext` |
 | `Inl (pp, ctx)` | local unknown `lv = node * C.t` |
 | `Analysis_Global v` | `G of V.t` |
 | `Activation_Seed` | none; stands in for `sidel` |

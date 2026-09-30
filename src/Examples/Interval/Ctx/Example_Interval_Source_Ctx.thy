@@ -43,7 +43,7 @@ proof -
   show ?thesis
     by (rule source_sound_from_collecting_cap
           [where R = "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program"
-             and startcontext = "[]"
+             and c\<^sub>0 = "[]"
              and \<gamma>\<^sub>M = twice_ctx_gamma,
            OF twice_wf init run'
               interval_es_rule.entry_state_has_context[OF twice_entry_state_hyps,
@@ -66,7 +66,7 @@ proof -
   show ?thesis
     by (rule source_sound_toplevel_from_collecting_cap
           [where R = "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program"
-             and startcontext = "[]"
+             and c\<^sub>0 = "[]"
              and \<gamma>\<^sub>M = twice_ctx_gamma,
            OF twice_wf init run' twice_activation_collect_sound])
 qed

@@ -19,25 +19,25 @@ text \<open>
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
-    and R :: "'c call_context_rel" and startcontext :: 'c
+    and R :: "'c call_context_rel" and c\<^sub>0 :: 'c
   assumes wf: "wf_compile_input \<G> Pi ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext (compile_prog Pi ps) t c"
-    and cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,startcontext,compile_prog Pi ps,S\<^esub> v ctx
+                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
+    and cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
                        \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
   shows "\<exists>v stk t c. Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R startcontext (compile_prog Pi ps) t c
+                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c
                    \<and> s \<in> \<gamma>\<^sub>M (sg (Inl (v, c)))"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_store_in_activation_collect
-         [where R=R and startcontext=startcontext,
+         [where R=R and c\<^sub>0=c\<^sub>0,
           OF wf s0 run has_ctx]
   obtain v stk t c where m: "Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-    and ck: "trace_context \<G> R startcontext ?g t c"
-    and mem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v c"
+    and ck: "trace_context \<G> R c\<^sub>0 ?g t c"
+    and mem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c"
     by blast
   have "s \<in> \<gamma>\<^sub>M (sg (Inl (v, c)))"
     using cap[of v c] mem by blast
@@ -49,21 +49,21 @@ text \<open>The witness-free specialisation of the composition at top-level prog
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
-    and R :: "'c call_context_rel" and startcontext :: 'c
+    and R :: "'c call_context_rel" and c\<^sub>0 :: 'c
   assumes wf: "wf_compile_input \<G> Pi ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
-    and cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,startcontext,compile_prog Pi ps,S\<^esub> v ctx
+    and cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
                        \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
   shows "\<exists>v. Pi, compile_prog Pi ps \<turnstile> (residual, s, []) \<approx> (v, s, [])
-             \<and> s \<in> \<gamma>\<^sub>M (sg (Inl (v, startcontext)))"
+             \<and> s \<in> \<gamma>\<^sub>M (sg (Inl (v, c\<^sub>0)))"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_toplevel_in_activation_collect
-         [where R=R and startcontext=startcontext, OF wf s0 run]
+         [where R=R and c\<^sub>0=c\<^sub>0, OF wf s0 run]
   obtain v where m: "Pi, compile_prog Pi ps \<turnstile> (residual, s, []) \<approx> (v, s, [])"
-    and mem: "s \<in> \<A>\<^bsub>\<G>,R,startcontext,?g,S\<^esub> v startcontext" by blast
-  have "s \<in> \<gamma>\<^sub>M (sg (Inl (v, startcontext)))" using cap[of v startcontext] mem by blast
+    and mem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c\<^sub>0" by blast
+  have "s \<in> \<gamma>\<^sub>M (sg (Inl (v, c\<^sub>0)))" using cap[of v c\<^sub>0] mem by blast
   then show ?thesis using m by blast
 qed
 
@@ -71,11 +71,11 @@ subsection \<open>Backbone corollaries: discharge the five coverage obligations 
 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::numeric_domain abs_state"
-    and R :: "'c call_context_rel" and startcontext :: 'c
+    and R :: "'c call_context_rel" and c\<^sub>0 :: 'c
   assumes wf: "wf_compile_input \<G> Pi ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), startcontext))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), c\<^sub>0))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -93,16 +93,16 @@ theorem source_activation_sound:
         \<Longrightarrow> combine_collect \<G> dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
     and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) R \<G> (compile_prog Pi ps)"
   shows "\<exists>v stk t c. Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R startcontext (compile_prog Pi ps) t c
+                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c
                    \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
 proof -
-  interpret G: ltr_coverage "compile_prog Pi ps" S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" R startcontext \<G>
+  interpret G: ltr_coverage "compile_prog Pi ps" S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" R c\<^sub>0 \<G>
     by (standard; blast intro: ENTRY_G EDGE CALL COMB TOTAL)
-  have cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,startcontext,compile_prog Pi ps,S\<^esub> v ctx
+  have cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE CALL COMB TOTAL])
   have has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R startcontext (compile_prog Pi ps) t c"
+                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
     using G.valid_ltr_has_context by blast
   show ?thesis
     by (rule source_sound_from_collecting_cap[where \<gamma>\<^sub>M=gamma_state,
@@ -125,7 +125,7 @@ theorem source_reaches_ltr_collect:
 proof -
   let ?g = "compile_prog Pi ps"
   from source_store_in_activation_collect_of_fun
-         [where f = "\<lambda>_ _ _. ()" and startcontext = "()",
+         [where f = "\<lambda>_ _ _. ()" and c\<^sub>0 = "()",
           OF wf s0 run]
   obtain v stk t c where m: "Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
     and "activation_context (\<lambda>_ _ _. ()) () t = c"

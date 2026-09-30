@@ -565,22 +565,22 @@ proof (intro allI impI)
 qed
 
 lemma activation_collect_dg_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound[where cover = "cover"])
   fix s0 assume s0mem: "s0 \<in> S0"
-  have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, startcontext)))"
+  have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
     by (rule pp_entry_s0d_bound[OF entry_cov])
   have le_global: "s0g \<le> dg_global (sigma (Inr analysis_global))"
     by (rule pp_entry_s0g_bound[OF entry_cov])
   have "\<gamma>\<^sub>D\<^sub>G s0d s0g
-        \<subseteq> gamma_at (cfg_entry g) startcontext"
+        \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
     by (rule gammaDG_mono[OF le_local le_global])
-  with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) startcontext" by blast
-  thus "s0 \<in> cover (cfg_entry g) startcontext"
+  with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+  thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
     using entry_cov by simp
 next
   fix u a v' c' s' s''
@@ -616,24 +616,24 @@ text \<open>
 \<close>
 
 lemma routed_valid_ltr_has_context:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
-  shows "\<exists>c. trace_context \<G> R startcontext g t c"
+  shows "\<exists>c. trace_context \<G> R c\<^sub>0 g t c"
 proof -
-  interpret G: ltr_coverage g S0 cover R startcontext \<G>
+  interpret G: ltr_coverage g S0 cover R c\<^sub>0 \<G>
   proof unfold_locales
     fix s0 assume s0mem: "s0 \<in> S0"
-    have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, startcontext)))"
+    have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
       by (rule pp_entry_s0d_bound[OF entry_cov])
     have le_global: "s0g \<le> dg_global (sigma (Inr analysis_global))"
       by (rule pp_entry_s0g_bound[OF entry_cov])
     have "\<gamma>\<^sub>D\<^sub>G s0d s0g
-          \<subseteq> gamma_at (cfg_entry g) startcontext"
+          \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
       by (rule gammaDG_mono[OF le_local le_global])
-    with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) startcontext" by blast
-    thus "s0 \<in> cover (cfg_entry g) startcontext"
+    with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+    thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
       using entry_cov by simp
   next
     fix u a v' c' s' s''
