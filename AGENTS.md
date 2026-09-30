@@ -77,7 +77,7 @@ foundations
     ->
 VIMP and compilation
     ->
-activation-local traces and the soundness contract
+activation traces and the soundness contract
     ->
 abstract domains
     ->
@@ -117,7 +117,7 @@ VIMP source semantics
 procedure-aware CFG
         |
         v
-activation-local trace semantics
+activation trace semantics
         |
         v
 D/G equation system with contexts and routing
@@ -138,18 +138,18 @@ The important concrete objects are deliberately separated.
 
 `cstep` defines execution of a procedure-aware CFG.
 
-`valid_ltr` defines activation-local traces. One trace represents one procedure
+`valid_activation_trace` defines activation traces. One trace represents one procedure
 activation and retains the structural information needed to interpret calls and
 returns.
 
-`ltr_collect` collects the stores valid traces can reach at a CFG node.
+`node_collect` collects the stores valid traces can reach at a CFG node.
 
 A context policy is read from the concrete trace semantics rather than baked
-into it. `trace_context` and the corresponding admissibility relation determine
+into it. `activation_context_rel` and the corresponding admissibility relation determine
 which activation belongs to which analysis context, and `activation_collect`
 provides the context-indexed collecting semantics.
 
-The `ltr_coverage` contract states the local obligations sufficient to
+The `activation_coverage` contract states the local obligations sufficient to
 over-approximate those concrete traces. The generic analyzer, domain instances,
 routing policies, and solver integration exist to construct and compute claims
 satisfying that contract.
