@@ -212,14 +212,14 @@ reports #_cli("pg-contexts-entry", "a == 6", 3) for `a == 6` with
   scale(80%, reflow: true, diagram(
     spacing: (18mm, 8mm),
     _seed((0, 0), $ctor("Activation_Seed") thin #_b space c_1$),
-    _loc((0, 1), $(italic("entry")_"bump", c_1)$),
-    _loc((0, 2), $(italic("exit")_"bump", c_1)$),
+    _loc((0, 1), $(ctor("FunctionEntry") thin italic("bump"), c_1)$),
+    _loc((0, 2), $(ctor("FunctionResult") thin italic("bump"), c_1)$),
     _loc((1.3, 0), $(italic("pp2"), c_0)$),
     _loc((1.3, 2), $(italic("pp3"), c_0)$),
     _loc((1.3, 5), $(italic("pp4"), c_0)$),
     _seed((2.6, 3), $ctor("Activation_Seed") thin #_b space c_2$),
-    _loc((2.6, 4), $(italic("entry")_"bump", c_2)$),
-    _loc((2.6, 5), $(italic("exit")_"bump", c_2)$),
+    _loc((2.6, 4), $(ctor("FunctionEntry") thin italic("bump"), c_2)$),
+    _loc((2.6, 5), $(ctor("FunctionResult") thin italic("bump"), c_2)$),
     _read((1.3, 0), (1.3, 2), [caller]),
     _read((1.3, 2), (1.3, 5), [caller], side: right),
     _read((0, 0), (0, 1), [seed read], side: right),
@@ -256,6 +256,9 @@ the initial abstract state $d_0$ of the analysis (@sec:sound-core) if $v$ is
 the program entry, the transfer along each incoming local edge, the
 contribution $italic("call")_u (c)$ of each call node $u$ whose continuation
 is $v$ (the set $italic("calls")(v)$), and the seed if $v$ is a callee entry.
+The names $italic("rhs")$, $italic("init")$, $italic("call")_u$ and
+$italic("calls")$ are our notation for the parts of
+#isaconst("routed_node_rhs"), not constants of the formalization.
 A transfer that uses analysis globals also reads and publishes them
 (@sec:manager).
 
@@ -295,7 +298,7 @@ them when the caller first reads the result. Since a call never enters the
 callee's body, recursion needs no special case. In @fig:eq-unknowns the
 continuation $(italic("pp3"), c_0)$ reads $(italic("pp2"), c_0)$, computes
 $c_1$ from the entry value $n = 5$, publishes that value to the seed of `bump`
-in $c_1$, and reads $(italic("exit")_"bump", c_1)$.
+in $c_1$, and reads $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 
 When the entry value is bottom, no store enters the callee. The call then
 publishes nothing, reads no result, and combines $q$ with a bottom callee
@@ -721,7 +724,7 @@ Most right-hand sides read a fixed set of unknowns: a local edge reads its
 predecessor. A call does not. In the running example the continuation
 $(italic("pp3"), c_0)$ first reads the caller $(italic("pp2"), c_0)$. Only from that value does it
 learn the entry value $n = 5$ and with it the context $c_1$, and only then
-does it know which result to read, $(italic("exit")_"bump", c_1)$.
+does it know which result to read, $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 The second unknown depends on the value of the first, so the equation cannot
 be handed to the solver as a function of a fixed list of arguments.
 
@@ -758,10 +761,10 @@ $ctor("Activation_Seed") thin p space c'$ is a global unknown and acts as a mail
 publishes $e$ to it with #ctor("Side"), and the entry equation of
 $(ctor("FunctionEntry") thin p, c')$ reads it with #ctor("QueryG"). In the
 running example `bump(5)` publishes ${n |-> 5}$ to $ctor("Activation_Seed") thin #_b space c_1$,
-and $(italic("entry")_"bump", c_1)$ reads it back (@fig:eq-unknowns).
+and $(ctor("FunctionEntry") thin italic("bump"), c_1)$ reads it back (@fig:eq-unknowns).
 Publishing alone does not demand `bump`, since the solver solves only unknowns
 that some tree queries. The result query does: solving
-$(italic("exit")_"bump", c_1)$ reaches the entry, which queries its seed.
+$(ctor("FunctionResult") thin italic("bump"), c_1)$ reaches the entry, which queries its seed.
 
 Because seeds are global unknowns, they inherit the update rule for globals:
 without contexts, warrowing widens the one seed of `bump` to the lower bound
@@ -862,21 +865,21 @@ satisfies
   #show math.equation: set block(breakable: true)
   #set text(size: 10pt)
   $
-    sol(italic("entry")_"main", c_0) & gt.eq d_0 union.sq sol(ctor("Activation_Seed") thin italic("main") space c_0) & quad & "initial state and seed" \
-    sol(italic("pp2"), c_0) & gt.eq sh(f)_("body(main)") (sol(italic("entry")_"main", c_0)) & & "local edge" \
+    sol(ctor("FunctionEntry") thin italic("main"), c_0) & gt.eq d_0 union.sq sol(ctor("Activation_Seed") thin italic("main") space c_0) & quad & "initial state and seed" \
+    sol(italic("pp2"), c_0) & gt.eq sh(f)_("body(main)") (sol(ctor("FunctionEntry") thin italic("main"), c_0)) & & "local edge" \
     sol(ctor("Activation_Seed") thin #_b space c_1) & gt.eq e_1 & & "call 1 publishes" \
-    sol(italic("entry")_"bump", c_1) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_1) & & "entry reads its seed" \
-    sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_1)) & & "local edge" \
-    sol(italic("exit")_"bump", c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
-    sol(italic("pp3"), c_0) & gt.eq sh("combine") (q_1, sol(italic("exit")_"bump", c_1)) & & "call 1 returns" \
+    sol(ctor("FunctionEntry") thin italic("bump"), c_1) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_1) & & "entry reads its seed" \
+    sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin italic("bump"), c_1)) & & "local edge" \
+    sol(ctor("FunctionResult") thin italic("bump"), c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
+    sol(italic("pp3"), c_0) & gt.eq sh("combine") (q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) & & "call 1 returns" \
     sol(ctor("Activation_Seed") thin #_b space c_2) & gt.eq e_2 & & "call 2 publishes" \
-    sol(italic("entry")_"bump", c_2) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_2) & & "entry reads its seed" \
-    sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(italic("entry")_"bump", c_2)) & & "local edge" \
-    sol(italic("exit")_"bump", c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
-    sol(italic("pp4"), c_0) & gt.eq sh("combine") (q_2, sol(italic("exit")_"bump", c_2)) & & "call 2 returns" \
+    sol(ctor("FunctionEntry") thin italic("bump"), c_2) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_2) & & "entry reads its seed" \
+    sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin italic("bump"), c_2)) & & "local edge" \
+    sol(ctor("FunctionResult") thin italic("bump"), c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
+    sol(italic("pp4"), c_0) & gt.eq sh("combine") (q_2, sol(ctor("FunctionResult") thin italic("bump"), c_2)) & & "call 2 returns" \
     sol(italic("pp5"), c_0) & gt.eq sh(f)_("check(a == 6)") (sol(italic("pp4"), c_0)) & & "local edge" \
     sol(italic("pp6"), c_0) & gt.eq sh(f)_("check(b == 5)") (sol(italic("pp5"), c_0)) & & "local edge" \
-    sol(italic("exit")_"main", c_0) & gt.eq sh(f)_("return") (sol(italic("pp6"), c_0)) & & "local edge"
+    sol(ctor("FunctionResult") thin italic("main"), c_0) & gt.eq sh(f)_("return") (sol(italic("pp6"), c_0)) & & "local edge"
   $
 ]
 Each local edge gives one inequality, each call two (its publication and its

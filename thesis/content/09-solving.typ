@@ -154,14 +154,14 @@ unknown, its valuation is #lbot and the bound holds trivially.
 #[
   #set enum(numbering: n => "(C" + str(n) + ")")
   + puts the query into the solved set (#isathm("part_post_solution_query")). In the running example the query is
-    $(italic("exit")_"main", c_0)$.
+    $(ctor("FunctionResult") thin italic("main"), c_0)$.
   + closes $V$ under reading: every local unknown that the equation of a solved
     unknown reads is itself solved (#isathm("part_post_solution_closed")). Which unknowns a right-hand side reads can depend on the
     values it reads (@sec:eq-trees), so the dependencies are taken under the
     final valuation. In the running example $V$ holds the #_local-unknowns local
     unknowns the solve of @sec:eq-example reached, and the tree of
     $(italic("pp3"), c_0)$ reads $(italic("pp2"), c_0)$ and, in the context
-    $c_1$ it computes from that value, $(italic("exit")_"bump", c_1)$; both
+    $c_1$ it computes from that value, $(ctor("FunctionResult") thin italic("bump"), c_1)$; both
     lie in $V$.
   + is the post-solution inequality of @ch:background for local unknowns: the
     value #sol stores at $u$ is at least what the right-hand side of $u$
@@ -172,7 +172,7 @@ unknown, its valuation is #lbot and the bound holds trivially.
     call's combined result. So $sol(u)$ over-approximates each of them; these
     are the inequalities #ineq(1), #ineq(2), #ineq(4) and #ineq(5) of
     @sec:eq-discharge. In the running example, (C3) at $(italic("pp3"), c_0)$
-    requires $sh("combine")(q_1, sol(italic("exit")_"bump", c_1)) lle
+    requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
     sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
   + carries a call into its callee: it makes the callee's seed hold every
     entry value routed there, and global unknowns receive their values only

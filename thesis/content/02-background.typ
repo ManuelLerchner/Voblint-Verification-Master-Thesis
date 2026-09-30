@@ -661,11 +661,16 @@ with a local unknown $y in Unk$, a global $g in G$, an abstract value $d in A$
 and a continuation $k : A -> tau$ that receives the value read. $ctor("Answer", thy: "Basics_side")(d)$
 returns $d$ as the value of the right-hand side, $ctor("QueryL")$ and
 $ctor("QueryG")$ read a local or a global unknown, and $ctor("Side")(g, d, tau)$
-contributes $d$ to $g$ before continuing with $tau$. Evaluating $tau$ against $sol$ follows the queries and
-yields a value $italic("eval")(tau, sol)$ (#isaconst("traverse_rhs", thy: "Basics_side")), the set $italic("dep")(tau, sol)$ of local unknowns it
-reads, and the join $italic("side")(tau, sol)$ of its side contributions per global
-(#isaconst("sides_of_rhs")). @fig:strategy-trees shows two
-right-hand sides in both forms.
+contributes $d$ to $g$ before continuing with $tau$. Evaluating $tau$ against
+$sol$ follows the queries and yields the value
+$#isaconst("traverse_rhs", thy: "Basics_side") med tau med sol$ of the
+$ctor("Answer", thy: "Basics_side")$ it ends in, the join
+$#isaconst("sides_of_rhs") med tau med sol$ of its side contributions per
+global, and the local unknowns it reads. Isabelle defines the last per
+unknown: for an equation system $T$ that maps each local unknown $u$ to its
+tree, $#isaconst("dep\<^sub>L") med T med sol med u$ is the set of local
+unknowns that $T med u$ reads. @fig:strategy-trees shows two right-hand sides
+in both forms.
 
 #let _tree(steps) = {
   set text(size: 8pt)
