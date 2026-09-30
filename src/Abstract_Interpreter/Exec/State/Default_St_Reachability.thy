@@ -156,6 +156,13 @@ text \<open>
 
 subsection \<open>Exact test for the declared globals\<close>
 
+text \<open>
+  In these names \<open>rep\<close> marks a test on representations and \<open>for\<close> a test exact for an
+  explicit list of declared globals. The classifier-only test
+  \<^const>\<open>default_st_rep_is_bot\<close> has no quotient counterpart: it ignores the global
+  default, so extensionally equal representatives can disagree on it.
+\<close>
+
 definition default_st_rep_is_bot_for ::
   "vname list => (vname => bool) => ('a::executable_domain) default_st_rep => bool" where
   "default_st_rep_is_bot_for globals \<G> s =
