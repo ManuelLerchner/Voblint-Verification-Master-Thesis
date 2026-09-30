@@ -3197,6 +3197,9 @@ function updateGlobalsHelp() {
     warrow: "Widen, then narrow, every value side-effected into a global.",
 
     "warrow-per-origin": "Widen and narrow side-effected values separately per origin.",
+
+    "bounded-narrowing":
+      "Widen side-effected values per origin; narrow each origin until it has switched to narrowing 5 times.",
   };
 
   globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
@@ -3229,7 +3232,13 @@ function readConfiguration() {
 
   const context = contextSelect.value;
 
-  const allowedGlobals = new Set(["join", "per-origin", "warrow", "warrow-per-origin"]);
+  const allowedGlobals = new Set([
+    "join",
+    "per-origin",
+    "warrow",
+    "warrow-per-origin",
+    "bounded-narrowing",
+  ]);
 
   if (!allowedGlobals.has(globals)) {
     throw new Error(`Unknown globals rule: ${globals}`);

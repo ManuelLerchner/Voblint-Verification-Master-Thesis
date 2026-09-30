@@ -26,6 +26,15 @@ def test_settings_read_every_analysis_flag():
     }
 
 
+def test_narrow_bound_is_an_integer_setting():
+    args = "--analysis interval --globals bounded-narrowing --narrow-bound 3".split()
+    assert vimp_fixture.analysis_settings(args) == {
+        "analyses": ["interval"],
+        "globals": "bounded-narrowing",
+        "narrow_bound": 3,
+    }
+
+
 def test_output_and_runner_flags_select_nothing():
     args = "--analysis sign --dot --timeout 5".split()
     assert vimp_fixture.analysis_settings(args) == {"analyses": ["sign"]}

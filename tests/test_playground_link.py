@@ -83,6 +83,17 @@ def test_flags_in_any_order_override_the_header(tmp_path):
     assert unpack(url.split("#code=")[1]) == "fun main() {}"
 
 
+def test_bounded_narrowing_links_only_at_the_default_bound(tmp_path):
+    program = tmp_path / "prog.vimp"
+    program.write_text(
+        "// PARAM: --analysis interval --globals bounded-narrowing\nfun main() {}\n"
+    )
+    url = playground_link.program_link(program, ["--narrow-bound", "5"])
+    assert "globals=bounded-narrowing" in url
+    with pytest.raises(ValueError):
+        playground_link.program_link(program, ["--narrow-bound", "2"])
+
+
 def test_a_program_without_header_keeps_its_first_line(tmp_path):
     program = tmp_path / "prog.vimp"
     program.write_text("// my own comment\nfun main() {}\n")

@@ -116,6 +116,13 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
         raise ValueError(
             f"{program}: no --analysis given and no // PARAM: header names one"
         )
+    if settings.get("narrow_bound", vimp_fixture.DEFAULT_NARROW_BOUND) != (
+        vimp_fixture.DEFAULT_NARROW_BOUND
+    ):
+        raise ValueError(
+            f"{program}: the playground runs bounded-narrowing only at its default"
+            f" bound {vimp_fixture.DEFAULT_NARROW_BOUND}"
+        )
 
     return link(
         vimp_fixture.shown_source(program.read_text()),

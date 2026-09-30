@@ -573,14 +573,13 @@ let analysis_answer_json = function
   | C.Malformed_Program -> tagged "Malformed_Program" []
   | C.Analysed r -> tagged "Analysed" [ run_result_json r ]
 
-let globals_rule_json r =
-  tagged
-    (match r with
-    | C.Globals_Join -> "Globals_Join"
-    | C.Globals_Per_Origin -> "Globals_Per_Origin"
-    | C.Globals_Warrow -> "Globals_Warrow"
-    | C.Globals_Warrow_Per_Origin -> "Globals_Warrow_Per_Origin")
-    []
+let globals_rule_json = function
+  | C.Globals_Join -> tagged "Globals_Join" []
+  | C.Globals_Per_Origin -> tagged "Globals_Per_Origin" []
+  | C.Globals_Warrow -> tagged "Globals_Warrow" []
+  | C.Globals_Warrow_Per_Origin -> tagged "Globals_Warrow_Per_Origin" []
+  | C.Globals_Bounded_Narrowing n ->
+      tagged "Globals_Bounded_Narrowing" [ nat_json n ]
 
 let context_mode_json = function
   | C.Ctx_None -> tagged "Ctx_None" []

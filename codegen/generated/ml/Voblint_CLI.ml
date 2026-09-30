@@ -104,7 +104,7 @@ module Generated : sig
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type 'a cfg_ext
   type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
-    Globals_Warrow_Per_Origin
+    Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat
   type abstract_value
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type arithmetic_obligation
@@ -4041,6 +4041,8 @@ type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
 
+type phase = Widening | Narrowing;;
+
 type 'a cfg_ext =
   Cfg_ext of
     (cfg_node * (edge_action * cfg_node)) set *
@@ -4074,7 +4076,7 @@ type ('a, 'b, 'c, 'd) state_ext =
       'd;;
 
 type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
-  Globals_Warrow_Per_Origin;;
+  Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
@@ -4241,6 +4243,9 @@ type ('a, 'b, 'c, 'd) func_state =
                  (('b -> 'c) *
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext))));;
+
+type ('a, 'b, 'c) ug_state_with_gas_ext =
+  Ug_state_with_gas_ext of ('b -> 'a -> phase * nat) * 'c;;
 
 type ('a, 'b) nonrelational_ops_ext =
   Nonrelational_ops_ext of
@@ -10278,6 +10283,71 @@ let rec update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C
             let join_over_origins = sup_over_origins _B _A2 statea g in
              (Some join_over_origins, statea)));;
 
+let rec gas_update
+  gasa (Ug_state_ext (rho, Ug_state_with_gas_ext (gas, more))) =
+    Ug_state_ext (rho, Ug_state_with_gas_ext (gasa gas, more));;
+
+let rec equal_phase x0 x1 = match x0, x1 with Widening, Narrowing -> false
+                      | Narrowing, Widening -> false
+                      | Narrowing, Narrowing -> true
+                      | Widening, Widening -> true;;
+
+let rec gas (Ug_state_ext (rho, Ug_state_with_gas_ext (gas, more))) = gas;;
+
+let rec update_global_bounded_narrowing (_A1, _A2, _A3) _B _C
+  i da orig g d state =
+    (if eq _A1
+          (fmlookup_default _B (rho state g)
+            (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+          d
+      then (None, state)
+      else (let (phase, ia) = gas state g orig in
+             (if less_eq
+                   _A2.order_bot_bounded_semilattice_sup_bot.order_order_bot.preorder_order.ord_preorder
+                   d (fmlookup_default _B (rho state g)
+                       (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                       orig) &&
+                   (equal_phase phase Narrowing && less_eq_nat i ia)
+               then (None, state)
+               else (let (db, (phasea, ib)) =
+                       (if not (less_eq
+                                 _A2.order_bot_bounded_semilattice_sup_bot.order_order_bot.preorder_order.ord_preorder
+                                 d (fmlookup_default _B (rho state g)
+                                     (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                                     orig))
+                         then (widen _A3.widening_warrowing
+                                 (fmlookup_default _B (rho state g)
+                                   (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                                   orig)
+                                 d,
+                                (Widening, ia))
+                         else (if equal_phase phase Narrowing
+                                then (narrow _A3.narrowing_warrowing
+(fmlookup_default _B (rho state g)
+  (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+d,
+                                       (phase, ia))
+                                else (narrow _A3.narrowing_warrowing
+(fmlookup_default _B (rho state g)
+  (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+d,
+                                       (Narrowing, plus_nat ia one_nat))))
+                       in
+                     let statea =
+                       gas_update
+                         (fun _ ->
+                           fun_upd _C (gas state) g
+                             (fun_upd _B (gas state g) orig (phasea, ib)))
+                         (rho_update
+                           (fun _ ->
+                             fun_upd _C (rho state) g
+                               (fmupd _B orig db (rho state g)))
+                           state)
+                       in
+                     let join_over_origins = sup_over_origins _B _A2 statea g in
+                      (if eq _A1 join_over_origins da then (None, statea)
+                        else (Some join_over_origins, statea))))));;
+
 let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
   da orig g d state =
     (if eq _A1
@@ -10317,12 +10387,26 @@ let rec update_global_per_origin (_A1, _A2) _B _C
      let db = sup_over_origins _B _A2 statea g in
       (if eq _A1 db da then (None, statea) else (Some db, statea)));;
 
+let rec truncatea r = Ug_state_ext (rho r, ());;
+
+let rec lift_basic_rule
+  f da orig g d state =
+    (let (res, st) = f da orig g d (truncatea state) in
+      (res, rho_update (fun _ -> rho st) state));;
+
 let rec update_global_of (_A1, _A2, _A3) _B _C
-  r = (match r with Globals_Join -> update_global_always_join (_A1, _A2) _B _C
-        | Globals_Per_Origin -> update_global_per_origin (_A1, _A2) _B _C
-        | Globals_Warrow -> update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
+  r = (match r
+        with Globals_Join ->
+          lift_basic_rule (update_global_always_join (_A1, _A2) _B _C)
+        | Globals_Per_Origin ->
+          lift_basic_rule (update_global_per_origin (_A1, _A2) _B _C)
+        | Globals_Warrow ->
+          lift_basic_rule (update_global_warrowing_apinis (_A1, _A2, _A3) _B _C)
         | Globals_Warrow_Per_Origin ->
-          update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C);;
+          lift_basic_rule
+            (update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C)
+        | Globals_Bounded_Narrowing a ->
+          update_global_bounded_narrowing (_A1, _A2, _A3) _B _C a);;
 
 let rec point
   (State_ext (called, infl, stabl, sigma, State_exta (point, more))) = point;;
@@ -10443,7 +10527,10 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                                      (infl_update (fun _ -> infla) state)),
                                   ug_statea)))))))));;
 
-let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
+let rec init_ug_state_with_gas _C
+  = Ug_state_ext
+      ((fun _ -> fmempty),
+        Ug_state_with_gas_ext ((fun _ _ -> (Widening, zero_nat)), ()));;
 
 let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
   r t x =
@@ -10451,7 +10538,7 @@ let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
            (I (x, (called_update
                      (fun _ -> inserta _A x (called (init_state (_C2, _C3))))
                      (init_state (_C2, _C3)),
-                    init_basic_ug_state
+                    init_ug_state_with_gas
                       _C2.order_bot_bounded_semilattice_sup_bot))))
       (fun (_, (state, _)) -> Some (stabl state, sigma state));;
 

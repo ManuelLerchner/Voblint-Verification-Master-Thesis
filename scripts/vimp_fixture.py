@@ -36,7 +36,11 @@ SETTING_FLAGS = {
     "--context-depth": "context_depth",
     "--globals": "globals",
     "--int-refinement": "int_refinement",
+    "--narrow-bound": "narrow_bound",
 }
+
+# The bound voblint's bounded-narrowing rule takes when --narrow-bound is absent.
+DEFAULT_NARROW_BOUND = 5
 
 
 def param_args(path: Path) -> list[str] | None:
@@ -76,7 +80,7 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
         key = SETTING_FLAGS[flag]
         if key == "analyses":
             settings[key] = value.split(",")
-        elif key == "context_depth":
+        elif key in ("context_depth", "narrow_bound"):
             settings[key] = int(value)
         else:
             settings[key] = value

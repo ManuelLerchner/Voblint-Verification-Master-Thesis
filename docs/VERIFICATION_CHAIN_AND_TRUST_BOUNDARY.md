@@ -96,9 +96,11 @@ that path. The certificate is solver-independent:
 `activation_collect_dg_sound` (`Routed_Context.thy`) proves collecting
 soundness from any valuation satisfying it, without asking how it was computed.
 
-The four update rules of `globals_rule` (always-join, per-origin, Apinis
-warrowing, warrowing-per-origin) are vendored rules, selected through one
-`TD_side_rule_Interp` interpretation (`Globals_Rule.thy`), and widening is a type-class
+The five update rules of `globals_rule` (always-join, per-origin, Apinis
+warrowing, warrowing-per-origin, bounded narrowing) are vendored rules, selected
+through one `TD_side_rule_Interp` interpretation (`Globals_Rule.thy`). The first
+four run on the contribution part of the bounded-narrowing rule's update state
+(`lift_basic_rule`, proved to keep the update-rule interface), and widening is a type-class
 instance of the vendored `widening` class, so there is no refinement gap at the
 solver layer beyond ordinary code-generation trust.
 

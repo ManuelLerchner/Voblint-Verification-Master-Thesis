@@ -155,7 +155,9 @@ def test_return_expression_is_inspected(tmp_path):
         ("--context", "call-string", "--context-depth", "1"),
     ],
 )
-@pytest.mark.parametrize("rule", ["join", "per-origin", "warrow", "warrow-per-origin"])
+@pytest.mark.parametrize(
+    "rule", ["join", "per-origin", "warrow", "warrow-per-origin", "bounded-narrowing"]
+)
 def test_contexts_aggregate_mixed_zero_and_nonzero_as_possible(
     tmp_path, context_args, rule
 ):
