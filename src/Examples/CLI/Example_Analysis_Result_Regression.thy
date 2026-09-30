@@ -339,7 +339,7 @@ lemma result_demo_two_dead_not_live:
   "\<not> node_live_ex result_demo_two_dead (Statement 1)"
   by eval
 
-subsection \<open>Sign and int_dom: the same abstraction, one live and one dead key\<close>
+subsection \<open>Sign and \<open>int_dom\<close>: the same abstraction, one live and one dead key\<close>
 
 text \<open>
   Deliberately lighter than the Interval coverage above: these two only have

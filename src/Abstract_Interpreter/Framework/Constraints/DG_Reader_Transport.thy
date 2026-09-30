@@ -263,10 +263,7 @@ text \<open>
   tree-commute reasoning.
 
   The specification's own enter and combine appear inside the routed tree as
-  compiled sub-trees, so their transport hypotheses are themselves tree commutes
-  -- and
-  \<open>caller_cont\<close> needs no hypothesis at all, since
-  \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
+  compiled sub-trees, so their transport hypotheses are themselves tree commutes.
   Sequencing them is what \<open>dg_tree_st_commute_seqcomp\<close> does: a bind commutes when
   its head commutes and its continuation commutes at the head's answer.
 \<close>

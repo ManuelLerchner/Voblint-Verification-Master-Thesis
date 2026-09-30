@@ -1,4 +1,4 @@
-section \<open>Example: checks_proven/checks_provenD alone, store-only\<close>
+section \<open>Example: \<open>checks_proven\<close> alone, store-only\<close>
 
 theory Example_Checks_Store_Only
   imports "Voblint_Framework.Checks"

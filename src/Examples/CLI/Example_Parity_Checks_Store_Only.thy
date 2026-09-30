@@ -8,8 +8,8 @@ begin
 
 text \<open>
   Third-domain worked example, mirroring
-  Voblint_Examples_CLI.Example_Checks_Store_Only (Sign) and
-  Voblint_Examples_CLI.Example_Interval_Checks_Store_Only, discharged
+  \<open>Voblint_Examples_CLI.Example_Checks_Store_Only\<close> (Sign) and
+  \<open>Voblint_Examples_CLI.Example_Interval_Checks_Store_Only\<close>, discharged
   node-locally through \<^theory>\<open>Voblint_Analysis_Parity.Parity_Classify\<close> rather than by
   forwarding stores to the procedure exit. The run is Parity's unit-context registration
   \<open>parity_rule\<close> at \<^const>\<open>Globals_Join\<close>.

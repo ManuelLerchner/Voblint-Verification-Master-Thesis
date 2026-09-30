@@ -310,7 +310,7 @@ text \<open>
       guard. The graph itself is unchanged; the cone restriction belongs to the
       abstract concretization.
 
-  \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
+  \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the \<open>TD_side\<close> solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} ---
       \<^verbatim>\<open>numeric_domain\<close>, lifted state concretization, and

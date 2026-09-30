@@ -611,8 +611,8 @@ qed
 text \<open>
   Every valid activation trace of a covered program carries some context under this instance's own
   \<open>R\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>activation_coverage\<close> total here, so a \<open>Source_Ctx\<close>-style example can discharge the
-  \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
+  \<open>activation_coverage\<close> total here, so an example such as
+  \<open>Example_Interval_Source_Ctx\<close> can discharge the \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
   interpretation itself.
 \<close>
 

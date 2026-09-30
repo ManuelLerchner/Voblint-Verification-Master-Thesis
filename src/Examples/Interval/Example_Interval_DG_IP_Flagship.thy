@@ -35,7 +35,7 @@ definition twice_main :: "VIMP_Proc.com" where "twice_main = prog_main twice_pro
 text \<open>The storage classifier: \<open>twice_program\<close> declares no globals, so \<open>twice_gs\<close>
   classifies every variable this chain touches as local, matching the
   \<open>declared_global\<close> pattern used by every other flagship rather than
-  the \<open>is_global\<close> naming convention.\<close>
+  the retired convention that read a name starting with \<open>G\<close> as global.\<close>
 abbreviation twice_gs :: "vname \<Rightarrow> bool" where
   "twice_gs \<equiv> declared_global twice_program"
 

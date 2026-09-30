@@ -11,8 +11,8 @@ text \<open>
   \<open>Min\<close>/\<open>Max\<close>. This theory proves that shape's soundness and monotonicity once,
   against an abstract pair of primitives (\<open>special_min\<close>/\<open>special_max\<close>) and an
   abstract expression evaluator, so each domain only has to supply its own
-  \<open>X_min\<close>/\<open>X_max\<close> and their soundness/monotonicity facts -- the case-split
-  dispatch and its proof are not repeated per domain.
+  minimum and maximum primitives and their soundness/monotonicity facts -- the
+  case-split dispatch and its proof are not repeated per domain.
 
   \<open>special_min\<close>/\<open>special_max\<close> are bundled as a record rather than as two bare
   locale parameters so a concrete instance (e.g. \<open>sign_special_ops\<close>) is a

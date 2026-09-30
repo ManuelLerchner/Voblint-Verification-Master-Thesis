@@ -11,8 +11,8 @@ text \<open>
   analysis. It demonstrates that a non-\<open>abs_state\<close> carrier discharges
   \<^locale>\<open>analysis_contract\<close> with zero changes to the DG framework. Every transfer
   below is deliberately the most imprecise sound choice (forget on assign, havoc on
-  call) except for a precise \<open>assume\<close>/\<open>assume_not\<close> pair, which is enough to make
-  the carrier genuinely relational.
+  call) except for a precise \<open>assume_step\<close>/\<open>assume_not_step\<close> pair, which is
+  enough to make the carrier genuinely relational.
 \<close>
 
 subsection \<open>Local and global state together\<close>
@@ -385,8 +385,8 @@ lemma relc_step_sound:
 
 subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>\<top>\<close>\<close>
 
-text \<open>The composed return pipeline: \<open>caller_cont\<close> and \<open>combine_assign\<close> are the
-  defaults, so the whole combine is the environment merge, which resets both halves
+text \<open>The composed return pipeline: \<open>combine_assign\<close> keeps the template's
+  identity default, so the whole combine is the environment merge, which resets both halves
   to \<^term>\<open>\<top> :: relc\<close>.\<close>
 
 lemma dg_spec_combine_transfer_rel_order_spec [simp]:

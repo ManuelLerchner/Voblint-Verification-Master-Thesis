@@ -362,7 +362,7 @@ subsection \<open>Shared-state regression facts\<close>
 text \<open>The local unknown carries the whole abstract state, so a variable that is shared
   across activations is read at the very same slot as a formal.  A name that
   \<^const>\<open>twice_program\<close> never declares --- \<open>Gx\<close> --- therefore reads identically in both
-  callee contexts: no name-based \<open>is_global\<close> convention gives it a separate,
+  callee contexts: no name-based convention for globals gives it a separate,
   context-indexed slot.\<close>
 lemma global_slot_shared:
   "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')

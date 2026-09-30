@@ -246,14 +246,6 @@ lemma combine_collect_sound [intro]:
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)
 
-text \<open>
-  Discharge the concrete return combine from an abstract bound: given
-  \<open>combine\<^sup># dst sc se \<le> sr\<close>, any concrete return assembled from a
-  caller store sound for \<open>sc\<close> and a callee-exit store sound for \<open>se\<close> lies in
-  \<open>\<lbrakk>sr\<rbrakk>\<close>.  @{thm combine_collect_sound} carried to the bound by
-  @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
-  checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
-\<close>
 subsection \<open>The C-faithful initial store set\<close>
 
 text \<open>

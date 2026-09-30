@@ -3,7 +3,7 @@ theory Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_EntryState_Ctx
 begin
 
-section \<open>Activation-indexed collecting soundness: one context covers every __voblint_nondet_int() draw\<close>
+section \<open>Activation-indexed collecting soundness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
 text \<open>
   \<^const>\<open>rc_program\<close> is the concrete instance of the production entry-state

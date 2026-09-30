@@ -35,7 +35,7 @@ text \<open>
   The construction is generic in the carrier -- the same three operations exist on
   function-valued states and on the solver's association lists -- but not in the
   ownership rule, which is always \<^const>\<open>combine_env\<close> and the two
-  \<open>restrict_\<close> projections at that carrier.
+  restrictions to the global and the local half at that carrier.
 \<close>
 
 
@@ -214,8 +214,8 @@ lemma ownership_split_transfer_gen_local_outer_man [simp]:
 subsection \<open>The ownership rule at the pointwise carrier\<close>
 
 text \<open>The three carrier operations the wrapper is generic in, fixed at the
-  function-valued states: \<^const>\<open>combine_env\<close> merges by the classifier, and the
-  two \<open>restrict_\<close> projections read each half back out.\<close>
+  function-valued states: \<^const>\<open>combine_env\<close> merges by the classifier, and
+  \<^const>\<open>restrict_global_for\<close> and \<^const>\<open>restrict_local_for\<close> read each half back out.\<close>
 
 definition ownership_split_transfer ::
   "(vname \<Rightarrow> bool)

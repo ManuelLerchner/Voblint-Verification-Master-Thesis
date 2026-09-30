@@ -176,8 +176,7 @@ text \<open>
   The routed spine's transport hypotheses are commutes of compiled sub-trees.
   Both specifications are
   local-only, so each such commute reduces to the corresponding field equation
-  above -- and \<open>caller_cont\<close> needs no hypothesis at all, since
-  \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
+  above.
 \<close>
 
 abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) dg_spec" where

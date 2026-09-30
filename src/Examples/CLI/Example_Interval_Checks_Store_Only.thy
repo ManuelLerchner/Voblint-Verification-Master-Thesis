@@ -1,4 +1,4 @@
-section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval\<close>
+section \<open>Example: \<open>checks_proven\<close> alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Analyses"

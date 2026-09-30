@@ -47,8 +47,9 @@ subsection \<open>The slot under every update rule\<close>
 text \<open>\<open>join\<close> and \<open>per_origin\<close> agree at the exact \<open>[1, 2]\<close>: neither widens, and storing a
   contribution per origin then taking \<^const>\<open>sup_over_origins\<close> reconstructs the value
   accumulating them into one slot produces.  They are the precision ceiling on this
-  system, and \<open>warrow_per_origin\<close> meets it while keeping the termination guarantee that
-  \<open>join\<close> and \<open>per_origin\<close> do not carry. Pinned as one fact per update rule, so a change to
+  system, and \<^const>\<open>update_global_warrowing_per_origin\<close> meets it while keeping the
+  termination guarantee that \<open>join\<close> and \<open>per_origin\<close> do not carry. Pinned as one fact
+  per update rule, so a change to
   any single rule fails on the claim it breaks rather than on a list mismatch.\<close>
 
 lemma two_writer_slot_join:
