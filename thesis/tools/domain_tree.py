@@ -27,35 +27,53 @@ REPO = Path(__file__).resolve().parents[2]
 TREES = REPO / "thesis/shared/domain-tree.toml"
 SNIPPETS = REPO / "thesis/shared/snippets.toml"
 
-INSTANTIATION = re.compile(
-    r"^instantiation\s+(\S+)\s*::\s*(?:\([^)]*\)\s*)?(\w+)", re.M
-)
-# An unconditional lemma whose statement opens with a locale predicate.
-LEMMA = re.compile(
-    r"^lemma\s+(\w+)\s*(?:\[[^\]]*\])?:\s*\n?\s*\"(\w+)\s+([^\"]*)\"", re.M
-)
-INTERPRETATION = re.compile(r"^global_interpretation\s+(\w+)\s*:\s*(\w+)\s+(.*)$", re.M)
-# A locale's parent expression: up to its `for`, `fixes`, `assumes` or `begin`.
-LOCALE = re.compile(
-    r"^locale\s+(\w+)\s*=\s*(.*?)(?=\bfor\b|\bfixes\b|\bassumes\b|^begin\b|^\S)",
-    re.M | re.S,
-)
+sys.path.insert(0, str(REPO / "scripts"))
+from isar_json import hierarchy, instances, names  # noqa: E402
+
+# A statement whose first proposition is a locale predicate: `lemma n: "loc args"`.
+PREDICATE = re.compile(r'^lemma\s+\w+\s*(?:\[[^\]]*\])?:\s*"(\w+)\s+([^"]*)"')
 
 
-def locale_parents(texts: list[str]) -> dict[str, list[str]]:
+def own(row: dict) -> bool:
+    """Declared in a theory of src/, not a generated one."""
+    return row["path"].startswith("src/") and "/generated/" not in row["path"]
+
+
+def instantiations() -> list[tuple[str, str]]:
+    """`(type, class)` of every class instantiation."""
+    return [
+        tuple(i["name"].split(" :: "))
+        for i in instances(str(REPO))
+        if i["command"] == "instantiation" and own(i)
+    ]
+
+
+def interpretations() -> list[tuple[str, str, str]]:
+    """`(qualifier, locale, arguments)` of every global interpretation."""
+    return [
+        (i["name"], i["target"], i["arguments"])
+        for i in instances(str(REPO))
+        if i["command"] == "global_interpretation" and own(i)
+    ]
+
+
+def certificates() -> list[tuple[str, str, str]]:
+    """`(lemma, locale, arguments)` of every lemma whose statement is a locale
+    predicate."""
+    found = []
+    for row in names(str(REPO), statements=True):
+        if row["command"] == "lemma" and own(row):
+            m = PREDICATE.match(" ".join(row["statement"].split()))
+            if m:
+                found.append((row["name"].rsplit(".", 1)[1], m[1], m[2]))
+    return found
+
+
+def locale_parents() -> dict[str, list[str]]:
     """Each locale's declared parents, with qualifiers such as `backward:` dropped."""
-    parents: dict[str, list[str]] = {}
-    for text in texts:
-        for name, expr in LOCALE.findall(text):
-            names = []
-            for part in expr.split("+"):
-                words = part.split()
-                if words and words[0].endswith(":"):
-                    words = words[1:]
-                if words:
-                    names.append(words[0])
-            parents[name] = names
-    return parents
+    return {
+        d["name"]: d["parents"] for d in hierarchy(str(REPO)) if d["kind"] == "locale"
+    }
 
 
 def bundle(arg: str) -> str:
@@ -78,10 +96,8 @@ def extends(locale: str, node: str, parents: dict[str, list[str]]) -> bool:
 def main() -> int:
     trees = tomllib.loads(TREES.read_text())
     snippets = tomllib.loads(SNIPPETS.read_text())["snippets"]
-    theories = [p for p in (REPO / "src").rglob("*.thy") if "generated" not in p.parts]
-    texts = [p.read_text(errors="ignore") for p in theories]
-
-    parents = locale_parents(texts)
+    parents = locale_parents()
+    instance_rows, lemmas, interps = instantiations(), certificates(), interpretations()
 
     missing: list[str] = []
     for key, tree in trees.items():
@@ -91,30 +107,22 @@ def main() -> int:
             elif not extends(strengthening, node, parents):
                 missing.append(f"{key}/{node}: {strengthening} does not extend {node}")
         for node, listed in tree.get("interpreted", {}).items():
-            listed_instances = {snippets.get(n, {}).get("instance") for n in listed}
+            listed_instances = {snippets.get(n, {}).get("name") for n in listed}
             # A listed interpretation covers the lemma it is built from.
-            covered = {
-                bundle(arg)
-                for text in texts
-                for name, _, arg in INTERPRETATION.findall(text)
-                if name in listed
-            }
-            for text in texts:
-                for ty, cls in INSTANTIATION.findall(text):
-                    if cls == node and f"{ty} :: {cls}" not in listed_instances:
-                        missing.append(f"{key}/{node}: instantiation {ty} :: {cls}")
-                for name, locale, arg in LEMMA.findall(text):
-                    if (
-                        (locale == node or locale.startswith(node + "_"))
-                        and name not in listed
-                        and bundle(arg) not in covered
-                    ):
-                        missing.append(f"{key}/{node}: lemma {name} ({locale})")
-                for name, locale, _ in INTERPRETATION.findall(text):
-                    if extends(locale, node, parents) and name not in listed:
-                        missing.append(
-                            f"{key}/{node}: interpretation {name} ({locale})"
-                        )
+            covered = {bundle(arg) for name, _, arg in interps if name in listed}
+            for ty, cls in instance_rows:
+                if cls == node and f"{ty} :: {cls}" not in listed_instances:
+                    missing.append(f"{key}/{node}: instantiation {ty} :: {cls}")
+            for name, locale, arg in lemmas:
+                if (
+                    (locale == node or locale.startswith(node + "_"))
+                    and name not in listed
+                    and bundle(arg) not in covered
+                ):
+                    missing.append(f"{key}/{node}: lemma {name} ({locale})")
+            for name, locale, _ in interps:
+                if extends(locale, node, parents) and name not in listed:
+                    missing.append(f"{key}/{node}: interpretation {name} ({locale})")
 
     if missing:
         print("domain_tree: shared/domain-tree.toml disagrees with the theories:")

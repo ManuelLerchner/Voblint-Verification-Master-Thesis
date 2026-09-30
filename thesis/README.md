@@ -34,7 +34,7 @@ document with no build step.
 The one thing that argued for LaTeX was Isabelle's document preparation:
 `@{thm foo}` typesets the statement Isabelle actually proved, and the build
 fails when `foo` is gone. That guarantee is available here too --
-`tools/snippets.py` lifts the statement as the theory writes it and
+`isar project extract` lifts the statement as the theory writes it and
 `tools/facts.py` checks against a built session that the fact is proved, in
 that theory -- and it does not require writing prose inside theory files to get
 it. A third check with no LaTeX equivalent, `claims.py`, follows from the same
@@ -93,7 +93,7 @@ misses. Unresolved names come with a spelling suggestion.
 ### `pixi run thesis-snippets` -- is this still what the theory says?
 
 Declarations are cited by **name** in `shared/snippets.toml`, never by line
-range, and `tools/snippets.py` lifts each one's source text into
+range, and `isar project extract --statement` lifts each one's source text into
 `shared/generated/snippets/`. The name has to resolve, and the extracted text
 is committed, so a rename fails and an edit to a shown definition surfaces as a
 diff.

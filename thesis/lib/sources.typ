@@ -4,7 +4,7 @@
 // nothing is retyped. Two sources, generated outside Typst and committed:
 //
 //   /shared/generated/snippets/<name>.thy   source text of a declaration,
-//                                           lifted by name (tools/snippets.py);
+//                                           lifted by name (isar project extract);
 //                                           a theorem is cut before its proof
 //   /shared/generated/facts.json            the facts a built session proves,
 //                                           with their theory (tools/facts.py)

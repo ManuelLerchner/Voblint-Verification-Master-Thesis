@@ -6,7 +6,7 @@ fails the build if `foo` is gone -- but only to a document written inside a
 theory file. This gets the same guarantee from outside one: it asks a built
 session for each fact the thesis cites and stores its statement and theory.
 
-The page shows a theorem as its source text (tools/snippets.py), so this also
+The page shows a theorem as its source text (isar project extract), so this also
 checks that a shown theorem was lifted from the theory that proves it. The
 printed statements are not rendered; they are kept so that a statement changed
 without an edit to its source text (notation, an abbreviation) is a diff here.

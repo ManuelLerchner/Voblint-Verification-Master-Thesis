@@ -98,6 +98,7 @@ why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query t
 
 [snippets.default_st]
 why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
+proof = true
 
 [snippets.caller_of]
 why = "The creating caller of a trace (traces chapter)."
@@ -466,7 +467,7 @@ why = "Chapter 4, a graph step keeps a representing trace."
 
 [snippets.bfilter_sound]
 why = "Chapter 5, the guard filter drops no store that passes the guard."
-file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
+file = "src/Abstract_Interpreter/Domain/Eval/Backward_Domain.thy"
 
 [snippets.relc_branch_step_sound]
 why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
@@ -543,32 +544,32 @@ why = "Chapter 7, soundness of the combination of independent components."
 
 [snippets.relc_executable_domain]
 why = "Chapter 5, Figure 5.2: the relational carrier stops at executable_domain."
-instance = "relc :: executable_domain"
+name = "relc :: executable_domain"
 file = "src/Abstract_Interpreter/Domain/Relational/Order_Lattice.thy"
 
 [snippets.sign_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
-instance = "sign :: numeric_domain"
+name = "sign :: numeric_domain"
 file = "src/Analyses/Sign/Sign_Warrowing.thy"
 
 [snippets.ivl_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
-instance = "ivl :: numeric_domain"
+name = "ivl :: numeric_domain"
 file = "src/Analyses/Interval/Interval_Warrowing.thy"
 
 [snippets.parity_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
-instance = "parity :: numeric_domain"
+name = "parity :: numeric_domain"
 file = "src/Analyses/Parity/Parity_Warrowing.thy"
 
 [snippets.congruence_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
-instance = "congruence :: numeric_domain"
+name = "congruence :: numeric_domain"
 file = "src/Analyses/Congruence/Congruence_Warrowing.thy"
 
 [snippets.int_dom_ext_numeric_domain]
 why = "Chapter 5, Figure 5.2: a carrier implementing numeric_domain."
-instance = "int_dom_ext :: numeric_domain"
+name = "int_dom_ext :: numeric_domain"
 file = "src/Analyses/Int/Int_Warrowing.thy"
 
 [snippets.sound_minmax_ops]
