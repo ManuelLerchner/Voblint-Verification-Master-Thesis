@@ -11,8 +11,8 @@ refinement layer, not as part of the framework.
 
 | File | Role |
 | --- | --- |
-| `State/Default_St_Base.thy` | `'a default_st_rep` (local/global defaults plus location-keyed overrides) and its quotient `'a default_st`; lookup, the pointwise order, executable equality and point update. Knows no variable names |
-| `State/Default_St_Algebra.thy` | Join, widening and narrowing through one pointwise combinator (`map2_default_st_rep`) over a deduplicated support, plus the lattice and warrowing instances |
+| `State/Default_St_Base.thy` | `'a default_st_rep`, one `default_dict` (a default plus finite entries) per partition, and its quotient `'a default_st`; lookup at a local or global `location`, the pointwise order, executable equality and point update. Knows no global-name classifier |
+| `State/Default_St_Algebra.thy` | Join, widening and narrowing through one pointwise combinator (`map2_default_dict`, applied to both dictionaries) over a deduplicated support, plus the lattice and warrowing instances |
 | `State/Default_St_Transfer.thy` | Where the global-name classifier enters: `location_of`, `default_st_rep_to_fun` (the function a state represents), the call/return operations, the equations relating carrier operations to their `abs_state` counterparts, and the carrier concretization `default_st_gamma` |
 | `State/Default_St_Reachability.thy` | The finite dead-code test, its exactness against `is_empty_state` and `default_st_gamma`, the quotient lift, the lifted state that tracks emptiness incrementally, and the lifted concretization |
 | `State/Default_St_Restriction_Refinement.thy` | `default_st_to_fun gs`: the `'a abs_state` a state represents, and what commutes with it |

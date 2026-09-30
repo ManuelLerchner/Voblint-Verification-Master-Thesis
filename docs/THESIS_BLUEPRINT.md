@@ -231,9 +231,9 @@ COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
 discharged once for any routing policy), the check layers, and the result table.
 
 **`Voblint_Exec`.** The gap between what soundness talks about and what the
-solver computes on. `default_st` is a quotient type over
-(local default, global default, override list); `default_st_to_fun gs`
-reads it back as an `abs_state`; every executable operation carries a commute
+solver computes on. `default_st` is a quotient type over two default
+dictionaries, one for locals and one for globals, each a default plus a finite
+entry list; `default_st_to_fun gs` maps it to the `abs_state` it represents; every executable operation carries a commute
 theorem against its abstract counterpart; `Default_St_Reachability` gives a finite
 dead-state test proved equivalent to the infinite one.
 
@@ -1341,7 +1341,7 @@ thesis section → theories → central definitions → central theorems.
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
-| 8.4–8.6 | `Voblint_Exec.Default_St_Base`, `Default_St_Algebra`, `Default_St_Transfer`, `Default_St_Reachability`, `Exec_DG_State` | `default_st_rep`, `default_st` (quotient), `location`, `location_of`, `default_st_to_fun`, `default_st_rep_is_bot`, `canonical_location`, `dg_state_to_fun` | `default_st_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
+| 8.4–8.6 | `Voblint_Exec.Default_St_Base`, `Default_St_Algebra`, `Default_St_Transfer`, `Default_St_Reachability`, `Exec_DG_State` | `default_st_rep`, `default_st` (quotient), `location`, `location_of`, `default_st_to_fun`, `default_dict`, `default_st_rep_is_bot`, `dg_state_to_fun` | `default_st_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
 | 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_unknowns`, `lookup_context`, `wf_analysis_result`, `live_unknowns`, `cfg_succ_rel` | `live_unknowns_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Unit_DG_Analysis`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `unit_dg_analysis`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `unit_dg_analysis.source_sound`, `result_node_sound` |

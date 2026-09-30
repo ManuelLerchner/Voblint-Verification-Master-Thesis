@@ -128,25 +128,22 @@ not acted on, either because it needs a semantic decision or because it belongs
 to a larger migration.
 
 **Resolved variable identities.** `gs :: vname => bool` classifies a *textual
-name*, so a state carrier keyed by `location = Local_Location vname |
-Global_Location vname` admits entries at the tagging a name does not have.
+name*, so a carrier with one `vname`-keyed default dictionary per partition
+admits an entry for a name in the dictionary `gs` does not select for it.
 `default_st_rep_is_bot` is the one carrier operation that must consult `gs`, and it
-does so only to filter those entries: the quotient's equality observes every
-tagged location while the concretization reads back only the one `gs` selects.
-`canonical_location` names that filter. The dependency disappears when
-elaboration resolves each declaration to its own identity -- one declaration,
-one cell, scope as metadata -- which also handles shadowing that a textual name
-cannot. Do not split the carrier into local and global maps first: keyed by raw
-`vname` they admit the same malformed states, and the migration would be done
-twice.
+does so only to skip those entries: the quotient's equality observes both
+dictionaries while the represented function reads each name in only the one `gs`
+selects. The dependency disappears when elaboration resolves each declaration
+to its own identity -- one declaration, one cell, scope as metadata -- which
+also handles shadowing that a textual name cannot.
 
 **Names that still need a read before they are changed.** `State_Restriction`
 holds only ownership projections, so `Ownership_Restriction` would be more
 truthful. `DG_Ctx_Activation` abbreviates a
 word its own directory already supplies.
 
-**Refining the override list.** `default_st_rep`'s association list is a candidate
-for an AFP `rbt` map. Keep it independent of the identity migration above, and
+**Refining the dictionary entries.** A `default_dict`'s association list is a
+candidate for an AFP `rbt` map. Keep it independent of the identity migration above, and
 benchmark the generated OCaml rather than Isabelle evaluation.
 
 ## Source extensions
