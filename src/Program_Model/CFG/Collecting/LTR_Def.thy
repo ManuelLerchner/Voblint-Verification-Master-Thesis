@@ -39,7 +39,7 @@ text \<open>A \<open>trace\<close> is what a run leaves behind with no procedure
   control stood at, and what the store held there.  A local trace is one of these per
   activation, with the surrounding activations beside it rather than on it.\<close>
 
-type_synonym trace = "(cfg_node * store) list"
+type_synonym trace = "(cfg_node \<times> store) list"
 
 datatype ltr =
     Root trace
