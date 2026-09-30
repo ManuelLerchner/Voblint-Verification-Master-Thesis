@@ -47,6 +47,14 @@ lemma default_dict_get_map2 [simp]:
   by (cases m1; cases m2)
     (auto simp: map_of_map_key_list map_of_resolved_none_iff[THEN iffD2])
 
+text \<open>
+  From here on the combinator is read through its lookup equation. Its
+  defining equation would otherwise unfold first and hide it from
+  @{thm [source] default_dict_get_map2}.
+\<close>
+
+declare map2_default_dict.simps [simp del]
+
 lemma default_st_rep_get_map2 [simp]:
   "default_st_rep_get (map2_default_st_rep f s t) loc =
      f (default_st_rep_get s loc) (default_st_rep_get t loc)"
