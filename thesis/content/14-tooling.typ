@@ -308,7 +308,8 @@ inserts guarded calls at named places in its text, each of which must occur
 exactly once, so a regeneration that moves one fails the build instead of
 silently losing events. The hooks only observe, and without the flag the
 output is unchanged, which a test checks. The tracer is outside the proof like
-the rest of the tool. @tab:eq-trace and @fig:eq-walk are generated from such a
+the rest of the tool. The playground shows the same trace in a panel when the
+reader asks for it. @tab:eq-trace and @fig:eq-walk are generated from such a
 trace, registered as a claim.
 
 Everything a reader sees is derived in the same way. The website and this
