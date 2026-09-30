@@ -286,7 +286,7 @@ has no procedures: its programs are sets of thread control-flow graphs without
 a call action, and Schwarz lists procedures among the features that Goblint
 implements but the local-trace semantics does not yet support
 @schwarz25phd[§8, p. 277].
-In Voblint, the context relation #isaconst("trace_context") (@sec:contexts)
+In Voblint, the context relation #isaconst("activation_context_rel") (@sec:contexts)
 takes the digest's place for sequential activations. It is a relation, because an entry-state context is
 read off the analysis's result.
 
@@ -313,7 +313,7 @@ concrete semantics that carries contexts, parameterized by a context policy.
 Voblint's differs in three respects. Contexts are admitted by a relation, so one call
 may enter several contexts; the totality condition
 #isaconst("call_context_total_on") makes the context-indexed collection
-exhaustive (#isathm("ltr_collect_eq_Union_activation_collect")); and the
+exhaustive (#isathm("node_collect_eq_Union_activation_collect")); and the
 indexing is connected to an executable solver. The adaptation of local traces
 to activations has no mechanized predecessor that we found.
 

@@ -283,7 +283,13 @@
     One execution of a procedure body from its entry. Repeated and recursive
     calls of one procedure are different activations over the same nodes.
   ],
-  term("ltr", "activation-local trace", _trace, isa: isatype("ltr"), see: <sec:ltr>)[
+  term(
+    "activation-trace",
+    "activation trace",
+    _trace,
+    isa: isatype("activation_trace"),
+    see: <sec:activation-trace>,
+  )[
     A record of one activation: #ctor("Root") for the initial activation,
     #ctor("Call") for a callee holding its creating caller, #ctor("Resume")
     for a caller continued past a finished callee. The construction adapts the
@@ -293,8 +299,8 @@
     "valid-trace",
     "valid trace",
     _trace,
-    isa: isaconst("valid_ltr"),
-    notation: nota("valid_ltr"),
+    isa: isaconst("valid_activation_trace"),
+    notation: nota("valid_activation_trace"),
     see: <sec:valid>,
   )[
     A trace in the least set closed under the rules init, intra, call and ret,
@@ -311,8 +317,8 @@
     "trace-collect",
     "trace collecting semantics",
     _trace,
-    isa: isaconst("ltr_collect"),
-    notation: nota("ltr_collect"),
+    isa: isaconst("node_collect"),
+    notation: nota("node_collect"),
     see: <sec:collect>,
   )[
     The stores that valid traces hold at their sink node $v$: the concrete set
@@ -342,11 +348,11 @@
     "trace-context",
     "context of a trace",
     _trace,
-    isa: isaconst("trace_context"),
+    isa: isaconst("activation_context_rel"),
     see: <sec:contexts>,
   )[
     The inductive relation stating which contexts a trace carries. A
-    #ctor("Root") carries the initial context (Goblint's `startcontext`,
+    #ctor("Root") carries the initial context #isai("c\<^sub>0") (Goblint's `startcontext`,
     printed as `root`), a #ctor("Call") any context admissible from a context
     of its caller, a #ctor("Resume") whatever the resumed trace carries.
   ],
@@ -370,7 +376,7 @@
     "coverage-contract",
     "coverage contract",
     _trace,
-    isa: [#isalocale("ltr_coverage"), #isaconst("call_context_total_on")],
+    isa: [#isalocale("activation_coverage"), #isaconst("call_context_total_on")],
     see: <sec:contract>,
   )[
     Five local obligations on a cover under which it contains every valid
@@ -600,7 +606,7 @@
     "routing-adequacy",
     "routing adequacy",
     _eq,
-    isa: isalocale("routed_context_base_hetero"),
+    isa: isalocale("routed_context"),
     see: <sec:eq-routing>,
   )[
     Whenever the call-context relation admits $c'$ for a covered call, one
@@ -648,7 +654,7 @@
     "carrier",
     "executable carrier",
     _solve,
-    isa: [#isatype("resolved_st_q"), #isaconst("fun_of_resolved_st_q_for")],
+    isa: [#isatype("default_st"), #isaconst("default_st_to_fun")],
     see: <ch:solving>,
   )[
     The finite state representation: a local default, a global default and a

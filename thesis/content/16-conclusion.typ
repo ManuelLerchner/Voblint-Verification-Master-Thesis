@@ -23,7 +23,7 @@ parser, code generator, compilers, runtimes and presentation code
 read off how the activation was entered (@sec:contexts). When every covered
 call admits some callee context (#isaconst("call_context_total_on")), the
 context buckets jointly equal the context-free trace collection
-(#isathm("ltr_collect_eq_Union_activation_collect"), @sec:eval-rq2).
+(#isathm("node_collect_eq_Union_activation_collect"), @sec:eval-rq2).
 
 *Can the ingredients be verified separately?* Yes. Domains, context policies
 and the solver prove their obligations without each other. One theorem
@@ -57,7 +57,7 @@ the constant of the theorem the one the tools run (@sec:codegen).
 *Generalizability.* Goblint analyzes C after CIL normalization, with pointers,
 a heap, threads, machine integers and further update rules. The certificate is
 stated over right-hand sides and unknowns and mentions no VIMP construct. The
-coverage contract has one obligation per rule of #isaconst("valid_ltr") and
+coverage contract has one obligation per rule of #isaconst("valid_activation_trace") and
 refers to VIMP only through the graph, its stores and three step functions,
 #isaconst("edge_step"), #isaconst("call_enter") and #isaconst("combine_collect")
 (@sec:contract). We therefore expect the contract's shape,
@@ -79,7 +79,7 @@ through a pointer. #cite(<sotin11>, form: "prose") introduce their local
 semantics for this case. A heap adds a store
 component that caller and callee share, so #oblig("RETURN"), the entry pairs
 and one value per variable in the domains (@sec:vimp) would all change. Threads
-interleave activations, which #isaconst("valid_ltr") cannot express. The local
+interleave activations, which #isaconst("valid_activation_trace") cannot express. The local
 traces of #cite(<schwarz21>, form: "prose") handle them, but the interface
 would also need synchronization, which it lacks. A new update
 rule that meets the vendored interface needs the least work, since only
@@ -124,7 +124,7 @@ arises.
   the level of the contract for every program
   (#isathm("ownership_split_lift_contract")), but end to end only for one
   program whose routing obligations are evaluated
-  (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow).
+  (#isathm("mf_node_collect_sound"), @sec:mixed-flow).
 + *Coverage of the configuration space.* The combined state admits
   only components without globals, so #isaconst("rel_order_spec") is not
   selectable; its local form, the order analysis, is (@sec:relational).
@@ -168,7 +168,7 @@ globals discussed in @sec:mixed-flow.
 
 The context relation reads only how an activation was entered. Digests refine
 unknowns by other abstractions of a local trace (@sec:rel-goblint).
-Generalizing #isaconst("trace_context") to such abstractions over
+Generalizing #isaconst("activation_context_rel") to such abstractions over
 activation traces would allow path- or history-sensitive unknowns, each
 with its own admissibility conditions.
 

@@ -1,4 +1,4 @@
-(* src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy *)
+(* src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy *)
 definition call_context_total_on ::
   "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c call_context_rel \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool"
 where

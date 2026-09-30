@@ -73,21 +73,21 @@ name = "csim_star"
 
 [[anchor]]
 chapter = "ch:traces"
-concept = "Activation-local trace"
+concept = "Activation trace"
 kind = "type"
-name = "ltr"
+name = "activation_trace"
 
 [[anchor]]
 chapter = "ch:traces"
 concept = "Valid traces"
 kind = "const"
-name = "valid_ltr"
+name = "valid_activation_trace"
 
 [[anchor]]
 chapter = "ch:traces"
 concept = "Collecting semantics"
 kind = "const"
-name = "ltr_collect"
+name = "node_collect"
 
 [[anchor]]
 chapter = "ch:traces"
@@ -99,19 +99,19 @@ name = "activation_collect"
 chapter = "ch:traces"
 concept = "Soundness contract"
 kind = "locale"
-name = "ltr_coverage"
+name = "activation_coverage"
 
 [[anchor]]
 chapter = "ch:traces"
 concept = "Source runs have valid traces"
 kind = "thm"
-name = "source_run_has_ltr"
+name = "source_run_has_activation_trace"
 
 [[anchor]]
 chapter = "ch:traces"
 concept = "Source runs reach the collecting semantics"
 kind = "thm"
-name = "source_reaches_ltr_collect"
+name = "source_reaches_node_collect"
 
 [[anchor]]
 chapter = "ch:domains"
@@ -177,7 +177,7 @@ name = "routed_call_program"
 chapter = "ch:equations"
 concept = "Routed context proof locale"
 kind = "locale"
-name = "routed_context_base_hetero"
+name = "routed_context"
 
 [[anchor]]
 chapter = "ch:solving"
@@ -203,7 +203,7 @@ name = "part_post_solution_of_solve_c"
 chapter = "ch:solving"
 concept = "Executable state carrier"
 kind = "type"
-name = "resolved_st_q"
+name = "default_st"
 
 [[anchor]]
 chapter = "ch:results"

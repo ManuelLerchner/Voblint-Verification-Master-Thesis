@@ -96,7 +96,7 @@ why = "Chapter 3, the source-to-graph simulation relation: its three constructor
 [snippets.reach]
 why = "Background, Isabelle mechanisms: an inductive set, the unknowns a query transitively depends on."
 
-[snippets.resolved_st_q]
+[snippets.default_st]
 why = "Background, Isabelle mechanisms: a quotient type, finite abstract states up to readback."
 
 [snippets.caller_of]
@@ -157,6 +157,8 @@ why = "The certificate between the vendored solver and the semantic proof (solvi
 
 [snippets.default_st_rep_get]
 why = "The executable carrier's lookup: one default dictionary per partition (solving chapter)."
+[snippets.default_st_rep_get]
+why = "The executable carrier's lookup: two defaults and an override list (solving chapter)."
 
 [snippets.run_voblint]
 why = "The public operation and its type: what the executable chapter says the browser and CLI call."
@@ -405,13 +407,13 @@ why = "The source-level soundness theorem (introduction and results chapter)."
 [snippets.source_run_has_ltr]
 why = "Main-statements appendix: every source run is represented by a valid trace."
 
-[snippets.mf_ltr_collect_sound]
+[snippets.mf_node_collect_sound]
 why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to end for one program."
 
 [snippets.mf_after_calls]
 why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."
 
-[snippets.ltr_collect_semantic_postfix]
+[snippets.node_collect_semantic_postfix]
 why = "Figure gallery: the theorem-statement example."
 
 [snippets.combine_env]
@@ -420,19 +422,19 @@ why = "Figure gallery example."
 [snippets.analysis_contract]
 why = "Figure gallery example."
 
-[snippets.ltr]
-why = "Chapter 4, the activation-local trace datatype."
+[snippets.activation_trace]
+why = "Chapter 4, the activation trace datatype."
 
 [snippets.call_context_rel]
 why = "Chapter 4, the type of a call-context relation."
 
-[snippets.trace_context]
+[snippets.activation_context_rel]
 why = "Chapter 4, which contexts a trace may carry."
 
 [snippets.call_context_total_on]
 why = "Chapter 4, conditional totality of a call-context relation."
 
-[snippets.ltr_coverage]
+[snippets.activation_coverage]
 why = "Chapter 4, the coverage contract: five local obligations."
 
 [snippets.return_at_caller_context_unsound]
@@ -444,30 +446,29 @@ why = "Chapter 4, dropping TOTAL is unsound."
 [snippets.ov_empty_continuation_bot]
 why = "Chapter 4, an analysis without paired entry coverage declares an executed point unreachable."
 
-[snippets.source_reaches_ltr_collect]
+[snippets.source_reaches_node_collect]
 why = "Chapter 4, source-reachable stores are collected."
 
-[snippets.ltr_collect_eq_Union_activation_collect]
+[snippets.node_collect_eq_Union_activation_collect]
 why = "Chapter 4, under the whole contract the buckets recover the collection."
 
-[snippets.trace]
-why = "Chapter 4, a local path: a list of node-store pairs."
-file = "src/Program_Model/CFG/Collecting/LTR_Def.thy"
+[snippets.activation_path]
+why = "Chapter 4, an activation path: a list of node-store pairs."
 
 [snippets.stack_repr]
 why = "Chapter 4, a frame stack matches a trace caller chain."
 
-[snippets.ltr_repr]
+[snippets.activation_trace_repr]
 why = "Chapter 4, a valid trace represents a graph configuration."
 
-[snippets.cstep_preserves_ltr_repr]
+[snippets.cstep_preserves_activation_trace_repr]
 why = "Chapter 4, a graph step keeps a representing trace."
 
 [snippets.bfilter_sound]
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 file = "src/Abstract_Interpreter/Domain/Backward_Domain.thy"
 
-[snippets.branch_step_rel_sound]
+[snippets.relc_branch_step_sound]
 why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
 file = "src/Analyses/Relational/Rel_Order_Domain.thy"
 

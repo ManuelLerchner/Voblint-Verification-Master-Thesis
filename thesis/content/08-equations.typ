@@ -43,7 +43,7 @@ the context policy decides it.
 The goal is a solution $sol$ that over-approximates the buckets of
 @sec:contexts: for every node $v$ and context $c$,
 $
-  #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
+  #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
 where $conc_(M)$ is the concretization $conc_(D G)(d, g)$ of @sec:sound-core applied to
 the local half $d$ of $sol(v, c)$ and the global half $g$ of the analysis
@@ -606,7 +606,7 @@ soundness contract and the routing properties of @sec:eq-routing.
   enter, and routing is adequate and total. Then for every node $v$ and
   context $c$,
   $
-    #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)).
+    #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)).
   $
 ]
 
@@ -669,7 +669,7 @@ concretization of its left side.
 ) <tab:eq-obligations>
 
 In Isabelle the lemma is proved inside the locale
-#isalocale("routed_context_base_hetero"), which carries the analysis and
+#isalocale("routed_context"), which carries the analysis and
 routing assumptions. The lemma itself adds only the program entry and the
 initial stores:
 #proved("activation_collect_dg_sound")

@@ -79,7 +79,7 @@ three activations. To find the context of a step, one has to recover from the
 list which call created its activation and which return resumes which caller.
 
 Grouping the same run by activation makes these relationships explicit
-(@fig:flat-nested, bottom). Each activation has its own local path. A call
+(@fig:flat-nested, bottom). Each activation has its own activation path. A call
 creates a new activation attached to its caller, and a return composes the
 finished callee back into that caller. This construction adapts the _local traces_ of Schwarz et al. @schwarz21, each
 one thread's view of a concurrent execution, to procedure activations. Here a
@@ -204,40 +204,40 @@ calling contexts off the same traces.
 
 == Traces <sec:traces>
 
-=== Activation traces <sec:ltr>
+=== Activation traces <sec:activation-trace>
 
 We turn the grouping of @fig:flat-nested into a datatype.
 
 #block(breakable: false)[
-  #definition(name: [Activation trace], isa: "ltr", cmd: "datatype")[
+  #definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
     A trace has one constructor per way an activation begins or continues.
   ]
 
   #figure(
     {
       show raw.where(block: true): set text(size: 6.2pt)
-      thy("trace")
-      thy("ltr")
+      thy("activation_path")
+      thy("activation_trace")
     },
     kind: image,
     placement: none,
-    caption: [The declarations of #isatype("trace", thy: "LTR_Def") and #isatype("ltr"), lifted from the theory. A #isatype("trace", thy: "LTR_Def") is a local path, a list of pairs of a CFG node and a store.],
-  ) <fig:ltr>
+    caption: [The declarations of #isatype("activation_path") and #isatype("activation_trace"), lifted from the theory. An #isatype("activation_path") is the path of one activation, a list of pairs of a CFG node and a store.],
+  ) <fig:activation-trace>
 ]
 
-$#Root($pi$)$ is the initial activation of the program with local path $pi$.
+$#Root($pi$)$ is the initial activation of the program with activation path $pi$.
 $#CallT($tau'$, $pi$)$ is a callee created by the caller $tau'$
-(#isaconst("ltr_caller")); its local path begins at the callee's entry store.
+(#isaconst("activation_trace_caller")); its activation path begins at the callee's entry store.
 $#ResumeT($tau'$, $tau''$, $pi$)$ is the activation $tau'$
-(#isaconst("ltr_current")) continued past the call that produced the finished
-callee $tau''$ (#isaconst("ltr_callee")). The observer
-$#isaconst("path") thin tau$ returns the local path,
+(#isaconst("activation_trace_current")) continued past the call that produced the finished
+callee $tau''$ (#isaconst("activation_trace_callee")). The observer
+$#isaconst("path_of") thin tau$ returns the activation path,
 $#isaconst("sink_node") thin tau$ the node of its last entry and
 $#isaconst("sink_store") thin tau$ that entry's store.
 
 Each trace represents the history of one activation up to a program point. On
-well-formed compiled programs, its local path stays inside the nodes of one
-procedure (#isathm("valid_ltr_frag_callers")). A call creates a separate trace
+well-formed compiled programs, its activation path stays inside the nodes of one
+procedure (#isathm("valid_activation_trace_frag_callers")). A call creates a separate trace
 for the callee, which holds its caller as a field. When the callee finishes, a
 $ctor("Resume")$ creates a new trace for the continued caller, which keeps both
 the frozen caller and the finished callee. A whole run is therefore a family of
@@ -245,7 +245,7 @@ traces linked by these fields. A $ctor("Call")$ stores its caller exactly,
 frozen at the call node. So a finished callee composes back into the activation
 that created it, and no search for a compatible stack frame is needed. Validity
 forces the frozen caller of a $ctor("Resume")$ to be exactly the creating
-caller of its callee (#isathm("valid_ltr_Resume_fields")). The context defined
+caller of its callee (#isathm("valid_activation_trace_Resume_fields")). The context defined
 below does not read the finished callee. Both the validity rules and the
 context need the activation that created a trace.
 
@@ -269,17 +269,17 @@ The datatype admits terms that no execution produces: a path whose step follows
 no edge, or a $ctor("Resume")$ pairing a caller with a callee that another
 activation created. Validity rules such terms out.
 
-#definition(name: [Valid traces], isa: "valid_ltr", cmd: "inductive_set")[
+#definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
   For a global-variable classifier $cal(G)$, a graph $g$ and a set $S$ of
   initial stores (for VIMP programs #isaconst("cinit_stores"): globals $0$,
-  locals arbitrary), #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_ltr")) is
+  locals arbitrary), #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
   the least set of traces closed under the four rules of @fig:valid-rules.
 ]
 
 #figure(
-  thy("valid_ltr"),
+  thy("valid_activation_trace"),
   kind: image,
-  caption: [The four rules of #isaconst("valid_ltr"): init, intra, call and
+  caption: [The four rules of #isaconst("valid_activation_trace"): init, intra, call and
     ret. Each reads the relation for its own phenomenon: #isaconst("intra")
     for local flow, #isaconst("calls") for entering a callee and for
     recovering the continuation $italic("cont")$ at a return.],
@@ -309,7 +309,7 @@ The traces are meant to describe the runs of the compiled graph, and through
 @sec:csim the runs of VIMP programs.
 
 #block(breakable: false)[
-  #definition(name: [Trace representation], isa: "ltr_repr", cmd: "definition")[
+  #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
     A valid trace represents a graph configuration if it ends at the
     configuration's node and store and its chain of creating callers matches
     the runtime frame stack.
@@ -319,33 +319,33 @@ The traces are meant to describe the runs of the compiled graph, and through
     {
       show raw.where(block: true): set text(size: 6pt)
       thy("stack_repr")
-      thy("ltr_repr")
+      thy("activation_trace_repr")
     },
     kind: image,
     placement: none,
     caption: [The declarations of #isaconst("stack_repr") and
-      #isaconst("ltr_repr"), lifted from the theory.],
-  ) <fig:ltr-repr>
+      #isaconst("activation_trace_repr"), lifted from the theory.],
+  ) <fig:activation-trace-repr>
 ]
 
 For a well-formed compiled program (#isaconst("wf_compile_input")), the
 correspondence is lock-step. A local graph step extends the current trace, a
 call creates a $ctor("Call")$ trace, and a return creates a $ctor("Resume")$
-trace (#isathm("cstep_preserves_ltr_repr")). The initial configuration is
-represented by a $ctor("Root")$ trace (#isathm("located_ltr_entry")). Hence
+trace (#isathm("cstep_preserves_activation_trace_repr")). The initial configuration is
+represented by a $ctor("Root")$ trace (#isathm("located_activation_trace_entry")). Hence
 every configuration that a graph run of such a program reaches has a
-representing valid trace (#isathm("csteps_preserve_located_ltr")). Only this
+representing valid trace (#isathm("csteps_preserve_located_activation_trace")). Only this
 direction is proved, and soundness needs only this direction. Composed with the
 simulation of @ch:program-model, it extends to VIMP programs.
 
-#theorem(name: [Source runs are traces], isa: "source_run_has_ltr")[
+#theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
   For a well-formed compiled program, every finite source execution from an
   initial store in $S$ has a matching graph configuration and a valid trace ending at
   the same node with the same store, whose caller chain represents the graph's
   frame stack.
 ]
 
-#proved("source_run_has_ltr")
+#proved("source_run_has_activation_trace")
 
 === The trace collecting semantics <sec:collect>
 
@@ -354,8 +354,8 @@ at a node. This gives the _trace collecting semantics_, a counterpart of the
 node-indexed collecting semantics of @ch:background.
 
 #block(breakable: false)[
-  #definition(name: [Trace collecting semantics], isa: "ltr_collect", cmd: "definition")[
-    #thy("ltr_collect")
+  #definition(name: [Trace collecting semantics], isa: "node_collect", cmd: "definition")[
+    #thy("node_collect")
   ]
 ]
 
@@ -368,14 +368,14 @@ stores and forgets which activation held each. A procedure's result is an
 ordinary collected node, and whole-program completion is collection at
 $ctor("FunctionResult") italic("main")$.
 
-#isaconst("ltr_collect") is a function from nodes to store sets, like the
+#isaconst("node_collect") is a function from nodes to store sets, like the
 intraprocedural collecting semantics of @ch:background, so a claim stated over
 it alone is context-insensitive. The trace structure remains available in
-#isaconst("valid_ltr"), and @sec:contexts reads the context off it.
+#isaconst("valid_activation_trace"), and @sec:contexts reads the context off it.
 
 By @sec:source-bridge, every store that a finite source execution of a
 well-formed program reaches lies in the trace collecting semantics at a related node
-(#isathm("source_reaches_ltr_collect")).
+(#isathm("source_reaches_node_collect")).
 The node is existential because #isaconst("csim") is not functional
 (@sec:csim).
 
@@ -384,7 +384,7 @@ The node is existential because #isaconst("csim") is not functional
 A _context_ is the index under which an activation is analyzed. At a fixed node,
 activations with the same context contribute to the same abstract unknown
 $[v, c]$. The context belongs to the whole activation: extending a trace by a
-local edge keeps its contexts (#isathm("trace_context_extend")). We call
+local edge keeps its contexts (#isathm("activation_context_rel_extend")). We call
 contexts _activation-stable_ for this reason. The classical designs differ in what a context records @sharir81 @rival20[§8.4.1] @seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records the call history, and practical variants bound it to the $k$ most recent call sites, since a recursive procedure otherwise has infinitely many contexts. The functional approach computes a procedure summary independent of callers, which each call site instantiates. Goblint computes the callee context after its entry operation, by passing each
 resulting callee entry state to the analysis's `context` operation
 (@app:goblint-alignment), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
@@ -429,23 +429,23 @@ exactly this entered store and $R$ admits $c'$ for that edge. The context of a
 whole trace is built from these calls.
 
 #block(breakable: false)[
-  #definition(name: [Context of a trace], isa: "trace_context", cmd: "inductive")[
-    #isai("trace_context \<G> R startcontext g t ctx") reads "$t$ may carry
+  #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
+    #isai("activation_context_rel \<G> R c\<^sub>0 g t ctx") reads "$t$ may carry
     #isai("ctx")".
   ]
 
   #figure(
     {
       show raw.where(block: true): set text(size: 6pt)
-      thy("trace_context")
+      thy("activation_context_rel")
     },
     kind: image,
     placement: none,
-    caption: [The declaration of #isaconst("trace_context"), lifted from the theory.],
+    caption: [The declaration of #isaconst("activation_context_rel"), lifted from the theory.],
   ) <fig:trace-context>
 ]
 
-A $ctor("Root")$ carries only the initial context #isai("startcontext"). A
+A $ctor("Root")$ carries only the initial context #isai("c\<^sub>0"). A
 $ctor("Call")$ trace whose path starts at #isai("FunctionEntry p") with entered
 store #isai("es") carries every context that is admitted, from some context of its
 caller, for a call to $p$ with this entered store. Admission is checked at the
@@ -474,7 +474,7 @@ The claim for $[v, c]$ must over-approximate, relative to the policy
 #isai("R"), the final stores of the valid traces that end at $v$ and carry
 $c$. #isaconst("activation_collect") collects exactly these stores. For a
 fixed node $v$, we call these context-indexed sets the _buckets_ of $v$, an
-informal shorthand for #isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c").
+informal shorthand for #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c").
 In the example of @sec:why-traces, with one context per argument, the final
 store of the `bump(5)` activation belongs to the bucket of context $5$, and
 the final store of `bump(4)` to the bucket of context $4$.
@@ -490,7 +490,7 @@ each context only has to cover that context's bucket. A store in two buckets is
 covered twice, once by each claim. The end-to-end argument does need the
 buckets together to cover the trace collecting semantics, since a store in no bucket
 would escape every claim. The contract establishes the stronger sufficient property that every valid
-trace carries at least one context (#isathm("ltr_coverage.valid_ltr_has_context")).
+trace carries at least one context (#isathm("activation_coverage.valid_activation_trace_has_context")).
 
 // The grey region is the collecting semantics at the node; the context
 // regions tile it completely (a cover), overlapping only on the right.
@@ -585,7 +585,7 @@ at one call.
   placement: none,
   caption: [The obligations at one call (schematic). Boxes are (node, context)
     pairs. Solid arrows show where each obligation applies; #oblig("INTRA") may be
-    applied repeatedly along a local path. The dotted arrow is no
+    applied repeatedly along a activation path. The dotted arrow is no
     obligation. It shows the caller store $s$ that #oblig("RETURN") reads.
     #oblig("RETURN") combines the caller's store $s$ with the
     callee's result read in the admitted context $c'$. #oblig("TOTAL") demands
@@ -703,20 +703,20 @@ routing reads the admitted contexts off the computed claim and has to discharge
 the condition against it. For entry-state routing this follows from entry coverage (@sec:eq-entry-routing).
 
 Isabelle states the obligations as the assumptions of the locale
-#isalocale("ltr_coverage") (@fig:ltr-coverage).
+#isalocale("activation_coverage") (@fig:activation-coverage).
 
 #figure(
   {
     show raw.where(block: true): set text(size: 6pt)
-    thy("ltr_coverage")
+    thy("activation_coverage")
   },
   kind: image,
   placement: auto,
-  caption: [The declaration of #isalocale("ltr_coverage"), lifted from the
+  caption: [The declaration of #isalocale("activation_coverage"), lifted from the
     theory. In #oblig("RETURN"), $p'$ and #isai("es") range over every call edge
     out of #isai("cl"). On compiled programs a call site has one call edge
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
-) <fig:ltr-coverage>
+) <fig:activation-coverage>
 
 == What the contract gives <sec:consequences>
 
@@ -727,7 +727,7 @@ union of the buckets is exactly the trace collecting semantics
 (@fig:buckets).
 
 The proof of the first consequence is a rule induction over the valid traces.
-Each rule of #isaconst("valid_ltr") matches one obligation: a root trace is
+Each rule of #isaconst("valid_activation_trace") matches one obligation: a root trace is
 covered by #oblig("INIT"), an extended trace by #oblig("INTRA"), a callee trace
 by #oblig("CALL"), and a resumed trace by #oblig("RETURN"). #oblig("TOTAL")
 supplies an admitted callee context in the call and return cases. The return case
@@ -737,8 +737,10 @@ hypothesis is strengthened to every trace on the chain of creating callers
 
 #block(breakable: false)[
   #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-    Assume the five obligations. Then for every node $v$ and context $c$,
-    #align(center, isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c \<subseteq> cover v c"))
+    Assume that the claim meets the contract, that is, the locale
+    #isalocale("activation_coverage") holds for it (its five obligations).
+    Then for every node $v$ and context $c$,
+    #align(center, isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c \<subseteq> cover v c"))
   ]
 
   #proved("activation_collect_sound")
@@ -746,18 +748,18 @@ hypothesis is strengthened to every trace on the chain of creating callers
 
 #theorem(
   name: [Exhaustive buckets],
-  isa: "ltr_collect_eq_Union_activation_collect",
+  isa: "node_collect_eq_Union_activation_collect",
 )[
   Under the five coverage obligations, including #oblig("TOTAL"),
   #align(
     center,
     isai(
-      "\<C>\<^bsub>\<G>,g,S\<^esub> v = (\<Union>c. \<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c)",
+      "\<C>\<^bsub>\<G>,g,S\<^esub> v = (\<Union>c. \<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c)",
     ),
   )
 ]
 
-#proved("ltr_collect_eq_Union_activation_collect")
+#proved("node_collect_eq_Union_activation_collect")
 
 With this equality, a context-specific claim can be more precise than a single
 sound claim that must cover the whole node, as "result $6$ in context $5$" for
@@ -771,9 +773,9 @@ trace semantics and prove that each is covered by its claim.
 @fig:ch4-chain summarizes the chapter. A context is a property of an
 activation trace, and the five coverage obligations guarantee that the claim
 covers every context's bucket (#isathm("activation_collect_sound")). With #oblig("TOTAL"), the buckets together
-recover the trace collecting semantics (#isathm("ltr_collect_eq_Union_activation_collect")). For well-formed programs, the trace
+recover the trace collecting semantics (#isathm("node_collect_eq_Union_activation_collect")). For well-formed programs, the trace
 representation and the forward simulation of @ch:program-model transfer these
-guarantees to finite VIMP source executions (#isathm("source_reaches_ltr_collect")). The following chapters construct
+guarantees to finite VIMP source executions (#isathm("source_reaches_node_collect")). The following chapters construct
 such claims from abstract domains and equations.
 
 #let _step(pos, name, body) = node(

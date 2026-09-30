@@ -247,7 +247,7 @@ The certificate is what the pipeline hands to the soundness theorem of
   thy: "DG_Live_Unknowns",
   display: "routed_analysis_sound_live_unknowns",
 )
-establishes the locale #isalocale("routed_analysis_sound"), which joins that
+establishes the locale #isalocale("routed_analysis"), which joins that
 theorem with the _check classifier_, the function that turns the abstract state
 at a check into a verdict (@sec:verdicts). It takes as $V$ the live unknowns of
 @sec:cert-forward, a subset of the solved set. @tab:cert-premises lists how the
@@ -278,7 +278,7 @@ equations.
   ),
   placement: none,
   caption: [How a terminating solve meets the premises of
-    #isalocale("routed_analysis_sound") that depend on it, with $V$ the live
+    #isalocale("routed_analysis") that depend on it, with $V$ the live
     unknowns. The first row uses the certificate's value bounds (C3) and (C4),
     the second its query and dependency closure (C1) and (C2), and the last two
     come from the context policy and the solver's finiteness. The remaining
@@ -417,16 +417,16 @@ exactly. It makes the existing abstraction computable and adds no new one.
 
 Voblint's carrier keeps two defaults, one for locals and one for globals, next
 to a list of overrides at _locations_, which tag a name as local or global
-(#isatype("resolved_st"), #isatype("location")). We write a carrier state as a
+(#isatype("default_st_rep"), #isatype("location")). We write a carrier state as a
 triple of the local default, the global default and the override list. A map
 over a fixed #ltop cannot express two states the analysis needs. VIMP
 initializes variables as C does: globals start at zero and the locals of
 `main` are arbitrary (@sec:vimp-vs-c, #c11("6.7.9p10")). The initial state is
-$(ltop, 0^sharp, [])$ (#isaconst("initial_resolved_st_q"); for Sign,
+$(ltop, 0^sharp, [])$ (#isaconst("initial_default_st"); for Sign,
 #isaconst("cinit_sign_st")), where $0^sharp$ is the domain's abstract value of
 the constant $0$: every local is #ltop and every global $0^sharp$, without
 listing the declared globals. The solver's lattice interface also asks for a
-least element, here $(lbot, lbot, [])$ (#isaconst("bot_resolved_st_q")), and
+least element, here $(lbot, lbot, [])$ (#isaconst("bot_default_st")), and
 the mixed-flow extension of @sec:mixed-flow stores states whose locals are all
 #lbot. In
 #isaconst("run_voblint") the solver's values are lifted states, which start at
@@ -437,20 +437,20 @@ may appear in any order, and an override equal to its default changes nothing.
 A _quotient type_ (@sec:isabelle) makes these descriptions one value. Its
 elements are the classes of representations that answer every lookup alike:
 
-#thy("resolved_st_q")
+#thy("default_st")
 
 Two elements are therefore equal exactly when every lookup agrees
-(#isathm("resolved_st_q_eq_iff")). A finite test decides this.
-#isathm("le_resolved_st_code_raw_iff") shows that comparing the two defaults and
+(#isathm("default_st_eq_iff")). A finite test decides this.
+#isathm("le_default_st_rep_code_raw_iff") shows that comparing the two defaults and
 the finitely many listed locations decides the order, and the executable
-equality (#isaconst("equal_resolved_st_q")) tests the order in both
+equality (#isaconst("equal_default_st")) tests the order in both
 directions. An operation is defined on the finite representation and lifted to
 the quotient once it is shown to give equal results on equal descriptions.
 
 Such an element is used like a map with `get` and `set`. `get`
-(#isaconst("lookup_resolved_st_q")) returns the override of a location, or the
-default for its tag if there is none; `set` (#isaconst("update_resolved_st_q"))
-records an override. Readback $rho$ (#isaconst("fun_of_resolved_st_q_for")) is
+(#isaconst("default_st_get")) returns the override of a location, or the
+default for its tag if there is none; `set` (#isaconst("default_st_set"))
+records an override. Readback $rho$ (#isaconst("default_st_to_fun")) is
 `get` on every variable: it turns a carrier state into the total function on
 variable names that the specification uses. It looks each name $x$ up at its
 location $ell(x)$, the local or global location that the program's
@@ -474,7 +474,7 @@ in its value type and asks exactly for these operations
 executable equality for code generation). Function states get order, join and
 bottom pointwise from HOL, as $"Var" -> A$ from $A$, but no widening or
 narrowing. The carrier instantiates all of these classes on
-#isatype("resolved_st_q") whenever the values do, so the solver runs on it
+#isatype("default_st") whenever the values do, so the solver runs on it
 unchanged. The carrier lattice is infinite, since the overrides range over
 infinitely many locations. @fig:carrier-lattice shows its override-free
 elements for one local and one global.
@@ -581,10 +581,10 @@ the stores of a lower one.
 Each operation is computed with the value domain's operation on the two
 defaults and on each listed location, so under `get` it agrees with the
 pointwise operation on functions: for the join,
-#isathm("lookup_sup_resolved_st_q") states
+#isathm("default_st_get_sup") states
 $"get"(d union.sq e, l) = "get"(d, l) union.sq "get"(e, l)$, and
-#isathm("lookup_bot_resolved_st_q"), #isathm("le_resolved_st_q_iff"),
-#isathm("lookup_widen_resolved_st_q") and #isathm("lookup_narrow_resolved_st_q")
+#isathm("default_st_get_bot"), #isathm("le_default_st_iff"),
+#isathm("default_st_get_widen") and #isathm("default_st_get_narrow")
 state the same for bottom, order, widening and narrowing. Point update is not a
 lattice operation; the transfer functions use it for assignments.
 
@@ -607,7 +607,7 @@ The carrier decides it with a finite test. The test inspects the local
 default, the overrides that readback reads, and each declared global. The
 globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
-#isathm("resolved_st_q_is_bot_for_iff") proves that the test holds exactly
+#isathm("default_st_is_bot_for_iff") proves that the test holds exactly
 when the readback $rho(d)$ satisfies #isaconst("is_empty_state"), provided the
 supplied list enumerates exactly the globals of the global-variable
 classifier, and #isathm("is_empty_state_iff_gamma_state_empty") shows that
@@ -618,7 +618,7 @@ $ "is_bot"(d) <==> gamma_(S) (d) = emptyset. $
 The carrier uses the equivalence in both directions. The specification
 collapses exactly the empty states to #lbot, and because the test is exact the
 executable collapse commutes with readback. A state the test keeps is nonempty
-(#isaconst("live_resolved_st_q")), which is where the numeric transfer
+(#isaconst("live_default_st")), which is where the numeric transfer
 commutes with readback.
 
 The solver can now compute every operation its interface requires on finite

@@ -8,7 +8,7 @@
 session = "Voblint_CLI"
 theory = "Voblint_CLI.Analysis_Certified"
 
-[facts.ltr_collect_semantic_postfix]
+[facts.node_collect_semantic_postfix]
 why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
 
 [facts.run_voblint_certified_source_sound]
@@ -23,7 +23,7 @@ why = "Unreachability endpoint cited in the introduction."
 [facts.run_voblint_arithmetic_safe]
 why = "Arithmetic-safety endpoint cited in the introduction."
 
-[facts.source_run_has_ltr]
+[facts.source_run_has_activation_trace]
 why = "Main-statements appendix: source runs are represented by valid traces."
 
 [facts.csim_step]
@@ -38,18 +38,18 @@ theory = "Voblint_Compile.Source_Progress"
 why = "Main-statements appendix: simulation of source runs by the compiled graph."
 
 [facts.activation_collect_sound]
-why = "Main-statements appendix: the activation-local coverage theorem."
+why = "Main-statements appendix: the activation coverage theorem."
 
 [facts.activation_collect_dg_sound]
 why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
-fact = "routed_context_base_hetero.activation_collect_dg_sound"
+fact = "routed_context.activation_collect_dg_sound"
 
 [facts.nv_source_certified]
 why = "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
 session = "Voblint_Examples"
 theory = "Voblint_Examples.Example_Non_Vacuity"
 
-[facts.mf_ltr_collect_sound]
+[facts.mf_node_collect_sound]
 why = "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
 session = "Voblint_Examples_Sign"
 theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
@@ -98,18 +98,18 @@ why = "Chapter 4: without paired entry coverage an executed point is declared un
 session = "Voblint_Examples_Sign"
 theory = "Voblint_Examples_Sign.Example_Sign_DG_Overlapping_Enter"
 
-[facts.source_reaches_ltr_collect]
+[facts.source_reaches_node_collect]
 why = "Chapter 4: source-reachable stores are collected."
 session = "Voblint_Result"
 theory = "Voblint_Result.Source_Activation_Sound"
 
-[facts.ltr_collect_eq_Union_activation_collect]
+[facts.node_collect_eq_Union_activation_collect]
 why = "Chapter 4: exhaustive buckets under the coverage contract."
-fact = "ltr_coverage.ltr_collect_eq_Union_activation_collect"
+fact = "activation_coverage.node_collect_eq_Union_activation_collect"
 session = "Voblint_CFG"
-theory = "Voblint_CFG.LTR_Abstract"
+theory = "Voblint_CFG.Activation_Trace_Abstract"
 
-[facts.cstep_preserves_ltr_repr]
+[facts.cstep_preserves_activation_trace_repr]
 why = "Chapter 4: one graph step is matched by a trace rule."
 session = "Voblint_Compile"
 theory = "Voblint_Compile.Source_To_Trace"
@@ -118,7 +118,7 @@ theory = "Voblint_Compile.Source_To_Trace"
 why = "Chapter 5, the guard filter drops no store that passes the guard."
 fact = "sound_refinement.bfilter_sound"
 
-[facts.branch_step_rel_sound]
+[facts.relc_branch_step_sound]
 why = "Chapter 5, the relational guard refinement drops no store that passes the guard."
 
 [facts.ls_channel_sound]

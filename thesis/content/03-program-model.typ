@@ -742,7 +742,7 @@ A run starts in a related pair. #isathm("compile_prog_main_base") provides the
 node $e$. It relates the initial configuration
 $(#isaconst("main_body") thin Pi, s, [])$ to $e$, which is one edge after the
 entry of the graph. The simulated graph run of #isathm("csim_star") therefore
-starts at $e$. #isathm("source_run_has_ltr") prepends the #isaconst("EA_Body")
+starts at $e$. #isathm("source_run_has_activation_trace") prepends the #isaconst("EA_Body")
 step when it turns the graph run into an activation trace. This trace
 therefore starts at the graph entry (@sec:source-bridge). This is the first
 inclusion of the soundness chain. Every finite source run of such a program is

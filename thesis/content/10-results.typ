@@ -41,15 +41,15 @@ must yield, and @sec:verdicts closes the two gaps.
 
 At a CFG node $v$, the argument that a verdict is sound is a chain of
 inclusions between sets of stores, followed by one implication. Writing $C_c$ for
-#isai("\<A>\<^bsub>\<G>,R,startcontext,g,S\<^esub> v c"), the stores of the
+#isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c"), the stores of the
 valid traces that end at $v$ and carry context $c$ under the policy's relation
-$R$, with `main` in the initial context #isai("startcontext") (@sec:contexts),
+$R$, with `main` in the initial context #isai("c\<^sub>0") (@sec:contexts),
 $
   "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
   = union.big_c C_c, quad C_c subset.eq sem(A_(v, c))_bot
   quad => quad "verdict at" v
 $
-(#isathm("source_reaches_ltr_collect"), #isathm("ltr_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
+(#isathm("source_reaches_node_collect"), #isathm("node_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
 Here $A_(v,c)$ is the lifted abstract state the published table holds for $v$
 in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
 unreachable state #ctor("Bot"). Each later set in the chain may contain stores that no execution
@@ -110,7 +110,7 @@ fun main() {
       align: center + horizon,
       [], [], ..values.map(x => [$#x$]), [], [*verdict*],
       label-col(1, [stores of source runs at the check]), ..strip((2, 2)), [],
-      label-col(2, [#isaconst("ltr_collect") at `pp6`, the one context of `main`]),
+      label-col(2, [#isaconst("node_collect") at `pp6`, the one context of `main`]),
       ..strip((2, 2)),
       [],
 
@@ -129,7 +129,7 @@ fun main() {
   caption: [The soundness chain at the check of this section, projected on $a$. Green:
     the value every run has there; blue: values admitted although no run has
     them. Rows 1 and 2 are derived by hand; rows 3 and 4 are analyzer output.
-    Row 1 lies in row 2 by #isathm("source_reaches_ltr_collect"), and row 2 in
+    Row 1 lies in row 2 by #isathm("source_reaches_node_collect"), and row 2 in
     rows 3 and 4 by #isathm("run_voblint_sound_at"). `PROVED` requires the
     admitted stores to lie in the bottom row.],
   kind: image,
@@ -149,7 +149,7 @@ its own entry and exit, and the result stays exact.
 
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the collection into context
-buckets is #isathm("ltr_collect_eq_Union_activation_collect"), which rests on
+buckets is #isathm("node_collect_eq_Union_activation_collect"), which rests on
 #oblig("TOTAL"): every covered call reaches some context. Equation soundness
 (@ch:equations) bounds each bucket by the solver's valuation, given the
 certificate of @ch:solving. What the chain should deliver to a client is this:

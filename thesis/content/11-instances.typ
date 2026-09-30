@@ -121,7 +121,7 @@ values (for Parity, #isathm("parity_cinit_gamma")). Each numeric domain has a
 generated registration that discharges them at the unit context. Interval is
 also registered at the entry-state and call-string contexts. The analyzer does
 not run these registrations. The combined state runs each numeric field's
-component #isaconst("exec_spec") itself and cites the registration's soundness
+component #isaconst("exec_local_spec") itself and cites the registration's soundness
 facts for that component and its initial state.
 
 #figure(

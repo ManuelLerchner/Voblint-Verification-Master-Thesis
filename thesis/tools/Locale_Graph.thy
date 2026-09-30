@@ -16,7 +16,7 @@ ML \<open>
     (Path.append (Resources.master_directory \<^theory>)
        (Path.explode "../shared/dot/locale_deps.dot"))
     (Locale_Graph.dot
-       ["numeric_domain", "analysis", "dg_", "routed", "ltr_coverage", "transfer"]
+       ["numeric_domain", "analysis", "dg_", "routed", "activation_coverage", "transfer"]
        \<^theory> ^ "\n")
 \<close>
 

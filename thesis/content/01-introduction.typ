@@ -184,8 +184,8 @@ states and reports a verdict per check, and each change of representation could
 lose concrete behavior. The argument therefore follows one store that an
 execution reaches through every representation (@fig:intro-nest). The compiler
 simulation places it at a graph node $v$ (#isathm("csim_star")), the reached graph state is covered by a valid
-activation trace (#isaconst("valid_ltr"), #isathm("source_reaches_ltr_collect")), and under the totality condition that trace falls
-into a context bucket (#isathm("ltr_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
+activation trace (#isaconst("valid_activation_trace"), #isathm("source_reaches_node_collect")), and under the totality condition that trace falls
+into a context bucket (#isathm("node_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
 $v$ holds for every admitted store (#isathm("run_voblint_sound_at")). Each check row of the result carries its source position, which
 the unverified parser writes (@sec:trust-boundary).
 Each outer set in @fig:intro-nest may add stores that no execution reaches,
@@ -226,7 +226,7 @@ which costs precision. Soundness needs only that it contains the set inside it.
           ring(
             vb.locale,
             [Trace collection],
-            [#isaconst("ltr_collect"): stores of valid traces ending at $v$ (@ch:traces)],
+            [#isaconst("node_collect"): stores of valid traces ending at $v$ (@ch:traces)],
             ring(
               vb.called,
               [Graph runs],
@@ -440,10 +440,10 @@ answers one of the questions of @sec:rqs.
 - _A concrete semantics of calling contexts._ A context policy is a relation
   between calls and callee contexts (#isatype("call_context_rel")), which
   determines the contexts an activation trace carries. Under the
-  coverage contract (#isalocale("ltr_coverage")), whose totality condition
+  coverage contract (#isalocale("activation_coverage")), whose totality condition
   admits every call the claim covers at some context, the per-context
   collections together equal the context-free collection
-  (#isathm("ltr_collect_eq_Union_activation_collect"), @sec:consequences).
+  (#isathm("node_collect_eq_Union_activation_collect"), @sec:consequences).
 - _Compositional soundness._ Domain, context policy and solver are verified
   separately. A numeric domain proves certificates about its primitive
   operations only, and its transfer functions, with the executable versions

@@ -200,10 +200,10 @@ uses only that the answer holds, so it works with every partner whose answers
 hold. @sec:coop-channel shows that the framework supplies a channel that holds
 at every store of $conc(x)$, so the premise excludes no store.
 
-The order analysis asks in the other direction (#isaconst("rel_learn")). At an
+The order analysis asks in the other direction (#isaconst("relc_learn")). At an
 assignment $x := e$ it asks, for each variable $y$, whether $e lt.eq y$ and
 whether $y lt.eq e$, and records the pairs the answer $1$ confirms. Its
-soundness follows the same pattern (#isathm("rel_learn_sound")).
+soundness follows the same pattern (#isathm("relc_learn_sound")).
 
 === Local specifications with channels <sec:coop-local-spec>
 
@@ -398,7 +398,7 @@ manifest (@ch:tooling).
 A non-relational numeric domain never states these laws itself. It certifies
 its primitive operations once (#isalocale("sound_nonrelational_ops"),
 @sec:instances-supply). From that certificate the framework proves the
-domain's executable analysis #isaconst("exec_spec") a sound
+domain's executable analysis #isaconst("exec_local_spec") a sound
 local specification (#isathm("sound_nonrelational_ops.dg_analysis_execI")),
 and #isathm("ask_assign_sound") keeps it sound under the wrapper. The domain's
 own handler answers $ltop$. The analyzer replaces it by one that reads answers
@@ -420,7 +420,7 @@ The order analysis is built this way. Its state (#isatype("relc")) is
 unreachable or a set of pairs $(x, y)$, and it describes the stores $s$ with
 $s(x) lt.eq s(y)$ for every pair. It replaces the default handler, which now
 answers comparisons between variables it has ordered
-(#isathm("rel_qry_sound")), and the default branch. It asks at assignments (@sec:coop-any-channel) and enters and returns
+(#isathm("relc_qry_sound")), and the default branch. It asks at assignments (@sec:coop-any-channel) and enters and returns
 with no facts (#isathm("order_spec_sound")). @fig:contract-routes collects
 the routes by which the analyses of this thesis reach the analysis soundness
 contract.
@@ -470,7 +470,7 @@ contract.
       <c-local>,
       "->",
       stroke: 0.6pt + vb.neutral,
-      label: _clab[#isathm("dg_domain_exec.exec_spec_sound"), at #isaconst("exec_spec")],
+      label: _clab[#isathm("dg_domain_exec.exec_local_spec_sound"), at #isaconst("exec_local_spec")],
       label-side: left,
     ),
     edge(

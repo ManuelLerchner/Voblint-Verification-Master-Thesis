@@ -323,7 +323,7 @@ $lfp F$. In the counting loop, $I = conc([0, 0])$, the states that `i = 0` produ
 == Constraint systems <sec:constraints>
 
 A collecting semantics associates a set of reachable stores, the concrete
-states of VIMP, with every program point @cousot77[§4] @mine17[§3.4] (#isaconst("ltr_collect") in @ch:traces), here the stores with $i in {0, dots, 5}$ at the loop head, and its abstract
+states of VIMP, with every program point @cousot77[§4] @mine17[§3.4] (#isaconst("node_collect") in @ch:traces), here the stores with $i in {0, dots, 5}$ at the loop head, and its abstract
 counterpart associates an abstract state. A non-relational abstract state maps each variable to an abstract value and concretizes to the
 stores whose variables lie in the respective values.
 An analysis states its result as a system of constraints over unknowns. An
@@ -768,12 +768,12 @@ transitively depends, #isaconst("reach"), by two rules:
 #thy("reach")
 Source execution #isaconst("pstep") (@fig:pstep), graph execution
 #isaconst("cstep") (@fig:cstep) and the valid activation traces
-#isaconst("valid_ltr") are defined by rules as well.
+#isaconst("valid_activation_trace") are defined by rules as well.
 
 A _quotient type_ identifies representations up to an equivalence
 @huffman13. @ch:solving identifies finite executable abstract states that read
 back to the same function-valued state:
-#thy("resolved_st_q")
+#thy("default_st")
 Its operations are lifted with #isacmd("lift_definition").
 
 _Code equations_ determine what code generation emits @haftmann10, and one

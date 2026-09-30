@@ -733,7 +733,7 @@ the test on a finite representation of the state (@sec:readback).
 A relational state keeps what the pointwise form forgets. The type
 #isatype("relc") records a set $P$ of variable pairs, finite in every value the
 analysis constructs, where $(x, y)$
-asserts $x <= y$. Its concretization is #isaconst("gamma_rel"):
+asserts $x <= y$. Its concretization is #isaconst("gamma_relc"):
 $
   sem(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
   quad sem(ctor("RelBot")) = emptyset.
@@ -1166,8 +1166,8 @@ never remove a store that satisfies the condition.
 The branch inherits this law. Its gate drops only arms that no store takes,
 and replacing an empty arm by #ctor("Bot") keeps the stores it describes
 (#isathm("sound_refinement.branch_sound")). The relational refinement
-#isaconst("branch_step_rel") satisfies the same statement
-(#isathm("branch_step_rel_sound")).
+#isaconst("relc_branch_step") satisfies the same statement
+(#isathm("relc_branch_step_sound")).
 
 == The complete domain interface <sec:domain-contract>
 

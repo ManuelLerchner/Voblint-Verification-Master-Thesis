@@ -69,7 +69,7 @@ source theorem is stated about the result before this map
 Export requires executable code equations for the whole dependency closure. Two
 objects of the soundness argument have none, and @ch:solving replaces both. The
 semantic state, a function on an infinite set of variables, becomes the finite
-carrier #isatype("resolved_st_q"). The solver specification, a recursion whose
+carrier #isatype("default_st"). The solver specification, a recursion whose
 termination is not known in general, gets the vendored solver's executable
 version as its code equation, which the vendored library proves from their
 agreement wherever the specification is defined @tilscher26. Outside that

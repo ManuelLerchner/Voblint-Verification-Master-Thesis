@@ -42,7 +42,7 @@ adopted this change because the work set out to formalize calling contexts,
 and the state-based collecting semantics used in the prototype records the
 stores reaching a node but not which activation holds each store
 (@sec:why-traces). The requirements for the activation traces of
-@sec:ltr were then developed interactively with language models: the
+@sec:activation-trace were then developed interactively with language models: the
 operations generating the trace set, that a callee trace starts only at a
 call, that a trace keeps its call history, and that a calling context is read
 from the trace.

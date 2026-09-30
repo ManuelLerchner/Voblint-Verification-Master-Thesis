@@ -184,12 +184,12 @@ lose no executions? A context is read off the trace of an activation, and
 indexing loses nothing under the totality obligation #oblig("TOTAL").
 
 _Evidence: machine-checked._ The meaning is the relation
-#isaconst("trace_context") of @sec:contexts, which reads a context off an
+#isaconst("activation_context_rel") of @sec:contexts, which reads a context off an
 activation trace at the call that created the activation. The
 condition is #oblig("TOTAL")
 (#isaconst("call_context_total_on")), stated relative to the claim: under the
 five coverage obligations, #isathm("activation_collect_sound") bounds each
-context's bucket, and #isathm("ltr_collect_eq_Union_activation_collect") shows
+context's bucket, and #isathm("node_collect_eq_Union_activation_collect") shows
 that the buckets together are the context-free collection. The link to the
 executable analyzer is #isathm("activation_collect_dg_sound"), which
 discharges all five obligations in every domain, for every policy that
@@ -249,7 +249,7 @@ outside document text.
 Making the carrier selectable as the order analysis took three proofs about
 its local specification, soundness (#isathm("order_spec_sound")), a single
 entry pair (#isathm("single_entry_order_spec")) and sound query answers
-(#isathm("rel_qry_sound")), and an entry in the analysis manifest
+(#isathm("relc_qry_sound")), and an entry in the analysis manifest
 (@ch:tooling). On the non-relational side, Parity's refinement operations
 (#isaconst("parity_refine_ops")) reach the analyzer only as a field of its
 record #isaconst("parity_ops"), and no theory outside Parity's own names them.
@@ -261,7 +261,7 @@ rule decides a check depends on the program (@fig:rules-programs), and whether
 a call-string depth decides the `down` recursion below depends on widening. In
 every selectable analysis the global unknowns carry only activation seeds.
 Program globals in a flow-insensitive unknown are proved sound end to end for
-one program only (#isathm("mf_ltr_collect_sound"), @sec:mixed-flow). A component of the
+one program only (#isathm("mf_node_collect_sound"), @sec:mixed-flow). A component of the
 combined state cannot read or publish globals, so an analysis with its own analysis globals cannot join it (@sec:coop-limits).
 
 == Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
@@ -596,7 +596,7 @@ design, or consequences of the source model that they make explicit. Each item
 names the kind of its evidence and the section that argues it.
 
 + *A per-context statement can hold vacuously at a callee entry* if the callee
-  is indexed by the caller's context, which is why #isaconst("trace_context")
+  is indexed by the caller's context, which is why #isaconst("activation_context_rel")
   reads the context at the call. _Argument_; the current definitions exclude
   the situation. @sec:why-traces.
 

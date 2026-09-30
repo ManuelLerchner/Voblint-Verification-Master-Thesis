@@ -9,9 +9,11 @@ inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store
     "\<Pi>, g \<turnstile> (inner, s, frs) \<approx> (v, s, stk) \<Longrightarrow>
      control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont \<Longrightarrow>
      compiled_at \<Pi> g pc c0c kc nc \<Longrightarrow>
-     \<Pi>, g \<turnstile> (seq_after (Seq inner Restore) afters, s, frs @ [Frame caller dst]) \<approx> (v, s, stk @ [(cont, dst, caller)])"
+     \<Pi>, g \<turnstile> (seq_after (Seq inner Restore) afters, s, frs @ [Frame caller dst])
+       \<approx> (v, s, stk @ [(cont, dst, caller)])"
 | Returning:
     "pop_ready w \<Longrightarrow>
      control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont \<Longrightarrow>
      compiled_at \<Pi> g pc c0c kc nc \<Longrightarrow>
-     \<Pi>, g \<turnstile> (seq_after w afters, callee, [Frame caller dst]) \<approx> (FunctionResult p, callee, [(cont, dst, caller)])"
+     \<Pi>, g \<turnstile> (seq_after w afters, callee, [Frame caller dst])
+       \<approx> (FunctionResult p, callee, [(cont, dst, caller)])"
