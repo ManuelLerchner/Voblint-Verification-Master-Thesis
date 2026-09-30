@@ -4,7 +4,7 @@ theory Example_Interval_DG_EntryState_Base
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>A random-argument call: the compiled base for the entry-state witness\<close>
 
@@ -39,7 +39,7 @@ text \<open>The storage classifier: \<open>rc_program\<close> declares no global
 abbreviation rc_gs :: "vname \<Rightarrow> bool" where
   "rc_gs \<equiv> declared_global rc_program"
 
-abbreviation rc_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+abbreviation rc_lookup :: "('a::bot) default_st \<Rightarrow> vname \<Rightarrow> 'a" where
   "rc_lookup s x \<equiv> s\<langle>location_of rc_gs x\<rangle>"
 
 definition rc_cfg :: cfg where
@@ -76,6 +76,6 @@ lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs"
   by (auto simp: wf_compile_input_simps rc_pi_def rc_procs_def rc_main_def rc_program_def
       split: if_splits option.splits)
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

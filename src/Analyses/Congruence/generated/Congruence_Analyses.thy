@@ -36,7 +36,7 @@ global_interpretation congruence_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((congruence exec_dg_st lifted, congruence exec_dg_st lifted) dg_state) r"
+       TYPE((congruence default_st lifted, congruence default_st lifted) dg_state) r"
     bot congruence_classify_check
     skip_congruence assign_congruence special_congruence branch_congruence body_congruence
     return_congruence enter_congruence_ci_for event_congruence "\<lambda>_. route_unit"

@@ -10,7 +10,7 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
@@ -44,7 +44,7 @@ text \<open>
 \<close>
 
 definition sign_combine_env_callee_join ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
 where
   "sign_combine_env_callee_join =
      local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
@@ -53,9 +53,9 @@ subsection \<open>The Sign specification that uses it\<close>
 
 definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
+   \<Rightarrow> (edge_action \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> (call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> ('x, 'k, unit, sign default_st, sign default_st) dg_spec" where
   "sign_dg_spec_callee_join \<G> tf_st enter_st =
      (ownership_split_dg_spec_st_for \<G> tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
@@ -95,10 +95,10 @@ text \<open>
 abbreviation cj_gs :: "vname \<Rightarrow> bool" where
   "cj_gs \<equiv> (\<lambda>_. False)"
 
-definition cj_caller :: "sign exec_dg_st" where
+definition cj_caller :: "sign default_st" where
   "cj_caller = bot\<langle>Local_Location (STR ''r'') := SPos\<rangle>"
 
-definition cj_callee :: "sign exec_dg_st" where
+definition cj_callee :: "sign default_st" where
   "cj_callee = bot\<langle>Local_Location (STR ''r'') := SNeg\<rangle>"
 
 lemma stock_env_keeps_caller:
@@ -114,10 +114,10 @@ text \<open>So the two environment merges are different functions, and the overr
 
 lemma callee_join_merge_neq_stock:
   "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
-     \<noteq> (\<lambda>dc (de :: sign exec_dg_st). dc)"
+     \<noteq> (\<lambda>dc (de :: sign default_st). dc)"
 proof
   assume "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
-            = (\<lambda>dc (de :: sign exec_dg_st). dc)"
+            = (\<lambda>dc (de :: sign default_st). dc)"
   from fun_cong[OF fun_cong[OF this, of cj_caller], of cj_callee]
   have "cj_caller \<squnion> restrict_local_resolved_q cj_callee = cj_caller" .
   then show False
@@ -387,13 +387,13 @@ abbreviation cj_prog_gs :: "vname \<Rightarrow> bool" where
 definition cj_cfg :: cfg where
   "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)"
 
-abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
+abbreviation cj_lookup :: "sign default_st \<Rightarrow> vname \<Rightarrow> sign" where
   "cj_lookup s x \<equiv> s\<langle>location_of cj_prog_gs x\<rangle>"
 
 definition cj_stock_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "cj_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
@@ -402,7 +402,7 @@ definition cj_stock_eqs ::
 definition cj_custom_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "cj_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_callee_join cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
@@ -421,7 +421,7 @@ lemma cj_custom_terminates:
 definition cj_stock_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "cj_stock_sol =
      TD_side_rule_Interp_solve Globals_Join cj_stock_eqs
        (cfg_exit cj_cfg, ())"
@@ -429,7 +429,7 @@ definition cj_stock_sol ::
 definition cj_custom_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "cj_custom_sol =
      TD_side_rule_Interp_solve Globals_Join cj_custom_eqs
        (cfg_exit cj_cfg, ())"
@@ -470,6 +470,6 @@ lemma cj_return_assignment_unaffected:
   "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   by eval+
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

@@ -55,7 +55,7 @@ and its own expected verdict inline next to each check:
                                    (unreachable)", but asserts more than
                                    Goblint's silence does: voblint carries
                                    an exact, proved per-check unreachable
-                                   flag (resolved_st_q_is_bot_for,
+                                   flag (default_st_is_bot_for,
                                    Exec_St_Reachability.thy;
                                    contextual_verdict's Bot under --context) and names it in the
                                    report, so a NOWARN that fails because

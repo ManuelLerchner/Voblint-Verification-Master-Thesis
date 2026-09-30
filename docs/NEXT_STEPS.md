@@ -130,7 +130,7 @@ to a larger migration.
 **Resolved variable identities.** `gs :: vname => bool` classifies a *textual
 name*, so a state carrier keyed by `location = Local_Location vname |
 Global_Location vname` admits entries at the tagging a name does not have.
-`resolved_st_is_bot` is the one carrier operation that must consult `gs`, and it
+`default_st_rep_is_bot` is the one carrier operation that must consult `gs`, and it
 does so only to filter those entries: the quotient's equality observes every
 tagged location while the concretization reads back only the one `gs` selects.
 `canonical_location` names that filter. The dependency disappears when
@@ -145,7 +145,7 @@ holds only ownership projections, so `Ownership_Restriction` would be more
 truthful. `DG_Ctx_Activation` abbreviates a
 word its own directory already supplies.
 
-**Refining the override list.** `resolved_st`'s association list is a candidate
+**Refining the override list.** `default_st_rep`'s association list is a candidate
 for an AFP `rbt` map. Keep it independent of the identity migration above, and
 benchmark the generated OCaml rather than Isabelle evaluation.
 

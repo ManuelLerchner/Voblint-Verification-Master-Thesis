@@ -229,8 +229,8 @@ COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
 discharged once for any routing policy), the check layers, and the result table.
 
 **`Voblint_Exec`.** The gap between what soundness talks about and what the
-solver computes on. `resolved_st_q` is a quotient type over
-(local default, global default, override list); `fun_of_resolved_st_q_for gs`
+solver computes on. `default_st` is a quotient type over
+(local default, global default, override list); `default_st_to_fun gs`
 reads it back as an `abs_state`; every executable operation carries a commute
 theorem against its abstract counterpart; `Exec_St_Reachability` gives a finite
 dead-state test proved equivalent to the infinite one.
@@ -398,7 +398,7 @@ L7  SOLVER
              │
              v
 L8  EXECUTABLE ↔ MATHEMATICAL
-    resolved_st_q (quotient), fun_of_resolved_st_q_for   Exec_St_Base, Exec_St_Transfer
+    default_st (quotient), default_st_to_fun   Exec_St_Base, Exec_St_Transfer
     generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
     routed_dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
     readback_result_value, canonicalize_lift            Exec_Result_Readback
@@ -604,7 +604,7 @@ that ratio to a syntax-directed interval analyzer, and losing it means nothing.
 | --- | --- | --- |
 | Ballarin, *Locales — a module system for mathematical theories* (JAR 2014) | locales, interpretation, sublocale | Ch. 2 |
 | Haftmann & Nipkow, *Code generation from Isabelle/HOL theories* | the code generator and its trust story | Ch. 11 |
-| Huffman & Kunčar, *Lifting and Transfer* | quotient types; `resolved_st_q` | Ch. 8 |
+| Huffman & Kunčar, *Lifting and Transfer* | quotient types; `default_st` | Ch. 8 |
 | Haftmann & Wenzel, *Constructive type classes in Isabelle* | type classes; `numeric_domain`, `widening` | Ch. 2, Ch. 5 |
 
 ---
@@ -770,9 +770,9 @@ are specific and checkable.
 ### C7 — The executable/abstract refinement
 
 **Claim.** Soundness is stated over `'a abs_state = vname => 'a`, a function on
-an infinite domain. The solver runs on `resolved_st_q`, a quotient of
+an infinite domain. The solver runs on `default_st`, a quotient of
 (local default, global default, override list). Every operation carries a
-commute theorem through `fun_of_resolved_st_q_for gs`, and the finite
+commute theorem through `default_st_to_fun gs`, and the finite
 dead-state test is proved equivalent to the infinite one. The two defaults are
 forced, not chosen: C-style zero-initialization of globals needs a non-`top`
 default for globals and `top` for locals, and the ownership split needs `bot`
@@ -1339,7 +1339,7 @@ thesis section → theories → central definitions → central theorems.
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
-| 8.4–8.6 | `Voblint_Exec.Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer`, `Exec_St_Reachability`, `Exec_DG_State` | `resolved_st`, `resolved_st_q` (quotient), `location`, `location_of`, `fun_of_resolved_st_q_for`, `resolved_st_is_bot`, `canonical_location`, `exec_dg_st`, `fun_of_dg_st_for` | `resolved_st_q_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
+| 8.4–8.6 | `Voblint_Exec.Exec_St_Base`, `Exec_St_Algebra`, `Exec_St_Transfer`, `Exec_St_Reachability`, `Exec_DG_State` | `default_st_rep`, `default_st` (quotient), `location`, `location_of`, `default_st_to_fun`, `default_st_rep_is_bot`, `canonical_location`, `dg_state_to_fun` | `default_st_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
 | 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.Routed_Live_Keys`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_unknowns`, `lookup_context`, `wf_analysis_result`, `live_unknowns`, `cfg_succ_rel` | `live_unknowns_cover`, `routed_dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.Routed_DG_Analysis`, `Unit_DG_Analysis`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `routed_dg_pipeline`, locale `routed_dg_analysis`, locale `unit_dg_analysis`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `unit_dg_analysis.source_sound`, `result_node_sound` |
@@ -1441,7 +1441,7 @@ Prefer generated over drawn wherever the infrastructure already exists
    `Side` seed → entry read-back → exit read → `combine_env` →
    `combine_assign`, with the Goblint name beside each Voblint name.
 7. **The two representations and their morphism** (Ch. 8): `abs_state` on the
-   left, `resolved_st_q` on the right, `fun_of_resolved_st_q_for gs` between,
+   left, `default_st` on the right, `default_st_to_fun gs` between,
    and one commuting square for a transfer.
 8. **The locale hierarchy** (Ch. 6 or Appendix A), generated by
    `tools/locale_graph.ML`.
@@ -1848,7 +1848,7 @@ Nothing else has a source. These four must be drawn:
 | `cstep`'s three rules beside `valid_ltr`'s four clauses | 4.3 | `CFG_Exec.thy`, `LTR_Def.thy`; `curryst` |
 | one `ltr` as a tree, with the `caller_of` chain | 4.2 | the running program; `syntree` or `fletcher` |
 | the five obligations as commuting squares | 4.7 | `ltr_coverage` in `LTR_Abstract.thy`; `simulation` generalizes |
-| `abs_state` ↔ `resolved_st_q` and one commuting transfer | 8.5 | `Exec_St_Transfer.thy`; `simulation` + `annotation-grid` |
+| `abs_state` ↔ `default_st` and one commuting transfer | 8.5 | `Exec_St_Transfer.thy`; `simulation` + `annotation-grid` |
 
 Three further figures the explainer has and the thesis cannot lift, with the
 reason recorded in the manifest: `gamma`, `strategy-tree` and `timeline-of-runs`

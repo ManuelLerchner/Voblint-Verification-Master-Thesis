@@ -117,10 +117,10 @@ text \<open>
   executable test: \<open>'a abs_state\<close> is a raw function \<open>vname \<Rightarrow> 'a\<close>, and
   \<^typ>\<open>vname\<close> is infinite, so \<open>\<exists>x. is_empty (\<sigma> x)\<close> has no code equation --
   there is no finite witness search for code generation to compile. The
-  finite executable bottom test a real dispatcher runs is \<open>resolved_st_q_is_bot_for\<close>,
+  finite executable bottom test a real dispatcher runs is \<open>default_st_is_bot_for\<close>,
   defined downstream in the \<open>Voblint_Exec\<close> session, which scans only the
-  resolved state's finitely many locations and is proved to agree with
-  \<open>is_empty_state\<close> on every resolved state.
+  state's finitely many stored locations and is proved to agree with
+  \<open>is_empty_state\<close> on every such state.
 \<close>
 
 definition is_empty_state :: "('a::executable_domain) abs_state \<Rightarrow> bool" where

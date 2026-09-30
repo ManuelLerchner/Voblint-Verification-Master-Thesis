@@ -81,7 +81,7 @@ arguments, so an applied fact role is a registry error.
 `MCP_Carrier.thy` is generated from the same registry, in registry order. It
 holds the `analysis_domain` datatype, one constructor per domain, and the
 combined state `mcp_st`: a nested product with one lifted field per domain,
-each field carrying that domain's `exec_dg_st`. Beside it comes the per-domain
+each field carrying that domain's `default_st`. Beside it comes the per-domain
 dispatch the combined state needs, one equation per domain each:
 `local_spec_of` (a field's transfer, lensed into the product), the field
 concretization and liveness readers, `val_answer` (a field's answer to a

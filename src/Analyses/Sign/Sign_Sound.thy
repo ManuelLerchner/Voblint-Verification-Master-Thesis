@@ -31,8 +31,8 @@ text \<open>
 subsection \<open>The specification\<close>
 
 definition sign_conf_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (sign default_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, unit, sign default_st lifted, sign default_st lifted) dg_spec"
 where
   "sign_conf_spec \<G> empty_pred =
      local_state_dg_spec_st_for_lifted \<G> empty_pred (sign_tf_st_for \<G>) (sign_enter_st_for \<G>)"
@@ -54,8 +54,8 @@ declare sign_conf_abs_spec_def [code_unfold]
 subsection \<open>The concretization\<close>
 
 definition sign_conf_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
-  "sign_conf_gamma \<G> d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) d\<rbrakk>\<^sub>\<bottom>"
+    "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st lifted \<Rightarrow> sign default_st lifted \<Rightarrow> store set" where
+  "sign_conf_gamma \<G> d g = \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>"
 
 lemma sign_conf_gamma_Bot [simp]: "sign_conf_gamma \<G> Bot g = {}"
   by (simp add: sign_conf_gamma_def)
@@ -70,8 +70,8 @@ text \<open>
 \<close>
 
 context
-  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "sign exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "sign default_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
 begin
 
 interpretation sign_dom: dg_domain_exec
@@ -116,8 +116,8 @@ text \<open>
 
 lemma sign_cinit_gamma:
   "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_sign_st)\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_sign_st)\<rbrakk>\<^sub>\<bottom>"
   by (auto simp: cinit_stores_def gamma_state_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q)
+      default_st_to_fun_def default_st_to_fun_initial)
 
 end

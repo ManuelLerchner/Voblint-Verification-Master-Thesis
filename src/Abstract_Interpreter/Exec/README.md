@@ -5,18 +5,18 @@ the carrier the framework is stated over. This session has no Goblint
 counterpart, and that is the point of naming it: Goblint's `D.t` is already
 executable, so it needs no second representation. Here the soundness theorems
 of `Voblint_Framework` are stated over function-valued states `vname => 'a`, the
-verified solver runs on the association-list quotient `'a resolved_st_q`,
+verified solver runs on the association-list quotient `'a default_st`,
 and every theory in this session exists to connect the two. Read it as a
 refinement layer, not as part of the framework.
 
 | File | Role |
 | --- | --- |
-| `State/Exec_St_Base.thy` | `'a resolved_st` (local/global defaults plus location-keyed overrides) and its quotient `'a resolved_st_q`; lookup, the pointwise order, executable equality and point update. Knows no variable names |
-| `State/Exec_St_Algebra.thy` | Join, widening and narrowing through one pointwise combinator (`map2_resolved_st`) over a deduplicated support, plus the lattice and warrowing instances |
-| `State/Exec_St_Transfer.thy` | Where the global-name classifier enters: `location_of`, the readback `fun_of_resolved_st_for`, the call/return operations, and the equations relating carrier operations to their `abs_state` counterparts |
+| `State/Exec_St_Base.thy` | `'a default_st_rep` (local/global defaults plus location-keyed overrides) and its quotient `'a default_st`; lookup, the pointwise order, executable equality and point update. Knows no variable names |
+| `State/Exec_St_Algebra.thy` | Join, widening and narrowing through one pointwise combinator (`map2_default_st_rep`) over a deduplicated support, plus the lattice and warrowing instances |
+| `State/Exec_St_Transfer.thy` | Where the global-name classifier enters: `location_of`, the readback `default_st_rep_to_fun`, the call/return operations, and the equations relating carrier operations to their `abs_state` counterparts |
 | `State/Exec_St_Reachability.thy` | The finite dead-code test, its exactness against `is_empty_state`, the quotient lift, and the lifted state that tracks emptiness incrementally |
-| `State/Exec_St_Restriction_Refinement.thy` | `fun_of_resolved_st_q_for gs`: the readback into `'a abs_state`, and what commutes with it |
-| `Spec/Exec_DG_State.thy` | The executable D/G carrier `exec_dg_st` and its classifier-parametric readback |
+| `State/Exec_St_Restriction_Refinement.thy` | `default_st_to_fun gs`: the readback into `'a abs_state`, and what commutes with it |
+| `Spec/Exec_DG_State.thy` | The executable D/G carrier `default_st` and its classifier-parametric readback |
 | `Spec/Ownership_Split_Exec.thy` | The ownership-splitting analysis at that carrier: the generic transfer at the executable merge/project triple |
 | `Spec/DG_Local_State_Exec.thy` | The executable Base-style D/G construction: definitions and their selector equations |
 | `Refinement/DG_Local_State_Exec_Refinement.thy` | `dg_domain_exec`: soundness at the executable carrier, pulled back along the readback |

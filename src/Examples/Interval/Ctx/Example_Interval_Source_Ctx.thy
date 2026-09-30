@@ -20,11 +20,11 @@ text \<open>
 text \<open>The analysis' own solved reader, abbreviated for the two statements below.\<close>
 
 abbreviation twice_ctx_sg ::
-  "pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> ivl exec_dg_st lifted" where
+  "pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> ivl default_st lifted" where
   "twice_ctx_sg \<equiv> interval_es_rule.reader Globals_Warrow twice_gs twice_program"
 
-abbreviation twice_ctx_gamma :: "ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "twice_ctx_gamma m \<equiv> \<lbrakk>map_lift (fun_of_resolved_st_q_for twice_gs) m\<rbrakk>\<^sub>\<bottom>"
+abbreviation twice_ctx_gamma :: "ivl default_st lifted \<Rightarrow> store set" where
+  "twice_ctx_gamma m \<equiv> \<lbrakk>map_lift (default_st_to_fun twice_gs) m\<rbrakk>\<^sub>\<bottom>"
 
 text \<open>Context-sensitive source soundness.  Any \<open>twice\<close> run reaches a store bounded at the
   interval slot indexed by some context the trace that produced it admits.\<close>

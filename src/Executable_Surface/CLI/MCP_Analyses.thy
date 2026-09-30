@@ -136,7 +136,7 @@ lemma part_empty_rd:
   "part_empty (declared_global_vars p) a r = val_empty a (mcp_rd (declared_global p) r)"
   by (cases a)
      (simp_all add: mcp_rd_def
-        resolved_st_q_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
+        default_st_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
         split: lifted.split)
 
 lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"

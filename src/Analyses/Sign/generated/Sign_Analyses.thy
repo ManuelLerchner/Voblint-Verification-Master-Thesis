@@ -36,7 +36,7 @@ global_interpretation sign_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) r"
+       TYPE((sign default_st lifted, sign default_st lifted) dg_state) r"
     bot sign_classify_check
     skip_sign assign_sign special_sign branch_sign body_sign return_sign
     enter_sign_ci_for event_sign "\<lambda>_. route_unit"

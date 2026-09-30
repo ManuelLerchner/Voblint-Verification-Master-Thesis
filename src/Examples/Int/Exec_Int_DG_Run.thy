@@ -37,16 +37,16 @@ definition gExI :: cfg where
 
 text \<open>
   The Base construction routes the whole abstract state through the local
-  unknown, reachability-lifted: \<open>int_ex_read\<close> reads a computed \<open>exec_dg_st
-  lifted\<close> value back through \<^const>\<open>fun_of_resolved_st_q_for\<close>, matching
+  unknown, reachability-lifted: \<open>int_ex_read\<close> reads a computed \<open>default_st
+  lifted\<close> value back through \<^const>\<open>default_st_to_fun\<close>, matching
   \<open>parity_lookup\<close>'s role in Parity's own DG flagship -- a genuinely
   unreachable local unknown (\<open>Bot\<close>) reads back as \<open>top\<close>, never spuriously
   observed here since every inspected node below is reachable.
 \<close>
 
-abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" where
+abbreviation int_ex_read :: "int_dom default_st lifted => vname => int_dom" where
   "int_ex_read d x ==
-     (case map_lift (fun_of_resolved_st_q_for int_ex_gs) d of
+     (case map_lift (default_st_to_fun int_ex_gs) d of
         Lifted f => f x | Bot => top)"
 
 abbreviation int_ex_result where
@@ -70,17 +70,17 @@ text \<open>
   Each mode is registered on the generic Base construction
   \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Exec.DG_Local_State_Exec\<close>),
   matching Sign's own production route: the local unknown carries the whole
-  reachability-lifted \<open>int_dom exec_dg_st\<close>, with no separate local/global
+  reachability-lifted \<open>int_dom default_st\<close>, with no separate local/global
   split for \<open>int_ex_prog\<close>'s (empty) set of declared globals to route through.
 \<close>
 
 definition dgExI_never_eqs ::
     "pp * unit => (pp * unit, (unit, unit) global_unknown,
-       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
+       (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
-       (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+       (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_for Refine_Never int_ex_gs) (int_dom_enter_st_for Refine_Never int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
@@ -91,11 +91,11 @@ lemma dgExI_never_result:
 
 definition dgExI_once_eqs ::
     "pp * unit => (pp * unit, (unit, unit) global_unknown,
-       (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) strategy_tree"
+       (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (local_state_dg_spec_st_for_lifted int_ex_gs
-       (resolved_st_q_is_bot_for (declared_global_vars int_ex_prog))
+       (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (int_tf_st_for Refine_Once int_ex_gs) (int_dom_enter_st_for Refine_Once int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 

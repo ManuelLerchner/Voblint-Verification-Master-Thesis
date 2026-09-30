@@ -9,7 +9,7 @@ theory Example_Buffered_Encoding_Flush_Order
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>Whether the two encodings solve alike\<close>
 
@@ -39,14 +39,14 @@ definition fo_cfg :: cfg where
   "fo_cfg = compile_prog (prog_table fo_program) (prog_procs fo_program)"
 
 definition fo_spec ::
-  "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
+  "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl default_st, ivl default_st) dg_spec" where
   "fo_spec = ownership_split_dg_spec_st_for fo_gs (ivl_tf_st_for fo_gs) (ivl_enter_st_for fo_gs)"
 
 text \<open>The direct encoding is spelled as the unbuffered routed generator itself, at
   the unit context; the buffered one is the constructor every analysis solves.\<close>
 
 definition fo_direct ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "fo_direct =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ()) route_unit
@@ -57,7 +57,7 @@ definition fo_direct ::
        fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition fo_buffered ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
      fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
@@ -174,6 +174,6 @@ text \<open>
   all, by either generator.
 \<close>
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

@@ -10,7 +10,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>A computed 1-call-string context, routed by truncated call history\<close>
 
@@ -23,7 +23,7 @@ text \<open>
   which \<open>f\<close> call led there, can.
 
   Storage is Base-style: the local unknown carries the whole abstract state on the lifted
-  carrier \<^typ>\<open>sign exec_dg_st lifted\<close>, so a global is read and written exactly where a
+  carrier \<^typ>\<open>sign default_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
   \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
@@ -50,7 +50,7 @@ abbreviation sign_nest_gs :: "vname \<Rightarrow> bool" where
 
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable point
   (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
-abbreviation sign_nest_lookup :: "sign exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> sign" where
+abbreviation sign_nest_lookup :: "sign default_st lifted \<Rightarrow> vname \<Rightarrow> sign" where
   "sign_nest_lookup d x \<equiv>
      (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of sign_nest_gs x\<rangle>)"
 
@@ -98,12 +98,12 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
   declared globals; \<open>sign_nest_exact\<close> is the exactness fact every transport step below
   consumes.\<close>
 
-definition sign_nest_empty_pred :: "sign resolved_st_q \<Rightarrow> bool" where
-  "sign_nest_empty_pred = resolved_st_q_is_bot_for (declared_global_vars sign_nest_program)"
+definition sign_nest_empty_pred :: "sign default_st \<Rightarrow> bool" where
+  "sign_nest_empty_pred = default_st_is_bot_for (declared_global_vars sign_nest_program)"
 
 lemma sign_nest_exact:
-  "sign_nest_empty_pred s = is_empty_state (fun_of_resolved_st_q_for sign_nest_gs s)"
-  unfolding sign_nest_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+  "sign_nest_empty_pred s = is_empty_state (default_st_to_fun sign_nest_gs s)"
+  unfolding sign_nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair every other Sign analysis solves over, at the same
   \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> primitives: nothing call-string
@@ -111,19 +111,19 @@ text \<open>The same Base-style pair every other Sign analysis solves over, at t
 
 definition sign_nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
-     unit, sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
+     unit, sign default_st lifted, sign default_st lifted) dg_spec" where
   "sign_nest_S_st = local_state_dg_spec_st_for_lifted sign_nest_gs sign_nest_empty_pred
                       (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
 text \<open>The executable spec is sound for the concretization that reads a local unknown back
-  through \<^const>\<open>fun_of_resolved_st_q_for\<close> and ignores the inert global slot; Sign's own
+  through \<^const>\<open>default_st_to_fun\<close> and ignores the inert global slot; Sign's own
   primitive commute facts are all the generic engine needs.\<close>
 
 definition sign_nest_gamma ::
-    "sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> store set" where
-  "sign_nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
+    "sign default_st lifted \<Rightarrow> sign default_st lifted \<Rightarrow> store set" where
+  "sign_nest_gamma d g = \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) d\<rbrakk>\<^sub>\<bottom>"
 
 interpretation sign_nest_domain: dg_domain_exec
   sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
@@ -150,7 +150,7 @@ text \<open>The global-key type \<^type>\<open>call_string_gk\<close> comes from
 
 definition sign_nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
-     (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
+     (sign default_st lifted, sign default_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 1)
        (\<lambda>ctx' src a. dg_spec_edge_program sign_nest_S_st a src (\<lambda>_. Global))
@@ -162,7 +162,7 @@ definition sign_nest_1_eqs ::
 definition sign_nest_1_sol ::
   "(pp \<times> cfg_node list) set
      \<times> (pp \<times> cfg_node list + call_string_gk
-          \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state)" where
   "sign_nest_1_sol = TD_side_always_join_Interp_solve sign_nest_1_eqs
                        (cfg_exit sign_nest_cfg, [])"
 
@@ -237,7 +237,7 @@ section \<open>The solver's post-solution\<close>
 
 lemma sign_nest_1_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
-     TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
+     TYPE((sign default_st lifted, sign default_st lifted) dg_state)
      sign_nest_1_eqs (cfg_exit sign_nest_cfg, [])"
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF sign_nest_1_terminates])
 
@@ -253,13 +253,13 @@ text \<open>The solver's own table is the solved system the routed spine is inte
 
 abbreviation sigma_1 ::
   "pp \<times> cfg_node list + call_string_gk
-     \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state" where
+     \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state" where
   "sigma_1 \<equiv> snd sign_nest_1_sol"
 
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
 abbreviation sign_ctx_sg_1 ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign default_st lifted" where
   "sign_ctx_sg_1 \<equiv> solved_local_reader (fst sign_nest_1_sol) sigma_1"
 
 text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
@@ -275,7 +275,7 @@ interpretation sign_nest_1_cs: call_string_routed_context
     Bot "Lifted cinit_sign_st" Bot
     sigma_1 "fst sign_nest_1_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_1
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -359,8 +359,8 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 
 lemma sign_nest_cinit_le_cinit_sign_st:
   "cinit_stores sign_nest_gs \<subseteq> sign_nest_gamma (Lifted cinit_sign_st) Bot"
-  by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_initial_resolved_st_q)
+  by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def default_st_to_fun_def
+                 default_st_to_fun_initial)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
@@ -369,7 +369,7 @@ text \<open>The routed interpretation carries the theorem: every store the 1-cal
 theorem sign_nest_1_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 1),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+     \<subseteq> \<lbrakk>map_lift (default_st_to_fun sign_nest_gs)
            (sign_ctx_sg_1 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule sign_nest_1_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
@@ -396,6 +396,6 @@ lemma sign_nest_1_g_entry_merged:
      (STR ''p'') = STop"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

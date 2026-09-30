@@ -53,17 +53,17 @@ text \<open>
 
 definition exec_formals_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'a list
-       \<Rightarrow> ('a::bot) exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
+       \<Rightarrow> ('a::bot) default_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
   "exec_formals_route \<G> u ctx d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
-          (fun_of_resolved_st_q_for \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (default_st_to_fun \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 text \<open>
   The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
   solver's carrier. A rendering that draws one node per activation has to know
   which callee context a call edge enters, and the table it draws from holds
-  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a exec_dg_st\<close> --- so the projection
+  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a default_st\<close> --- so the projection
   \<^const>\<open>exec_formals_route\<close> performs is unavailable to it, and the entered
   state has to be recomputed from the caller's. \<open>enter\<close> is the domain's own
   entry transfer and is the only domain-specific value involved; emptiness is
@@ -96,11 +96,11 @@ definition callee_ctx_of ::
             else Some (formals_context pars entered)))"
 
 lemma exec_formals_route_commute:
-  "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca
+  "formals_route_lifted_gen u ctx (map_lift (default_st_to_fun \<G>) d) ca
      = exec_formals_route \<G> u ctx d ca"
   by (cases d; cases ca)
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
-        exec_formals_route_def fun_of_resolved_st_q_for_def)
+        exec_formals_route_def default_st_to_fun_def)
 
 lemma gamma_point_canonicalize:
   fixes x :: "'a::numeric_domain abs_state lifted"
@@ -1090,18 +1090,18 @@ text \<open>
 
 locale dg_analysis_exec = certified_solver solve solve_dom solve_c
   for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
-                  \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and init_st :: "'a exec_dg_st"
+                  \<Rightarrow> 'a::numeric_domain default_st \<Rightarrow> 'a default_st"
+    and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
+    and init_st :: "'a default_st"
     and analysis_global :: 'k
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and root_ctx :: 'c
-    and solve :: "(pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+    and solve :: "(pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                   \<Rightarrow> pp \<times> 'c
                   \<Rightarrow> (pp \<times> 'c) set
-                       \<times> (pp \<times> 'c + 'k \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)"
-    and solve_dom :: "(pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+                       \<times> (pp \<times> 'c + 'k \<Rightarrow> ('a default_st lifted, 'a default_st lifted) dg_state)"
+    and solve_dom :: "(pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                       \<Rightarrow> pp \<times> 'c \<Rightarrow> bool"
     and bot_state :: "'a abs_state"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
@@ -1115,22 +1115,22 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and route_abs :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and solve_c :: "(pp \<times> 'c, 'k,
-                       ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+                       ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                     \<Rightarrow> pp \<times> 'c
                     \<Rightarrow> ((pp \<times> 'c) set
                           \<times> (pp \<times> 'c + 'k
-                               \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option" +
+                               \<Rightarrow> ('a default_st lifted, 'a default_st lifted) dg_state)) option" +
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
-      "\<And>\<G> a s. live_resolved_st_q \<G> s
-         \<Longrightarrow> fun_of_resolved_st_q_for \<G> (tf_st \<G> a s)
-               = local_spec_step sk asn spc br bd rt ev a (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>\<G> a s. live_default_st \<G> s
+         \<Longrightarrow> default_st_to_fun \<G> (tf_st \<G> a s)
+               = local_spec_step sk asn spc br bd rt ev a (default_st_to_fun \<G> s)"
     and enter_commute:
-      "\<And>\<G> ci s. fun_of_resolved_st_q_for \<G> (enter_st \<G> ci s)
-                    = en \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>\<G> ci s. default_st_to_fun \<G> (enter_st \<G> ci s)
+                    = en \<G> ci (default_st_to_fun \<G> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"
     and exec_seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and exec_classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
@@ -1140,13 +1140,13 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
     and bot_state_eq: "bot_state = bot"
     and exec_init_sound:
       "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+               \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
-    "\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+    "\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
              (tf_st \<G>) (enter_st \<G>)"
-    "\<lambda>p. resolved_st_q_is_bot_for (declared_global_vars p)"
-    fun_of_resolved_st_q_for init_st analysis_global seed route root_ctx solve solve_dom bot_state
+    "\<lambda>p. default_st_is_bot_for (declared_global_vars p)"
+    default_st_to_fun init_st analysis_global seed route root_ctx solve solve_dom bot_state
       classify
     gamma_state is_empty_state solve_c
 proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intro],
@@ -1154,19 +1154,19 @@ proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intr
     Init)
   case (CompSound p)
   interpret dom: dg_domain_exec "declared_global p"
-      "resolved_st_q_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
+      "default_st_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
       "enter_st (declared_global p)" sk asn spc br bd rt "en (declared_global p)" ev
     by unfold_locales
        (rule tf_commute, assumption,
         rule enter_commute,
-        rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
+        rule default_st_is_bot_for_iff[OF declared_global_iff])
   show ?case by (rule dom.exec_spec_sound[OF tf_sound])
 next
   case (EnterSingle p ci d)
   then show ?case by (simp add: dg_pipeline.entry_of_def)
 next
   case (EmptyExact p s)
-  then show ?case by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
+  then show ?case by (rule default_st_is_bot_for_iff[OF declared_global_iff])
 next
   case (EmptyVExact v) then show ?case by (rule is_empty_state_gamma_state_empty)
 next
@@ -1190,10 +1190,10 @@ text \<open>
 
 lemma (in dg_analysis_exec) entry_of_exec:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
         (tf_st \<G>) (enter_st \<G>))
      \<G> p ci d
-   = transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
+   = transfer_lift (default_st_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
   by (simp add: dg_pipeline.entry_of_def)
 
 end

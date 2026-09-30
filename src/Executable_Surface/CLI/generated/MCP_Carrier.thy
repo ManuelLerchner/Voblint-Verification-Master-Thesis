@@ -170,9 +170,9 @@ lemmas slot_defs [simp] = slot1_def slot2_def slot3_def slot4_def slot5_def slot
   set_slot5_def set_slot6_def set_slot7_def set_slot8_def
 
 type_synonym mcp_st =
-  "(sign exec_dg_st lifted, (ivl exec_dg_st lifted, (parity exec_dg_st lifted, (int_dom
-    exec_dg_st lifted, (int_dom exec_dg_st lifted, (int_dom exec_dg_st lifted, (congruence
-    exec_dg_st lifted, relc) analysis_product) analysis_product) analysis_product)
+  "(sign default_st lifted, (ivl default_st lifted, (parity default_st lifted, (int_dom
+    default_st lifted, (int_dom default_st lifted, (int_dom default_st lifted, (congruence
+    default_st lifted, relc) analysis_product) analysis_product) analysis_product)
     analysis_product) analysis_product) analysis_product) analysis_product"
 
 type_synonym mcp_val =
@@ -192,50 +192,50 @@ fun local_spec_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
   "local_spec_of \<G> p Sign_Analysis =
      lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
        (sign_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Interval_Analysis =
      lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
        (ivl_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Parity_Analysis =
      lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
        (parity_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Int_Analysis =
      lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint
-       \<G>) (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint \<G>)
+       (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
 | "local_spec_of \<G> p Int_Once_Analysis =
      lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
        (int_dom_enter_st_for Refine_Once \<G>)))"
 | "local_spec_of \<G> p Int_Never_Analysis =
      lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
        (int_dom_enter_st_for Refine_Never \<G>)))"
 | "local_spec_of \<G> p Congruence_Analysis =
      lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
+       (default_st_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
        (congruence_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Order_Analysis =
      lens_of (lift_get slot8) (lift_put set_slot8) (order_spec (program_vars p))"
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot1 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot1 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Interval_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot2 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot2 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Parity_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot3 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot3 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Int_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot4 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot4 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Int_Once_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot5 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot5 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Int_Never_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot6 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot6 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Congruence_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot7 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. \<lbrakk>map_lift (default_st_to_fun \<G>) (lift_get slot7 x)\<rbrakk>\<^sub>\<bottom>)"
 | "part_gamma \<G> Order_Analysis =
      (\<lambda>x. \<lbrakk>(lift_get slot8 x)\<rbrakk>)"
 
@@ -259,31 +259,30 @@ fun part_live :: "analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
 
 fun part_empty :: "vname list \<Rightarrow> analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
   "part_empty gs Sign_Analysis r =
-     (case (slot1 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot1 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Interval_Analysis r =
-     (case (slot2 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot2 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Parity_Analysis r =
-     (case (slot3 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot3 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Analysis r =
-     (case (slot4 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot4 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Once_Analysis r =
-     (case (slot5 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot5 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Never_Analysis r =
-     (case (slot6 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot6 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Congruence_Analysis r =
-     (case (slot7 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot7 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Order_Analysis r =
      ((slot8 r) = RelBot)"
 
 subsection \<open>What each field publishes\<close>
 
 definition mcp_rd :: "(vname \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightarrow> mcp_val" where
-  "mcp_rd \<G> r = Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot1 r)) (Product
-    (map_lift (fun_of_resolved_st_q_for \<G>) (slot2 r)) (Product (map_lift
-    (fun_of_resolved_st_q_for \<G>) (slot3 r)) (Product (map_lift (fun_of_resolved_st_q_for
-    \<G>) (slot4 r)) (Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot5 r)) (Product
-    (map_lift (fun_of_resolved_st_q_for \<G>) (slot6 r)) (Product (map_lift
-    (fun_of_resolved_st_q_for \<G>) (slot7 r)) (slot8 r)))))))"
+  "mcp_rd \<G> r = Product (map_lift (default_st_to_fun \<G>) (slot1 r)) (Product (map_lift
+    (default_st_to_fun \<G>) (slot2 r)) (Product (map_lift (default_st_to_fun \<G>) (slot3 r))
+    (Product (map_lift (default_st_to_fun \<G>) (slot4 r)) (Product (map_lift
+    (default_st_to_fun \<G>) (slot5 r)) (Product (map_lift (default_st_to_fun \<G>) (slot6 r))
+    (Product (map_lift (default_st_to_fun \<G>) (slot7 r)) (slot8 r)))))))"
 
 fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "val_gamma Sign_Analysis v =

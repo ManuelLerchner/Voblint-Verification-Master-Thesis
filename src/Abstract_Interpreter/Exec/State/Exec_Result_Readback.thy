@@ -7,7 +7,7 @@ section \<open>Normalizing a solved local unknown\<close>
 text \<open>
   \<open>readback_result_value\<close> is the sole entry point from the executable solver
   substrate into the result boundary: it relabels the local unknown exactly
-  as the solver stores it (an \<^typ>\<open>'a resolved_st_q lifted\<close>) into a
+  as the solver stores it (an \<^typ>\<open>'a default_st lifted\<close>) into a
   \<^typ>\<open>'a abs_state lifted\<close>, \<^const>\<open>Bot\<close> becoming \<^const>\<open>Bot\<close> and
   \<^const>\<open>Lifted\<close> becoming \<^const>\<open>Lifted\<close> of the projected state. It is a
   purely structural conversion with no bottom test of its own.
@@ -27,8 +27,8 @@ text \<open>
 \<close>
 
 fun readback_result_value ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) resolved_st_q lifted \<Rightarrow> 'a abs_state lifted"
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) default_st lifted \<Rightarrow> 'a abs_state lifted"
 where
   "readback_result_value \<G> Bot = Bot"
-| "readback_result_value \<G> (Lifted s) = Lifted (fun_of_resolved_st_q_for \<G> s)"
+| "readback_result_value \<G> (Lifted s) = Lifted (default_st_to_fun \<G> s)"
 end

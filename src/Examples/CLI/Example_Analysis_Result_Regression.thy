@@ -95,14 +95,14 @@ lemma result_demo_interval_stmt1_live:
 text \<open>
   Case B --- a covered key whose raw stored state is \<^const>\<open>Lifted\<close> and yet
   concretizes to nothing. The production pipeline never leaves such a state
-  behind, because it threads \<^const>\<open>resolved_st_q_is_bot_for\<close> through the
+  behind, because it threads \<^const>\<open>default_st_is_bot_for\<close> through the
   equation system and collapses a witness-bottom result to \<^const>\<open>Bot\<close> on the
   spot. Passing \<^term>\<open>\<lambda>_. False\<close> as that predicate instead is what makes the
   case observable: the very same solver run then stores the dead branch's
   node as \<^const>\<open>Lifted\<close> over an empty (inverted-bound) interval. This is
   exactly the raw, noncanonical value a result adapter's own
   \<^const>\<open>canonicalize_lift\<close> step exists to catch, using the real
-  \<^const>\<open>resolved_st_q_is_bot_for\<close> test rather than the solver's own
+  \<^const>\<open>default_st_is_bot_for\<close> test rather than the solver's own
   (deliberately disabled, here) one: \<^const>\<open>lookup_context\<close> must still
   report it \<^const>\<open>Bot\<close> --- reading off the raw outer constructor
   alone would call it live.
@@ -113,10 +113,10 @@ text \<open>The unit-context equation system at this program, with the bottom te
   \<^const>\<open>Globals_Join\<close>.\<close>
 
 definition result_demo_ivl_sol ::
-    "(ivl exec_dg_st \<Rightarrow> bool)
+    "(ivl default_st \<Rightarrow> bool)
      \<Rightarrow> (pp \<times> unit) set
        \<times> (pp \<times> unit + (unit, unit) global_unknown
-            \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+            \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "result_demo_ivl_sol empty_pred =
      TD_side_rule_Interp_solve Globals_Join
        (compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
@@ -132,13 +132,13 @@ definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" w
           gl = declared_global_vars result_demo_prog
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. readback_result_value (declared_global result_demo_prog)
-                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                      (canonicalize_lift (default_st_is_bot_for gl)
                         (dg_local (snd sol (Inl (v, ctx)))))))"
 
 lemma result_demo_unnormalized_stmt2_stored_lifted_bottom:
   "(case dg_local (snd (result_demo_ivl_sol (\<lambda>_. False)) (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> False
-    | Lifted s \<Rightarrow> resolved_st_q_is_bot_for (declared_global_vars result_demo_prog) s)"
+    | Lifted s \<Rightarrow> default_st_is_bot_for (declared_global_vars result_demo_prog) s)"
   by eval
 
 lemma result_demo_unnormalized_stmt2_not_reachable:
@@ -168,7 +168,7 @@ text \<open>
 
 lemma result_demo_interval_stmt2_stored_bot:
   "(case dg_local (snd (result_demo_ivl_sol
-                        (resolved_st_q_is_bot_for (declared_global_vars result_demo_prog)))
+                        (default_st_is_bot_for (declared_global_vars result_demo_prog)))
                   (Inl (Statement 2, ()))) of
       Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False)"
   by eval

@@ -68,7 +68,7 @@ text \<open>\<open>dgEx_eqs\<close> is the registered equation system at this pr
 definition dgEx_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
+        (sign default_st lifted, sign default_st lifted) dg_state) strategy_tree" where
   "dgEx_eqs = sign_rule.equations sign_ex_gs sign_ex_prog"
 
 lemma dgEx_terminates_c:
@@ -119,7 +119,7 @@ text \<open>The unit registration routes the whole abstract state through the lo
   the solver computed, beside the theorem above that quantifies over every run.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. case map_lift (fun_of_resolved_st_q_for sign_ex_gs)
+  "map_option (\<lambda>sol. case map_lift (default_st_to_fun sign_ex_gs)
                             (dg_local (snd sol (Inl (Statement 2, ()))))
                       of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None)
      (TD_side_rule_Interp_solve_c Globals_Join dgEx_eqs (cfg_exit gEx, ())) = Some (Some SPos)"

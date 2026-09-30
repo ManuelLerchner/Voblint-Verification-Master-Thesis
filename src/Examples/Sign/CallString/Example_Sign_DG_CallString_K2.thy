@@ -23,7 +23,7 @@ text \<open>Reuses \<^type>\<open>call_string_gk\<close> from \<^theory>\<open>V
 
 definition sign_nest_2_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
-     (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
+     (sign default_st lifted, sign default_st lifted) dg_state) eqsT" where
   "sign_nest_2_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 2)
        (\<lambda>ctx' src a. dg_spec_edge_program sign_nest_S_st a src (\<lambda>_. Global))
@@ -35,7 +35,7 @@ definition sign_nest_2_eqs ::
 definition sign_nest_2_sol ::
   "(pp \<times> cfg_node list) set
      \<times> (pp \<times> cfg_node list + call_string_gk
-          \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state)" where
   "sign_nest_2_sol = TD_side_always_join_Interp_solve sign_nest_2_eqs
                        (cfg_exit sign_nest_cfg, [])"
 
@@ -115,7 +115,7 @@ section \<open>The solver's post-solution\<close>
 
 lemma sign_nest_2_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
-     TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
+     TYPE((sign default_st lifted, sign default_st lifted) dg_state)
      sign_nest_2_eqs (cfg_exit sign_nest_cfg, [])"
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF sign_nest_2_terminates])
 
@@ -128,13 +128,13 @@ lemma sign_nest_2_pp_st:
 
 abbreviation sigma_2 ::
   "pp \<times> cfg_node list + call_string_gk
-     \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state" where
+     \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state" where
   "sigma_2 \<equiv> snd sign_nest_2_sol"
 
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
 
 abbreviation sign_ctx_sg_2 ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign exec_dg_st lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign default_st lifted" where
   "sign_ctx_sg_2 \<equiv> solved_local_reader (fst sign_nest_2_sol) sigma_2"
 
 text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statement 2\<close> case now genuinely splits: \<open>g\<close>'s call site
@@ -147,7 +147,7 @@ interpretation sign_nest_2_cs: call_string_routed_context
     Bot "Lifted cinit_sign_st" Bot
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun sign_nest_gs) m\<rbrakk>\<^sub>\<bottom>"
 proof (unfold_locales, unfold sign_nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -240,7 +240,7 @@ section \<open>The headline theorem: 2-call-string activation collecting soundne
 theorem sign_nest_2_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 2),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for sign_nest_gs)
+     \<subseteq> \<lbrakk>map_lift (default_st_to_fun sign_nest_gs)
            (sign_ctx_sg_2 (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule sign_nest_2_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])

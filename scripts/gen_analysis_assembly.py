@@ -222,16 +222,16 @@ class Domain:
             self.prefix,
         )
         roles = {
-            "state_type": f"{vt} exec_dg_st lifted",
+            "state_type": f"{vt} default_st lifted",
             "published_type": f"{vt} abs_state lifted",
             "context_type": f"{vt} list",
             "component": "ask_assign (exec_spec $G"
-            " (resolved_st_q_is_bot_for (declared_global_vars $p))"
+            " (default_st_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
-            "gamma": "\\<lbrakk>map_lift (fun_of_resolved_st_q_for $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
+            "gamma": "\\<lbrakk>map_lift (default_st_to_fun $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
             "empty": "(case $f of Bot \\<Rightarrow> True"
-            " | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for $gs st)",
-            "read": "map_lift (fun_of_resolved_st_q_for $G) $f",
+            " | Lifted st \\<Rightarrow> default_st_is_bot_for $gs st)",
+            "read": "map_lift (default_st_to_fun $G) $f",
             "published_gamma": "\\<lbrakk>$v\\<rbrakk>\\<^sub>\\<bottom>",
             "published_empty": "(case $v of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> is_empty_state st)",
@@ -327,7 +327,7 @@ def registration(dom, ctx):
     out += [
         f'    "{INTERP}_solve r"',
         f'    "{INTERP}.solve_dom TYPE({ctx["gk"](vt)})',
-        f'       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state) r"',
+        f'       TYPE(({vt} default_st lifted, {vt} default_st lifted) dg_state) r"',
         f"    bot {t['classifier']}",
     ]
     groups = [

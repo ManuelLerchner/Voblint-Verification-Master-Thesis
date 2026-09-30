@@ -9,7 +9,7 @@ theory Example_Interval_DG_Seed_Join_Recursion
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>How a recursive callee is activated over and over\<close>
 
@@ -54,29 +54,29 @@ abbreviation sj_gs :: "vname \<Rightarrow> bool" where "sj_gs \<equiv> declared_
 definition sj_cfg :: cfg where
   "sj_cfg = compile_prog (prog_table sj_program) (prog_procs sj_program)"
 
-abbreviation sj_lookup :: "ivl exec_dg_st \<Rightarrow> vname \<Rightarrow> ivl" where
+abbreviation sj_lookup :: "ivl default_st \<Rightarrow> vname \<Rightarrow> ivl" where
   "sj_lookup s x \<equiv> s\<langle>location_of sj_gs x\<rangle>"
 
 abbreviation sj_seed :: "(pp \<times> unit) set \<times>
-    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
+    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st, ivl default_st) dg_state)
   \<Rightarrow> vname \<Rightarrow> ivl" where
   "sj_seed sol x \<equiv>
      sj_lookup (dg_local (snd sol (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ())))) x"
 
 abbreviation sj_at :: "(pp \<times> unit) set \<times>
-    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
+    (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st, ivl default_st) dg_state)
   \<Rightarrow> pp \<Rightarrow> vname \<Rightarrow> ivl" where
   "sj_at sol u x \<equiv> sj_lookup (dg_local (snd sol (Inl (u, ())))) x"
 
 definition sj_eqs ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
 where
   "sj_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for sj_gs (ivl_tf_st_for sj_gs) (ivl_enter_st_for sj_gs))
      sj_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 definition sj_sol ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
+  "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st, ivl default_st) dg_state)"
     where
   "sj_sol = TD_side_rule_Interp_solve Globals_Join sj_eqs (cfg_exit sj_cfg, ())"
 
@@ -129,6 +129,6 @@ lemma sj_warrowed_seed_agrees:
      (STR ''n'') = Ivl (Fin 0) (Fin 5)"
   by eval
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

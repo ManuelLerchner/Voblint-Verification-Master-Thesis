@@ -29,10 +29,10 @@ subsection \<open>Carrier-generic whole-CFG commute\<close>
 
 text \<open>
   The commute facts below only ever use that a readback preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
-  proof in the chain inspects \<open>fun_of_resolved_st_q_for\<close> or \<open>abs_state\<close> itself.
+  proof in the chain inspects \<open>default_st_to_fun\<close> or \<open>abs_state\<close> itself.
   \<open>dg_reader_commute_gen\<close> factors that out: a pair of local/global readers \<open>Floc\<close>/\<open>Fglob\<close>
   satisfying those two laws, from which every whole-tree and whole-equation-system commute
-  fact in this chain is proved once.  The raw readback \<open>fun_of_dg_st_for\<close> and the
+  fact in this chain is proved once.  The raw readback \<open>dg_state_to_fun\<close> and the
   reachability-lifted readback are both thin instances of the same engine.
 \<close>
 

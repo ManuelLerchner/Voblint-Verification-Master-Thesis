@@ -4,7 +4,7 @@ theory Example_Sign_DG_Overlapping_Enter
     "Voblint_VIMP.VIMP_Notation"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>One concrete call, two overlapping entry alternatives, two contexts\<close>
 
@@ -53,8 +53,8 @@ definition ov_procs :: "pname list" where "ov_procs = prog_procs ov_program"
 definition ov_cfg :: cfg where
   "ov_cfg = compile_prog ov_pi ov_procs"
 
-definition ov_ep :: "sign exec_dg_st \<Rightarrow> bool" where
-  "ov_ep = resolved_st_q_is_bot_for (declared_global_vars ov_program)"
+definition ov_ep :: "sign default_st \<Rightarrow> bool" where
+  "ov_ep = default_st_is_bot_for (declared_global_vars ov_program)"
 
 abbreviation p_entry :: cfg_node where "p_entry \<equiv> FunctionEntry (STR ''p'')"
 abbreviation p_result :: cfg_node where "p_result \<equiv> FunctionResult (STR ''p'')"
@@ -77,12 +77,12 @@ lemma ov_call_edge:
 subsection \<open>The overriding entry transfer\<close>
 
 definition forget_formals ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st" where
   "forget_formals \<G> ci s =
      foldl (\<lambda>s f. s\<langle>location_of \<G> f := STop\<rangle>) s (ci_formals ci)"
 
 definition forget_var ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> sign \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> sign \<Rightarrow> sign default_st lifted \<Rightarrow> sign default_st lifted" where
   "forget_var \<G> v w = map_lift (\<lambda>s. s\<langle>location_of \<G> v := w\<rangle>)"
 
 text \<open>Alternative 1 is the stock singleton entry, continuation untouched. Alternative 2
@@ -95,17 +95,17 @@ text \<open>Alternative 1 is the stock singleton entry, continuation untouched. 
   is not vacuous.\<close>
 
 definition ov_enter ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> call_info
-   \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted enter_result list" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> (sign default_st \<Rightarrow> bool) \<Rightarrow> call_info
+   \<Rightarrow> sign default_st lifted \<Rightarrow> sign default_st lifted enter_result list" where
   "ov_enter \<G> ep ci d =
      (let entered = transfer_lift ep (sign_enter_st_for \<G> ci) d
       in [(d, entered),
           (forget_var \<G> (STR ''x'') STop d, map_lift (forget_formals \<G> ci) entered)])"
 
 definition ov_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool)
+  "(vname \<Rightarrow> bool) \<Rightarrow> (sign default_st \<Rightarrow> bool)
    \<Rightarrow> (pp \<times> sign list, (unit, sign list) global_unknown, unit,
-        sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
+        sign default_st lifted, sign default_st lifted) dg_spec" where
   "ov_spec \<G> ep = (sign_conf_spec \<G> ep)
      \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (ov_enter \<G> ep ci)) \<rparr>"
 
@@ -161,7 +161,7 @@ text \<open>Entry is absent from \<^locale>\<open>analysis_contract\<close>, so 
   stock specification's contract outright.\<close>
 
 lemma analysis_contract_ov_spec:
-  assumes exact: "\<And>s. ep s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  assumes exact: "\<And>s. ep s = is_empty_state (default_st_to_fun \<G> s)"
   shows "analysis_contract (ov_spec \<G> ep) (sign_conf_gamma \<G>) \<G>"
 proof -
   interpret stock: analysis_contract "sign_conf_spec \<G> ep" "sign_conf_gamma \<G>" \<G>
@@ -190,7 +190,7 @@ text \<open>The entry-state registration's construction of \<^const>\<open>dg_pi
 
 definition ov_eqs ::
   "(pp \<times> sign list, (unit, sign list) global_unknown,
-    (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
+    (sign default_st lifted, sign default_st lifted) dg_state) eqsT" where
   "ov_eqs =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
@@ -203,7 +203,7 @@ definition ov_eqs ::
 definition ov_sol ::
   "(pp \<times> sign list) set \<times>
    (pp \<times> sign list + (unit, sign list) global_unknown
-      \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+      \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state)" where
   "ov_sol = TD_side_always_join_Interp_solve ov_eqs (cfg_exit ov_cfg, [])"
 
 definition ov_result :: "(sign list, sign abs_state) analysis_result" where
@@ -214,13 +214,13 @@ abbreviation ov_read :: "cfg_node \<Rightarrow> sign list \<Rightarrow> vname \<
   "ov_read v ctx x \<equiv> map_lift (\<lambda>st. st x) (lookup_context ov_result v ctx)"
 
 abbreviation ov_seed :: "sign list \<Rightarrow> vname \<Rightarrow> sign lifted" where
-  "ov_seed ctx x \<equiv> map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s x)
+  "ov_seed ctx x \<equiv> map_lift (\<lambda>s. default_st_to_fun ov_gs s x)
                      (dg_local (snd ov_sol (Inr (Activation_Seed p_entry ctx))))"
 
 lemmas ov_unfold = ov_result_def ov_sol_def ov_eqs_def ov_cfg_def ov_pi_def ov_procs_def
   ov_ep_def ov_program_def
 
-definition ov_alt_answer :: "nat \<Rightarrow> sign exec_dg_st lifted" where
+definition ov_alt_answer :: "nat \<Rightarrow> sign default_st lifted" where
   "ov_alt_answer i =
      (let caller = dg_local (snd ov_sol (Inl (Statement 3, [])));
           alts = ov_enter ov_gs ov_ep (call_info_of ov_ca (STR ''p'')) caller
@@ -232,7 +232,7 @@ definition ov_alt_answer :: "nat \<Rightarrow> sign exec_dg_st lifted" where
 
 abbreviation ov_alt_read :: "nat \<Rightarrow> vname \<Rightarrow> sign lifted" where
   "ov_alt_read i x \<equiv>
-     map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s x) (ov_alt_answer i)"
+     map_lift (\<lambda>s. default_st_to_fun ov_gs s x) (ov_alt_answer i)"
 
 definition ov_caller_store :: store where
   "ov_caller_store = (\<lambda>_. 0)(STR ''x'' := 1)"
@@ -247,7 +247,7 @@ lemma ov_solution_snapshot_raw:
           (\<lambda>v ctx. readback_result_value ov_gs
             (canonicalize_lift ov_ep (dg_local (snd sol (Inl (v, ctx))))));
         read = (\<lambda>v ctx x. map_lift (\<lambda>st. st x) (lookup_context result v ctx));
-        seed = (\<lambda>ctx x. map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s x)
+        seed = (\<lambda>ctx x. map_lift (\<lambda>s. default_st_to_fun ov_gs s x)
           (dg_local (snd sol (Inr (Activation_Seed p_entry ctx)))));
         alt_answer = (\<lambda>i.
           let caller = dg_local (snd sol (Inl (Statement 3, [])));
@@ -266,25 +266,25 @@ lemma ov_solution_snapshot_raw:
       \<and> read p_entry [STop] (STR ''a'') = Lifted STop
       \<and> read p_result [SPos] ret_var = Lifted SPos
       \<and> read p_result [STop] ret_var = Lifted STop
-      \<and> map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s (STR ''y''))
+      \<and> map_lift (\<lambda>s. default_st_to_fun ov_gs s (STR ''y''))
           (alt_answer 0) = Lifted SPos
-      \<and> map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s (STR ''x''))
+      \<and> map_lift (\<lambda>s. default_st_to_fun ov_gs s (STR ''x''))
           (alt_answer 0) = Lifted SPos
-      \<and> map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s (STR ''y''))
+      \<and> map_lift (\<lambda>s. default_st_to_fun ov_gs s (STR ''y''))
           (alt_answer 1) = Lifted STop
-      \<and> map_lift (\<lambda>s. fun_of_resolved_st_q_for ov_gs s (STR ''x''))
+      \<and> map_lift (\<lambda>s. default_st_to_fun ov_gs s (STR ''x''))
           (alt_answer 1) = Lifted STop
       \<and> read (Statement 4) [] (STR ''x'') = Lifted STop
       \<and> read (Statement 4) [] (STR ''y'') = Lifted STop
       \<and> dg_local (snd sol (Inl (Statement 3, []))) =
-          update_resolved_st_q_lift (Lifted cinit_sign_st)
+          default_st_set_lift (Lifted cinit_sign_st)
             (location_of ov_gs (STR ''x'')) SPos
       \<and> exec_formals_route ov_gs (Statement 3) []
           (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
             (dg_local (snd sol (Inl (Statement 3, []))))) ov_ca = [SPos]
       \<and> forget_var ov_gs (STR ''x'') STop
           (dg_local (snd sol (Inl (Statement 3, [])))) =
-          update_resolved_st_q_lift (Lifted cinit_sign_st)
+          default_st_set_lift (Lifted cinit_sign_st)
             (location_of ov_gs (STR ''x'')) STop
       \<and> exec_formals_route ov_gs (Statement 3) []
           (map_lift (forget_formals ov_gs (call_info_of ov_ca (STR ''p'')))
@@ -318,14 +318,14 @@ lemma ov_solution_snapshot:
    \<and> ov_read (Statement 4) [] (STR ''x'') = Lifted STop
    \<and> ov_read (Statement 4) [] (STR ''y'') = Lifted STop
    \<and> dg_local (snd ov_sol (Inl (Statement 3, []))) =
-       update_resolved_st_q_lift (Lifted cinit_sign_st)
+       default_st_set_lift (Lifted cinit_sign_st)
          (location_of ov_gs (STR ''x'')) SPos
    \<and> exec_formals_route ov_gs (Statement 3) []
        (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
          (dg_local (snd ov_sol (Inl (Statement 3, []))))) ov_ca = [SPos]
    \<and> forget_var ov_gs (STR ''x'') STop
        (dg_local (snd ov_sol (Inl (Statement 3, [])))) =
-       update_resolved_st_q_lift (Lifted cinit_sign_st)
+       default_st_set_lift (Lifted cinit_sign_st)
          (location_of ov_gs (STR ''x'')) STop
    \<and> exec_formals_route ov_gs (Statement 3) []
        (map_lift (forget_formals ov_gs (call_info_of ov_ca (STR ''p'')))
@@ -441,7 +441,7 @@ text \<open>What the missing obligation would let through. With \<open>enter\<^s
 
 definition ov_empty_spec ::
   "(pp \<times> sign list, (unit, sign list) global_unknown, unit,
-    sign exec_dg_st lifted, sign exec_dg_st lifted) dg_spec" where
+    sign default_st lifted, sign default_st lifted) dg_spec" where
   "ov_empty_spec = (sign_conf_spec ov_gs ov_ep)
      \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. [])) \<rparr>"
 
@@ -449,7 +449,7 @@ declare ov_empty_spec_def [code_unfold]
 
 definition ov_empty_eqs ::
   "(pp \<times> sign list, (unit, sign list) global_unknown,
-    (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
+    (sign default_st lifted, sign default_st lifted) dg_state) eqsT" where
   "ov_empty_eqs =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
@@ -462,7 +462,7 @@ definition ov_empty_eqs ::
 definition ov_empty_sol ::
   "(pp \<times> sign list) set \<times>
    (pp \<times> sign list + (unit, sign list) global_unknown
-      \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+      \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state)" where
   "ov_empty_sol = TD_side_always_join_Interp_solve ov_empty_eqs (cfg_exit ov_cfg, [])"
 
 lemmas ov_empty_unfold = ov_empty_sol_def ov_empty_eqs_def ov_empty_spec_def ov_cfg_def
@@ -498,13 +498,13 @@ lemma ov_empty_continuation_bot:
 
 lemma ov_call_site_dg_local_probe:
   "dg_local (snd ov_sol (Inl (Statement 3, [])))
-     = update_resolved_st_q_lift (Lifted cinit_sign_st) (location_of ov_gs (STR ''x'')) SPos"
+     = default_st_set_lift (Lifted cinit_sign_st) (location_of ov_gs (STR ''x'')) SPos"
   using ov_solution_snapshot by blast+
 
 lemma ov_call_site_reader:
-  "map_lift (fun_of_resolved_st_q_for ov_gs) (dg_local (snd ov_sol (Inl (Statement 3, []))))
-     = Lifted ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos))"
-  unfolding ov_call_site_dg_local_probe update_resolved_st_q_lift_def
+  "map_lift (default_st_to_fun ov_gs) (dg_local (snd ov_sol (Inl (Statement 3, []))))
+     = Lifted ((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos))"
+  unfolding ov_call_site_dg_local_probe default_st_set_lift_def
   by (simp add: is_bottom_sign_def)
 
 lemma ov_caller_store_covered:
@@ -513,9 +513,9 @@ lemma ov_caller_store_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
-          \<in> \<gamma> (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)) y)"
+          \<in> \<gamma> (((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos)) y)"
     by (cases "y = STR ''x''")
-       (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
+       (simp_all add: default_st_to_fun_initial gamma_sign_top ov_caller_store_def)
 qed
 
 lemma ov_alt1_route:
@@ -539,39 +539,39 @@ lemma ov_entry1_dg_local_exact:
        (enter_frame_D_resolved_q STop
           cinit_sign_st\<langle>location_of ov_gs (STR ''x'') := SPos\<rangle>)
          \<langle>location_of ov_gs (STR ''a'') := SPos\<rangle>"
-  unfolding ov_call_site_dg_local_probe update_resolved_st_q_lift_def
+  unfolding ov_call_site_dg_local_probe default_st_set_lift_def
   by (simp add: bind_formals_resolved_q_singleton is_bottom_sign_def normalize_lift_def
                 ov_entry1_not_empty_probe)
 
 lemma ov_entry1_reader:
-  "map_lift (fun_of_resolved_st_q_for ov_gs)
+  "map_lift (default_st_to_fun ov_gs)
      (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
         (dg_local (snd ov_sol (Inl (Statement 3, [])))))
    = Lifted ((enter_frame ov_gs STop
-                ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
+                ((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos)))
              (STR ''a'' := SPos))"
   unfolding ov_entry1_dg_local_exact by simp
 
 lemma ov_entry2_reader:
-  "map_lift (fun_of_resolved_st_q_for ov_gs)
+  "map_lift (default_st_to_fun ov_gs)
      (map_lift (forget_formals ov_gs (call_info_of ov_ca (STR ''p'')))
        (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
           (dg_local (snd ov_sol (Inl (Statement 3, []))))))
    = Lifted ((enter_frame ov_gs STop
-                ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
+                ((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos)))
              (STR ''a'' := STop))"
   unfolding forget_formals_def ov_entry1_dg_local_exact by simp
 
 lemma ov_cont2_dg_local_probe:
   "forget_var ov_gs (STR ''x'') STop (dg_local (snd ov_sol (Inl (Statement 3, []))))
-     = update_resolved_st_q_lift (Lifted cinit_sign_st) (location_of ov_gs (STR ''x'')) STop"
+     = default_st_set_lift (Lifted cinit_sign_st) (location_of ov_gs (STR ''x'')) STop"
   using ov_solution_snapshot by blast
 
 lemma ov_cont2_reader:
-  "map_lift (fun_of_resolved_st_q_for ov_gs)
+  "map_lift (default_st_to_fun ov_gs)
      (forget_var ov_gs (STR ''x'') STop (dg_local (snd ov_sol (Inl (Statement 3, [])))))
-   = Lifted (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := STop)))"
-  unfolding ov_cont2_dg_local_probe update_resolved_st_q_lift_def
+   = Lifted (((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := STop)))"
+  unfolding ov_cont2_dg_local_probe default_st_set_lift_def
   by (simp add: is_bottom_sign_def)
 
 lemma ov_cont2_covered:
@@ -582,9 +582,9 @@ lemma ov_cont2_covered:
 proof (rule CollectI, rule allI)
   fix y
   show "ov_caller_store y
-          \<in> \<gamma> (((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := STop)) y)"
+          \<in> \<gamma> (((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := STop)) y)"
     by (cases "y = STR ''x''")
-       (simp_all add: fun_of_initial_resolved_st_q gamma_sign_top ov_caller_store_def)
+       (simp_all add: default_st_to_fun_initial gamma_sign_top ov_caller_store_def)
 qed
 
 lemma ov_entry1_covered:
@@ -598,11 +598,11 @@ proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
           \<in> \<gamma> (((enter_frame ov_gs STop
-                       ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
+                       ((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos)))
                     (STR ''a'' := SPos)) y)"
     by (cases "y = STR ''a''")
        (simp_all add: call_enter_CallEdge ov_caller_store_def gamma_sign_top
-                      fun_of_initial_resolved_st_q)
+                      default_st_to_fun_initial)
 qed
 
 lemma ov_entry2_covered:
@@ -617,11 +617,11 @@ proof (rule CollectI, rule allI)
   fix y
   show "call_enter ov_gs ov_ca ov_caller_store y
           \<in> \<gamma> (((enter_frame ov_gs STop
-                       ((fun_of_resolved_st_q_for ov_gs cinit_sign_st)(STR ''x'' := SPos)))
+                       ((default_st_to_fun ov_gs cinit_sign_st)(STR ''x'' := SPos)))
                     (STR ''a'' := STop)) y)"
     by (cases "y = STR ''a''")
        (simp_all add: call_enter_CallEdge ov_caller_store_def gamma_sign_top
-                      fun_of_initial_resolved_st_q)
+                      default_st_to_fun_initial)
 qed
 
 lemma ov_alt2_route:
@@ -654,8 +654,8 @@ lemma ov_R_eq:
             (Analysis_Global ()) (exec_formals_route ov_gs)"
   by (rule refl)
 
-lemma ov_exact: "ov_ep s = is_empty_state (fun_of_resolved_st_q_for ov_gs s)"
-  unfolding ov_ep_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma ov_exact: "ov_ep s = is_empty_state (default_st_to_fun ov_gs s)"
+  unfolding ov_ep_def by (rule default_st_is_bot_for_iff) simp
 
 lemma ov_fwd_closed_all:
   "\<forall>(u, ctx) \<in> fst ov_sol. \<forall>(u', a, v) \<in> intra ov_cfg. u = u' \<longrightarrow> (v, ctx) \<in> fst ov_sol"
@@ -879,7 +879,7 @@ interpretation ov_routed: routed_context_base_hetero
   "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
-  "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for ov_gs) m\<rbrakk>\<^sub>\<bottom>" ov_R
+  "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun ov_gs) m\<rbrakk>\<^sub>\<bottom>" ov_R
 proof (rule routed_context_base_hetero.intro
     [OF dg_ctx_activation_base.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
@@ -1056,6 +1056,6 @@ text \<open>
   missing obligation \<^const>\<open>call_context_total_on\<close> rules out.
 \<close>
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

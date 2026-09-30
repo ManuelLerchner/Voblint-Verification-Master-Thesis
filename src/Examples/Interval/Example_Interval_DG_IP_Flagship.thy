@@ -93,7 +93,7 @@ text \<open>The analysis is the one \<open>Example_Interval_DG_Flagship\<close> 
 definition twice_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
+       (ivl default_st lifted, ivl default_st lifted) dg_state) strategy_tree" where
   "twice_eqs = interval_rule.equations twice_gs twice_program"
 
 lemma twice_terminates_c:

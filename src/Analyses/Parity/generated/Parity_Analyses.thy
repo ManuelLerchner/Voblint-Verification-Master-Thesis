@@ -36,7 +36,7 @@ global_interpretation parity_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) r"
+       TYPE((parity default_st lifted, parity default_st lifted) dg_state) r"
     bot parity_classify_check
     skip_parity assign_parity special_parity branch_parity body_parity return_parity
     enter_parity_ci_for event_parity "\<lambda>_. route_unit"

@@ -2,7 +2,7 @@ theory Exec_St_Transfer
   imports Exec_St_Algebra "Voblint_Framework.Transfer_Algebra"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>Refinement to variable-indexed states\<close>
 
@@ -10,7 +10,7 @@ text \<open>
   Everything so far is stated about locations. A program, though, talks about
   variable names, and which names are global is a property of the program, not
   of the carrier. \<open>location_of\<close> is that classifier applied: it turns a name
-  into the location holding its value, and \<open>fun_of_resolved_st_for\<close> reads a
+  into the location holding its value, and \<open>default_st_rep_to_fun\<close> reads a
   whole state back as the function \<^typ>\<open>'a abs_state\<close> that soundness is stated
   over.
 
@@ -52,21 +52,21 @@ text \<open>
   equation to its classification side and takes the rewrite away.
 \<close>
 
-definition fun_of_resolved_st_for ::
-  "(vname => bool) => ('a::bot) resolved_st => vname => 'a" where
-  "fun_of_resolved_st_for \<G> s x =
-     lookup_resolved_st s (location_of \<G> x)"
+definition default_st_rep_to_fun ::
+  "(vname => bool) => ('a::bot) default_st_rep => vname => 'a" where
+  "default_st_rep_to_fun \<G> s x =
+     default_st_rep_get s (location_of \<G> x)"
 
-lemma fun_of_resolved_st_for_update_location [simp]:
-  "fun_of_resolved_st_for \<G>
-      (update_resolved_st s (location_of \<G> x) a) =
-   (fun_of_resolved_st_for \<G> s)(x := a)"
+lemma default_st_rep_to_fun_set_location [simp]:
+  "default_st_rep_to_fun \<G>
+      (default_st_rep_set s (location_of \<G> x) a) =
+   (default_st_rep_to_fun \<G> s)(x := a)"
 proof (rule ext)
   fix y
-  show "fun_of_resolved_st_for \<G>
-      (update_resolved_st s (location_of \<G> x) a) y =
-    ((fun_of_resolved_st_for \<G> s)(x := a)) y"
-    unfolding fun_of_resolved_st_for_def    by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
+  show "default_st_rep_to_fun \<G>
+      (default_st_rep_set s (location_of \<G> x) a) y =
+    ((default_st_rep_to_fun \<G> s)(x := a)) y"
+    unfolding default_st_rep_to_fun_def    by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
         simp_all add: location_of_def)
 qed
 
@@ -79,16 +79,16 @@ lemma map_of_filter_fst:
      (if P k then map_of xs k else None)"
   by (induction xs) auto
 
-definition fun_of_resolved_st_q_for ::
-  "(vname => bool) => ('a::bot) resolved_st_q => vname => 'a"
+definition default_st_to_fun ::
+  "(vname => bool) => ('a::bot) default_st => vname => 'a"
 where
-  "fun_of_resolved_st_q_for \<G> s x =
+  "default_st_to_fun \<G> s x =
      s\<langle>location_of \<G> x\<rangle>"
 
 
-lemma fun_of_resolved_st_q_for_bot [simp]:
-  "fun_of_resolved_st_q_for \<G> (bot :: ('a::order_bot) resolved_st_q) = bot"
-  by (rule ext) (simp add: fun_of_resolved_st_q_for_def)
+lemma default_st_to_fun_bot [simp]:
+  "default_st_to_fun \<G> (bot :: ('a::order_bot) default_st) = bot"
+  by (rule ext) (simp add: default_st_to_fun_def)
 
 text \<open>
   The state a run starts in gives every local one value and every global
@@ -100,76 +100,76 @@ text \<open>
   descend through both quotients.
 \<close>
 
-definition initial_resolved_st_q :: "'a::bot => 'a => 'a resolved_st_q" where
-  "initial_resolved_st_q local_value global_value =
-     Abs_resolved_st (local_value, global_value, [])"
+definition initial_default_st :: "'a::bot => 'a => 'a default_st" where
+  "initial_default_st local_value global_value =
+     Abs_default_st (local_value, global_value, [])"
 
-lemma lookup_initial_resolved_st_q [simp]:
-  "fun_of_resolved_st_q_for \<G> (initial_resolved_st_q local_value global_value) x =
+lemma default_st_get_initial [simp]:
+  "default_st_to_fun \<G> (initial_default_st local_value global_value) x =
    (if \<G> x then global_value else local_value)"
-  unfolding fun_of_resolved_st_q_for_def initial_resolved_st_q_def
+  unfolding default_st_to_fun_def initial_default_st_def
   by (auto simp: location_of_def split: if_splits)
 
-lemma fun_of_initial_resolved_st_q:
-  "fun_of_resolved_st_q_for \<G> (initial_resolved_st_q local_value global_value) =
+lemma default_st_to_fun_initial:
+  "default_st_to_fun \<G> (initial_default_st local_value global_value) =
    (\<lambda>x. if \<G> x then global_value else local_value)"
   by (rule ext) simp
 
 text \<open>
   The quotient-level projection agrees with the raw one at \<open>s\<close>'s own chosen
-  representative -- so any raw-level fact about @{const fun_of_resolved_st_for}
-  transports directly to @{const fun_of_resolved_st_q_for} through
-  @{const rep_resolved_st}, with no separate quotient-respectfulness argument
-  needed: @{const rep_resolved_st} is a genuine function of \<open>s\<close>, so anything
+  representative -- so any raw-level fact about @{const default_st_rep_to_fun}
+  transports directly to @{const default_st_to_fun} through
+  @{const rep_default_st}, with no separate quotient-respectfulness argument
+  needed: @{const rep_default_st} is a genuine function of \<open>s\<close>, so anything
   defined through it is automatically well-defined on the quotient.
 \<close>
 
-lemma fun_of_resolved_st_q_for_rep:
-  "fun_of_resolved_st_q_for \<G> s = fun_of_resolved_st_for \<G> (rep_resolved_st s)"
-  unfolding fun_of_resolved_st_q_for_def fun_of_resolved_st_for_def
-  by (rule ext) (simp add: lookup_rep_resolved_st_q)
+lemma default_st_to_fun_rep:
+  "default_st_to_fun \<G> s = default_st_rep_to_fun \<G> (rep_default_st s)"
+  unfolding default_st_to_fun_def default_st_rep_to_fun_def
+  by (rule ext) (simp add: default_st_get_rep)
 
-lemma fun_of_resolved_st_q_for_mono:
+lemma default_st_to_fun_mono:
   assumes "s \<le> t"
-  shows "fun_of_resolved_st_q_for \<G> s \<le> fun_of_resolved_st_q_for \<G> t"
+  shows "default_st_to_fun \<G> s \<le> default_st_to_fun \<G> t"
   using assms
-  unfolding fun_of_resolved_st_q_for_def le_fun_def
-  by (simp add: le_resolved_st_q_iff)
+  unfolding default_st_to_fun_def le_fun_def
+  by (simp add: le_default_st_iff)
 
 
 text \<open>
   Each quotient-level refinement equation is its raw counterpart transported
   along the quotient: unfolding the projection leaves a goal in
-  \<^const>\<open>lookup_resolved_st_q\<close>, \<open>transfer\<close> lowers it to
-  \<^const>\<open>lookup_resolved_st\<close>, and the raw lemma -- read at the same unfolded
+  \<^const>\<open>default_st_get\<close>, \<open>transfer\<close> lowers it to
+  \<^const>\<open>default_st_rep_get\<close>, and the raw lemma -- read at the same unfolded
   shape -- closes it. An operation returning the quotient has no \<open>rep_eq\<close> to
   unfold instead, since its representative is fixed only up to
-  \<^const>\<open>eq_resolved_st\<close>.
+  \<^const>\<open>eq_default_st_rep\<close>.
 \<close>
 
 
 subsection \<open>Assignment and formal binding\<close>
 
 definition combine_assign_resolved ::
-  "(vname => bool) => vname option => 'a => ('a::bot) resolved_st
-   => 'a resolved_st"
+  "(vname => bool) => vname option => 'a => ('a::bot) default_st_rep
+   => 'a default_st_rep"
 where
   "combine_assign_resolved \<G> dst v s =
      (case dst of None => s
-      | Some x => update_resolved_st s (location_of \<G> x) v)"
+      | Some x => default_st_rep_set s (location_of \<G> x) v)"
 
-lemma eq_resolved_st_combine_assign:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (combine_assign_resolved \<G> dst v s)
+lemma eq_default_st_rep_combine_assign:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (combine_assign_resolved \<G> dst v s)
       (combine_assign_resolved \<G> dst v t)"
   by (unfold combine_assign_resolved_def; cases dst;
-      simp_all add: assms eq_resolved_st_update)
+      simp_all add: assms eq_default_st_rep_set)
 
 lift_definition combine_assign_resolved_q ::
-  "(vname => bool) => vname option => 'a => ('a::bot) resolved_st_q
-   => 'a resolved_st_q"
+  "(vname => bool) => vname option => 'a => ('a::bot) default_st
+   => 'a default_st"
   is combine_assign_resolved
-  by (rule eq_resolved_st_combine_assign)
+  by (rule eq_default_st_rep_combine_assign)
 
 lemma lookup_combine_assign_resolved_q [simp]:
   "(combine_assign_resolved_q \<G> dst v s)\<langle>loc\<rangle> =
@@ -178,96 +178,96 @@ lemma lookup_combine_assign_resolved_q [simp]:
       | Some x => if location_of \<G> x = loc then v else s\<langle>loc\<rangle>)"
   by transfer (auto simp add:combine_assign_resolved_def split:option.splits)
 
-lemma fun_of_resolved_st_for_combine_assign [simp]:
-  "fun_of_resolved_st_for \<G>
+lemma default_st_rep_to_fun_combine_assign [simp]:
+  "default_st_rep_to_fun \<G>
       (combine_assign_resolved \<G> dst v s) =
-   combine_assign dst v (fun_of_resolved_st_for \<G> s)"
+   combine_assign dst v (default_st_rep_to_fun \<G> s)"
   by (cases dst)
      (simp_all add: combine_assign_resolved_def)
 
-lemma fun_of_resolved_st_q_for_combine_assign [simp]:
-  "fun_of_resolved_st_q_for \<G>
+lemma default_st_to_fun_combine_assign [simp]:
+  "default_st_to_fun \<G>
       (combine_assign_resolved_q \<G> dst v s) =
-   combine_assign dst v (fun_of_resolved_st_q_for \<G> s)"
-  unfolding fun_of_resolved_st_q_for_def
+   combine_assign dst v (default_st_to_fun \<G> s)"
+  unfolding default_st_to_fun_def
   by transfer
-     (rule fun_of_resolved_st_for_combine_assign[unfolded fun_of_resolved_st_for_def])
+     (rule default_st_rep_to_fun_combine_assign[unfolded default_st_rep_to_fun_def])
 
 definition bind_formals_resolved ::
-  "(vname => bool) => vname list => 'a list => ('a::bot) resolved_st
-   => 'a resolved_st"
+  "(vname => bool) => vname list => 'a list => ('a::bot) default_st_rep
+   => 'a default_st_rep"
 where
   "bind_formals_resolved \<G> xs avs s =
-     fold (\<lambda>(x, a) t. update_resolved_st t (location_of \<G> x) a)
+     fold (\<lambda>(x, a) t. default_st_rep_set t (location_of \<G> x) a)
        (zip xs avs) s"
 
-lemma eq_resolved_st_fold_update:
-  "eq_resolved_st s t \<Longrightarrow>
-     eq_resolved_st
-       (fold (\<lambda>(x, a) t. update_resolved_st t (location_of \<G> x) a) ps s)
-       (fold (\<lambda>(x, a) t. update_resolved_st t (location_of \<G> x) a) ps t)"
+lemma eq_default_st_rep_fold_set:
+  "eq_default_st_rep s t \<Longrightarrow>
+     eq_default_st_rep
+       (fold (\<lambda>(x, a) t. default_st_rep_set t (location_of \<G> x) a) ps s)
+       (fold (\<lambda>(x, a) t. default_st_rep_set t (location_of \<G> x) a) ps t)"
 proof (induction ps arbitrary: s t)
   case Nil
   then show ?case by simp
 next
   case (Cons p ps)
   then show ?case
-    by (cases p) (simp_all add: eq_resolved_st_update)
+    by (cases p) (simp_all add: eq_default_st_rep_set)
 qed
 
-lemma eq_resolved_st_bind_formals:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (bind_formals_resolved \<G> xs avs s)
+lemma eq_default_st_rep_bind_formals:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (bind_formals_resolved \<G> xs avs s)
       (bind_formals_resolved \<G> xs avs t)"
   unfolding bind_formals_resolved_def
-  using assms by (rule eq_resolved_st_fold_update)
+  using assms by (rule eq_default_st_rep_fold_set)
 
 lift_definition bind_formals_resolved_q ::
-  "(vname => bool) => vname list => 'a list => ('a::bot) resolved_st_q
-   => 'a resolved_st_q"
+  "(vname => bool) => vname list => 'a list => ('a::bot) default_st
+   => 'a default_st"
   is bind_formals_resolved
-  by (rule eq_resolved_st_bind_formals)
+  by (rule eq_default_st_rep_bind_formals)
 
 text \<open>A single-formal call binds exactly one location, so its reduction is a
-  plain \<^const>\<open>update_resolved_st_q\<close>. An instance with a
+  plain \<^const>\<open>default_st_set\<close>. An instance with a
   one-argument procedure call cites this directly instead of unfolding
   \<^const>\<open>bind_formals_resolved_q\<close>'s fold.\<close>
 
 lemma bind_formals_resolved_q_singleton:
   "bind_formals_resolved_q \<G> [x] [a] s = s\<langle>location_of \<G> x := a\<rangle>"
-  by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
+  by transfer (simp add: bind_formals_resolved_def eq_default_st_rep_def)
 
-lemma fun_of_resolved_st_for_fold_update:
-  "fun_of_resolved_st_for \<G>
-      (fold (\<lambda>(x, a) t. update_resolved_st t (location_of \<G> x) a) ps s) =
+lemma default_st_rep_to_fun_fold_set:
+  "default_st_rep_to_fun \<G>
+      (fold (\<lambda>(x, a) t. default_st_rep_set t (location_of \<G> x) a) ps s) =
    fold (\<lambda>(x, a) t. t(x := a)) ps
-      (fun_of_resolved_st_for \<G> s)"
+      (default_st_rep_to_fun \<G> s)"
   by (induction ps arbitrary: s)
      (simp_all split: prod.splits)
 
-lemma fun_of_resolved_st_for_bind_formals [simp]:
-  "fun_of_resolved_st_for \<G>
+lemma default_st_rep_to_fun_bind_formals [simp]:
+  "default_st_rep_to_fun \<G>
       (bind_formals_resolved \<G> xs avs s) =
-   bind_formals xs avs (fun_of_resolved_st_for \<G> s)"
+   bind_formals xs avs (default_st_rep_to_fun \<G> s)"
   unfolding bind_formals_resolved_def
-  by (rule fun_of_resolved_st_for_fold_update)
+  by (rule default_st_rep_to_fun_fold_set)
 
-lemma fun_of_resolved_st_q_for_bind_formals [simp]:
-  "fun_of_resolved_st_q_for \<G>
+lemma default_st_to_fun_bind_formals [simp]:
+  "default_st_to_fun \<G>
       (bind_formals_resolved_q \<G> xs avs s) =
-   bind_formals xs avs (fun_of_resolved_st_q_for \<G> s)"
-  unfolding fun_of_resolved_st_q_for_def
+   bind_formals xs avs (default_st_to_fun \<G> s)"
+  unfolding default_st_to_fun_def
   by transfer
-     (rule fun_of_resolved_st_for_bind_formals[unfolded fun_of_resolved_st_for_def])
+     (rule default_st_rep_to_fun_bind_formals[unfolded default_st_rep_to_fun_def])
 
-lemma fun_of_resolved_st_q_for_update [simp]:
-  "fun_of_resolved_st_q_for \<G> s\<langle>location_of \<G> x := a\<rangle> =
-   (fun_of_resolved_st_q_for \<G> s)(x := a)"
+lemma default_st_to_fun_set [simp]:
+  "default_st_to_fun \<G> s\<langle>location_of \<G> x := a\<rangle> =
+   (default_st_to_fun \<G> s)(x := a)"
 proof (rule ext)
   fix y
-  show "fun_of_resolved_st_q_for \<G> s\<langle>location_of \<G> x := a\<rangle> y =
-    ((fun_of_resolved_st_q_for \<G> s)(x := a)) y"
-    unfolding fun_of_resolved_st_q_for_def
+  show "default_st_to_fun \<G> s\<langle>location_of \<G> x := a\<rangle> y =
+    ((default_st_to_fun \<G> s)(x := a)) y"
+    unfolding default_st_to_fun_def
     by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
         simp_all add: location_of_def)
 qed
@@ -284,61 +284,61 @@ fun location_is_global :: "location => bool" where
 | "location_is_global (Global_Location x) = True"
 
 definition restrict_local_resolved ::
-  "('a::bot) resolved_st => 'a resolved_st" where
+  "('a::bot) default_st_rep => 'a default_st_rep" where
   "restrict_local_resolved s =
      (case s of (dl, dg, ps) =>
        (dl, bot, filter (\<lambda>p. location_is_local (fst p)) ps))"
 
 definition restrict_global_resolved ::
-  "('a::bot) resolved_st => 'a resolved_st" where
+  "('a::bot) default_st_rep => 'a default_st_rep" where
   "restrict_global_resolved s =
      (case s of (dl, dg, ps) =>
        (bot, dg, filter (\<lambda>p. location_is_global (fst p)) ps))"
 
 
 lemma lookup_restrict_local_resolved:
-  "lookup_resolved_st (restrict_local_resolved s) loc =
+  "default_st_rep_get (restrict_local_resolved s) loc =
      (case loc of
-        Local_Location x => lookup_resolved_st s loc
+        Local_Location x => default_st_rep_get s loc
       | Global_Location x => bot)"
   by (cases s; cases loc)
      (simp_all add: restrict_local_resolved_def map_of_filter_fst
        split: location.splits option.splits)
 
 lemma lookup_restrict_global_resolved:
-  "lookup_resolved_st (restrict_global_resolved s) loc =
+  "default_st_rep_get (restrict_global_resolved s) loc =
      (case loc of
         Local_Location x => bot
-      | Global_Location x => lookup_resolved_st s loc)"
+      | Global_Location x => default_st_rep_get s loc)"
   by (cases s; cases loc)
      (simp_all add: restrict_global_resolved_def map_of_filter_fst
        split: location.splits option.splits)
 
-lemma eq_resolved_st_restrict_local:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (restrict_local_resolved s)
+lemma eq_default_st_rep_restrict_local:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (restrict_local_resolved s)
       (restrict_local_resolved t)"
-  by (rule eq_resolved_stI)
-     (simp add: lookup_restrict_local_resolved eq_resolved_stD[OF assms]
+  by (rule eq_default_st_repI)
+     (simp add: lookup_restrict_local_resolved eq_default_st_repD[OF assms]
        split: location.split)
 
-lemma eq_resolved_st_restrict_global:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (restrict_global_resolved s)
+lemma eq_default_st_rep_restrict_global:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (restrict_global_resolved s)
       (restrict_global_resolved t)"
-  by (rule eq_resolved_stI)
-     (simp add: lookup_restrict_global_resolved eq_resolved_stD[OF assms]
+  by (rule eq_default_st_repI)
+     (simp add: lookup_restrict_global_resolved eq_default_st_repD[OF assms]
        split: location.split)
 
 lift_definition restrict_local_resolved_q ::
-  "('a::bot) resolved_st_q => 'a resolved_st_q"
+  "('a::bot) default_st => 'a default_st"
   is restrict_local_resolved
-  by (rule eq_resolved_st_restrict_local)
+  by (rule eq_default_st_rep_restrict_local)
 
 lift_definition restrict_global_resolved_q ::
-  "('a::bot) resolved_st_q => 'a resolved_st_q"
+  "('a::bot) default_st => 'a default_st"
   is restrict_global_resolved
-  by (rule eq_resolved_st_restrict_global)
+  by (rule eq_default_st_rep_restrict_global)
 
 text \<open>
   \<^const>\<open>restrict_local_resolved_q\<close>/\<^const>\<open>restrict_global_resolved_q\<close>
@@ -365,121 +365,121 @@ lemma lookup_restrict_global_resolved_q [simp]:
       | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_restrict_global_resolved)
 
-lemma fun_of_resolved_st_q_for_restrict_local [simp]:
-  "fun_of_resolved_st_q_for \<G> (restrict_local_resolved_q s) x =
-     (if \<G> x then bot else fun_of_resolved_st_q_for \<G> s x)"
-  unfolding fun_of_resolved_st_q_for_def location_of_def
+lemma default_st_to_fun_restrict_local [simp]:
+  "default_st_to_fun \<G> (restrict_local_resolved_q s) x =
+     (if \<G> x then bot else default_st_to_fun \<G> s x)"
+  unfolding default_st_to_fun_def location_of_def
   by (cases "\<G> x") simp_all
 
-lemma fun_of_resolved_st_q_for_restrict_global [simp]:
-  "fun_of_resolved_st_q_for \<G> (restrict_global_resolved_q s) x =
-     (if \<G> x then fun_of_resolved_st_q_for \<G> s x else bot)"
-  unfolding fun_of_resolved_st_q_for_def location_of_def
+lemma default_st_to_fun_restrict_global [simp]:
+  "default_st_to_fun \<G> (restrict_global_resolved_q s) x =
+     (if \<G> x then default_st_to_fun \<G> s x else bot)"
+  unfolding default_st_to_fun_def location_of_def
   by (cases "\<G> x") simp_all
 
-definition combine_resolved_st ::
-  "('a::bot) resolved_st => 'a resolved_st => 'a resolved_st"
+definition combine_default_st_rep ::
+  "('a::bot) default_st_rep => 'a default_st_rep => 'a default_st_rep"
 where
-  "combine_resolved_st sc se =
+  "combine_default_st_rep sc se =
      (case sc of (dlc, dgc, psc) =>
       case se of (dle, dge, pse) =>
         (dlc, dge,
          filter (\<lambda>p. location_is_local (fst p)) psc @
          filter (\<lambda>p. location_is_global (fst p)) pse))"
 
-lemma lookup_combine_resolved_st [simp]:
-  "lookup_resolved_st (combine_resolved_st sc se) loc =
+lemma default_st_rep_get_combine [simp]:
+  "default_st_rep_get (combine_default_st_rep sc se) loc =
    (case loc of
-      Local_Location x => lookup_resolved_st sc loc
-    | Global_Location x => lookup_resolved_st se loc)"
+      Local_Location x => default_st_rep_get sc loc
+    | Global_Location x => default_st_rep_get se loc)"
   by (cases sc; cases se; cases loc)
-       (simp_all add: combine_resolved_st_def map_add_def map_of_filter_fst
+       (simp_all add: combine_default_st_rep_def map_add_def map_of_filter_fst
          split: option.splits)
 
-lemma eq_resolved_st_combine:
-  assumes "eq_resolved_st sc1 sc2"
-    and "eq_resolved_st se1 se2"
-  shows "eq_resolved_st (combine_resolved_st sc1 se1)
-      (combine_resolved_st sc2 se2)"
-  by (rule eq_resolved_stI)
-     (simp add: eq_resolved_stD[OF assms(1)] eq_resolved_stD[OF assms(2)]
+lemma eq_default_st_rep_combine:
+  assumes "eq_default_st_rep sc1 sc2"
+    and "eq_default_st_rep se1 se2"
+  shows "eq_default_st_rep (combine_default_st_rep sc1 se1)
+      (combine_default_st_rep sc2 se2)"
+  by (rule eq_default_st_repI)
+     (simp add: eq_default_st_repD[OF assms(1)] eq_default_st_repD[OF assms(2)]
        split: location.split)
 
-lift_definition combine_resolved_st_q ::
-  "('a::bot) resolved_st_q => 'a resolved_st_q => 'a resolved_st_q"
-  is combine_resolved_st
-  by (rule eq_resolved_st_combine)
+lift_definition combine_default_st ::
+  "('a::bot) default_st => 'a default_st => 'a default_st"
+  is combine_default_st_rep
+  by (rule eq_default_st_rep_combine)
 
-lemma lookup_combine_resolved_st_q [simp]:
-  "(combine_resolved_st_q sc se)\<langle>loc\<rangle> =
+lemma default_st_get_combine [simp]:
+  "(combine_default_st sc se)\<langle>loc\<rangle> =
      (case loc of
         Local_Location x => sc\<langle>loc\<rangle>
       | Global_Location x => se\<langle>loc\<rangle>)"
-  by transfer (rule lookup_combine_resolved_st)
+  by transfer (rule default_st_rep_get_combine)
 
 
-lemma fun_of_resolved_st_for_combine_resolved [simp]:
-  "fun_of_resolved_st_for \<G> (combine_resolved_st sc se) =
-   combine_env \<G> (fun_of_resolved_st_for \<G> sc)
-     (fun_of_resolved_st_for \<G> se)"
+lemma default_st_rep_to_fun_combine_resolved [simp]:
+  "default_st_rep_to_fun \<G> (combine_default_st_rep sc se) =
+   combine_env \<G> (default_st_rep_to_fun \<G> sc)
+     (default_st_rep_to_fun \<G> se)"
 proof (rule ext)
   fix x
-  show "fun_of_resolved_st_for \<G> (combine_resolved_st sc se) x =
-      combine_env \<G> (fun_of_resolved_st_for \<G> sc)
-        (fun_of_resolved_st_for \<G> se) x"
-    unfolding fun_of_resolved_st_for_def combine_env_def location_of_def
+  show "default_st_rep_to_fun \<G> (combine_default_st_rep sc se) x =
+      combine_env \<G> (default_st_rep_to_fun \<G> sc)
+        (default_st_rep_to_fun \<G> se) x"
+    unfolding default_st_rep_to_fun_def combine_env_def location_of_def
     by (cases "\<G> x") simp_all
 qed
 
-lemma fun_of_resolved_st_q_for_combine [simp]:
-  "fun_of_resolved_st_q_for \<G> (combine_resolved_st_q sc se) =
-   combine_env \<G> (fun_of_resolved_st_q_for \<G> sc)
-     (fun_of_resolved_st_q_for \<G> se)"
+lemma default_st_to_fun_combine [simp]:
+  "default_st_to_fun \<G> (combine_default_st sc se) =
+   combine_env \<G> (default_st_to_fun \<G> sc)
+     (default_st_to_fun \<G> se)"
 proof (rule ext)
   fix x
-  show "fun_of_resolved_st_q_for \<G> (combine_resolved_st_q sc se) x =
-      combine_env \<G> (fun_of_resolved_st_q_for \<G> sc)
-        (fun_of_resolved_st_q_for \<G> se) x"
-    unfolding fun_of_resolved_st_q_for_def combine_env_def location_of_def
+  show "default_st_to_fun \<G> (combine_default_st sc se) x =
+      combine_env \<G> (default_st_to_fun \<G> sc)
+        (default_st_to_fun \<G> se) x"
+    unfolding default_st_to_fun_def combine_env_def location_of_def
     by (cases "\<G> x") simp_all
 qed
 
 
-lemma fun_of_resolved_st_q_for_sup [simp]:
-  "fun_of_resolved_st_q_for \<G> (s \<squnion> t) =
-   fun_of_resolved_st_q_for \<G> s \<squnion> fun_of_resolved_st_q_for \<G> t"
-  by (rule ext) (simp add: fun_of_resolved_st_q_for_def sup_fun_def)
+lemma default_st_to_fun_sup [simp]:
+  "default_st_to_fun \<G> (s \<squnion> t) =
+   default_st_to_fun \<G> s \<squnion> default_st_to_fun \<G> t"
+  by (rule ext) (simp add: default_st_to_fun_def sup_fun_def)
 
 
 subsection \<open>Frame entry\<close>
 
 definition enter_frame_D_resolved ::
-  "'a => ('a::bot) resolved_st => 'a resolved_st"
+  "'a => ('a::bot) default_st_rep => 'a default_st_rep"
 where
   "enter_frame_D_resolved top_val s =
      (case s of (dl, dg, ps) =>
        (top_val, dg, filter (\<lambda>p. location_is_global (fst p)) ps))"
 
 lemma lookup_enter_frame_D_resolved [simp]:
-  "lookup_resolved_st (enter_frame_D_resolved top_val s) loc =
+  "default_st_rep_get (enter_frame_D_resolved top_val s) loc =
    (case loc of
       Local_Location x => top_val
-    | Global_Location x => lookup_resolved_st s loc)"
+    | Global_Location x => default_st_rep_get s loc)"
   by (cases s; cases loc)
        (simp_all add: enter_frame_D_resolved_def map_of_filter_fst
          split: option.splits)
 
-lemma eq_resolved_st_enter_frame_D:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (enter_frame_D_resolved top_val s)
+lemma eq_default_st_rep_enter_frame_D:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (enter_frame_D_resolved top_val s)
       (enter_frame_D_resolved top_val t)"
-  by (rule eq_resolved_stI)
-     (simp add: eq_resolved_stD[OF assms] split: location.split)
+  by (rule eq_default_st_repI)
+     (simp add: eq_default_st_repD[OF assms] split: location.split)
 
 lift_definition enter_frame_D_resolved_q ::
-  "'a => ('a::bot) resolved_st_q => 'a resolved_st_q"
+  "'a => ('a::bot) default_st => 'a default_st"
   is enter_frame_D_resolved
-  by (rule eq_resolved_st_enter_frame_D)
+  by (rule eq_default_st_rep_enter_frame_D)
 
 lemma lookup_enter_frame_D_resolved_q [simp]:
   "(enter_frame_D_resolved_q top_val s)\<langle>loc\<rangle> =
@@ -488,24 +488,24 @@ lemma lookup_enter_frame_D_resolved_q [simp]:
       | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_enter_frame_D_resolved)
 
-lemma fun_of_resolved_st_for_enter_frame [simp]:
-  "fun_of_resolved_st_for \<G> (enter_frame_D_resolved top_val s) =
-   enter_frame \<G> top_val (fun_of_resolved_st_for \<G> s)"
+lemma default_st_rep_to_fun_enter_frame [simp]:
+  "default_st_rep_to_fun \<G> (enter_frame_D_resolved top_val s) =
+   enter_frame \<G> top_val (default_st_rep_to_fun \<G> s)"
 proof (rule ext)
   fix x
-  show "fun_of_resolved_st_for \<G> (enter_frame_D_resolved top_val s) x =
-      enter_frame \<G> top_val (fun_of_resolved_st_for \<G> s) x"
-    unfolding enter_frame_def fun_of_resolved_st_for_def location_of_def
+  show "default_st_rep_to_fun \<G> (enter_frame_D_resolved top_val s) x =
+      enter_frame \<G> top_val (default_st_rep_to_fun \<G> s) x"
+    unfolding enter_frame_def default_st_rep_to_fun_def location_of_def
     by (cases "\<G> x") simp_all
 qed
 
-lemma fun_of_resolved_st_q_for_enter_frame [simp]:
-  "fun_of_resolved_st_q_for \<G>
+lemma default_st_to_fun_enter_frame [simp]:
+  "default_st_to_fun \<G>
       (enter_frame_D_resolved_q top_val s) =
-   enter_frame \<G> top_val (fun_of_resolved_st_q_for \<G> s)"
-  unfolding fun_of_resolved_st_q_for_def
+   enter_frame \<G> top_val (default_st_to_fun \<G> s)"
+  unfolding default_st_to_fun_def
   by transfer
-     (rule fun_of_resolved_st_for_enter_frame[unfolded fun_of_resolved_st_for_def])
+     (rule default_st_rep_to_fun_enter_frame[unfolded default_st_rep_to_fun_def])
 
 
 subsection \<open>Executable restriction and combination laws\<close>
@@ -517,31 +517,31 @@ text \<open>
   Executable trees use them to split and rebuild a routed state.
 \<close>
 
-lemma combine_resolved_st_q_eq_restrict_sup:
-  "combine_resolved_st_q A B =
+lemma combine_default_st_eq_restrict_sup:
+  "combine_default_st A B =
      restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B"
-  by (rule resolved_st_q_eqI) (simp split: location.split)
+  by (rule default_st_eqI) (simp split: location.split)
 
-lemma restrict_local_resolved_q_combine_resolved_st_q [simp]:
-  "restrict_local_resolved_q (combine_resolved_st_q A B) =
+lemma restrict_local_resolved_q_combine_default_st [simp]:
+  "restrict_local_resolved_q (combine_default_st A B) =
      restrict_local_resolved_q A"
-  by (rule resolved_st_q_eqI) (simp split: location.split)
+  by (rule default_st_eqI) (simp split: location.split)
 
-lemma restrict_global_resolved_q_combine_resolved_st_q [simp]:
-  "restrict_global_resolved_q (combine_resolved_st_q A B) =
+lemma restrict_global_resolved_q_combine_default_st [simp]:
+  "restrict_global_resolved_q (combine_default_st A B) =
      restrict_global_resolved_q B"
-  by (rule resolved_st_q_eqI) (simp split: location.split)
+  by (rule default_st_eqI) (simp split: location.split)
 
 lemma restrict_local_resolved_q_split [simp]:
   "restrict_local_resolved_q (restrict_local_resolved_q A \<squnion>
       restrict_global_resolved_q B) = restrict_local_resolved_q A"
-  by (rule resolved_st_q_eqI) (simp split: location.split)
+  by (rule default_st_eqI) (simp split: location.split)
 
 lemma restrict_global_resolved_q_split [simp]:
   "restrict_global_resolved_q (restrict_local_resolved_q A \<squnion>
       restrict_global_resolved_q B) = restrict_global_resolved_q B"
-  by (rule resolved_st_q_eqI) (simp split: location.split)
+  by (rule default_st_eqI) (simp split: location.split)
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

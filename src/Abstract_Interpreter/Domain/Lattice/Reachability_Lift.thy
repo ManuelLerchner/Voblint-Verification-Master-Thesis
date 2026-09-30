@@ -395,8 +395,8 @@ text \<open>
   primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
   program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>empty_pred\<close>
   itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
-  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close>, or \<open>resolved_st_q_is_bot_for\<close>'s own
-  monotonicity once bridged through \<open>fun_of_resolved_st_q_for_mono\<close> -- not any fact
+  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close>, or \<open>default_st_is_bot_for\<close>'s own
+  monotonicity once bridged through \<open>default_st_to_fun_mono\<close> -- not any fact
   specific to how \<open>empty_pred\<close> itself is computed.
 \<close>
 
@@ -488,7 +488,7 @@ lemma normalized_lift_bind:
 
 text \<open>
   Generic monotonicity for the reachability dispatch, proved once here instead of at every
-  instantiation (\<open>abs_state\<close>, \<open>resolved_st_q\<close>, ...): whenever the underlying transfer is
+  instantiation (\<open>abs_state\<close>, \<open>default_st\<close>, ...): whenever the underlying transfer is
   monotone and the bottom predicate is downward closed (as \<open>is_empty_state\<close> always is, via
   \<open>is_empty_state_antimono\<close>), \<open>transfer_lift\<close>/\<open>transfer_lift2\<close> are monotone.
 \<close>

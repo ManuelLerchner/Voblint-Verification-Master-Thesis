@@ -4,7 +4,7 @@ theory Example_Interval_DG_Ctx_Flagship
     "Voblint_Analysis_Interval.Interval_Analyses"
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
 
@@ -27,25 +27,25 @@ text \<open>
   Nothing solver-shaped is owned here: the equation system, its routing hook, the
   solver-global key type \<^type>\<open>global_unknown\<close>, and the solved projection all come from the
   production analysis.  The local unknown carries the whole abstract state on the
-  lifted carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read where a local is
+  lifted carrier \<^typ>\<open>ivl default_st lifted\<close>, so a global is read where a local is
   and there is no separate solver-global slot holding program state.
 \<close>
 
 subsection \<open>The executable bottom predicate\<close>
 
 text \<open>The equation system reads the program's own declared globals for its bottom
-  test. At a concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those
+  test. At a concrete program it is \<^const>\<open>default_st_is_bot_for\<close> on those
   globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
 
-definition twice_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "twice_empty_pred = resolved_st_q_is_bot_for (declared_global_vars twice_program)"
+definition twice_empty_pred :: "ivl default_st \<Rightarrow> bool" where
+  "twice_empty_pred = default_st_is_bot_for (declared_global_vars twice_program)"
 
-lemma twice_exact: "twice_empty_pred s = is_empty_state (fun_of_resolved_st_q_for twice_gs s)"
-  unfolding twice_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma twice_exact: "twice_empty_pred s = is_empty_state (default_st_to_fun twice_gs s)"
+  unfolding twice_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable
   point (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
-abbreviation twice_ctx_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
+abbreviation twice_ctx_lookup :: "ivl default_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
   "twice_ctx_lookup d x \<equiv>
      (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of twice_gs x\<rangle>)"
 
@@ -57,7 +57,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
-     \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+     \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "twice_ctx_sol = interval_es_rule.solution Globals_Warrow twice_gs twice_program"
 
 lemma twice_ctx_terminates_c:
@@ -164,6 +164,6 @@ lemma callee_covered_call2: "(FunctionEntry (STR ''twice''), ctx_call2) \<in> fs
 lemma callee_not_under_main: "(FunctionEntry (STR ''twice''), []) \<notin> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

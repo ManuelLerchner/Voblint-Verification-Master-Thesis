@@ -190,17 +190,17 @@ text \<open>
 \<close>
 
 theorem tf_st_for_commute:
-  assumes "live_resolved_st_q \<G> s"
+  assumes "live_default_st \<G> s"
   shows
-    "fun_of_resolved_st_q_for \<G> (generic_tf_st_for ops \<G> a s) =
-     tf_abs a (fun_of_resolved_st_q_for \<G> s)"
+    "default_st_to_fun \<G> (generic_tf_st_for ops \<G> a s) =
+     tf_abs a (default_st_to_fun \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: backward.branch_st_with_ops [simplified] backward.branch_st_commute[OF assms])
 
 lemma enter_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (generic_enter_st_for ops \<G> ci s) =
-   enter_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+  "default_st_to_fun \<G> (generic_enter_st_for ops \<G> ci s) =
+   enter_ci_for \<G> ci (default_st_to_fun \<G> s)"
   by (simp add: generic_enter_st_for_def op_defs enter_binding_def enter_frame_def)
 
 subsection \<open>Registering the bundle with the pipeline\<close>
@@ -216,12 +216,12 @@ text \<open>
 theorem dg_analysis_execI:
   assumes route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and solver: "certified_solver solve solve_dom solve_c"
     and init_sound:
       "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
+               \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
   shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st analysis_global seed
            route solve solve_dom bot check.classify_check
            skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"

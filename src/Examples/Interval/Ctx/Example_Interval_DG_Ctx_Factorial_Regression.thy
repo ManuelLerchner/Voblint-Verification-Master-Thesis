@@ -50,7 +50,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 
 definition fact_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)"
     where
   "fact_sol = interval_es_rule.solution Globals_Warrow fact_gs fact_prog"
 
@@ -121,11 +121,11 @@ text \<open>The dead \<open>return 1\<close> edge's own local state (\<open>Stat
   \<^const>\<open>Bot\<close> within every \<open>n>=2\<close> context -- the actual fix the reachability lift
   delivers, not merely an imprecise interval that happens to widen away.\<close>
 lemma fact_dead_branch_bot_ctx_a:
-  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a))) :: ivl exec_dg_st lifted) = Bot"
+  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a))) :: ivl default_st lifted) = Bot"
   by eval
 
 lemma fact_dead_branch_bot_ctx_a2:
-  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a2))) :: ivl exec_dg_st lifted) = Bot"
+  "(dg_local (snd fact_sol (Inl (Statement 2, ctx_a2))) :: ivl default_st lifted) = Bot"
   by eval
 
 text \<open>Final acceptance value: the production check-report pipeline end to end, including

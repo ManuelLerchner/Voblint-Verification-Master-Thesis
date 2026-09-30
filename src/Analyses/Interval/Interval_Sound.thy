@@ -21,8 +21,8 @@ text \<open>
 \<close>
 
 definition interval_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl default_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, unit, ivl default_st lifted, ivl default_st lifted) dg_spec"
 where
   "interval_spec \<G> empty_pred =
      local_state_dg_spec_st_for_lifted \<G> empty_pred (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>)"
@@ -38,8 +38,8 @@ declare interval_spec_def [code_unfold]
 declare interval_abs_spec_def [code_unfold]
 
 definition interval_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "interval_gamma \<G> d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) d\<rbrakk>\<^sub>\<bottom>"
+    "(vname \<Rightarrow> bool) \<Rightarrow> ivl default_st lifted \<Rightarrow> ivl default_st lifted \<Rightarrow> store set" where
+  "interval_gamma \<G> d g = \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>"
 
 lemma interval_gamma_Bot [simp]: "interval_gamma \<G> Bot g = {}"
   by (simp add: interval_gamma_def)
@@ -53,8 +53,8 @@ text \<open>
 \<close>
 
 context
-  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "ivl default_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
 begin
 
 interpretation ivl_dom: dg_domain_exec
@@ -99,8 +99,8 @@ text \<open>
 
 lemma interval_cinit_gamma:
   "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_ivl_st)\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> \<lbrakk>map_lift (default_st_to_fun \<G>) (Lifted cinit_ivl_st)\<rbrakk>\<^sub>\<bottom>"
   by (auto simp: cinit_stores_def gamma_state_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q)
+      default_st_to_fun_def default_st_to_fun_initial)
 
 end

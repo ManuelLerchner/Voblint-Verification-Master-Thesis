@@ -129,9 +129,9 @@ qed
 locale routed_domain_exec =
   dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for \<G> :: "vname \<Rightarrow> bool"
-    and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
-    and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and empty_pred :: "'a::numeric_domain default_st \<Rightarrow> bool"
+    and tf_st :: "edge_action \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
+    and enter_st :: "call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
     and sk :: "'a abs_state \<Rightarrow> 'a abs_state"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -142,15 +142,15 @@ locale routed_domain_exec =
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" +
   fixes analysis_global :: 'k
     and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and route_abs :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
-    and resolve_st :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> pname list"
+    and resolve_st :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a default_st lifted \<Rightarrow> pname list"
     and resolve_abs :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a abs_state lifted \<Rightarrow> pname list"
   assumes seed_unknown_ne_analysis_global [simp]: "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global"
       and route_agree: "\<And>u c' d ca. route_st u c' d ca
-                          = route_abs u c' (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
+                          = route_abs u c' (map_lift (default_st_to_fun \<G>) d) ca"
       and resolve_agree: "\<And>g w cc ca d. resolve_st g w cc ca d
-                          = resolve_abs g w cc ca (map_lift (fun_of_resolved_st_q_for \<G>) d)"
+                          = resolve_abs g w cc ca (map_lift (default_st_to_fun \<G>) d)"
 begin
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. \<open>spec_st\<close>
@@ -161,13 +161,13 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 
 lemma dg_prog_st_commute_routed_call_program:
   "dg_reader_commute_gen.dg_prog_st_commute
-     (map_lift (fun_of_resolved_st_q_for \<G>)) (map_lift (fun_of_resolved_st_q_for \<G>)) env
+     (map_lift (default_st_to_fun \<G>)) (map_lift (default_st_to_fun \<G>)) env
      (routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
      (routed_call_program spec_abs analysis_global seed_unknown (resolve_abs g) (\<lambda>d. d = Bot)
         route_abs ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_prog_st_commute_routed_call_program
-        [where Floc = "map_lift (fun_of_resolved_st_q_for \<G>)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for \<G>)"])
+        [where Floc = "map_lift (default_st_to_fun \<G>)"
+           and Fglob = "map_lift (default_st_to_fun \<G>)"])
      (rule dg_reader_commute_gen_lifted_for seed_unknown_ne_analysis_global
            dg_spec_wf_local_state_dg_spec_st_for_lifted
            dg_spec_wf_local_state_dg_spec_for_lifted
@@ -195,15 +195,15 @@ text \<open>
 \<close>
 
 abbreviation intra_st :: "'c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action
-   \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state,
-        ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_program"
+   \<Rightarrow> (pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state,
+        ('a default_st lifted, 'a default_st lifted) dg_state) strategy_program"
 where
   "intra_st ctx' src a \<equiv> dg_spec_edge_program spec_st a src (\<lambda>_. analysis_global)"
 
-abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
+abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state,
-        ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) strategy_program"
+   \<Rightarrow> (pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state,
+        ('a default_st lifted, 'a default_st lifted) dg_state) strategy_program"
 where
   "cmb_st g \<equiv> routed_call_program spec_st analysis_global seed_unknown (resolve_st g) (\<lambda>d. d = Bot)"
 

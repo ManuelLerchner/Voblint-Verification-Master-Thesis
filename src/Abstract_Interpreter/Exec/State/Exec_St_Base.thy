@@ -6,7 +6,7 @@ section \<open>Finite default-map representation\<close>
 
 text \<open>
   An abstract state has to be a finite thing before a solver can run on it. A
-  \<open>resolved_st\<close> is that finite thing: two default values -- one for local names,
+  \<open>default_st_rep\<close> is that finite thing: two default values -- one for local names,
   one for global ones -- and a list of explicitly stored location values.
   Reading a location returns its stored value if it has one and the matching
   default otherwise. Nothing forces a stored value to differ from its default.
@@ -65,7 +65,7 @@ datatype location =
   Local_Location (location_vname: vname)
 | Global_Location (location_vname: vname)
 
-type_synonym 'a resolved_st =
+type_synonym 'a default_st_rep =
   "'a \<times> 'a \<times> (location \<times> 'a) list"
 
 lemma map_of_resolved_delete:
@@ -73,9 +73,9 @@ lemma map_of_resolved_delete:
      (if loc = loc' then None else map_of ps loc')"
   by (simp add: AList.delete_conv')
 
-fun lookup_resolved_st ::
-  "('a::bot) resolved_st => location => 'a" where
-  "lookup_resolved_st (dl, dg, ps) loc =
+fun default_st_rep_get ::
+  "('a::bot) default_st_rep => location => 'a" where
+  "default_st_rep_get (dl, dg, ps) loc =
      (case map_of ps loc of
         Some a => a
       | None => (case loc of
@@ -83,44 +83,44 @@ fun lookup_resolved_st ::
         | Global_Location x => dg))"
 
 subsection \<open>Extensional equality\<close>
-definition eq_resolved_st ::
-  "('a::bot) resolved_st => 'a resolved_st => bool"
+definition eq_default_st_rep ::
+  "('a::bot) default_st_rep => 'a default_st_rep => bool"
 where
-  "eq_resolved_st s t \<longleftrightarrow>
-     lookup_resolved_st s = lookup_resolved_st t"
+  "eq_default_st_rep s t \<longleftrightarrow>
+     default_st_rep_get s = default_st_rep_get t"
 
-lemma equivp_eq_resolved_st: "equivp eq_resolved_st"
-  unfolding eq_resolved_st_def
+lemma equivp_eq_default_st_rep: "equivp eq_default_st_rep"
+  unfolding eq_default_st_rep_def
   by (rule equivpI) (auto intro: reflpI sympI transpI)
 
 text \<open>
   The two rules every congruence proof below goes through: a raw operation
-  respects \<^const>\<open>eq_resolved_st\<close> exactly when its lookup equation says the
+  respects \<^const>\<open>eq_default_st_rep\<close> exactly when its lookup equation says the
   result depends on the arguments only through their lookups.  Stating that
   once keeps the individual congruence proofs down to their own lookup rules.
 \<close>
 
-lemma eq_resolved_stI [intro]:
-  assumes "\<And>loc. lookup_resolved_st s loc = lookup_resolved_st t loc"
-  shows "eq_resolved_st s t"
-  unfolding eq_resolved_st_def fun_eq_iff using assms by blast
+lemma eq_default_st_repI [intro]:
+  assumes "\<And>loc. default_st_rep_get s loc = default_st_rep_get t loc"
+  shows "eq_default_st_rep s t"
+  unfolding eq_default_st_rep_def fun_eq_iff using assms by blast
 
-lemma eq_resolved_stD:
-  assumes "eq_resolved_st s t"
-  shows "lookup_resolved_st s loc = lookup_resolved_st t loc"
-  using assms unfolding eq_resolved_st_def fun_eq_iff by blast
+lemma eq_default_st_repD:
+  assumes "eq_default_st_rep s t"
+  shows "default_st_rep_get s loc = default_st_rep_get t loc"
+  using assms unfolding eq_default_st_rep_def fun_eq_iff by blast
 
 subsection \<open>Executable pointwise order\<close>
-definition le_resolved_st_code ::
-  "('a::order_bot) resolved_st => 'a resolved_st => bool"
+definition le_default_st_rep_code ::
+  "('a::order_bot) default_st_rep => 'a default_st_rep => bool"
 where
-  "le_resolved_st_code s t =
+  "le_default_st_rep_code s t =
      (case s of (dl, dg, ps) =>
       case t of (el, eg, qs) =>
         dl <= el \<and> dg <= eg \<and>
         list_all
-          (\<lambda>loc. lookup_resolved_st (dl, dg, ps) loc <=
-            lookup_resolved_st (el, eg, qs) loc)
+          (\<lambda>loc. default_st_rep_get (dl, dg, ps) loc <=
+            default_st_rep_get (el, eg, qs) loc)
           (map fst ps @ map fst qs))"
 
 lemma map_of_resolved_none_iff:
@@ -151,33 +151,33 @@ proof -
   then show thesis by (rule that)
 qed
 
-lemma le_resolved_st_code_raw_iff:
-  "le_resolved_st_code (dl, dg, ps) (el, eg, qs) \<longleftrightarrow>
-    (\<forall>loc. lookup_resolved_st (dl, dg, ps) loc <=
-      lookup_resolved_st (el, eg, qs) loc)"
+lemma le_default_st_rep_code_raw_iff:
+  "le_default_st_rep_code (dl, dg, ps) (el, eg, qs) \<longleftrightarrow>
+    (\<forall>loc. default_st_rep_get (dl, dg, ps) loc <=
+      default_st_rep_get (el, eg, qs) loc)"
 proof
-  assume le: "le_resolved_st_code (dl, dg, ps) (el, eg, qs)"
-  show "\<forall>loc. lookup_resolved_st (dl, dg, ps) loc \<le>
-      lookup_resolved_st (el, eg, qs) loc"
+  assume le: "le_default_st_rep_code (dl, dg, ps) (el, eg, qs)"
+  show "\<forall>loc. default_st_rep_get (dl, dg, ps) loc \<le>
+      default_st_rep_get (el, eg, qs) loc"
   proof
     fix loc
-    show "lookup_resolved_st (dl, dg, ps) loc \<le>
-        lookup_resolved_st (el, eg, qs) loc"
+    show "default_st_rep_get (dl, dg, ps) loc \<le>
+        default_st_rep_get (el, eg, qs) loc"
     proof (cases "loc \<in> set (map fst ps @ map fst qs)")
       case True
       with le show ?thesis
-        unfolding le_resolved_st_code_def by (simp add: list_all_iff)
+        unfolding le_default_st_rep_code_def by (simp add: list_all_iff)
     next
       case False
       with le show ?thesis
-        unfolding le_resolved_st_code_def
+        unfolding le_default_st_rep_code_def
         by (simp add: location.case_eq_if
           map_of_resolved_none_iff[THEN iffD2])
     qed
   qed
 next
-  assume le: "\<forall>loc. lookup_resolved_st (dl, dg, ps) loc \<le>
-      lookup_resolved_st (el, eg, qs) loc"
+  assume le: "\<forall>loc. default_st_rep_get (dl, dg, ps) loc \<le>
+      default_st_rep_get (el, eg, qs) loc"
   obtain x :: vname where fresh: "x \<in> UNIV"
       "Local_Location x \<notin> set (map fst ps @ map fst qs)"
       "Global_Location x \<notin> set (map fst ps @ map fst qs)"
@@ -186,8 +186,8 @@ next
     using le[rule_format, of "Local_Location x"]
       le[rule_format, of "Global_Location x"] fresh
     by (simp_all add: map_of_resolved_none_iff[THEN iffD2])
-  then show "le_resolved_st_code (dl, dg, ps) (el, eg, qs)"
-    unfolding le_resolved_st_code_def using le by (simp add: list_all_iff)
+  then show "le_default_st_rep_code (dl, dg, ps) (el, eg, qs)"
+    unfolding le_default_st_rep_code_def using le by (simp add: list_all_iff)
 qed
 
 text \<open>
@@ -196,44 +196,44 @@ text \<open>
   representatives.
 \<close>
 
-lemma le_resolved_st_code_iff:
-  "le_resolved_st_code s t \<longleftrightarrow>
-    (\<forall>loc. lookup_resolved_st s loc \<le> lookup_resolved_st t loc)"
+lemma le_default_st_rep_code_iff:
+  "le_default_st_rep_code s t \<longleftrightarrow>
+    (\<forall>loc. default_st_rep_get s loc \<le> default_st_rep_get t loc)"
   by (cases s rule: prod_cases3, cases t rule: prod_cases3)
-    (simp add: le_resolved_st_code_raw_iff)
+    (simp add: le_default_st_rep_code_raw_iff)
 
 
 subsection \<open>The extensional quotient, lookup and point update\<close>
-quotient_type 'a resolved_st_q =
-  "('a::bot) resolved_st" / "eq_resolved_st"
-  morphisms rep_resolved_st Abs_resolved_st
-  by (rule equivp_eq_resolved_st)
+quotient_type 'a default_st =
+  "('a::bot) default_st_rep" / "eq_default_st_rep"
+  morphisms rep_default_st Abs_default_st
+  by (rule equivp_eq_default_st_rep)
 
-lift_definition lookup_resolved_st_q ::
-  "('a::bot) resolved_st_q => location => 'a"
-  is lookup_resolved_st
-  by (simp add: eq_resolved_st_def)
+lift_definition default_st_get ::
+  "('a::bot) default_st => location => 'a"
+  is default_st_rep_get
+  by (simp add: eq_default_st_rep_def)
 
-fun update_resolved_st ::
-  "('a::bot) resolved_st => location => 'a => 'a resolved_st" where
-  "update_resolved_st (dl, dg, ps) loc a =
+fun default_st_rep_set ::
+  "('a::bot) default_st_rep => location => 'a => 'a default_st_rep" where
+  "default_st_rep_set (dl, dg, ps) loc a =
      (dl, dg, (loc, a) # AList.delete loc ps)"
 
-lemma lookup_resolved_st_update [simp]:
-  "lookup_resolved_st (update_resolved_st s loc a) loc' =
-     (if loc = loc' then a else lookup_resolved_st s loc')"
+lemma default_st_rep_get_set [simp]:
+  "default_st_rep_get (default_st_rep_set s loc a) loc' =
+     (if loc = loc' then a else default_st_rep_get s loc')"
   by (cases s) (simp add: map_of_resolved_delete)
 
-lemma eq_resolved_st_update:
-  assumes "eq_resolved_st s t"
-  shows "eq_resolved_st (update_resolved_st s loc a)
-      (update_resolved_st t loc a)"
-  by (rule eq_resolved_stI) (simp add: eq_resolved_stD[OF assms])
+lemma eq_default_st_rep_set:
+  assumes "eq_default_st_rep s t"
+  shows "eq_default_st_rep (default_st_rep_set s loc a)
+      (default_st_rep_set t loc a)"
+  by (rule eq_default_st_repI) (simp add: eq_default_st_repD[OF assms])
 
-lift_definition update_resolved_st_q ::
-  "('a::bot) resolved_st_q => location => 'a => 'a resolved_st_q"
-  is update_resolved_st
-  by (rule eq_resolved_st_update)
+lift_definition default_st_set ::
+  "('a::bot) default_st => location => 'a => 'a default_st"
+  is default_st_rep_set
+  by (rule eq_default_st_rep_set)
 
 text \<open>
   Lookup is written \<open>s\<langle>l\<rangle>\<close> and point update \<open>s\<langle>l := a\<rangle>\<close>. The notation is a
@@ -244,25 +244,25 @@ text \<open>
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
 \<close>
 
-bundle resolved_st_syntax
+bundle default_st_syntax
 begin
-notation lookup_resolved_st_q ("_\<langle>_\<rangle>" [1000, 0] 1000)
-notation update_resolved_st_q ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
+notation default_st_get ("_\<langle>_\<rangle>" [1000, 0] 1000)
+notation default_st_set ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
 end
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
-lemma lookup_Abs_resolved_st_q [simp]:
-  "(Abs_resolved_st s)\<langle>loc\<rangle> = lookup_resolved_st s loc"
+lemma default_st_get_Abs [simp]:
+  "(Abs_default_st s)\<langle>loc\<rangle> = default_st_rep_get s loc"
   by transfer simp
 
-lemma Abs_resolved_st_rep_resolved_st [simp]:
-  "Abs_resolved_st (rep_resolved_st s) = s"
-  by (fact Lifting.Quotient_abs_rep [OF Quotient_resolved_st_q])
+lemma Abs_default_st_rep_default_st [simp]:
+  "Abs_default_st (rep_default_st s) = s"
+  by (fact Lifting.Quotient_abs_rep [OF Quotient_default_st])
 
-lemma lookup_rep_resolved_st_q:
-  "s\<langle>loc\<rangle> = lookup_resolved_st (rep_resolved_st s) loc"
-  by (simp add: lookup_resolved_st_q.rep_eq)
+lemma default_st_get_rep:
+  "s\<langle>loc\<rangle> = default_st_rep_get (rep_default_st s) loc"
+  by (simp add: default_st_get.rep_eq)
 
 text \<open>
   One lookup equation for the update, rather than a same/different pair: the
@@ -270,108 +270,108 @@ text \<open>
   cases fall out of it by \<^term>\<open>simp\<close>.
 \<close>
 
-lemma lookup_resolved_st_q_update [simp]:
+lemma default_st_get_set [simp]:
   "s\<langle>loc := a\<rangle>\<langle>loc'\<rangle> = (if loc = loc' then a else s\<langle>loc'\<rangle>)"
   by transfer simp
 
-lemma resolved_st_q_eq_iff:
+lemma default_st_eq_iff:
   "s = t \<longleftrightarrow>
-     lookup_resolved_st_q s = lookup_resolved_st_q t"
-  by transfer (simp add: eq_resolved_st_def)
+     default_st_get s = default_st_get t"
+  by transfer (simp add: eq_default_st_rep_def)
 
 text \<open>
-  The quotient-level counterpart of @{thm [source] eq_resolved_stI}: two
+  The quotient-level counterpart of @{thm [source] eq_default_st_repI}: two
   quotient states are equal as soon as they look the same everywhere.  Left
   untagged -- as an \<open>[intro]\<close> rule it would attack every equation at this type
   by extensionality, which is rarely what a goal about a concrete state wants.
 \<close>
 
-lemma resolved_st_q_eqI:
+lemma default_st_eqI:
   assumes "\<And>loc. s\<langle>loc\<rangle> = t\<langle>loc\<rangle>"
   shows "s = t"
-  using assms by (simp add: resolved_st_q_eq_iff fun_eq_iff)
+  using assms by (simp add: default_st_eq_iff fun_eq_iff)
 
 
 subsection \<open>Order, bottom and executable equality\<close>
 
-instantiation resolved_st_q :: (bot) bot
+instantiation default_st :: (bot) bot
 begin
-definition bot_resolved_st_q ::
-  "('a::bot) resolved_st_q"
+definition bot_default_st ::
+  "('a::bot) default_st"
 where
-  "bot_resolved_st_q = Abs_resolved_st (bot, bot, [])"
+  "bot_default_st = Abs_default_st (bot, bot, [])"
 instance ..
 end
 
-instantiation resolved_st_q :: (order_bot) ord
+instantiation default_st :: (order_bot) ord
 begin
-lift_definition less_eq_resolved_st_q ::
-  "('a::order_bot) resolved_st_q =>
-   'a resolved_st_q => bool"
-  is le_resolved_st_code
-  by (auto simp: le_resolved_st_code_raw_iff eq_resolved_st_def)
+lift_definition less_eq_default_st ::
+  "('a::order_bot) default_st =>
+   'a default_st => bool"
+  is le_default_st_rep_code
+  by (auto simp: le_default_st_rep_code_raw_iff eq_default_st_rep_def)
 
-definition less_resolved_st_q ::
-  "('a::order_bot) resolved_st_q =>
-   'a resolved_st_q => bool"
+definition less_default_st ::
+  "('a::order_bot) default_st =>
+   'a default_st => bool"
 where
-  "less_resolved_st_q s t \<longleftrightarrow>
+  "less_default_st s t \<longleftrightarrow>
      s \<le> t \<and> \<not> t \<le> s"
 
 instance ..
 end
 
 
-lemma le_resolved_st_q_iff:
-  fixes s t :: "('a::order_bot) resolved_st_q"
+lemma le_default_st_iff:
+  fixes s t :: "('a::order_bot) default_st"
   shows "s \<le> t \<longleftrightarrow> (\<forall>loc. s\<langle>loc\<rangle> \<le> t\<langle>loc\<rangle>)"
-  by transfer (rule le_resolved_st_code_iff)
+  by transfer (rule le_default_st_rep_code_iff)
 
 
-instance resolved_st_q :: (order_bot) order
+instance default_st :: (order_bot) order
 proof intro_classes
-  fix s t u :: "('a::order_bot) resolved_st_q"
+  fix s t u :: "('a::order_bot) default_st"
   show "(s < t) \<longleftrightarrow> (s \<le> t \<and> \<not> t \<le> s)"
-    by (simp add: less_resolved_st_q_def)
+    by (simp add: less_default_st_def)
 
   show "s \<le> s"
-    by (simp add: le_resolved_st_q_iff)
+    by (simp add: le_default_st_iff)
   show "s \<le> t \<Longrightarrow> t \<le> u \<Longrightarrow> s \<le> u"
-    by (auto simp: le_resolved_st_q_iff intro: order_trans)
+    by (auto simp: le_default_st_iff intro: order_trans)
   show "s \<le> t \<Longrightarrow> t \<le> s \<Longrightarrow> s = t"
-    by (auto simp: le_resolved_st_q_iff
-      resolved_st_q_eq_iff fun_eq_iff intro: order_antisym)
+    by (auto simp: le_default_st_iff
+      default_st_eq_iff fun_eq_iff intro: order_antisym)
 qed
 
 context
   includes lattice_syntax
 begin
 
-lemma lookup_bot_resolved_st_q [simp]:
-  "(\<bottom> :: ('a::bot) resolved_st_q)\<langle>loc\<rangle> = \<bottom>"
-  unfolding bot_resolved_st_q_def
+lemma default_st_get_bot [simp]:
+  "(\<bottom> :: ('a::bot) default_st)\<langle>loc\<rangle> = \<bottom>"
+  unfolding bot_default_st_def
   by transfer (simp split: location.splits)
 
 end
 
 
-lemma bot_le_resolved_st_q:
-  "(bot :: ('a::order_bot) resolved_st_q) \<le> s"
-  by (simp add: le_resolved_st_q_iff)
+lemma bot_le_default_st:
+  "(bot :: ('a::order_bot) default_st) \<le> s"
+  by (simp add: le_default_st_iff)
 
-instance resolved_st_q :: (order_bot) order_bot
-  by standard (rule bot_le_resolved_st_q)
-instantiation resolved_st_q :: ("{order_bot,equal}") equal
+instance default_st :: (order_bot) order_bot
+  by standard (rule bot_le_default_st)
+instantiation default_st :: ("{order_bot,equal}") equal
 begin
-definition equal_resolved_st_q ::
-  "('a::{order_bot,equal}) resolved_st_q =>
-   'a resolved_st_q => bool"
+definition equal_default_st ::
+  "('a::{order_bot,equal}) default_st =>
+   'a default_st => bool"
 where
-  "equal_resolved_st_q s t = (s \<le> t \<and> t \<le> s)"
+  "equal_default_st s t = (s \<le> t \<and> t \<le> s)"
 instance
-  by standard (auto simp: equal_resolved_st_q_def intro: order_antisym)
+  by standard (auto simp: equal_default_st_def intro: order_antisym)
 end
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

@@ -44,7 +44,7 @@ text \<open>
   \<^typ>\<open>int set\<close>) and exists purely to state and prove soundness. Splitting the
   class this way keeps \<open>gamma\<close> out of the type-class dictionary that code
   generation must materialize for any constant that only needs \<open>is_empty\<close>
-  (the finite witness-bottom tests over a resolved state, in
+  (the finite witness-bottom tests over a \<open>default_st\<close>, in
   particular): requesting \<open>'a::executable_domain\<close> there never drags \<^const>\<open>gamma\<close>'s
   code equation into the dependency closure, even though every
   \<^class>\<open>numeric_domain\<close> instance is automatically a \<^class>\<open>executable_domain\<close>

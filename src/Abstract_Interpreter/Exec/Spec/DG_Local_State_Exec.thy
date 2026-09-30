@@ -4,13 +4,13 @@ theory DG_Local_State_Exec
     Exec_St_Reachability
 begin
 
-unbundle resolved_st_syntax
+unbundle default_st_syntax
 
 section \<open>Executable Base-style DG construction\<close>
 
 text \<open>
   Executable mirror of \<^const>\<open>local_state_dg_spec_for_lifted\<close>: a component
-  over \<open>'a exec_dg_st lifted\<close> instead of \<open>'a abs_state lifted\<close>, with \<open>tf_st\<close> a
+  over \<open>'a default_st lifted\<close> instead of \<open>'a abs_state lifted\<close>, with \<open>tf_st\<close> a
   bare \<open>edge_action \<Rightarrow> _\<close> dispatcher -- the executable side dispatches on the
   action rather than naming one operation per edge kind -- and \<open>enter_st\<close> its
   enter counterpart. Local-only means it reads no global and publishes none, so
@@ -21,7 +21,7 @@ text \<open>
   is not the identity here. \<^const>\<open>combine_assign_resolved_q\<close> (unlike
   \<^const>\<open>combine_collect_abs\<close>) does not itself select
   locals-from-caller/globals-from-callee; that selection is what
-  \<^const>\<open>combine_resolved_st_q\<close> computes, so the env stage must compute it
+  \<^const>\<open>combine_default_st\<close> computes, so the env stage must compute it
   explicitly before the assign stage writes the return value.
 \<close>
 
@@ -31,12 +31,12 @@ text \<open>The caller half of \<open>enter\<close> is the identity for the same
   call-site value against the callee exit.\<close>
 
 definition combine_env_st_lifted ::
-  "'a::bounded_semilattice_sup_bot exec_dg_st lifted \<Rightarrow> 'a exec_dg_st lifted
-   \<Rightarrow> 'a exec_dg_st lifted"
+  "'a::bounded_semilattice_sup_bot default_st lifted \<Rightarrow> 'a default_st lifted
+   \<Rightarrow> 'a default_st lifted"
 where
   "combine_env_st_lifted dc de =
      (case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
-        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))"
+        (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_default_st x y)))"
 
 text \<open>
   The executable analysis is a component whose edge transfers are the one
@@ -45,10 +45,10 @@ text \<open>
 \<close>
 
 definition exec_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> 'a exec_dg_st lifted local_spec" where
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bounded_semilattice_sup_bot default_st \<Rightarrow> bool)
+   \<Rightarrow> (edge_action \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> 'a default_st lifted local_spec" where
   "exec_spec \<G> empty_pred tf_st enter_st = make_local_spec
      (\<lambda>_ _. \<top>)
      (\<lambda>_ a. transfer_lift empty_pred (tf_st a))
@@ -74,10 +74,10 @@ lemma ls_enter_exec_spec [simp]:
 
 definition local_state_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('x,'k,unit,'a exec_dg_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
+   \<Rightarrow> ('a::bounded_semilattice_sup_bot default_st \<Rightarrow> bool)
+   \<Rightarrow> (edge_action \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> ('x,'k,unit,'a default_st lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st
      = dg_spec_of (exec_spec \<G> empty_pred tf_st enter_st)"
@@ -113,6 +113,6 @@ lemma dg_spec_combine_transfer_local_state_st_for_lifted:
             (combine_env_st_lifted dc de) de)"
   by (simp add: local_state_dg_spec_st_for_lifted_def exec_spec_def)
 
-unbundle no resolved_st_syntax
+unbundle no default_st_syntax
 
 end

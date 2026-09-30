@@ -22,7 +22,7 @@ text \<open>Reuses \<^type>\<open>call_string_gk\<close> from \<^theory>\<open>V
 
 definition nest_2_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
-     (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+     (ivl default_st lifted, ivl default_st lifted) dg_state) eqsT" where
   "nest_2_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 2)
       (\<lambda>ctx' src a. dg_spec_edge_program nest_S_st a src (\<lambda>_. Global))
@@ -33,7 +33,7 @@ definition nest_2_eqs ::
 definition nest_2_sol ::
   "(pp \<times> cfg_node list) set
      \<times> (pp \<times> cfg_node list + call_string_gk
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "nest_2_sol = TD_side_warrowing_apinis_Interp_solve nest_2_eqs
                     (cfg_exit nest_cfg, [])"
 
@@ -151,7 +151,7 @@ section \<open>The solver's post-solution\<close>
 
 lemma nest_2_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
-     TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+     TYPE((ivl default_st lifted, ivl default_st lifted) dg_state)
      nest_2_eqs (cfg_exit nest_cfg, [])"
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF nest_2_terminates])
 
@@ -165,7 +165,7 @@ lemma nest_2_pp_st:
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
 
 abbreviation nest_2_sg ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> ivl exec_dg_st lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> ivl default_st lifted" where
   "nest_2_sg \<equiv> solved_local_reader (fst nest_2_sol) (snd nest_2_sol)"
 
 text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statement 2\<close> case now genuinely splits: \<open>g\<close>'s call site
@@ -177,7 +177,7 @@ interpretation nest_2_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 2 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_2_sol" "fst nest_2_sol" "(cfg_exit nest_cfg, [])" nest_2_sg
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "\<lambda>m. \<lbrakk>map_lift (default_st_to_fun nest_gs) m\<rbrakk>\<^sub>\<bottom>"
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -267,7 +267,7 @@ section \<open>The headline theorem: 2-call-string activation collecting soundne
 
 theorem nest_2_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 2),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_2_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> \<lbrakk>map_lift (default_st_to_fun nest_gs) (nest_2_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   by (rule nest_2_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_2 nest_cinit_le_cinit_ivl_st])
 

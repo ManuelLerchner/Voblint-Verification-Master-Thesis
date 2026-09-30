@@ -75,7 +75,7 @@ text \<open>The state a call enters its callee with, as the registration's pipel
 
 lemma rc_entered:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_spec \<G> (default_st_is_bot_for (declared_global_vars p))
         (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
      rc_gs rc_program ci d
    = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"
@@ -142,7 +142,7 @@ theorem rc_activation_collect_sound:
   "\<A>\<^bsub>rc_gs,
      interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program,
      [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub> v ctx
-   \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+   \<subseteq> \<lbrakk>map_lift (default_st_to_fun rc_gs)
        (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
   unfolding rc_cfg_alt[symmetric]
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF rc_entry_state_hyps])
@@ -213,10 +213,10 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+  assumes sm: "s \<in> \<lbrakk>map_lift (default_st_to_fun rc_gs)
     (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))\<rbrakk>\<^sub>\<bottom>"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+           \<in> \<lbrakk>map_lift (default_st_to_fun rc_gs)
                 (interval_es_rule.reader Globals_Warrow rc_gs rc_program
                   (Inl (FunctionEntry (STR ''p''), ctx_call)))\<rbrakk>\<^sub>\<bottom>"
 proof -
