@@ -33,7 +33,7 @@ every figure kind the thesis needs, built from the vocabulary in
   now wrong. Verified wrong as of the figure audit: the module graph named
   five theories that do not exist (removed below); #isatype("dg_spec") is a
   record, not a locale, and `route` belongs to
-  #isalocale("routed_context_base_hetero"), so @fig:correspondence misstates
+  #isalocale("routed_context"), so @fig:correspondence misstates
   both; @tab:instantiation marks Congruence unavailable standalone, though it
   is one of the five selectable domains; @fig:cfg-source and @fig:ast write
   `proc`, where VIMP's keyword is `fun`; @fig:validltr names the constructors
@@ -451,7 +451,7 @@ the trust boundary follows @leroy09.
     locale-node((0, 1), "bounded_lattice"),
     locale-node((0, 2), "numeric_domain"),
     locale-node((-1, 3), "man_transfer"),
-    locale-node((1, 3), "dg_ctx_activation_base"),
+    locale-node((1, 3), "dg_context_activation"),
     locale-node((0, 4), "dg_spec"),
     locale-node((0, 5), "analysis_contract"),
     instance-node((-1.6, 6), "Sign_Analysis"),
@@ -496,7 +496,7 @@ the trust boundary follows @leroy09.
     table.hline(stroke: 0.5pt),
     [#isalocale("numeric_domain")], yes, yes, yes, yes, yes,
     [#isatype("man_transfer")], yes, yes, yes, yes, yes,
-    [#isalocale("dg_ctx_activation_base")], yes, yes, yes, no, yes,
+    [#isalocale("dg_context_activation")], yes, yes, yes, no, yes,
     [#isatype("dg_spec")], yes, yes, yes, no, yes,
     [#isalocale("analysis_contract")], yes, yes, yes, no, yes,
     table.hline(),

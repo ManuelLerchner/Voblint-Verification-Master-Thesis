@@ -104,10 +104,6 @@ ALLOWED = {
     "assign",
     "ctx",
     "combine_env",
-    # Renamed in the naming audit; the thesis catches up after the merge.
-    # Delete these entries together with that thesis update.
-    "routed_context_base_hetero",
-    "dg_ctx_activation_base",
 }
 
 
