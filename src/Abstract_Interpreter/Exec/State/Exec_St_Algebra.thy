@@ -2,7 +2,7 @@ theory Exec_St_Algebra
   imports Exec_St_Base "Voblint_Domain.Abstract_Domain"
 begin
 
-unbundle default_st_syntax
+unbundle default_st_carrier_syntax
 
 section \<open>Pointwise abstract-domain operations\<close>
 
@@ -220,6 +220,6 @@ lemma default_st_get_narrow [simp]:
 
 instance default_st :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
 
-unbundle no default_st_syntax
+unbundle no default_st_carrier_syntax
 
 end

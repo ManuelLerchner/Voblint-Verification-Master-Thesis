@@ -244,20 +244,22 @@ text \<open>
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
   The state with local default \<open>dl\<close>, global default \<open>dg\<close> and overrides \<open>ps\<close>
   is written \<open>\<llangle>dl, dg, ps\<rrangle>\<close>.
+  Theories past the variable readback open \<open>default_st_syntax\<close>, which adds
+  the readback notation to this bundle.
 \<close>
 
 abbreviation default_st_mk ::
   "('a::bot) => 'a => (location \<times> 'a) list => 'a default_st" where
   "default_st_mk dl dg ps \<equiv> Abs_default_st (dl, dg, ps)"
 
-bundle default_st_syntax
+bundle default_st_carrier_syntax
 begin
 notation default_st_get ("_\<langle>_\<rangle>" [1000, 0] 1000)
 notation default_st_set ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
 notation default_st_mk ("\<llangle>_,/ _,/ _\<rrangle>")
 end
 
-unbundle default_st_syntax
+unbundle default_st_carrier_syntax
 
 lemma default_st_get_Abs [simp]:
   "(Abs_default_st s)\<langle>loc\<rangle> = default_st_rep_get s loc"
@@ -388,6 +390,6 @@ instance
   by standard (auto simp: equal_default_st_def intro: order_antisym)
 end
 
-unbundle no default_st_syntax
+unbundle no default_st_carrier_syntax
 
 end

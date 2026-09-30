@@ -295,7 +295,7 @@ lift_definition default_st_is_bot_for ::
 lemma default_st_is_bot_for_iff:
   fixes s :: "'a::executable_domain default_st"
   assumes globals: "\<And>x. \<G> x = (x \<in> set globals)"
-  shows "default_st_is_bot_for globals s \<longleftrightarrow> is_empty_state (default_st_to_fun \<G> s)"
+  shows "default_st_is_bot_for globals s \<longleftrightarrow> is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
 proof -
   have gs_eq: "(\<lambda>x. x \<in> set globals) = \<G>"
     using globals by (simp add: fun_eq_iff)
@@ -332,7 +332,7 @@ lemma gamma_lift_default_st_gamma_mono:
   by (rule gamma_lift_mono[OF default_st_gamma_mono])
 
 lemma gamma_lift_default_st_gamma_readback:
-  "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>)"
+  "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift \<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<^sub>\<bottom>)"
   by (rule ext) (simp add: gamma_lift_def default_st_gamma_def split: lifted.split)
 
 
@@ -342,7 +342,7 @@ subsection \<open>Incremental dead-code tracking\<close>
 definition live_default_st ::
   "(vname => bool) => ('a::executable_domain) default_st => bool"
 where
-  "live_default_st \<G> s = (~ is_empty_state (default_st_to_fun \<G> s))"
+  "live_default_st \<G> s = (~ is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s))"
 
 lemma live_default_stD:
   assumes "live_default_st \<G> s"
@@ -392,7 +392,7 @@ lemma default_st_set_lift_correct:
            (default_st_set_lift (Lifted s) (location_of \<G> x) a) =
          normalize_lift is_empty_state ((default_st_to_fun \<G> s)(x := a))"
 proof -
-  from live have live': "\<not> is_empty_state (default_st_to_fun \<G> s)"
+  from live have live': "\<not> is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
     unfolding live_default_st_def by simp
   have upd: "is_empty_state ((default_st_to_fun \<G> s)(x := a)) = is_empty a"
     by (rule is_empty_state_fun_upd_iff[OF live'])

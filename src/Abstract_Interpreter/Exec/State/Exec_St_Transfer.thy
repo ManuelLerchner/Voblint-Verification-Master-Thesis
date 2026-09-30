@@ -2,7 +2,7 @@ theory Exec_St_Transfer
   imports Exec_St_Algebra "Voblint_Framework.Transfer_Algebra"
 begin
 
-unbundle default_st_syntax
+unbundle default_st_carrier_syntax
 
 section \<open>Refinement to variable-indexed states\<close>
 
@@ -85,6 +85,19 @@ where
   "default_st_to_fun \<G> s x =
      s\<langle>location_of \<G> x\<rangle>"
 
+text \<open>
+  The readback is written \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close>. The notation joins the carrier
+  notation in the opt-in bundle \<open>default_st_syntax\<close>: vendored theories bind
+  \<open>\<rho>\<close> as a variable, so it must never be global.
+\<close>
+
+bundle default_st_syntax
+begin
+unbundle default_st_carrier_syntax
+notation default_st_to_fun ("\<rho>\<^bsub>_\<^esub>")
+end
+
+unbundle default_st_syntax
 
 lemma default_st_to_fun_bot [simp]:
   "default_st_to_fun \<G> (bot :: ('a::order_bot) default_st) = bot"
@@ -556,7 +569,7 @@ text \<open>
 
 definition default_st_gamma ::
   "(vname => bool) => ('a::numeric_domain) default_st => store set" where
-  "default_st_gamma \<G> s = \<lbrakk>default_st_to_fun \<G> s\<rbrakk>"
+  "default_st_gamma \<G> s = \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> s\<rbrakk>"
 
 lemma default_st_gamma_mono:
   "s \<le> t \<Longrightarrow> default_st_gamma \<G> s \<subseteq> default_st_gamma \<G> t"
