@@ -188,7 +188,7 @@ theorem run_voblint_certified_source_sound:
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
   from ans have "wf_program_compile_input_exec p" by (rule run_voblint_AnalysedE)
-  from source_reaches_ltr_collect
+  from source_reaches_node_collect
          [OF wf_program_compile_input_exec_sound [OF this] s0 [unfolded G_def]
              run [unfolded G_def Pi_def]]
   obtain v stk

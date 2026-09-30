@@ -12,7 +12,7 @@ text \<open>
   \<^const>\<open>Check_Unknown\<close>. It then shows five conditions to be load-bearing: the
   verdict clause of \<^const>\<open>checks_sound_at\<close>, the transfer obligation of the
   congruence remainder, the context correlation of RETURN and the TOTAL obligation in
-  \<^const>\<open>ltr_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
+  \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
   or weakening each admits an answer that misses a concrete execution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
@@ -298,15 +298,15 @@ proof -
     by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
   have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
               cinit_stores (declared_global nv_dead_prog)\<^esub> (FunctionEntry (STR ''main''))"
-    using ltr_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global nv_dead_prog)"
+    using node_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global nv_dead_prog)"
                                "declared_global nv_dead_prog" "prog_cfg nv_dead_prog"]
     by (simp add: entry cinit_stores_def)
   have s0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
               cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 0)"
-    by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
+    by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: intra)
   show ?thesis
-    by (rule ltr_collect_intra_step [OF s0, where a = "EA_Assign (STR ''x'') (N 1)"])
+    by (rule node_collect_intra_step [OF s0, where a = "EA_Assign (STR ''x'') (N 1)"])
        (auto simp: intra)
 qed
 
@@ -422,12 +422,13 @@ lemma ret_weak_obligations:
                  call_context_total_on_def)
 
 lemma ret_not_coverage:
-  "\<not> ltr_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
+  "\<not> activation_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
        ret_R 0 (declared_global ret_prog)"
 proof
-  assume "ltr_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
+  assume "activation_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
             ret_R 0 (declared_global ret_prog)"
-  then interpret C: ltr_coverage "prog_cfg ret_prog" "cinit_stores (declared_global ret_prog)"
+  then interpret C: activation_coverage "prog_cfg ret_prog"
+    "cinit_stores (declared_global ret_prog)"
       ret_cover ret_R 0 "declared_global ret_prog" .
   have e: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1], FunctionEntry (STR ''f''),
              Statement 3) \<in> calls (prog_cfg ret_prog)"
@@ -470,12 +471,12 @@ lemma ret_reaches_second_call:
 proof -
   have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
               cinit_stores (declared_global ret_prog)\<^esub> (FunctionEntry (STR ''main''))"
-    using ltr_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global ret_prog)"
+    using node_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global ret_prog)"
                                "declared_global ret_prog" "prog_cfg ret_prog"]
     by (simp add: ret_entry cinit_stores_def)
   have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,
               cinit_stores (declared_global ret_prog)\<^esub> (Statement 2)"
-    by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
+    by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: ret_intra)
   have ce: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
              FunctionEntry (STR ''f''), Statement 3) \<in> calls (prog_cfg ret_prog)"
@@ -487,7 +488,7 @@ proof -
               (FunctionResult (STR ''f''), ((\<lambda>_. 0)(STR ''n'' := 1))(ret_var := 1))"
     using ret_f_body [where k = 1] by (simp add: ret_enter)
   show ?thesis
-    using ltr_collect_call_return_step [OF s2 ce bd]
+    using node_collect_call_return_step [OF s2 ce bd]
     by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
 qed
 
@@ -526,17 +527,17 @@ proof -
     by (rule activation_collect_E)
   let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
   have ev: "?entered \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    using valid_ltr.call [OF cv, where dst = dst and pars = pars and args = args
+    using valid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
   obtain callee where dv: "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
     and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
     and dc: "caller_of callee = caller_of ?entered"
-    by (rule valid_ltr_intra_path_extend [OF _ ev]) (use body in simp_all)
+    by (rule valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   let ?r = "Resume caller callee
               (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
   have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    by (rule valid_ltr.ret [OF dv _ dn]) (use dc ce cn in simp_all)
+    by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   have "sink_store ?r \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
@@ -590,12 +591,14 @@ proof
   let ?S = "cinit_stores (declared_global ret_prog)"
   let ?t0 = "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0)]"
   have v0: "?t0 \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_ltr.init [where s = "\<lambda>_. 0" and S = ?S and \<G> = "declared_global ret_prog"
+    using valid_activation_trace.init
+      [where s = "\<lambda>_. 0" and S = ?S and \<G> = "declared_global ret_prog"
                                 and g = "prog_cfg ret_prog"]
     by (simp add: ret_entry cinit_stores_def)
   have v1: "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)]
               \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_ltr.intra [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2"
+    using valid_activation_trace.intra
+      [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2"
                                   and s' = "\<lambda>_. 0"]
     by (simp add: ret_intra sink_node_def sink_store_def)
   have s2: "(\<lambda>_. 0) \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 2) 0"

@@ -168,7 +168,7 @@ text \<open>
   one of them in dead code.  Do not try to prove a node unique, and do not read \<open>csim x v\<close> as
   "the execution is at \<open>v\<close>": it says \<open>v\<close> \<^emph>\<open>can represent\<close> this control state.
 
-  A caller that needs the semantic node pairs this with membership in \<open>ltr_collect\<close> at the
+  A caller that needs the semantic node pairs this with membership in \<open>node_collect\<close> at the
   same node, which the dead witness cannot satisfy --- no valid local trace reaches it.  That
   pairing, not uniqueness, is what the source-level endpoints are stated over.
 \<close>

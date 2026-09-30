@@ -107,7 +107,7 @@ proof -
     "x1_gs, prog_table x1_prog \<turnstile> (main_body (prog_table x1_prog), x1_s0, [])
       \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [])"
     using x1_completed by simp
-  from source_completes_ltr_collect_exit[OF wf init run]
+  from source_completes_node_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .
 qed
 

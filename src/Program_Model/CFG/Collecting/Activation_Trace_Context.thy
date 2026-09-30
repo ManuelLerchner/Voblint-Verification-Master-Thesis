@@ -1,5 +1,5 @@
-theory LTR_Activation_Context
-  imports LTR_Def
+theory Activation_Trace_Context
+  imports Activation_Trace_Def
 begin
 
 section \<open>Activation context selection and context-indexed collecting\<close>
@@ -14,7 +14,7 @@ text \<open>
   a completed call does not repartition the caller.  Exposing the call site to \<open>enterc\<close> is
   what makes a call-site-keyed context (a k-call-string) expressible as an instance rather
   than only as a generator-side hook.\<close>
-fun activation_context :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c" where
+fun activation_context :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> activation_trace \<Rightarrow> 'c" where
   "activation_context enterc initial_ctx (Root _)                  = initial_ctx"
 | "activation_context enterc initial_ctx (Call parent p)           =
      enterc (sink_node parent) (activation_context enterc initial_ctx parent) (snd (hd p))"
@@ -77,7 +77,7 @@ text \<open>
   \<open>ctx'\<close> for that edge.  It is \<^const>\<open>call_enter_store\<close> with the callee and the admitted
   context made explicit.  Naming the edge by its effect rather than assuming it unique keeps
   the semantics honest on a graph with two call edges leaving one node, exactly as
-  \<open>valid_ltr.ret\<close> does.
+  \<open>valid_activation_trace.ret\<close> does.
 \<close>
 
 definition admits_call_context ::
@@ -124,7 +124,7 @@ text \<open>
 \<close>
 
 inductive trace_context ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> ltr \<Rightarrow> 'c \<Rightarrow> bool"
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
   for \<G> :: "vname \<Rightarrow> bool" and R :: "'c call_context_rel" and c\<^sub>0 :: 'c and g :: cfg
 where
   Root: "trace_context \<G> R c\<^sub>0 g (Root xs) c\<^sub>0"
@@ -190,7 +190,7 @@ context
   fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
 begin
 
-private abbreviation (input) traces :: "ltr set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
+private abbreviation (input) traces :: "activation_trace set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
 notation traces ("\<T>")
 
 text \<open>A called activation carries exactly the contexts admitted for the transition from its
@@ -217,7 +217,7 @@ proof -
     fix s show "P (Root [(cfg_entry g, s)])" by (simp add: P_def)
   next
     fix t a v s' assume t: "t \<in> \<T>" and IH: "\<forall>u \<in> callers t. P u"
-    have "path t \<noteq> []" using valid_ltr_path_nonempty[OF t] .
+    have "path t \<noteq> []" using valid_activation_trace_path_nonempty[OF t] .
     with IH[THEN bspec, OF callers_refl] show "P (extend t (v, s'))"
       by (simp add: P_def trace_context_extend hd_append)
   next
@@ -230,7 +230,8 @@ proof -
     assume cv: "callee \<in> \<T>" and IH: "\<forall>u \<in> callers callee. P u"
       and cof: "caller_of callee = Some caller"
     have "path caller \<noteq> []"
-      using valid_ltr_path_nonempty[OF valid_ltr_caller_valid[OF cv cof]] .
+      using valid_activation_trace_path_nonempty[OF valid_activation_trace_caller_valid[OF cv cof]]
+      .
     moreover have "P caller" using IH ancestors_caller[OF cof] by blast
     ultimately show "P (Resume caller callee
         (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
@@ -291,7 +292,7 @@ proof -
     fix s show "P (Root [(cfg_entry g, s)])" by (simp add: P_def eq_commute)
   next
     fix t a v s' assume t: "t \<in> \<T>" and IH: "\<forall>u \<in> callers t. P u"
-    have "path t \<noteq> []" using valid_ltr_path_nonempty[OF t] .
+    have "path t \<noteq> []" using valid_activation_trace_path_nonempty[OF t] .
     with IH[THEN bspec, OF callers_refl] show "P (extend t (v, s'))"
       by (simp add: P_def activation_context_extend_nonempty trace_context_extend)
   next
@@ -317,7 +318,7 @@ qed
 subsection \<open>Functional context entry invariant\<close>
 
 text \<open>Every ancestor of a valid trace is itself valid: \<open>caller_chain_closure\<close>'s own
-  four cases are exactly \<^const>\<open>valid_ltr\<close>'s four introduction rules, so the closure fact
+  four cases are exactly \<^const>\<open>valid_activation_trace\<close>'s four introduction rules, so the closure fact
   and validity coincide.\<close>
 
 lemma callers_valid:
@@ -326,13 +327,15 @@ lemma callers_valid:
 proof -
   have "\<forall>u \<in> callers callee. u \<in> \<T>"
   proof (rule caller_chain_closure[OF _ _ _ _ assms(1)], goal_cases Root Intra Call Ret)
-    case (Root s) then show ?case by (rule valid_ltr.init)
+    case (Root s) then show ?case by (rule valid_activation_trace.init)
   next
-    case (Intra t a v s') then show ?case by (blast intro: valid_ltr.intra)
+    case (Intra t a v s') then show ?case by (blast intro: valid_activation_trace.intra)
   next
-    case (Call caller dst pars args p cont) then show ?case by (blast intro: valid_ltr.call)
+    case (Call caller dst pars args p cont) then show ?case
+      by (blast intro: valid_activation_trace.call)
   next
-    case (Ret callee caller p dst pars args cont) then show ?case by (blast intro: valid_ltr.ret)
+    case (Ret callee caller p dst pars args cont) then show ?case
+      by (blast intro: valid_activation_trace.ret)
   qed
   then show ?thesis using assms(2) by blast
 qed
@@ -353,7 +356,7 @@ lemma activation_context_entry_invariant:
 proof (intro ballI allI impI)
   fix u c assume mem: "u \<in> callers callee" and cof: "caller_of u = Some c"
   have uv: "u \<in> \<T>" using callers_valid[OF assms mem] .
-  have cv: "c \<in> \<T>" using valid_ltr_caller_valid[OF uv cof] .
+  have cv: "c \<in> \<T>" using valid_activation_trace_caller_valid[OF uv cof] .
   have tc_u: "trace_context \<G> (call_context_rel_of_fun enterc) initial_ctx g u
                 (activation_context enterc initial_ctx u)"
     by (simp only: trace_context_of_fun_iff[OF uv])

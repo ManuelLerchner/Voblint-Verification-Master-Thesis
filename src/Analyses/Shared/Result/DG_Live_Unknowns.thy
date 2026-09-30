@@ -535,7 +535,7 @@ theorem fun_route_result_node_sound:
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
            \<subseteq> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
-  using fun_route_ltr_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
+  using fun_route_node_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
     fun_route_state_at_sound[OF route_const wf solves]
   by (simp add: SUP_mono')
 
@@ -594,7 +594,7 @@ proof -
   have "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
           \<and> s \<in> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
     unfolding cfg_eq
-    by (rule source_sound_from_ltr_collecting_cap[OF wf s0 run])
+    by (rule source_sound_from_node_collect_cap[OF wf s0 run])
        (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
   then show ?thesis by blast
 qed
@@ -672,12 +672,12 @@ corollary entry_state_lookup_sound_of_terminates:
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 
-theorem entry_state_ltr_collect_eq_Union_of_terminates:
+theorem entry_state_node_collect_eq_Union_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
                        root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
-proof (rule ltr_collect_eq_Union_activation_of_has_context)
+proof (rule node_collect_eq_Union_activation_of_has_context)
   interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
@@ -690,7 +690,7 @@ proof (rule ltr_collect_eq_Union_activation_of_has_context)
   assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
   then show "\<exists>c. trace_context (declared_global p) (admitted_contexts (declared_global p) p)
                    root_ctx (prog_cfg p) t c"
-    by (rule live.routed_valid_ltr_has_context
+    by (rule live.routed_valid_activation_trace_has_context
           [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
 qed
 

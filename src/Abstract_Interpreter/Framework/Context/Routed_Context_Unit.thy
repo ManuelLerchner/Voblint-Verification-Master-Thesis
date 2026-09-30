@@ -1,5 +1,5 @@
 theory Routed_Context_Unit
-  imports Routed_Context "Voblint_CFG.LTR_Collect"
+  imports Routed_Context "Voblint_CFG.Activation_Trace_Collect"
 begin
 
 section \<open>The monovariant context as a routed-context instance\<close>
@@ -16,7 +16,7 @@ text \<open>
   function, exactly as the call-string and entry-state analyses are registered at
   theirs; nothing here is a second analysis. What this theory adds is the collapse at
   the end: at the unit context the activation-indexed collecting semantics is
-  \<^const>\<open>ltr_collect\<close>.
+  \<^const>\<open>node_collect\<close>.
 \<close>
 
 subsection \<open>Unit routing\<close>
@@ -63,8 +63,8 @@ text \<open>
   lemma rather than re-deriving it.
 \<close>
 
-lemma activation_collect_unit_eq_ltr_collect:
+lemma activation_collect_unit_eq_node_collect:
   "\<A>\<^bsub>\<G>,call_context_rel_of_fun enterc_unit,(),g,S\<^esub> v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  unfolding activation_collect_of_fun ltr_collect_def by simp
+  unfolding activation_collect_of_fun node_collect_def by simp
 
 end

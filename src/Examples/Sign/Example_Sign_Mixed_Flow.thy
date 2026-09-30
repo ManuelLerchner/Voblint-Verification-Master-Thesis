@@ -337,16 +337,16 @@ theorem mf_activation_collect_sound:
   using mf_snapshot
   by (intro mf_routed.activation_collect_dg_sound mf_cinit_sound) blast
 
-theorem mf_ltr_collect_sound:
+theorem mf_node_collect_sound:
   "\<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> v
      \<subseteq> mf_gammaM (mf_reader (Inl (v, ())))"
-  using mf_activation_collect_sound unfolding activation_collect_unit_eq_ltr_collect .
+  using mf_activation_collect_sound unfolding activation_collect_unit_eq_node_collect .
 
-corollary mf_ltr_collect_solved:
+corollary mf_node_collect_solved:
   assumes "(v, ()) \<in> fst mf_sol"
   shows "\<C>\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\<^esub> v
            \<subseteq> split_gamma mf_gs (dg_local (snd mf_sol (Inl (v, ())))) mf_G"
-  using mf_ltr_collect_sound[of v] assms
+  using mf_node_collect_sound[of v] assms
   by (simp add: mf_reader_def split_gamma_def)
 
 corollary mf_after_calls:
@@ -354,7 +354,7 @@ corollary mf_after_calls:
   shows "0 < s (STR ''x'') \<and> 0 \<le> s (STR ''y'')"
 proof -
   have "s \<in> split_gamma mf_gs (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G"
-    using mf_ltr_collect_solved mf_snapshot assms by blast
+    using mf_node_collect_solved mf_snapshot assms by blast
   then have mem: "s \<in> \<lbrakk>default_st_to_fun mf_gs
       (combine_default_st (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G)\<rbrakk>"
     unfolding split_gamma_def default_st_gamma_def .

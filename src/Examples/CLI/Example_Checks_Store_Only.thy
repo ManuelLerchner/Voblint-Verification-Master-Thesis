@@ -20,7 +20,7 @@ text \<open>
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
   The run is Sign's unit-context registration \<open>sign_rule\<close> at \<^const>\<open>Globals_Join\<close>,
   and its node-soundness endpoint \<open>sign_rule.fun_route_result_node_sound\<close> connects
-  the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
+  the computed table back to \<^const>\<open>node_collect\<close> at each check's own node ---
   every covered node, not only the solver's query seed. No ghost or
   trace-projection content: the check
   condition is a plain \<^typ>\<open>exp\<close>.
@@ -164,10 +164,10 @@ text \<open>Non-vacuity: stores do reach the check nodes.  The all-zero initial 
 lemma checks_ex_reach_nonempty:
   "checks_ex_reach (Statement 1) \<noteq> {}" "checks_ex_reach (Statement 5) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where \<G> = checks_ex_gs and g = "prog_cfg checks_ex_program"
+  note step = node_collect_intra_step[where \<G> = checks_ex_gs and g = "prog_cfg checks_ex_program"
       and S = "cinit_stores checks_ex_gs", folded checks_ex_reach_def]
   have "(\<lambda>_. 0) \<in> checks_ex_reach (cfg_entry (prog_cfg checks_ex_program))"
-    unfolding checks_ex_reach_def by (rule ltr_collect_init) (simp add: cinit_stores_def)
+    unfolding checks_ex_reach_def by (rule node_collect_init) (simp add: cinit_stores_def)
   then have "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
     by (rule step) (auto simp: checks_ex_entry_eval checks_ex_intra_eval)
   then have s1: "(\<lambda>_. 0)(STR ''y'' := 5) \<in> checks_ex_reach (Statement 1)"

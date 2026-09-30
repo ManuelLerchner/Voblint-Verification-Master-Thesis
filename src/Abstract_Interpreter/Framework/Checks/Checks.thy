@@ -35,7 +35,7 @@ text \<open>The one-step destruction dual of \<open>checks_provenI\<close>, so a
   unfolding the definition. It carries no soundness content of its own, and is
   named for what it is rather than \<open>_sound\<close>: the real soundness work happens
   where a caller establishes \<open>checks_proven\<close> for a concrete \<open>reach\<close>, by
-  composing this theory with an existing \<open>ltr_collect \<le> gamma_state(\<dots>)\<close>-shaped
+  composing this theory with an existing \<open>node_collect \<le> gamma_state(\<dots>)\<close>-shaped
   corollary; this theory never states or proves that inclusion itself.\<close>
 
 lemma checks_provenD [dest]:

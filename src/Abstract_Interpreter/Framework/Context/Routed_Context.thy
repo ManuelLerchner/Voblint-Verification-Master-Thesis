@@ -1,5 +1,6 @@
 theory Routed_Context
-  imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec "Voblint_CFG.LTR_Def"
+  imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec
+    "Voblint_CFG.Activation_Trace_Def"
     Activation_Backbone
 begin
 
@@ -539,7 +540,7 @@ subsection \<open>Activation-collect soundness against the routed local unknown\
 text \<open>
   Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
-  \<^locale>\<open>ltr_coverage\<close> are this locale's own facts: the two entry bounds discharge
+  \<^locale>\<open>activation_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
   \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routed_entry_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
@@ -610,19 +611,19 @@ qed
 text \<open>
   Every valid trace of a covered program carries some context under this instance's own
   \<open>R\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>ltr_coverage\<close> total here, so a \<open>Source_Ctx\<close>-style example can discharge the
+  \<open>activation_coverage\<close> total here, so a \<open>Source_Ctx\<close>-style example can discharge the
   \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
   interpretation itself.
 \<close>
 
-lemma routed_valid_ltr_has_context:
+lemma routed_valid_activation_trace_has_context:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
   shows "\<exists>c. trace_context \<G> R c\<^sub>0 g t c"
 proof -
-  interpret G: ltr_coverage g S0 cover R c\<^sub>0 \<G>
+  interpret G: activation_coverage g S0 cover R c\<^sub>0 \<G>
   proof unfold_locales
     fix s0 assume s0mem: "s0 \<in> S0"
     have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
@@ -659,7 +660,7 @@ proof -
     show "call_context_total_on cover R \<G> g"
       by (rule routed_call_context_total)
   qed
-  show ?thesis using G.valid_ltr_has_context[OF tv] by blast
+  show ?thesis using G.valid_activation_trace_has_context[OF tv] by blast
 qed
 
 end

@@ -53,7 +53,7 @@ qed
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source
   frame stack) is certified at the concrete seed context \<open>[]\<close> (no formal binds the root
-  activation) --- no \<^typ>\<open>ltr\<close> witness, no context existential.  This is the clean user-facing
+  activation) --- no \<^typ>\<open>activation_trace\<close> witness, no context existential.  This is the clean user-facing
   statement for main-level program points.\<close>
 theorem twice_source_toplevel_at_bot:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"

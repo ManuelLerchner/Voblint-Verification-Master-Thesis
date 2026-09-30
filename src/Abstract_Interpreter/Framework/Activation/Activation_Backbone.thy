@@ -1,5 +1,5 @@
 theory Activation_Backbone
-  imports "Voblint_Domain.Nonrelational_State" "Voblint_CFG.LTR_Abstract"
+  imports "Voblint_Domain.Nonrelational_State" "Voblint_CFG.Activation_Trace_Abstract"
 begin
 
 section \<open>What one activation of a procedure may observe\<close>
@@ -15,13 +15,13 @@ text \<open>
   its stores; they need not partition them.
 
   \<open>cover v c\<close> is the set of stores that table admits at node \<open>v\<close> in context \<open>c\<close>.  Given the
-  five local obligations of \<^locale>\<open>ltr_coverage\<close> on it --- \<open>INIT\<close> for the seed stores,
+  five local obligations of \<^locale>\<open>activation_coverage\<close> on it --- \<open>INIT\<close> for the seed stores,
   \<open>INTRA\<close> per intra edge, \<open>CALL\<close> per call and admitted context, \<open>RETURN\<close> per return,
   \<open>TOTAL\<close> for at least one admitted context per covered call ---
   \<open>activation_collect_sound\<close> bounds \<^const>\<open>activation_collect\<close>, the set
   of stores some valid trace can leave at one \<open>(node, context)\<close>.  It is the context-sensitive
-  twin of \<open>ltr_collect_semantic_postfix\<close> and shares its proof shape: interpret
-  \<^locale>\<open>ltr_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_ltr_covered_at\<close>.
+  twin of \<open>node_collect_semantic_postfix\<close> and shares its proof shape: interpret
+  \<^locale>\<open>activation_coverage\<close> at the supplied \<open>cover\<close>, then read off \<open>valid_activation_trace_covered_at\<close>.
 
   \<open>R\<close> says which contexts may describe a concrete call transition, and that is what indexes
   the collecting semantics.  It is handed both stores, so a policy may inspect them, but
@@ -32,10 +32,10 @@ text \<open>
 \<close>
 
 theorem activation_collect_sound:
-  assumes "ltr_coverage g S cover R c\<^sub>0 \<G>"
+  assumes "activation_coverage g S cover R c\<^sub>0 \<G>"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx \<subseteq> cover v ctx"
 proof -
-  interpret G: ltr_coverage g S cover R c\<^sub>0 \<G> by (fact assms)
+  interpret G: activation_coverage g S cover R c\<^sub>0 \<G> by (fact assms)
   show ?thesis
   proof (rule subsetI)
     fix st assume "st \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx"
@@ -43,7 +43,8 @@ proof -
       and sn: "sink_node t = v" and kc: "trace_context \<G> R c\<^sub>0 g t ctx"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
-    have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_ltr_covered_at[OF t kc] .
+    have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_activation_trace_covered_at[OF t kc]
+      .
     then show "st \<in> cover v ctx" using sn st by simp
   qed
 qed

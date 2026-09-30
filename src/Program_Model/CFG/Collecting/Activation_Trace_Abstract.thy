@@ -1,5 +1,5 @@
-theory LTR_Abstract
-  imports LTR_Collect
+theory Activation_Trace_Abstract
+  imports Activation_Trace_Collect
 begin
 
 section \<open>What an analysis must satisfy to be sound\<close>
@@ -21,7 +21,7 @@ text \<open>
   transition from the caller's own carried context, so a return may only compose a callee
   whose context came from the caller it is resuming --- not any context that happens to
   cover that callee's entry.  This correlation is not an extra parameter to assume:
-  \<open>trace_context_caller_entry\<close> makes it a theorem about \<^const>\<open>valid_ltr\<close>.
+  \<open>trace_context_caller_entry\<close> makes it a theorem about \<^const>\<open>valid_activation_trace\<close>.
 
   \<open>TOTAL\<close> is what makes the buckets meaningful rather than merely safe.  A resumed caller
   may carry a context under which its callee was never assigned one; the callee's exit
@@ -40,7 +40,7 @@ text \<open>\<open>cover\<close> is the claim itself, \<open>R\<close> the conte
   \<open>c\<^sub>0\<close> the context the seed stores arrive under.  An analysis interprets this once,
   with its own solved table in place of \<open>cover\<close>; nothing below asks how that table was
   computed.\<close>
-locale ltr_coverage =
+locale activation_coverage =
   fixes g :: cfg and S :: "store set"
     and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and R :: "'c call_context_rel"
@@ -68,10 +68,10 @@ text \<open>The trace-level objects at the locale's fixed arguments: the collect
   valid traces \<open>\<T>\<close>, the context relation \<open>carries\<close>, the buckets \<open>\<A>\<close>, and the
   admitted call contexts \<open>admits\<close>.\<close>
 abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
-  where "\<C> \<equiv> ltr_collect \<G> g S"
-abbreviation traces :: "ltr set" ("\<T>")
-  where "\<T> \<equiv> valid_ltr \<G> g S"
-abbreviation carries :: "ltr \<Rightarrow> 'c \<Rightarrow> bool"
+  where "\<C> \<equiv> node_collect \<G> g S"
+abbreviation traces :: "activation_trace set" ("\<T>")
+  where "\<T> \<equiv> valid_activation_trace \<G> g S"
+abbreviation carries :: "activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
   where "carries \<equiv> trace_context \<G> R c\<^sub>0 g"
 abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set" ("\<A>")
   where "\<A> \<equiv> activation_collect \<G> R c\<^sub>0 g S"
@@ -80,7 +80,7 @@ abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarr
 
 text \<open>\<open>trace_covered u\<close>: \<open>u\<close> carries some context, and its sink store is admitted at its
   own node under every context it carries.\<close>
-definition trace_covered :: "ltr \<Rightarrow> bool" where
+definition trace_covered :: "activation_trace \<Rightarrow> bool" where
   "trace_covered u \<longleftrightarrow>
      (\<exists>c. carries u c)
      \<and> (\<forall>c. carries u c \<longrightarrow> sink_store u \<in> cover (sink_node u) c)"
@@ -209,7 +209,7 @@ qed
 
 subsection \<open>The generic soundness theorem\<close>
 
-text \<open>The bound holds along the whole caller chain, by \<^const>\<open>valid_ltr\<close> rule induction
+text \<open>The bound holds along the whole caller chain, by \<^const>\<open>valid_activation_trace\<close> rule induction
   feeding the four closure lemmas.  The chain, not a per-node statement, is what the
   \<open>RETURN\<close> case needs: it recovers its caller structurally, and the caller lies in the
   callee's chain.\<close>
@@ -221,7 +221,7 @@ proof (rule caller_chain_closure)
 next
   fix t a v s' assume ht: "t \<in> \<T>" and ch: "\<forall>u \<in> callers t. trace_covered u"
     and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> edge_step a (sink_store t)"
-  have pt: "path t \<noteq> []" using ht valid_ltr_path_nonempty by blast
+  have pt: "path t \<noteq> []" using ht valid_activation_trace_path_nonempty by blast
   have iht: "trace_covered t" using ch callers_refl by blast
   show "trace_covered (extend t (v, s'))" by (rule intra_covered[OF e st pt iht])
 next
@@ -245,40 +245,40 @@ next
 qed
 
 text \<open>Every valid trace carries a context, and its sink lies in every slot it carries:
-  \<^const>\<open>valid_ltr\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
-theorem valid_ltr_covered: "t \<in> \<T> \<Longrightarrow> trace_covered t"
+  \<^const>\<open>valid_activation_trace\<close> is soundly over-approximated by \<open>trace_covered\<close>.\<close>
+theorem valid_activation_trace_covered: "t \<in> \<T> \<Longrightarrow> trace_covered t"
 proof -
   assume "t \<in> \<T>"
   then have "\<forall>u \<in> callers t. trace_covered u" by (rule caller_chain_covered)
   then show "trace_covered t" using callers_refl by blast
 qed
 
-theorem valid_ltr_has_context:
+theorem valid_activation_trace_has_context:
   assumes "t \<in> \<T>"
   obtains c where "carries t c"
-  using valid_ltr_covered[OF assms] by (rule trace_covered_someE)
+  using valid_activation_trace_covered[OF assms] by (rule trace_covered_someE)
 
-theorem valid_ltr_covered_at:
+theorem valid_activation_trace_covered_at:
   "t \<in> \<T> \<Longrightarrow> carries t c
    \<Longrightarrow> sink_store t \<in> cover (sink_node t) c"
-  using valid_ltr_covered by (rule trace_coveredD)
+  using valid_activation_trace_covered by (rule trace_coveredD)
 
-text \<open>Bridge (2) of \<^theory>\<open>Voblint_CFG.LTR_Collect\<close>, earned: under \<open>TOTAL\<close> the
+text \<open>Bridge (2) of \<^theory>\<open>Voblint_CFG.Activation_Trace_Collect\<close>, earned: under \<open>TOTAL\<close> the
   context-insensitive collection is the union of the buckets.\<close>
-theorem ltr_collect_eq_Union_activation_collect:
+theorem node_collect_eq_Union_activation_collect:
   "\<C> v = (\<Union>c. \<A> v c)"
 proof
   show "\<C> v \<subseteq> (\<Union>c. \<A> v c)"
   proof
     fix x assume "x \<in> \<C> v"
     then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
-      by (rule ltr_collect_E)
-    from valid_ltr_has_context[OF t(1)] obtain c where "carries t c" .
+      by (rule node_collect_E)
+    from valid_activation_trace_has_context[OF t(1)] obtain c where "carries t c" .
     with t show "x \<in> (\<Union>c. \<A> v c)" by blast
   qed
 next
   show "(\<Union>c. \<A> v c) \<subseteq> \<C> v"
-    by (rule Union_activation_collect_le_ltr_collect)
+    by (rule Union_activation_collect_le_node_collect)
 qed
 
 end
@@ -293,19 +293,19 @@ text \<open>The interface is satisfiable for every graph, seed set, and start co
   wide \<open>cover\<close> is chosen --- \<open>TOTAL\<close> genuinely constrains the context policy, not merely
   the cover.\<close>
 
-lemma ltr_coverage_exists:
-  "ltr_coverage g S (\<lambda>_ _. UNIV) (call_context_rel_of_fun (\<lambda>_ _ _. ())) () \<G>"
+lemma activation_coverage_exists:
+  "activation_coverage g S (\<lambda>_ _. UNIV) (call_context_rel_of_fun (\<lambda>_ _ _. ())) () \<G>"
   by unfold_locales auto
 
 subsection \<open>Monovariant semantic post-fixpoint\<close>
 
 text \<open>
   Set-valued entry, edge, call, and combine closure of a candidate node map \<open>B\<close> bounds the
-  stack-faithful \<^const>\<open>ltr_collect\<close> at every node.  The proof interprets
-  \<^locale>\<open>ltr_coverage\<close> at \<open>cover v _ = B v\<close> with the trivial one-point context, whose policy
+  stack-faithful \<^const>\<open>node_collect\<close> at every node.  The proof interprets
+  \<^locale>\<open>activation_coverage\<close> at \<open>cover v _ = B v\<close> with the trivial one-point context, whose policy
   is total outright; its combine obligation follows one caller and one callee exit.
 \<close>
-lemma ltr_collect_semantic_postfix:
+lemma node_collect_semantic_postfix:
   fixes g :: cfg and B :: "cfg_node \<Rightarrow> store set"
     and S0 :: "store set" and v :: cfg_node and \<G> :: "vname \<Rightarrow> bool"
   assumes entry: "S0 \<subseteq> B (cfg_entry g)"
@@ -321,7 +321,7 @@ lemma ltr_collect_semantic_postfix:
         \<Longrightarrow> combine_collect \<G> dst s t \<in> B cont"
   shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v \<subseteq> B v"
 proof -
-  interpret G: ltr_coverage g S0 "\<lambda>v _. B v" "call_context_rel_of_fun (\<lambda>_ _ _. ())" "()" \<G>
+  interpret G: activation_coverage g S0 "\<lambda>v _. B v" "call_context_rel_of_fun (\<lambda>_ _ _. ())" "()" \<G>
   proof (standard, goal_cases INIT INTRA CALL RETURN TOTAL)
     case (INIT s) then show ?case using entry by auto
   next
@@ -337,10 +337,11 @@ proof -
   proof (rule subsetI)
     fix x assume "x \<in> \<C>\<^bsub>\<G>,g,S0\<^esub> v"
     then obtain u where u: "u \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>" "sink_node u = v" "sink_store u = x"
-      by (rule ltr_collect_E)
-    from G.valid_ltr_has_context[OF u(1)] obtain c
+      by (rule node_collect_E)
+    from G.valid_activation_trace_has_context[OF u(1)] obtain c
       where c: "trace_context \<G> (call_context_rel_of_fun (\<lambda>_ _ _. ())) () g u c" .
-    have "sink_store u \<in> B (sink_node u)" using G.valid_ltr_covered_at[OF u(1) c] by simp
+    have "sink_store u \<in> B (sink_node u)" using G.valid_activation_trace_covered_at[OF u(1) c]
+      by simp
     then show "x \<in> B v" using u(2,3) by simp
   qed
 qed

@@ -1,5 +1,5 @@
 theory Procedure_Ownership
-  imports Compile_Invariants "Voblint_CFG.LTR_Def"
+  imports Compile_Invariants "Voblint_CFG.Activation_Trace_Def"
 begin
 
 section \<open>Each procedure owns a disjoint block of nodes\<close>
@@ -527,7 +527,7 @@ text \<open>\<open>frag_ok u\<close>: the activation \<open>u\<close> either lie
   (declared body, entry wiring, all path nodes in the fragment) or is a single-node activation
   stuck at an undeclared \<^term>\<open>FunctionEntry\<close> --- which can never advance and never reaches a
   \<^term>\<open>FunctionResult\<close>.\<close>
-definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> ltr \<Rightarrow> bool" where
+definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> activation_trace \<Rightarrow> bool" where
   "frag_ok \<Pi> ps u \<longleftrightarrow>
      (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
         \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)
@@ -554,7 +554,7 @@ lemma frag_okE [elim]:
 
 lemma sink_in_path_nodes:
   "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
-  using valid_ltr_path_nonempty by (auto simp: sink_node_def)
+  using valid_activation_trace_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Extending a fragment-local activation by one node keeps it fragment-local when the step
   to that node stays inside every genuine fragment holding its sink and no step leaves a stub.
@@ -574,7 +574,7 @@ proof (cases rule: frag_okE)
   from stay[OF frag(1,2,3) this] have v_in: "v \<in> pfn r m m'" .
   show ?thesis
     by (rule frag_okI_frag[OF frag(1,2,3)])
-       (use frag(4,5) valid_ltr_path_nonempty[OF t] v_in in \<open>auto simp: pu hd_append\<close>)
+       (use frag(4,5) valid_activation_trace_path_nonempty[OF t] v_in in \<open>auto simp: pu hd_append\<close>)
 next
   case (stub q s0)
   have "sink_node t = FunctionEntry q" using stub(1) by (simp add: sink_node_def)
@@ -584,7 +584,7 @@ qed
 text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
   carried over the whole \<^const>\<open>callers\<close> chain so that the return case, which resumes the caller,
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
-lemma valid_ltr_frag_callers:
+lemma valid_activation_trace_frag_callers:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>"
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps u"
@@ -634,7 +634,7 @@ proof -
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
-    have cv: "caller \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_ltr_caller_valid[OF cvcallee cof] .
+    have cv: "caller \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace_caller_valid[OF cvcallee cof] .
     have "frag_ok \<Pi> ps caller" using ch cin by blast
     then show "frag_ok \<Pi> ps (Resume caller callee (path caller
             @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
@@ -647,7 +647,7 @@ qed
 
 text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reaches \<^term>\<open>FunctionResult q\<close> only for
   \<open>p = q\<close>.\<close>
-lemma valid_ltr_entry_result_eq:
+lemma valid_activation_trace_entry_result_eq:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>"
     and en: "fst (hd (path t)) = FunctionEntry p"
@@ -655,7 +655,7 @@ lemma valid_ltr_entry_result_eq:
   shows "p = q"
 proof -
   have "frag_ok \<Pi> ps t"
-    using valid_ltr_frag_callers[OF wf t] callers_refl by blast
+    using valid_activation_trace_frag_callers[OF wf t] callers_refl by blast
   then show ?thesis
   proof (cases rule: frag_okE)
     case (frag r d m m' Ep Kp)

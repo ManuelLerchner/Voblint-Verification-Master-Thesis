@@ -13,7 +13,7 @@ session Voblint_CFG in "." = "Voblint_VIMP" +
     (* The concrete interprocedural semantics of an arbitrary CFG.  Nothing here
        mentions the compiler: the analysis soundness statements are about any
        graph, not only about compiled ones. *)
-    LTR_Def
-    LTR_Activation_Context
-    LTR_Collect
-    LTR_Abstract
+    Activation_Trace_Def
+    Activation_Trace_Context
+    Activation_Trace_Collect
+    Activation_Trace_Abstract

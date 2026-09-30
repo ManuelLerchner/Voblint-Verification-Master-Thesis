@@ -233,10 +233,10 @@ text \<open>
   own soundness already puts the collect inside an empty concretization there.
   So every bucket is empty and so is their union.
 
-  \<^term>\<open>ltr_collect\<close> decomposes into those buckets only for a context relation
+  \<^term>\<open>node_collect\<close> decomposes into those buckets only for a context relation
   that comes from a function, which this locale does not assume of \<^term>\<open>R\<close>;
   the decomposition is therefore a hypothesis, discharged by
-  \<open>ltr_collect_eq_Union_activation_of_fun\<close> at every instance whose relation has
+  \<open>node_collect_eq_Union_activation_of_fun\<close> at every instance whose relation has
   that shape.
 \<close>
 

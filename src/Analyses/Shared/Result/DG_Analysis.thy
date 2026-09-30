@@ -932,21 +932,21 @@ theorem entry_state_has_context:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
     and trace: "t \<in> \<T>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub>"
   shows "\<exists>c. trace_context pgs entry_context_rel root_ctx (prog_cfg p) t c"
-  by (rule entry.routed_valid_ltr_has_context[OF entry_cov cinit_le_init trace])
+  by (rule entry.routed_valid_activation_trace_has_context[OF entry_cov cinit_le_init trace])
 
 text \<open>
   The two together: covering the entry is enough for the activation buckets to
   exhaust the context-insensitive collection, so a caller holding only a
-  \<^const>\<open>ltr_collect\<close> membership -- which is what a source run delivers -- can
+  \<^const>\<open>node_collect\<close> membership -- which is what a source run delivers -- can
   pass to the bucket its own call history produced.  Without this the per-context
   bounds above say nothing about a run whose context is not known in advance.
 \<close>
 
-theorem entry_state_ltr_collect_eq_Union:
+theorem entry_state_node_collect_eq_Union:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule ltr_collect_eq_Union_activation_of_has_context)
+  by (rule node_collect_eq_Union_activation_of_has_context)
      (rule entry_state_has_context [OF entry_cov])
 
 end
@@ -971,12 +971,12 @@ theorem entry_state_activation_collect_sound_of_cover:
             ctx_vars_cover_combineD [OF cover]
             ctx_vars_cover_entryD [OF cover]])
 
-theorem entry_state_ltr_collect_eq_Union_of_cover:
+theorem entry_state_node_collect_eq_Union_of_cover:
   assumes solves: "terminates pgs p"
     and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule entry_state_ltr_collect_eq_Union
+  by (rule entry_state_node_collect_eq_Union
         [OF solves ctx_vars_cover_edgeD [OF cover]
             ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
             ctx_vars_cover_combineD [OF cover]
@@ -1044,10 +1044,10 @@ text \<open>
   those coincide, which is what \<open>route_const\<close> says and all this proof uses it for.
 \<close>
 
-theorem fun_route_ltr_collect_eq_Union:
+theorem fun_route_node_collect_eq_Union:
   "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
      = (\<Union>ctx. \<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule ltr_collect_eq_Union_activation_of_fun)
+  by (rule node_collect_eq_Union_activation_of_fun)
 
 theorem fun_route_activation_collect_sound_of_cover:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"

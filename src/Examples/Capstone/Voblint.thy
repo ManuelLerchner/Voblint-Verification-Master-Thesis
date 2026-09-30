@@ -9,7 +9,7 @@ theory Voblint
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Def"
     "Voblint_Compile.VIMP_Proc_to_CFG"
-    "Voblint_CFG.LTR_Def"
+    "Voblint_CFG.Activation_Trace_Def"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Framework.Transfer_Algebra"
@@ -203,13 +203,13 @@ text \<open>
 subsection \<open>Activation-local concrete semantics\<close>
 
 text \<open>
-  \<^const>\<open>valid_ltr\<close> represents one procedure activation and its ancestry.
+  \<^const>\<open>valid_activation_trace\<close> represents one procedure activation and its ancestry.
   \<^const>\<open>Root\<close> starts main, \<^const>\<open>Call\<close> records an immediate caller, and
   \<^const>\<open>Resume\<close> continues that caller after its callee reaches the matching
   result node.  Structural caller links distinguish nested and recursive activations
   without placing an unbounded stack in CFG nodes.
 
-  \<^const>\<open>ltr_collect\<close> forgets the activation structure and collects stores by
+  \<^const>\<open>node_collect\<close> forgets the activation structure and collects stores by
   node, while \<^const>\<open>activation_collect\<close> keys the same collection by the
   structural activation context.  Both contain only stores from valid local traces.
 \<close>
@@ -298,13 +298,13 @@ text \<open>
       \<^verbatim>\<open>edges_collect\<close>,
       \<^verbatim>\<open>combine_collect\<close>, and
       \<^verbatim>\<open>call_enter_store\<close>.
-    \<^item> @{theory Voblint_CFG.LTR_Def} --- the call-structured
-      activation-local trace \<^const>\<open>valid_ltr\<close>
+    \<^item> @{theory Voblint_CFG.Activation_Trace_Def} --- the call-structured
+      activation-local trace \<^const>\<open>valid_activation_trace\<close>
       (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/
-      \<^verbatim>\<open>Resume\<close>), the \<^const>\<open>ltr_collect\<close> and
+      \<^verbatim>\<open>Resume\<close>), the \<^const>\<open>node_collect\<close> and
       \<^const>\<open>activation_collect\<close> projections, and the
-      \<^locale>\<open>ltr_coverage\<close> interface with
-      \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>.
+      \<^locale>\<open>activation_coverage\<close> interface with
+      \<^verbatim>\<open>node_collect_semantic_postfix\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph
       reachability (\<^const>\<open>cfg_reaches\<close>), which feeds the cone
       guard. The graph itself is unchanged; the cone restriction belongs to the
@@ -403,20 +403,20 @@ text \<open>
       (\<^verbatim>\<open>analysis_contract\<close>). The routed context locales in
       @{theory Voblint_Framework.Routed_Context} feed those obligations into
       \<^const>\<open>activation_collect\<close>. The unit-context instance reaches
-      \<^const>\<open>ltr_collect\<close> through
-      \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
+      \<^const>\<open>node_collect\<close> through
+      \<^verbatim>\<open>node_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
       domain as a \<^locale>\<open>dg_analysis_exec\<close> instance at the unit context, and
       Interval also at entry state and call string, so each reaches
-      \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>ltr_collect\<close>,
+      \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>node_collect\<close>,
       through the locale's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
     \<^item> @{theory Voblint_Framework.Activation_Backbone} --- the generic
       \<^verbatim>\<open>activation_collect_sound\<close>. Over
-      \<^const>\<open>valid_ltr\<close>, the five obligations
+      \<^const>\<open>valid_activation_trace\<close>, the five obligations
       \<^verbatim>\<open>INIT\<close>/\<^verbatim>\<open>INTRA\<close>/
       \<^verbatim>\<open>CALL\<close>/\<^verbatim>\<open>RETURN\<close>/
       \<^verbatim>\<open>TOTAL\<close> on a \<^verbatim>\<open>cover\<close> map bound
@@ -479,10 +479,10 @@ text \<open>
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Result.Source_Activation_Sound} --- the
       source-adequacy bridge. A reachable VIMP source configuration produces a
-      \<^const>\<open>valid_ltr\<close> trace
-      (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
+      \<^const>\<open>valid_activation_trace\<close> trace
+      (\<^verbatim>\<open>source_run_has_activation_trace\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
-      (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
+      (\<^verbatim>\<open>source_reaches_node_collect\<close>).
     \<^item> @{theory Voblint_Result.DG_Live_Unknowns} --- the endpoints of a routed
       analysis whose route is a function of the call site, the unit context
       among them; they are what every flagship and codegen entry point applies: one
@@ -662,8 +662,8 @@ text \<open>
   the relational activation spine and its per-context admitted slots --- the unit
   and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), while
   entry-state routing genuinely admits several contexts per call. There is one
-  such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through the routed
-  unit-context instance's \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>, and the routed
+  such spine: every domain reaches \<^const>\<open>node_collect\<close> through the routed
+  unit-context instance's \<^verbatim>\<open>node_collect_eq_Union_activation_of_fun\<close>, and the routed
   instances through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 
