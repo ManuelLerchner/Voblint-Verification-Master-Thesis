@@ -246,9 +246,9 @@ the solver computes. Another solver, for instance one with local side effects
 The certificate is what the analysis locale hands to the soundness theorem of
 @ch:equations. For a terminating solve,
 #isathm(
-  "dg_analysis.routed_analysis_sound_live_unknowns",
+  "dg_analysis.routed_analysis_from_live_unknowns",
   thy: "DG_Live_Unknowns",
-  display: "routed_analysis_sound_live_unknowns",
+  display: "routed_analysis_from_live_unknowns",
 )
 establishes the locale #isalocale("routed_analysis"), which joins that
 theorem with the _check classifier_, the function that turns the abstract state
