@@ -1,8 +1,8 @@
 /*
  * Solve replay: steps through a run's solve on its control-flow graph.
  *
- * The replay reads two traces of the shown run, its JSON Lines events and its indented
- * text, both written by the traced build of the solver. From the events alone it
+ * The replay reads the JSON Lines trace of the shown run, the events the exported
+ * solver reports through its traced code equations. From the events alone it
  * rebuilds what the solver holds after each step: every local unknown's value, the
  * unknowns being solved (the solver's call stack), the stable ones, and the ones an
  * update destabilized. Destabilization follows the solver's own rule: an update clears
@@ -217,19 +217,94 @@ function parseEvents(jsonl) {
     .filter((record) => Number.isInteger(record.step));
 }
 
-/* The indented text, one block per step: its line and the detail lines under it. */
-function textBlocks(text) {
-  const blocks = [];
-
-  for (const line of text.split("\n")) {
-    if (/^\[\d+\]/.test(line)) {
-      blocks.push(line);
-    } else if (blocks.length > 0 && line.startsWith(" ")) {
-      blocks[blocks.length - 1] += `\n${line}`;
-    }
+/* Names as the CLI's trace writes them (cli/render/solver_trace.ml). */
+function traceContext(context) {
+  switch (context?.kind) {
+    case "unit":
+      return "unit";
+    case "entry_state":
+      return context.values.length > 0 ? `[${context.values.join(", ")}]` : "root";
+    case "call_string":
+      return context.sites.length > 0 ? `[${context.sites.join(" ")}]` : "root";
+    default:
+      return "?";
   }
+}
 
-  return blocks;
+function traceLocal(unknown) {
+  return `(${unknown.node}, ${traceContext(unknown.context)})`;
+}
+
+function traceGlobal(unknown) {
+  return unknown.kind === "activation_seed"
+    ? `Seed(${unknown.procedure}, ${traceContext(unknown.context)})`
+    : "Global";
+}
+
+/* One step's label, subject and detail lines. */
+function stepText(event) {
+  switch (event.event) {
+    case "solve":
+    case "resolve":
+      return [event.event.toUpperCase(), traceLocal(event.unknown), []];
+    case "query_local":
+      return ["QUERY-L", `${traceLocal(event.current)} -> ${traceLocal(event.target)}`, []];
+    case "value_local":
+      return [
+        "VALUE-L",
+        `${traceLocal(event.target)} to ${traceLocal(event.current)}`,
+        [["value", event.value]],
+      ];
+    case "query_global":
+      return [
+        "QUERY-G",
+        `${traceLocal(event.current)} -> ${traceGlobal(event.target)}`,
+        [["value", event.value]],
+      ];
+    case "side":
+      return [
+        "SIDE",
+        `${traceLocal(event.current)} -> ${traceGlobal(event.target)}`,
+        [["value", event.value]],
+      ];
+    case "update_global":
+      return [
+        "UPDATE-G",
+        `${traceGlobal(event.unknown)} (readers destabilized)`,
+        [
+          ["old", event.old],
+          ["new", event.new],
+        ],
+      ];
+    case "update_local":
+      return [
+        "UPDATE-L",
+        `${traceLocal(event.unknown)} (readers destabilized)`,
+        [
+          ["old", event.old],
+          ["new", event.new],
+        ],
+      ];
+    case "answer":
+      return ["ANSWER", traceLocal(event.current), [["value", event.value]]];
+    case "route":
+      return [
+        "ROUTE",
+        `call at ${traceLocal(event.call)} -> context ${traceContext(event.context)}`,
+        [["entry", event.entry]],
+      ];
+    default:
+      return [event.event, "", []];
+  }
+}
+
+/* One block per step, indented by the solver's call depth after it. */
+function stepBlock(event, index, depth) {
+  const indent = "  ".repeat(depth);
+  const [label, subject, details] = stepText(event);
+  const head = `[${String(index + 1).padStart(3, "0")}] ${indent}${label.padEnd(9)} ${subject}`;
+
+  return [head, ...details.map(([key, value]) => `      ${indent}${key} = ${value}`)].join("\n");
 }
 
 /* --------------------------------------------------------------------- view */
@@ -327,21 +402,17 @@ export function createSolveReplay(deps) {
         throw new Error(answer.message ?? "the analyzer returned no trace");
       }
 
-      const text =
-        run.verboseTrace ??
-        JSON.parse(await deps.solve({ ...run.configuration, trace: "verbose" }, run.source)).trace;
-
-      return { answer, events: parseEvents(answer.trace), blocks: textBlocks(text ?? "") };
+      return { answer, events: parseEvents(answer.trace) };
     })();
 
     try {
-      const { answer, events, blocks } = await loading;
+      const { answer, events } = await loading;
 
       if (offered !== run) {
         return;
       }
 
-      await build(answer, events, blocks);
+      await build(answer, events);
       setMessage("");
       count.textContent = `${events.length} steps`;
     } catch (error) {
@@ -361,7 +432,7 @@ export function createSolveReplay(deps) {
     }
   }
 
-  async function build(answer, events, blocks) {
+  async function build(answer, events) {
     const nodeOf = new Map();
     const keyOf = new Map();
     const pointOf = new Map();
@@ -383,6 +454,7 @@ export function createSolveReplay(deps) {
     };
 
     const snapshots = [];
+    const blocks = [];
     const state = emptyState();
 
     events.forEach((event, index) => {
@@ -391,6 +463,7 @@ export function createSolveReplay(deps) {
       }
 
       apply(state, event);
+      blocks.push(stepBlock(event, index, Math.max(0, state.stack.length - 1)));
     });
 
     const { cytoscape, elk } = await deps.getGraphLibraries();
@@ -455,7 +528,7 @@ export function createSolveReplay(deps) {
 
     replay = {
       events,
-      blocks: blocks.length === events.length ? blocks : null,
+      blocks,
       snapshots,
       nodeOf,
       keyOf,
@@ -646,7 +719,7 @@ export function createSolveReplay(deps) {
       line.type = "button";
       line.className = "replay-line";
       line.dataset.step = String(index + 1);
-      line.textContent = blocks ? blocks[index] : `[${index + 1}] ${events[index].event}`;
+      line.textContent = blocks[index];
 
       if (index === step - 1) {
         line.classList.add("is-current");

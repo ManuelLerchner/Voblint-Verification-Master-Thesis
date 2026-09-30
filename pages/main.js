@@ -3642,11 +3642,7 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
         showDiagnosticsSummary(result);
-        solveReplay.offer({
-          configuration,
-          source,
-          verboseTrace: configuration.trace === "verbose" ? result.trace : null,
-        });
+        solveReplay.offer({ configuration, source });
       }
     } else {
       /*
