@@ -7,27 +7,29 @@
 
 = Solver Certificates and Executable States <ch:solving>
 
-@ch:equations stopped at post-solutions: every valuation that satisfies the
-generated constraints covers the context-indexed collecting semantics
-(#isathm("activation_collect_dg_sound")). This chapter connects that theorem
-to a run of the executable solver. The solver enters the proof through one
-statement about its result, a _certificate_: the valuation it returns is a
-post-solution on the finite set of unknowns it evaluated (@sec:certificate).
-Every other part of the proof uses only this statement, so the solver's
-algorithm and its update rule (@sec:update-rules) can change without touching
-it. The solver runs on an executable representation of abstract states, and
-@sec:readback shows that this representation computes the same values as the
-functions over variable names the analyses are specified with. Termination of
-the solve is a premise, checked per program (@sec:termination).
+@ch:equations stopped at post-solutions: a valuation that satisfies the
+generated constraints on a suitably closed set of unknowns covers the
+context-indexed collecting semantics (#isathm("activation_collect_dg_sound")).
+This chapter connects that theorem to a run of the executable solver. The
+solver enters the proof through three facts about its result (@sec:cert-param).
+The main one is a _certificate_: the valuation it returns is a post-solution on
+the set of unknowns it evaluated (@sec:certificate). The other two state that
+this set is finite and that a finished run of the executable solver lies in the
+domain on which the certificate holds. The proof uses nothing else about the
+solver, so its algorithm and its update rule (@sec:update-rules) can change
+without touching the proof. The solver runs on an executable representation of
+abstract states, and @sec:readback shows that this representation computes the
+same values as the functions over variable names the analyses are specified
+with. Termination of the solve is a premise, checked per program
+(@sec:termination).
 
 Chaining the two results gives the statement @ch:results builds on: whenever
 the executable solver returns for a program, the valuation it returns covers
-every store that reaches each solved unknown in its context. The certificate
-is the only fact about the solver in this chain. The chapter therefore has two
-tasks: to isolate that logical fact (@sec:certificate), and to fix the choices
-needed to run the solver, an update rule (@sec:update-rules) and an executable
-state representation (@sec:readback), and account for the remaining
-termination premise (@sec:termination).
+every store that reaches each solved unknown in its context. The chapter
+isolates the certificate (@sec:certificate), fixes the two choices needed to
+run the solver, an update rule (@sec:update-rules) and an executable state
+representation (@sec:readback), and accounts for the remaining termination
+premise (@sec:termination).
 
 == The certificate between solver and semantics <sec:certificate>
 
@@ -46,7 +48,7 @@ right-hand side to every pair of a graph node and a context
 (#isaconst("compiled_routed_eqs_for")), so the system is total over
 node-context pairs; for a policy with an infinite context type, such as
 entry-state contexts over intervals, it has infinitely many unknowns. The solver starts from a
-single query, the exit of `main` in the root context (#isaconst("root_query")),
+single query, the exit of `main` in the root context (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query")),
 evaluates its right-hand side, and solves every unknown that right-hand side
 reads, recursively @seidl21 @tilscher26. Starting from the exit of `main`, it
 follows the predecessor and call dependencies that the evaluated right-hand
@@ -82,16 +84,18 @@ reaches. Unknowns from which the exit cannot be reached, such as code after a
 )
 
 #figure(
-  image("/shared/generated/svg/infinite.svg", width: 70%),
+  image("/shared/generated/svg/infinite.svg", width: 100%),
   placement: none,
   caption: [The equation system of a five-procedure program as a grid: rows
     are program points grouped by procedure, columns are contexts, one cell
     per unknown. `main` calls `w` and `f(3)`, `f` calls itself twice and calls
     `g`, and `g` calls `h`; `w` calls itself with an unconstrained value.
-    Under entry-state contexts with Interval, the filled cells are the
-    unknowns one solve reaches, starting from the ringed query at the exit of
-    `main`; hollow cells are read and answer #lbot.
-    Dashed arrows are the publications to callee seeds, solid arrows the
+    Under entry-state contexts with Interval, a column label lists a
+    procedure's argument values: (3) is the entry state with argument
+    $[3, 3]$, (1,0) that of `g` with arguments $[1, 1]$ and $[0, 0]$, and ()
+    the root context. Filled cells are the unknowns one solve reaches, starting
+    from the ringed query at the exit of `main`; hollow orange cells are read
+    and answer #lbot; grey cells are never reached. Dashed arrows are the publications to callee seeds, solid arrows the
     result reads. Axis breaks marked $infinity$ stand for the rows and columns
     left out, including procedures and contexts this program never uses.
     Lifted from the explainer page; the filled contexts and hollow points are
@@ -120,7 +124,8 @@ $#isaconst("dep\<^sub>L") med T med sol med u$ is the set of local unknowns
 the path queries.
 
 
-Written out for the solved set $V$ (`vars`), the certificate requires
+Written out for the query $x$ and the solved set $V$ (`vars`), the
+certificate requires
 $
   & x in V & wide "(C1)" \
   forall u in V. med & #isaconst("dep\<^sub>L") med T med sol med u subset.eq V & wide "(C2)" \
@@ -164,10 +169,9 @@ unknown, its valuation is #lbot and the bound holds trivially.
     @sec:eq-discharge. In the running example, (C3) at $(italic("pp3"), c_0)$
     requires $sh("combine")(q_1, sol(italic("exit")_"bump", c_1)) lle
     sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
-  + bounds what each equation publishes, joined per target, at every global
-    unknown. It carries a call into its callee, because it makes the callee's
-    seed hold every entry value routed there, and global unknowns receive
-    their values only through it. It gives the seed inequality #ineq(3) of
+  + carries a call into its callee: it makes the callee's seed hold every
+    entry value routed there, and global unknowns receive their values only
+    through it. It gives the seed inequality #ineq(3) of
     @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
     ${n |-> [5, 5]} lle sol(italic("Seed")(italic("bump"), c_1))$ and
@@ -176,10 +180,12 @@ unknown, its valuation is #lbot and the bound holds trivially.
 ]
 
 Among local unknowns the solver widens and narrows only at loop points
-(@sec:td, @fig:td-trace), so #sol may lie above the least solution; (C1) to (C4) describe exactly the
-post-solution certificate it guarantees (@ch:background). The
-collecting-soundness theorem of @ch:equations is stated for any $V$ and #sol
-that meet them.
+(@sec:td, @fig:td-trace). The returned #sol may therefore lie above the least
+solution, and (C1) to (C4) state all the solver guarantees about it. The
+collecting-soundness theorem of @ch:equations needs the bounds (C3) and (C4)
+on a set $V$ that is closed forward and contains the program entry, together
+with premises on entry and routing. @sec:cert-forward obtains such a set from
+(C1) and (C2) by restricting $V$ to its live unknowns.
 
 === From backward to forward closure <sec:cert-forward>
 
@@ -194,13 +200,13 @@ Code after a `return` shows why backward closure alone does not suffice: such
 an unknown may be solved, yet its successors need not lie on any dependency
 path back from the procedure's result.
 
-The fix restricts attention to _live_ unknowns (#isaconst("live_unknowns")): solved unknowns whose node is live in a procedure whose result is solved in the same
-context. Liveness (#isaconst("prog_live")) is defined on the program text: a
-statement is live if no command before it in its sequence cannot fall through.
-The semantic alternative, that the node can still reach its procedure's result,
-is not preserved along the edges of an arbitrary graph, and control after a
-`return` can run into a node with no way out. The syntactic notion has the two
-properties the argument needs. Every live node reaches the procedure's result
+The fix restricts attention to _live_ unknowns
+(#isaconst("dg_analysis.live_unknowns", thy: "DG_Live_Unknowns", display: "live_unknowns")): solved unknowns whose
+node is live in a procedure whose result is solved in the same context.
+Liveness (#isaconst("prog_live")) is defined on the program text: a statement
+is live if every command before it in its sequence can fall through to the
+next, as a `return` cannot. This syntactic notion has the two properties the
+argument needs. Every live node reaches the procedure's result
 along the steps an equation reads backwards, and every edge out of a live node
 lands on a live node. A successor of a live unknown therefore reaches a solved
 result, and backward closure from that result puts the successor into $V$.
@@ -209,51 +215,62 @@ The call case has one more condition. The callee's entry is covered only when
 the abstract entry state of the callee is not #ctor("Bot"), because only then does the
 solve select a callee context and demand its result. An execution that makes
 the call enters with a store that this state describes, so the state is not
-#ctor("Bot") in the cases the proof needs. #isathm("live_unknowns_cover")
+#ctor("Bot") in the cases the proof needs.
+#isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")
 derives the forward closure from well-formedness and termination alone, so
 coverage is not a premise of the final theorem.
 
 === The solver as a parameter <sec:cert-param>
 
-The solver enters the pipeline in exactly one place. The pipeline locale
-#isalocale("dg_analysis") takes the solver as a parameter, together with its
-domain predicate and its executable form, and states three contracts about
-it; no other part of the development assumes anything about the solver. First, a solve whose recursion is defined
-on the query returns a post-solution on its stabilized set. The vendored
-theorem #isathm("partial_post_solution") provides this. Second, such a solve returns a finite set of unknowns
+The pipeline locale #isalocale("dg_analysis") takes the solver as a
+parameter, together with its domain predicate, the arguments on which its
+recursion terminates (@sec:termination), and its executable form. It states
+three contracts about them. First, a solve whose recursion is defined on the
+query returns a post-solution on its stabilized set; the vendored theorem
+#isathm("TD_side_upd_rule.partial_post_solution", thy: "TD_side_upd_rule") provides this.
+Second, such a solve returns a finite set of unknowns
 (#isathm("finite_stabl_solve"), proved once from the solver's stable-set
 invariant). Finiteness lets @ch:results combine the results of the finitely
-many contexts solved at a node into one verdict. Third, a run of the executable solver that returns a result lies
-in that domain (#isathm("solve_dom_of_solve_c"), @sec:termination). Every
-registration of an analysis with the pipeline discharges the three contracts
-by citing these facts at its update rule. Domain membership for the program's
-query is the termination premise of @sec:termination. The interface is small on purpose:
-each contract serves one purpose, soundness of the result, the join
-over contexts, and the executable check of the termination premise, and none
-refers to how the solver computes. Another solver, for instance one with
-local side effects (@sec:outlook-extending), attaches to Voblint by proving
-these three facts.
+many contexts solved at a node into one verdict. Third, a run of the
+executable solver that returns a result lies in that domain
+(#isathm("solve_dom_of_solve_c")). Every registration of an analysis with the
+pipeline discharges the three contracts by citing these facts at its update
+rule. Domain membership for the program's query is the termination premise of
+@sec:termination. None of the contracts refers to how the solver computes.
+Another solver, for instance one with local side effects
+(@sec:outlook-extending), attaches to Voblint by proving these three facts.
 
 The certificate is what the pipeline hands to the soundness theorem of
-@ch:equations. #isathm("routed_analysis_sound_of_live") establishes the locale
-#isalocale("routed_analysis_sound"), which joins that theorem with the check
-classifier, for a terminating solve, and @tab:cert-premises lists how each of its
-premises is met. The certificate itself supplies the inequalities. The solver
-certifies the buffered generator of @sec:eq-buffer, which the analyzer runs,
-while the soundness theorem speaks about the direct generator.
-#isathm("part_post_solution_routed_node_rhs_buffered") carries a certificate
-from the one to the other, and #isathm("pp_routed") applies it to the
-pipeline's equations.
+@ch:equations. For a terminating solve,
+#isathm(
+  "dg_analysis.routed_analysis_sound_live_unknowns",
+  thy: "DG_Live_Unknowns",
+  display: "routed_analysis_sound_live_unknowns",
+)
+establishes the locale #isalocale("routed_analysis_sound"), which joins that
+theorem with the _check classifier_, the function that turns the abstract state
+at a check into a verdict (@sec:verdicts). It takes as $V$ the live unknowns of
+@sec:cert-forward, a subset of the solved set. @tab:cert-premises lists how the
+premises that depend on the solve are met. The certificate supplies the
+inequalities: #isathm("post_bounded_of_part_post_solution") keeps its bounds
+(C3) and (C4) without the closure (C2), and the bounds restrict to any subset
+that contains the query. The solver certifies the buffered generator of
+@sec:eq-buffer, which the analyzer runs, while the soundness theorem speaks
+about the direct generator. #isathm("part_post_solution_routed_node_rhs_buffered")
+carries a certificate from the one to the other, and
+#isathm("dg_analysis.pp_routed", thy: "DG_Analysis", display: "pp_routed") applies it to the pipeline's
+equations.
 
 #figure(
   table(
     columns: (auto, auto),
-    align: (left, left),
+    align: (left, center),
     stroke: none,
     table.hline(),
     [*premise of the soundness theorem*], [*met by*],
     table.hline(stroke: 0.5pt),
-    [inequalities #ineq(1) to #ineq(5) on $V$], [(C3) and (C4), through #isathm("pp_routed")],
+    [inequalities #ineq(1) to #ineq(5) on $V$],
+    [(C3) and (C4) on the direct generator],
     [program entry, forward closure of $V$], [(C1), (C2) and liveness (@sec:cert-forward)],
     [routing adequacy and totality on $V$], [the context policy (@sec:eq-routing)],
     [finitely many contexts per node], [the finiteness contract],
@@ -261,50 +278,53 @@ pipeline's equations.
   ),
   placement: none,
   caption: [How a terminating solve meets the premises of
-    #isalocale("routed_analysis_sound"), the soundness theorem of
-    @sec:eq-discharge together with the check classifier. The first row uses the certificate's value bounds (C3) and (C4), the second its
-    query and dependency closure (C1) and (C2), and the last two come from the
-    context policy and the solver's finiteness.],
+    #isalocale("routed_analysis_sound") that depend on it, with $V$ the live
+    unknowns. The first row uses the certificate's value bounds (C3) and (C4),
+    the second its query and dependency closure (C1) and (C2), and the last two
+    come from the context policy and the solver's finiteness. The remaining
+    premises are discharged by the compiler, by assumptions of
+    #isalocale("dg_analysis"), or trivially.],
 ) <tab:cert-premises>
 
-The certificate abstracts from how the solver obtains such a valuation. To run
-it, two choices still have to be fixed: how side contributions update global
-unknowns (@sec:update-rules), and how abstract states are represented as
-executable values (@sec:readback). Neither changes the certificate.
+Running the solver needs two further choices, neither of which changes the
+certificate: how side contributions update global unknowns
+(@sec:update-rules), and how abstract states are represented as executable
+values (@sec:readback).
 
 == One proof for four update rules <sec:update-rules>
 
 The solver merges each side contribution into its global unknown, and the
 merge affects both precision and termination. In the analyzer each right-hand
-side's contributions to one target arrive already joined (@sec:eq-buffer).
-Voblint offers several merges
-and proves the solver sound for all of them at once (#isathm("update_rule_update_global_of")). A merge is an _update
-rule_.
-Stemmler et al. proposed such rules @stemmler25[§3–4], and Tilscher et al. formalize a
-generic update-rule interface and prove five of them sound against it
-@tilscher26. Every rule keeps one record per origin (@sec:td). Most rules store the origin's latest contribution
-there; per-origin warrowing stores the old record warrowed with the new
-contribution. The rules differ in what they record and in how they form the
-new value of the global. Voblint exposes four of them: join the
-contribution into the value, join the recorded contributions, warrow the value
-toward that join, or warrow the origin's own record and then join the records.
-The fifth vendored rule, which bounds narrowing by a counter, is not selectable.
-Voblint also proves sound a keyed combination that joins at entry seeds and
-warrows elsewhere; only examples use it.
-In #isaconst("run_voblint") the entry seeds are the only global unknowns that
-receive contributions (@sec:coop-limits). The rule therefore decides how a callee's entry state
-accumulates across call sites (@fig:update-rules).
+side's contributions to one target arrive already joined (@sec:eq-buffer). A
+merge is an _update rule_. Stemmler et al. proposed such rules
+@stemmler25[§3–4], and Tilscher et al. formalize a generic update-rule
+interface and prove five of them sound against it @tilscher26. Every rule
+keeps one record per origin (@sec:td). Voblint exposes four of the five rules:
+join the contribution into the value, join the recorded contributions, warrow
+the value toward that join, or warrow the origin's own record and then join the
+records. The first three record the origin's latest contribution; per-origin
+warrowing records the old record warrowed with the new contribution. The fifth
+vendored rule, which bounds narrowing by a counter, is not selectable. Voblint
+also proves sound a keyed combination that joins at entry seeds and warrows
+elsewhere; only examples use it. Each selectable rule meets the vendored
+interface (#isathm("update_rule_update_global_of")), so the solver is sound
+for all of them at once. In #isaconst("run_voblint") the entry seeds are the
+only global unknowns that receive contributions (@sec:coop-limits). The rule
+therefore decides how a callee's entry state accumulates across call sites
+(@fig:update-rules).
 
 Per-origin warrowing helps when several origins feed one global, as Seidl et
-al. show on a global that receives one constant per location @seidl26[§1]. A recursive call that feeds a growing value back into its own
-seed is a single origin, where the rule gains nothing and can lose precision
-(@sec:eval-rq4).
+al. show on a global that receives one constant per location @seidl26[§1]. A
+recursive call that feeds its own seed is a single origin. There the rule gains
+nothing and can lose precision, as on the shrinking recursion of
+@fig:rules-programs (@sec:eval-rq4).
 
 The choice of rule also affects termination. The two joining rules never widen
 a seed, so a recursion that enters with a growing argument can keep the solve
-running (@sec:termination), while both warrowing rules widen the entry and
-return. Either kind of rule can be more precise: @fig:rules-programs contains a
-program on which the joining rules are exact and warrowing is not.
+running (@sec:termination), while both warrowing rules widen the entry seed.
+No rule is more precise on every program. On the growing recursion of
+@fig:rules-programs only the warrowing rules answer, and each warrowing rule
+loses precision on a program that the joining rules solve exactly.
 
 #let _rule-steps = update-rule-steps()
 
@@ -375,7 +395,9 @@ an executable representation, which @sec:readback supplies.
 
 == Executable abstract states <sec:readback>
 
-The analyses of @ch:domains are specified over abstract states $"Var" -> A$.
+The pointwise analyses of @ch:domains are specified over abstract states
+$"Var" -> A$. The relational order analysis keeps its own state type, a set of
+variable pairs (#isatype("relc")), and this section does not concern it.
 For semantics and proofs this is the right representation: lookup is function
 application, and the lattice operations are pointwise. It is not a
 representation the solver can compute with. After every evaluation the solver
@@ -384,74 +406,78 @@ such functions means checking $forall x. f(x) = g(x)$ over infinitely many
 variable names. The solver also has to compute joins, widenings, narrowings,
 lookups and updates. Nipkow and Klein meet the same problem in the abstract
 interpreter of Concrete Semantics and solve it by a data refinement
-@nipkow14[§13.6]: a state is stored as a default value plus a finite list of
-overrides, so two states can differ only at the default and the listed names,
-and are compared on those. The carrier works like a default dictionary, a
-finite dictionary that answers every missing key with a default, and it
-represents a total function exactly. The point of the carrier is not a new
-abstraction: it makes the existing one computable.
+@nipkow14[§13.6]: a state is stored as a finite list of variables with their
+values, and every unlisted name reads as #ltop, so two states can differ only
+at the listed names and are compared on those. We call such an executable
+representation of abstract states an _executable state carrier_, in this
+chapter _carrier_ for short; it is distinct from the carrier of a domain, the
+type of its abstract values (@ch:background). It works like a default dictionary, a finite dictionary that
+answers every missing key with a default, and it represents a total function
+exactly. It makes the existing abstraction computable and adds no new one.
 
-Nipkow and Klein's interpreter stores one default, #ltop. Their language IMP has
-one kind of variable and starts in an arbitrary state, so every unlisted
-variable is unconstrained, and unreachability is kept outside the state as
-`None`. VIMP separates globals from locals and initializes them as C does:
-globals start at zero and the locals of `main` are arbitrary (@sec:vimp-vs-c,
-#c11("6.7.9p10")). Voblint's representation therefore keeps one default for
-locals and one for globals, next to a list of overrides at _locations_, which
-tag a name as local or global (#isatype("resolved_st"), #isatype("location")).
-The initial state is $(ltop, 0^sharp, [])$
-(#isaconst("initial_resolved_st_q"); for Sign, #isaconst("cinit_sign_st")):
-every local is #ltop and every global the abstraction of zero, without listing
-the declared globals. The solver starts every unknown at $(lbot, lbot, [])$
-(#isaconst("bot_resolved_st_q")). The mixed-flow extension of @sec:mixed-flow also stores
-states whose locals are all #lbot: it publishes the global variables of a state
-to a shared unknown, and with #lbot locals the publications from several call
-sites join without mixing in local values.
+Voblint's carrier keeps two defaults, one for locals and one for globals, next
+to a list of overrides at _locations_, which tag a name as local or global
+(#isatype("resolved_st"), #isatype("location")). We write a carrier state as a
+triple of the local default, the global default and the override list. A map
+over a fixed #ltop cannot express two states the analysis needs. VIMP
+initializes variables as C does: globals start at zero and the locals of
+`main` are arbitrary (@sec:vimp-vs-c, #c11("6.7.9p10")). The initial state is
+$(ltop, 0^sharp, [])$ (#isaconst("initial_resolved_st_q"); for Sign,
+#isaconst("cinit_sign_st")), where $0^sharp$ is the domain's abstract value of
+the constant $0$: every local is #ltop and every global $0^sharp$, without
+listing the declared globals. The solver's lattice interface also asks for a
+least element, here $(lbot, lbot, [])$ (#isaconst("bot_resolved_st_q")), and
+the mixed-flow extension of @sec:mixed-flow stores states whose locals are all
+#lbot. In
+#isaconst("run_voblint") the solver's values are lifted states, which start at
+#ctor("Bot") below every carrier state.
 
-Different lists can describe the same state: the order of the overrides does
-not matter, and an override equal to its default changes nothing. A _quotient
-type_ (@sec:isabelle) makes these descriptions one value. Its elements are the
-classes of representations that answer every lookup alike:
+Different lists can describe the same state: overrides at distinct locations
+may appear in any order, and an override equal to its default changes nothing.
+A _quotient type_ (@sec:isabelle) makes these descriptions one value. Its
+elements are the classes of representations that answer every lookup alike:
 
 #thy("resolved_st_q")
 
-Two elements are therefore equal exactly when they describe the same state, and
-the equality is decided by comparing the two defaults and the finitely many
-listed locations (#isathm("resolved_st_q_eq_iff")). An operation is defined on the finite representation and
-lifted to the quotient once it is shown to give equal results on equal
-descriptions.
+Two elements are therefore equal exactly when every lookup agrees
+(#isathm("resolved_st_q_eq_iff")). A finite test decides this.
+#isathm("le_resolved_st_code_raw_iff") shows that comparing the two defaults and
+the finitely many listed locations decides the order, and the executable
+equality (#isaconst("equal_resolved_st_q")) tests the order in both
+directions. An operation is defined on the finite representation and lifted to
+the quotient once it is shown to give equal results on equal descriptions.
 
 Such an element is used like a map with `get` and `set`. `get`
 (#isaconst("lookup_resolved_st_q")) returns the override of a location, or the
 default for its tag if there is none; `set` (#isaconst("update_resolved_st_q"))
 records an override. Readback $rho$ (#isaconst("fun_of_resolved_st_q_for")) is
 `get` on every variable: it turns a carrier state into the total function on
-variable names that the specification uses, looking each name up at the
-location the program's classifier gives it.
+variable names that the specification uses. It looks each name $x$ up at its
+location $ell(x)$, the local or global location that the program's
+global-variable classifier (@sec:pstep) assigns to $x$.
 
-A carrier state means what its readback means. @sec:nonrel-state concretizes
-a function state $sigma$ to the stores whose every variable lies in the
-concretization of its value, $sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x)))$
-(#isaconst("gamma_state")). The carrier's concretization is that set after
-readback:
-$ gamma_(S) (d) = sem(rho(d)) = setcomp(s, forall x. s(x) in conc("get"(d, ell(x)))), $
-where $ell(x)$ is the location the classifier gives $x$. The carrier therefore
-adds no new notion of meaning. Downstream semantic arguments use $gamma_(S)$; readback remains the
-refinement device that establishes its laws below. The solver never computes
-$gamma_(S)$: concretization is needed to prove the carrier sound, and the solver
-uses only the executable lattice operations.
+A carrier state means what its readback means. @sec:nonrel-state concretizes a
+function state $f$ to the stores whose every variable lies in the
+concretization of its value, $sem(f) = setcomp(s, forall x. s(x) in conc(f(x)))$
+(#isaconst("gamma_state")). We write $gamma_(S)$ for that set after readback:
+$ gamma_(S) (d) = sem(rho(d)) = setcomp(s, forall x. s(x) in conc("get"(d, ell(x)))). $
+The downstream contracts do not use a separate concretization of the carrier:
+they are stated through readback, as the commutation laws below show. The
+solver never computes
+$gamma_(S)$; it uses only the executable lattice operations.
 
 The solver needs a lattice of states: bottom to start every unknown, order and
 equality to decide whether an unknown changed, join to combine contributions,
 and widening and narrowing at loop heads and in the update rules. It is generic
 in its value type and asks exactly for these operations
 (#isalocale("bounded_semilattice_sup_bot"), #isalocale("warrowing"), and
-executable equality for code generation). States of the specification get them
-pointwise from the value domain, as $"Var" -> A$ from $A$, and the carrier
-instantiates the same classes on #isatype("resolved_st_q") whenever the values
-do. @fig:carrier-lattice shows the finite lattice on which the solver then
-computes. The solver therefore runs on it unchanged. With more
-variables the lattice is the same product, one factor per name.
+executable equality for code generation). Function states get order, join and
+bottom pointwise from HOL, as $"Var" -> A$ from $A$, but no widening or
+narrowing. The carrier instantiates all of these classes on
+#isatype("resolved_st_q") whenever the values do, so the solver runs on it
+unchanged. The carrier lattice is infinite, since the overrides range over
+infinitely many locations. @fig:carrier-lattice shows its override-free
+elements for one local and one global.
 
 #figure(
   {
@@ -502,11 +528,15 @@ variables the lattice is the same product, one factor per name.
           } else {
             let conds = cons.map(((v, a)) => $s(#v) mod 2 = #rem.at(a)$)
             if conds.len() == 1 { ${s | #conds.first()}$ } else {
-              [${s | #conds.at(0),$ \ $#conds.at(1)}$]
+              // Conditions stacked on the & so both start in the same column.
+              $
+                {s | & #conds.at(0) and \
+                     & #conds.at(1)}
+              $
             }
           }
           align(center, text(size: 6.5pt)[(#spell(st.at(0)), #spell(st.at(1)), []) \ #text(
-              size: 5.5pt,
+              size: 6pt,
               fill: vb.muted,
               den,
             )])
@@ -530,23 +560,23 @@ variables the lattice is the same product, one factor per name.
   },
   kind: image,
   placement: auto,
-  caption: [The carrier lattice for one local $x$ and one global $g$ over
-    Parity. A node shows its representation (default for locals, default for
-    globals, overrides) and, below it, its concretization $gamma_(S) (d)$. Edges
-    are the carrier order. Purple is the solver's start $(lbot, lbot, [])$;
-    blue is the initial state $(ltop, "even", [])$ (#isaconst("cinit_parity_st")),
-    which the quotient also identifies with $(ltop, ltop, [g |-> "even"])$.],
+  caption: [The override-free carrier states over Parity, part of an infinite
+    lattice. A node shows its representation (local default, global default,
+    overrides) and, below it, its concretization $gamma_(S) (d)$ restricted to
+    one local $x$ and one global $g$. Edges are the carrier order. Purple is the
+    least element $(lbot, lbot, [])$; blue is the initial state
+    $(ltop, "even", [])$ (#isaconst("cinit_parity_st")), which the quotient
+    also identifies with $(ltop, "even", [g |-> "even"])$.],
 ) <fig:carrier-lattice>
 
 
-The figure shows two different ways in which states can be alike. The
-quotient identifies representations that answer every lookup alike, such as
-$(ltop, "even", [])$ and $(ltop, ltop, [g |-> "even"])$. Distinct carrier
+The figure shows two ways in which states can be alike. The quotient
+identifies representations that answer every lookup alike, such as
+$(ltop, "even", [])$ and $(ltop, "even", [g |-> "even"])$. Distinct carrier
 elements can still denote the same stores: every node with a #lbot component
-has $gamma_(S) (d) = emptyset$. The quotient removes redundant representations of the same abstract function;
-it does not identify abstract states with equal concrete meaning, so these
-nodes stay distinct, and a higher node denotes at least the stores of a lower
-one.
+has $gamma_(S) (d) = emptyset$. These nodes read back to distinct function
+states, so the quotient keeps them apart, and a higher node denotes at least
+the stores of a lower one.
 
 Each operation is computed with the value domain's operation on the two
 defaults and on each listed location, so under `get` it agrees with the
@@ -555,31 +585,35 @@ pointwise operation on functions: for the join,
 $"get"(d union.sq e, l) = "get"(d, l) union.sq "get"(e, l)$, and
 #isathm("lookup_bot_resolved_st_q"), #isathm("le_resolved_st_q_iff"),
 #isathm("lookup_widen_resolved_st_q") and #isathm("lookup_narrow_resolved_st_q")
-state the same for bottom, order, widening and narrowing. Point update is not a lattice
-operation; the transfer functions use it for assignments.
+state the same for bottom, order, widening and narrowing. Point update is not a
+lattice operation; the transfer functions use it for assignments.
 
-Readback proves the executable operations correct; it does not state their
-meaning downstream. Each carrier operation commutes with readback,
+The transfer functions must commute with readback,
 $ rho("op"_"exec" (d)) = "op"_"abs" (rho(d)), $
-and since $gamma_(S) (d) = sem(rho(d))$, the existing soundness facts of
-@ch:analysis-interface for the abstract operation transport to the executable
-one. The carrier is a change of
-representation, not a second abstract domain. The locale #isalocale("dg_analysis_exec")
-states the commutation as its readback contract, for the transfer on nonempty
-states and for procedure entry. For a certified operation bundle both hold
-without a per-domain proof: the abstract and executable steps are derived from
+and since $gamma_(S) (d) = sem(rho(d))$, the soundness facts of
+@ch:analysis-interface for the abstract operation then transport to the
+executable one. The locale #isalocale("dg_analysis_exec") states this
+commutation as its readback contract, for the transfer on nonempty states and
+for procedure entry. For a certified operation bundle both hold without a
+per-domain proof, because the abstract and executable steps are derived from
 the same operations (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
+#isathm("sound_nonrelational_ops.enter_st_for_commute"),
 @sec:instances-supply).
 
 Emptiness, on which `DEAD` rests, is a condition over all names (@ch:domains).
 Unlike the lattice operations, it is not decided by the listed overrides
 alone: an unlisted variable can make the state empty through its default.
-The carrier decides it with a finite test that inspects the local default, the
-overrides at the locations the classifier selects, and the declared globals,
-enumerated explicitly because a fresh global need not exist.
-#isathm("resolved_st_q_is_bot_for_iff") proves the test exact,
-$ "is_bot"(d) <==> gamma_(S) (d) = emptyset, $
-provided the supplied list enumerates exactly the classifier's globals.
+The carrier decides it with a finite test. The test inspects the local
+default, the overrides that readback reads, and each declared global. The
+globals are listed explicitly because a program has finitely many of them, so
+the global default may describe no variable at all.
+#isathm("resolved_st_q_is_bot_for_iff") proves that the test holds exactly
+when the readback $rho(d)$ satisfies #isaconst("is_empty_state"), provided the
+supplied list enumerates exactly the globals of the global-variable
+classifier, and #isathm("is_empty_state_iff_gamma_state_empty") shows that
+#isaconst("is_empty_state") holds exactly for the function states that denote
+no store. Composed, the two make the test exact:
+$ "is_bot"(d) <==> gamma_(S) (d) = emptyset. $
 
 The carrier uses the equivalence in both directions. The specification
 collapses exactly the empty states to #lbot, and because the test is exact the
@@ -587,13 +621,9 @@ executable collapse commutes with readback. A state the test keeps is nonempty
 (#isaconst("live_resolved_st_q")), which is where the numeric transfer
 commutes with readback.
 
-The relational order analysis keeps its own state type, a set of variable pairs
-(#isatype("relc")), so this section does not apply to it.
-
 The solver can now compute every operation its interface requires on finite
-carrier values, with the update rule the analyzer selects. This makes the
-solve executable, not terminating: whether the recursive solve returns is the
-remaining premise.
+carrier values, with the update rule the analyzer selects. The solve is thus
+executable; whether the recursive solve returns is the remaining premise.
 
 == Why termination stays a premise <sec:termination>
 
@@ -611,28 +641,39 @@ form of the solver, which returns only when the recursion finishes, and
 #isathm("solve_dom_of_solve_c") turns a finished run into domain membership.
 Evaluating the solve for one program therefore discharges the premise.
 
-We expect termination to fail for some configurations. Under the unit context
-the solved unknowns are finite (#isathm("compiled_unit_vars_finite")), and
-bounded call strings over a compiled program form a finite space
-(#isathm("compiled_call_strings_finite")).
-Under entry-state contexts with Interval, Congruence or the Int product, a
-recursion that changes its argument at every level demands a fresh context at
-every level, and widening bounds the values of existing unknowns but not their
-number (#fixture(
+Under the unit context the solved unknowns are finite
+(#isathm("compiled_unit_vars_finite")), and bounded call strings over a
+compiled program form a finite space (#isathm("compiled_call_strings_finite")).
+Under entry-state contexts we expect termination to fail for some programs.
+With Interval, a recursion that changes its argument at every level demands a
+fresh context at every level, and widening bounds the values of existing
+unknowns but not their number (#fixture(
   "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
   label: "01-unbounded_context_chain_diverges",
-)). Finitely many unknowns do not suffice either: without contexts, the interval
-recursion `f(x) { f(x + 1) }` entered with $x = 0$ contributes
+)). Finitely many unknowns do not suffice either: without contexts, the
+interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ contributes
 $[0, 0], [0, 1], [0, 2], dots$ to the one seed of `f`, and the joining update
-rules never widen this chain (@fig:rules-programs). Both regression programs
-exceed their time limits; the arguments above, not the timeouts, are why we
-expect divergence, and neither is machine-checked (@sec:trust-boundary).
+rules never widen this chain (#fixture(
+  "24-site-figures/01-recursion_grows_join_diverges.vimp",
+  label: "01-recursion_grows_join_diverges",
+), @fig:rules-programs). Both regression programs exceed their time limits;
+the arguments above, not the timeouts, are why we expect divergence, and
+neither is machine-checked (@sec:trust-boundary).
 
 The vendored termination theorems cover top-down solvers without side effects
-over a finite type of unknowns @tilscher26. Voblint's unknowns pair a graph
-node, whose type is infinite, with a context, so they apply to no
-configuration. Seidl and Vogler's paper result needs only finitely many
-encountered unknowns (@sec:side-effects); mechanizing such a result for the
-vendored solver is future work. The end-to-end theorem is therefore a
+over a finite type of unknowns @tilscher26. They further require monotone
+right-hand sides and the ascending chain condition for plain TD, well-founded
+widening chains for TD with widening, and monotone right-hand sides with
+well-founded widening and narrowing chains for TD with warrowing. Voblint's
+unknowns pair a graph node, whose type is infinite, with a context, so these
+theorems apply to no configuration. Seidl and Vogler prove on paper that
+their side-effecting solver terminates on every system as long as only
+finitely many unknowns are encountered @seidl21[§9, Thm. 5], for widening and
+narrowing operators whose iterations always stabilize @seidl21[§3]. That solver
+joins a side effect into its target until one origin increases the target a
+second time, and from then on widens there @seidl21[§9]. The joining update
+rules never widen, so the result does not carry over to them, as the growing
+recursion above shows. Mechanizing such a result for the vendored solver is
+future work. The end-to-end theorem is therefore a
 partial-correctness result with a per-program premise, which @ch:results chains
 with equation soundness into the source-level theorem (@sec:headline).

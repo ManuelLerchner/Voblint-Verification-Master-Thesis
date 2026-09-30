@@ -81,7 +81,7 @@ argv = [
   "--graph-snapshot",
   "docs/readme-figures/infinite.vimp",
 ]
-why = "The contexts the explainer's infinite-system figure (fig:eq-infinite) fills: w in top, f in 0 to 3, h in 0 and 1, g in (0,0) and (1,0)."
+why = "The contexts the explainer's infinite-system figure (fig:solve-infinite) fills: w in top, f in 0 to 3, h in 0 and 1, g in (0,0) and (1,0)."
 
 [claims.pg-contexts-trace]
 argv = [
