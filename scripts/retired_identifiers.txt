@@ -3985,3 +3985,20 @@ gamma_lift_default_st_gamma_readback
 # --- Result publication named after what it does (2026-10-01). ---
 readback_result_value
 Exec_Result_Readback
+
+# --- The carrier stores one default dictionary per partition instead of one
+# location-keyed override list (2026-10-01). Restriction, combination and frame
+# entry move whole dictionaries, so the location filters are gone; bottom
+# detection reads the classifier per dictionary instead of through
+# canonical_location. ---
+support2_default_st_rep
+map_of_filter_fst
+location_is_local
+location_is_global
+canonical_location
+canonical_location_location_of
+canonical_location_Local
+canonical_location_Global
+default_st_rep_is_bot_defaultI
+default_st_rep_is_botE
+obtain_fresh_location

@@ -72,14 +72,6 @@ proof (rule ext)
 qed
 
 
-lemma map_of_filter_fst:
-  fixes P :: "location => bool"
-    and xs :: "(location \<times> 'a) list"
-    and k :: location
-  shows "map_of (filter (\<lambda>p. P (fst p)) xs) k =
-     (if P k then map_of xs k else None)"
-  by (induction xs) auto
-
 definition default_st_to_fun ::
   "(vname => bool) => ('a::bot) default_st => vname => 'a"
 where
@@ -110,14 +102,14 @@ text \<open>
   another: C initializes a declared global to zero and leaves a local
   unconstrained. Each domain's C-initial state is this construction at its own
   abstraction of zero and its whole-value element, so the equation for its
-  function is one lemma rather than one per domain. The triple is abstracted
-  directly rather than lifted, because a domain whose value type is itself a
-  typedef would otherwise descend through both quotients.
+  function is one lemma rather than one per domain. The two empty dictionaries
+  are abstracted directly rather than lifted, because a domain whose value type
+  is itself a typedef would otherwise descend through both quotients.
 \<close>
 
 definition initial_default_st :: "'a::bot => 'a => 'a default_st" where
   "initial_default_st local_value global_value =
-     \<llangle>local_value, global_value, []\<rrangle>"
+     \<llangle>(local_value, []), (global_value, [])\<rrangle>"
 
 lemma default_st_get_initial [simp]:
   "default_st_to_fun \<G> (initial_default_st local_value global_value) x =
@@ -290,25 +282,20 @@ qed
 
 subsection \<open>Ownership restriction and combination\<close>
 
-fun location_is_local :: "location => bool" where
-  "location_is_local (Local_Location x) = True"
-| "location_is_local (Global_Location x) = False"
-
-fun location_is_global :: "location => bool" where
-  "location_is_global (Local_Location x) = False"
-| "location_is_global (Global_Location x) = True"
+text \<open>
+  Each dictionary holds one partition, so the ownership operations below move
+  whole dictionaries: a restriction keeps one and empties the other to
+  \<open>bot\<close>, and the combination takes the caller's local dictionary and the
+  callee's global one.
+\<close>
 
 definition restrict_local_default_st_rep ::
   "('a::bot) default_st_rep => 'a default_st_rep" where
-  "restrict_local_default_st_rep s =
-     (case s of (dl, dg, ps) =>
-       (dl, bot, filter (\<lambda>p. location_is_local (fst p)) ps))"
+  "restrict_local_default_st_rep s = (fst s, (bot, []))"
 
 definition restrict_global_default_st_rep ::
   "('a::bot) default_st_rep => 'a default_st_rep" where
-  "restrict_global_default_st_rep s =
-     (case s of (dl, dg, ps) =>
-       (bot, dg, filter (\<lambda>p. location_is_global (fst p)) ps))"
+  "restrict_global_default_st_rep s = ((bot, []), snd s)"
 
 
 lemma default_st_rep_get_restrict_local:
@@ -316,18 +303,14 @@ lemma default_st_rep_get_restrict_local:
      (case loc of
         Local_Location x => default_st_rep_get s loc
       | Global_Location x => bot)"
-  by (cases s; cases loc)
-     (simp_all add: restrict_local_default_st_rep_def map_of_filter_fst
-       split: location.splits option.splits)
+  by (cases s; cases loc) (simp_all add: restrict_local_default_st_rep_def)
 
 lemma default_st_rep_get_restrict_global:
   "default_st_rep_get (restrict_global_default_st_rep s) loc =
      (case loc of
         Local_Location x => bot
       | Global_Location x => default_st_rep_get s loc)"
-  by (cases s; cases loc)
-     (simp_all add: restrict_global_default_st_rep_def map_of_filter_fst
-       split: location.splits option.splits)
+  by (cases s; cases loc) (simp_all add: restrict_global_default_st_rep_def)
 
 lemma eq_default_st_rep_restrict_local:
   assumes "eq_default_st_rep s t"
@@ -358,9 +341,9 @@ lift_definition restrict_global_default_st ::
 text \<open>
   \<^const>\<open>restrict_local_default_st\<close>/\<^const>\<open>restrict_global_default_st\<close>
   preserve the caller's semantic default over the (potentially infinite)
-  location space: the kept side carries over its input's own per-location
-  default verbatim (\<^term>\<open>dl\<close>/\<^term>\<open>dg\<close>, which need not be \<^term>\<open>bot\<close>), and
-  only the dropped side is forced to \<^term>\<open>bot\<close>. A scope-parametric
+  location space: the kept side carries over its input's own dictionary
+  verbatim, whose default need not be \<^term>\<open>bot\<close>, and only the dropped side
+  is replaced by the empty dictionary over \<^term>\<open>bot\<close>. A scope-parametric
   projection over a bounded materialized support would disagree with this
   pair outside its bound, so the pair is stated over the full location
   space and preserves the default by construction.
@@ -395,21 +378,14 @@ lemma default_st_to_fun_restrict_global [simp]:
 definition combine_default_st_rep ::
   "('a::bot) default_st_rep => 'a default_st_rep => 'a default_st_rep"
 where
-  "combine_default_st_rep sc se =
-     (case sc of (dlc, dgc, psc) =>
-      case se of (dle, dge, pse) =>
-        (dlc, dge,
-         filter (\<lambda>p. location_is_local (fst p)) psc @
-         filter (\<lambda>p. location_is_global (fst p)) pse))"
+  "combine_default_st_rep sc se = (fst sc, snd se)"
 
 lemma default_st_rep_get_combine [simp]:
   "default_st_rep_get (combine_default_st_rep sc se) loc =
    (case loc of
       Local_Location x => default_st_rep_get sc loc
     | Global_Location x => default_st_rep_get se loc)"
-  by (cases sc; cases se; cases loc)
-       (simp_all add: combine_default_st_rep_def map_add_def map_of_filter_fst
-         split: option.splits)
+  by (cases sc; cases se; cases loc) (simp_all add: combine_default_st_rep_def)
 
 lemma eq_default_st_rep_combine:
   assumes "eq_default_st_rep sc1 sc2"
@@ -471,18 +447,14 @@ subsection \<open>Frame entry\<close>
 definition enter_frame_D_default_st_rep ::
   "'a => ('a::bot) default_st_rep => 'a default_st_rep"
 where
-  "enter_frame_D_default_st_rep top_val s =
-     (case s of (dl, dg, ps) =>
-       (top_val, dg, filter (\<lambda>p. location_is_global (fst p)) ps))"
+  "enter_frame_D_default_st_rep top_val s = ((top_val, []), snd s)"
 
 lemma default_st_rep_get_enter_frame_D [simp]:
   "default_st_rep_get (enter_frame_D_default_st_rep top_val s) loc =
    (case loc of
       Local_Location x => top_val
     | Global_Location x => default_st_rep_get s loc)"
-  by (cases s; cases loc)
-       (simp_all add: enter_frame_D_default_st_rep_def map_of_filter_fst
-         split: option.splits)
+  by (cases s; cases loc) (simp_all add: enter_frame_D_default_st_rep_def)
 
 lemma eq_default_st_rep_enter_frame_D:
   assumes "eq_default_st_rep s t"

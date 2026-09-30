@@ -6,12 +6,13 @@ section \<open>Finite default-map representation\<close>
 
 text \<open>
   An abstract state has to be a finite thing before a solver can run on it. A
-  \<open>default_st_rep\<close> is that finite thing: two default values -- one for local names,
-  one for global ones -- and a list of explicitly stored location values.
-  Reading a location returns its stored value if it has one and the matching
-  default otherwise. Nothing forces a stored value to differ from its default.
+  \<open>default_dict\<close> is a finite dictionary that answers every name it does not
+  list with a default. A \<open>default_st_rep\<close> is two of them, one per partition:
+  a local dictionary and a global one. Reading a location consults the
+  dictionary of its partition. Nothing forces a stored value to differ from
+  its default.
 
-  Two such lists can describe the same reading, so the type is quotiented by
+  Two such pairs can describe the same reading, so the type is quotiented by
   agreement of all lookups. That identifies list order and redundant duplicate
   entries only where they do not affect the reading: \<^const>\<open>map_of\<close> answers
   with the first match, so reordering entries that disagree on a key is a
@@ -32,14 +33,14 @@ text \<open>
   needs a reason. Three, in fact, and each is load-bearing on its own.
 
   \<^item> \<^bold>\<open>C zero-initialization.\<close> Every domain's entry state gives globals a
-    non-\<open>top\<close> value and locals \<open>top\<close> --- \<open>(STop, SZero, [])\<close> for Sign, and the
-    parity, interval and product analyses match it. It over-approximates
-    \<open>cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}\<close>, which quantifies over
-    \<^emph>\<open>all\<close> names the classifier calls global, for an arbitrary classifier and
-    with no finiteness hypothesis. A fixed-\<open>top\<close> map can only express that by
-    materializing every global, which makes the entry state a function of the
-    program's declaration list and pushes that dependency into every soundness
-    statement that mentions it.
+    non-\<open>top\<close> value and locals \<open>top\<close> --- \<open>\<llangle>(STop, []), (SZero, [])\<rrangle>\<close> for
+    Sign, and the parity, interval and product analyses match it. It
+    over-approximates \<open>cinit_stores \<G> = {s. \<forall>x. \<G> x \<longrightarrow> s x = 0}\<close>, which
+    quantifies over \<^emph>\<open>all\<close> names the classifier calls global, for an arbitrary
+    classifier and with no finiteness hypothesis. A fixed-\<open>top\<close> map can only
+    express that by materializing every global, which makes the entry state a
+    function of the program's declaration list and pushes that dependency into
+    every soundness statement that mentions it.
 
   \<^item> \<^bold>\<open>The ownership split needs \<open>bot\<close> on the discarded side.\<close> Publishing a
     state's global half to a shared unknown sends locals to \<open>bot\<close>, and \<open>bot\<close> is
@@ -60,27 +61,112 @@ text \<open>
   three points above, not an accident of the first representation tried.
 \<close>
 
+subsection \<open>Default dictionaries\<close>
+
+type_synonym 'a default_dict = "'a \<times> (vname \<times> 'a) list"
+
+fun default_dict_get :: "'a default_dict => vname => 'a" where
+  "default_dict_get (d, ps) x = (case map_of ps x of Some a => a | None => d)"
+
+fun default_dict_set :: "'a default_dict => vname => 'a => 'a default_dict" where
+  "default_dict_set (d, ps) x a = (d, (x, a) # AList.delete x ps)"
+
+lemma map_of_resolved_delete:
+  "map_of (AList.delete k ps) k' =
+     (if k = k' then None else map_of ps k')"
+  by (simp add: AList.delete_conv')
+
+lemma map_of_resolved_none_iff:
+  "map_of ps k = None \<longleftrightarrow> k \<notin> set (map fst ps)"
+  by (induction ps) auto
+
+lemma default_dict_get_set [simp]:
+  "default_dict_get (default_dict_set m x a) y =
+     (if x = y then a else default_dict_get m y)"
+  by (cases m) (simp add: map_of_resolved_delete)
+
+text \<open>
+  A name escaping a finite list, drawn from any infinite supply. It is not
+  listed, so a dictionary answers it with its default. Consumers instantiate
+  the supply with all vnames, or with the ones a classifier leaves local.
+\<close>
+
+lemma obtain_fresh_vname:
+  assumes "infinite A"
+  obtains x where "x \<in> A" and "x \<notin> set xs"
+proof -
+  have "infinite (A - set xs)"
+    by (rule Diff_infinite_finite[OF _ assms]) simp
+  then obtain x where "x \<in> A - set xs"
+    using infinite_imp_nonempty by blast
+  then have "x \<in> A" "x \<notin> set xs" by simp_all
+  then show thesis by (rule that)
+qed
+
+text \<open>
+  The order on one dictionary compares the defaults and the finitely many
+  listed names. An unlisted name reads the default on both sides, so this
+  decides the pointwise order over all names.
+\<close>
+
+fun le_default_dict :: "('a::order) default_dict => 'a default_dict => bool" where
+  "le_default_dict (d, ps) (e, qs) \<longleftrightarrow>
+     d \<le> e \<and>
+     list_all (\<lambda>x. default_dict_get (d, ps) x \<le> default_dict_get (e, qs) x)
+       (map fst ps @ map fst qs)"
+
+lemma le_default_dict_iff:
+  "le_default_dict m n \<longleftrightarrow> (\<forall>x. default_dict_get m x \<le> default_dict_get n x)"
+proof -
+  obtain d ps where m: "m = (d, ps)" by (cases m)
+  obtain e qs where n: "n = (e, qs)" by (cases n)
+  show ?thesis
+  proof
+    assume le: "le_default_dict m n"
+    show "\<forall>x. default_dict_get m x \<le> default_dict_get n x"
+    proof
+      fix x
+      show "default_dict_get m x \<le> default_dict_get n x"
+      proof (cases "x \<in> set (map fst ps @ map fst qs)")
+        case True
+        with le show ?thesis unfolding m n
+          by (auto simp: list_all_iff simp del: default_dict_get.simps)
+      next
+        case False
+        then have "map_of ps x = None" "map_of qs x = None"
+          by (simp_all add: map_of_resolved_none_iff)
+        with le show ?thesis unfolding m n by simp
+      qed
+    qed
+  next
+    assume le: "\<forall>x. default_dict_get m x \<le> default_dict_get n x"
+    obtain y :: vname where "y \<in> UNIV" and fresh: "y \<notin> set (map fst ps @ map fst qs)"
+      by (rule obtain_fresh_vname[OF infinite_literal])
+    then have "map_of ps y = None" "map_of qs y = None"
+      by (simp_all add: map_of_resolved_none_iff)
+    with le[rule_format, of y] have "d \<le> e" unfolding m n by simp
+    with le show "le_default_dict m n" unfolding m n by (simp add: list_all_iff)
+  qed
+qed
+
 subsection \<open>Locations and raw lookup\<close>
+
 datatype location =
   Local_Location (location_vname: vname)
 | Global_Location (location_vname: vname)
 
-type_synonym 'a default_st_rep =
-  "'a \<times> 'a \<times> (location \<times> 'a) list"
+lemma all_location_iff:
+  "(\<forall>loc. P loc) \<longleftrightarrow> (\<forall>x. P (Local_Location x)) \<and> (\<forall>x. P (Global_Location x))"
+  by (metis location.exhaust)
 
-lemma map_of_resolved_delete:
-  "map_of (AList.delete loc ps) loc' =
-     (if loc = loc' then None else map_of ps loc')"
-  by (simp add: AList.delete_conv')
+text \<open>The local dictionary comes first, the global one second.\<close>
+
+type_synonym 'a default_st_rep = "'a default_dict \<times> 'a default_dict"
 
 fun default_st_rep_get ::
   "('a::bot) default_st_rep => location => 'a" where
-  "default_st_rep_get (dl, dg, ps) loc =
-     (case map_of ps loc of
-        Some a => a
-      | None => (case loc of
-          Local_Location x => dl
-        | Global_Location x => dg))"
+  "default_st_rep_get (l, g) (Local_Location x) = default_dict_get l x"
+| "default_st_rep_get (l, g) (Global_Location x) = default_dict_get g x"
 
 subsection \<open>Extensional equality\<close>
 definition eq_default_st_rep ::
@@ -111,87 +197,21 @@ lemma eq_default_st_repD:
   using assms unfolding eq_default_st_rep_def fun_eq_iff by blast
 
 subsection \<open>Executable pointwise order\<close>
-definition le_default_st_rep_code ::
+
+fun le_default_st_rep_code ::
   "('a::order_bot) default_st_rep => 'a default_st_rep => bool"
 where
-  "le_default_st_rep_code s t =
-     (case s of (dl, dg, ps) =>
-      case t of (el, eg, qs) =>
-        dl <= el \<and> dg <= eg \<and>
-        list_all
-          (\<lambda>loc. default_st_rep_get (dl, dg, ps) loc <=
-            default_st_rep_get (el, eg, qs) loc)
-          (map fst ps @ map fst qs))"
-
-lemma map_of_resolved_none_iff:
-  "map_of ps loc = None \<longleftrightarrow> loc \<notin> set (map fst ps)"
-  by (induction ps) auto
-
-text \<open>
-  A vname escaping a finite list of locations, drawn from any infinite supply.
-  Neither of its locations is overridden, which is what makes it reveal both
-  defaults at once.  Consumers instantiate the supply with all vnames, or with
-  the ones a classifier leaves local; keeping it abstract here is what lets the
-  lemma sit below the classification boundary.
-\<close>
-
-lemma obtain_fresh_location:
-  assumes "infinite A"
-  obtains x where "x \<in> A"
-    and "Local_Location x \<notin> set locs"
-    and "Global_Location x \<notin> set locs"
-proof -
-  have "infinite (A - location_vname ` set locs)"
-    by (rule Diff_infinite_finite[OF _ assms]) simp
-  then obtain x where "x \<in> A - location_vname ` set locs"
-    using infinite_imp_nonempty by blast
-  then have "x \<in> A" "Local_Location x \<notin> set locs"
-      "Global_Location x \<notin> set locs"
-    by force+
-  then show thesis by (rule that)
-qed
+  "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
+     le_default_dict l1 l2 \<and> le_default_dict g1 g2"
 
 lemma le_default_st_rep_code_raw_iff:
-  "le_default_st_rep_code (dl, dg, ps) (el, eg, qs) \<longleftrightarrow>
-    (\<forall>loc. default_st_rep_get (dl, dg, ps) loc <=
-      default_st_rep_get (el, eg, qs) loc)"
-proof
-  assume le: "le_default_st_rep_code (dl, dg, ps) (el, eg, qs)"
-  show "\<forall>loc. default_st_rep_get (dl, dg, ps) loc \<le>
-      default_st_rep_get (el, eg, qs) loc"
-  proof
-    fix loc
-    show "default_st_rep_get (dl, dg, ps) loc \<le>
-        default_st_rep_get (el, eg, qs) loc"
-    proof (cases "loc \<in> set (map fst ps @ map fst qs)")
-      case True
-      with le show ?thesis
-        unfolding le_default_st_rep_code_def by (simp add: list_all_iff)
-    next
-      case False
-      with le show ?thesis
-        unfolding le_default_st_rep_code_def
-        by (simp add: location.case_eq_if
-          map_of_resolved_none_iff[THEN iffD2])
-    qed
-  qed
-next
-  assume le: "\<forall>loc. default_st_rep_get (dl, dg, ps) loc \<le>
-      default_st_rep_get (el, eg, qs) loc"
-  obtain x :: vname where fresh: "x \<in> UNIV"
-      "Local_Location x \<notin> set (map fst ps @ map fst qs)"
-      "Global_Location x \<notin> set (map fst ps @ map fst qs)"
-    by (rule obtain_fresh_location[OF infinite_literal])
-  have "dl \<le> el" "dg \<le> eg"
-    using le[rule_format, of "Local_Location x"]
-      le[rule_format, of "Global_Location x"] fresh
-    by (simp_all add: map_of_resolved_none_iff[THEN iffD2])
-  then show "le_default_st_rep_code (dl, dg, ps) (el, eg, qs)"
-    unfolding le_default_st_rep_code_def using le by (simp add: list_all_iff)
-qed
+  "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
+    (\<forall>loc. default_st_rep_get (l1, g1) loc \<le>
+      default_st_rep_get (l2, g2) loc)"
+  by (simp add: all_location_iff le_default_dict_iff)
 
 text \<open>
-  The same characterization without the tuple pattern, so that quotient-level
+  The same characterization without the pair pattern, so that quotient-level
   statements can be discharged by \<open>transfer\<close> alone instead of re-opening both
   representatives.
 \<close>
@@ -199,8 +219,7 @@ text \<open>
 lemma le_default_st_rep_code_iff:
   "le_default_st_rep_code s t \<longleftrightarrow>
     (\<forall>loc. default_st_rep_get s loc \<le> default_st_rep_get t loc)"
-  by (cases s rule: prod_cases3, cases t rule: prod_cases3)
-    (simp add: le_default_st_rep_code_raw_iff)
+  by (cases s; cases t) (simp add: all_location_iff le_default_dict_iff)
 
 
 subsection \<open>The extensional quotient, lookup and point update\<close>
@@ -216,13 +235,13 @@ lift_definition default_st_get ::
 
 fun default_st_rep_set ::
   "('a::bot) default_st_rep => location => 'a => 'a default_st_rep" where
-  "default_st_rep_set (dl, dg, ps) loc a =
-     (dl, dg, (loc, a) # AList.delete loc ps)"
+  "default_st_rep_set (l, g) (Local_Location x) a = (default_dict_set l x a, g)"
+| "default_st_rep_set (l, g) (Global_Location x) a = (l, default_dict_set g x a)"
 
 lemma default_st_rep_get_set [simp]:
   "default_st_rep_get (default_st_rep_set s loc a) loc' =
      (if loc = loc' then a else default_st_rep_get s loc')"
-  by (cases s) (simp add: map_of_resolved_delete)
+  by (cases s; cases loc; cases loc') simp_all
 
 lemma eq_default_st_rep_set:
   assumes "eq_default_st_rep s t"
@@ -242,21 +261,21 @@ text \<open>
   never changes a term.
   Both forms bind tighter than application, so \<open>f s\<langle>l\<rangle>\<close> reads
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
-  The state with local default \<open>dl\<close>, global default \<open>dg\<close> and overrides \<open>ps\<close>
-  is written \<open>\<llangle>dl, dg, ps\<rrangle>\<close>.
+  The state with local dictionary \<open>(dl, ls)\<close> and global dictionary
+  \<open>(dg, gs)\<close> is written \<open>\<llangle>(dl, ls), (dg, gs)\<rrangle>\<close>.
   Theories past \<open>default_st_to_fun\<close> open \<open>default_st_syntax\<close>,
   which adds the notation for the function a state represents to this bundle.
 \<close>
 
 abbreviation default_st_mk ::
-  "('a::bot) => 'a => (location \<times> 'a) list => 'a default_st" where
-  "default_st_mk dl dg ps \<equiv> Abs_default_st (dl, dg, ps)"
+  "('a::bot) default_dict => 'a default_dict => 'a default_st" where
+  "default_st_mk l g \<equiv> Abs_default_st (l, g)"
 
 bundle default_st_carrier_syntax
 begin
 notation default_st_get ("_\<langle>_\<rangle>" [1000, 0] 1000)
 notation default_st_set ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
-notation default_st_mk ("\<llangle>_,/ _,/ _\<rrangle>")
+notation default_st_mk ("\<llangle>_,/ _\<rrangle>")
 end
 
 unbundle default_st_carrier_syntax
@@ -266,13 +285,11 @@ lemma default_st_get_Abs [simp]:
   by transfer simp
 
 lemma default_st_get_mk:
-  "\<llangle>dl, dg, ps\<rrangle>\<langle>loc\<rangle> =
-     (case map_of ps loc of
-        Some a => a
-      | None => (case loc of
-          Local_Location x => dl
-        | Global_Location x => dg))"
-  by simp
+  "\<llangle>l, g\<rrangle>\<langle>loc\<rangle> =
+     (case loc of
+        Local_Location x => default_dict_get l x
+      | Global_Location x => default_dict_get g x)"
+  by (cases loc) simp_all
 
 lemma Abs_default_st_rep_default_st [simp]:
   "Abs_default_st (rep_default_st s) = s"
@@ -317,7 +334,7 @@ begin
 definition bot_default_st ::
   "('a::bot) default_st"
 where
-  "bot_default_st = \<llangle>bot, bot, []\<rrangle>"
+  "bot_default_st = \<llangle>(bot, []), (bot, [])\<rrangle>"
 instance ..
 end
 
@@ -327,7 +344,7 @@ lift_definition less_eq_default_st ::
   "('a::order_bot) default_st =>
    'a default_st => bool"
   is le_default_st_rep_code
-  by (auto simp: le_default_st_rep_code_raw_iff eq_default_st_rep_def)
+  by (auto simp: le_default_st_rep_code_iff eq_default_st_rep_def)
 
 definition less_default_st ::
   "('a::order_bot) default_st =>
@@ -367,8 +384,7 @@ begin
 
 lemma default_st_get_bot [simp]:
   "(\<bottom> :: ('a::bot) default_st)\<langle>loc\<rangle> = \<bottom>"
-  unfolding bot_default_st_def
-  by transfer (simp split: location.splits)
+  unfolding bot_default_st_def by (cases loc) simp_all
 
 end
 

@@ -14,15 +14,14 @@ text \<open>
   the infinite one does.
 
   The finite test has three witness sources: the local default, which covers
-  every name no entry mentions; an explicitly stored entry that is bottom at a
-  location the classifier would itself produce for that name; and a scan of the
+  every name no entry mentions; an explicitly stored entry that is bottom in
+  the dictionary the classifier selects for its name; and a scan of the
   program's declared globals, which covers the side where no fresh-name
-  argument is available. The middle one needs the canonicality filter, since an
-  entry stored under the tag the classifier does not select for its name says
-  nothing about the function the state represents. Above that sits
-  the lifted view, where a whole unreachable state collapses to \<^const>\<open>Bot\<close>
-  and an update that writes a bottom value collapses to it incrementally,
-  without re-testing the rest of the state.
+  argument is available. The middle one needs the classifier, since an entry
+  stored in the other dictionary says nothing about the function the state
+  represents. Above that sits the lifted view, where a whole unreachable state
+  collapses to \<^const>\<open>Bot\<close> and an update that writes a bottom value collapses
+  to it incrementally, without re-testing the rest of the state.
 \<close>
 
 subsection \<open>Raw witness test\<close>
@@ -31,17 +30,18 @@ text \<open>
   Bottom detection is the one carrier operation that consults \<open>\<G>\<close>, and the
   reason is the mismatch between two readings of the same state. The quotient
   \<^typ>\<open>'a default_st\<close> identifies two states exactly when their lookups agree
-  at \<^emph>\<open>every\<close> location, whereas \<^const>\<open>default_st_rep_to_fun\<close> reads only
-  the one location \<open>\<G>\<close> selects for each name. An entry stored under the other
-  tagging of a name is therefore visible to equality and invisible to the
+  at \<^emph>\<open>every\<close> location, whereas \<^const>\<open>default_st_rep_to_fun\<close> reads each
+  name in the one dictionary \<open>\<G>\<close> selects for it. An entry for a name in the
+  other dictionary is therefore visible to equality and invisible to the
   concretization, and a test that must agree with \<^const>\<open>is_empty_state\<close> on the
-  represented function has to skip it. \<open>canonical_location\<close> names that filter. Every other
-  operation on the carrier -- lookup, update, order, join, widening, narrowing
-  -- treats all locations alike and needs no classifier.
+  represented function has to skip it. Every other operation on the carrier --
+  lookup, update, order, join, widening, narrowing -- treats all locations
+  alike and needs no classifier.
 
-  The test below is sufficient but not yet exact, and takes two disjuncts: the
-  local default already bottom, which covers every name no entry mentions; or
-  an entry that is bottom at a canonical location. The global default is
+  The test below is sufficient but not yet exact, and takes three disjuncts:
+  the local default already bottom, which covers every name no entry mentions;
+  or a local entry, for a name \<open>\<G>\<close> leaves local, that is bottom; or a global
+  entry, for a name \<open>\<G>\<close> calls global, that is bottom. The global default is
   deliberately not checked. A real program's classifier calls only finitely
   many names global, so no argument independent of the entry list can produce a
   fresh global escaping it, the way a fresh local always exists. Only the entry
@@ -49,54 +49,16 @@ text \<open>
   closes that gap by enumerating the declared globals outright.
 \<close>
 
-definition canonical_location ::
-  "(vname => bool) => location => bool" where
-  "canonical_location \<G> loc \<longleftrightarrow> location_of \<G> (location_vname loc) = loc"
-
-lemma canonical_location_location_of [simp]:
-  "canonical_location \<G> (location_of \<G> x)"
-  by (simp add: canonical_location_def location_of_def)
-
-lemma canonical_location_Local [simp]:
-  "canonical_location \<G> (Local_Location x) \<longleftrightarrow> \<not> \<G> x"
-  by (auto simp: canonical_location_def location_of_def)
-
-lemma canonical_location_Global [simp]:
-  "canonical_location \<G> (Global_Location x) \<longleftrightarrow> \<G> x"
-  by (auto simp: canonical_location_def location_of_def)
-
-definition default_st_rep_is_bot ::
+fun default_st_rep_is_bot ::
   "(vname => bool) => ('a::executable_domain) default_st_rep => bool" where
-  "default_st_rep_is_bot \<G> s =
-     (case s of (dl, dg, ps) =>
-       is_empty dl \<or>
-       (\<exists>loc \<in> set (map fst ps). is_empty (default_st_rep_get s loc)
-          \<and> canonical_location \<G> loc))"
-
-text \<open>
-  The two ways the test can hold, as rules rather than as a disjunction the
-  reader has to unfold. The introduction rule for the default side is cheap
-  enough to tag; the elimination rule is not tagged, because its second case
-  hands back a location and letting \<open>auto\<close> search for one everywhere a
-  \<^const>\<open>default_st_rep_is_bot\<close> hypothesis appears is a poor trade.
-\<close>
-
-lemma default_st_rep_is_bot_defaultI [intro]:
-  assumes "is_empty (fst s)"
-  shows "default_st_rep_is_bot \<G> s"
-  using assms by (cases s) (simp add: default_st_rep_is_bot_def)
-
-lemma default_st_rep_is_botE:
-  assumes "default_st_rep_is_bot \<G> (dl, dg, ps)"
-  obtains (default) "is_empty dl"
-    | (override) loc where "loc \<in> set (map fst ps)"
-        "is_empty (default_st_rep_get (dl, dg, ps) loc)"
-        "canonical_location \<G> loc"
-  using assms by (auto simp: default_st_rep_is_bot_def)
+  "default_st_rep_is_bot \<G> ((dl, ls), (dg, gs)) \<longleftrightarrow>
+     is_empty dl \<or>
+     (\<exists>x \<in> set (map fst ls). \<not> \<G> x \<and> is_empty (default_dict_get (dl, ls) x)) \<or>
+     (\<exists>x \<in> set (map fst gs). \<G> x \<and> is_empty (default_dict_get (dg, gs) x))"
 
 text \<open>
   Soundness needs \<open>\<G>\<close> to leave infinitely many vnames local, so that some local
-  witness always escapes any given (finite) override list -- true for any
+  witness always escapes any given (finite) entry list -- true for any
   @{term declared_global} of a real program, which only ever declares finitely
   many globals while @{typ vname} is infinite.
 \<close>
@@ -105,38 +67,43 @@ lemma default_st_rep_is_bot_sound:
     and infinite_local: "infinite {x. \<not> \<G> x}"
   shows "is_empty_state (default_st_rep_to_fun \<G> s)"
 proof -
-  obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
+  obtain l g where s_eq: "s = (l, g)" by (cases s)
+  obtain dl ls where l_eq: "l = (dl, ls)" by (cases l)
+  obtain dg gs where g_eq: "g = (dg, gs)" by (cases g)
+  have local_lookup: "default_st_rep_to_fun \<G> s x = default_dict_get l x"
+    if "\<not> \<G> x" for x
+    using that unfolding default_st_rep_to_fun_def location_of_def s_eq by simp
+  have global_lookup: "default_st_rep_to_fun \<G> s x = default_dict_get g x"
+    if "\<G> x" for x
+    using that unfolding default_st_rep_to_fun_def location_of_def s_eq by simp
   from bot consider
-      (dl) "is_empty dl"
-    | (ps) loc where "loc \<in> set (map fst ps)" "is_empty (default_st_rep_get s loc)"
-        "location_of \<G> (location_vname loc) = loc"
-    unfolding s_eq
-    by (elim default_st_rep_is_botE) (simp_all add: canonical_location_def)
+      (local_default) "is_empty dl"
+    | (local_entry) x where "\<not> \<G> x" "is_empty (default_dict_get l x)"
+    | (global_entry) x where "\<G> x" "is_empty (default_dict_get g x)"
+    unfolding s_eq l_eq g_eq by auto
   then show ?thesis
   proof cases
-    case dl
+    case local_default
     from infinite_local obtain x :: vname
       where x_local: "x \<in> {x. \<not> \<G> x}"
-        and local_ps: "Local_Location x \<notin> set (map fst ps)"
-        and "Global_Location x \<notin> set (map fst ps)"
-      by (rule obtain_fresh_location)
-    from x_local have not_gs: "\<not> \<G> x" by simp
-    have mo_l: "map_of ps (Local_Location x) = None"
-      using local_ps by (simp add: map_of_resolved_none_iff)
-    have "default_st_rep_get s (Local_Location x) = dl"
-      unfolding s_eq by (simp add: mo_l)
-    then have "is_empty (default_st_rep_to_fun \<G> s x)"
-      unfolding default_st_rep_to_fun_def location_of_def
-      using dl not_gs by simp
+        and fresh: "x \<notin> set (map fst ls)"
+      by (rule obtain_fresh_vname)
+    from fresh have "map_of ls x = None"
+      by (simp add: map_of_resolved_none_iff)
+    then have "default_dict_get l x = dl"
+      unfolding l_eq by simp
+    with local_default x_local have "is_empty (default_st_rep_to_fun \<G> s x)"
+      by (simp add: local_lookup)
     then show ?thesis by (rule is_empty_stateI)
   next
-    case ps
-    let ?x = "location_vname loc"
-    have loc_eq: "location_of \<G> ?x = loc" by (rule ps(3))
-    have "default_st_rep_to_fun \<G> s ?x = default_st_rep_get s loc"
-      unfolding default_st_rep_to_fun_def loc_eq by (rule refl)
-    then have "is_empty (default_st_rep_to_fun \<G> s ?x)"
-      using ps(2) by simp
+    case (local_entry x)
+    then have "is_empty (default_st_rep_to_fun \<G> s x)"
+      by (simp add: local_lookup)
+    then show ?thesis by (rule is_empty_stateI)
+  next
+    case (global_entry x)
+    then have "is_empty (default_st_rep_to_fun \<G> s x)"
+      by (simp add: global_lookup)
     then show ?thesis by (rule is_empty_stateI)
   qed
 qed
@@ -147,7 +114,7 @@ text \<open>
   classified vnames. A concrete program's classifier is always backed by an
   explicit finite list (@{term declared_global_vars}), and enumerating exactly
   that list closes the gap: every globally classified vname is checked
-  directly, so the global branch needs no override witness. This makes the
+  directly, so the global branch needs no entry witness. This makes the
   combined check an exact (not merely sound) characterization of
   @{const is_empty_state}, with no side condition on \<open>\<G>\<close> beyond \<open>globals\<close>
   actually listing its true set -- unlike @{thm default_st_rep_is_bot_sound},
@@ -215,30 +182,25 @@ proof -
       then show ?thesis unfolding default_st_rep_is_bot_for_def by (rule disjI1)
     next
       case False
-      have loc_eq: "location_of \<G> x = Local_Location x"
-        using False unfolding location_of_def by simp
-      have lookup_eq: "default_st_rep_get s (Local_Location x) = default_st_rep_to_fun \<G> s x"
-        unfolding default_st_rep_to_fun_def loc_eq by (rule refl)
-      obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
+      note local_x = False
+      obtain l g where s_eq: "s = (l, g)" by (cases s)
+      obtain dl ls where l_eq: "l = (dl, ls)" by (cases l)
+      obtain dg gs where g_eq: "g = (dg, gs)" by (cases g)
+      have empty: "is_empty (default_dict_get l x)"
+        using x local_x unfolding default_st_rep_to_fun_def location_of_def s_eq by simp
       have "default_st_rep_is_bot \<G> s"
-      proof (cases "Local_Location x \<in> set (map fst ps)")
+      proof (cases "x \<in> set (map fst ls)")
         case True
-        have loc_vname_eq: "location_of \<G> (location_vname (Local_Location x)) = Local_Location x"
-          using loc_eq by simp
-        show ?thesis
-          unfolding default_st_rep_is_bot_def canonical_location_def
-          using True lookup_eq x loc_vname_eq s_eq
-          apply(auto split:option.split)
-          by force
+        with empty local_x
+        have "\<exists>y \<in> set (map fst ls). \<not> \<G> y \<and> is_empty (default_dict_get (dl, ls) y)"
+          unfolding l_eq by blast
+        then show ?thesis unfolding s_eq l_eq g_eq by simp
       next
         case False
-        then have mo: "map_of ps (Local_Location x) = None"
+        then have "map_of ls x = None"
           by (simp add: map_of_resolved_none_iff)
-        have "default_st_rep_get s (Local_Location x) = dl"
-          unfolding s_eq using mo by simp
-        with lookup_eq x have "is_empty dl" by simp
-        then show ?thesis
-          unfolding default_st_rep_is_bot_def canonical_location_def using s_eq by auto
+        with empty have "is_empty dl" unfolding l_eq by simp
+        then show ?thesis unfolding s_eq l_eq g_eq by simp
       qed
       then show ?thesis unfolding default_st_rep_is_bot_for_def by (rule disjI2)
     qed
@@ -251,9 +213,9 @@ subsection \<open>Lifting the exact test to the quotient\<close>
 text \<open>
   \<^const>\<open>default_st_rep_is_bot_for\<close> takes \<open>\<G>\<close> as a free parameter, which makes it
   \<^const>\<open>eq_default_st_rep\<close>-respectful only when \<open>\<G>\<close> agrees with \<open>globals\<close>: a
-  mismatched pair can pick out a witness through one representative's override
-  list that another, extensionally equal, representative encodes via its
-  defaults instead. Every real caller supplies the matching pair, so fixing
+  mismatched pair can pick out a witness through one representative's
+  dictionary entries that another, extensionally equal, representative encodes
+  via its defaults instead. Every real caller supplies the matching pair, so fixing
   \<open>\<G>\<close> to \<open>\<lambda>x. x \<in> set globals\<close> internally loses nothing and restores
   unconditional respectfulness -- which is what makes
   \<open>default_st_is_bot_for\<close> below liftable to the quotient at all.

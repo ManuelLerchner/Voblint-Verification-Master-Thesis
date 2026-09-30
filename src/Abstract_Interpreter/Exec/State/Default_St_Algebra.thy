@@ -8,9 +8,10 @@ section \<open>Pointwise abstract-domain operations\<close>
 
 text \<open>
   Join, widening and narrowing are the same construction three times: apply an
-  element operation at both defaults and at every location listed by either
-  argument. This theory gives that construction once, instantiates it three
-  times, and installs the lattice and warrowing classes the solver needs.
+  element operation to both dictionaries of a state, at the default and at
+  every name either argument lists. This theory gives that construction once,
+  instantiates it three times, and installs the lattice and warrowing classes
+  the solver needs.
 
   The combinator's support is the two argument supports with duplicate keys
   removed. Keeping both copies would denote the same lookup function, but every
@@ -18,34 +19,38 @@ text \<open>
   materialized list without bound while each lookup scans it.
 \<close>
 
-subsection \<open>Finite binary support and the pointwise combinator\<close>
+subsection \<open>The pointwise combinator\<close>
 
-fun support2_default_st_rep ::
-  "('a::bot) default_st_rep => 'a default_st_rep => location list" where
-  "support2_default_st_rep (_, _, ps1) (_, _, ps2) =
-     remdups (map fst ps1 @ map fst ps2)"
+fun map2_default_dict ::
+  "('a => 'a => 'a) => 'a default_dict => 'a default_dict => 'a default_dict"
+where
+  "map2_default_dict f (d1, ps1) (d2, ps2) =
+     (f d1 d2,
+      map (\<lambda>x. (x, f (default_dict_get (d1, ps1) x) (default_dict_get (d2, ps2) x)))
+        (remdups (map fst ps1 @ map fst ps2)))"
 
 fun map2_default_st_rep ::
   "('a => 'a => 'a) => ('a::bot) default_st_rep => 'a default_st_rep =>
    'a default_st_rep"
 where
-  "map2_default_st_rep f (dl1, dg1, ps1) (dl2, dg2, ps2) =
-     (f dl1 dl2, f dg1 dg2,
-      map (\<lambda>loc. (loc,
-        f (default_st_rep_get (dl1, dg1, ps1) loc)
-          (default_st_rep_get (dl2, dg2, ps2) loc)))
-        (support2_default_st_rep (dl1, dg1, ps1) (dl2, dg2, ps2)))"
+  "map2_default_st_rep f (l1, g1) (l2, g2) =
+     (map2_default_dict f l1 l2, map2_default_dict f g1 g2)"
 
 lemma map_of_map_key_list:
   "map_of (map (\<lambda>k. (k, g k)) ks) x =
      (if x \<in> set ks then Some (g x) else None)"
   by (induction ks) auto
 
+lemma default_dict_get_map2 [simp]:
+  "default_dict_get (map2_default_dict f m1 m2) x =
+     f (default_dict_get m1 x) (default_dict_get m2 x)"
+  by (cases m1; cases m2)
+    (auto simp: map_of_map_key_list map_of_resolved_none_iff[THEN iffD2])
+
 lemma default_st_rep_get_map2 [simp]:
   "default_st_rep_get (map2_default_st_rep f s t) loc =
      f (default_st_rep_get s loc) (default_st_rep_get t loc)"
-  by (cases s rule: prod_cases3, cases t rule: prod_cases3, cases loc)
-    (auto simp: map_of_map_key_list map_of_resolved_none_iff[THEN iffD2])
+  by (cases s; cases t; cases loc) simp_all
 
 lemma eq_default_st_rep_map2:
   assumes "eq_default_st_rep s1 s2"
