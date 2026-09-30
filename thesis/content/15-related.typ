@@ -99,7 +99,7 @@ pattern. Each supplies one record of primitive operations
 (#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
 derives the transfer, branch, entry and check classifier from it and proves
 them sound once (@sec:instances-supply). Voblint keeps the separation between collecting semantics and
-abstraction. Its collecting semantics ranges over activation-local traces of a
+abstraction. Its collecting semantics ranges over activation traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
 which caller resumes. Their executable abstract state lists some variables and
 reads every other variable as top. Voblint's executable state also lists only
@@ -135,7 +135,7 @@ syntax with widening and narrowing, is proved correct through an intermediate
 collecting semantics defined with a generic least-fixpoint operator, and is
 extracted to OCaml @cachera10[§§1, 6]. Voblint uses the same stepping stone, a
 collecting semantics between execution and abstraction, but over
-activation-local traces of a graph and with a separately verified solver
+activation traces of a graph and with a separately verified solver
 instead of a syntax-directed iterator.
 
 #cite(<franceschino21>, form: "prose") verify a syntax-directed abstract
@@ -267,13 +267,15 @@ procedure activations: a trace covers one activation and records its suspended
 caller, so a return reads its caller from the trace instead of choosing one. A calling context becomes a
 projection of the trace instead of a component of the state. Context policies can therefore be
 proved against one fixed concrete semantics. Activations do not interfere, so
-no concurrency result of that work transfers.
+no concurrency result of that work transfers. We call our objects activation
+traces to keep them apart from these local traces, which are a semantics of
+multithreaded programs.
 
 #cite(<sotin11>, form: "prose") also replace a stack semantics by a local one,
 in which every instruction acts on the top activation record only. They prove
 the two semantics equivalent with respect to reachability and derive a
 relational interprocedural analysis from the local semantics. Their motive is
-pointers into the stack, which VIMP lacks. For activation-local traces, Voblint
+pointers into the stack, which VIMP lacks. For activation traces, Voblint
 proves only the direction soundness needs: every graph run is represented by a
 valid trace (@sec:valid). #_todo[check the equivalence claim of @sotin11.]
 
@@ -348,7 +350,7 @@ function mapping tokens to tokens in a covering may be replaced by a relation
 @rival07[Rem. 3.2.4] #_todo[check locator.]. Voblint's context-indexed
 collecting semantics is a covering of this relational kind, since a context relation may admit one
 activation in several contexts. Voblint mechanizes the indexing over
-activation-local traces and proves that the solved, routed result bounds every
+activation traces and proves that the solved, routed result bounds every
 admitted bucket.
 
 Contexts also determine how many unknowns a solve creates. The context lifters
@@ -468,7 +470,7 @@ rules come from #cite(<tilscher26>, form: "prose"), the rules from
 from Goblint. Widening, narrowing and the reduced product are standard
 @cousot77 @cousot79. Deriving forward and backward transfer from certified
 value operations follows the generic abstract interpreter of Nipkow and Klein
-@nipkow14[Sects. 13.5--13.7]. The activation-local traces adapt the local traces of
+@nipkow14[Sects. 13.5--13.7]. The activation traces adapt the local traces of
 @schwarz21 to procedure activations, and the context-indexed collecting
 semantics is a relational covering in the sense of @rival07. Compared with
 the works above, the scoped claims of @sec:contributions are the following.
@@ -482,7 +484,7 @@ this chapter, and none is a priority claim.
   executable.
 - *Context semantics.* The relational context semantics with its totality
   condition differs from the functional context module of @dabrowski09 in
-  admitting several contexts per call. Over activation-local traces, it
+  admitting several contexts per call. Over activation traces, it
   mechanizes a relational variant of coverings that @rival07 mention.
 - *Composition.* The certificate-based solver interface follows CompCert's. The
   three-way composition separates analysis, context policy and solver.

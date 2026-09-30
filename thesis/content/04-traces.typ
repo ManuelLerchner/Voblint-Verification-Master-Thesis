@@ -22,9 +22,12 @@ context-sensitive analysis may distinguish the activation entered with $5$ from
 the one entered with $4$. This chapter gives that distinction a concrete
 meaning.
 
-We represent executions by _activation-local traces_. A trace follows one
-procedure activation. A callee trace keeps the caller that created it, and a
-resumed trace keeps the callee it has completed. We read calling contexts from
+Each call of a procedure creates an _activation_. In the activation tree of a
+run, every activation is a node, and while one activation executes, the live
+activations form the path from the root to its node @aho06[§7.2.1]. We
+represent executions by _activation traces_, a term of this thesis. An
+activation trace follows one activation: its own path through the graph, the
+caller that created it, and the callees it has completed. We read calling contexts from
 this structure and do not store them in the execution semantics. Context
 membership is a relation: a concrete call may be admitted under no context, one,
 or several, and which ones may depend on the analysis's result.
@@ -61,7 +64,7 @@ by different calls, and a context policy may use exactly that entry information
 to tell them apart.
 
 The graph execution (@sec:cstep) already has a call stack. This stack stores
-only what is needed to resume suspended callers. Activation-local traces keep
+only what is needed to resume suspended callers. Activation traces keep
 more of the history. Because a callee trace keeps its creating caller and a
 resumed trace keeps both caller and callee, the context relation can choose a
 callee context at the call and keep the caller's context across calls and
@@ -201,12 +204,12 @@ calling contexts off the same traces.
 
 == Traces <sec:traces>
 
-=== Activation-local traces <sec:ltr>
+=== Activation traces <sec:ltr>
 
 We turn the grouping of @fig:flat-nested into a datatype.
 
 #block(breakable: false)[
-  #definition(name: [Activation-local trace], isa: "ltr", cmd: "datatype")[
+  #definition(name: [Activation trace], isa: "ltr", cmd: "datatype")[
     A trace has one constructor per way an activation begins or continues.
   ]
 

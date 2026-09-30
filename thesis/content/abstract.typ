@@ -45,7 +45,7 @@ analyses of concrete programs.
 A context-sensitive analysis bounds the stores at each program point per
 calling context, but the standard collecting semantics does not provide
 context-indexed sets of stores against which to state such a bound. We
-therefore develop an activation-local trace semantics. Like the local traces
+therefore develop an activation trace semantics. Like the local traces
 of Schwarz et al. for threads @schwarz21, it describes an execution from the
 perspective of one procedure activation, and the contexts an activation may carry are
 determined by its trace. A totality

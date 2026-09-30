@@ -767,7 +767,7 @@ way. The solver's verification defines the unknowns on which a query $x$
 transitively depends, #isaconst("reach"), by two rules:
 #thy("reach")
 Source execution #isaconst("pstep") (@fig:pstep), graph execution
-#isaconst("cstep") (@fig:cstep) and the valid activation-local traces
+#isaconst("cstep") (@fig:cstep) and the valid activation traces
 #isaconst("valid_ltr") are defined by rules as well.
 
 A _quotient type_ identifies representations up to an equivalence

@@ -185,7 +185,7 @@ indexing loses nothing under the totality obligation #oblig("TOTAL").
 
 _Evidence: machine-checked._ The meaning is the relation
 #isaconst("trace_context") of @sec:contexts, which reads a context off an
-activation-local trace at the call that created the activation. The
+activation trace at the call that created the activation. The
 condition is #oblig("TOTAL")
 (#isaconst("call_context_total_on")), stated relative to the claim: under the
 five coverage obligations, #isathm("activation_collect_sound") bounds each

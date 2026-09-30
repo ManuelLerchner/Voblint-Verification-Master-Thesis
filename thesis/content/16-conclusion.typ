@@ -19,7 +19,7 @@ analyzed program is not required. The delivered tools additionally trust the
 parser, code generator, compilers, runtimes and presentation code
 (@sec:trust-boundary).
 
-*What does a calling context denote?* A property of an activation-local trace,
+*What does a calling context denote?* A property of an activation trace,
 read off how the activation was entered (@sec:contexts). When every covered
 call admits some callee context (#isaconst("call_context_total_on")), the
 context buckets jointly equal the context-free trace collection
@@ -169,7 +169,7 @@ globals discussed in @sec:mixed-flow.
 The context relation reads only how an activation was entered. Digests refine
 unknowns by other abstractions of a local trace (@sec:rel-goblint).
 Generalizing #isaconst("trace_context") to such abstractions over
-activation-local traces would allow path- or history-sensitive unknowns, each
+activation traces would allow path- or history-sensitive unknowns, each
 with its own admissibility conditions.
 
 *Solver.* Voblint adapts its equations to the interface of the vendored solver
@@ -240,7 +240,7 @@ side effects and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function, for a scalar language
 with recursive procedures and under a per-program termination premise. The
 proof follows one chain. Graph runs simulate source executions, and valid
-activation-local traces represent graph runs, sorted into buckets by the
+activation traces represent graph runs, sorted into buckets by the
 context read off each activation. Context-indexed equations with routed calls
 cover every bucket, provided the analysis and the context policy meet their
 separate obligations. The solver enters only through a post-solution

@@ -184,7 +184,7 @@ states and reports a verdict per check, and each change of representation could
 lose concrete behavior. The argument therefore follows one store that an
 execution reaches through every representation (@fig:intro-nest). The compiler
 simulation places it at a graph node $v$ (#isathm("csim_star")), the reached graph state is covered by a valid
-activation-local trace (#isaconst("valid_ltr"), #isathm("source_reaches_ltr_collect")), and under the totality condition that trace falls
+activation trace (#isaconst("valid_ltr"), #isathm("source_reaches_ltr_collect")), and under the totality condition that trace falls
 into a context bucket (#isathm("ltr_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
 $v$ holds for every admitted store (#isathm("run_voblint_sound_at")). Each check row of the result carries its source position, which
 the unverified parser writes (@sec:trust-boundary).
@@ -439,7 +439,7 @@ answers one of the questions of @sec:rqs.
   theorems justify `DEAD` and the absence of arithmetic warnings.
 - _A concrete semantics of calling contexts._ A context policy is a relation
   between calls and callee contexts (#isatype("call_context_rel")), which
-  determines the contexts an activation-local trace carries. Under the
+  determines the contexts an activation trace carries. Under the
   coverage contract (#isalocale("ltr_coverage")), whose totality condition
   admits every call the claim covers at some context, the per-context
   collections together equal the context-free collection
@@ -478,7 +478,7 @@ transfer to a corresponding C program (@sec:vimp-vs-c).
 
 @ch:background gives the order-theoretic and Isabelle background. #partref(<part:over-approx>) fixes
 what an analysis must over-approximate: source execution and its compilation
-to a graph (@ch:program-model), and activation-local traces with contexts and
+to a graph (@ch:program-model), and activation traces with contexts and
 the coverage contract (@ch:traces). #partref(<part:analyzer>) builds the analyzer from
 separately verified ingredients: domains (@ch:domains), the analysis
 interface (@ch:analysis-interface), the combination of cooperating analyses
