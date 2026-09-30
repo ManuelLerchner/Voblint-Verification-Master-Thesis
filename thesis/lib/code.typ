@@ -264,13 +264,17 @@
 }
 // `thy:` names the theory when several theories define the same short name;
 // thesis-links refuses an unqualified citation of such a name.
+// `display:` replaces the printed text only: `isaconst("dg_pipeline.root_query",
+// display: "root_query")` links the locale-qualified name but prints the bare one.
+// The checkers read `thy:` and `display:` as string literals, in either order.
 #let entity(name, color, kind: none, display: none, thy: none) = {
   let key = if thy == none { name } else { thy + "." + name }
   let href = if kind == none { none } else { _url(kind, key) }
   let fill = if href == none { vb.plain } else { color }
-  let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if display == none {
-    _isa-display(name)
-  } else { display })
+  let shown = if display == none { name } else { display }
+  let body = text(fill: fill, font: "DejaVu Sans Mono", size: 0.85em, if type(shown) == str {
+    _isa-display(shown)
+  } else { shown })
   if href == none { body } else { link(href, body) }
 }
 #let isathm(name, display: none, thy: none) = entity(
@@ -280,9 +284,27 @@
   display: display,
   thy: thy,
 )
-#let isaconst(name, thy: none) = entity(name, vb.const, kind: "const", thy: thy)
-#let isatype(name, thy: none) = entity(name, vb.type, kind: "type", thy: thy)
-#let isalocale(name, thy: none) = entity(name, vb.locale, kind: "locale", thy: thy)
+#let isaconst(name, display: none, thy: none) = entity(
+  name,
+  vb.const,
+  kind: "const",
+  display: display,
+  thy: thy,
+)
+#let isatype(name, display: none, thy: none) = entity(
+  name,
+  vb.type,
+  kind: "type",
+  display: display,
+  thy: thy,
+)
+#let isalocale(name, display: none, thy: none) = entity(
+  name,
+  vb.locale,
+  kind: "locale",
+  display: display,
+  thy: thy,
+)
 #let isacmd(name) = entity(name, vb.trusted)   // an Isabelle command
 #let isasession(n) = entity(n, vb.muted, kind: "session")
 #let isafile(p) = entity(p, vb.muted)
