@@ -395,8 +395,16 @@
             caller returns, so a program without calls shows little more than its checks. The
             full form, <code>--verbose</code>, lists every solver step: each unknown solved,
             each query with the value it returns, each side effect, each update, and each
-            call's routing. The hooks that record the steps change no computed value; the
-            trace is presentation outside the proof.
+            call's routing, each step indented by the solver's call depth.
+          </p>
+
+          <p class="solver-globals-note">
+            The trace is recorded by hooks that the build patches into the generated OCaml
+            solver. The page runs that patched solver whether the trace is on or off; off, the
+            hooks record nothing. The patch is outside the proof: that it changes no computed
+            value rests on review and on tests comparing traced with untraced runs, and a bug
+            in it could change a result. With the trace on, the page's verdicts, values and
+            graph come from the same run as this trace.
           </p>
 
           <div class="solver-trace-tools">

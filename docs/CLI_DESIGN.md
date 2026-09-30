@@ -118,6 +118,13 @@ jsonl` is the machine-readable form. Each of `--compact`, `--verbose`,
 `--format` and `--output` implies `--trace`; none of these names is used by
 another option.
 
+The verbose text indents each step by the solver's call depth, two spaces per
+level, like the indentation Goblint's tracing library keeps between `tracei`
+and `traceu`. A `SOLVE` that a query reaches sits one level below the querying
+unknown, and every later step of that unknown returns to its level. The
+renderer reads the depth off the event order; the JSON Lines events carry no
+depth field.
+
 ```text
 voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
 ```
@@ -127,9 +134,13 @@ the generated `Voblint_CLI.ml` into the build with guarded calls into
 `cli/trace/solver_trace_hook.ml`. Each patch names generated text that must
 occur exactly once (a per-mode patch: once per context mode that uses it), so
 a regeneration that moves one fails the build with the patch's name. Neither
-the Isabelle sources nor the export change, and no hook changes a computed
-value; the tracer is outside the proof like the rest of the CLI. With
-`--trace` off every hook is one branch on a reference.
+the Isabelle sources nor the checked-in export change, but the CLI and the
+browser module compile the patched copy, so every run executes the hooks'
+guards, traced or not. With `--trace` off every hook is one branch on a
+reference. That no hook changes a computed value is a property of the patch,
+checked by review and by the tests that compare traced with untraced output;
+no theorem covers it. The patch and the tracer are outside the proof like the
+rest of the CLI.
 
 The solver is polymorphic in its unknowns, so events hold them untyped. The
 patches also define, next to each generated global-unknown datatype

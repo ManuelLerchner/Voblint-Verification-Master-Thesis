@@ -4686,7 +4686,28 @@ fun main() {
           and the <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">page and worker</a>.
         </figcaption>
       </figure>
-    
+
+      <div class="prose-block">
+        <h3>Watching the solver work</h3>
+        <p>
+          The playground's <strong>Solver trace</strong> setting, like <code>voblint --trace</code>
+          on the command line, lists what the solver did: each unknown it solves, each query and
+          the value it returns, each side effect into a seed, each update and the readers it
+          destabilizes, and the context each call is routed to. The full form indents every step
+          by the solver's call depth.
+        </p>
+        <p>
+          The export records no trace. Before compiling <code>Voblint_CLI.ml</code>, the build
+          passes it through a <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/cli/trace/patch_generated.ml" target="_blank" rel="noreferrer">patch program</a>
+          that inserts guarded calls to a recorder at the solver's steps. The command line and
+          the browser both run this patched copy, with the trace on or off; off, the hooks record
+          nothing. No theorem says the hooks leave the computed values alone. That rests on
+          reading the patch and on tests that compare traced with untraced output, so the patch
+          belongs with the handwritten OCaml outside the green box, and a bug in it could change a
+          result even with the trace off.
+        </p>
+      </div>
+
 
     </section>
 

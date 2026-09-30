@@ -89,7 +89,9 @@ restart the caller. `--verbose` lists every step, `--format jsonl` emits JSON
 Lines and `--output FILE` writes to a file; standard output stays the same.
 The playground's **Solver trace** setting shows the compact or the full
 (`--verbose`) trace above the graph, with downloads of the whole text and of
-its JSON Lines form.
+its JSON Lines form. The recording hooks are patched into the generated OCaml
+at build time, and every build runs the patched copy; the patch is outside the
+proof ([`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md#solver-trace---trace)).
 
 ```bash
 pixi run voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
