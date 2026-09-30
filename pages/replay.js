@@ -1,16 +1,26 @@
 /*
  * Solve replay: steps through a run's solve on its control-flow graph.
  *
- * The replay reads the JSON Lines trace of the shown run, the events the exported
- * solver reports through its traced code equations. From the events alone it
- * rebuilds what the solver holds after each step: every local unknown's value, the
- * unknowns being solved (the solver's call stack), the stable ones, and the ones an
- * update destabilized. Destabilization follows the solver's own rule: an update clears
- * the influence set of the updated unknown and removes each reader from the stable set,
- * continuing through the readers' influence sets except for readers still being solved.
+ * The replay reads the JSON Lines trace (schema 2) of the shown run: the events the
+ * exported solver reports through its traced code equations. Every state it shows comes
+ * from pages/replay_state.js's reducer, folded over those events: values, the stack of
+ * open queries, the stable set, widening points, influence edges, destabilization
+ * cascades, globals with their contributions, routes and counters. Nothing here
+ * reconstructs history on its own.
  *
- * Nothing here feeds back into the result on the page.
+ * The trace is an unverified observation of the verified computation, and this replay
+ * an unverified visualization of the trace. Nothing here feeds back into the result on
+ * the page.
  */
+
+import {
+  contextLabel,
+  createCache,
+  globalKey,
+  localKey,
+  parseEvents,
+  stepBlock,
+} from "./replay_state.js";
 
 /* Replay states kept for jumps: stepping back or dragging the slider replays at most this many events. */
 const SNAPSHOT_EVERY = 256;
@@ -31,30 +41,6 @@ function query(selector) {
   return element;
 }
 
-/* The name the result gives a context, as cli/result/result_text.ml's context_label writes it. */
-function contextLabel(context) {
-  switch (context?.kind) {
-    case "unit":
-      return "unit";
-    case "entry_state":
-      return context.values.length > 0 ? context.values.join(", ") : "root context";
-    case "call_string":
-      return context.sites.length > 0 ? `call-string=${context.sites.join(" ")}` : "root context";
-    default:
-      return "?";
-  }
-}
-
-function localKey(unknown) {
-  return `L:${unknown.node}|${contextLabel(unknown.context)}`;
-}
-
-function globalKey(unknown) {
-  return unknown.kind === "activation_seed"
-    ? `G:${unknown.procedure}|${contextLabel(unknown.context)}`
-    : "G:Global";
-}
-
 /* A global unknown as the page's seed list names it. */
 function globalName(key) {
   if (key === "G:Global") {
@@ -73,240 +59,6 @@ function shortValue(value) {
   return bare.length > VALUE_CHARS ? `${bare.slice(0, VALUE_CHARS - 1)}…` : bare;
 }
 
-/* ------------------------------------------------------------- solver state */
-
-function emptyState() {
-  return {
-    values: new Map(),
-    seen: new Set(),
-    stable: new Set(),
-    destabilized: new Set(),
-    stack: [],
-    infl: new Map(),
-    globals: new Map(),
-  };
-}
-
-function copyState(state) {
-  return {
-    values: new Map(state.values),
-    seen: new Set(state.seen),
-    stable: new Set(state.stable),
-    destabilized: new Set(state.destabilized),
-    stack: [...state.stack],
-    infl: new Map([...state.infl].map(([key, readers]) => [key, [...readers]])),
-    globals: new Map(state.globals),
-  };
-}
-
-/* The frames above [key] have returned: an event of [key] happens in its own frame. */
-function returnTo(state, key) {
-  const at = state.stack.lastIndexOf(key);
-
-  if (at !== -1) {
-    state.stack.length = at + 1;
-  }
-}
-
-function addReader(state, key, reader) {
-  const readers = state.infl.get(key);
-
-  if (!readers) {
-    state.infl.set(key, [reader]);
-  } else if (!readers.includes(reader)) {
-    readers.push(reader);
-  }
-}
-
-function destabilize(state, key) {
-  const work = [key];
-
-  while (work.length > 0) {
-    const next = work.pop();
-    const readers = state.infl.get(next);
-
-    if (!readers) {
-      continue;
-    }
-
-    state.infl.delete(next);
-
-    for (const reader of readers) {
-      if (state.stable.delete(reader)) {
-        state.destabilized.add(reader);
-      }
-
-      if (!state.stack.includes(reader)) {
-        work.push(reader);
-      }
-    }
-  }
-}
-
-function apply(state, event) {
-  const current = event.current ? localKey(event.current) : null;
-
-  if (current) {
-    returnTo(state, current);
-  }
-
-  switch (event.event) {
-    case "solve":
-    case "resolve": {
-      const key = localKey(event.unknown);
-
-      state.seen.add(key);
-      state.stable.add(key);
-      state.destabilized.delete(key);
-
-      if (state.stack.at(-1) !== key) {
-        state.stack.push(key);
-      }
-
-      break;
-    }
-    case "query_local":
-      state.seen.add(localKey(event.target));
-      break;
-    case "value_local":
-      addReader(state, localKey(event.target), current);
-      break;
-    case "query_global": {
-      const key = globalKey(event.target);
-
-      addReader(state, key, current);
-      state.globals.set(key, event.value);
-      break;
-    }
-    case "side": {
-      const key = globalKey(event.target);
-
-      if (!state.globals.has(key)) {
-        state.globals.set(key, "⊥");
-      }
-
-      break;
-    }
-    case "update_global": {
-      const key = globalKey(event.unknown);
-
-      state.globals.set(key, event.new);
-      destabilize(state, key);
-      break;
-    }
-    case "update_local": {
-      const key = localKey(event.unknown);
-
-      returnTo(state, key);
-      state.values.set(key, event.new);
-      destabilize(state, key);
-      break;
-    }
-    default:
-      break;
-  }
-}
-
-/* ---------------------------------------------------------------- the trace */
-
-function parseEvents(jsonl) {
-  return jsonl
-    .split("\n")
-    .filter((line) => line.trim() !== "")
-    .map((line) => JSON.parse(line))
-    .filter((record) => Number.isInteger(record.step));
-}
-
-/* Names as the CLI's trace writes them (cli/render/solver_trace.ml). */
-function traceContext(context) {
-  switch (context?.kind) {
-    case "unit":
-      return "unit";
-    case "entry_state":
-      return context.values.length > 0 ? `[${context.values.join(", ")}]` : "root";
-    case "call_string":
-      return context.sites.length > 0 ? `[${context.sites.join(" ")}]` : "root";
-    default:
-      return "?";
-  }
-}
-
-function traceLocal(unknown) {
-  return `(${unknown.node}, ${traceContext(unknown.context)})`;
-}
-
-function traceGlobal(unknown) {
-  return unknown.kind === "activation_seed"
-    ? `Seed(${unknown.procedure}, ${traceContext(unknown.context)})`
-    : "Global";
-}
-
-/* One step's label, subject and detail lines. */
-function stepText(event) {
-  switch (event.event) {
-    case "solve":
-    case "resolve":
-      return [event.event.toUpperCase(), traceLocal(event.unknown), []];
-    case "query_local":
-      return ["QUERY-L", `${traceLocal(event.current)} -> ${traceLocal(event.target)}`, []];
-    case "value_local":
-      return [
-        "VALUE-L",
-        `${traceLocal(event.target)} to ${traceLocal(event.current)}`,
-        [["value", event.value]],
-      ];
-    case "query_global":
-      return [
-        "QUERY-G",
-        `${traceLocal(event.current)} -> ${traceGlobal(event.target)}`,
-        [["value", event.value]],
-      ];
-    case "side":
-      return [
-        "SIDE",
-        `${traceLocal(event.current)} -> ${traceGlobal(event.target)}`,
-        [["value", event.value]],
-      ];
-    case "update_global":
-      return [
-        "UPDATE-G",
-        `${traceGlobal(event.unknown)} (readers destabilized)`,
-        [
-          ["old", event.old],
-          ["new", event.new],
-        ],
-      ];
-    case "update_local":
-      return [
-        "UPDATE-L",
-        `${traceLocal(event.unknown)} (readers destabilized)`,
-        [
-          ["old", event.old],
-          ["new", event.new],
-        ],
-      ];
-    case "answer":
-      return ["ANSWER", traceLocal(event.current), [["value", event.value]]];
-    case "route":
-      return [
-        "ROUTE",
-        `call at ${traceLocal(event.call)} -> context ${traceContext(event.context)}`,
-        [["entry", event.entry]],
-      ];
-    default:
-      return [event.event, "", []];
-  }
-}
-
-/* One block per step, indented by the solver's call depth after it. */
-function stepBlock(event, index, depth) {
-  const indent = "  ".repeat(depth);
-  const [label, subject, details] = stepText(event);
-  const head = `[${String(index + 1).padStart(3, "0")}] ${indent}${label.padEnd(9)} ${subject}`;
-
-  return [head, ...details.map(([key, value]) => `      ${indent}${key} = ${value}`)].join("\n");
-}
-
 /* --------------------------------------------------------------------- view */
 
 export function createSolveReplay(deps) {
@@ -319,6 +71,31 @@ export function createSolveReplay(deps) {
   const globalsList = query("#solve-replay-globals");
   const tracePane = query("#solve-replay-trace");
   const detail = query("#solve-replay-detail");
+  const stackList = query("#solve-replay-stack");
+  const routesPanel = query("#solve-replay-routes-panel");
+  const routesList = query("#solve-replay-routes");
+  const countersPanel = query("#solve-replay-counters-panel");
+  const countersBody = query("#solve-replay-counters");
+  /* Values, the active unknown, the stack and the current query edge are always drawn;
+     everything else is an overlay the reader turns on. */
+  const overlays = {
+    infl: false,
+    stable: false,
+    wpoints: false,
+    destab: false,
+    globals: false,
+    routes: false,
+    counters: false,
+  };
+
+  for (const toggle of document.querySelectorAll("[data-replay-overlay]")) {
+    toggle.checked = overlays[toggle.dataset.replayOverlay] ?? false;
+    toggle.addEventListener("change", () => {
+      overlays[toggle.dataset.replayOverlay] = toggle.checked;
+      drawn = new Map();
+      render();
+    });
+  }
   const slider = query("#solve-replay-slider");
   const stepLabel = query("#solve-replay-step");
   const speed = query("#solve-replay-speed");
@@ -402,7 +179,9 @@ export function createSolveReplay(deps) {
         throw new Error(answer.message ?? "the analyzer returned no trace");
       }
 
-      return { answer, events: parseEvents(answer.trace) };
+      const records = parseEvents(answer.trace);
+
+      return { answer, events: records.filter((record) => Number.isInteger(record.step)) };
     })();
 
     try {
@@ -453,18 +232,8 @@ export function createSolveReplay(deps) {
       return nodeOf.get(`L:entry_${procedure}|${context}`);
     };
 
-    const snapshots = [];
-    const blocks = [];
-    const state = emptyState();
-
-    events.forEach((event, index) => {
-      if (index % SNAPSHOT_EVERY === 0) {
-        snapshots.push(copyState(state));
-      }
-
-      apply(state, event);
-      blocks.push(stepBlock(event, index, Math.max(0, state.stack.length - 1)));
-    });
+    const cache = createCache(events, SNAPSHOT_EVERY);
+    const blocks = events.map((event, index) => stepBlock(event, index, cache.stateAt(index + 1)));
 
     const { cytoscape, elk } = await deps.getGraphLibraries();
     const elements = deps.graphElements(answer).map((element) => {
@@ -529,38 +298,20 @@ export function createSolveReplay(deps) {
     replay = {
       events,
       blocks,
-      snapshots,
+      cache,
       nodeOf,
       keyOf,
       pointOf,
       entryOf,
       edgesBetween,
       step: 0,
-      state: copyState(snapshots[0] ?? emptyState()),
-      stateStep: 0,
     };
 
     slider.max = String(events.length);
     render();
   }
 
-  /* The solver state after [step] events, from the nearest snapshot at or before it. */
-  function stateAt(step) {
-    if (step < replay.stateStep || step - replay.stateStep > SNAPSHOT_EVERY) {
-      const base = Math.floor(step / SNAPSHOT_EVERY);
-
-      replay.state = copyState(replay.snapshots[Math.min(base, replay.snapshots.length - 1)]);
-      replay.stateStep = Math.min(base, replay.snapshots.length - 1) * SNAPSHOT_EVERY;
-    }
-
-    while (replay.stateStep < step) {
-      apply(replay.state, replay.events[replay.stateStep]);
-      replay.stateStep++;
-    }
-
-    return replay.state;
-  }
-
+  /* The four states: unseen, evaluated, solving (on the stack), stable; stable marking is a toggle. */
   function status(state, key, finished) {
     if (!finished && state.stack.at(-1) === key) {
       return "r-current";
@@ -570,11 +321,11 @@ export function createSolveReplay(deps) {
       return "r-solving";
     }
 
-    if (state.stable.has(key)) {
+    if (overlays.stable && state.stable.has(key)) {
       return "r-stable";
     }
 
-    return state.seen.has(key) ? "r-seen" : "r-unseen";
+    return state.evaluated.has(key) ? "r-seen" : "r-unseen";
   }
 
   /* The graph elements an event touches: edges a value flows along, and its target node. */
@@ -629,17 +380,20 @@ export function createSolveReplay(deps) {
 
   function renderGraph(state, event, finished) {
     const changed = event?.event === "update_local" ? localKey(event.unknown) : null;
+    const cascade = overlays.destab ? state.cascade : new Set();
     const { edges, nodes } = touched(event);
 
     cy.batch(() => {
       cy.nodes(".point").forEach((node) => {
         const key = replay.keyOf.get(node.id());
-        const seen = state.seen.has(key);
+        const seen = state.reached.has(key);
         const value = seen ? shortValue(state.values.get(key) ?? "⊥") : UNREACHED;
         const classes = [
           "point",
           status(state, key, finished),
-          seen && state.destabilized.has(key) && !state.stable.has(key) ? "r-destabilized" : "",
+          cascade.has(key) ? "r-destabilized" : "",
+          overlays.wpoints && state.wpoints.has(key) ? "r-wpoint" : "",
+          overlays.wpoints && state.widened === key ? "r-widened" : "",
           key === changed ? "r-changed" : "",
           nodes.includes(node.id()) ? "r-target" : "",
           node.id() === selected ? "graph-node-selected" : "",
@@ -661,6 +415,8 @@ export function createSolveReplay(deps) {
       for (const edge of edges) {
         edge.addClass("r-active");
       }
+
+      drawInfluence(state);
     });
 
     const current = finished ? null : replay.nodeOf.get(state.stack.at(-1));
@@ -678,9 +434,95 @@ export function createSolveReplay(deps) {
     }
   }
 
+  /* Influence edges, reader to read unknown, as an overlay of their own; rebuilt per step. */
+  function drawInfluence(state) {
+    cy.remove("edge.r-infl");
+
+    if (!overlays.infl) {
+      return;
+    }
+
+    const edges = [];
+
+    for (const [read, readers] of state.infl) {
+      const target = read.startsWith("L:") ? replay.nodeOf.get(read) : replay.entryOf(read);
+
+      for (const reader of readers) {
+        const source = replay.nodeOf.get(reader);
+
+        if (source && target) {
+          edges.push({
+            group: "edges",
+            data: { id: `infl:${reader}>${read}`, source, target },
+            classes: "r-infl",
+          });
+        }
+      }
+    }
+
+    cy.add(edges);
+  }
+
+  /* The stack of open queries, innermost first; always shown. */
+  function renderStack(state, finished) {
+    const rows = (finished ? [] : [...state.stack].reverse()).map((key, index) => {
+      const row = document.createElement("li");
+      const [point, context] = key.slice(2).split("|");
+
+      row.className = index === 0 ? "replay-stack-entry is-active" : "replay-stack-entry";
+      row.textContent = `(${point}, ${context})`;
+
+      return row;
+    });
+
+    stackList.replaceChildren(...rows);
+  }
+
+  function counterRows(state) {
+    const keys = new Set([
+      ...state.counters.evaluations.keys(),
+      ...state.counters.updates.keys(),
+      ...state.counters.destabilizations.keys(),
+    ]);
+    const rows = [...keys].sort().map((key) => {
+      const row = document.createElement("tr");
+      const cells = [
+        key.startsWith("L:") ? `(${key.slice(2).replace("|", ", ")})` : globalName(key),
+        state.counters.evaluations.get(key) ?? 0,
+        state.counters.updates.get(key) ?? 0,
+        state.counters.destabilizations.get(key) ?? 0,
+      ];
+
+      row.replaceChildren(
+        ...cells.map((value) => {
+          const cell = document.createElement("td");
+
+          cell.textContent = String(value);
+          return cell;
+        }),
+      );
+
+      return row;
+    });
+
+    countersBody.replaceChildren(...rows);
+  }
+
+  function renderRoutes(state) {
+    routesList.replaceChildren(
+      ...state.routes.map(({ call, context, entry }) => {
+        const row = document.createElement("li");
+        const [point, callContext] = call.slice(2).split("|");
+
+        row.textContent = `call at (${point}, ${callContext}) with entry ${entry} → context ${context}`;
+        return row;
+      }),
+    );
+  }
+
   function renderGlobals(state, event) {
     const active = eventGlobal(event);
-    const rows = [...state.globals].map(([key, value]) => {
+    const rows = [...state.globals].map(([key, g]) => {
       const row = document.createElement("li");
       const name = document.createElement("code");
       const text = document.createElement("span");
@@ -689,8 +531,23 @@ export function createSolveReplay(deps) {
         key === active ? "solver-global replay-global is-active" : "solver-global replay-global";
       name.className = "solver-global-key";
       name.textContent = globalName(key);
-      text.textContent = value;
+      text.textContent = g.value;
       row.append(name, text);
+
+      if (overlays.globals) {
+        const detailText = document.createElement("span");
+
+        detailText.className = "replay-global-detail";
+        detailText.textContent = [
+          g.last ? `last change ${g.last.old} → ${g.last.new}` : "unchanged",
+          `${g.contributions.length} contribution(s)${
+            g.contributions.length > 0
+              ? `, last ${g.contributions.at(-1).value} from ${g.contributions.at(-1).from.slice(2).replace("|", " @ ")}`
+              : ""
+          }`,
+        ].join("; ");
+        row.append(detailText);
+      }
 
       return row;
     });
@@ -748,9 +605,15 @@ export function createSolveReplay(deps) {
 
     const key = replay.keyOf.get(selected);
     const [point, context] = key.slice(2).split("|");
-    const value = state.seen.has(key) ? (state.values.get(key) ?? "⊥") : UNREACHED;
+    const value = state.reached.has(key) ? (state.values.get(key) ?? "⊥") : UNREACHED;
+    const facts = [
+      state.stable.has(key) ? "stable" : "not stable",
+      state.wpoints.has(key) ? "widening point" : "",
+      `${state.counters.evaluations.get(key) ?? 0} evaluation(s)`,
+      `read by ${[...(state.infl.get(key) ?? [])].map((reader) => reader.slice(2).replace("|", " @ ")).join(", ") || "nothing"}`,
+    ].filter(Boolean);
 
-    detail.textContent = `(${point}, ${context}) = ${value}`;
+    detail.textContent = `(${point}, ${context}) = ${value} · ${facts.join(" · ")}`;
   }
 
   function render() {
@@ -760,11 +623,23 @@ export function createSolveReplay(deps) {
 
     const { step, events } = replay;
     const finished = step === events.length;
-    const state = stateAt(step);
+    const state = replay.cache.stateAt(step);
     const event = step > 0 ? events[step - 1] : null;
 
     renderGraph(state, event, finished);
+    renderStack(state, finished);
     renderGlobals(state, event);
+    routesPanel.hidden = !overlays.routes;
+    countersPanel.hidden = !overlays.counters;
+
+    if (overlays.routes) {
+      renderRoutes(state);
+    }
+
+    if (overlays.counters) {
+      counterRows(state);
+    }
+
     renderTrace(step);
     renderDetail(state);
 
@@ -934,6 +809,26 @@ function replayStyle(cssToken) {
     {
       selector: "node.point.r-changed",
       style: { "underlay-color": cssToken("--success"), "underlay-opacity": 0.35 },
+    },
+    {
+      selector: "node.point.r-wpoint",
+      style: { "border-style": "double", "border-width": 4 },
+    },
+    {
+      selector: "node.point.r-widened",
+      style: { "underlay-color": cssToken("--accent"), "underlay-opacity": 0.35 },
+    },
+    {
+      selector: "edge.r-infl",
+      style: {
+        width: 1.5,
+        "line-style": "dotted",
+        "curve-style": "unbundled-bezier",
+        "line-color": cssToken("--text-faint"),
+        "target-arrow-shape": "triangle",
+        "target-arrow-color": cssToken("--text-faint"),
+        "z-index": 5,
+      },
     },
     {
       selector: "edge.r-active",

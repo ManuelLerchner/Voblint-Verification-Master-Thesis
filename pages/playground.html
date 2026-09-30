@@ -395,15 +395,16 @@
             caller returns, so a program without calls shows little more than its checks. The
             full form, <code>--verbose</code>, lists every solver step: each unknown solved,
             each query with the value it returns, each side effect, each update, each
-            destabilization and each call's routing, in the form of Goblint's solver trace,
+            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
             indented by the solver's query depth.
           </p>
 
           <p class="solver-globals-note">
-            Tracing is part of the exported code: the trace calls come from code equations proved
-            equal to the untraced ones, and the only added trusted piece is the mapping of the
-            trace primitive to the OCaml recorder, like the other target-language
-            mappings.
+            Three layers: the solver result is the exported computation of proved equations,
+            and the trace calls come from code equations proved equal to the untraced ones.
+            The trace is an unverified observation of that computation, recorded by a hook
+            that returns nothing, swallows exceptions and never touches solver state. The
+            replay below is an unverified visualization of the trace.
           </p>
 
           <div class="solver-trace-tools">
@@ -499,8 +500,8 @@
           </p>
 
           <p class="solver-globals-note">
-            The run is solved again with its JSON Lines trace, and the page rebuilds each step
-            from those events. The replay and its drawing are outside the proof.
+            The run is solved again with its JSON Lines trace, and one reducer folds those
+            events into every state shown here: an unverified visualization of the trace.
           </p>
 
           <p id="solve-replay-message" class="solver-globals-note" hidden></p>
@@ -539,13 +540,24 @@
 
             <ul class="replay-legend" aria-label="Legend">
               <li><span class="replay-swatch r-unseen"></span>not reached yet</li>
-              <li><span class="replay-swatch r-seen"></span>reached, not stable (value may be ⊥)</li>
+              <li><span class="replay-swatch r-seen"></span>evaluated (value may be ⊥)</li>
               <li><span class="replay-swatch r-solving"></span>being solved (on the call stack)</li>
               <li><span class="replay-swatch r-current"></span>solved now</li>
-              <li><span class="replay-swatch r-stable"></span>stable</li>
-              <li><span class="replay-swatch r-destabilized"></span>destabilized by an update</li>
+              <li><span class="replay-swatch r-stable"></span>stable (overlay)</li>
+              <li><span class="replay-swatch r-destabilized"></span>removed from the stable set by the last update (overlay)</li>
               <li><span class="replay-swatch r-edge"></span>the step's query, value or call</li>
             </ul>
+
+            <fieldset class="replay-overlays">
+              <legend class="eyebrow">Overlays</legend>
+              <label><input type="checkbox" data-replay-overlay="infl"> influence edges</label>
+              <label><input type="checkbox" data-replay-overlay="stable"> stable set</label>
+              <label><input type="checkbox" data-replay-overlay="destab"> destabilization cascade</label>
+              <label><input type="checkbox" data-replay-overlay="wpoints"> widening points</label>
+              <label><input type="checkbox" data-replay-overlay="globals"> side effects on globals</label>
+              <label><input type="checkbox" data-replay-overlay="routes"> routes</label>
+              <label><input type="checkbox" data-replay-overlay="counters"> counters</label>
+            </fieldset>
 
             <div class="replay-layout">
               <div
@@ -557,8 +569,21 @@
 
               <div class="replay-side">
                 <p id="solve-replay-detail" class="solver-globals-note replay-detail"></p>
+                <h3 class="eyebrow">Solve stack</h3>
+                <ol id="solve-replay-stack" class="replay-stack" aria-label="Open queries, innermost first"></ol>
                 <h3 class="eyebrow">Global unknowns</h3>
                 <ul id="solve-replay-globals" class="solver-globals-list"></ul>
+                <div id="solve-replay-routes-panel" hidden>
+                  <h3 class="eyebrow">Routes</h3>
+                  <ul id="solve-replay-routes" class="replay-routes"></ul>
+                </div>
+                <div id="solve-replay-counters-panel" hidden>
+                  <h3 class="eyebrow">Counters</h3>
+                  <table class="replay-counters">
+                    <thead><tr><th>unknown</th><th>evaluations</th><th>updates</th><th>destabilizations</th></tr></thead>
+                    <tbody id="solve-replay-counters"></tbody>
+                  </table>
+                </div>
                 <h3 class="eyebrow">Trace</h3>
                 <div id="solve-replay-trace" class="replay-trace" tabindex="0" aria-label="Trace around the current step. Click a line to go to its step."></div>
               </div>
