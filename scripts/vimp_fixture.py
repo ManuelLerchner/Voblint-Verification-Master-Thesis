@@ -23,8 +23,20 @@ GRAPH_END = "// EXPECT-GRAPH-END"
 
 # Flags that choose what voblint prints, not what it computes.
 OUTPUT_FLAGS = frozenset(
-    {"--dot", "--graph-snapshot", "--parse-only", "--ast", "--html"}
+    {
+        "--dot",
+        "--graph-snapshot",
+        "--parse-only",
+        "--ast",
+        "--html",
+        "--trace",
+        "--verbose",
+        "--compact",
+    }
 )
+
+# Output flags that take a value, such as the solver trace's format.
+VALUED_OUTPUT_FLAGS = frozenset({"--format", "--output"})
 
 # Flags that bound the run rather than select an analysis.
 RUNNER_FLAGS = frozenset({"--timeout"})
@@ -64,6 +76,10 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
         flag = rest.pop(0)
 
         if flag in OUTPUT_FLAGS:
+            continue
+
+        if flag in VALUED_OUTPUT_FLAGS:
+            rest.pop(0)
             continue
 
         if flag not in SETTING_FLAGS and flag not in RUNNER_FLAGS:
