@@ -7,6 +7,7 @@ Run after `pixi run cli-build`; a missing executable is a failed prerequisite.
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -104,6 +105,34 @@ def test_expected_trace(name, trace_args):
     if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
         expected.write_text(actual)
     assert actual == expected.read_text()
+
+
+def test_verbose_indents_by_call_depth():
+    """A query's SOLVE sits one level below the querying unknown; a loop head
+    that destabilized itself is solved again at its own level."""
+    text = voblint(
+        "--analysis",
+        "interval",
+        "--trace",
+        "--verbose",
+        "docs/readme-figures/while-loop.vimp",
+    ).stderr
+    steps = [
+        (len(indent) // 2, label, subject.split(" (readers")[0])
+        for indent, label, subject in re.findall(
+            r"^\[\d{3}\] ( *)(\S+) +(.*)$", text, re.M
+        )
+    ]
+    assert steps[0] == (0, "SOLVE", "(exit_main, unit)")
+    pairs = list(zip(steps, steps[1:], strict=False))
+    queries = [(a, b) for a, b in pairs if a[1] == "QUERY-L" and b[1] == "SOLVE"]
+    again = [
+        (a, b)
+        for a, b in pairs
+        if a[1] == "UPDATE-L" and b[1] == "RESOLVE" and a[2] == b[2]
+    ]
+    assert queries and all(b[0] == a[0] + 1 for a, b in queries)
+    assert again and all(b[0] == a[0] for a, b in again)
 
 
 def test_deterministic():

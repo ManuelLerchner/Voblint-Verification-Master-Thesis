@@ -6,189 +6,189 @@ Voblint trace
 
 [001] SOLVE     (exit_main, root)
 [002] QUERY-L   (exit_main, root) -> (pp6, root)
-[003] SOLVE     (pp6, root)
-[004] QUERY-L   (pp6, root) -> (pp5, root)
-[005] SOLVE     (pp5, root)
-[006] QUERY-L   (pp5, root) -> (pp4, root)
-[007] SOLVE     (pp4, root)
-[008] QUERY-L   (pp4, root) -> (pp3, root)
-[009] SOLVE     (pp3, root)
-[010] QUERY-L   (pp3, root) -> (pp2, root)
-[011] SOLVE     (pp2, root)
-[012] QUERY-L   (pp2, root) -> (entry_main, root)
-[013] SOLVE     (entry_main, root)
-[014] QUERY-G   (entry_main, root) -> Seed(main, root)
-      value = ⊥
-[015] ANSWER    (entry_main, root)
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[016] UPDATE-L  (entry_main, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[017] VALUE-L   (entry_main, root) to (pp2, root)
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[018] ANSWER    (pp2, root)
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[019] UPDATE-L  (pp2, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[020] VALUE-L   (pp2, root) to (pp3, root)
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[021] ROUTE     call at (pp2, root) -> context [[5,5]]
-      entry = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[022] QUERY-L   (pp3, root) -> (exit_bump, [[5,5]])
-[023] SOLVE     (exit_bump, [[5,5]])
-[024] QUERY-L   (exit_bump, [[5,5]]) -> (pp0, [[5,5]])
-[025] SOLVE     (pp0, [[5,5]])
-[026] QUERY-L   (pp0, [[5,5]]) -> (entry_bump, [[5,5]])
-[027] SOLVE     (entry_bump, [[5,5]])
-[028] QUERY-G   (entry_bump, [[5,5]]) -> Seed(bump, [[5,5]])
-      value = ⊥
-[029] ANSWER    (entry_bump, [[5,5]])
-      value = ⊥
-[030] VALUE-L   (entry_bump, [[5,5]]) to (pp0, [[5,5]])
-      value = ⊥
-[031] ANSWER    (pp0, [[5,5]])
-      value = ⊥
-[032] VALUE-L   (pp0, [[5,5]]) to (exit_bump, [[5,5]])
-      value = ⊥
-[033] ANSWER    (exit_bump, [[5,5]])
-      value = ⊥
-[034] VALUE-L   (exit_bump, [[5,5]]) to (pp3, root)
-      value = ⊥
-[035] SIDE      (pp3, root) -> Seed(bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[036] UPDATE-G  Seed(bump, [[5,5]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[037] ANSWER    (pp3, root)
-      value = ⊥
-[038] QUERY-L   (pp3, root) -> (pp2, root)
-[039] VALUE-L   (pp2, root) to (pp3, root)
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-[040] ROUTE     call at (pp2, root) -> context [[5,5]]
-      entry = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[041] QUERY-L   (pp3, root) -> (exit_bump, [[5,5]])
-[042] RESOLVE   (exit_bump, [[5,5]])
-[043] QUERY-L   (exit_bump, [[5,5]]) -> (pp0, [[5,5]])
-[044] RESOLVE   (pp0, [[5,5]])
-[045] QUERY-L   (pp0, [[5,5]]) -> (entry_bump, [[5,5]])
-[046] RESOLVE   (entry_bump, [[5,5]])
-[047] QUERY-G   (entry_bump, [[5,5]]) -> Seed(bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[048] ANSWER    (entry_bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[049] UPDATE-L  (entry_bump, [[5,5]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[050] VALUE-L   (entry_bump, [[5,5]]) to (pp0, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[051] ANSWER    (pp0, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[052] UPDATE-L  (pp0, [[5,5]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[053] VALUE-L   (pp0, [[5,5]]) to (exit_bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[054] ANSWER    (exit_bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-[055] UPDATE-L  (exit_bump, [[5,5]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-[056] VALUE-L   (exit_bump, [[5,5]]) to (pp3, root)
-      value = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-[057] SIDE      (pp3, root) -> Seed(bump, [[5,5]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
-[058] ANSWER    (pp3, root)
-      value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-[059] UPDATE-L  (pp3, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-[060] VALUE-L   (pp3, root) to (pp4, root)
-      value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-[061] ROUTE     call at (pp3, root) -> context [[4,4]]
-      entry = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[062] QUERY-L   (pp4, root) -> (exit_bump, [[4,4]])
-[063] SOLVE     (exit_bump, [[4,4]])
-[064] QUERY-L   (exit_bump, [[4,4]]) -> (pp0, [[4,4]])
-[065] SOLVE     (pp0, [[4,4]])
-[066] QUERY-L   (pp0, [[4,4]]) -> (entry_bump, [[4,4]])
-[067] SOLVE     (entry_bump, [[4,4]])
-[068] QUERY-G   (entry_bump, [[4,4]]) -> Seed(bump, [[4,4]])
-      value = ⊥
-[069] ANSWER    (entry_bump, [[4,4]])
-      value = ⊥
-[070] VALUE-L   (entry_bump, [[4,4]]) to (pp0, [[4,4]])
-      value = ⊥
-[071] ANSWER    (pp0, [[4,4]])
-      value = ⊥
-[072] VALUE-L   (pp0, [[4,4]]) to (exit_bump, [[4,4]])
-      value = ⊥
-[073] ANSWER    (exit_bump, [[4,4]])
-      value = ⊥
-[074] VALUE-L   (exit_bump, [[4,4]]) to (pp4, root)
-      value = ⊥
-[075] SIDE      (pp4, root) -> Seed(bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[076] UPDATE-G  Seed(bump, [[4,4]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[077] ANSWER    (pp4, root)
-      value = ⊥
-[078] QUERY-L   (pp4, root) -> (pp3, root)
-[079] VALUE-L   (pp3, root) to (pp4, root)
-      value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-[080] ROUTE     call at (pp3, root) -> context [[4,4]]
-      entry = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[081] QUERY-L   (pp4, root) -> (exit_bump, [[4,4]])
-[082] RESOLVE   (exit_bump, [[4,4]])
-[083] QUERY-L   (exit_bump, [[4,4]]) -> (pp0, [[4,4]])
-[084] RESOLVE   (pp0, [[4,4]])
-[085] QUERY-L   (pp0, [[4,4]]) -> (entry_bump, [[4,4]])
-[086] RESOLVE   (entry_bump, [[4,4]])
-[087] QUERY-G   (entry_bump, [[4,4]]) -> Seed(bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[088] ANSWER    (entry_bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[089] UPDATE-L  (entry_bump, [[4,4]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[090] VALUE-L   (entry_bump, [[4,4]]) to (pp0, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[091] ANSWER    (pp0, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[092] UPDATE-L  (pp0, [[4,4]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[093] VALUE-L   (pp0, [[4,4]]) to (exit_bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[094] ANSWER    (exit_bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-[095] UPDATE-L  (exit_bump, [[4,4]]) (readers destabilized)
-      old = ⊥
-      new = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-[096] VALUE-L   (exit_bump, [[4,4]]) to (pp4, root)
-      value = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-[097] SIDE      (pp4, root) -> Seed(bump, [[4,4]])
-      value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
-[098] ANSWER    (pp4, root)
-      value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[099] UPDATE-L  (pp4, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[100] VALUE-L   (pp4, root) to (pp5, root)
-      value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[101] ANSWER    (pp5, root)
-      value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[102] UPDATE-L  (pp5, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[103] VALUE-L   (pp5, root) to (pp6, root)
-      value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[104] ANSWER    (pp6, root)
-      value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
-[105] UPDATE-L  (pp6, root) (readers destabilized)
-      old = ⊥
-      new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[003]   SOLVE     (pp6, root)
+[004]   QUERY-L   (pp6, root) -> (pp5, root)
+[005]     SOLVE     (pp5, root)
+[006]     QUERY-L   (pp5, root) -> (pp4, root)
+[007]       SOLVE     (pp4, root)
+[008]       QUERY-L   (pp4, root) -> (pp3, root)
+[009]         SOLVE     (pp3, root)
+[010]         QUERY-L   (pp3, root) -> (pp2, root)
+[011]           SOLVE     (pp2, root)
+[012]           QUERY-L   (pp2, root) -> (entry_main, root)
+[013]             SOLVE     (entry_main, root)
+[014]             QUERY-G   (entry_main, root) -> Seed(main, root)
+                  value = ⊥
+[015]             ANSWER    (entry_main, root)
+                  value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[016]             UPDATE-L  (entry_main, root) (readers destabilized)
+                  old = ⊥
+                  new = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[017]           VALUE-L   (entry_main, root) to (pp2, root)
+                value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[018]           ANSWER    (pp2, root)
+                value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[019]           UPDATE-L  (pp2, root) (readers destabilized)
+                old = ⊥
+                new = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[020]         VALUE-L   (pp2, root) to (pp3, root)
+              value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[021]         ROUTE     call at (pp2, root) -> context [[5,5]]
+              entry = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[022]         QUERY-L   (pp3, root) -> (exit_bump, [[5,5]])
+[023]           SOLVE     (exit_bump, [[5,5]])
+[024]           QUERY-L   (exit_bump, [[5,5]]) -> (pp0, [[5,5]])
+[025]             SOLVE     (pp0, [[5,5]])
+[026]             QUERY-L   (pp0, [[5,5]]) -> (entry_bump, [[5,5]])
+[027]               SOLVE     (entry_bump, [[5,5]])
+[028]               QUERY-G   (entry_bump, [[5,5]]) -> Seed(bump, [[5,5]])
+                    value = ⊥
+[029]               ANSWER    (entry_bump, [[5,5]])
+                    value = ⊥
+[030]             VALUE-L   (entry_bump, [[5,5]]) to (pp0, [[5,5]])
+                  value = ⊥
+[031]             ANSWER    (pp0, [[5,5]])
+                  value = ⊥
+[032]           VALUE-L   (pp0, [[5,5]]) to (exit_bump, [[5,5]])
+                value = ⊥
+[033]           ANSWER    (exit_bump, [[5,5]])
+                value = ⊥
+[034]         VALUE-L   (exit_bump, [[5,5]]) to (pp3, root)
+              value = ⊥
+[035]         SIDE      (pp3, root) -> Seed(bump, [[5,5]])
+              value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[036]         UPDATE-G  Seed(bump, [[5,5]]) (readers destabilized)
+              old = ⊥
+              new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[037]         ANSWER    (pp3, root)
+              value = ⊥
+[038]         QUERY-L   (pp3, root) -> (pp2, root)
+[039]         VALUE-L   (pp2, root) to (pp3, root)
+              value = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
+[040]         ROUTE     call at (pp2, root) -> context [[5,5]]
+              entry = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[041]         QUERY-L   (pp3, root) -> (exit_bump, [[5,5]])
+[042]           RESOLVE   (exit_bump, [[5,5]])
+[043]           QUERY-L   (exit_bump, [[5,5]]) -> (pp0, [[5,5]])
+[044]             RESOLVE   (pp0, [[5,5]])
+[045]             QUERY-L   (pp0, [[5,5]]) -> (entry_bump, [[5,5]])
+[046]               RESOLVE   (entry_bump, [[5,5]])
+[047]               QUERY-G   (entry_bump, [[5,5]]) -> Seed(bump, [[5,5]])
+                    value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[048]               ANSWER    (entry_bump, [[5,5]])
+                    value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[049]               UPDATE-L  (entry_bump, [[5,5]]) (readers destabilized)
+                    old = ⊥
+                    new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[050]             VALUE-L   (entry_bump, [[5,5]]) to (pp0, [[5,5]])
+                  value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[051]             ANSWER    (pp0, [[5,5]])
+                  value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[052]             UPDATE-L  (pp0, [[5,5]]) (readers destabilized)
+                  old = ⊥
+                  new = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[053]           VALUE-L   (pp0, [[5,5]]) to (exit_bump, [[5,5]])
+                value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[054]           ANSWER    (exit_bump, [[5,5]])
+                value = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
+[055]           UPDATE-L  (exit_bump, [[5,5]]) (readers destabilized)
+                old = ⊥
+                new = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
+[056]         VALUE-L   (exit_bump, [[5,5]]) to (pp3, root)
+              value = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
+[057]         SIDE      (pp3, root) -> Seed(bump, [[5,5]])
+              value = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+[058]         ANSWER    (pp3, root)
+              value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
+[059]         UPDATE-L  (pp3, root) (readers destabilized)
+              old = ⊥
+              new = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
+[060]       VALUE-L   (pp3, root) to (pp4, root)
+            value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
+[061]       ROUTE     call at (pp3, root) -> context [[4,4]]
+            entry = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[062]       QUERY-L   (pp4, root) -> (exit_bump, [[4,4]])
+[063]         SOLVE     (exit_bump, [[4,4]])
+[064]         QUERY-L   (exit_bump, [[4,4]]) -> (pp0, [[4,4]])
+[065]           SOLVE     (pp0, [[4,4]])
+[066]           QUERY-L   (pp0, [[4,4]]) -> (entry_bump, [[4,4]])
+[067]             SOLVE     (entry_bump, [[4,4]])
+[068]             QUERY-G   (entry_bump, [[4,4]]) -> Seed(bump, [[4,4]])
+                  value = ⊥
+[069]             ANSWER    (entry_bump, [[4,4]])
+                  value = ⊥
+[070]           VALUE-L   (entry_bump, [[4,4]]) to (pp0, [[4,4]])
+                value = ⊥
+[071]           ANSWER    (pp0, [[4,4]])
+                value = ⊥
+[072]         VALUE-L   (pp0, [[4,4]]) to (exit_bump, [[4,4]])
+              value = ⊥
+[073]         ANSWER    (exit_bump, [[4,4]])
+              value = ⊥
+[074]       VALUE-L   (exit_bump, [[4,4]]) to (pp4, root)
+            value = ⊥
+[075]       SIDE      (pp4, root) -> Seed(bump, [[4,4]])
+            value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[076]       UPDATE-G  Seed(bump, [[4,4]]) (readers destabilized)
+            old = ⊥
+            new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[077]       ANSWER    (pp4, root)
+            value = ⊥
+[078]       QUERY-L   (pp4, root) -> (pp3, root)
+[079]       VALUE-L   (pp3, root) to (pp4, root)
+            value = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
+[080]       ROUTE     call at (pp3, root) -> context [[4,4]]
+            entry = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[081]       QUERY-L   (pp4, root) -> (exit_bump, [[4,4]])
+[082]         RESOLVE   (exit_bump, [[4,4]])
+[083]         QUERY-L   (exit_bump, [[4,4]]) -> (pp0, [[4,4]])
+[084]           RESOLVE   (pp0, [[4,4]])
+[085]           QUERY-L   (pp0, [[4,4]]) -> (entry_bump, [[4,4]])
+[086]             RESOLVE   (entry_bump, [[4,4]])
+[087]             QUERY-G   (entry_bump, [[4,4]]) -> Seed(bump, [[4,4]])
+                  value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[088]             ANSWER    (entry_bump, [[4,4]])
+                  value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[089]             UPDATE-L  (entry_bump, [[4,4]]) (readers destabilized)
+                  old = ⊥
+                  new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[090]           VALUE-L   (entry_bump, [[4,4]]) to (pp0, [[4,4]])
+                value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[091]           ANSWER    (pp0, [[4,4]])
+                value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[092]           UPDATE-L  (pp0, [[4,4]]) (readers destabilized)
+                old = ⊥
+                new = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[093]         VALUE-L   (pp0, [[4,4]]) to (exit_bump, [[4,4]])
+              value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[094]         ANSWER    (exit_bump, [[4,4]])
+              value = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
+[095]         UPDATE-L  (exit_bump, [[4,4]]) (readers destabilized)
+              old = ⊥
+              new = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
+[096]       VALUE-L   (exit_bump, [[4,4]]) to (pp4, root)
+            value = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
+[097]       SIDE      (pp4, root) -> Seed(bump, [[4,4]])
+            value = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+[098]       ANSWER    (pp4, root)
+            value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[099]       UPDATE-L  (pp4, root) (readers destabilized)
+            old = ⊥
+            new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[100]     VALUE-L   (pp4, root) to (pp5, root)
+          value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[101]     ANSWER    (pp5, root)
+          value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[102]     UPDATE-L  (pp5, root) (readers destabilized)
+          old = ⊥
+          new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[103]   VALUE-L   (pp5, root) to (pp6, root)
+        value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[104]   ANSWER    (pp6, root)
+        value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+[105]   UPDATE-L  (pp6, root) (readers destabilized)
+        old = ⊥
+        new = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 [106] VALUE-L   (pp6, root) to (exit_main, root)
       value = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 [107] ANSWER    (exit_main, root)

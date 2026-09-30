@@ -238,6 +238,50 @@ let record_of (e : H.event) =
           ];
       }
 
+(* ------------------------------------------------------------ call depth *)
+
+(* The unknown whose right-hand side is being evaluated when the event fires.
+   A route and a global update carry none: they fire inside the evaluation of
+   whichever unknown is innermost at the time. *)
+let current_of = function
+  | H.Query_local (x, _)
+  | H.Value_local (x, _, _)
+  | H.Query_global (x, _, _)
+  | H.Side (x, _, _)
+  | H.Update_local (x, _, _)
+  | H.Answer (x, _) ->
+      Some x
+  | H.Solve _ | H.Update_global _ | H.Route _ -> None
+
+(* The solver's call depth at each event, read off the event order. A SOLVE
+   opens a frame one level below the unknown whose query reached it; an event
+   of a current unknown sits at that unknown's frame, so every frame opened
+   above it has returned. The solve starts from one root unknown at level 0,
+   and a stable unknown's query opens no frame. An unknown whose update
+   destabilized itself is solved again by a tail call from its own frame,
+   so that SOLVE stays at its level. *)
+let depths events =
+  let rec return_to x = function
+    | y :: _ as frames when y = x -> Some frames
+    | _ :: frames -> return_to x frames
+    | [] -> None
+  in
+  let level frames = max 0 (List.length frames - 1) in
+  let _, depths =
+    List.fold_left
+      (fun (frames, acc) e ->
+        match (e, current_of e) with
+        | H.Solve x, _ when List.nth_opt frames 0 = Some x ->
+            (frames, level frames :: acc)
+        | H.Solve x, _ -> (x :: frames, List.length frames :: acc)
+        | _, Some x ->
+            let frames = Option.value ~default:frames (return_to x frames) in
+            (frames, level frames :: acc)
+        | _, None -> (frames, level frames :: acc))
+      ([], []) events
+  in
+  List.rev depths
+
 (* ---------------------------------------------------------- compact text *)
 
 (* The per-caller story: which context a call is routed to, the query of the
@@ -376,14 +420,17 @@ let emit ~out ~format ~verbose ~analyses ~context ~globals ~program result =
       pr "  globals:  %s\n" globals;
       pr "  program:  %s\n\n" program;
       if verbose then
-        ignore
-          (List.fold_left
-             (fun step e ->
-               let r = record_of e in
-               pr "[%03d] %-9s %s\n" step r.label r.subject;
-               List.iter (fun (k, v) -> pr "      %s = %s\n" k v) r.details;
-               step + 1)
-             1 events)
+        (* An array, not List.combine: the browser build's stack cannot hold a
+           non-tail-recursive walk over a long trace. *)
+        let depths = Array.of_list (depths events) in
+        List.iteri
+          (fun i e ->
+            let r = record_of e and indent = String.make (2 * depths.(i)) ' ' in
+            pr "[%03d] %s%-9s %s\n" (i + 1) indent r.label r.subject;
+            List.iter
+              (fun (k, v) -> pr "      %s%s = %s\n" indent k v)
+              r.details)
+          events
       else List.iter (fun l -> pr "%s\n" l) (compact events);
       pr "\n";
       List.iter
