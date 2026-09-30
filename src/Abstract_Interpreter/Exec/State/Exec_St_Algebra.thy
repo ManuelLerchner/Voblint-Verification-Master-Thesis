@@ -2,6 +2,8 @@ theory Exec_St_Algebra
   imports Exec_St_Base "Voblint_Domain.Abstract_Domain"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Pointwise abstract-domain operations\<close>
 
 text \<open>
@@ -85,15 +87,9 @@ lift_definition sup_resolved_st_q ::
 instance ..
 end
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_sup_resolved_st_q [simp]:
   "(s \<squnion> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<squnion> t\<langle>loc\<rangle>"
   by transfer (rule lookup_merge_resolved_st)
-
-end
 
 instance resolved_st_q ::
   (bounded_semilattice_sup_bot) semilattice_sup
@@ -150,8 +146,8 @@ lift_definition widen_on_resolved_st_q ::
   by (rule eq_resolved_st_widen)
 
 lemma lookup_widen_on_resolved_st_q [simp]:
-  "lookup_resolved_st_q (widen_on_resolved_st_q s t) loc =
-     lookup_resolved_st_q s loc \<nabla> lookup_resolved_st_q t loc"
+  "(widen_on_resolved_st_q s t)\<langle>loc\<rangle> =
+     s\<langle>loc\<rangle> \<nabla> t\<langle>loc\<rangle>"
   by transfer (rule lookup_widen_resolved_st)
 
 instantiation resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") widening
@@ -171,15 +167,9 @@ proof
 qed
 end
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_widen_resolved_st_q [simp]:
   "(s \<nabla> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<nabla> t\<langle>loc\<rangle>"
   by (simp add: widen_resolved_st_q_def)
-
-end
 
 definition narrow_resolved_st ::
   "('a::{bounded_semilattice_sup_bot, warrowing}) resolved_st =>
@@ -207,8 +197,8 @@ lift_definition narrow_on_resolved_st_q ::
   by (rule eq_resolved_st_narrow)
 
 lemma lookup_narrow_on_resolved_st_q [simp]:
-  "lookup_resolved_st_q (narrow_on_resolved_st_q s t) loc =
-     lookup_resolved_st_q s loc \<Delta> lookup_resolved_st_q t loc"
+  "(narrow_on_resolved_st_q s t)\<langle>loc\<rangle> =
+     s\<langle>loc\<rangle> \<Delta> t\<langle>loc\<rangle>"
   by transfer (rule lookup_narrow_resolved_st)
 
 instantiation resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") narrowing
@@ -224,16 +214,12 @@ instance
        intro: narrow_ge narrow_le)
 end
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_narrow_resolved_st_q [simp]:
   "(s \<Delta> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<Delta> t\<langle>loc\<rangle>"
   by (simp add: narrow_resolved_st_q_def)
 
-end
-
 instance resolved_st_q :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
+
+unbundle no resolved_st_syntax
 
 end

@@ -12,6 +12,8 @@ theory Example_Relational_DG_Demo
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>End-to-end demo: a relational analysis on the same executable pipeline as Interval\<close>
 
 text \<open>
@@ -58,7 +60,7 @@ lemma demo_program_declared_global_vars [simp]:
 text \<open>Local shorthand for the executable state's lookup projection, fixed at this
   file's own \<open>demo_gs\<close> classifier.\<close>
 abbreviation demo_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "demo_lookup s x \<equiv> lookup_resolved_st_q s (location_of demo_gs x)"
+  "demo_lookup s x \<equiv> s\<langle>location_of demo_gs x\<rangle>"
 
 definition demo_pi :: proc_table where
   "demo_pi = prog_table demo_program"
@@ -157,5 +159,7 @@ lemma direct_relational_order_guards:
   "assume_not_step (GreaterEq (V x) (V y)) (RelC {}) = RelC {(x, y)}"
   "assume_not_step (NotEq (V x) (V y)) (RelC {}) = RelC {(x, y), (y, x)}"
   by (simp_all add: assume_step_def assume_not_step_def)
+
+unbundle no resolved_st_syntax
 
 end

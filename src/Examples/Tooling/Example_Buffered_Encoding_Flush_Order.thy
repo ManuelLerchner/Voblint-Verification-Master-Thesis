@@ -9,6 +9,8 @@ theory Example_Buffered_Encoding_Flush_Order
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Whether the two encodings solve alike\<close>
 
 text \<open>
@@ -64,7 +66,7 @@ abbreviation fo_sol where
   "fo_sol E \<equiv> snd (TD_side_rule_Interp_solve Globals_Warrow E (cfg_exit fo_cfg, ()))"
 
 abbreviation fo_look where
-  "fo_look s x \<equiv> lookup_resolved_st_q s (location_of fo_gs x)"
+  "fo_look s x \<equiv> s\<langle>location_of fo_gs x\<rangle>"
 
 subsection \<open>Interval, warrowing every global\<close>
 
@@ -171,5 +173,7 @@ text \<open>
   narrows back --- so the most scheduling-sensitive shape cannot be compared at
   all, by either generator.
 \<close>
+
+unbundle no resolved_st_syntax
 
 end

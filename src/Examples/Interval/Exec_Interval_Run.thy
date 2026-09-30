@@ -5,6 +5,8 @@ theory Exec_Interval_Run
             Example_Interval_Loop_Coverage
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 
 text \<open>
@@ -57,7 +59,7 @@ text \<open>One projection, reused by every engine below: take a solved D/G slot
 definition loop_read_x ::
     "(ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state \<Rightarrow> ivl" where
   "loop_read_x d =
-     case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x''))) (dg_local d)"
+     case_lifted bot (\<lambda>q. q\<langle>location_of loop_gs (STR ''x'')\<rangle>) (dg_local d)"
 
 definition loop_sig0 ::
     "pp \<times> unit + (unit, unit) global_unknown
@@ -202,5 +204,7 @@ text \<open>
   \<open>Interval_Analysis\<close>; a second, domain-specific export module would just
   be a parallel, redundant API surface for the same computation.
 \<close>
+
+unbundle no resolved_st_syntax
 
 end

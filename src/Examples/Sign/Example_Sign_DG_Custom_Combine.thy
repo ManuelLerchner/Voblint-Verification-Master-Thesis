@@ -10,6 +10,8 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
 text \<open>
@@ -94,18 +96,17 @@ abbreviation cj_gs :: "vname \<Rightarrow> bool" where
   "cj_gs \<equiv> (\<lambda>_. False)"
 
 definition cj_caller :: "sign exec_dg_st" where
-  "cj_caller = update_resolved_st_q bot (Local_Location (STR ''r'')) SPos"
+  "cj_caller = bot\<langle>Local_Location (STR ''r'') := SPos\<rangle>"
 
 definition cj_callee :: "sign exec_dg_st" where
-  "cj_callee = update_resolved_st_q bot (Local_Location (STR ''r'')) SNeg"
+  "cj_callee = bot\<langle>Local_Location (STR ''r'') := SNeg\<rangle>"
 
 lemma stock_env_keeps_caller:
-  "lookup_resolved_st_q cj_caller (Local_Location (STR ''r'')) = SPos"
+  "cj_caller\<langle>Local_Location (STR ''r'')\<rangle> = SPos"
   by (simp add: cj_caller_def)
 
 lemma callee_join_env_publishes_top:
-  "lookup_resolved_st_q (cj_caller \<squnion> restrict_local_resolved_q cj_callee)
-     (Local_Location (STR ''r'')) = STop"
+  "(cj_caller \<squnion> restrict_local_resolved_q cj_callee)\<langle>Local_Location (STR ''r'')\<rangle> = STop"
   by (simp add: cj_caller_def cj_callee_def sup_sign_def)
 
 text \<open>So the two environment merges are different functions, and the override is
@@ -387,7 +388,7 @@ definition cj_cfg :: cfg where
   "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)"
 
 abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
-  "cj_lookup s x \<equiv> lookup_resolved_st_q s (location_of cj_prog_gs x)"
+  "cj_lookup s x \<equiv> s\<langle>location_of cj_prog_gs x\<rangle>"
 
 definition cj_stock_eqs ::
   "pp \<times> unit
@@ -468,5 +469,7 @@ lemma cj_return_assignment_unaffected:
   "cj_lookup (dg_local (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   by eval+
+
+unbundle no resolved_st_syntax
 
 end

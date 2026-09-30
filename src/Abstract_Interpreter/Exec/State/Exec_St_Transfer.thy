@@ -2,6 +2,8 @@ theory Exec_St_Transfer
   imports Exec_St_Algebra "Voblint_Framework.Transfer_Algebra"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Refinement to variable-indexed states\<close>
 
 text \<open>
@@ -81,7 +83,7 @@ definition fun_of_resolved_st_q_for ::
   "(vname => bool) => ('a::bot) resolved_st_q => vname => 'a"
 where
   "fun_of_resolved_st_q_for \<G> s x =
-     lookup_resolved_st_q s (location_of \<G> x)"
+     s\<langle>location_of \<G> x\<rangle>"
 
 
 lemma fun_of_resolved_st_q_for_bot [simp]:
@@ -169,18 +171,12 @@ lift_definition combine_assign_resolved_q ::
   is combine_assign_resolved
   by (rule eq_resolved_st_combine_assign)
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_combine_assign_resolved_q [simp]:
   "(combine_assign_resolved_q \<G> dst v s)\<langle>loc\<rangle> =
      (case dst of
         None => s\<langle>loc\<rangle>
       | Some x => if location_of \<G> x = loc then v else s\<langle>loc\<rangle>)"
   by transfer (auto simp add:combine_assign_resolved_def split:option.splits)
-
-end
 
 lemma fun_of_resolved_st_for_combine_assign [simp]:
   "fun_of_resolved_st_for \<G>
@@ -238,7 +234,7 @@ text \<open>A single-formal call binds exactly one location, so its reduction is
   \<^const>\<open>bind_formals_resolved_q\<close>'s fold.\<close>
 
 lemma bind_formals_resolved_q_singleton:
-  "bind_formals_resolved_q \<G> [x] [a] s = update_resolved_st_q s (location_of \<G> x) a"
+  "bind_formals_resolved_q \<G> [x] [a] s = s\<langle>location_of \<G> x := a\<rangle>"
   by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
 
 lemma fun_of_resolved_st_for_fold_update:
@@ -265,13 +261,11 @@ lemma fun_of_resolved_st_q_for_bind_formals [simp]:
      (rule fun_of_resolved_st_for_bind_formals[unfolded fun_of_resolved_st_for_def])
 
 lemma fun_of_resolved_st_q_for_update [simp]:
-  "fun_of_resolved_st_q_for \<G>
-      (update_resolved_st_q s (location_of \<G> x) a) =
+  "fun_of_resolved_st_q_for \<G> s\<langle>location_of \<G> x := a\<rangle> =
    (fun_of_resolved_st_q_for \<G> s)(x := a)"
 proof (rule ext)
   fix y
-  show "fun_of_resolved_st_q_for \<G>
-      (update_resolved_st_q s (location_of \<G> x) a) y =
+  show "fun_of_resolved_st_q_for \<G> s\<langle>location_of \<G> x := a\<rangle> y =
     ((fun_of_resolved_st_q_for \<G> s)(x := a)) y"
     unfolding fun_of_resolved_st_q_for_def
     by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
@@ -357,10 +351,6 @@ text \<open>
   space and preserves the default by construction.
 \<close>
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_restrict_local_resolved_q [simp]:
   "(restrict_local_resolved_q s)\<langle>loc\<rangle> =
      (case loc of
@@ -374,8 +364,6 @@ lemma lookup_restrict_global_resolved_q [simp]:
         Local_Location x => bot
       | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_restrict_global_resolved)
-
-end
 
 lemma fun_of_resolved_st_q_for_restrict_local [simp]:
   "fun_of_resolved_st_q_for \<G> (restrict_local_resolved_q s) x =
@@ -422,18 +410,12 @@ lift_definition combine_resolved_st_q ::
   is combine_resolved_st
   by (rule eq_resolved_st_combine)
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_combine_resolved_st_q [simp]:
   "(combine_resolved_st_q sc se)\<langle>loc\<rangle> =
      (case loc of
         Local_Location x => sc\<langle>loc\<rangle>
       | Global_Location x => se\<langle>loc\<rangle>)"
   by transfer (rule lookup_combine_resolved_st)
-
-end
 
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
@@ -499,18 +481,12 @@ lift_definition enter_frame_D_resolved_q ::
   is enter_frame_D_resolved
   by (rule eq_resolved_st_enter_frame_D)
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma lookup_enter_frame_D_resolved_q [simp]:
   "(enter_frame_D_resolved_q top_val s)\<langle>loc\<rangle> =
      (case loc of
         Local_Location x => top_val
       | Global_Location x => s\<langle>loc\<rangle>)"
   by transfer (rule lookup_enter_frame_D_resolved)
-
-end
 
 lemma fun_of_resolved_st_for_enter_frame [simp]:
   "fun_of_resolved_st_for \<G> (enter_frame_D_resolved top_val s) =
@@ -565,5 +541,7 @@ lemma restrict_global_resolved_q_split [simp]:
   "restrict_global_resolved_q (restrict_local_resolved_q A \<squnion>
       restrict_global_resolved_q B) = restrict_global_resolved_q B"
   by (rule resolved_st_q_eqI) (simp split: location.split)
+
+unbundle no resolved_st_syntax
 
 end

@@ -2,6 +2,8 @@ theory Exec_Backward
     imports "Voblint_Exec.Exec_St_Reachability" "Voblint_Domain.Backward_Domain_Mono"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Generic executable mirror of backward filtering\<close>
 
 text \<open>
@@ -205,8 +207,7 @@ fun afilter_st ::
   "(vname => bool) => exp => 'a => 'a resolved_st_q => 'a resolved_st_q"
 where
     "afilter_st \<G> (V x) a s =
-       update_resolved_st_q s (location_of \<G> x)
-         (intersect a (fun_of_resolved_st_q_for \<G> s x))"
+       s\<langle>location_of \<G> x := intersect a (fun_of_resolved_st_q_for \<G> s x)\<rangle>"
   | "afilter_st \<G> (Plus e1 e2) a s =
        (let (a1, a2) = inv_plus a
               (aval_abs e1 (fun_of_resolved_st_q_for \<G> s))
@@ -798,5 +799,7 @@ next
 qed
 
 end
+
+unbundle no resolved_st_syntax
 
 end

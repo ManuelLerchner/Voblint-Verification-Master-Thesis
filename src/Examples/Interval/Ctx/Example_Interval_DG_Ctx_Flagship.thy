@@ -4,6 +4,8 @@ theory Example_Interval_DG_Ctx_Flagship
     "Voblint_Analysis_Interval.Interval_Analyses"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
 
 text \<open>
@@ -45,7 +47,7 @@ text \<open>Reading one variable off a lifted whole-state local unknown: an unre
   point (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
 abbreviation twice_ctx_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
   "twice_ctx_lookup d x \<equiv>
-     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of twice_gs x))"
+     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of twice_gs x\<rangle>)"
 
 subsection \<open>The routed equation system and its solution\<close>
 
@@ -161,5 +163,7 @@ lemma callee_covered_call2: "(FunctionEntry (STR ''twice''), ctx_call2) \<in> fs
 
 lemma callee_not_under_main: "(FunctionEntry (STR ''twice''), []) \<notin> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_empty_pred_def by eval
+
+unbundle no resolved_st_syntax
 
 end

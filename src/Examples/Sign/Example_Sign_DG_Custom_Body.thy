@@ -10,6 +10,8 @@ theory Example_Sign_DG_Custom_Body
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>What a procedure-entry transfer can change\<close>
 
 text \<open>
@@ -52,7 +54,7 @@ definition sign_body_forget ::
    \<Rightarrow> ('x,'k,unit,sign exec_dg_st,sign exec_dg_st) man_transfer"
 where
   "sign_body_forget \<G> x =
-     local_transfer (\<lambda>d. update_resolved_st_q d (location_of \<G> x) STop)"
+     local_transfer (\<lambda>d. d\<langle>location_of \<G> x := STop\<rangle>)"
 
 subsection \<open>The Sign specification that uses it\<close>
 
@@ -124,7 +126,7 @@ definition bf_cfg :: cfg where
   "bf_cfg = compile_prog (prog_table bf_program) (prog_procs bf_program)"
 
 abbreviation bf_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
-  "bf_lookup s x \<equiv> lookup_resolved_st_q s (location_of bf_prog_gs x)"
+  "bf_lookup s x \<equiv> s\<langle>location_of bf_prog_gs x\<rangle>"
 
 definition bf_stock_eqs ::
   "pp \<times> unit
@@ -220,5 +222,7 @@ lemma bf_caller_unaffected:
   "bf_lookup (dg_local (snd bf_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
   "bf_lookup (dg_local (snd bf_custom_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
   by eval+
+
+unbundle no resolved_st_syntax
 
 end

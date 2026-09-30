@@ -4,6 +4,8 @@ theory Example_Sign_DG_Overlapping_Enter
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>One concrete call, two overlapping entry alternatives, two contexts\<close>
 
 text \<open>
@@ -77,11 +79,11 @@ subsection \<open>The overriding entry transfer\<close>
 definition forget_formals ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st" where
   "forget_formals \<G> ci s =
-     foldl (\<lambda>s f. update_resolved_st_q s (location_of \<G> f) STop) s (ci_formals ci)"
+     foldl (\<lambda>s f. s\<langle>location_of \<G> f := STop\<rangle>) s (ci_formals ci)"
 
 definition forget_var ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> sign \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> sign exec_dg_st lifted" where
-  "forget_var \<G> v w = map_lift (\<lambda>s. update_resolved_st_q s (location_of \<G> v) w)"
+  "forget_var \<G> v w = map_lift (\<lambda>s. s\<langle>location_of \<G> v := w\<rangle>)"
 
 text \<open>Alternative 1 is the stock singleton entry, continuation untouched. Alternative 2
   forgets the formals on entry \<^emph>\<open>and\<close> forgets the caller's own \<open>x\<close> in its continuation to
@@ -524,19 +526,19 @@ lemma ov_alt1_route:
   using ov_solution_snapshot by blast
 
 lemma ov_entry1_not_empty_probe:
-  "\<not> ov_ep (update_resolved_st_q
-       (enter_frame_D_resolved_q STop
-         (update_resolved_st_q cinit_sign_st (location_of ov_gs (STR ''x'')) SPos))
-       (location_of ov_gs (STR ''a'')) SPos)"
+  "\<not> ov_ep
+     (enter_frame_D_resolved_q STop
+        cinit_sign_st\<langle>location_of ov_gs (STR ''x'') := SPos\<rangle>)
+       \<langle>location_of ov_gs (STR ''a'') := SPos\<rangle>"
   by eval
 
 lemma ov_entry1_dg_local_exact:
   "transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
      (dg_local (snd ov_sol (Inl (Statement 3, []))))
-   = Lifted (update_resolved_st_q
-               (enter_frame_D_resolved_q STop
-                 (update_resolved_st_q cinit_sign_st (location_of ov_gs (STR ''x'')) SPos))
-               (location_of ov_gs (STR ''a'')) SPos)"
+   = Lifted
+       (enter_frame_D_resolved_q STop
+          cinit_sign_st\<langle>location_of ov_gs (STR ''x'') := SPos\<rangle>)
+         \<langle>location_of ov_gs (STR ''a'') := SPos\<rangle>"
   unfolding ov_call_site_dg_local_probe update_resolved_st_q_lift_def
   by (simp add: bind_formals_resolved_q_singleton is_bottom_sign_def normalize_lift_def
                 ov_entry1_not_empty_probe)
@@ -1053,5 +1055,7 @@ text \<open>
   never covers the live caller --- \<open>ov_empty_pairs_never_cover\<close> above is exactly the
   missing obligation \<^const>\<open>call_context_total_on\<close> rules out.
 \<close>
+
+unbundle no resolved_st_syntax
 
 end

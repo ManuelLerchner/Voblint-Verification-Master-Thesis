@@ -6,6 +6,8 @@ theory Example_Sign_Mixed_Flow
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>A mixed flow-sensitive analysis, sound end to end for one program\<close>
 
 subsection \<open>The ownership-split Sign specification at the executable carrier\<close>
@@ -96,7 +98,7 @@ next
       \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) (fun_of_resolved_st_q_for \<G> ?x) (fun_of_resolved_st_q_for \<G> ?y)\<rbrakk>"
     using 4 unfolding split_gamma_def by (intro combine_collect_sound)
   also have "\<dots> = \<lbrakk>fun_of_resolved_st_q_for \<G>
-      (combine_assign_resolved_q \<G> (ci_dst ci) (lookup_resolved_st_q ?y (location_of \<G> ret_var))
+      (combine_assign_resolved_q \<G> (ci_dst ci) ?y\<langle>location_of \<G> ret_var\<rangle>
          ?x)\<rbrakk>"
     by (subst (2) xy[symmetric]) (simp only: fun_of_resolved_st_q_for_combine_assign)
   finally show ?case
@@ -384,5 +386,7 @@ proof -
   moreover have "c = ()" by simp
   ultimately show ?thesis using mf_activation_collect_sound[of v] by blast
 qed
+
+unbundle no resolved_st_syntax
 
 end

@@ -4,6 +4,8 @@ theory DG_Local_State_Exec
     Exec_St_Reachability
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Executable Base-style DG construction\<close>
 
 text \<open>
@@ -54,7 +56,7 @@ definition exec_spec ::
      (\<lambda>_ _ ci. combine_env_st_lifted)
      (\<lambda>_ ci. transfer_lift2 empty_pred
         (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-             (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0))"
+             de0\<langle>location_of \<G> ret_var\<rangle> env0))"
 
 lemma ls_step_exec_spec [simp]:
   "ls_step (exec_spec \<G> empty_pred tf_st enter_st) A a = transfer_lift empty_pred (tf_st a)"
@@ -107,8 +109,10 @@ lemma dg_spec_combine_transfer_local_state_st_for_lifted:
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred
             (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-                 (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+                 de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)"
   by (simp add: local_state_dg_spec_st_for_lifted_def exec_spec_def)
+
+unbundle no resolved_st_syntax
 
 end

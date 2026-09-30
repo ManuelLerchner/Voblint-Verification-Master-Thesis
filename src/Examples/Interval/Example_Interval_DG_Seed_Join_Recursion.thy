@@ -9,6 +9,8 @@ theory Example_Interval_DG_Seed_Join_Recursion
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>How a recursive callee is activated over and over\<close>
 
 text \<open>
@@ -53,7 +55,7 @@ definition sj_cfg :: cfg where
   "sj_cfg = compile_prog (prog_table sj_program) (prog_procs sj_program)"
 
 abbreviation sj_lookup :: "ivl exec_dg_st \<Rightarrow> vname \<Rightarrow> ivl" where
-  "sj_lookup s x \<equiv> lookup_resolved_st_q s (location_of sj_gs x)"
+  "sj_lookup s x \<equiv> s\<langle>location_of sj_gs x\<rangle>"
 
 abbreviation sj_seed :: "(pp \<times> unit) set \<times>
     (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)
@@ -126,5 +128,7 @@ lemma sj_warrowed_seed_agrees:
        (cfg_exit sj_cfg, ())) (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ()))))
      (STR ''n'') = Ivl (Fin 0) (Fin 5)"
   by eval
+
+unbundle no resolved_st_syntax
 
 end

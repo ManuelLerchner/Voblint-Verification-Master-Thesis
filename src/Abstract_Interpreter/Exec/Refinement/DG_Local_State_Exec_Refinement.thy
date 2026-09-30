@@ -6,6 +6,8 @@ theory DG_Local_State_Exec_Refinement
     "Voblint_Framework.MCP_Spec"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Reading an executable D/G run back as the mathematical one\<close>
 
 text \<open>
@@ -29,7 +31,7 @@ text \<open>
 
 lemma fun_of_resolved_st_q_for_combine_assign:
   "fun_of_resolved_st_q_for \<G>
-     (combine_assign_resolved_q \<G> dst (lookup_resolved_st_q y (location_of \<G> ret_var))
+     (combine_assign_resolved_q \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_resolved_st_q x y))
    = combine\<^sup># \<G> dst (fun_of_resolved_st_q_for \<G> x) (fun_of_resolved_st_q_for \<G> y)"
   unfolding fun_of_resolved_st_q_for_def
@@ -147,13 +149,13 @@ lemma transfer_lift2_combine_env_st_lifted:
 lemma combine_lift_commute:
   "reader (transfer_lift2 empty_pred
             (\<lambda>env0 de0. combine_assign_resolved_q \<G> dst
-                 (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+                 de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)
      = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
   show "\<And>x y. fun_of_resolved_st_q_for \<G>
-      (combine_assign_resolved_q \<G> dst (lookup_resolved_st_q y (location_of \<G> ret_var))
+      (combine_assign_resolved_q \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_resolved_st_q x y))
         = combine\<^sup># \<G> dst (fun_of_resolved_st_q_for \<G> x) (fun_of_resolved_st_q_for \<G> y)"
     by (rule fun_of_resolved_st_q_for_combine_assign)
@@ -279,7 +281,7 @@ proof -
   qed
   have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>reader (transfer_lift2 empty_pred
         (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-           (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+           de0\<langle>location_of \<G> ret_var\<rangle> env0)
         (combine_env_st_lifted dc de) de)\<rbrakk>\<^sub>\<bottom>"
     if "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci
     unfolding combine_lift_commute
@@ -340,5 +342,6 @@ lemma entry_exec_route_gen_commute:
 
 end
 
+unbundle no resolved_st_syntax
 
 end

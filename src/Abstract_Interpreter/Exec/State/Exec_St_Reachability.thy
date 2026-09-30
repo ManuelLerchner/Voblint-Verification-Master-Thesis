@@ -2,6 +2,8 @@ theory Exec_St_Reachability
   imports Exec_St_Transfer "Voblint_Domain.Nonrelational_Reachability"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>Executable dead-code detection\<close>
 
 text \<open>
@@ -333,7 +335,7 @@ definition update_resolved_st_q_lift ::
 where
   "update_resolved_st_q_lift x loc a = do {
      s <- x;
-     if is_empty a then Bot else Lifted (update_resolved_st_q s loc a)
+     if is_empty a then Bot else Lifted s\<langle>loc := a\<rangle>
    }"
 
 lemma update_resolved_st_q_lift_Bot [simp]:
@@ -342,7 +344,7 @@ lemma update_resolved_st_q_lift_Bot [simp]:
 
 lemma update_resolved_st_q_lift_Lifted:
   "update_resolved_st_q_lift (Lifted s) loc a =
-     (if is_empty a then Bot else Lifted (update_resolved_st_q s loc a))"
+     (if is_empty a then Bot else Lifted s\<langle>loc := a\<rangle>)"
   unfolding update_resolved_st_q_lift_def by simp
 
 text \<open>
@@ -368,5 +370,7 @@ proof -
     by (cases "is_empty a")
       (simp_all add: update_resolved_st_q_lift_Lifted upd)
 qed
+
+unbundle no resolved_st_syntax
 
 end

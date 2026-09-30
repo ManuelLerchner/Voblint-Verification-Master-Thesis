@@ -6,6 +6,8 @@ theory Nonrelational_Ops
     "Voblint_Exec.Exec_St_Restriction_Refinement"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>The primitives one abstract value per variable is built from\<close>
 
 text \<open>
@@ -83,10 +85,9 @@ fun generic_tf_st_for ::
        'a resolved_st_q => 'a resolved_st_q" where
     "generic_tf_st_for ops \<G> EA_Nop s = s"
   | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
-       update_resolved_st_q s (location_of \<G> x)
-         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+       s\<langle>location_of \<G> x := n_aval ops a (fun_of_resolved_st_q_for \<G> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Special sc x) s =
-       update_resolved_st_q s (location_of \<G> x)
+       s\<langle>location_of \<G> x :=
          (case sc of
             Nondet_Int => top
           | Min a b => special_min (n_special ops)
@@ -94,14 +95,13 @@ fun generic_tf_st_for ::
                          (n_aval ops b (fun_of_resolved_st_q_for \<G> s))
           | Max a b => special_max (n_special ops)
                          (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
-                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s)))"
+                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s)))\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Assume b) s = n_bfilter ops \<G> b True s"
   | "generic_tf_st_for ops \<G> (EA_AssumeNot b) s = n_bfilter ops \<G> b False s"
   | "generic_tf_st_for ops \<G> (EA_Body p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret None p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of \<G> ret_var)
-         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+       s\<langle>location_of \<G> ret_var := n_aval ops a (fun_of_resolved_st_q_for \<G> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
@@ -175,5 +175,7 @@ next
   case (EA_Check l cnd)
   then show ?thesis by simp
 qed
+
+unbundle no resolved_st_syntax
 
 end

@@ -236,9 +236,10 @@ lift_definition update_resolved_st_q ::
   by (rule eq_resolved_st_update)
 
 text \<open>
-  The lemmas characterizing the quotient write lookup as \<open>s\<langle>l\<rangle>\<close> and point
-  update as \<open>s\<langle>l := a\<rangle>\<close>. The notation is a bundle, opened only around those
-  statements, so it neither reaches importing theories nor changes a term.
+  Lookup is written \<open>s\<langle>l\<rangle>\<close> and point update \<open>s\<langle>l := a\<rangle>\<close>. The notation is a
+  bundle: every theory that uses it opens it after \<open>begin\<close> and closes it with
+  \<open>unbundle no\<close> before \<open>end\<close>, so it never reaches an importing theory and
+  never changes a term.
   Both forms bind tighter than application, so \<open>f s\<langle>l\<rangle>\<close> reads
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
 \<close>
@@ -249,9 +250,7 @@ notation lookup_resolved_st_q ("_\<langle>_\<rangle>" [1000, 0] 1000)
 notation update_resolved_st_q ("_\<langle>_ :=/ _\<rangle>" [1000, 0, 0] 1000)
 end
 
-context
-  includes resolved_st_syntax
-begin
+unbundle resolved_st_syntax
 
 lemma lookup_Abs_resolved_st_q [simp]:
   "(Abs_resolved_st s)\<langle>loc\<rangle> = lookup_resolved_st s loc"
@@ -292,8 +291,6 @@ lemma resolved_st_q_eqI:
   shows "s = t"
   using assms by (simp add: resolved_st_q_eq_iff fun_eq_iff)
 
-end
-
 
 subsection \<open>Order, bottom and executable equality\<close>
 
@@ -325,16 +322,10 @@ instance ..
 end
 
 
-context
-  includes resolved_st_syntax
-begin
-
 lemma le_resolved_st_q_iff:
   fixes s t :: "('a::order_bot) resolved_st_q"
   shows "s \<le> t \<longleftrightarrow> (\<forall>loc. s\<langle>loc\<rangle> \<le> t\<langle>loc\<rangle>)"
   by transfer (rule le_resolved_st_code_iff)
-
-end
 
 
 instance resolved_st_q :: (order_bot) order
@@ -353,7 +344,7 @@ proof intro_classes
 qed
 
 context
-  includes resolved_st_syntax and lattice_syntax
+  includes lattice_syntax
 begin
 
 lemma lookup_bot_resolved_st_q [simp]:
@@ -380,4 +371,7 @@ where
 instance
   by standard (auto simp: equal_resolved_st_q_def intro: order_antisym)
 end
+
+unbundle no resolved_st_syntax
+
 end

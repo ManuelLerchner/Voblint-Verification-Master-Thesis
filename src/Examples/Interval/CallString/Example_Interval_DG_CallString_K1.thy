@@ -11,6 +11,8 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>A computed 1-call-string context, routed by truncated call history\<close>
 
 text \<open>
@@ -46,7 +48,7 @@ text \<open>Reading one variable off a lifted whole-state local unknown: an unre
   (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
 abbreviation nest_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
   "nest_lookup d x \<equiv>
-     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of nest_gs x))"
+     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of nest_gs x\<rangle>)"
 
 definition nest_pi :: proc_table where "nest_pi = prog_table nest_program"
 definition nest_procs :: "pname list" where "nest_procs = prog_procs nest_program"
@@ -463,5 +465,6 @@ lemma nest_1_seed_f_second:
      (STR ''p'') = Ivl (Fin 10) (Fin 10)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
+unbundle no resolved_st_syntax
 
 end

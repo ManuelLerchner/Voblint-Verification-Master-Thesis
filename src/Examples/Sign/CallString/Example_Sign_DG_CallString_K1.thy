@@ -10,6 +10,8 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>A computed 1-call-string context, routed by truncated call history\<close>
 
 text \<open>
@@ -50,7 +52,7 @@ text \<open>Reading one variable off a lifted whole-state local unknown: an unre
   (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
 abbreviation sign_nest_lookup :: "sign exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> sign" where
   "sign_nest_lookup d x \<equiv>
-     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of sign_nest_gs x))"
+     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of sign_nest_gs x\<rangle>)"
 
 definition sign_nest_pi :: proc_table where "sign_nest_pi = prog_table sign_nest_program"
 definition sign_nest_procs :: "pname list" where "sign_nest_procs = prog_procs sign_nest_program"
@@ -393,5 +395,7 @@ lemma sign_nest_1_g_entry_merged:
   "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
      (STR ''p'') = STop"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+
+unbundle no resolved_st_syntax
 
 end

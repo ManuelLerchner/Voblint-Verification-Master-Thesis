@@ -7,6 +7,8 @@ theory Ownership_Split_Exec
     "Voblint_Framework.Routed_Context"
 begin
 
+unbundle resolved_st_syntax
+
 section \<open>The ownership-splitting analysis at the executable carrier\<close>
 
 text \<open>
@@ -55,7 +57,7 @@ where
        restrict_local_resolved_q
        (local_combine_transfer
           (\<lambda>env de. combine_assign_resolved_q \<G> (ci_dst ci)
-                      (lookup_resolved_st_q de (location_of \<G> ret_var)) env))"
+                      de\<langle>location_of \<G> ret_var\<rangle> env))"
 
 definition ownership_split_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
@@ -93,5 +95,7 @@ lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:
      = ownership_split_combine_transfer_st \<G> ci m de"
   unfolding dg_spec_combine_transfer_def ownership_split_dg_spec_st_for_def
   by (simp add: local_transfer_def local_combine_transfer_def)
+
+unbundle no resolved_st_syntax
 
 end
