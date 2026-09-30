@@ -25,6 +25,8 @@ from urllib.parse import quote
 
 import vimp_fixture
 
+TRACE_FLAGS = frozenset({"--trace", "--verbose", "--compact"})
+
 PLAYGROUND = "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html"
 
 
@@ -43,15 +45,15 @@ def link(
     k: int | None = None,
     base: str = PLAYGROUND,
     refinement: str | None = None,
-    trace: bool = False,
+    trace: str | None = None,
 ) -> str:
     settings = [("analysis", analysis), ("globals", globals_rule), ("context", context)]
     if k is not None:
         settings.append(("k", str(k)))
     if refinement is not None:
         settings.append(("refinement", refinement))
-    if trace:
-        settings.append(("trace", "1"))
+    if trace is not None:
+        settings.append(("trace", trace))
     query = "&".join(f"{key}={quote(value)}" for key, value in settings)
     return f"{base}?{query}#code={pack_source(source)}"
 
@@ -94,10 +96,17 @@ def parse_command_line(argv: list[str]) -> tuple[Path, list[str], str, bool]:
 def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str:
     """The link for a program: command-line settings over its header's.
 
-    `--trace` opens the playground with its solver trace switched on.
+    voblint's trace flags open the playground with its solver trace on:
+    `--verbose` in the full form, `--trace` or `--compact` in the compact one.
     """
-    trace = "--trace" in flags
-    flags = [flag for flag in flags if flag != "--trace"]
+    trace = (
+        "verbose"
+        if "--verbose" in flags
+        else "compact"
+        if TRACE_FLAGS & set(flags)
+        else None
+    )
+    flags = [flag for flag in flags if flag not in TRACE_FLAGS]
     header = vimp_fixture.param_args(program) or []
     settings = vimp_fixture.analysis_settings(header) | vimp_fixture.analysis_settings(
         flags

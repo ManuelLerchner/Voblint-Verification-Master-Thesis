@@ -22,7 +22,7 @@
 
    Examples:
 
-     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source, false)
+     Voblint_run("interval", "warrow", "none", 0, "fixpoint", source, "off")
 
      Voblint_run(
        "int",
@@ -31,7 +31,7 @@
        1,
        "once",
        source,
-       true
+       "verbose"
      )
 
    [context_depth] is ignored unless [context = "call-string"].
@@ -39,9 +39,11 @@
    [int_refinement] is how the components of int refine each other: "never",
    "once" or "fixpoint". It is ignored unless [analysis] names int.
 
-   [trace] true adds a "trace" field to a successful result: the solver trace
-   in the compact text voblint --trace prints (Solver_trace). With false the
-   answer carries no such field and the solver records nothing.
+   [trace] is the solver trace's form, as voblint's own flags name it:
+   "compact" (--trace), "verbose" (--trace --verbose) or "jsonl"
+   (--trace --format jsonl). Each adds a "trace" field to a successful result
+   holding the text Solver_trace writes in that form. With "off" the answer
+   carries no such field and the solver records nothing.
 
    [globals] names how the solver merges side-effected globals: "join",
    "per-origin", "warrow" or "warrow-per-origin".
@@ -118,10 +120,17 @@ let domains_of_string int_analysis names =
     (if names = "" then [] else String.split_on_char ',' names)
     (Ok [])
 
-let trace_text ~domains ~globals ~context result =
+(* None is tracing off; otherwise the format and whether text is verbose. *)
+let trace_of_string = function
+  | "off" -> Ok None
+  | "compact" -> Ok (Some (Solver_trace.Text, false))
+  | "verbose" -> Ok (Some (Solver_trace.Text, true))
+  | "jsonl" -> Ok (Some (Solver_trace.Jsonl, false))
+  | mode -> Error ("Unknown trace mode: " ^ mode)
+
+let trace_text (format, verbose) ~domains ~globals ~context result =
   let buffer = Buffer.create 4096 in
-  Solver_trace.emit ~out:(Buffer.add_string buffer) ~format:Solver_trace.Text
-    ~verbose:false
+  Solver_trace.emit ~out:(Buffer.add_string buffer) ~format ~verbose
     ~analyses:(List.map Result_text.analysis_label domains)
     ~context:(Solver_trace.context_name context)
     ~globals ~program:"browser.vimp" result;
@@ -139,23 +148,26 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
 
   let source = Js.to_string source_js in
 
-  let trace = Js.to_bool trace_js in
+  let trace = trace_of_string (Js.to_string trace_js) in
 
   (* Set on every call: the worker keeps this module alive between runs. *)
-  Solver_trace_hook.enabled := trace;
+  Solver_trace_hook.enabled :=
+    Result.fold ~ok:Option.is_some ~error:(fun _ -> false) trace;
 
   let answer =
     match
-      ( int_analysis_of_string refinement_name,
+      ( trace,
+        int_analysis_of_string refinement_name,
         globals_of_string globals_name,
         context_of_string context_name context_depth )
     with
-    | None, _, _ ->
+    | Error message, _, _, _ -> Render_json.error_json message
+    | _, None, _, _ ->
         Render_json.error_json ("Unknown int refinement: " ^ refinement_name)
-    | _, None, _ ->
+    | _, _, None, _ ->
         Render_json.error_json ("Unknown globals rule: " ^ globals_name)
-    | _, _, Error message -> Render_json.error_json message
-    | Some int_analysis, Some globals, Ok context -> (
+    | _, _, _, Error message -> Render_json.error_json message
+    | Ok trace, Some int_analysis, Some globals, Ok context -> (
         match domains_of_string int_analysis analysis_name with
         | Error message -> Render_json.error_json message
         | Ok domains -> (
@@ -186,11 +198,11 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
                   Render_json.error_json ~raw message
               | C.Analysed result ->
                   let trace =
-                    if trace then
-                      Some
-                        (trace_text ~domains ~globals:globals_name ~context
-                           result)
-                    else None
+                    Option.map
+                      (fun form ->
+                        trace_text form ~domains ~globals:globals_name ~context
+                          result)
+                      trace
                   in
                   Render_json.result_json ?trace analysis_ms program
                     ~stmt_positions ~header_positions ~raw result

@@ -78,7 +78,7 @@ const contextDepthGroup = query("#context-depth-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
-const traceToggle = query("#trace-toggle");
+const traceSelect = query("#trace-select");
 
 const globalsHelp = query("#globals-help");
 
@@ -115,6 +115,9 @@ const solverTraceText = query("#solver-trace-text");
 const solverTraceCut = query("#solver-trace-cut");
 const solverTraceCutLabel = query("#solver-trace-cut-label");
 const solverTraceAll = query("#solver-trace-all");
+const solverTraceDownload = query("#solver-trace-download");
+const solverTraceDownloadJsonl = query("#solver-trace-download-jsonl");
+const solverTraceDownloadJsonlLabel = query("#solver-trace-download-jsonl-label");
 
 const rawResult = query("#raw-result");
 const rawResultEmpty = query("#raw-result-empty");
@@ -1264,13 +1267,14 @@ function inspectCursor(state) {
   }
 }
 
-function showAnalysisView(result) {
+/* [configuration] and [source] are the run's own; the JSON Lines download solves them again. */
+function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
   showSolverGlobals(analysisModel ? result.seeds : null);
-  showSolverTrace(analysisModel ? result.trace : null);
+  showSolverTrace(analysisModel ? result.trace : null, configuration, source);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1735,7 +1739,7 @@ function applyGraphSelection() {
 
 /* Pans only the graph's own view; the page stays where the reader put it. */
 function revealGraphNodes(ids) {
-  if (!cy || graphPanel.hidden) {
+  if (!cy || graphPanel.hidden || !graphPanel.open) {
     return;
   }
 
@@ -1829,24 +1833,69 @@ function showSolverGlobals(seeds) {
 /* -------------------------------------------------------------------------- */
 
 /*
- * A recursive program under a deep call string can trace tens of thousands of
- * lines, and laying all of them out at once stalls the page. The panel shows the
- * head; the reader asks for the rest.
+ * A full trace, or a recursive program under a deep call string, can run to tens of
+ * thousands of lines, and laying all of them out at once stalls the page. The panel
+ * first lays out only the head; the whole trace is still computed and kept, and
+ * "Show all" and the download buttons give all of it.
  */
 const TRACE_PREVIEW_LINES = 400;
 
-let solverTraceLines = [];
+const TRACE_MODES = new Set(["off", "compact", "verbose"]);
 
-function showSolverTraceLines(count) {
-  solverTraceText.textContent = solverTraceLines.slice(0, count).join("\n");
-  solverTraceCut.hidden = count >= solverTraceLines.length;
-  solverTraceCutLabel.textContent = `Showing the first ${count} of ${solverTraceLines.length} lines.`;
+/* The shown trace in full, and the run that produced it. */
+let solverTraceContent = "";
+let solverTraceRun = null;
+
+/* The offset just past the first [lines] lines of [text], or its length. */
+function lineBoundary(text, lines) {
+  let offset = 0;
+
+  for (let line = 0; line < lines; line++) {
+    offset = text.indexOf("\n", offset) + 1;
+
+    if (offset === 0) {
+      return text.length;
+    }
+  }
+
+  return offset;
 }
 
-/* The compact text the CLI's --trace prints; null when the run recorded none. */
-function showSolverTrace(trace) {
-  solverTraceLines = typeof trace === "string" ? trace.replace(/\n$/, "").split("\n") : [];
-  solverTrace.hidden = solverTraceLines.length === 0;
+function showSolverTraceHead() {
+  const { lines } = solverTraceRun;
+  const shown = Math.min(TRACE_PREVIEW_LINES, lines);
+
+  solverTraceText.textContent = solverTraceContent.slice(
+    0,
+    lineBoundary(solverTraceContent, shown),
+  );
+  solverTraceCut.hidden = shown >= lines;
+  solverTraceCutLabel.textContent = `Showing the first ${shown} of ${lines} lines.`;
+}
+
+function showSolverTraceAll() {
+  solverTraceText.textContent = solverTraceContent;
+  solverTraceCut.hidden = true;
+}
+
+function countLines(text) {
+  let lines = text.endsWith("\n") ? 0 : 1;
+
+  for (let at = text.indexOf("\n"); at !== -1; at = text.indexOf("\n", at + 1)) {
+    lines++;
+  }
+
+  return lines;
+}
+
+/* The text of the run's trace mode; null when the run recorded none. */
+function showSolverTrace(trace, configuration, source) {
+  solverTraceContent = typeof trace === "string" ? trace : "";
+  solverTraceRun =
+    solverTraceContent === ""
+      ? null
+      : { configuration, source, lines: countLines(solverTraceContent) };
+  solverTrace.hidden = solverTraceRun === null;
 
   if (solverTrace.hidden) {
     solverTraceText.textContent = "";
@@ -1854,8 +1903,72 @@ function showSolverTrace(trace) {
     return;
   }
 
-  solverTraceCount.textContent = `${solverTraceLines.length} lines`;
-  showSolverTraceLines(Math.min(TRACE_PREVIEW_LINES, solverTraceLines.length));
+  const form = configuration.trace === "verbose" ? "full" : "compact";
+
+  solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${form}`;
+  showSolverTraceHead();
+}
+
+function downloadBlob(blob, name) {
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+}
+
+function downloadSolverTrace() {
+  if (solverTraceRun) {
+    downloadBlob(
+      new Blob([solverTraceContent], { type: "text/plain" }),
+      `voblint-trace-${settingsSlug()}-${solverTraceRun.configuration.trace}.txt`,
+    );
+  }
+}
+
+/*
+ * The shown run solved again with its JSON Lines trace. The solver is
+ * deterministic, so the records are the steps of the run on screen. A new run or
+ * a changed setting cancels it like any pending analysis.
+ */
+async function downloadSolverTraceJsonl() {
+  const shown = solverTraceRun;
+
+  if (!shown || pendingAnalysis) {
+    return;
+  }
+
+  const idle = solverTraceDownloadJsonlLabel.textContent;
+
+  solverTraceDownloadJsonl.disabled = true;
+  solverTraceDownloadJsonlLabel.textContent = "Preparing JSON Lines...";
+
+  try {
+    const answer = JSON.parse(
+      await runAnalysisInWorker({ ...shown.configuration, trace: "jsonl" }, shown.source),
+    );
+
+    if (typeof answer.trace !== "string") {
+      throw new Error(answer.message ?? "the analyzer returned no trace");
+    }
+
+    if (solverTraceRun === shown) {
+      downloadBlob(
+        new Blob([answer.trace], { type: "application/jsonl" }),
+        `voblint-trace-${settingsSlug()}.jsonl`,
+      );
+    }
+  } catch (error) {
+    if (solverTraceRun === shown) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      showStatus(`The JSON Lines trace could not be produced: ${message}`, "error");
+    }
+  } finally {
+    solverTraceDownloadJsonl.disabled = false;
+    solverTraceDownloadJsonlLabel.textContent = idle;
+  }
 }
 
 function inspectGraphNode(id) {
@@ -2821,6 +2934,12 @@ function saveGraphImage() {
     maxHeight: 8000,
     bg: cssToken("--surface-muted"),
   });
+
+  downloadBlob(image, `voblint-graph-${settingsSlug()}.png`);
+}
+
+/* The analysis settings as part of a file name. */
+function settingsSlug() {
   const settings = [
     activationControl.value.replaceAll(",", "+"),
     globalsSelect.value,
@@ -2835,12 +2954,7 @@ function saveGraphImage() {
     settings.push(`int-${intRefinementSelect.value}`);
   }
 
-  const link = document.createElement("a");
-
-  link.href = URL.createObjectURL(image);
-  link.download = `voblint-graph-${settings.join("-")}.png`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  return settings.join("-");
 }
 
 function fitGraphZoom({ animate = true } = {}) {
@@ -3143,13 +3257,19 @@ function readConfiguration() {
     throw new Error(`Unknown Int refinement: ${intRefinement}`);
   }
 
+  const trace = traceSelect.value;
+
+  if (!TRACE_MODES.has(trace)) {
+    throw new Error(`Unknown solver trace: ${trace}`);
+  }
+
   return {
     analysis,
     globals,
     context,
     contextDepth,
     intRefinement,
-    trace: traceToggle.checked,
+    trace,
   };
 }
 
@@ -3374,8 +3494,13 @@ async function run() {
    * validation, so an invalid selection can never leave an old graph next to
    * a new error/table state.
    */
-  if (runButton.disabled || running || pendingAnalysis) {
+  if (runButton.disabled || running) {
     return;
+  }
+
+  /* Only a JSON Lines trace download can be pending here; a new run replaces it. */
+  if (pendingAnalysis) {
+    retireActiveRun("Trace download cancelled: a new run started.");
   }
 
   const runGeneration = ++analysisRunGeneration;
@@ -3434,7 +3559,7 @@ async function run() {
 
     renderTiming(result);
     showRawRunProgram(result.raw);
-    showAnalysisView(result);
+    showAnalysisView(result, configuration, source);
 
     if (result.status === "ok") {
       /*
@@ -3600,12 +3725,14 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
-  traceToggle,
+  traceSelect,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-solverTraceAll.addEventListener("click", () => showSolverTraceLines(solverTraceLines.length));
+solverTraceAll.addEventListener("click", showSolverTraceAll);
+solverTraceDownload.addEventListener("click", downloadSolverTrace);
+solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);
 
 for (const box of analysisChoices) {
   box.addEventListener("change", updateIntRefinementControls);
@@ -3718,8 +3845,9 @@ graph.addEventListener("keydown", (event) => {
   }
 });
 
-new ResizeObserver(() => {
-  if (!cy) {
+/* A collapsed panel lays the graph out at no size; fit it again once it is open. */
+function resizeGraph() {
+  if (!cy || !graphPanel.open || graph.clientWidth === 0) {
     return;
   }
 
@@ -3728,7 +3856,10 @@ new ResizeObserver(() => {
   if (graphFitted) {
     fitGraphZoom({ animate: false });
   }
-}).observe(graph);
+}
+
+new ResizeObserver(resizeGraph).observe(graph);
+graphPanel.addEventListener("toggle", resizeGraph);
 
 updateContextControls();
 updateIntRefinementControls();
@@ -3980,9 +4111,8 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  if (settings.trace !== undefined) {
-    traceToggle.checked = settings.trace === "1";
-  }
+  /* trace=1 is how links named the compact trace before it had a full form. */
+  selectIfOffered(traceSelect, settings.trace === "1" ? "compact" : (settings.trace ?? null));
 
   const depth = parseContextDepth(settings.k);
 
@@ -4121,7 +4251,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(traceToggle.checked ? [linkParam("trace", "1")] : []),
+    ...(traceSelect.value !== "off" ? [linkParam("trace", traceSelect.value)] : []),
   ];
   const url = new URL(location.href);
 

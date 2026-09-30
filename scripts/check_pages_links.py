@@ -110,11 +110,24 @@ def collected() -> dict[str, set[str]]:
     return links
 
 
-PLAYGROUND_KEYS = {"fixture", "analysis", "globals", "context", "k", "trace"}
+PLAYGROUND_KEYS = {
+    "fixture",
+    "analysis",
+    "globals",
+    "context",
+    "k",
+    "refinement",
+    "trace",
+}
 PLAYGROUND_SELECTS = {
     "globals": "globals-select",
     "context": "context-select",
+    "refinement": "int-refinement-select",
+    "trace": "trace-select",
 }
+# Values a link may carry besides the select's own: trace=1 is how links named
+# the compact trace before the full one existed, and the playground still reads it.
+PLAYGROUND_ALIASES = {"trace": {"1"}}
 MARKDOWN_PLAYGROUND = re.compile(
     r"(?:https?://[^\s\"'<>()]*/)?playground\.html[^\s\"'<>()]*"
 )
@@ -133,7 +146,7 @@ def playground_vocabulary() -> dict[str, object]:
             set(re.findall(r'<option value="([^"]+)"', block.group(1)))
             if block
             else set()
-        )
+        ) | PLAYGROUND_ALIASES.get(key, set())
     choices = re.search(
         r'<fieldset id="analysis-choices"[^>]*>(.*?)</fieldset>', html, re.S
     )
@@ -173,11 +186,6 @@ def check_playground(url: str, source: str, vocabulary: dict[str, object]) -> li
     for value in query.get("k", []):
         if not value.isdigit() or int(value) > vocabulary["max_depth"]:
             problems.append(f"k={value} is outside 0..{vocabulary['max_depth']}")
-
-    # The Share button writes trace=1 or leaves the key out.
-    for value in query.get("trace", []):
-        if value != "1":
-            problems.append(f"trace={value} is not a playground option")
 
     for path in query.get("fixture", []):
         if not (REGRESSION / path).is_file():

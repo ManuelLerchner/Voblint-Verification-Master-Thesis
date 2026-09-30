@@ -4,7 +4,7 @@
  * Preloaded ahead of the wasm_of_ocaml loader, which must run as the main
  * module because it finds its assets next to require.main:
  *
- *   VOBLINT_WEB_CALLS='[["interval","warrow","none",0,"fixpoint","fun main() {}",false]]' \
+ *   VOBLINT_WEB_CALLS='[["interval","warrow","none",0,"fixpoint","fun main() {}","off"]]' \
  *     node --require tests/voblint_web_calls.cjs build/browser/voblint_web.bc.wasm.js
  *
  * Every call runs in this one process, in order, so state one run leaves in
