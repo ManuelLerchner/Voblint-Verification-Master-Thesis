@@ -82,8 +82,8 @@ Grouping the same run by activation makes these relationships explicit
 (@fig:flat-nested, bottom). Each activation has its own activation path. A call
 creates a new activation attached to its caller, and a return composes the
 finished callee back into that caller. This construction adapts the _local traces_ of Schwarz et al. @schwarz21, each
-one thread's view of a concurrent execution, to procedure activations. Here a
-local trace is one activation's view of a sequential execution
+one thread's view of a concurrent execution, to procedure activations. An
+_activation trace_ is one activation's view of a sequential execution
 (@sec:rel-goblint).
 
 @sec:traces turns this grouping into a datatype, gives the rules that make a
