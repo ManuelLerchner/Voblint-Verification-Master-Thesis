@@ -300,6 +300,17 @@ verdicts. For the browser, #raw("wasm_of_ocaml", lang: "sh") compiles the
 adapter into a WebAssembly module that runs in a Web Worker the user can
 cancel.
 
+To show how the solver reaches a result, the command-line tool can record a
+trace of the solve (#raw("voblint --trace", lang: "sh")): each query, seed read, publication and
+update, and each routing decision, as text or as JSON Lines. The hooks are not
+part of the theories or the export. The build copies the exported module and
+inserts guarded calls at named places in its text, each of which must occur
+exactly once, so a regeneration that moves one fails the build instead of
+silently losing events. The hooks only observe, and without the flag the
+output is unchanged, which a test checks. The tracer is outside the proof like
+the rest of the tool. @tab:eq-trace and @fig:eq-walk are generated from such a
+trace, registered as a claim.
+
 Everything a reader sees is derived in the same way. The website and this
 document take their repository figures from the sources, their Isabelle names,
 definitions and theorem statements from the theories and a built session, and

@@ -4,6 +4,17 @@
 
 #let claim-text(name) = read("/shared/generated/" + name + ".txt")
 
+// A claim named in prose, linked to its stored output (a pattern such as
+// `dom-stride2-*` links to the declarations instead). The outputs live on the
+// thesis branch until it is merged.
+#let claim-blob = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/writing/thesis/shared/"
+#let claim-ref(name) = if name.contains("*") {
+  link(claim-blob + "claims.toml", raw(name))
+} else {
+  let _ = claim-text(name)
+  link(claim-blob + "generated/" + name + ".txt", raw(name))
+}
+
 // The run was stopped by `--timeout`: the report is the CLI's rejection line.
 #let claim-timed-out(name) = claim-text(name).contains("did not finish within")
 

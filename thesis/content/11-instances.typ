@@ -3,6 +3,7 @@
 #import "../lib/code.typ": fixture, isaconst, isalocale, isasession, isathm, isatype, listing
 #import "../lib/figures.typ": int-axis, int-strip, printed-set
 #import "../lib/math.typ": *
+#import "../lib/claims.typ": claim-ref
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
 // its source location, so a table cell cannot drift from what the CLI prints.
@@ -268,7 +269,7 @@ fun main() {
       .flatten(),
     table.hline(),
   ),
-  caption: [The stride-2 loop under each domain (claims `dom-stride2-*`). No
+  caption: [The stride-2 loop under each domain (claims #claim-ref("dom-stride2-*")). No
     single component proves `v == 51`: Interval has the bound, Parity and
     Congruence have the oddness. The reduced product `int` combines them.],
 ) <fig:stride2>

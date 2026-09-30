@@ -1,7 +1,9 @@
 #import "../lib/code.typ": *
 #import "../lib/stats.typ": stat, stat-percent, stat-sum
 #import "../lib/alignment.typ": alignment, alignment-count
-#import "../lib/claims.typ": claim-check, claim-snapshot, claim-timed-out, snapshot-verdict
+#import "../lib/claims.typ": (
+  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-verdict,
+)
 #import "../lib/theme.typ": vb
 
 = Evaluation <ch:evaluation>
@@ -418,8 +420,8 @@ holds at every call. Call strings of length 100 give
 #_k100.clusters.len() procedure copies, and the check is
 #snapshot-verdict(_k100, "n >= 0"). Length 99 gives #_k99.clusters.len() copies, but one context still
 stands for the deepest calls, widening removes the lower bound there, and the
-check is #snapshot-verdict(_k99, "n >= 0") (claims `cost-down-k99` and
-`cost-down-k100`).
+check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") and
+#claim-ref("cost-down-k100")).
 
 *Update rules.* _Evidence: executable, and evaluated for a two-equation
 system._ @fig:rules-programs runs the four update rules of @sec:update-rules on
@@ -508,7 +510,7 @@ for all three activation lists and are proved by `eval`.
 #let _sign = claim-check("sign-cannot-bound-magnitude", "total < 100")
 
 *Known imprecision.* _Evidence: executable, except where marked._ Sign has no
-magnitude: in the claim `sign-cannot-bound-magnitude`, `total` is 7 in every execution, and at
+magnitude: in the claim #claim-ref("sign-cannot-bound-magnitude"), `total` is 7 in every execution, and at
 the check `total < 100` Sign reports #raw(_sign.at(4)) and the verdict
 #raw(_sign.at(3)). _Argument:_ no context policy or update rule can change this
 verdict, because Sign's comparison query decides nothing for a positive value
@@ -623,7 +625,7 @@ names the kind of its evidence and the section that argues it.
 + *A `PROVED` verdict may depend on behaviour that C11 leaves undefined*:
   division by zero, and the zeroed locals of a callee (#isaconst("enter_state")),
   which no shipped analysis uses but the theorem would accept. _Source
-  inspection_, and executable for the division (claim `pg-division-definite`:
+  inspection_, and executable for the division (claim #claim-ref("pg-division-definite"):
   `quotient == 0` is
   #raw(claim-check("pg-division-definite", "quotient == 0").at(3))).
   @sec:vimp-vs-c, @sec:verdicts.

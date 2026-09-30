@@ -4,7 +4,9 @@
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge
-#import "../lib/claims.typ": claim-snapshot, claim-trace, snapshot-cluster-of, snapshot-verdict
+#import "../lib/claims.typ": (
+  claim-ref, claim-snapshot, claim-trace, snapshot-cluster-of, snapshot-verdict,
+)
 #import "../lib/sources.typ": proved, thy
 
 // A verdict or state of a registered CLI claim (shared/claims.toml), read from
@@ -584,7 +586,7 @@ between call-string lengths one and two.
     `a == 2`. Boxes are procedure copies labelled with their contexts as the
     analyzer prints them (`root` is the initial context of `main`), arrows
     calls labelled with their sites. Read from
-    the analyzer's solved graph (Interval, claims `ctx-demo-*`).],
+    the analyzer's solved graph (Interval, claims #claim-ref("ctx-demo-*")).],
 ) <fig:eq-policies>
 
 == Soundness of the generated system <sec:eq-discharge>
@@ -992,7 +994,7 @@ second pass computes the real result.
     placement: none,
     caption: [The solve of the running example under entry-state contexts,
       condensed into phases. Generated from the solver trace (claim
-      `pg-contexts-trace`); the phase numbers are assigned when the thesis
+      #claim-ref("pg-contexts-trace")); the phase numbers are assigned when the thesis
       renders the trace. The second column names the unknown, or the chain of
       unknowns, whose right-hand side the phase evaluates.],
   ) <tab:eq-trace>

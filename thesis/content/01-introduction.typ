@@ -3,6 +3,7 @@
 #import "../lib/sources.typ": proved
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
+#import "../lib/claims.typ": claim-ref
 
 = Introduction <ch:intro>
 
@@ -169,7 +170,7 @@ counterexample.
   kind: image,
   placement: auto,
   caption: [One analyzer run on a clamp function, as the browser playground
-    shows it (Interval, `warrow` globals, no contexts; claim `intro-answers`, fixture
+    shows it (Interval, `warrow` globals, no contexts; claim #claim-ref("intro-answers"), fixture
     #fixture("24-site-figures/precision/48-clamp_every_answer.vimp")). A unit
     test of `clamp` would try a few inputs. The analysis covers every value of
     `t` at once. Each guarantee assumes that the solve terminates, which this

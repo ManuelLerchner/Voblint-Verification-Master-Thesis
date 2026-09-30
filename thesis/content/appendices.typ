@@ -7,6 +7,7 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/alignment.typ": alignment, alignment-mark, alignment-table
 #import "../lib/theme.typ": vb
+#import "../lib/claims.typ": claim-ref
 
 = Comparison with Goblint <app:goblint-alignment>
 
@@ -62,7 +63,7 @@ loses precision, because the fact must cover the initial `Gx = 0` as well as
 the written 1. Sign can only claim #signval("≥0") for `Gx` and for `y` after
 `y = get()`, although every run ends with `y = 1`. A flow-sensitive analysis
 carries #signval("+") from `set`'s exit into `get`'s entry and derives
-#signval(_mf("y")) for `y` (claim `mixed-flow-sign`).
+#signval(_mf("y")) for `y` (claim #claim-ref("mixed-flow-sign")).
 
 The lifter #isaconst("ownership_split_lift") adds one global unknown
 $kappa = #isaconst("Analysis_Global") thin ()$ whose value is an abstract

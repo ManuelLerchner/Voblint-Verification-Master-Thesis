@@ -8,6 +8,7 @@
 #import "../lib/theorems.typ": definition, theorem
 #import "../lib/theme.typ": vb
 #import "@preview/cetz:0.5.2"
+#import "../lib/claims.typ": claim-ref
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
 // its source location, so a table cell cannot drift from what the CLI prints.
@@ -928,7 +929,7 @@ the conjunction (@fig:query-tree).
   kind: image,
   placement: none,
   caption: [How #isaconst("check_query") answers a compound condition, in Sign
-    with #raw(_q.state) (claim `dom-query-tree-sign`). Each comparison becomes
+    with #raw(_q.state) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
     one of the domain's two queries (blue), as $~>$ marks; the answer follows
     the colon. Negation flips a definite answer,
     and `&&` is true because both operands are. The analyzer reports the check
