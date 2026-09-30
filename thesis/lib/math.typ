@@ -43,7 +43,16 @@
 // with no source token (Restore, Entry, Root) is set with ctor, and
 // metavariables and the notation around them (:=, ";", brackets) stay math.
 #let keyw(x) = text(font: "Latin Modern Roman", weight: "bold", fill: vb.keyword, x)
-#let ctor(x) = text(font: "Latin Modern Sans", fill: vb.type, x)
+// A constructor links to its definition when thesis-links resolved it; notation
+// for something the theories do not define stays plain.
+#let _ctor-links = json("/shared/generated/links.json")
+#let ctor(x) = {
+  let body = text(font: "Latin Modern Sans", fill: vb.type, x)
+  let key = "ctor:" + if type(x) == str { x } else { "" }
+  if _ctor-links.base != "" and key in _ctor-links.links {
+    link(_ctor-links.base + _ctor-links.links.at(key), body)
+  } else { body }
+}
 // Math only: the class restores the operator spacing that text drops.
 #let vop(x, unary: false) = math.class(
   if unary { "unary" } else { "binary" },
