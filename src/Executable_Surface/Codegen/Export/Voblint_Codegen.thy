@@ -157,7 +157,7 @@ export_code
   Ev_Query_Global Ev_Answer_Global Ev_Iterate Ev_Eq Ev_Rhs Ev_Still_Unstable Ev_Widen Ev_Sol
   Ev_Wpoint_Remove Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global Ev_Destabilize
   Ev_Stable_Remove
-  Ev_Route Trace_Printers string_of_abstract_value
+  Ev_Route Trace_Printers string_of_abstract_value Inl Inr
 
   in OCaml module_name Generated file_prefix "Voblint_CLI"
 
