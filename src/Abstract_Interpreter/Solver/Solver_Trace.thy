@@ -106,7 +106,7 @@ unbundle lattice_syntax
 lemma solve_rec_c_traced:
   fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
   shows "TD_side_rule_Interp_solve_rec_c r T s = (case s of
-    Q (y, x, state, ug_state) \<Rightarrow>
+    TD_side_upd_rule.func_state.Q (y, x, state, ug_state) \<Rightarrow>
       (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Query y x (x \<in> stabl state) (x \<in> called state)
                  :: ('x, 'g, 'd) solver_event)) in
        Option.bind (
@@ -118,17 +118,17 @@ lemma solve_rec_c_traced:
           (let _ = trace_event STR ''solver''
                      (\<lambda>_. (Ev_Iterate_From_Query x :: ('x, 'g, 'd) solver_event)) in
            TD_side_rule_Interp_solve_rec_c r T
-             (I (x, state\<lparr> called := insert x (called state) \<rparr>, ug_state))))
+             (TD_side_upd_rule.func_state.I (x, state\<lparr> called := insert x (called state) \<rparr>, ug_state))))
         (\<lambda>(xd, state, ug_state).
           let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Add_Infl (Inl x) y :: ('x, 'g, 'd) solver_event)) in
           let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Answer y x xd :: ('x, 'g, 'd) solver_event)) in
           Some (xd, state\<lparr>infl := fminsert (infl state) (Inl x) y\<rparr>, ug_state)))
-  | I (x, state, ug_state) \<Rightarrow>
+  | TD_side_upd_rule.func_state.I (x, state, ug_state) \<Rightarrow>
       (let _ = trace_event STR ''solver''
                  (\<lambda>_. (Ev_Iterate x (x \<in> called state) (x \<in> stabl state) (x \<in> point state)
                    :: ('x, 'g, 'd) solver_event)) in
        if x \<notin> stabl state then Option.bind (
-        TD_side_rule_Interp_solve_rec_c r T (R (x, state, ug_state)))
+        TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.R (x, state, ug_state)))
         (\<lambda>(d_new, state1, ug_state1).
           let _ = trace_event STR ''solver''
                     (\<lambda>_. (Ev_Widen x (x \<in> point state) :: ('x, 'g, 'd) solver_event)) in
@@ -148,49 +148,49 @@ lemma solve_rec_c_traced:
              let (infl1, stabl1) = destab_opt (Inl x) (infl state1) (stabl state1) (called state1) in
              let _ = trace_event STR ''solver''
                        (\<lambda>_. (Ev_Iterate_Changed x :: ('x, 'g, 'd) solver_event)) in
-             TD_side_rule_Interp_solve_rec_c r T (I (x, state1\<lparr> infl := infl1, stabl := stabl1,
+             TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.I (x, state1\<lparr> infl := infl1, stabl := stabl1,
                \<sigma> := (\<sigma> state1)(Inl x := d_new') \<rparr>, ug_state1))))
       else
         (let _ = trace_event STR ''solver''
                    (\<lambda>_. (Ev_Wpoint_Clear x (x \<in> point state) :: ('x, 'g, 'd) solver_event)) in
          Some ((\<sigma> state) (Inl x), state\<lparr> called := called state - {x}, point := (point state) - {x}\<rparr>,
           ug_state)))
-  | R (x, state, ug_state) \<Rightarrow>
+  | TD_side_upd_rule.func_state.R (x, state, ug_state) \<Rightarrow>
       (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Eq x :: ('x, 'g, 'd) solver_event)) in
        Option.bind (
         TD_side_rule_Interp_solve_rec_c r T
-          (E (x, T x, (\<lambda>_. \<bottom>), state \<lparr>stabl := insert x (stabl state)\<rparr>, ug_state)))
+          (TD_side_upd_rule.func_state.E (x, T x, (\<lambda>_. \<bottom>), state \<lparr>stabl := insert x (stabl state)\<rparr>, ug_state)))
         (\<lambda>(xd, state, ug_state). if x \<in> stabl state then Some (xd, state, ug_state)
           else (let _ = trace_event STR ''solver''
                           (\<lambda>_. (Ev_Still_Unstable x :: ('x, 'g, 'd) solver_event)) in
-                TD_side_rule_Interp_solve_rec_c r T (R (x, state, ug_state)))))
-  | E (x, t, sides, state, ug_state) \<Rightarrow> (case t of
+                TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.R (x, state, ug_state)))))
+  | TD_side_upd_rule.func_state.E (x, t, sides, state, ug_state) \<Rightarrow> (case t of
         Answer d \<Rightarrow>
           (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Rhs x d :: ('x, 'g, 'd) solver_event)) in
            Some (d, state, ug_state))
       | QueryL y g \<Rightarrow> (
-          Option.bind (TD_side_rule_Interp_solve_rec_c r T (Q (x, y, state, ug_state)))
+          Option.bind (TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.Q (x, y, state, ug_state)))
             (\<lambda>(yd, state, ug_state).
-              TD_side_rule_Interp_solve_rec_c r T (E (x, g yd, sides, state, ug_state))))
+              TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, g yd, sides, state, ug_state))))
       | QueryG y g \<Rightarrow>
           (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Query_Global x y :: ('x, 'g, 'd) solver_event)) in
            let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Add_Infl (Inr y) x :: ('x, 'g, 'd) solver_event)) in
            let _ = trace_event STR ''solver''
                      (\<lambda>_. (Ev_Answer_Global x y ((\<sigma> state) (Inr y)) :: ('x, 'g, 'd) solver_event)) in
-           TD_side_rule_Interp_solve_rec_c r T (E (x, g ((\<sigma> state) (Inr y)), sides,
+           TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, g ((\<sigma> state) (Inr y)), sides,
              state\<lparr> infl := fminsert (infl state) (Inr y) x\<rparr>, ug_state)))
       | Side y d t \<Rightarrow>
           (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Side x y d :: ('x, 'g, 'd) solver_event)) in
            let d = sides y \<squnion> d in
            let sides = sides(y := d) in
            let (upd, ug_state) = update_global_of r (\<sigma> state (Inr y)) x y d ug_state in
-           case upd of None \<Rightarrow> TD_side_rule_Interp_solve_rec_c r T (E (x, t, sides, state, ug_state))
+           case upd of None \<Rightarrow> TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, t, sides, state, ug_state))
            | Some d \<Rightarrow>
              let _ = trace_event STR ''solver''
                        (\<lambda>_. (Ev_Update_Global x y ((\<sigma> state) (Inr y) = \<bottom>) ((\<sigma> state) (Inr y)) d
                          :: ('x, 'g, 'd) solver_event)) in
              let (infl', stabl') = destab_opt (Inr y) (infl state) (stabl state) (called state) in
-             TD_side_rule_Interp_solve_rec_c r T (E (x, t, sides, state\<lparr> infl := infl', stabl := stabl',
+             TD_side_rule_Interp_solve_rec_c r T (TD_side_upd_rule.func_state.E (x, t, sides, state\<lparr> infl := infl', stabl := stabl',
                \<sigma> := (\<sigma> state)(Inr y := d)\<rparr>, ug_state)))))"
   by (rule trans[OF TD_side_rule_Interp.solve_rec_c.simps])
      (simp only: trace_event_def Let_def)
