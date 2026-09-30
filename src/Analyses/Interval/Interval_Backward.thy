@@ -21,14 +21,14 @@ lemma interval_less_unfold:
      (if interval_less_true a b then Some True
       else if interval_less_false a b then Some False
       else None)"
-  by (simp add: interval_less_def numeric_query_judgments.query_less_def)
+  by (fact interval_numeric_queries.query_less_def)
 
 lemma interval_eq_unfold:
   "interval_eq a b =
      (if interval_eq_true a b then Some True
       else if interval_eq_false a b then Some False
       else None)"
-  by (simp add: interval_eq_def numeric_query_judgments.query_eq_def)
+  by (fact interval_numeric_queries.query_eq_def)
 
 definition interval_tobool :: "ivl \<Rightarrow> bool option" where
   "interval_tobool a =
