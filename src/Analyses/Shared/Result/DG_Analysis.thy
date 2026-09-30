@@ -931,7 +931,7 @@ theorem entry_state_activation_collect_sound:
 theorem entry_state_has_context:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
     and trace: "t \<in> \<T>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub>"
-  shows "\<exists>c. trace_context pgs entry_context_rel root_ctx (prog_cfg p) t c"
+  shows "\<exists>c. activation_context_rel pgs entry_context_rel root_ctx (prog_cfg p) t c"
   by (rule entry.routed_valid_activation_trace_has_context[OF entry_cov cinit_le_init trace])
 
 text \<open>

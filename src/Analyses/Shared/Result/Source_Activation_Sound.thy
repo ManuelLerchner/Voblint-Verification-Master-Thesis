@@ -24,11 +24,11 @@ theorem source_sound_from_collecting_cap:
     and s0: "s0 \<in> S"
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
+                   \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
     and cap: "\<And>v ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
                        \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
   shows "\<exists>v stk t c. Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c
+                   \<and> activation_context_rel \<G> R c\<^sub>0 (compile_prog Pi ps) t c
                    \<and> s \<in> \<gamma>\<^sub>M (sg (Inl (v, c)))"
 proof -
   let ?g = "compile_prog Pi ps"
@@ -36,7 +36,7 @@ proof -
          [where R=R and c\<^sub>0=c\<^sub>0,
           OF wf s0 run has_ctx]
   obtain v stk t c where m: "Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-    and ck: "trace_context \<G> R c\<^sub>0 ?g t c"
+    and ck: "activation_context_rel \<G> R c\<^sub>0 ?g t c"
     and mem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c"
     by blast
   have "s \<in> \<gamma>\<^sub>M (sg (Inl (v, c)))"
@@ -93,7 +93,7 @@ theorem source_activation_sound:
         \<Longrightarrow> combine_collect \<G> dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
     and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) R \<G> (compile_prog Pi ps)"
   shows "\<exists>v stk t c. Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c
+                   \<and> activation_context_rel \<G> R c\<^sub>0 (compile_prog Pi ps) t c
                    \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
 proof -
   interpret G: activation_coverage "compile_prog Pi ps" S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" R c\<^sub>0 \<G>
@@ -102,7 +102,7 @@ proof -
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF G.activation_coverage_axioms])
   have has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
+                   \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 (compile_prog Pi ps) t c"
     using G.valid_activation_trace_has_context by blast
   show ?thesis
     by (rule source_sound_from_collecting_cap[where \<gamma>\<^sub>M=gamma_state,
@@ -180,7 +180,7 @@ theorem source_completes_valid_activation_trace_result:
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, s, [])"
   shows "\<exists>t p. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
                \<and> caller_of t = None
-               \<and> fst (hd (path t)) = cfg_entry (compile_prog Pi ps)
+               \<and> fst (hd (path_of t)) = cfg_entry (compile_prog Pi ps)
                \<and> sink_node t = FunctionResult p
                \<and> sink_store t = s"
 proof -
@@ -193,7 +193,7 @@ proof -
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: activation_trace_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have hd_t: "fst (hd (path t)) = cfg_entry ?g"
+  have hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
     by (rule valid_activation_trace_caller_None_entry[OF tv cof])
   \<comment> \<open>the located node of a completed activation is its procedure's result\<close>
   from sim obtain p c0 k n where
@@ -219,12 +219,12 @@ proof -
   from valid_activation_trace_intra_path_extend[OF path_to_ret tv]
   obtain t' where t'v: "t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and t'n: "sink_node t' = FunctionResult p"
     and t's: "sink_store t' = s" and t'c: "caller_of t' = caller_of t"
-    and t'h: "fst (hd (path t')) = fst (hd (path t))" by blast
+    and t'h: "fst (hd (path_of t')) = fst (hd (path_of t))" by blast
   show ?thesis
   proof (intro exI conjI)
     show "t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" by (rule t'v)
     show "caller_of t' = None" using t'c cof by simp
-    show "fst (hd (path t')) = cfg_entry ?g" using t'h hd_t by simp
+    show "fst (hd (path_of t')) = cfg_entry ?g" using t'h hd_t by simp
     show "sink_node t' = FunctionResult p" by (rule t'n)
     show "sink_store t' = s" by (rule t's)
   qed
@@ -245,9 +245,9 @@ corollary source_completes_node_collect_exit:
 proof -
   let ?g = "compile_prog Pi ps"
   from source_completes_valid_activation_trace_result[OF wf s0 run]
-  obtain t p where tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and hd_t: "fst (hd (path t)) = cfg_entry ?g"
+  obtain t p where tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
     and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
-  have "fst (hd (path t)) = FunctionEntry prog_main_name"
+  have "fst (hd (path_of t)) = FunctionEntry prog_main_name"
     using hd_t by (simp add: compile_prog_def Let_def split: prod.splits)
   from valid_activation_trace_entry_result_eq[OF wf tv this sn] have "prog_main_name = p" .
   with sn ss tv show ?thesis

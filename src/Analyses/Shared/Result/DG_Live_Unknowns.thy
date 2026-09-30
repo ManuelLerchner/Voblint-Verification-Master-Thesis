@@ -688,7 +688,7 @@ proof (rule node_collect_eq_Union_activation_of_has_context)
     by (rule entry_state_routed_analysis_sound_live_unknowns[OF wf solves])
   fix t
   assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
-  then show "\<exists>c. trace_context (declared_global p) (admitted_contexts (declared_global p) p)
+  then show "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
                    root_ctx (prog_cfg p) t c"
     by (rule live.routed_valid_activation_trace_has_context
           [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])

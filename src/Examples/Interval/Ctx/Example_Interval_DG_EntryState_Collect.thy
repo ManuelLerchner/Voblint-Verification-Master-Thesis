@@ -241,9 +241,9 @@ proof -
 qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the
-  \<^const>\<open>trace_context\<close> side of the same fact syntactically manifest: every concrete
+  \<^const>\<open>activation_context_rel\<close> side of the same fact syntactically manifest: every concrete
   callee-entry trace this set counts --- one per \<open>__voblint_nondet_int()\<close> outcome that
-  actually occurs --- is one whose \<^const>\<open>trace_context\<close> admits the single context
+  actually occurs --- is one whose \<^const>\<open>activation_context_rel\<close> admits the single context
   \<^const>\<open>ctx_call\<close>. The admitted-context relation is a relation rather than a
   function, so this is membership, not an equation.
   \<open>rc_activation_collect_sound\<close> then bounds this whole set, every context alike.\<close>
@@ -256,7 +256,7 @@ corollary rc_activation_ctx_key:
    = {sink_store t | t.
         t \<in> \<T>\<^bsub>rc_gs,compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub>
         \<and> sink_node t = FunctionEntry (STR ''p'')
-        \<and> trace_context rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
+        \<and> activation_context_rel rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
             [] (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 

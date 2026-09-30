@@ -88,7 +88,7 @@ text \<open>
 lemma valid_activation_trace_intra_path_extend_pair:
   "intra_path g x y \<Longrightarrow> t \<in> \<T> \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
    \<Longrightarrow> \<exists>t'. t' \<in> \<T> \<and> sink_node t' = fst y \<and> sink_store t' = snd y
-            \<and> caller_of t' = caller_of t \<and> fst (hd (path t')) = fst (hd (path t))"
+            \<and> caller_of t' = caller_of t \<and> fst (hd (path_of t')) = fst (hd (path_of t))"
 proof (induction arbitrary: t rule: star.induct)
   case (refl x)
   then show ?case by blast
@@ -102,12 +102,12 @@ next
   have ext: "extend t (w, s1) \<in> \<T>"
     by (rule valid_activation_trace.intra[OF step.prems(1)])
        (use e st step.prems(2,3) x in simp_all)
-  have hd_ext: "fst (hd (path (extend t (w, s1)))) = fst (hd (path t))"
+  have hd_ext: "fst (hd (path_of (extend t (w, s1)))) = fst (hd (path_of t))"
     using valid_activation_trace_path_nonempty[OF step.prems(1)] by simp
   from step.IH[OF ext] y obtain t' where
     "t' \<in> \<T>" "sink_node t' = fst z" "sink_store t' = snd z"
     "caller_of t' = caller_of (extend t (w, s1))"
-    "fst (hd (path t')) = fst (hd (path (extend t (w, s1))))" by auto
+    "fst (hd (path_of t')) = fst (hd (path_of (extend t (w, s1))))" by auto
   then show ?case using hd_ext by auto
 qed
 
@@ -115,7 +115,7 @@ lemma valid_activation_trace_intra_path_extend:
   assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
     and t: "t \<in> \<T>"
   obtains t' where "t' \<in> \<T>" "sink_node t' = v" "sink_store t' = s'"
-    "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
+    "caller_of t' = caller_of t" "fst (hd (path_of t')) = fst (hd (path_of t))"
   using valid_activation_trace_intra_path_extend_pair[OF p t] by auto
 
 text \<open>
@@ -148,7 +148,7 @@ proof -
     and dc: "caller_of callee = caller_of ?entered"
     by (rule valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   have "Resume caller callee
-          (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])
+          (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])
           \<in> \<T>"
     by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   from node_collect_I [OF this] show ?thesis
@@ -160,7 +160,7 @@ subsection \<open>Collecting equations\<close>
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>
 lemma node_collect_init:
   "s \<in> S \<Longrightarrow> s \<in> \<C> (cfg_entry g)"
-  using node_collect_I[OF valid_activation_trace.init] by simp
+  using node_collect_I[OF valid_activation_trace.root] by simp
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 
@@ -180,7 +180,7 @@ text \<open>Bridge (2): the converse needs every valid trace to carry some conte
   \<^const>\<open>activation_context\<close> is total; a relational one earns it from conditional totality, which is
   \<open>Activation_Trace_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem node_collect_eq_Union_activation_of_has_context:
-  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 g t c"
+  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
   shows "\<C> v = (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
 proof
   show "\<C> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
@@ -188,7 +188,7 @@ proof
     fix x assume "x \<in> \<C> v"
     then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
       by (rule node_collect_E)
-    from has_ctx [OF t(1)] obtain c where "trace_context \<G> R c\<^sub>0 g t c" ..
+    from has_ctx [OF t(1)] obtain c where "activation_context_rel \<G> R c\<^sub>0 g t c" ..
     with t show "x \<in> (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
       by blast
   qed
@@ -201,7 +201,7 @@ theorem node_collect_eq_Union_activation_of_fun:
   "\<C> v
      = (\<Union>c. \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,g,S\<^esub> v c)"
   by (rule node_collect_eq_Union_activation_of_has_context)
-     (simp add: trace_context_of_fun_iff)
+     (simp add: activation_context_rel_of_fun_iff)
 
 end
 
@@ -234,7 +234,7 @@ lemma activation_trace_witness_root:
   "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
 proof -
   have "Root [(cfg_entry activation_trace_witness_cfg, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
-    by (rule valid_activation_trace.init) simp
+    by (rule valid_activation_trace.root) simp
   then show ?thesis by simp
 qed
 

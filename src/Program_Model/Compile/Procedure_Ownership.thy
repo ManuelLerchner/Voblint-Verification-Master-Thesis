@@ -5,7 +5,7 @@ begin
 section \<open>Each procedure owns a disjoint block of nodes\<close>
 
 text \<open>
-  An activation's own local \<^const>\<open>path\<close> stays inside one compiled procedure fragment.  A
+  An activation's own local \<^const>\<open>path_of\<close> stays inside one compiled procedure fragment.  A
   \<^emph>\<open>fragment\<close> of procedure \<open>r\<close> compiled over \<open>[m, m')\<close> is \<^term>\<open>FunctionEntry r\<close>,
   \<^term>\<open>FunctionResult r\<close>, and the \<^term>\<open>Statement\<close> nodes in that counter range.  Every intra edge
   keeps both endpoints in one fragment, every call edge keeps its source and continuation there
@@ -532,15 +532,15 @@ definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> activat
      (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
         \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)
         \<and> (FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)
-        \<and> fst (hd (path u)) = FunctionEntry r
-        \<and> (\<forall>nd \<in> fst ` set (path u). nd \<in> pfn r m m'))
-   \<or> (\<exists>p s. path u = [(FunctionEntry p, s)] \<and> \<Pi> p = None)"
+        \<and> fst (hd (path_of u)) = FunctionEntry r
+        \<and> (\<forall>nd \<in> fst ` set (path_of u). nd \<in> pfn r m m'))
+   \<or> (\<exists>p s. path_of u = [(FunctionEntry p, s)] \<and> \<Pi> p = None)"
 
 lemma frag_okI_frag:
   assumes "\<Pi> r = Some d" "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     "(FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)"
-    "fst (hd (path u)) = FunctionEntry r"
-    "\<And>nd. nd \<in> fst ` set (path u) \<Longrightarrow> nd \<in> pfn r m m'"
+    "fst (hd (path_of u)) = FunctionEntry r"
+    "\<And>nd. nd \<in> fst ` set (path_of u) \<Longrightarrow> nd \<in> pfn r m m'"
   shows "frag_ok \<Pi> ps u"
   unfolding frag_ok_def using assms by blast
 
@@ -548,12 +548,12 @@ lemma frag_okE [elim]:
   assumes "frag_ok \<Pi> ps u"
   obtains (frag) r d m m' Ep Kp where "\<Pi> r = Some d" "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     "(FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)"
-    "fst (hd (path u)) = FunctionEntry r" "\<forall>nd \<in> fst ` set (path u). nd \<in> pfn r m m'"
-  | (stub) p s where "path u = [(FunctionEntry p, s)]" "\<Pi> p = None"
+    "fst (hd (path_of u)) = FunctionEntry r" "\<forall>nd \<in> fst ` set (path_of u). nd \<in> pfn r m m'"
+  | (stub) p s where "path_of u = [(FunctionEntry p, s)]" "\<Pi> p = None"
   using assms unfolding frag_ok_def by meson
 
 lemma sink_in_path_nodes:
-  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
+  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t \<in> fst ` set (path_of t)"
   using valid_activation_trace_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Extending a fragment-local activation by one node keeps it fragment-local when the step
@@ -561,7 +561,7 @@ text \<open>Extending a fragment-local activation by one node keeps it fragment-
   An intra step and the resumption after a call are the two such extensions.\<close>
 lemma frag_ok_snoc:
   assumes t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>" and ok: "frag_ok \<Pi> ps t"
-    and pu: "path u = path t @ [(v, s)]"
+    and pu: "path_of u = path_of t @ [(v, s)]"
     and stay: "\<And>r d m m' Ep Kp. \<Pi> r = Some d \<Longrightarrow> compile_proc \<Pi> r d m = (m', Ep, Kp) \<Longrightarrow>
       (FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps) \<Longrightarrow>
       sink_node t \<in> pfn r m m' \<Longrightarrow> v \<in> pfn r m m'"
@@ -636,7 +636,7 @@ proof -
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
     have cv: "caller \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace_caller_valid[OF cvcallee cof] .
     have "frag_ok \<Pi> ps caller" using ch cin by blast
-    then show "frag_ok \<Pi> ps (Resume caller callee (path caller
+    then show "frag_ok \<Pi> ps (Resume caller callee (path_of caller
             @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
       by (rule frag_ok_snoc[OF cv _ _ frag_edge_calls[OF wf _ _ _ _ e]])
          (use e in \<open>auto dest: compile_prog_calls_source_stmt\<close>)
@@ -650,7 +650,7 @@ text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reac
 lemma valid_activation_trace_entry_result_eq:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>"
-    and en: "fst (hd (path t)) = FunctionEntry p"
+    and en: "fst (hd (path_of t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
   shows "p = q"
 proof -

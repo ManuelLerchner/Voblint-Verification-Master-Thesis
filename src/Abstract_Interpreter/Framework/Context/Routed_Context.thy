@@ -621,7 +621,7 @@ lemma routed_valid_activation_trace_has_context:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
-  shows "\<exists>c. trace_context \<G> R c\<^sub>0 g t c"
+  shows "\<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
 proof -
   interpret G: activation_coverage g S0 cover R c\<^sub>0 \<G>
   proof unfold_locales

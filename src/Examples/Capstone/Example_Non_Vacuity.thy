@@ -390,7 +390,7 @@ definition ret_R :: "int call_context_rel" where
   "ret_R = call_context_rel_of_fun (\<lambda>_ _ es. es (STR ''n''))"
 
 text \<open>
-  The claim: \<open>main\<close> is covered in the start context \<open>0\<close> up to its first call site
+  The claim: \<open>main\<close> is covered in the initial context \<open>0\<close> up to its first call site
   and nowhere after it; \<open>f\<close> is covered everywhere, but only in the contexts its
   calls create.
 \<close>
@@ -522,7 +522,7 @@ lemma resume_keeps_context:
   shows "combine_collect \<G> dst s t \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> cont ctx"
 proof -
   from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    and cn: "sink_node caller = u" and ck: "trace_context \<G> R c0 g caller ctx"
+    and cn: "sink_node caller = u" and ck: "activation_context_rel \<G> R c0 g caller ctx"
     and cs: "sink_store caller = s"
     by (rule activation_collect_E)
   let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
@@ -535,7 +535,7 @@ proof -
     and dc: "caller_of callee = caller_of ?entered"
     by (rule valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   let ?r = "Resume caller callee
-              (path caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
+              (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
   have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
     by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   have "sink_store ?r \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> (sink_node ?r) ctx"
@@ -544,7 +544,7 @@ proof -
 qed
 
 text \<open>The relation that admits no context, and the claim that covers \<open>main\<close> up to its first
-  call site in the start context and nothing else.\<close>
+  call site in the initial context and nothing else.\<close>
 
 definition tot_R :: "int call_context_rel" where
   "tot_R u ctx ci s es ctx' \<longleftrightarrow> False"
@@ -578,7 +578,7 @@ lemma tot_weak_obligations:
 
 text \<open>
   The claim meets INIT, INTRA, CALL and RETURN and fails only TOTAL. The run resumes at
-  the second call site in the start context, where the claim is empty, so the
+  the second call site in the initial context, where the claim is empty, so the
   per-context conclusion of \<open>activation_collect_sound\<close> fails.
 \<close>
 
@@ -591,7 +591,7 @@ proof
   let ?S = "cinit_stores (declared_global ret_prog)"
   let ?t0 = "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0)]"
   have v0: "?t0 \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_activation_trace.init
+    using valid_activation_trace.root
       [where s = "\<lambda>_. 0" and S = ?S and \<G> = "declared_global ret_prog"
                                 and g = "prog_cfg ret_prog"]
     by (simp add: ret_entry cinit_stores_def)

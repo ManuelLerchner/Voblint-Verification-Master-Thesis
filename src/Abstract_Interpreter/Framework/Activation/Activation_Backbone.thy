@@ -7,7 +7,7 @@ section \<open>What one activation of a procedure may observe\<close>
 text \<open>
   Every concrete call creates one callee activation.  Each step of that activation carries
   the contexts its creating call admits, a nested call derives its callee's contexts from
-  those, and a return resumes the caller at the caller's own.  \<^const>\<open>trace_context\<close> replays
+  those, and a return resumes the caller at the caller's own.  \<^const>\<open>activation_context_rel\<close> replays
   those choices along a trace, so a table indexed by \<open>(node, context)\<close> can be checked
   against concrete runs without carrying an auxiliary digest.  That indexing is many-to-one
   and one-to-many at once: activations reaching the same context are collected together,
@@ -40,7 +40,7 @@ proof -
   proof (rule subsetI)
     fix st assume "st \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v ctx"
     then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-      and sn: "sink_node t = v" and kc: "trace_context \<G> R c\<^sub>0 g t ctx"
+      and sn: "sink_node t = v" and kc: "activation_context_rel \<G> R c\<^sub>0 g t ctx"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
     have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_activation_trace_covered_at[OF t kc]

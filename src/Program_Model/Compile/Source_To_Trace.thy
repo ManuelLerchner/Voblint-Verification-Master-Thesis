@@ -25,7 +25,7 @@ text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in
 inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> activation_trace \<Rightarrow> bool" for g where
   empty: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
 | frame: "caller_of t = Some c \<Longrightarrow> sink_store c = caller
-          \<Longrightarrow> fst (hd (path t)) = FunctionEntry p
+          \<Longrightarrow> fst (hd (path_of t)) = FunctionEntry p
           \<Longrightarrow> (sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
           \<Longrightarrow> stack_repr g stk c
           \<Longrightarrow> stack_repr g ((cont, dst, caller) # stk) t"
@@ -53,7 +53,7 @@ text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_
   unchanged).\<close>
 lemma stack_repr_cong:
   "stack_repr g stk t1 \<Longrightarrow> caller_of t2 = caller_of t1
-   \<Longrightarrow> fst (hd (path t2)) = fst (hd (path t1)) \<Longrightarrow> stack_repr g stk t2"
+   \<Longrightarrow> fst (hd (path_of t2)) = fst (hd (path_of t1)) \<Longrightarrow> stack_repr g stk t2"
   by (cases rule: stack_repr.cases) auto
 
 subsection \<open>The return step\<close>
@@ -70,7 +70,7 @@ lemma activation_trace_repr_Return:
   shows "activation_trace_repr \<G> (compile_prog \<Pi> ps) S
            (cont, combine_collect \<G> dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
-              (path (the (caller_of t0)) @ [(cont, combine_collect \<G> dst caller tst)]))"
+              (path_of (the (caller_of t0)) @ [(cont, combine_collect \<G> dst caller tst)]))"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from rep have t0v: "t0 \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn0: "sink_node t0 = FunctionResult q"
@@ -78,7 +78,7 @@ proof -
     and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
     by (auto simp: activation_trace_repr_def)
   from stk0 obtain c p pars args where cof: "caller_of t0 = Some c"
-    and ssc: "sink_store c = caller" and entryp: "fst (hd (path t0)) = FunctionEntry p"
+    and ssc: "sink_store c = caller" and entryp: "fst (hd (path_of t0)) = FunctionEntry p"
     and edge: "(sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
@@ -86,14 +86,14 @@ proof -
   have pq: "p = q" using valid_activation_trace_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
   let ?r = "combine_collect \<G> dst caller tst"
-  let ?t' = "Resume c t0 (path c @ [(cont, ?r)])"
+  let ?t' = "Resume c t0 (path_of c @ [(cont, ?r)])"
   have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
     using edge pq by simp
   have valid': "?t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
     using valid_activation_trace.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
   have sn': "sink_node ?t' = cont" by (simp add: sink_node_def)
   have ss': "sink_store ?t' = ?r" by (simp add: sink_store_def)
-  have entry': "fst (hd (path ?t')) = fst (hd (path c))"
+  have entry': "fst (hd (path_of ?t')) = fst (hd (path_of c))"
     using valid_activation_trace_path_nonempty[OF cvalid] by simp
   have stk': "stack_repr ?g stk ?t'"
     using stack_repr_cong[OF stkc, of ?t'] entry' by simp
@@ -142,7 +142,7 @@ next
   proof (rule stack_repr.frame)
     show "caller_of ?child = Some t" by simp
     show "sink_store t = s" using ss .
-    show "fst (hd (path ?child)) = FunctionEntry q" by simp
+    show "fst (hd (path_of ?child)) = FunctionEntry q" by simp
     show "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
       using edge .
     show "stack_repr ?g stk' t" using str .
@@ -167,7 +167,7 @@ proof -
   have "activation_trace_repr \<G> g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
     using assms
     by (auto simp: activation_trace_repr_def sink_node_def sink_store_def
-      valid_activation_trace.init)
+      valid_activation_trace.root)
   then show ?thesis by (auto simp: located_activation_trace_def)
 qed
 
@@ -236,12 +236,12 @@ lemma stack_repr_Nil_iff:
   "stack_repr g stk t \<Longrightarrow> (stk = []) = (caller_of t = None)"
   by (cases rule: stack_repr.cases) auto
 
-text \<open>A callerless activation carries exactly the start context, whatever the policy ---
+text \<open>A callerless activation carries exactly the initial context, whatever the policy ---
   the \<open>Root\<close> case never consults \<open>R\<close>, and the \<open>Resume\<close> case only forwards to the same
   callerless ancestor. No validity is needed: the two clauses involved name no edge.\<close>
-lemma trace_context_caller_of_None:
+lemma activation_context_rel_caller_of_None:
   "caller_of t = None
-   \<Longrightarrow> trace_context \<G> R c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
+   \<Longrightarrow> activation_context_rel \<G> R c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
   by (induction t) auto
 
 subsection \<open>The source bridge\<close>
@@ -292,9 +292,9 @@ theorem source_store_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. trace_context \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c"
+                   \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> trace_context \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c
+                   \<and> activation_context_rel \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c
                    \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -304,7 +304,7 @@ proof -
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
     by (auto simp: activation_trace_repr_def)
-  from has_ctx[OF tv] obtain c where tc: "trace_context \<G> R c\<^sub>0 ?g t c" by blast
+  from has_ctx[OF tv] obtain c where tc: "activation_context_rel \<G> R c\<^sub>0 ?g t c" by blast
   have "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim tc by blast
@@ -328,8 +328,8 @@ proof -
     and ss: "sink_store t = s"
     by (auto simp: activation_trace_repr_def)
   have tc:
-    "trace_context \<G> (call_context_rel_of_fun f) c\<^sub>0 ?g t (activation_context f c\<^sub>0 t)"
-    by (simp add: trace_context_of_fun_iff[OF tv])
+    "activation_context_rel \<G> (call_context_rel_of_fun f) c\<^sub>0 ?g t (activation_context f c\<^sub>0 t)"
+    by (simp add: activation_context_rel_of_fun_iff[OF tv])
   have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,?g,S\<^esub> v
               (activation_context f c\<^sub>0 t)"
     using activation_collect_I[OF tv sn tc] ss by simp
@@ -355,8 +355,8 @@ proof -
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
     by (auto simp: activation_trace_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "trace_context \<G> R c\<^sub>0 ?g t c\<^sub>0"
-    by (simp add: trace_context_caller_of_None[OF cof])
+  have covered: "activation_context_rel \<G> R c\<^sub>0 ?g t c\<^sub>0"
+    by (simp add: activation_context_rel_caller_of_None[OF cof])
   have "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c\<^sub>0"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast

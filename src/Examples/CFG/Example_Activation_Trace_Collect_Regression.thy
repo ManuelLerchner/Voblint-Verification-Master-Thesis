@@ -49,7 +49,7 @@ lemma nested_valid_activation_trace_example:
 proof -
   define main0 where "main0 = Root [(cfg_entry nest_cfg, s0)]"
   have main_mem: "main0 \<in> \<T>\<^bsub>demo_gs,nest_cfg,S\<^esub>"
-    unfolding main0_def by (rule valid_activation_trace.init[OF s0])
+    unfolding main0_def by (rule valid_activation_trace.root[OF s0])
   have m_sn: "sink_node main0 = FunctionEntry mn"
     by (simp add: main0_def nest_defs)
   have ecall_f:
@@ -86,7 +86,7 @@ proof -
   \<comment> \<open>g returns into f (the immediate caller), not main\<close>
   define f' where
     "f' = Resume f0 g1
-      (path f0 @
+      (path_of f0 @
         [(Statement 200,
           combine_collect demo_gs None (sink_store f0) (sink_store g1))])"
   have f'_mem: "f' \<in> \<T>\<^bsub>demo_gs,nest_cfg,S\<^esub>"
@@ -109,7 +109,7 @@ proof -
     by (simp add: m_sn nest_defs)
   define final where
     "final = Resume main0 f2
-      (path main0 @
+      (path_of main0 @
         [(Statement 100,
           combine_collect demo_gs None (sink_store main0) (sink_store f2))])"
   have final_mem: "final \<in> \<T>\<^bsub>demo_gs,nest_cfg,S\<^esub>"
@@ -146,12 +146,12 @@ lemma multi_return_join:
     \<and> sink_node t1 = FunctionResult pf \<and> sink_node t2 = FunctionResult pf
     \<and> caller_of t1 = Some c1 \<and> caller_of t2 = Some c2
     \<and> Resume c1 t1
-          (path c1 @
+          (path_of c1 @
             [(Statement 100,
               combine_collect demo_gs None (sink_store c1) (sink_store t1))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>
     \<and> Resume c2 t2
-          (path c2 @
+          (path_of c2 @
             [(Statement 100,
               combine_collect demo_gs None (sink_store c2) (sink_store t2))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"
@@ -163,7 +163,7 @@ proof -
 
   \<comment> \<open>positive branch through Statement 0\<close>
   have R0: "r0 \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>" unfolding r0_def
-    by (rule valid_activation_trace.init) simp
+    by (rule valid_activation_trace.root) simp
   have m0: "sink_node r0 = FunctionEntry mn" by (simp add: r0_def mret_defs)
   have ec0: "(sink_node r0, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m0 mret_defs)
@@ -192,7 +192,7 @@ proof -
 
   \<comment> \<open>negative branch through Statement 1\<close>
   have R1: "r1 \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>" unfolding r1_def
-    by (rule valid_activation_trace.init) simp
+    by (rule valid_activation_trace.root) simp
   have m1: "sink_node r1 = FunctionEntry mn" by (simp add: r1_def mret_defs)
   have ec1: "(sink_node r1, CallEdge None [] [], FunctionEntry pf, Statement 100) \<in> calls mret_cfg"
     by (simp add: m1 mret_defs)
@@ -229,11 +229,11 @@ proof -
     by (simp add: t1_def t2_def c0_def c1_def k0_def k1_def)
 
   have res1: "Resume r0 t1
-      (path r0 @ [(Statement 100, combine_collect demo_gs None (sink_store r0) (sink_store t1))])
+      (path_of r0 @ [(Statement 100, combine_collect demo_gs None (sink_store r0) (sink_store t1))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"
     by (rule valid_activation_trace.ret[OF T1 ct1 sn1 ec0])
   have res2: "Resume r1 t2
-      (path r1 @ [(Statement 100, combine_collect demo_gs None (sink_store r1) (sink_store t2))])
+      (path_of r1 @ [(Statement 100, combine_collect demo_gs None (sink_store r1) (sink_store t2))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"
     by (rule valid_activation_trace.ret[OF T2 ct2 sn2 ec1])
 
@@ -273,7 +273,7 @@ proof -
   define s0 :: store where "s0 = (\<lambda>_. 0)((STR ''Gx'') := 1)"
   define root where "root = Root [(cfg_entry rec_cfg, s0)]"
   have R: "root \<in> \<T>\<^bsub>demo_gs,rec_cfg,UNIV\<^esub>" unfolding root_def
-    by (rule valid_activation_trace.init) simp
+    by (rule valid_activation_trace.root) simp
   have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)
   have eA: "(sink_node root, EA_Assume bpos, Statement 1) \<in> intra rec_cfg"
     by (simp add: rt_sn rec_defs)
@@ -315,12 +315,12 @@ proof -
     T1: "t1 \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>" and T2: "t2 \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"
     and sn1: "sink_node t1 = FunctionResult pf" and sn2: "sink_node t2 = FunctionResult pf"
     and R1: "Resume c1 t1
-          (path c1 @
+          (path_of c1 @
             [(Statement 100,
               combine_collect demo_gs None (sink_store c1) (sink_store t1))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"
     and R2: "Resume c2 t2
-          (path c2 @
+          (path_of c2 @
             [(Statement 100,
               combine_collect demo_gs None (sink_store c2) (sink_store t2))])
         \<in> \<T>\<^bsub>demo_gs,mret_cfg,UNIV\<^esub>"

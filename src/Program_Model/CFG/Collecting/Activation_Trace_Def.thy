@@ -35,36 +35,36 @@ text \<open>
     \<open>callee\<close> is the retained completed callee subtree; \<open>p\<close> is the continued path.
 \<close>
 
-text \<open>A \<open>trace\<close> is what a run leaves behind with no procedures in the picture: which node
+text \<open>An \<open>activation_path\<close> is what a run leaves behind with no procedures in the picture: which node
   control stood at, and what the store held there.  A local trace is one of these per
   activation, with the surrounding activations beside it rather than on it.\<close>
 
-type_synonym trace = "(cfg_node \<times> store) list"
+type_synonym activation_path = "(cfg_node \<times> store) list"
 
 datatype activation_trace =
-    Root trace
-  | Call (activation_trace_caller: activation_trace) trace
+    Root activation_path
+  | Call (activation_trace_caller: activation_trace) activation_path
   | Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace)
-    trace
+    activation_path
 
 subsection \<open>Observers\<close>
 
-text \<open>\<open>path\<close> is the activation-local control-flow path.  \<open>sink_node\<close> and \<open>sink_store\<close>
+text \<open>\<open>path_of\<close> is the activation-local control-flow path.  \<open>sink_node\<close> and \<open>sink_store\<close>
   return its final program point and final store.\<close>
 
-fun path :: "activation_trace \<Rightarrow> trace" where
-  "path (Root p)       = p"
-| "path (Call _ p)     = p"
-| "path (Resume _ _ p) = p"
+fun path_of :: "activation_trace \<Rightarrow> activation_path" where
+  "path_of (Root p)       = p"
+| "path_of (Call _ p)     = p"
+| "path_of (Resume _ _ p) = p"
 
 definition entry_store :: "activation_trace \<Rightarrow> store" where
-  "entry_store t = snd (hd (path t))"
+  "entry_store t = snd (hd (path_of t))"
 
 definition sink_node :: "activation_trace \<Rightarrow> cfg_node" where
-  "sink_node t = fst (last (path t))"
+  "sink_node t = fst (last (path_of t))"
 
 definition sink_store :: "activation_trace \<Rightarrow> store" where
-  "sink_store t = snd (last (path t))"
+  "sink_store t = snd (last (path_of t))"
 
 text \<open>\<open>caller_of\<close> recovers the creating caller of an activation.  It descends the frozen
   \<open>caller\<close> field of a \<^const>\<open>Resume\<close>, so it works uniformly for a returned callee of any
@@ -102,7 +102,7 @@ inductive_set valid_activation_trace ::
     "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> activation_trace set"
     ("\<T>\<^bsub>_,_,_\<^esub>")
   for \<G> and g and S where
-  init:
+  root:
     "s \<in> S
      \<Longrightarrow> Root [(cfg_entry g, s)] \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
 | intra:
@@ -125,7 +125,7 @@ inductive_set valid_activation_trace ::
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
      \<Longrightarrow> Resume caller callee
-           (path caller
+           (path_of caller
               @ [(cont, combine_collect \<G> dst
                           (sink_store caller) (sink_store callee))])
          \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
@@ -145,7 +145,7 @@ text \<open>How the three trace shapes answer the projections every later proof 
   through -- path, sink, caller, entry store.  Kept as \<open>simp\<close> rules so an induction over
   \<open>valid_activation_trace\<close> never has to case on the constructor merely to look up a sink.\<close>
 lemma extend_simps [simp]:
-  "path (extend t x) = path t @ [x]"
+  "path_of (extend t x) = path_of t @ [x]"
   "caller_of (extend t x) = caller_of t"
   "sink_node (extend t x) = fst x"
   "sink_store (extend t x) = snd x"
@@ -171,11 +171,11 @@ private abbreviation (input) traces :: "activation_trace set" where "traces \<eq
 notation traces ("\<T>")
 
 lemma valid_activation_trace_path_nonempty:
-  "t \<in> \<T> \<Longrightarrow> path t \<noteq> []"
+  "t \<in> \<T> \<Longrightarrow> path_of t \<noteq> []"
   by (induction t rule: valid_activation_trace.induct) auto
 
 lemma entry_store_extend [simp]:
-  assumes "path t \<noteq> []"
+  assumes "path_of t \<noteq> []"
   shows "entry_store (extend t x) = entry_store t"
   using assms by (simp add: entry_store_def)
 
@@ -224,7 +224,7 @@ next
   then show ?case using Resume.IH(1)[OF cv] by simp
 qed
 
-text \<open>A \<^const>\<open>Root\<close> activation starts at \<^const>\<open>cfg_entry\<close>: \<open>init\<close> creates it there and
+text \<open>A \<^const>\<open>Root\<close> activation starts at \<^const>\<open>cfg_entry\<close>: \<open>root\<close> creates it there and
   \<open>intra\<close> only appends.\<close>
 lemma valid_activation_trace_Root_entry:
   "u \<in> \<T> \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
@@ -239,20 +239,20 @@ qed auto
 
 text \<open>A \<^const>\<open>Resume\<close> extends its caller's own local path, so both share a head node.\<close>
 lemma valid_activation_trace_Resume_path:
-  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path cc @ xs \<and> xs \<noteq> []"
+  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path_of cc @ xs \<and> xs \<noteq> []"
 proof (induction arbitrary: cc dd q rule: valid_activation_trace.induct)
   case (intra t a v s')
   from intra.prems obtain q' where t: "t = Resume cc dd q'" and q: "q = q' @ [(v, s')]"
     by (cases t) auto
-  from intra.IH[OF t] obtain xs where "q' = path cc @ xs" by blast
+  from intra.IH[OF t] obtain xs where "q' = path_of cc @ xs" by blast
   then show ?case using q by auto
 qed auto
 
-text \<open>A callerless activation is the root one, and its local \<^const>\<open>path\<close> starts at
+text \<open>A callerless activation is the root one, and its local \<^const>\<open>path_of\<close> starts at
   \<^const>\<open>cfg_entry\<close>.  The \<^const>\<open>Resume\<close> case needs the caller's own entry, which term
   induction supplies (the caller is a subterm) --- rule induction would only offer the callee.\<close>
 lemma valid_activation_trace_caller_None_entry:
-  "t \<in> \<T> \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path t)) = cfg_entry g"
+  "t \<in> \<T> \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path_of t)) = cfg_entry g"
 proof (induction t)
   case (Root p)
   then show ?case using valid_activation_trace_Root_entry[OF Root.prems(1) refl] by simp
@@ -266,9 +266,9 @@ next
   have cv: "caller \<in> \<T>" using Resume.IH(2)[OF cd(1)] cd(2)
     using valid_activation_trace_caller_valid[OF cd(1) cd(2)] by simp
   from Resume.prems(2) have "caller_of caller = None" by simp
-  with Resume.IH(1)[OF cv] have hcaller: "fst (hd (path caller)) = cfg_entry g" by simp
+  with Resume.IH(1)[OF cv] have hcaller: "fst (hd (path_of caller)) = cfg_entry g" by simp
   from valid_activation_trace_Resume_path[OF Resume.prems(1) refl] obtain xs where
-    q: "q = path caller @ xs" by blast
+    q: "q = path_of caller @ xs" by blast
   show ?case using hcaller q valid_activation_trace_path_nonempty[OF cv] by simp
 qed
 
@@ -323,12 +323,12 @@ lemma caller_chain_closure:
         \<Longrightarrow> caller_of callee = Some caller \<Longrightarrow> sink_node callee = FunctionResult p
         \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
-        \<Longrightarrow> P (Resume caller callee (path caller
+        \<Longrightarrow> P (Resume caller callee (path_of caller
                  @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
   shows "t \<in> \<T> \<Longrightarrow> \<forall>u \<in> callers t. P u"
 proof (induction rule: valid_activation_trace.induct)
-  case (init s)
-  then show ?case using Root[OF init] by simp
+  case (root s)
+  then show ?case using Root[OF root] by simp
 next
   case (intra t a v s')
   then show ?case using Intra[OF intra.hyps(1) intra.IH intra.hyps(2,3)] by auto
@@ -355,8 +355,8 @@ definition call_enter_store :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<R
         \<and> t = call_enter \<G> (CallEdge dst pars args) s)"
 
 lemma entry_store_Resume_caller:
-  "path caller \<noteq> [] \<Longrightarrow>
-     entry_store (Resume caller callee (path caller @ [x])) = entry_store caller"
+  "path_of caller \<noteq> [] \<Longrightarrow>
+     entry_store (Resume caller callee (path_of caller @ [x])) = entry_store caller"
   by (simp add: entry_store_def hd_append)
 
 end

@@ -14,7 +14,7 @@ text \<open>
   \<^const>\<open>gamma_state_lift\<close>.  The admitted-context relation
   \<^const>\<open>dg_analysis.admitted_contexts\<close> keeps the two calls separate while the
   source/CFG simulation preserves the concrete frame stack; being a relation rather than a
-  function, what a trace admits is membership in \<^const>\<open>trace_context\<close>, not an equation.
+  function, what a trace admits is membership in \<^const>\<open>activation_context_rel\<close>, not an equation.
 \<close>
 
 text \<open>The analysis' own solved reader, abbreviated for the two statements below.\<close>
@@ -33,7 +33,7 @@ theorem twice_source_ctx_run_sound:
     and init: "s0 \<in> cinit_stores twice_gs"
   shows "\<exists>v stk t c.
            twice_pi, compile_prog twice_pi twice_procs \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> trace_context twice_gs
+           \<and> activation_context_rel twice_gs
                (interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program)
                [] (compile_prog twice_pi twice_procs) t c
            \<and> s \<in> twice_ctx_gamma (twice_ctx_sg (Inl (v, c)))"

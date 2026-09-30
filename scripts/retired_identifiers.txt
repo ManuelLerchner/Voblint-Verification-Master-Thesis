@@ -3951,3 +3951,21 @@ valid_ltr_intra_path_extend
 valid_ltr_intra_path_extend_pair
 valid_ltr_path_nonempty
 
+# --- trace_context renamed to activation_context_rel beside call_context_rel
+# (2026-09-30). The observer path (now path_of) and the type trace (now
+# activation_path) are ordinary words in theory prose, so they are not listed. ---
+trace_context
+trace_context_CallE
+trace_context_Call_Nil
+trace_context_Call_iff
+trace_context_ResumeE
+trace_context_Resume_iff
+trace_context_RootE
+trace_context_Root_iff
+trace_context_caller_entry
+trace_context_caller_entryE
+trace_context_caller_entryI
+trace_context_caller_of_None
+trace_context_extend
+trace_context_of_fun_iff
+
