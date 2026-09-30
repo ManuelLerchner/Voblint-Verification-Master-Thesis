@@ -5,12 +5,12 @@ begin
 section \<open>The monovariant context as a routed-context instance\<close>
 
 text \<open>
-  Every other \<^locale>\<open>routed_context_base_hetero\<close> instance (call-string, entry-state)
+  Every other \<^locale>\<open>routed_context\<close> instance (call-string, entry-state)
   routes to a non-trivial context. This theory checks the routed-context abstraction
   also admits the degenerate case a context-insensitive analysis needs: exactly one
   context, chosen the same way at every call, carrying no history and no dependence on
   the abstract state. \<open>route_unit\<close> is that routing function; nothing else
-  about \<^locale>\<open>routed_context_base_hetero\<close> changes.
+  about \<^locale>\<open>routed_context\<close> changes.
 
   The context-insensitive analysis is the routed analysis registered at this routing
   function, exactly as the call-string and entry-state analyses are registered at
@@ -26,7 +26,7 @@ text \<open>
   call-site history, no dependence on the caller's abstract state, no sentinel encoding.
   \<open>enterc_unit\<close> is its trace-semantic counterpart; its graph
   \<open>call_context_rel_of_fun enterc_unit\<close> instantiates
-  \<^locale>\<open>routed_context_base_hetero\<close>'s \<open>R\<close> parameter. The two are definitionally
+  \<^locale>\<open>routed_context\<close>'s \<open>R\<close> parameter. The two are definitionally
   the same constant function, so \<open>routed_entry_cover\<close>'s routing agreement holds
   independently of any call edge, solved state, or concrete store.
 \<close>

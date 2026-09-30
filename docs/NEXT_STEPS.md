@@ -12,7 +12,7 @@ collecting semantics to the CLI:
   `trace_context` threads them over traces, and `activation_collect` is indexed
   by them (`LTR_Activation_Context`). A functional policy embeds through
   `call_context_rel_of_fun`.
-- **Routing.** `routed_context_base_hetero` (`Routed_Context`) discharges the call
+- **Routing.** `routed_context` (`Routed_Context`) discharges the call
   and combine obligations once for any context type `'c`;
   `Entry_State_Routed_Context` and `Call_String_Routed_Context`
   (`Voblint_Routing`) instantiate it. `'c` carries no `finite` sort constraint:

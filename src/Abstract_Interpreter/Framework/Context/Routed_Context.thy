@@ -6,7 +6,7 @@ begin
 section \<open>One route, CALL and COMB discharged once\<close>
 
 text \<open>
-  \<^locale>\<open>dg_ctx_activation_base\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
+  \<^locale>\<open>dg_context_activation\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
   post-solution, independent of \<open>route\<close>/\<open>cmb\<close>/\<open>extra\<close>: intra edges never route. Its COMB
   analogue (\<open>dg_ctx_act_comb_covered\<close>) is generic in the same sense but still takes the
   program's contribution as an assumption (\<open>bound\<close>) rather than deriving it, because \<open>cmb\<close> is
@@ -22,19 +22,19 @@ text \<open>
 subsection \<open>The routed-context locale: D and G independently typed\<close>
 
 text \<open>
-  \<open>routed_context_base_hetero\<close> instantiates \<^locale>\<open>dg_ctx_activation_base\<close> at
+  \<open>routed_context\<close> instantiates \<^locale>\<open>dg_context_activation\<close> at
   \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>, so \<open>S\<close>'s own \<open>'D\<close>/\<open>'G\<close> stay as
   independent as that locale already keeps them: no \<open>'D = 'G\<close> constraint is threaded
-  in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_ctx_activation_base\<close> itself carries
+  in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_context_activation\<close> itself carries
   no routing-specific content: every fact it supplies (\<open>pp_eq_bound\<close>,
   \<open>pp_sides_bound\<close>, \<open>sides_fold_le_Gen\<close>, \<open>edge_bound_local\<close>/\<open>_global\<close>,
   \<open>dg_ctx_act_edge\<close>, \<open>dg_ctx_act_comb_covered\<close>) is already generic in
   \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>
   reuses those proofs unchanged; only the seed-specific reasoning below, which
-  \<open>dg_ctx_activation_base\<close> never has since seeding is \<open>routed_call_program\<close>'s own
+  \<open>dg_context_activation\<close> never has since seeding is \<open>routed_call_program\<close>'s own
   addition, is carried out here.
 
-  Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s parameters: \<open>seed_unknown\<close> injects a routed
+  Beyond \<^locale>\<open>dg_context_activation\<close>'s parameters: \<open>seed_unknown\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>R\<close> is the trace-semantic context relation
   keying the activation-local collecting semantics; and two obligations about it cannot be
   discharged generically.  \<open>routed_entry_cover\<close> is adequacy: whenever \<open>R\<close> admits a context
@@ -54,8 +54,8 @@ text \<open>
   the collecting semantics itself never needs it, and compiled programs have it for free.
 \<close>
 
-locale routed_context_base_hetero =
-  dg_ctx_activation_base S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route
+locale routed_context =
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route
     "routed_call_program S analysis_global seed_unknown resolve is_bot"
       "routed_entry_seed_programs seed_unknown"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
@@ -746,7 +746,7 @@ text \<open>
   domain provides for a concrete value and the CFG needed to look up a call
   site's own formal list. Neither definition mentions a domain-specific accessor
   beyond \<open>decode\<close> itself, nor a specification, so any domain reusing
-  \<^locale>\<open>routed_context_base_hetero\<close> instantiates this pair once instead of
+  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of
   hand-writing a per-formal projection.
 \<close>
 
@@ -837,8 +837,8 @@ subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<cl
 
 text \<open>
   \<^const>\<open>formals_context\<close> above operates on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context_base_hetero\<close> caller state
-  has. The routed executable spine (\<^locale>\<open>dg_ctx_activation_base\<close>, every current
+  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context\<close> caller state
+  has. The routed executable spine (\<^locale>\<open>dg_context_activation\<close>, every current
   instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
   activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
   \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:

@@ -246,13 +246,13 @@ lemma mf_pp: "part_post_solution mf_eqs (cfg_exit mf_cfg, ()) (snd mf_sol) (fst 
   using TD_side_always_join_Interp.part_post_solution_of_solve_c[OF mf_terminates_c]
   unfolding mf_sol_def by simp
 
-interpretation mf_routed: routed_context_base_hetero
+interpretation mf_routed: routed_context
   "mf_spec mf_gs" "split_gamma mf_gs" mf_gs mf_cfg "Analysis_Global ()"
   route_unit bot cinit_sign_st "restrict_global_default_st cinit_sign_st"
   "snd mf_sol" "fst mf_sol" "(cfg_exit mf_cfg, ())" mf_reader Activation_Seed
   "static_resolve mf_cfg" "\<lambda>d. d = bot" mf_gammaM "call_context_rel_of_fun enterc_unit"
-proof (rule routed_context_base_hetero.intro
-    [OF dg_ctx_activation_base.intro[OF analysis_contract_mf]],
+proof (rule routed_context.intro
+    [OF dg_context_activation.intro[OF analysis_contract_mf]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_mf_spec])

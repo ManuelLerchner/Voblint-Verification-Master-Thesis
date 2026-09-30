@@ -877,15 +877,15 @@ text \<open>The routed context locale, fully interpreted: every alternative's co
   alternative a concrete relational admission points at (\<open>EnterCover\<close>), and a return
   leaves the continuation covered at the caller's own context (\<open>CombFwd\<close>).\<close>
 
-interpretation ov_routed: routed_context_base_hetero
+interpretation ov_routed: routed_context
   "ov_spec ov_gs ov_ep" "sign_conf_gamma ov_gs" ov_gs ov_cfg "Analysis_Global ()"
   "exec_formals_route ov_gs" Bot "Lifted cinit_sign_st" Bot
   "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
   "gamma_lift (default_st_gamma ov_gs)" ov_R
-proof (rule routed_context_base_hetero.intro
-    [OF dg_ctx_activation_base.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
+proof (rule routed_context.intro
+    [OF dg_context_activation.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
@@ -1048,7 +1048,7 @@ text \<open>
   obligations inspect what the entry list contains, only that it is
   \<^const>\<open>local_enter_transfer\<close>-shaped, which \<open>ov_enter\<close> already is. This example supplies
   and discharges the corresponding non-deterministic entry obligations
-  (\<open>routed_context_base_hetero\<close>'s \<open>EnterCover\<close>/\<open>EnterTotal\<close>/\<open>CombFwd\<close>) for the first time,
+  (\<open>routed_context\<close>'s \<open>EnterCover\<close>/\<open>EnterTotal\<close>/\<open>CombFwd\<close>) for the first time,
   and \<open>ov_two_contexts_admitted\<close> above names the one concrete call transition that genuinely
   admits the callee activation under both \<open>[SPos]\<close> and \<open>[STop]\<close> via \<open>ov_R\<close> --- not merely that
   two contexts exist somewhere in the abstract table, but that this call's own admitted-context

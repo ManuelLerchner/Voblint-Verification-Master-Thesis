@@ -85,7 +85,7 @@ text \<open>
   while an effectful spec's own \<open>man_global\<close>/\<open>man_sideg\<close> calls ride inside the
   compiled subtrees.
 
-  Parameter order matches \<open>dg_ctx_activation_base\<close>'s \<open>cmb\<close> calling
+  Parameter order matches \<open>dg_context_activation\<close>'s \<open>cmb\<close> calling
   convention: the generator supplies \<open>route\<close> as \<open>cmb\<close>'s own first argument
   (\<open>cmb route c ca cc ex\<close> in \<^const>\<open>routed_node_rhs\<close>), so
   \<open>routed_call_program S analysis_global seed_unknown\<close>, closing over the spec, the shared slot, and the
@@ -104,7 +104,7 @@ text \<open>
   so this layer only chooses addresses and keys. Only the half that
   cannot move stays with \<open>routed_entry_seed_programs\<close>: a callee's own entry equation is the one
   place that can read its own seed slot back. \<open>route\<close> is kept as a parameter of that
-  hook purely to match \<open>dg_ctx_activation_base\<close>'s \<open>extra\<close> calling
+  hook purely to match \<open>dg_context_activation\<close>'s \<open>extra\<close> calling
   convention, which always supplies it.
 
   The seed channel is \<open>'D\<close>-typed, so \<open>'D\<close> and \<open>'G\<close> stay independent. The

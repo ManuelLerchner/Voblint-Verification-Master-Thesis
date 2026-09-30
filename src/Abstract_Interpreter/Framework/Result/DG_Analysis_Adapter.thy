@@ -13,10 +13,10 @@ text \<open>
   \<^const>\<open>classify_checks_verdicts\<close>, and discharge that report's own soundness
   from the activation-indexed collecting semantics
   (\<^theory>\<open>Voblint_Framework.Activation_Backbone\<close>) already available once
-  EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context_base_hetero\<close>.
+  EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context\<close>.
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a
-  context instance (an interpretation of \<^locale>\<open>routed_context_base_hetero\<close>),
+  context instance (an interpretation of \<^locale>\<open>routed_context\<close>),
   and the published value (a readback \<open>rd\<close> from the solver's carrier into a
   value type \<open>'v\<close> with its own concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness
   test \<open>empty\<^sub>V\<close>; a non-relational analysis publishes its abstract store),
@@ -39,7 +39,7 @@ text \<open>
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0 sg
+  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0 sg
     seed_unknown
     "static_resolve g" is_bot \<gamma>\<^sub>M R
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
@@ -163,7 +163,7 @@ text \<open>
   case-split on coverage. A concrete instance whose own public result reads
   through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
   own node-soundness bridge from this lemma directly, instead of re-deriving
-  it from \<open>routed_context_base_hetero\<close>'s primitives by hand.
+  it from \<open>routed_context\<close>'s primitives by hand.
 \<close>
 
 lemma analyse_result_node_sound:

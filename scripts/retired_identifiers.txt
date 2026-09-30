@@ -3806,3 +3806,9 @@ sides_rel_transfer
 step_sound_rel
 traverse_rel_combine
 traverse_rel_transfer
+# --- Routed locale chain renamed after what it is (2026-09-30):
+# routed_context_base_hetero, dg_ctx_activation_base and the locale
+# routed_analysis_sound lose their construction-history suffixes. ---
+dg_ctx_activation_base
+routed_analysis_sound
+routed_context_base_hetero

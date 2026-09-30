@@ -5,7 +5,7 @@ investigation against the 2026-07-30 tree; their locale, lemma and file
 names (`routed_context`, `dg_ctx_activation`, `enterc`,
 `route_enterc_agree`, `DG_Soundness.thy`, `LTR_Def.thy`,
 `Example_Interval_DG_CallString.thy`) are not maintained. The current
-locales are `routed_context_base_hetero` and `dg_ctx_activation_base`
+locales are `routed_context` and `dg_context_activation`
 (`Routed_Context.thy`, `DG_Ctx_Activation.thy`); `key` lives in
 `LTR_Activation_Context.thy`. Sections 8 and 9 and the theories are
 authoritative.

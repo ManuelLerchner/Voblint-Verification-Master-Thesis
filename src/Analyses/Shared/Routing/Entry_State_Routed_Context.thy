@@ -42,7 +42,7 @@ text \<open>
 \<close>
 
 locale pure_entry_routed_context =
-  dg_ctx_activation_base S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global route
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global route
     "routed_call_program S analysis_global seed_unknown (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs seed_unknown"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
@@ -89,7 +89,7 @@ text \<open>The context relation this instance keys its collecting semantics by.
 abbreviation entry_context_rel :: "'c call_context_rel" where
   "entry_context_rel \<equiv> routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma analysis_global route"
 
-sublocale routed: routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global
+sublocale routed: routed_context S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global
   route bot0 s0d s0g sigma vars x0 sg seed_unknown
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M entry_context_rel
 proof unfold_locales

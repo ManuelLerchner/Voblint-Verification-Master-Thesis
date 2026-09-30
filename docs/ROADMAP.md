@@ -81,8 +81,8 @@ more precise shared-state communication. Keep routing generic over the `D` and
 The hook-tree layer (`sound_dg_hooks`) and the owner-sensitive placement
 examples built on it were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` ("D/G
 reconstruction and publication timing") records why. Every analysis interprets
-`analysis_contract` through `dg_ctx_activation_base` and
-`routed_context_base_hetero`. An analysis-specific sharing policy belongs in that
+`analysis_contract` through `dg_context_activation` and
+`routed_context`. An analysis-specific sharing policy belongs in that
 analysis's own semantics over the keyed manager, not in a generic placement
 layer.
 

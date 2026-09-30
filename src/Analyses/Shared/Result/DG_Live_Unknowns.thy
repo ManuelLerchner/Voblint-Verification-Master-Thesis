@@ -336,7 +336,7 @@ lemma routed_analysis_sound_live_unknowns:
         \<Longrightarrow> s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec (declared_global p) p)
+  shows "routed_analysis (analysis_spec (declared_global p) p)
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) R
@@ -456,7 +456,7 @@ theorem activation_collect_sound_live_unknowns:
            \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx))))"
 proof -
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
@@ -603,7 +603,7 @@ subsection \<open>Entry-state routing\<close>
 
 lemma entry_state_routed_analysis_sound_live_unknowns:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "routed_analysis_sound (analysis_spec (declared_global p) p)
+  shows "routed_analysis (analysis_spec (declared_global p) p)
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
@@ -647,7 +647,7 @@ theorem entry_state_activation_collect_sound_of_terminates:
            \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx))))"
 proof -
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
@@ -678,7 +678,7 @@ theorem entry_state_ltr_collect_eq_Union_of_terminates:
            = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
                        root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
 proof (rule ltr_collect_eq_Union_activation_of_has_context)
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot

@@ -52,7 +52,7 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_ctx_activation_base S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global "cs_route k"
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global "cs_route k"
     "routed_call_program S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs Seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
@@ -96,7 +96,7 @@ locale call_string_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global
+sublocale routed: routed_context S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "call_context_rel_of_fun (cs_context k)"
 proof unfold_locales

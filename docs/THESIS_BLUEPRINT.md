@@ -379,8 +379,8 @@ L5  EQUATIONS
              │
              v
 L6  FROM A POST-SOLUTION TO A COVER
-    dg_ctx_activation_base  ⊢ EDGE, COMB           DG_Ctx_Activation
-    routed_context_base_hetero ⊢ CALL, COMB,
+    dg_context_activation  ⊢ EDGE, COMB           DG_Ctx_Activation
+    routed_context ⊢ CALL, COMB,
       activation_collect_dg_sound                  Routed_Context
     route_unit, activation_collect_unit_eq_ltr_collect   Routed_Context_Unit
     cs_route / cs_context  (call strings)          Call_String_Context,
@@ -1014,8 +1014,8 @@ that way.** It is discharged in five named steps, each in a different session:
 | Step | Discharges | Where |
 | --- | --- | --- |
 | `ltr_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
-| `dg_ctx_activation_base` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
-| `routed_context_base_hetero` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
+| `dg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
+| `routed_context` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
 | `routed_dg_analysis` / `unit_dg_analysis` | the published table and the source bridge | `Voblint_Result` |
 | `sound_table` / `run_voblint_certified_source_sound` | the configuration-level statement | `Voblint_CLI` |
 
@@ -1105,7 +1105,7 @@ PART III — THE ANALYZER
   7.3 The call protocol: enter, seed, exit read, combine
   7.4 Why the callee entry is a global proxy, and what that costs
   7.5 Routing policies: monovariant, call strings, entry state
-  7.6 Discharging CALL and RETURN once (routed_context_base_hetero)
+  7.6 Discharging CALL and RETURN once (routed_context)
   7.7 Side buffering: why one right-hand side must not name a key twice
   7.8 Context spaces: which policies can be finite
 
@@ -1335,7 +1335,7 @@ thesis section → theories → central definitions → central theorems.
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_lift`, `gamma_ownership_split`, `restrict_local`, `restrict_global` | `gamma_ownership_split_combine_env` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Indexed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `global_unknown` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
-| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context_base_hetero`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
+| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_ltr_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.TD_Solver_Bridge`, `Globals_Rule`, `Strategy_Tree_Post_Solution` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `part_post_solution_of_solve_c` |
@@ -1768,7 +1768,7 @@ Verified defects in the current gallery, all in figure payloads:
 | --- | --- | --- |
 | `fig:modules` | six theory names that do not exist: `Constraint_System`, `DG_Framework`, `Ivl_Exec`, `Analyse_Dispatch`, `State_Report_GraphViz`; caption cites `code_identifier` | zero occurrences in `src/`; the export uses one `module_name Generated` block and no `code_identifier` at all |
 | `fig:pipeline` | edge labelled `dg_gen_of` | zero occurrences; the generator is `routed_node_rhs` / `compiled_routed_eqs_for` |
-| `fig:correspondence` | shows `locale dg_spec = fixes tf, route, read, publish` | `dg_spec` is a **record** with ten fields; `route` is a parameter of `routed_context_base_hetero`, not of `dg_spec`; reads/publishes go through `man_global`/`man_sideg` |
+| `fig:correspondence` | shows `locale dg_spec = fixes tf, route, read, publish` | `dg_spec` is a **record** with ten fields; `route` is a parameter of `routed_context`, not of `dg_spec`; reads/publishes go through `man_global`/`man_sideg` |
 | `tab:instantiation` | Congruence marked ✗ for `dg_spec` / `analysis_contract`, captioned “not selectable on its own” | **false**: `Congruence_Analysis` is one of the five `analysis_domain` constructors and it runs at all three context policies as a field of the combined state |
 | `fig:cfg-source`, `fig:ast` | `proc fac(n) { … }` | VIMP's keyword is `fun` (`manifests/vimp-grammar.yaml`, `keywords: fun: FUN`) |
 | `fig:validltr` | constructors `Called`, `Resumed` | `Call`, `Resume`; the step rule appends through `extend` |
@@ -1973,8 +1973,8 @@ admitted subgoal, and one line to regenerate.
 fragments it yields 17 nodes and 10 edges, and the edges are the proof spine:
 
 ```text
-analysis_contract -> dg_ctx_activation_base -> routed_context_base_hetero
-  -> dg_analysis_adapter -> routed_analysis_sound
+analysis_contract -> dg_context_activation -> routed_context
+  -> dg_analysis_adapter -> routed_analysis
 routed_dg_pipeline -> routed_dg_analysis -> unit_dg_analysis
 ```
 

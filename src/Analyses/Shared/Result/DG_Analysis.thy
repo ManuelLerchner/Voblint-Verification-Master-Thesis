@@ -616,7 +616,7 @@ lemma routed_analysis_sound_of_live:
         \<Longrightarrow> s \<in> cgam (dg_local (sol_env pgs p (Inl (u, ctx))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
@@ -713,7 +713,7 @@ lemma routed_analysis_sound_of:
         \<Longrightarrow> s \<in> cgam (dg_local (sol_env pgs p (Inl (u, ctx))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
   by (rule routed_analysis_sound_of_live [where R = R, OF solves _ comb_fwd_ok _ total_R])
@@ -760,7 +760,7 @@ lemma activation_collect_sound_of:
            \<subseteq> cgam
                  ((reader pgs p (Inl (v, ctx))))"
 proof -
-  interpret adapter: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
+  interpret adapter: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
       "prog_cfg p" analysis_global "route pgs" Bot "Lifted init_st" Bot
       "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot" R
       "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
@@ -846,7 +846,7 @@ lemma entry_state_routed_analysis_sound:
     and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) entry_context_rel (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_sound_of
@@ -906,7 +906,7 @@ context
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
 begin
 
-interpretation entry: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
+interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
     "prog_cfg p" analysis_global "route pgs" Bot "Lifted init_st" Bot
     "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot"
     entry_context_rel "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify

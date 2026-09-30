@@ -87,7 +87,7 @@ and where the correspondence is inexact.
 | --- | --- | --- |
 | `D` | Opaque `'D` carrier (`dg_state.dg_local`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
 | `G` | Opaque `'G` carrier (`dg_state.dg_global`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
-| `C` | `'c` (type parameter of `dg_ctx_activation_base`/`routed_context_base_hetero`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
+| `C` | `'c` (type parameter of `dg_context_activation`/`routed_context`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
 | `V` | `'v` (the `dg_spec` record's global-name parameter, `DG_Spec.thy`) | An analysis reaches shared state only through `man_global`/`man_sideg` at a `'v`; `mk_dg_man` embeds it into the solver's global-key type `'k` (`DG_Manager.thy`). Not the combined unknown space -- see below. |
 
 **The combined unknown space is not `V`.** The vendored solver's equation type
@@ -113,7 +113,7 @@ carries the soundness proof -- notation does not rename the identifier.
 | Notation | Identifier | Layer |
 | --- | --- | --- |
 | `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `context#` | `route` (locale parameter of `dg_ctx_activation_base`, carrying the notation in `routed_context_base_hetero`) | Generator, `Routed_Context.thy` |
+| `context#` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
 | `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
@@ -133,7 +133,7 @@ outer keyword, hence `route` -- see `docs/GOBLINT_ALIGNMENT_REGISTER.md`.
 
 ### `sigma` / `sg`
 
-Both fixed in `dg_ctx_activation_base` (`DG_Ctx_Activation.thy`) and genuinely
+Both fixed in `dg_context_activation` (`DG_Ctx_Activation.thy`) and genuinely
 different objects, not naming duplication:
 
 | Term | Meaning |

@@ -41,7 +41,7 @@ lemma solved_local_reader_global [simp]:
   by (simp add: solved_local_reader_def)
 
 text \<open>
-  The two coverage obligations \<^locale>\<open>dg_ctx_activation_base\<close> asks for hold for
+  The two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for hold for
   this reader by construction, given only that the joint concretization ignores
   its global argument (which is what \<open>gammaDG_rd\<close> already says) and that the
   readback takes \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the
@@ -62,7 +62,7 @@ text \<open>
   check report's proved/refuted verdicts.
 \<close>
 
-locale routed_analysis_sound =
+locale routed_analysis =
   dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed_unknown is_bot "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d)"
     R rd \<gamma>\<^sub>V empty\<^sub>V classify

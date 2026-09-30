@@ -4780,7 +4780,7 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">⊆</span>
-            <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>
+            <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>
             <span>given a post-solution and a sound specification, every trace step stays inside
             <code>γ</code>; the induction itself is
             <a href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact"><code>activation_collect_sound</code></a>,
@@ -4900,7 +4900,7 @@ fun main() {
           <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale"><code>sound_nonrelational_transfer</code></a>
           and <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
           are obligations each domain discharges, pillar 3,
-          <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
+          <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
           one that each context policy discharges.
           Pillar 4 bridges to the vendored solver's own theorem, and it promises a post-solution
           only for a solve that terminates, which is why every flagship soundness theorem below
@@ -4941,7 +4941,7 @@ fun main() {
           <tr><td class="nl-sym">skip<sup>#</sup> S / assign<sup>#</sup> S / special<sup>#</sup> S / branch<sup>#</sup> S / body<sup>#</sup> S / return<sup>#</sup> S / event<sup>#</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
           <tr><td class="nl-sym">enter<sup>#</sup> S / combine_env<sup>#</sup> S / combine_assign<sup>#</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
           <tr><td class="nl-sym">combine<sup>#</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
-          <tr><td class="nl-sym">context<sup>#</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale"><code>route</code></a></td></tr>
+          <tr><td class="nl-sym">context<sup>#</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale"><code>route</code></a></td></tr>
           <tr><td class="nl-sym">a ∇ b / a Δ b</td><td><em>a</em> widened by <em>b</em>, <em>a</em> narrowed by <em>b</em></td><td><a href="Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst"><code>widen</code></a> <a href="Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst"><code>narrow</code></a></td></tr>
           <tr><td class="nl-sym">𝒢</td><td>the globals classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
           <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></td></tr>
@@ -5469,7 +5469,7 @@ qed</code></pre>
               <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
               <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
+            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
               <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
 
             <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
@@ -5485,7 +5485,7 @@ qed</code></pre>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
-            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
+            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
@@ -5604,7 +5604,7 @@ qed</code></pre>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L196-L197" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">context from the callee state</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
             <span class="align-note">The context is chosen from the state after enter, as in Goblint, though the selector does not see which callee it is choosing for.</span>
           </li>
           <li class="align-row simplified">

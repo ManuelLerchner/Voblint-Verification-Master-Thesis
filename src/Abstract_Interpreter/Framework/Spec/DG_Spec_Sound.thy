@@ -187,7 +187,7 @@ text \<open>
 
   So \<open>analysis_contract\<close> is the entry-independent part and not a complete soundness
   statement: interpreting it alone leaves a call's entry entirely unconstrained.
-  \<open>routed_context_base_hetero\<close> (\<open>Routed_Context\<close>, downstream in this session) is
+  \<open>routed_context\<close> (\<open>Routed_Context\<close>, downstream in this session) is
   the complete statement, extending this contract with that entry obligation for
   the routed equation shape, and is what an analysis should be asked to
   establish.
