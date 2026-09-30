@@ -8,6 +8,7 @@ theory DG_Analysis
     Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Routing.Entry_State_Routed_Context"
+    "Voblint_Solver.TD_Solver_Bridge"
 begin
 
 section \<open>One context-sensitive analysis, assembled from its choices\<close>
@@ -374,9 +375,9 @@ text \<open>
   What an instance owes, and nothing more: its component is sound for the
   concretization its readback induces, its entry answers one alternative, its two
   emptiness tests are exact, its seed keys are distinct from the analysis-wide
-  global, its solver answers a post-solution over finitely many keys once it
-  terminates, its classifier is correct, and its entry state describes every
-  initial store. The equation system, the solve, the covered keys, the reader,
+  global, its solver is a \<^locale>\<open>certified_solver\<close> (a post-solution over
+  finitely many keys once it terminates), its classifier is correct, and its entry
+  state describes every initial store. The equation system, the solve, the covered keys, the reader,
   the result table and the report are all fixed by \<^locale>\<open>dg_pipeline\<close>
   above and appear here only in conclusions. Each obligation is stated at the
   program's own declared globals, the one set the soundness statement uses.
@@ -385,6 +386,7 @@ text \<open>
 locale dg_analysis =
   dg_pipeline comp emp rd init_st analysis_global seed route root_ctx solve solve_dom
     bot_state classify
+  + certified_solver solve solve_dom solve_c
   for comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
     and rd :: "(vname \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
@@ -395,13 +397,13 @@ locale dg_analysis =
     and root_ctx :: 'c
     and solve solve_dom
     and bot_state :: 'v
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result" +
-  fixes gamma\<^sub>V :: "'v \<Rightarrow> store set"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+    and gamma\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and solve_c :: "(pp \<times> 'c, 'k, ('s lifted, 's lifted) dg_state) eqsT
                     \<Rightarrow> pp \<times> 'c
                     \<Rightarrow> ((pp \<times> 'c) set
-                          \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)) option"
+                          \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)) option" +
   assumes comp_sound:
       "\<And>p. sound_local_spec (declared_global p)
                (\<lambda>d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
@@ -413,10 +415,6 @@ locale dg_analysis =
     and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
     and empty\<^sub>V_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> gamma\<^sub>V v = {}"
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and solve_pp:
-      "\<And>eqs x. solve_dom eqs x
-         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
-    and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and classify_refuted:
@@ -425,7 +423,6 @@ locale dg_analysis =
     and bot_state_empty: "gamma\<^sub>V bot_state = {}"
     and init_sound:
       "\<And>p. cinit_stores (declared_global p) \<subseteq> gamma\<^sub>V (rd (declared_global p) init_st)"
-    and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
 begin
 
 text \<open>
@@ -1091,8 +1088,8 @@ text \<open>
   for the analyses that state it; the pipeline's soundness does not use it.
 \<close>
 
-locale dg_analysis_exec =
-  fixes tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
+locale dg_analysis_exec = certified_solver solve solve_dom solve_c
+  for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
                   \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and init_st :: "'a exec_dg_st"
@@ -1122,7 +1119,7 @@ locale dg_analysis_exec =
                     \<Rightarrow> pp \<times> 'c
                     \<Rightarrow> ((pp \<times> 'c) set
                           \<times> (pp \<times> 'c + 'k
-                               \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option"
+                               \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option" +
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
       "\<And>\<G> a s. live_resolved_st_q \<G> s
@@ -1135,10 +1132,6 @@ locale dg_analysis_exec =
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
          = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
     and exec_seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and exec_solve_pp:
-      "\<And>eqs x. solve_dom eqs x
-         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
-    and exec_solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and exec_classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and exec_classify_refuted:
@@ -1148,7 +1141,6 @@ locale dg_analysis_exec =
     and exec_init_sound:
       "\<And>\<G>. cinit_stores \<G>
                \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
-    and exec_dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
     "\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
@@ -1157,8 +1149,9 @@ sublocale dg_analysis_exec \<subseteq> dg_analysis
     fun_of_resolved_st_q_for init_st analysis_global seed route root_ctx solve solve_dom bot_state
       classify
     gamma_state is_empty_state solve_c
-proof (unfold_locales, goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe
-    SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
+proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intro],
+    goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe ClProved ClRefuted BotState
+    Init)
   case (CompSound p)
   interpret dom: dg_domain_exec "declared_global p"
       "resolved_st_q_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
@@ -1179,10 +1172,6 @@ next
 next
   case (SeedNe v ctx) then show ?case by (rule exec_seed_ne_analysis_global)
 next
-  case (SolvePP eqs x) then show ?case by (rule exec_solve_pp)
-next
-  case (SolveFin eqs x) then show ?case by (rule exec_solve_fin)
-next
   case (ClProved c d s) then show ?case by (rule exec_classify_proved)
 next
   case (ClRefuted c d s) then show ?case by (rule exec_classify_refuted)
@@ -1192,8 +1181,6 @@ next
 next
   case (Init p) then show ?case
     using exec_init_sound[of "declared_global p"] by simp
-next
-  case (DomC eqs x) then show ?case by (rule exec_dom_of_solve_c)
 qed
 
 text \<open>

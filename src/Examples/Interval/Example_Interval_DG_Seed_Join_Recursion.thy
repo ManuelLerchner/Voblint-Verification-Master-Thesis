@@ -4,7 +4,7 @@ theory Example_Interval_DG_Seed_Join_Recursion
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
@@ -20,11 +20,9 @@ text \<open>
   reads back. So the seed climbs while the recursion is being discovered, and
   the entry unknown climbs with it.
 
-  This theory runs that climb to its fixpoint and pins where it stops. The
-  seed is joined and never widened, which is what
-  \<^const>\<open>is_activation_seed\<close> tells the solver bridge's key-selected update
-  rule; the analysis's own globals keep whatever widening policy the analysis
-  configured. What the assertions below fix is the route: the value at the
+  This theory runs that climb to its fixpoint and pins where it stops. Under
+  the joining global rule \<^const>\<open>Globals_Join\<close> the seed is joined and never
+  widened. What the assertions below fix is the route: the value at the
   callee's entry unknown is the value at its seed, and both are the exact join
   of the six entered states rather than anything the iteration invented on the
   way up.
@@ -78,10 +76,10 @@ where
 definition sj_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)"
     where
-  "sj_sol = TD_side_seed_join_warrowing_Interp_solve is_activation_seed sj_eqs (cfg_exit sj_cfg, ())"
+  "sj_sol = TD_side_rule_Interp_solve Globals_Join sj_eqs (cfg_exit sj_cfg, ())"
 
 lemma sj_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed sj_eqs (cfg_exit sj_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Join sj_eqs (cfg_exit sj_cfg, ()) \<noteq> None"
   by eval
 
 subsection \<open>Where the climb stops\<close>
@@ -116,21 +114,15 @@ lemma sj_caller_result_exact:
 subsection \<open>What the join policy is not\<close>
 
 text \<open>
-  Running the same equations with every global warrowed --- the seed included
-  --- answers the same thing. Warrowing widens on an increase and narrows on a
-  decrease, and here the guard \<open>n < 5\<close> bounds the recursion in the interval
-  domain itself, so the narrowing phase recovers \<open>[0,5]\<close> from whatever the
-  widening phase overshot to.
-
-  That is worth recording, because it says what \<^const>\<open>is_activation_seed\<close>
-  is for. It is not a precision device on programs like this one: it is an
-  ownership statement. A seed is the framework's key, not the analysis's, and
-  the update rule that key gets must not depend on the widening policy an
-  analysis configured for its own globals.
+  Running the same equations under \<^const>\<open>Globals_Warrow\<close>, which warrows every
+  global and so the seed, answers the same thing. Warrowing widens on an increase
+  and narrows on a decrease, and here the guard \<open>n < 5\<close> bounds the recursion in
+  the interval domain itself, so the narrowing phase recovers \<open>[0,5]\<close> from
+  whatever the widening phase overshot to.
 \<close>
 
 lemma sj_warrowed_seed_agrees:
-  "sj_lookup (dg_local (snd (TD_side_seed_join_warrowing_Interp_solve (\<lambda>_. False) sj_eqs
+  "sj_lookup (dg_local (snd (TD_side_rule_Interp_solve Globals_Warrow sj_eqs
        (cfg_exit sj_cfg, ())) (Inr (Activation_Seed (FunctionEntry (STR ''up'')) ()))))
      (STR ''n'') = Ivl (Fin 0) (Fin 5)"
   by eval

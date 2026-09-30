@@ -5,7 +5,7 @@ theory Example_Sign_DG_Custom_Body
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Analysis_Sign.Sign_Transfer"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
@@ -145,12 +145,12 @@ definition bf_custom_eqs ::
      bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma bf_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_stock_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join bf_stock_eqs
      (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
 lemma bf_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_custom_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join bf_custom_eqs
      (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
@@ -159,7 +159,7 @@ definition bf_stock_sol ::
    \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "bf_stock_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_stock_eqs
+     TD_side_rule_Interp_solve Globals_Join bf_stock_eqs
        (cfg_exit bf_cfg, ())"
 
 definition bf_custom_sol ::
@@ -167,7 +167,7 @@ definition bf_custom_sol ::
    \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "bf_custom_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_custom_eqs
+     TD_side_rule_Interp_solve Globals_Join bf_custom_eqs
        (cfg_exit bf_cfg, ())"
 
 subsection \<open>The procedure-entry edge, and what runs on it\<close>

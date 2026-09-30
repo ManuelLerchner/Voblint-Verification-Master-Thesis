@@ -43,4 +43,15 @@ global_interpretation TD_side_rule_Interp:
     and TD_side_rule_Interp_solve_rec_c = TD_side_rule_Interp.solve_rec_c
   by (simp add: TD_side_upd_rule.intro update_rule_update_global_of)
 
+text \<open>The solver contract of the pipeline, once for every rule.\<close>
+
+lemma td_certified_solver:
+  "certified_solver (TD_side_rule_Interp_solve r)
+     (TD_side_rule_Interp.solve_dom TYPE('g) TYPE('d::{bounded_semilattice_sup_bot,warrowing}) r)
+     (TD_side_rule_Interp_solve_c r)"
+  by unfold_locales
+     (erule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing],
+      erule TD_side_rule_Interp.finite_stabl_solve,
+      erule TD_side_rule_Interp.solve_dom_of_solve_c)
+
 end

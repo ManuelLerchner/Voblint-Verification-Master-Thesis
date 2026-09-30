@@ -3577,3 +3577,27 @@ globs_sides_ownership_split_combine_transfer_gen
 ov_entry1_locals_exact
 ov_call_site_locals_probe
 ov_cont2_locals_probe
+# --- Solver contract as one locale (certified_solver), 2026-09-30: the
+# per-locale restatements of its three assumptions are gone. The key-selected
+# seed-join/warrow-elsewhere update rule is deleted: run_voblint cannot select
+# it, and the examples that used it run under a globals_rule instead. ---
+exec_solve_pp
+exec_solve_fin
+exec_dom_of_solve_c
+update_global_keyed
+update_rule_keyed
+TD_side_seed_join_warrowing_Interp
+TD_side_seed_join_warrowing_Interp_solve
+TD_side_seed_join_warrowing_Interp_solve_c
+TD_side_seed_join_warrowing_Interp_solve_rec_c
+is_activation_seed
+interval_seed_join
+interval_sj_spec
+interval_sj_root_query
+interval_sj_equations
+interval_sj_solution
+interval_sj_terminates
+interval_sj_vars
+interval_sj_env
+interval_sj_result
+interval_sj_state_at

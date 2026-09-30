@@ -209,9 +209,8 @@ text \<open>
   The bundle already settles everything \<^locale>\<open>dg_analysis_exec\<close> asks of the domain:
   the derived transfer is sound, the executable step and entry read back to it, and the
   derived classifier is sound in both directions. What remains belongs to the context
-  policy (the routing agreement and the seed key), the solver (its partial
-  post-solution, finite domain and success condition) and the initial state, and stays
-  a premise.
+  policy (the routing agreement and the seed key), the solver (a
+  \<^locale>\<open>certified_solver\<close>) and the initial state, and stays a premise.
 \<close>
 
 theorem dg_analysis_execI:
@@ -219,18 +218,14 @@ theorem dg_analysis_execI:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
          = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and solve_pp:
-      "\<And>eqs x. solve_dom eqs x
-         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
-    and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
+    and solver: "certified_solver solve solve_dom solve_c"
     and init_sound:
       "\<And>\<G>. cinit_stores \<G>
                \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
-    and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
   shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st analysis_global seed
            route solve solve_dom bot check.classify_check
            skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"
-proof (rule dg_analysis_exec.intro, goal_cases)
+proof (rule dg_analysis_exec.intro[OF solver dg_analysis_exec_axioms.intro], goal_cases)
   case (1 \<G>) show ?case by (rule is_sound_nonrelational_transfer)
 next
   case (2 \<G> a s) then show ?case
@@ -238,7 +233,7 @@ next
 next
   case (3 \<G> ci s) show ?case
     by (rule enter_st_for_commute)
-qed (fact route_agree seed_ne_analysis_global solve_pp solve_fin init_sound dom_of_solve_c
+qed (fact route_agree seed_ne_analysis_global init_sound
        check.classify_check_proved check.classify_check_refuted refl)+
 
 end

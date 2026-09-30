@@ -5,7 +5,7 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Analysis_Sign.Sign_Transfer"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
@@ -408,12 +408,12 @@ definition cj_custom_eqs ::
      cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 lemma cj_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join cj_stock_eqs
      (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 lemma cj_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_custom_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join cj_custom_eqs
      (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
@@ -422,7 +422,7 @@ definition cj_stock_sol ::
    \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "cj_stock_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs
+     TD_side_rule_Interp_solve Globals_Join cj_stock_eqs
        (cfg_exit cj_cfg, ())"
 
 definition cj_custom_sol ::
@@ -430,7 +430,7 @@ definition cj_custom_sol ::
    \<times> (pp \<times> unit + (unit, unit) global_unknown
         \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
   "cj_custom_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs
+     TD_side_rule_Interp_solve Globals_Join cj_custom_eqs
        (cfg_exit cj_cfg, ())"
 
 text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<open>Statement 5\<close>.\<close>

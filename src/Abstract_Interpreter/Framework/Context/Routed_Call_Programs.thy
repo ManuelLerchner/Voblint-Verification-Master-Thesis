@@ -71,16 +71,6 @@ lemma activation_seed_ne_analysis_global [simp]:
   "Analysis_Global v \<noteq> Activation_Seed u c"
   by simp_all
 
-text \<open>Which routed keys are seeds. The solver bridge's key-selected update rule
-  \<open>update_global_keyed\<close> takes this predicate so that every seed is joined while
-  the analysis global keeps its configured rule; some example theories solve with
-  that rule. \<open>run_voblint\<close> does not: it merges into a seed with the
-  selected global rule like into any other global key, so under the two
-  warrowing rules a seed can be widened.\<close>
-fun is_activation_seed :: "('v, 'c) global_unknown \<Rightarrow> bool" where
-  "is_activation_seed (Activation_Seed _ _) = True"
-| "is_activation_seed (Analysis_Global _) = False"
-
 subsection \<open>The canonical routed entry-seed publication and return combine\<close>
 
 text \<open>

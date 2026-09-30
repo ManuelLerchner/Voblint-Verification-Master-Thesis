@@ -109,8 +109,8 @@ text \<open>
 \<close>
 
 text \<open>The unit-context equation system at this program, with the bottom test the
-  equation system threads left as a parameter, solved by the seed-joining warrowing
-  rule.\<close>
+  equation system threads left as a parameter, solved with the joining global rule
+  \<^const>\<open>Globals_Join\<close>.\<close>
 
 definition result_demo_ivl_sol ::
     "(ivl exec_dg_st \<Rightarrow> bool)
@@ -118,7 +118,7 @@ definition result_demo_ivl_sol ::
        \<times> (pp \<times> unit + (unit, unit) global_unknown
             \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "result_demo_ivl_sol empty_pred =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed
+     TD_side_rule_Interp_solve Globals_Join
        (compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
           (local_state_dg_spec_st_for_lifted (declared_global result_demo_prog) empty_pred
              (ivl_tf_st_for (declared_global result_demo_prog))

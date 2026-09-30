@@ -649,7 +649,7 @@ text \<open>
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
     \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
-    \<^item> the endpoint \<open>interval_seed_join.fun_route_source_sound\<close>
+    \<^item> the endpoint \<open>interval_rule.fun_route_source_sound\<close>
       (@{theory Voblint_Result.DG_Live_Unknowns}, the routed analysis at the unit
       context) bundles solver correctness,
       executable/pure commutation,

@@ -55,6 +55,7 @@ COMMON_IMPORTS = [
 ]
 
 INTERP = "TD_side_rule_Interp"
+CERTIFIED = "td_certified_solver"
 
 GENERATED_NOTICE = (
     "GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/analyses.yaml\\<close>; generator:\n"
@@ -313,8 +314,8 @@ def const_name(role):
 
 def registration(dom, ctx):
     """One registration. The bundle's certificate discharges every domain
-    obligation; the six left are the context's, the solver's and the initial
-    state's, and only the route agreement varies with the context."""
+    obligation; the four left are the context's two, the solver's and the
+    initial state's, and only the route agreement varies with the context."""
     r = dom.roles()
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
@@ -344,16 +345,9 @@ def registration(dom, ctx):
         "next",
         "  case (2 v ctx) show ?case by simp",
         "next",
-        "  case (3 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.partial_post_solution[OF _ surjective_pairing]"),
+        f"  case 3 show ?case by (rule {CERTIFIED})",
         "next",
-        "  case (4 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.finite_stabl_solve"),
-        "next",
-        f"  case (5 \\<G>) show ?case by (rule {r['init_gamma']})",
-        "next",
-        "  case (6 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.solve_dom_of_solve_c"),
+        f"  case (4 \\<G>) show ?case by (rule {r['init_gamma']})",
         "qed",
     ]
     return out
