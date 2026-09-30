@@ -481,6 +481,15 @@
       "globals": "warrow"
     }
   },
+  "rules-grows-bounded-narrowing": {
+    "fixture": "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
+    "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "bounded-narrowing"
+    }
+  },
   "rules-grows-warrow": {
     "fixture": "tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp",
     "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
@@ -497,6 +506,15 @@
       "analysis": "interval",
       "context": "none",
       "globals": "warrow-per-origin"
+    }
+  },
+  "rules-loop-call-bounded-narrowing": {
+    "fixture": "tests/regression/24-site-figures/precision/50-loop_call_bounded_narrowing.vimp",
+    "program": "fun g(x) {\n  __voblint_check(x < 10);\n}\n\nfun main() {\n  x = 0;\n  while (x < 10) {\n    g(x);\n    x = x + 1;\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "bounded-narrowing"
     }
   },
   "rules-loop-call-join": {
@@ -535,6 +553,15 @@
       "globals": "warrow-per-origin"
     }
   },
+  "rules-shrinks-bounded-narrowing": {
+    "fixture": "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
+    "program": "fun f(a) {\n  if (a < 4) {\n    f(9 / (a + 2));\n  }\n  __voblint_check(a <= 9);\n}\n\nfun main() {\n  f(-1);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "bounded-narrowing"
+    }
+  },
   "rules-shrinks-join": {
     "fixture": "tests/regression/24-site-figures/precision/15-recursion_shrinks_join.vimp",
     "program": "fun f(a) {\n  if (a < 4) {\n    f(9 / (a + 2));\n  }\n  __voblint_check(a <= 9);\n}\n\nfun main() {\n  f(-1);\n}",
@@ -569,6 +596,15 @@
       "analysis": "interval",
       "context": "none",
       "globals": "warrow-per-origin"
+    }
+  },
+  "rules-two-sites-bounded-narrowing": {
+    "fixture": "tests/regression/24-site-figures/precision/49-two_sites_bounded_narrowing.vimp",
+    "program": "fun p(x) {\n  __voblint_check(x <= 2);\n}\n\nfun main() {\n  p(1);\n  p(2);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "bounded-narrowing"
     }
   },
   "rules-two-sites-join": {

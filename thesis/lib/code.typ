@@ -106,6 +106,8 @@
   "analysis": "interval",
   "globals": "warrow",
   "context": "entry-state",
+  "refinement": "fixpoint",
+  "trace": "off",
   "k": 1,
 )
 
