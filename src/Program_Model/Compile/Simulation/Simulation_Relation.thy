@@ -84,8 +84,8 @@ lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> Unwind"
 subsection \<open>Compile-into-\<open>g\<close> evidence for an active fragment\<close>
 
 text \<open>
-  \<open>compiled_at \<Pi> g p c0 k n\<close> is an activation's certificate.  It says two things at once,
-  because every activation needs both: \<open>c0\<close> is genuinely procedure \<open>p\<close>'s body, and that body,
+  \<open>compiled_at \<Pi> g p body_p k n\<close> is an activation's certificate.  It says two things at once,
+  because every activation needs both: \<open>body_p\<close> is genuinely procedure \<open>p\<close>'s body, and that body,
   compiled at the exact offset \<open>n\<close> with continuation \<open>k\<close>, is embedded in the target graph
   \<open>g\<close> --- its intra edges lie in \<^term>\<open>intra g\<close> and its call edges in \<^term>\<open>calls g\<close>.
 
@@ -103,36 +103,36 @@ text \<open>
 \<close>
 definition compiled_at ::
   "proc_table \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> bool" where
-  "compiled_at \<Pi> g p c0 k n \<longleftrightarrow>
-     (\<exists>decl n' en E K. \<Pi> p = Some decl \<and> c0 = body decl
-        \<and> compile \<Pi> p c0 k n = (n', en, E, K)
+  "compiled_at \<Pi> g p body_p k n \<longleftrightarrow>
+     (\<exists>decl n' en E K. \<Pi> p = Some decl \<and> body_p = body decl
+        \<and> compile \<Pi> p body_p k n = (n', en, E, K)
         \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
-        \<and> (falls_through c0 \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g))"
+        \<and> (falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g))"
 
 lemma compiled_atI [intro]:
-  "\<Pi> p = Some decl \<Longrightarrow> c0 = body decl \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
-   (falls_through c0 \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g) \<Longrightarrow>
-   compiled_at \<Pi> g p c0 k n"
+  "\<Pi> p = Some decl \<Longrightarrow> body_p = body decl \<Longrightarrow>
+   compile \<Pi> p body_p k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
+   (falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g) \<Longrightarrow>
+   compiled_at \<Pi> g p body_p k n"
   unfolding compiled_at_def by blast
 
 lemma compiled_atE [elim]:
-  assumes "compiled_at \<Pi> g p c0 k n"
+  assumes "compiled_at \<Pi> g p body_p k n"
   obtains decl n' en E K where
-    "\<Pi> p = Some decl" "c0 = body decl"
-    "compile \<Pi> p c0 k n = (n', en, E, K)" "E \<subseteq> intra g" "K \<subseteq> calls g"
-    "falls_through c0 \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
+    "\<Pi> p = Some decl" "body_p = body decl"
+    "compile \<Pi> p body_p k n = (n', en, E, K)" "E \<subseteq> intra g" "K \<subseteq> calls g"
+    "falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
   using assms unfolding compiled_at_def by blast
 
 text \<open>The procedure-identity half on its own, for the many proofs that only need the
   declaration behind an activation.\<close>
 lemma compiled_at_decl:
-  assumes "compiled_at \<Pi> g p c0 k n"
-  obtains decl where "\<Pi> p = Some decl" "c0 = body decl"
+  assumes "compiled_at \<Pi> g p body_p k n"
+  obtains decl where "\<Pi> p = Some decl" "body_p = body decl"
   using assms unfolding compiled_at_def by blast
 
 lemma compiled_at_exit:
-  "compiled_at \<Pi> g p c0 k n \<Longrightarrow> falls_through c0 \<Longrightarrow>
+  "compiled_at \<Pi> g p body_p k n \<Longrightarrow> falls_through body_p \<Longrightarrow>
    (k, EA_Ret None p, FunctionResult p) \<in> intra g"
   unfolding compiled_at_def by auto
 
@@ -146,18 +146,18 @@ inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store
                     \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<approx>/ _)" [51, 51, 51, 51] 50) for \<Pi> g where
   Base:
-    "control_at \<Pi> p c0 k n c v \<Longrightarrow> compiled_at \<Pi> g p c0 k n \<Longrightarrow>
+    "control_at \<Pi> p body_p k n c v \<Longrightarrow> compiled_at \<Pi> g p body_p k n \<Longrightarrow>
      \<Pi>, g \<turnstile> (c, s, []) \<approx> (v, s, [])"
 | Nested:
     "\<Pi>, g \<turnstile> (inner, s, frs) \<approx> (v, s, stk) \<Longrightarrow>
-     control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont \<Longrightarrow>
-     compiled_at \<Pi> g pc c0c kc nc \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after SKIP afters) cont \<Longrightarrow>
+     compiled_at \<Pi> g pc body_pc kc nc \<Longrightarrow>
      \<Pi>, g \<turnstile> (seq_after (Seq inner Restore) afters, s, frs @ [Frame caller dst])
        \<approx> (v, s, stk @ [(cont, dst, caller)])"
 | Returning:
     "pop_ready w \<Longrightarrow>
-     control_at \<Pi> pc c0c kc nc (seq_after SKIP afters) cont \<Longrightarrow>
-     compiled_at \<Pi> g pc c0c kc nc \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after SKIP afters) cont \<Longrightarrow>
+     compiled_at \<Pi> g pc body_pc kc nc \<Longrightarrow>
      \<Pi>, g \<turnstile> (seq_after w afters, callee, [Frame caller dst])
        \<approx> (FunctionResult p, callee, [(cont, dst, caller)])"
 text \<open>
@@ -414,13 +414,13 @@ lemma csim_next_check_edge:
   shows "\<exists>w. (v, EA_Check l e, w) \<in> intra g"
   using assms
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
-  case (Base p c0 k n c v s)
+  case (Base p body_p k n c v s)
   from Base.hyps(2) obtain n' en E K
-    where "compile \<Pi> p c0 k n = (n', en, E, K)" and "E \<subseteq> intra g"
+    where "compile \<Pi> p body_p k n = (n', en, E, K)" and "E \<subseteq> intra g"
     by blast
   with control_at_next_check_edge [OF Base.hyps(1) Base.prems] show ?case by blast
 next
-  case (Returning w pc c0c kc nc afters cont callee caller dst p)
+  case (Returning w pc body_pc kc nc afters cont callee caller dst p)
   then show ?case by (simp add: is_returning_next_check pop_ready_is_returning)
 qed simp
 
