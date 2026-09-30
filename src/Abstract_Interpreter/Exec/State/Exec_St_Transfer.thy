@@ -542,6 +542,34 @@ lemma restrict_global_resolved_q_split [simp]:
       restrict_global_resolved_q B) = restrict_global_resolved_q B"
   by (rule default_st_eqI) (simp split: location.split)
 
+subsection \<open>The stores a carrier state describes\<close>
+
+text \<open>
+  A carrier state denotes the stores its readback denotes. This is the one
+  concretization the carrier offers to semantic statements; the readback
+  itself stays a refinement device, used to relate carrier operations to their
+  counterparts on \<^typ>\<open>'a abs_state\<close>. Only the classifier \<open>\<G>\<close> is
+  needed besides the state, because it decides which location holds each
+  name's value. A context that fixes \<open>\<G>\<close> may register
+  \<open>default_st_gamma \<G>\<close> under \<open>\<lbrakk>_\<rbrakk>\<close> with \<open>adhoc_overloading\<close>.
+\<close>
+
+definition default_st_gamma ::
+  "(vname => bool) => ('a::numeric_domain) default_st => store set" where
+  "default_st_gamma \<G> s = \<lbrakk>default_st_to_fun \<G> s\<rbrakk>"
+
+lemma default_st_gamma_mono:
+  "s \<le> t \<Longrightarrow> default_st_gamma \<G> s \<subseteq> default_st_gamma \<G> t"
+  unfolding default_st_gamma_def by (intro gamma_state_mono default_st_to_fun_mono)
+
+lemma default_st_gamma_bot [simp]: "default_st_gamma \<G> bot = {}"
+  by (simp add: default_st_gamma_def)
+
+lemma default_st_gamma_initial:
+  "default_st_gamma \<G> (initial_default_st local_value global_value) =
+   \<lbrakk>\<lambda>x. if \<G> x then global_value else local_value\<rbrakk>"
+  by (simp add: default_st_gamma_def default_st_to_fun_initial)
+
 unbundle no default_st_syntax
 
 end

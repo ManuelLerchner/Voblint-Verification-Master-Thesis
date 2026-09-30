@@ -305,6 +305,36 @@ proof -
       default_st_to_fun_rep)
 qed
 
+text \<open>
+  The same test read through the carrier's concretization: a state passes it
+  exactly when it describes no store.
+\<close>
+
+lemma default_st_is_bot_for_gamma_iff:
+  fixes s :: "'a::numeric_domain default_st"
+  assumes globals: "\<And>x. \<G> x = (x \<in> set globals)"
+  shows "default_st_is_bot_for globals s \<longleftrightarrow> default_st_gamma \<G> s = {}"
+  by (simp add: default_st_is_bot_for_iff[OF globals] default_st_gamma_def
+      is_empty_state_iff_gamma_state_empty)
+
+subsection \<open>The stores a lifted carrier state describes\<close>
+
+text \<open>
+  Reachability adds no new concretization: a lifted carrier state is read
+  through \<^const>\<open>gamma_lift\<close> over \<^const>\<open>default_st_gamma\<close>, as a lifted
+  pointwise state is read through \<^const>\<open>gamma_lift\<close> over
+  \<^const>\<open>gamma_state\<close>. The second lemma relates the two along the readback.
+\<close>
+
+lemma gamma_lift_default_st_gamma_mono:
+  fixes x y :: "'a::numeric_domain default_st lifted"
+  shows "x \<le> y \<Longrightarrow> gamma_lift (default_st_gamma \<G>) x \<subseteq> gamma_lift (default_st_gamma \<G>) y"
+  by (rule gamma_lift_mono[OF default_st_gamma_mono])
+
+lemma gamma_lift_default_st_gamma_readback:
+  "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift (default_st_to_fun \<G>) d\<rbrakk>\<^sub>\<bottom>)"
+  by (rule ext) (simp add: gamma_lift_def default_st_gamma_def split: lifted.split)
+
 
 subsection \<open>Incremental dead-code tracking\<close>
 
