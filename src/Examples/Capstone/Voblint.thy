@@ -440,7 +440,7 @@ text \<open>
       context-insensitive or not, is solved over; the verified solver \<^emph>\<open>runs\<close> on it.
     \<^item> @{theory Voblint_Framework.DG_Reader_Transport} --- reads a
       whole equation system through carrier-generic readers
-      (\<^const>\<open>fun_of_dg_st_gen\<close>), letting the executable run answer
+      (\<^const>\<open>map_dg_state\<close>), letting the executable run answer
       for the mathematical system.
     \<^item> @{theory Voblint_Exec.DG_Local_State_Exec_Refinement} ---
       \<^locale>\<open>dg_domain_exec\<close> proves a registered domain's

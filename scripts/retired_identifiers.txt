@@ -3821,3 +3821,15 @@ interval_eqb_sound
 interval_lt
 interval_lt_mono
 interval_lt_sound
+# --- Duplicate constants deleted (2026-09-30): fun_of_dg_st_gen was the
+# datatype's own map_dg_state, and entry_exec_route(_gen) restated
+# exec_formals_route inside the refinement locale with no consumer. ---
+entry_exec_route
+entry_exec_route_commute
+entry_exec_route_gen
+entry_exec_route_gen_commute
+fun_of_dg_st_gen
+fun_of_dg_st_gen_bot
+fun_of_dg_st_gen_mono
+fun_of_dg_st_gen_simps
+fun_of_dg_st_gen_sup

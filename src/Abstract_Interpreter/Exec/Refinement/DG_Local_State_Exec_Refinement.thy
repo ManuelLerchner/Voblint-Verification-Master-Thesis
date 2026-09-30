@@ -309,45 +309,6 @@ theorem analysis_contract_st:
   unfolding local_state_dg_spec_st_for_lifted_def gamma_exec_def[abs_def]
   by (rule dg_spec_of_contract[OF exec_spec_sound[OF tf_sound]])
 
-subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
-
-text \<open>
-  \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
-  are already domain-generic at the abstract carrier \<open>'a abs_state lifted\<close> -- the shape
-  \<^locale>\<open>routed_context\<close>'s own \<open>route\<close> parameter needs. The executable equation
-  system a solver actually runs needs the same construction at the exec carrier
-  \<open>'a default_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>empty_pred\<close>
-  rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every EntryState-style routed
-  instance needs this exact projection and its commute lemma (\<open>exec_formals_route\<close>,
-  \<open>exec_formals_route_commute\<close>); stating it here once lets a
-  domain interpret it instead of restating it, mirroring how \<open>Hstep_lifted_for\<close> etc.
-  already generalize the step/enter/combine commute facts.
-
-  The route is a pure projection of the state it is handed: the routed generator
-  enters the callee frame once and routes on that entered state, so entering again
-  here would key the seed on a doubly-entered frame.
-\<close>
-
-definition entry_exec_route :: "'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
-  "entry_exec_route d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (default_st_to_fun \<G>
-          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
-
-definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-  where
-  "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
-
-lemma entry_exec_route_commute:
-  "formals_route_lifted (reader s) ca = entry_exec_route s ca"
-  by (cases ca; cases s)
-     (simp_all add: formals_route_lifted_def entry_exec_route_def
-                    formals_context_def default_st_to_fun_def)
-
-lemma entry_exec_route_gen_commute:
-  "formals_route_lifted_gen u ctx (reader s) ca = entry_exec_route_gen u ctx s ca"
-  by (simp add: formals_route_lifted_gen_def entry_exec_route_gen_def entry_exec_route_commute)
-
 end
 
 unbundle no default_st_syntax
