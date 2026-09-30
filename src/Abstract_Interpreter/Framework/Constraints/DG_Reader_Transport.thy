@@ -11,7 +11,7 @@ text \<open>
   the side effects it emits, and the unknowns it queries. The only properties
   any proof in the chain uses are that a reader preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>, so
   they are the locale's two assumptions and the development is generic in both
-  carriers. A concrete readback becomes a one-line interpretation.
+  carriers. A concrete reader becomes a one-line interpretation.
 \<close>
 
 subsection \<open>Dependency commutation for the generator\<close>
@@ -28,12 +28,12 @@ lemma dep_aux_Side: "dep_aux \<sigma> (Side y d t) = dep_aux \<sigma> t"
 subsection \<open>Carrier-generic whole-CFG commute\<close>
 
 text \<open>
-  The commute facts below only ever use that a readback preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
+  The commute facts below only ever use that a reader preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
   proof in the chain inspects \<open>default_st_to_fun\<close> or \<open>abs_state\<close> itself.
   \<open>dg_reader_commute_gen\<close> factors that out: a pair of local/global readers \<open>Floc\<close>/\<open>Fglob\<close>
   satisfying those two laws, from which every whole-tree and whole-equation-system commute
-  fact in this chain is proved once.  The raw readback \<open>dg_state_to_fun\<close> and the
-  reachability-lifted readback are both thin instances of the same engine.
+  fact in this chain is proved once.  The pair of represented functions \<open>dg_state_to_fun\<close> and
+  its reachability-lifted version are both thin instances of the same engine.
 \<close>
 
 text \<open>
@@ -289,7 +289,7 @@ lemma dg_tree_st_commute_read_local:
   by (simp add: dg_tree_st_commute_def)
 
 text \<open>A local-only transfer compiles to a single answer, so its commute is the
-  readback equation on the pure function alone -- no tree reasoning, and no
+  reader equation on the pure function alone -- no tree reasoning, and no
   hypothesis about the global half beyond the reader's own \<open>bot\<close> law.\<close>
 
 lemma dg_tree_st_commute_local_transfer:
@@ -360,9 +360,9 @@ qed
 text \<open>
   What a compiled entry must satisfy to transport. Entry answers a list of
   caller-continuation/callee-entry pairs, which is not the solver's carrier, so the
-  readback cannot be stated on the answer of a compiled tree the way the edge and
+  reader equation cannot be stated on the answer of a compiled tree the way the edge and
   combine transports are. It is stated on the program instead: run both entries
-  against continuations that already agree on pairs read back componentwise, and the
+  against continuations that already agree on pairs mapped componentwise by the readers, and the
   two trees agree. This observes the entry program exactly as \<^const>\<open>enter_runs\<close>
   does, and for the same reason.
 \<close>
@@ -383,7 +383,7 @@ lemma dg_enter_st_commuteD:
   shows "dg_tree_st_commute \<sigma>_st (T_st K_st) (T_abs K_abs)"
   using assms unfolding dg_enter_st_commute_def by blast
 
-text \<open>A Base-style entry answers its list outright, so its transport is the readback
+text \<open>A Base-style entry answers its list outright, so its transport is the reader
   equation on that list alone.\<close>
 
 lemma dg_enter_st_commute_local_enter_transfer:

@@ -173,7 +173,7 @@ qed simp_all
 text \<open>
     \<open>map_lift_sup\<close>'s left-hand side is \<open>map_lift ?f (?x \<squnion> ?y)\<close>, so using it with a
   schematic \<open>?f\<close> makes the simplifier search higher-order matches and, in the join
-  cases below, exceed its unification bound. Specializing \<open>f\<close> to the read-back once
+  cases below, exceed its unification bound. Specializing \<open>f\<close> to \<open>default_st_to_fun \<G>\<close> once
   leaves a first-order rewrite that needs no search --- and the specialization is
   proved by the case split directly rather than through \<open>map_lift_sup\<close>, since
   resolving against that rule is itself where the search happens.
@@ -540,7 +540,7 @@ qed
 
 text \<open>
   \<open>bfilter_lift_gate_step\<close> is the executable/lifted correspondence for a
-  single gated disjunct, feeding @{const feasible} the same read-back state
+  single gated disjunct, feeding @{const feasible} the same represented state
   \<open>bfilter_lifted\<close>'s own gate reads: a feasible disjunct recurses, an
   infeasible one contributes \<open>Bot\<close> on both sides.
 \<close>

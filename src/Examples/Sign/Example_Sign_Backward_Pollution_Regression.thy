@@ -99,8 +99,8 @@ subsection \<open>The executable mirror is exact, not just the specification\<cl
 text \<open>
   \<^const>\<open>bfilter_sign_st_lift\<close> is the code-generatable mirror of
   \<^const>\<open>bfilter_lifted_sign\<close>; \<open>bfilter_st_lift_correct\<close>
-  (\<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) proves that readback commutes
-  exactly with filtering. This lemma is not a restatement of that theorem:
+  (\<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) proves that taking the represented
+  function commutes exactly with filtering. This lemma is not a restatement of that theorem:
   it separately checks that code
   generation for the whole dependency chain still succeeds (no
   non-executable \<open>is_empty_state\<close> leaked into it) and that the concrete,

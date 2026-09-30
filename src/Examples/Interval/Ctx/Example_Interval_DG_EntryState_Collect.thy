@@ -144,7 +144,7 @@ theorem rc_activation_collect_sound:
      [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub> v ctx
    \<subseteq> gamma_lift (default_st_gamma rc_gs)
        (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))"
-  unfolding rc_cfg_alt[symmetric] gamma_lift_default_st_gamma_readback
+  unfolding rc_cfg_alt[symmetric] gamma_lift_default_st_gamma_to_fun
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
@@ -198,7 +198,7 @@ proof -
     unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_readback rc_entered
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_to_fun rc_entered
              rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
@@ -235,9 +235,9 @@ proof -
   show ?thesis
     using interval_es_rule.entry_state_routed_context_call[OF rc_routed_hyps
           ce[folded rc_cfg_alt]
-          sm[unfolded interval_es_rule.reader_def gamma_lift_default_st_gamma_readback]
+          sm[unfolded interval_es_rule.reader_def gamma_lift_default_st_gamma_to_fun]
           rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]]
-    by (simp add: interval_es_rule.reader_def gamma_lift_default_st_gamma_readback)
+    by (simp add: interval_es_rule.reader_def gamma_lift_default_st_gamma_to_fun)
 qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the

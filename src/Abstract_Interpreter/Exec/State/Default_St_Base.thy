@@ -244,8 +244,8 @@ text \<open>
   \<open>f (s\<langle>l\<rangle>)\<close> and updates chain as \<open>s\<langle>l := a\<rangle>\<langle>l'\<rangle>\<close>.
   The state with local default \<open>dl\<close>, global default \<open>dg\<close> and overrides \<open>ps\<close>
   is written \<open>\<llangle>dl, dg, ps\<rrangle>\<close>.
-  Theories past the variable readback open \<open>default_st_syntax\<close>, which adds
-  the readback notation to this bundle.
+  Theories past \<open>default_st_to_fun\<close> open \<open>default_st_syntax\<close>,
+  which adds the notation for the function a state represents to this bundle.
 \<close>
 
 abbreviation default_st_mk ::

@@ -10,7 +10,7 @@ text \<open>
   holds a \<^typ>\<open>congruence default_st\<close>, a compact record with one slot for
   locals, one for globals, and an override list. This theory gives Congruence's
   eight operations on that carrier and proves each agrees with the abstract
-  operation once the carrier is read back through
+  operation on the function a carrier state represents,
   \<^const>\<open>default_st_to_fun\<close>. That agreement -- \<open>commutation\<close> -- is what
   every later soundness statement is transported along.
 

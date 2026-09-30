@@ -363,7 +363,7 @@ lemma sign_nest_cinit_le_cinit_sign_st:
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
   activation-trace collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
-  local unknown at that key, read back into an abstract state.\<close>
+  local unknown at that key, through the abstract state it represents.\<close>
 
 theorem sign_nest_1_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 1),[],sign_nest_cfg,

@@ -244,7 +244,7 @@ lemma map_lift_Bot [simp]: "map_lift f Bot = Bot"
 lemma map_lift_Lifted [simp]: "map_lift f (Lifted a) = Lifted (f a)"
   unfolding map_lift_def by simp
 
-text \<open>A readback never invents or destroys the dead point, so the two carriers agree
+text \<open>\<open>map_lift\<close> never invents or destroys the dead point, so the two carriers agree
   on the coarsest bottom test there is.\<close>
 
 lemma map_lift_eq_Bot_iff [simp]: "map_lift f x = Bot \<longleftrightarrow> x = Bot"
@@ -306,8 +306,8 @@ lemma gamma_collapse_lift:
 text \<open>
   \<open>collapse_lift\<close> commutes with \<open>map_lift f\<close> whenever \<open>f\<close> itself sends
   \<open>bot\<close> to \<open>bot\<close>: both sides land on \<open>Bot\<close>'s collapse, \<open>bot\<close>, when the
-  carrier is \<open>Bot\<close>, and agree trivially on \<open>Lifted a\<close>. This is what lets an
-  executable-carrier readback (\<open>f\<close>) be applied either before or after
+  carrier is \<open>Bot\<close>, and agree trivially on \<open>Lifted a\<close>. This is what lets the
+  map from an executable state to its function (\<open>f\<close>) be applied either before or after
   collapsing a \<open>lifted\<close> result, so a commutation theorem proved for the
   \<open>lifted\<close> level transports to the collapsed, plain-type level for free.
 \<close>

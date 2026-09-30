@@ -24,7 +24,7 @@ text \<open>
   reset the callee frame to the whole-value element, bind the formals.
   \<open>generic_tf_st_for\<close> is the per-edge executable step, and
   \<open>generic_tf_st_for_commute\<close> says it agrees with the abstract dispatcher
-  \<open>generic_tf_abs\<close> once the executable store is read back, provided the guard
+  \<open>generic_tf_abs\<close> on the function the executable store represents, provided the guard
   filter commutes with the abstract branch on the state at hand.
 
   \<open>generic_tf_abs\<close> takes the abstract branch as a separate argument so this

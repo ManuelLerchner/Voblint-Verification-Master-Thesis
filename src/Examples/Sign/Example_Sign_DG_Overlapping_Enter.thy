@@ -509,7 +509,7 @@ lemma ov_call_site_reader:
 
 lemma ov_caller_store_covered:
   "ov_caller_store \<in> sign_conf_gamma ov_gs (dg_local (snd ov_sol (Inl (Statement 3, [])))) g"
-  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_call_site_reader
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_to_fun ov_call_site_reader
     gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
@@ -579,7 +579,7 @@ lemma ov_cont2_covered:
   "ov_caller_store
      \<in> sign_conf_gamma ov_gs (forget_var ov_gs (STR ''x'') STop (dg_local (snd ov_sol (Inl (Statement 3, [])))))
          g"
-  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_cont2_reader
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_to_fun ov_cont2_reader
     gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
@@ -595,7 +595,7 @@ lemma ov_entry1_covered:
          (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
             (dg_local (snd ov_sol (Inl (Statement 3, [])))))
          g"
-  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_entry1_reader
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_to_fun ov_entry1_reader
     gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y
@@ -615,7 +615,7 @@ lemma ov_entry2_covered:
            (transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
               (dg_local (snd ov_sol (Inl (Statement 3, []))))))
          g"
-  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_readback ov_entry2_reader
+  unfolding sign_conf_gamma_def gamma_lift_default_st_gamma_to_fun ov_entry2_reader
     gamma_lift_Lifted gamma_state_def
 proof (rule CollectI, rule allI)
   fix y

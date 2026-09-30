@@ -24,8 +24,8 @@ text \<open>
 subsection \<open>What the initial abstract state describes\<close>
 
 text \<open>
-  The stores a run may start in are described by the entry state read back
-  through the executable bridge. This mentions neither a solver nor a coverage
+  The stores a run may start in are described by the function the entry state
+  represents. This mentions neither a solver nor a coverage
   assumption --- only the entry state and the global-variable predicate --- so
   it is stated here rather than inside a solved-system context.
 \<close>

@@ -1079,8 +1079,8 @@ subsection \<open>An executable analysis as the pipeline's component\<close>
 text \<open>
   What an executable non-relational analysis owes, stated over its own
   transfers: the abstract transfer it implements is sound, its executable
-  mirror reads back to that transfer, and its routing, solver, classifier and
-  entry state satisfy the pipeline's contracts at the abstract-store readback.
+  mirror represents that transfer, and its routing, solver, classifier and
+  entry state satisfy the pipeline's contracts on the represented abstract store.
   Its component is \<^const>\<open>exec_local_spec\<close>, so the generic pipeline runs
   exactly its local specification, and every theorem above holds of it.
 
@@ -1159,7 +1159,7 @@ proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intr
         rule enter_commute,
         rule default_st_is_bot_for_iff[OF declared_global_iff])
   show ?case
-    by (rule dom.exec_local_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback])
+    by (rule dom.exec_local_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_to_fun])
 next
   case (EnterSingle p ci d)
   then show ?case by (simp add: dg_pipeline.entry_of_def)
@@ -1191,7 +1191,7 @@ lemma (in dg_analysis_exec) exec_comp_sound:
   "sound_local_spec (declared_global p) (gamma_lift (default_st_gamma (declared_global p)))
      (exec_local_spec (declared_global p) (default_st_is_bot_for (declared_global_vars p))
         (tf_st (declared_global p)) (enter_st (declared_global p)))"
-  unfolding gamma_lift_default_st_gamma_readback by (rule comp_sound)
+  unfolding gamma_lift_default_st_gamma_to_fun by (rule comp_sound)
 
 text \<open>
   The state a call enters its callee with, at the executable component: the entry

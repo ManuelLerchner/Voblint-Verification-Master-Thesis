@@ -5,13 +5,13 @@ begin
 section \<open>Refinement between executable and abstract split states\<close>
 
 text \<open>
-  \<^const>\<open>default_st_to_fun\<close> reads an executable \<^typ>\<open>'a default_st\<close>
-  back as an abstract \<^typ>\<open>'a abs_state\<close>. It is a homomorphism for the
-  local/global projections and for the routed combine, so an executable step
-  and its abstract counterpart agree after readback.
+  \<^const>\<open>default_st_to_fun\<close> maps an executable \<^typ>\<open>'a default_st\<close>
+  to the abstract \<^typ>\<open>'a abs_state\<close> it represents. It is a homomorphism
+  for the local/global projections and for the routed combine, so an executable
+  step and its abstract counterpart agree on the represented functions.
 \<close>
 
-subsection \<open>Readback of ownership projections\<close>
+subsection \<open>The represented function of ownership projections\<close>
 lemma default_st_to_fun_restrict_local_for [simp]:
   "default_st_to_fun \<G> (restrict_local_default_st s) =
      restrict_local_for \<G> (default_st_to_fun \<G> s)"
@@ -24,7 +24,7 @@ lemma default_st_to_fun_restrict_global_for [simp]:
   unfolding restrict_global_for_def
   by (rule ext) simp
 
-subsection \<open>Readback of joins\<close>
+subsection \<open>The represented function of joins\<close>
 
 lemma map_lift_default_st_to_fun_sup [simp]:
   "map_lift (default_st_to_fun \<G>) (a \<squnion> b) =

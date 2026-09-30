@@ -183,7 +183,8 @@ text \<open>
   \<open>parity_terminates_c\<close> into a source-level guarantee: every reachable VIMP store
   is described by the state published at its matched program point, under the one
   context \<open>()\<close> the unit route names.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, or readback appears in this proof.
+  \<^const>\<open>part_post_solution\<close>, or equation about the function a carrier
+  state represents appears in this proof.
 \<close>
 
 lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"

@@ -8,24 +8,24 @@ begin
 
 unbundle default_st_syntax
 
-section \<open>Reading an executable D/G run back as the mathematical one\<close>
+section \<open>The mathematical run an executable D/G run represents\<close>
 
 text \<open>
   The executable construction above computes on association-list states; the
   soundness statements are about function-valued ones. This theory is the
   bridge: it fixes a domain whose executable transfer agrees with its abstract
-  transfer after readback (\<open>dg_domain_exec\<close>) and derives, from
+  transfer on the represented functions (\<open>dg_domain_exec\<close>) and derives, from
   those three agreements alone, that a whole D/G specification is sound at the
   executable carrier -- with no separate abstract-carrier run to compare against.
 \<close>
 
-subsection \<open>The readback of one return combine\<close>
+subsection \<open>The function one return combine represents\<close>
 
 text \<open>
   The one fact about the executable state representation this theory needs
   that no lifter supplies: merging caller against callee and then writing the
-  return value reads back as the mathematical \<^const>\<open>combine_collect_abs\<close> of
-  the two readbacks. Everything else transports through
+  return value represents the mathematical \<^const>\<open>combine_collect_abs\<close> of
+  the two represented functions. Everything else transports through
   \<^const>\<open>transfer_lift\<close>/\<^const>\<open>transfer_lift2\<close> naturality.
 \<close>
 
@@ -102,7 +102,7 @@ adhoc_overloading gamma_S == "gamma_lift (default_st_gamma \<G>)"
 abbreviation reader :: "'a default_st lifted \<Rightarrow> 'a abs_state lifted" where
   "reader \<equiv> map_lift (default_st_to_fun \<G>)"
 
-text \<open>Each field's readback equation, once. These are the only inputs the tree
+text \<open>Each field's equation on the represented function, once. These are the only inputs the tree
   commutes below take: a local-only transfer compiles to a single answer, so
   its transport is exactly the pure equation on the function it wraps.\<close>
 
@@ -217,7 +217,7 @@ lemma Hcomb_lifted_for:
          where F = "transfer_lift2 is_empty_state (combine\<^sup># \<G> (ci_dst ci))"])
      (rule combine_lift_commute)
 
-subsection \<open>Soundness at the executable carrier, pulled back along the readback\<close>
+subsection \<open>Soundness at the executable carrier, pulled back through its functions\<close>
 
 text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
@@ -247,7 +247,7 @@ lemma entered_st:
     and s: "s \<in> \<lbrakk>d\<rbrakk>"
   shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
            \<in> \<lbrakk>transfer_lift empty_pred (enter_st ci) d\<rbrakk>"
-  using s unfolding gamma_lift_default_st_gamma_readback enter_lift_commute
+  using s unfolding gamma_lift_default_st_gamma_to_fun enter_lift_commute
   by (intro transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty])
      (simp add: call_enter_CallEdge
        sound_nonrelational_transfer.tf_sound_enter_entry_for[OF tf_sound])
@@ -264,7 +264,7 @@ theorem entry_pairs_cover_st:
 
 text \<open>
   The executable analysis as a component, sound for the carrier's
-  concretization. The proof reads each state back through \<open>reader\<close>; the
+  concretization. The proof maps each state to its function through \<open>reader\<close>; the
   contract below is its one-line consequence.
 \<close>
 
@@ -297,9 +297,9 @@ proof -
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
     by (meson gamma_lift_mono gamma_state_mono map_lift_default_st_to_fun_mono)
   show ?thesis
-    unfolding sound_local_spec_def gamma_lift_default_st_gamma_readback
+    unfolding sound_local_spec_def gamma_lift_default_st_gamma_to_fun
     using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step]
-      entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_readback] comb
+      entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_to_fun] comb
     by (auto simp: exec_local_spec_def)
 qed
 

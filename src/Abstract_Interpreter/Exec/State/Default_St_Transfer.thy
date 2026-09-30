@@ -10,16 +10,17 @@ text \<open>
   Everything so far is stated about locations. A program, though, talks about
   variable names, and which names are global is a property of the program, not
   of the carrier. \<open>location_of\<close> is that classifier applied: it turns a name
-  into the location holding its value, and \<open>default_st_rep_to_fun\<close> reads a
-  whole state back as the function \<^typ>\<open>'a abs_state\<close> that soundness is stated
-  over.
+  into the location holding its value, and \<open>default_st_rep_to_fun\<close> maps a
+  whole state to the function \<^typ>\<open>'a abs_state\<close> it represents, the form
+  soundness is stated over.
 
   The rest of the theory is the operations a call and a return need --
   assignment, formal binding, restriction to one side of the ownership split,
   frame entry, and the caller/callee combination -- each paired with the
-  equation saying that performing it on the carrier and then reading back
-  agrees with performing its counterpart on the read-back function. Those
-  equations are the interface every soundness proof downstream actually uses.
+  equation saying that performing it on the carrier and then taking the
+  represented function agrees with performing its counterpart on that
+  function. Those equations are the interface every soundness proof downstream
+  actually uses.
 \<close>
 
 subsection \<open>Location classification and projection\<close>
@@ -86,9 +87,10 @@ where
      s\<langle>location_of \<G> x\<rangle>"
 
 text \<open>
-  The readback is written \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close>. The notation joins the carrier
-  notation in the opt-in bundle \<open>default_st_syntax\<close>: vendored theories bind
-  \<open>\<rho>\<close> as a variable, so it must never be global.
+  The function a state represents is written \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close>.
+  The notation joins the carrier notation in the opt-in bundle
+  \<open>default_st_syntax\<close>: vendored theories bind \<open>\<rho>\<close> as a
+  variable, so it must never be global.
 \<close>
 
 bundle default_st_syntax
@@ -107,10 +109,10 @@ text \<open>
   The state a run starts in gives every local one value and every global
   another: C initializes a declared global to zero and leaves a local
   unconstrained. Each domain's C-initial state is this construction at its own
-  abstraction of zero and its whole-value element, so the readback is one lemma
-  rather than one per domain. The triple is abstracted directly rather than
-  lifted, because a domain whose value type is itself a typedef would otherwise
-  descend through both quotients.
+  abstraction of zero and its whole-value element, so the equation for its
+  function is one lemma rather than one per domain. The triple is abstracted
+  directly rather than lifted, because a domain whose value type is itself a
+  typedef would otherwise descend through both quotients.
 \<close>
 
 definition initial_default_st :: "'a::bot => 'a => 'a default_st" where
@@ -558,11 +560,11 @@ lemma restrict_global_default_st_split [simp]:
 subsection \<open>The stores a carrier state describes\<close>
 
 text \<open>
-  A carrier state denotes the stores its readback denotes. This is the one
-  concretization the carrier offers to semantic statements; the readback
-  itself stays a refinement device, used to relate carrier operations to their
-  counterparts on \<^typ>\<open>'a abs_state\<close>. Only the classifier \<open>\<G>\<close> is
-  needed besides the state, because it decides which location holds each
+  A carrier state denotes the stores its function denotes. This is the one
+  concretization the carrier offers to semantic statements; the represented
+  function itself stays a refinement device, used to relate carrier operations
+  to their counterparts on \<^typ>\<open>'a abs_state\<close>. Only the classifier
+  \<open>\<G>\<close> is needed besides the state, because it decides which location holds each
   name's value. A context that fixes \<open>\<G>\<close> may register
   \<open>default_st_gamma \<G>\<close> under \<open>\<lbrakk>_\<rbrakk>\<close> with \<open>adhoc_overloading\<close>.
 \<close>

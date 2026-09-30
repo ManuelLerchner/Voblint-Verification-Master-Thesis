@@ -19,7 +19,7 @@ text \<open>
   program's declared globals, which covers the side where no fresh-name
   argument is available. The middle one needs the canonicality filter, since an
   entry stored under the tag the classifier does not select for its name says
-  nothing about the readback. Above that sits
+  nothing about the function the state represents. Above that sits
   the lifted view, where a whole unreachable state collapses to \<^const>\<open>Bot\<close>
   and an update that writes a bottom value collapses to it incrementally,
   without re-testing the rest of the state.
@@ -31,11 +31,11 @@ text \<open>
   Bottom detection is the one carrier operation that consults \<open>\<G>\<close>, and the
   reason is the mismatch between two readings of the same state. The quotient
   \<^typ>\<open>'a default_st\<close> identifies two states exactly when their lookups agree
-  at \<^emph>\<open>every\<close> location, whereas \<^const>\<open>default_st_rep_to_fun\<close> reads back only
+  at \<^emph>\<open>every\<close> location, whereas \<^const>\<open>default_st_rep_to_fun\<close> reads only
   the one location \<open>\<G>\<close> selects for each name. An entry stored under the other
   tagging of a name is therefore visible to equality and invisible to the
   concretization, and a test that must agree with \<^const>\<open>is_empty_state\<close> on the
-  readback has to skip it. \<open>canonical_location\<close> names that filter. Every other
+  represented function has to skip it. \<open>canonical_location\<close> names that filter. Every other
   operation on the carrier -- lookup, update, order, join, widening, narrowing
   -- treats all locations alike and needs no classifier.
 
@@ -330,7 +330,8 @@ text \<open>
   Reachability adds no new concretization: a lifted carrier state is read
   through \<^const>\<open>gamma_lift\<close> over \<^const>\<open>default_st_gamma\<close>, as a lifted
   pointwise state is read through \<^const>\<open>gamma_lift\<close> over
-  \<^const>\<open>gamma_state\<close>. The second lemma relates the two along the readback.
+  \<^const>\<open>gamma_state\<close>. The second lemma relates the two through the
+  represented function.
 \<close>
 
 lemma gamma_lift_default_st_gamma_mono:
@@ -338,7 +339,7 @@ lemma gamma_lift_default_st_gamma_mono:
   shows "x \<le> y \<Longrightarrow> gamma_lift (default_st_gamma \<G>) x \<subseteq> gamma_lift (default_st_gamma \<G>) y"
   by (rule gamma_lift_mono[OF default_st_gamma_mono])
 
-lemma gamma_lift_default_st_gamma_readback:
+lemma gamma_lift_default_st_gamma_to_fun:
   "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift \<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<^sub>\<bottom>)"
   by (rule ext) (simp add: gamma_lift_def default_st_gamma_def split: lifted.split)
 

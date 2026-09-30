@@ -2,14 +2,14 @@ theory Exec_DG_State
   imports Default_St_Restriction_Refinement "Voblint_Framework.DG_Constraint_Programs"
 begin
 
-section \<open>The executable carrier and its readback\<close>
+section \<open>The executable carrier and the functions it represents\<close>
 
 text \<open>
   The verified solver uses the executable association-list carrier \<open>'a default_st\<close>, while
   soundness is stated over function-valued abstract states. This theory is the bottom of the
-  bridge: the D/G product's lattice structure and the classifier-parametric readback
-  \<open>dg_state_to_fun\<close> that lifts \<^const>\<open>default_st_to_fun\<close> to that product. Everything
-  here is carrier-level -- no specification, no transfer, no equation shape -- so a
+  bridge: the D/G product's lattice structure and \<open>dg_state_to_fun\<close>, which lifts
+  \<^const>\<open>default_st_to_fun\<close> to that product: the pair of functions a D/G state
+  represents, parametric in the classifier. Everything here is carrier-level -- no specification, no transfer, no equation shape -- so a
   domain's executable mirror is related to its abstract state once, here, and the
   specification layers above never restate it.
 
@@ -18,12 +18,12 @@ text \<open>
 \<close>
 
 
-subsection \<open>Classifier-parametric readback\<close>
+subsection \<open>Classifier-parametric represented function\<close>
 
 text \<open>
-  The executable local/side readback is \<^const>\<open>default_st_to_fun\<close>, generic in
-  the classifier: an executable state is written with a declaration-driven classifier,
-  so reading it back needs the same classifier or the readback consults the wrong slot.
+  The function a local or side state represents is \<^const>\<open>default_st_to_fun\<close>,
+  generic in the classifier: an executable state is written with a declaration-driven
+  classifier, so its function needs the same classifier or it consults the wrong slot.
   \<open>dg_state_to_fun\<close> applies it to both components.
 \<close>
 

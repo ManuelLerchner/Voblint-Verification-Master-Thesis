@@ -140,7 +140,7 @@ lemma is_sound_nonrelational_transfer:
         ret_sound enter_ci_for_sound event_sound)
 
 text \<open>The per-edge dispatcher. The executable mirror a domain runs dispatches on
-  the action, so the readback equations relating the two are stated at this shape
+  the action, so the equations relating the two through the represented function are stated at this shape
   rather than one lemma per operation.\<close>
 
 definition tf_abs :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
@@ -207,7 +207,7 @@ subsection \<open>Registering the bundle with the pipeline\<close>
 
 text \<open>
   The bundle already settles everything \<^locale>\<open>dg_analysis_exec\<close> asks of the domain:
-  the derived transfer is sound, the executable step and entry read back to it, and the
+  the derived transfer is sound, the executable step and entry represent it, and the
   derived classifier is sound in both directions. What remains belongs to the context
   policy (the routing agreement and the seed key), the solver (a
   \<^locale>\<open>certified_solver\<close>) and the initial state, and stays a premise.
