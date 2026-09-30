@@ -72,7 +72,8 @@
     sinkstore: "sink_store t = snd (last (path_of t))",
     caller:
       "caller_of (Root _) = None | caller_of (Call c _) = Some c | caller_of (Resume cur _ _) = caller_of cur",
-    callee: "Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace) activation_path",
+    callee:
+      "Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace) activation_path",
   };
 
   const LINKS = {
