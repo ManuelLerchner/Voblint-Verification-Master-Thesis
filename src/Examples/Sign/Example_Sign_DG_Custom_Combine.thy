@@ -47,7 +47,7 @@ definition sign_combine_env_callee_join ::
   "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
 where
   "sign_combine_env_callee_join =
-     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
+     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_default_st de)"
 
 subsection \<open>The Sign specification that uses it\<close>
 
@@ -106,20 +106,20 @@ lemma stock_env_keeps_caller:
   by (simp add: cj_caller_def)
 
 lemma callee_join_env_publishes_top:
-  "(cj_caller \<squnion> restrict_local_resolved_q cj_callee)\<langle>Local_Location (STR ''r'')\<rangle> = STop"
+  "(cj_caller \<squnion> restrict_local_default_st cj_callee)\<langle>Local_Location (STR ''r'')\<rangle> = STop"
   by (simp add: cj_caller_def cj_callee_def sup_sign_def)
 
 text \<open>So the two environment merges are different functions, and the override is
   not a re-spelling of the stock one.\<close>
 
 lemma callee_join_merge_neq_stock:
-  "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
+  "(\<lambda>dc de. dc \<squnion> restrict_local_default_st de)
      \<noteq> (\<lambda>dc (de :: sign default_st). dc)"
 proof
-  assume "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
+  assume "(\<lambda>dc de. dc \<squnion> restrict_local_default_st de)
             = (\<lambda>dc (de :: sign default_st). dc)"
   from fun_cong[OF fun_cong[OF this, of cj_caller], of cj_callee]
-  have "cj_caller \<squnion> restrict_local_resolved_q cj_callee = cj_caller" .
+  have "cj_caller \<squnion> restrict_local_default_st cj_callee = cj_caller" .
   then show False
     using stock_env_keeps_caller callee_join_env_publishes_top by simp
 qed
@@ -397,7 +397,7 @@ definition cj_stock_eqs ::
   "cj_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition cj_custom_eqs ::
   "pp \<times> unit
@@ -406,7 +406,7 @@ definition cj_custom_eqs ::
   "cj_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_callee_join cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 lemma cj_stock_terminates:
   "TD_side_rule_Interp_solve_c Globals_Join cj_stock_eqs

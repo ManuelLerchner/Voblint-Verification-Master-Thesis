@@ -3,7 +3,7 @@ theory Nonrelational_Ops
     Special_Ops
     Exec_Backward
     "Voblint_Framework.DG_Local_State_Spec"
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
 begin
 
 unbundle default_st_syntax
@@ -74,9 +74,9 @@ definition generic_enter_st_for ::
     "'a::{bot, top} nonrelational_ops => (vname => bool) => call_info =>
        'a default_st => 'a default_st" where
   "generic_enter_st_for ops \<G> ci s =
-     bind_formals_resolved_q \<G> (ci_formals ci)
+     bind_formals_default_st \<G> (ci_formals ci)
        (map (\<lambda>e. n_aval ops e (default_st_to_fun \<G> s)) (ci_args ci))
-       (enter_frame_D_resolved_q top s)"
+       (enter_frame_D_default_st top s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
 

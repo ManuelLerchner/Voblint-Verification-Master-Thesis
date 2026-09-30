@@ -10,11 +10,11 @@ session Voblint_Exec in "." = "Voblint_Framework" +
     "Spec"
     "Refinement"
   theories
-    Exec_St_Base
-    Exec_St_Algebra
-    Exec_St_Transfer
-    Exec_St_Reachability
-    Exec_St_Restriction_Refinement
+    Default_St_Base
+    Default_St_Algebra
+    Default_St_Transfer
+    Default_St_Reachability
+    Default_St_Restriction_Refinement
     Exec_DG_State
     Ownership_Split_Exec
     DG_Local_State_Exec

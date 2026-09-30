@@ -1,5 +1,5 @@
-theory Exec_St_Reachability
-  imports Exec_St_Transfer "Voblint_Domain.Nonrelational_Reachability"
+theory Default_St_Reachability
+  imports Default_St_Transfer "Voblint_Domain.Nonrelational_Reachability"
 begin
 
 unbundle default_st_syntax

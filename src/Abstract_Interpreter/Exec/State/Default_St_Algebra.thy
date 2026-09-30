@@ -1,5 +1,5 @@
-theory Exec_St_Algebra
-  imports Exec_St_Base "Voblint_Domain.Abstract_Domain"
+theory Default_St_Algebra
+  imports Default_St_Base "Voblint_Domain.Abstract_Domain"
 begin
 
 unbundle default_st_carrier_syntax

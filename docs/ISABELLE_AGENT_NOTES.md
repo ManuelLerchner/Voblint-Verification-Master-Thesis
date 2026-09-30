@@ -351,7 +351,7 @@ closed, and the batch log is green.
 ### Codegen module cycles
 
 - Splitting `export_code` targets by session/theory boundary can produce an
-  OCaml module dependency cycle (the `Exec_St_*` executable state is generically
+  OCaml module dependency cycle (the `Default_St_*` executable state is generically
   instantiated at the solver's own `widening`/`narrowing` type classes, and
   the CFG-specific solver instantiation needs `cfg_node` back -- a real,
   mutual code-level dependency, not an arbitrary grouping choice) or, even

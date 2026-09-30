@@ -1,5 +1,5 @@
 theory Congruence_Exec
-  imports "Voblint_Exec.Exec_St_Restriction_Refinement" "Voblint_Nonrelational.Nonrelational_Ops"
+  imports "Voblint_Exec.Default_St_Restriction_Refinement" "Voblint_Nonrelational.Nonrelational_Ops"
     Congruence_Transfer Congruence_Warrowing
 begin
 
@@ -40,10 +40,10 @@ definition congruence_enter_st_for ::
 
 lemma congruence_enter_st_for_eq [simp]:
   "congruence_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_congruence e
         (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q top s)"
+      (enter_frame_D_default_st top s)"
   by (simp add: congruence_enter_st_for_def generic_enter_st_for_def)
 
 definition congruence_tf_st_for ::
@@ -72,7 +72,7 @@ theorem congruence_tf_st_for_commute:
   by (rule congruence_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_congruence_st_for_commute:
-  "default_st_to_fun \<G> (enter_frame_D_resolved_q top s) =
+  "default_st_to_fun \<G> (enter_frame_D_default_st top s) =
    enter_frame_congruence_for \<G> (default_st_to_fun \<G> s)"
   by (simp add: congruence_tf.op_defs)
 

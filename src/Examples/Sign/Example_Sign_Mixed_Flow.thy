@@ -21,15 +21,15 @@ definition split_gamma ::
   "split_gamma \<G> d g = default_st_gamma \<G> (combine_default_st d g)"
 
 lemma combine_restrict_split [simp]:
-  "combine_default_st (restrict_local_resolved_q x) (restrict_global_resolved_q x) = x"
+  "combine_default_st (restrict_local_default_st x) (restrict_global_default_st x) = x"
   by (rule default_st_eqI) (simp split: location.split)
 
 lemma combine_restrict_local_left [simp]:
-  "combine_default_st (restrict_local_resolved_q x) y = combine_default_st x y"
+  "combine_default_st (restrict_local_default_st x) y = combine_default_st x y"
   by (rule default_st_eqI) (simp split: location.split)
 
 lemma combine_self_restrict_global [simp]:
-  "combine_default_st x (restrict_global_resolved_q x) = x"
+  "combine_default_st x (restrict_global_default_st x) = x"
   by (rule default_st_eqI) (simp split: location.split)
 
 lemma sign_tf_st_sound:
@@ -98,7 +98,7 @@ next
       \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) (default_st_to_fun \<G> ?x) (default_st_to_fun \<G> ?y)\<rbrakk>"
     using 4 unfolding split_gamma_def default_st_gamma_def by (intro combine_collect_sound)
   also have "\<dots> = \<lbrakk>default_st_to_fun \<G>
-      (combine_assign_resolved_q \<G> (ci_dst ci) ?y\<langle>location_of \<G> ret_var\<rangle>
+      (combine_assign_default_st \<G> (ci_dst ci) ?y\<langle>location_of \<G> ret_var\<rangle>
          ?x)\<rbrakk>"
     by (subst (2) xy[symmetric]) (simp only: default_st_to_fun_combine_assign)
   finally show ?case
@@ -128,7 +128,7 @@ proof (rule is_empty_state_gamma_state_empty, rule is_empty_stateI)
 qed
 
 lemma split_gamma_restrict_local_combine:
-  "split_gamma \<G> (restrict_local_resolved_q (combine_default_st d G)) G = split_gamma \<G> d G"
+  "split_gamma \<G> (restrict_local_default_st (combine_default_st d G)) G = split_gamma \<G> d G"
   unfolding split_gamma_def
   by (rule arg_cong[where f = "default_st_gamma \<G>"], rule default_st_eqI)
      (simp split: location.split)
@@ -136,13 +136,13 @@ lemma split_gamma_restrict_local_combine:
 lemma split_gamma_enter:
   assumes "\<forall>f \<in> set (ci_formals ci). \<not> \<G> f"
   shows "split_gamma \<G>
-           (restrict_local_resolved_q (sign_enter_st_for \<G> ci (combine_default_st d G))) G
+           (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G
          = default_st_gamma \<G> (sign_enter_st_for \<G> ci (combine_default_st d G))"
   unfolding split_gamma_def default_st_gamma_def
 proof (rule arg_cong[where f = gamma_state], rule ext)
   fix x
   show "default_st_to_fun \<G> (combine_default_st
-            (restrict_local_resolved_q (sign_enter_st_for \<G> ci (combine_default_st d G))) G) x
+            (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G) x
         = default_st_to_fun \<G> (sign_enter_st_for \<G> ci (combine_default_st d G)) x"
   proof (cases "\<G> x")
     case True
@@ -186,7 +186,7 @@ definition mf_eqs ::
        (routed_call_program (mf_spec mf_gs) (Analysis_Global ()) Activation_Seed
           (static_resolve mf_cfg) (\<lambda>d. d = bot))
        (routed_entry_seed_programs Activation_Seed)
-       mf_cfg bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+       mf_cfg bot cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition mf_sol ::
   "(pp \<times> unit) set \<times>
@@ -248,7 +248,7 @@ lemma mf_pp: "part_post_solution mf_eqs (cfg_exit mf_cfg, ()) (snd mf_sol) (fst 
 
 interpretation mf_routed: routed_context_base_hetero
   "mf_spec mf_gs" "split_gamma mf_gs" mf_gs mf_cfg "Analysis_Global ()"
-  route_unit bot cinit_sign_st "restrict_global_resolved_q cinit_sign_st"
+  route_unit bot cinit_sign_st "restrict_global_default_st cinit_sign_st"
   "snd mf_sol" "fst mf_sol" "(cfg_exit mf_cfg, ())" mf_reader Activation_Seed
   "static_resolve mf_cfg" "\<lambda>d. d = bot" mf_gammaM "call_context_rel_of_fun enterc_unit"
 proof (rule routed_context_base_hetero.intro
@@ -293,7 +293,7 @@ next
   let ?d = "dg_local (snd mf_sol (Inl (u, ctx)))"
   let ?D = "combine_default_st ?d mf_G"
   let ?E = "sign_enter_st_for mf_gs ?ci ?D"
-  let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_resolved_q cont, restrict_local_resolved_q entry))
+  let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_default_st cont, restrict_local_default_st entry))
                   [(?D, ?E)]"
   have Rr: "\<exists>pub. enter_runs (enter\<^sup># (mf_spec mf_gs) ?ci)
       (mk_dg_man ?d (\<lambda>_. Analysis_Global ())) (snd mf_sol) ?pairs pub"
@@ -305,12 +305,12 @@ next
     unfolding dgs_enter_ownership_split_dg_spec_st_for ownership_split_enter_transfer_st_def
     by (rule exI, rule enter_deps_ownership_split_enter_transfer_gen)
        (rule enter_deps_local_enter_transfer_mk_dg_man)
-  have ccov: "s \<in> split_gamma mf_gs (restrict_local_resolved_q ?D) mf_G"
+  have ccov: "s \<in> split_gamma mf_gs (restrict_local_default_st ?D) mf_G"
     using EnterCover(3) by (simp only: split_gamma_restrict_local_combine)
   have formals: "\<forall>f \<in> set (ci_formals ?ci). \<not> mf_gs f"
     using mf_snapshot EnterCover(2) by fastforce
   have ecov: "call_enter mf_gs (CallEdge dst pars args) s
-      \<in> split_gamma mf_gs (restrict_local_resolved_q ?E) mf_G"
+      \<in> split_gamma mf_gs (restrict_local_default_st ?E) mf_G"
     unfolding split_gamma_enter[OF formals]
     by (rule sign_call_enter_sound) (use EnterCover(3) in \<open>simp only: split_gamma_def\<close>)
   have fwd: "(FunctionEntry p, ctx') \<in> fst mf_sol"
@@ -327,7 +327,7 @@ qed
 subsection \<open>Soundness against the concrete trace semantics\<close>
 
 lemma mf_cinit_sound:
-  "cinit_stores mf_gs \<subseteq> split_gamma mf_gs cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+  "cinit_stores mf_gs \<subseteq> split_gamma mf_gs cinit_sign_st (restrict_global_default_st cinit_sign_st)"
   using sign_cinit_gamma[of mf_gs]
   by (simp add: split_gamma_def)
 

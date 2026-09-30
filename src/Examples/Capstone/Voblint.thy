@@ -33,7 +33,7 @@ theory Voblint
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Framework.DG_Ctx_Activation"
-    "Voblint_Exec.Exec_St_Reachability"
+    "Voblint_Exec.Default_St_Reachability"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
     "Voblint_Examples_CLI.Example_Checks_Store_Only"
@@ -428,12 +428,12 @@ text \<open>
       solution certifies the activation collecting semantics.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
-    \<^item> @{theory Voblint_Exec.Exec_St_Base} --- executable abstract-state maps for code
+    \<^item> @{theory Voblint_Exec.Default_St_Base} --- executable abstract-state maps for code
       generation, layered as representation, algebra
-      (@{theory Voblint_Exec.Exec_St_Algebra}), refinement to variable-indexed states
-      (@{theory Voblint_Exec.Exec_St_Transfer}) and dead-code detection
-      (@{theory Voblint_Exec.Exec_St_Reachability}).
-    \<^item> @{theory Voblint_Exec.Exec_St_Restriction_Refinement} ---
+      (@{theory Voblint_Exec.Default_St_Algebra}), refinement to variable-indexed states
+      (@{theory Voblint_Exec.Default_St_Transfer}) and dead-code detection
+      (@{theory Voblint_Exec.Default_St_Reachability}).
+    \<^item> @{theory Voblint_Exec.Default_St_Restriction_Refinement} ---
       commutation from executable states to function states.
     \<^item> @{theory Voblint_Routing.Compiled_Routed_Equations} --- the D/G
       equation generator (\<^const>\<open>compiled_routed_eqs_for\<close>) every analysis,

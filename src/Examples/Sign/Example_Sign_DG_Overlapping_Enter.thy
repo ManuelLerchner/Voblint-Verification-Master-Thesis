@@ -528,7 +528,7 @@ lemma ov_alt1_route:
 
 lemma ov_entry1_not_empty_probe:
   "\<not> ov_ep
-     (enter_frame_D_resolved_q STop
+     (enter_frame_D_default_st STop
         cinit_sign_st\<langle>location_of ov_gs (STR ''x'') := SPos\<rangle>)
        \<langle>location_of ov_gs (STR ''a'') := SPos\<rangle>"
   by eval
@@ -537,11 +537,11 @@ lemma ov_entry1_dg_local_exact:
   "transfer_lift ov_ep (sign_enter_st_for ov_gs (call_info_of ov_ca (STR ''p'')))
      (dg_local (snd ov_sol (Inl (Statement 3, []))))
    = Lifted
-       (enter_frame_D_resolved_q STop
+       (enter_frame_D_default_st STop
           cinit_sign_st\<langle>location_of ov_gs (STR ''x'') := SPos\<rangle>)
          \<langle>location_of ov_gs (STR ''a'') := SPos\<rangle>"
   unfolding ov_call_site_dg_local_probe default_st_set_lift_def
-  by (simp add: bind_formals_resolved_q_singleton is_bottom_sign_def normalize_lift_def
+  by (simp add: bind_formals_default_st_singleton is_bottom_sign_def normalize_lift_def
                 ov_entry1_not_empty_probe)
 
 lemma ov_entry1_reader:

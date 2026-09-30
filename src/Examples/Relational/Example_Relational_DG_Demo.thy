@@ -85,7 +85,7 @@ definition demo_ivl_eqs ::
      compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
        (ownership_split_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs))
        demo_cfg (initial_default_st ivl_top ivl_top)
-       (restrict_global_resolved_q (initial_default_st ivl_top ivl_top))"
+       (restrict_global_default_st (initial_default_st ivl_top ivl_top))"
 
 definition demo_ivl_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st, ivl default_st) dg_state)"
@@ -99,7 +99,7 @@ lemma demo_ivl_terminates:
 subsection \<open>The relational analysis, on the very same CFG, generator, and solver\<close>
 
 text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<open>and\<close> the executable
-  specification -- \<open>relc\<close> needed no \<open>Exec_St_Transfer\<close>-style refinement layer,
+  specification -- \<open>relc\<close> needed no \<open>Default_St_Transfer\<close>-style refinement layer,
   so \<open>compiled_routed_eqs_for\<close> is applied to it directly, with no bridging step and no
   parallel generator.\<close>
 

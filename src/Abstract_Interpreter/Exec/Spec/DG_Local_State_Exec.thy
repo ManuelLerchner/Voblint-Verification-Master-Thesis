@@ -1,7 +1,7 @@
 theory DG_Local_State_Exec
   imports "Voblint_Framework.DG_Local_State_Spec"
     Ownership_Split_Exec
-    Exec_St_Reachability
+    Default_St_Reachability
 begin
 
 unbundle default_st_syntax
@@ -18,7 +18,7 @@ text \<open>
   mathematical side.
 
   One field differs from the mathematical construction: the env stage of \<open>combine\<close>
-  is not the identity here. \<^const>\<open>combine_assign_resolved_q\<close> (unlike
+  is not the identity here. \<^const>\<open>combine_assign_default_st\<close> (unlike
   \<^const>\<open>combine_collect_abs\<close>) does not itself select
   locals-from-caller/globals-from-callee; that selection is what
   \<^const>\<open>combine_default_st\<close> computes, so the env stage must compute it
@@ -55,7 +55,7 @@ definition exec_spec ::
      (\<lambda>_ ci p. [(fst p, transfer_lift empty_pred (enter_st ci) (fst p))])
      (\<lambda>_ _ ci. combine_env_st_lifted)
      (\<lambda>_ ci. transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+        (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
              de0\<langle>location_of \<G> ret_var\<rangle> env0))"
 
 lemma ls_step_exec_spec [simp]:
@@ -108,7 +108,7 @@ lemma dg_spec_combine_transfer_local_state_st_for_lifted:
   "dg_spec_combine_transfer (local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred
-            (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+            (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
                  de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)"
   by (simp add: local_state_dg_spec_st_for_lifted_def exec_spec_def)

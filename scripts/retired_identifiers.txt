@@ -3729,3 +3729,34 @@ widen_resolved_st_q
 # --- Root-activation context parameter renamed to its notation c\<^sub>0
 # (2026-09-30); the Goblint name Spec.startcontext stays in prose only. ---
 startcontext
+# --- Carrier operations named after default_st (2026-09-30): raw operations
+# end in _default_st_rep, quotient operations in _default_st, lookup lemmas
+# read default_st(_rep)_get_<op>, and the Exec_St_* theories are Default_St_*. ---
+Exec_St_Algebra
+Exec_St_Base
+Exec_St_Reachability
+Exec_St_Restriction_Refinement
+Exec_St_Transfer
+bind_formals_resolved
+bind_formals_resolved_q
+bind_formals_resolved_q_singleton
+combine_assign_resolved
+combine_assign_resolved_q
+default_st_rep_to_fun_combine_resolved
+enter_frame_D_resolved
+enter_frame_D_resolved_q
+lookup_combine_assign_resolved_q
+lookup_enter_frame_D_resolved
+lookup_enter_frame_D_resolved_q
+lookup_restrict_global_resolved
+lookup_restrict_global_resolved_q
+lookup_restrict_local_resolved
+lookup_restrict_local_resolved_q
+restrict_global_resolved
+restrict_global_resolved_q
+restrict_global_resolved_q_combine_default_st
+restrict_global_resolved_q_split
+restrict_local_resolved
+restrict_local_resolved_q
+restrict_local_resolved_q_combine_default_st
+restrict_local_resolved_q_split

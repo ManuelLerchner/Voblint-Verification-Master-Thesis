@@ -1,7 +1,7 @@
 theory Parity_Exec
   imports
-    "Voblint_Exec.Exec_St_Reachability"
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Reachability"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     Parity_Transfer
 begin
@@ -44,10 +44,10 @@ definition parity_enter_st_for ::
 
 lemma parity_enter_st_for_eq [simp]:
   "parity_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_parity e
         (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q PTop s)"
+      (enter_frame_D_default_st PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def top_parity_def)
 
 definition parity_tf_st_for ::
@@ -70,7 +70,7 @@ theorem parity_tf_st_for_commute:
   by (rule parity_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_parity_st_for_commute:
-  "default_st_to_fun \<G> (enter_frame_D_resolved_q PTop s) =
+  "default_st_to_fun \<G> (enter_frame_D_default_st PTop s) =
    enter_frame_parity_for \<G> (default_st_to_fun \<G> s)"
   by (simp add: parity_tf.op_defs)
 

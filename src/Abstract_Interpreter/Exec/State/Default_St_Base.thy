@@ -1,4 +1,4 @@
-theory Exec_St_Base
+theory Default_St_Base
   imports "Voblint_VIMP.VIMP_Syntax" "HOL-Library.AList"
 begin
 
@@ -21,7 +21,7 @@ text \<open>
   equality and point update defined on it. It does not decide which variable
   names are local and which are global -- a \<open>location\<close> records a
   classification this theory never makes. That classifier arrives only in
-  \<open>Exec_St_Transfer\<close>, which is built on this.
+  \<open>Default_St_Transfer\<close>, which is built on this.
 \<close>
 
 text \<open>
@@ -56,7 +56,7 @@ text \<open>
 
   What the defaults cost is visible throughout this theory: the order has to
   compare them, extensional equality has to pin them, and the emptiness test in
-  \<open>Exec_St_Reachability\<close> has to reason about them. That cost is the price of the
+  \<open>Default_St_Reachability\<close> has to reason about them. That cost is the price of the
   three points above, not an accident of the first representation tried.
 \<close>
 

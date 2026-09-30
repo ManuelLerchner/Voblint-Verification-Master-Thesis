@@ -1,6 +1,6 @@
 theory Int_Exec
   imports
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     "Voblint_Result.DG_Result_Construction"
@@ -44,9 +44,9 @@ where
 
 lemma int_dom_enter_st_for_eq [simp]:
   "int_dom_enter_st_for mode \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_int_dom mode e (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q top s)"
+      (enter_frame_D_default_st top s)"
   by (simp add: int_dom_enter_st_for_def generic_enter_st_for_def)
 
 subsection \<open>Executable/abstract correspondence\<close>

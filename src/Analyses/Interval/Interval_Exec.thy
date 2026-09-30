@@ -1,6 +1,6 @@
 theory Interval_Exec
   imports
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     Interval_Domain
 begin
@@ -10,7 +10,7 @@ section \<open>Interval executable transfer mirror\<close>
 text \<open>
   Executable mirror of @{const ivl_tf_abs} on @{typ "ivl default_st"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Exec.Exec_St_Restriction_Refinement} transport; the certified
+  into the generic @{theory Voblint_Exec.Default_St_Restriction_Refinement} transport; the certified
   end-to-end soundness theory built on this mirror lives in
   \<open>Interval_Analyses\<close>, mirroring \<open>Sign_Analyses\<close>.
 \<close>
@@ -39,10 +39,10 @@ definition ivl_enter_st_for ::
 
 lemma ivl_enter_st_for_eq [simp]:
   "ivl_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_ivl e
         (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q ivl_top s)"
+      (enter_frame_D_default_st ivl_top s)"
   by (simp add: ivl_enter_st_for_def generic_enter_st_for_def top_ivl_def)
 
 definition ivl_tf_st_for ::

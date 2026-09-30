@@ -48,16 +48,16 @@ denoting `Bot`. `branch_sound` holds either way; the gate is a precision change
 The mathematical layer works over `'a abs_state = vname => 'a`
 (`Nonrelational_State.thy`), a function over an infinite domain with no finite
 representation. The executable layer works over `'a default_st`
-(`Exec_St_Base.thy`), a `quotient_type` of a default-value-plus-finite-override
+(`Default_St_Base.thy`), a `quotient_type` of a default-value-plus-finite-override
 encoding, quotiented by observable lookup so that `=`, `<=` and `bot` are
 well-defined.
 
 The link is a total function, `default_st_to_fun gs`
-(`Exec_St_Transfer.thy`), which reads each name at the location the classifier
+(`Default_St_Transfer.thy`), which reads each name at the location the classifier
 `gs` selects. It is not injective: a quotient value carries both a local and a
 global location per name and the conversion reads one. That is why
 `default_st_rep_is_bot` filters through `canonical_location`
-(`Exec_St_Reachability.thy`).
+(`Default_St_Reachability.thy`).
 
 ## 3. Commute theorems
 

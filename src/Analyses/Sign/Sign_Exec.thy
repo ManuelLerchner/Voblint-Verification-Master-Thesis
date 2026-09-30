@@ -1,6 +1,6 @@
 theory Sign_Exec
   imports
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     Sign_Transfer
 begin
@@ -35,10 +35,10 @@ definition sign_enter_st_for ::
 
 lemma sign_enter_st_for_eq [simp]:
   "sign_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_sign e
         (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q STop s)"
+      (enter_frame_D_default_st STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def top_sign_def)
 
 definition sign_tf_st_for ::
@@ -69,7 +69,7 @@ theorem sign_tf_st_for_commute:
   by (rule sign_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_sign_st_for_commute:
-  "default_st_to_fun \<G> (enter_frame_D_resolved_q STop s) =
+  "default_st_to_fun \<G> (enter_frame_D_default_st STop s) =
    enter_frame_sign_for \<G> (default_st_to_fun \<G> s)"
   by (simp add: sign_tf.op_defs)
 

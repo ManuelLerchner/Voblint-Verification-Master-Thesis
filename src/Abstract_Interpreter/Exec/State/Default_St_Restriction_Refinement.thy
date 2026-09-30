@@ -1,5 +1,5 @@
-theory Exec_St_Restriction_Refinement
-  imports Exec_St_Transfer "Voblint_Framework.State_Restriction"
+theory Default_St_Restriction_Refinement
+  imports Default_St_Transfer "Voblint_Framework.State_Restriction"
 begin
 
 section \<open>Refinement between executable and abstract split states\<close>
@@ -13,13 +13,13 @@ text \<open>
 
 subsection \<open>Readback of ownership projections\<close>
 lemma default_st_to_fun_restrict_local_for [simp]:
-  "default_st_to_fun \<G> (restrict_local_resolved_q s) =
+  "default_st_to_fun \<G> (restrict_local_default_st s) =
      restrict_local_for \<G> (default_st_to_fun \<G> s)"
   unfolding restrict_local_for_def
   by (rule ext) simp
 
 lemma default_st_to_fun_restrict_global_for [simp]:
-  "default_st_to_fun \<G> (restrict_global_resolved_q s) =
+  "default_st_to_fun \<G> (restrict_global_default_st s) =
      restrict_global_for \<G> (default_st_to_fun \<G> s)"
   unfolding restrict_global_for_def
   by (rule ext) simp

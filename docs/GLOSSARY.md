@@ -85,8 +85,8 @@ and where the correspondence is inexact.
 
 | `Spec` component | Voblint realization | Note |
 | --- | --- | --- |
-| `D` | Opaque `'D` carrier (`dg_state.locals`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
-| `G` | Opaque `'G` carrier (`dg_state.globs`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
+| `D` | Opaque `'D` carrier (`dg_state.dg_local`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
+| `G` | Opaque `'G` carrier (`dg_state.dg_global`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
 | `C` | `'c` (type parameter of `dg_ctx_activation_base`/`routed_context_base_hetero`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
 | `V` | `'v` (the `dg_spec` record's global-name parameter, `DG_Spec.thy`) | An analysis reaches shared state only through `man_global`/`man_sideg` at a `'v`; `mk_dg_man` embeds it into the solver's global-key type `'k` (`DG_Manager.thy`). Not the combined unknown space -- see below. |
 
@@ -96,7 +96,7 @@ and `'g` (global key): `('x, 'g, 'd) eqsT = 'x => ('x, 'g, 'd) strategy_tree`,
 with unknowns typed `'x + 'g`. `DG_Ctx_Activation.thy` instantiates
 `'x = pp \<times> 'c` and, deliberately, `'g = 'k` rather than reusing the bare
 letter `'g` -- `DG_State.thy`'s `dg_state` datatype already fixes `'g` as
-the global *value* type (the `globs` field, i.e. Goblint's `G.t`), one layer
+the global *value* type (the `dg_global` field, i.e. Goblint's `G.t`), one layer
 up. Reusing `'g` for the global *key* at the activation layer would silently
 overload one letter for two different `Spec` components (`G` and `V`) across
 two adjacent files. `'k` names the vendor solver's global-key slot without

@@ -1,5 +1,5 @@
 theory Exec_Backward
-    imports "Voblint_Exec.Exec_St_Reachability" "Voblint_Domain.Backward_Domain_Mono"
+    imports "Voblint_Exec.Default_St_Reachability" "Voblint_Domain.Backward_Domain_Mono"
 begin
 
 unbundle default_st_syntax

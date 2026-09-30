@@ -73,7 +73,7 @@ definition sj_eqs ::
 where
   "sj_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for sj_gs (ivl_tf_st_for sj_gs) (ivl_enter_st_for sj_gs))
-     sj_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+     sj_cfg cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 definition sj_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st, ivl default_st) dg_state)"

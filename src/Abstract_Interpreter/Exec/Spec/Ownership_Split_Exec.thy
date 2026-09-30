@@ -14,7 +14,7 @@ section \<open>The ownership-splitting analysis at the executable carrier\<close
 text \<open>
   \<^const>\<open>ownership_split_transfer_gen\<close> asks only that a carrier can merge a local and a
   global half and project each back out. The association-list carrier answers
-  with \<^const>\<open>combine_default_st\<close> and the two \<open>restrict_\<dots>_resolved_q\<close>
+  with \<^const>\<open>combine_default_st\<close> and the two \<open>restrict_\<dots>_default_st\<close>
   projections, so the executable analysis is that transfer at those three
   arguments -- not a second definition of what the analysis does.
 \<close>
@@ -24,7 +24,7 @@ definition ownership_split_transfer_st ::
    \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_transfer"
 where
   "ownership_split_transfer_st =
-     ownership_split_transfer_gen combine_default_st restrict_global_resolved_q restrict_local_resolved_q"
+     ownership_split_transfer_gen combine_default_st restrict_global_default_st restrict_local_default_st"
 
 text \<open>
   Entry is the same wrapping one step up in arity: it answers a list of
@@ -38,8 +38,8 @@ definition ownership_split_enter_transfer_st ::
    \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_enter_transfer"
 where
   "ownership_split_enter_transfer_st =
-     ownership_split_enter_transfer_gen combine_default_st restrict_global_resolved_q
-       restrict_local_resolved_q"
+     ownership_split_enter_transfer_gen combine_default_st restrict_global_default_st
+       restrict_local_default_st"
 
 text \<open>
   The callee exit reaches the wrapped stage merged against the same shared fact,
@@ -53,10 +53,10 @@ definition ownership_split_combine_transfer_st ::
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
 where
   "ownership_split_combine_transfer_st \<G> ci =
-     ownership_split_combine_transfer_gen combine_default_st restrict_global_resolved_q
-       restrict_local_resolved_q
+     ownership_split_combine_transfer_gen combine_default_st restrict_global_default_st
+       restrict_local_default_st
        (local_combine_transfer
-          (\<lambda>env de. combine_assign_resolved_q \<G> (ci_dst ci)
+          (\<lambda>env de. combine_assign_default_st \<G> (ci_dst ci)
                       de\<langle>location_of \<G> ret_var\<rangle> env))"
 
 definition ownership_split_dg_spec_st_for ::

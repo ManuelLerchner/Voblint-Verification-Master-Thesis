@@ -54,13 +54,13 @@ definition fo_direct ::
        (routed_call_program fo_spec (Analysis_Global ()) Activation_Seed (static_resolve fo_cfg)
           (\<lambda>d. d = bot))
        (routed_entry_seed_programs Activation_Seed)
-       fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+       fo_cfg bot cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 definition fo_buffered ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
-     fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+     fo_cfg cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 abbreviation fo_sol where
   "fo_sol E \<equiv> snd (TD_side_rule_Interp_solve Globals_Warrow E (cfg_exit fo_cfg, ()))"

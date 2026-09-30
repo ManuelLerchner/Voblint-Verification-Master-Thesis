@@ -31,7 +31,7 @@ text \<open>
 
 lemma default_st_to_fun_combine_assign:
   "default_st_to_fun \<G>
-     (combine_assign_resolved_q \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
+     (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_default_st x y))
    = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
   unfolding default_st_to_fun_def
@@ -59,7 +59,7 @@ text \<open>
   \<^locale>\<open>dg_reader_commute_gen\<close>'s instance at the same reader on both sides needs no
   domain fact at all: \<^const>\<open>default_st_to_fun\<close> is already carrier-polymorphic and
   \<open>sup\<close>-homomorphic (\<open>default_st_to_fun_sup\<close>,
-  \<open>Voblint_Exec.Exec_St_Transfer\<close>), so this
+  \<open>Voblint_Exec.Default_St_Transfer\<close>), so this
   is a free-standing fact, not part of the \<open>dg_domain_exec\<close> locale below -- keeping it
   outside means citing it never drags in that locale's \<open>empty_pred\<close>/transfer obligations.
 \<close>
@@ -154,14 +154,14 @@ lemma transfer_lift2_combine_env_st_lifted:
 
 lemma combine_lift_commute:
   "reader (transfer_lift2 empty_pred
-            (\<lambda>env0 de0. combine_assign_resolved_q \<G> dst
+            (\<lambda>env0 de0. combine_assign_default_st \<G> dst
                  de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)
      = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
   show "\<And>x y. default_st_to_fun \<G>
-      (combine_assign_resolved_q \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
+      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_default_st x y))
         = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
     by (rule default_st_to_fun_combine_assign)
@@ -287,7 +287,7 @@ proof -
     then show ?thesis by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
   qed
   have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>reader (transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
+        (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
            de0\<langle>location_of \<G> ret_var\<rangle> env0)
         (combine_env_st_lifted dc de) de)\<rbrakk>\<^sub>\<bottom>"
     if "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci

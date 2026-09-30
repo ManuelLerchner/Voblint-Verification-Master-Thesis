@@ -135,7 +135,7 @@ definition bf_stock_eqs ::
   "bf_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for bf_prog_gs
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition bf_custom_eqs ::
   "pp \<times> unit
@@ -144,7 +144,7 @@ definition bf_custom_eqs ::
   "bf_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 lemma bf_stock_terminates:
   "TD_side_rule_Interp_solve_c Globals_Join bf_stock_eqs
