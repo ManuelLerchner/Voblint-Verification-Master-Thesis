@@ -966,10 +966,11 @@ main {
   --verdict-color: var(--text-faint);
 }
 
+/* The same red as REFUTED, set apart by a light tint as the editor sets it apart by a fill. */
 .lg-badge.error {
-  color: #1c1c1c;
-  background: #ff8a73;
-  border-color: #ff8a73;
+  --verdict-color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger);
 }
 
 .lg-badge.hint {
