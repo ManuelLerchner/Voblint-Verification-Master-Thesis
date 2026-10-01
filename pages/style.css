@@ -919,6 +919,32 @@ main {
   display: none;
 }
 
+/* A panel's key, inline above what it explains: one wrapping strip of small items. */
+.panel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 0 12px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.panel-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-legend .lg {
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 700 0.66rem var(--mono);
+}
+
+.panel-legend .legend-defs {
+  position: absolute;
+}
+
 .inspector-message,
 .panel-lead {
   color: var(--text-muted);
