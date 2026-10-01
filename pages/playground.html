@@ -563,6 +563,7 @@
 
       <div class="reading-grid">
         <figure class="scene scene-editor">
+          <p class="legend-head">Source</p>
           <pre class="mock-editor" data-lang="vimp" aria-label="Example editor annotations"><span class="ml proved">__voblint_check(i == 5);<span class="mb">✓ PROVED</span></span>
 <span class="ml refuted">__voblint_check(i &lt; 5);<span class="mb">✗ REFUTED</span></span>
 <span class="ml unknown">__voblint_check(a == 2);<span class="mb">? UNKNOWN</span></span>
@@ -579,9 +580,15 @@
             <div><dt class="lg hint">x: [2,2]</dt><dd>What a statement assigns; <code>→</code> marks callee parameters, <code>↩</code> a return.</dd></div>
             <div><dt class="lg hint">⊔ i: [0,5]</dt><dd>Several paths meet here, so the value includes more than this step.</dd></div>
           </dl>
+          <figcaption>
+            Every check gets a verdict badge, and a statement that assigns or merges values
+            gets a hint with what it leaves behind. Hover a badge for its details; put the
+            cursor on a statement to see its state in every context.
+          </figcaption>
         </figure>
 
         <figure class="scene scene-graph">
+          <p class="legend-head">Control-flow graph</p>
           <svg viewBox="0 0 640 300" role="img"
             aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points, procedure entry or exit and seeds; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
             <defs>

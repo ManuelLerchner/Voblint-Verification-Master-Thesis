@@ -972,8 +972,8 @@
 /* -------------------------------------------------------------------------- */
 
 /*
- * One legend per row, each laid out for the full width: the editor beside its badges,
- * the graph legend beside its caption, the replay key in two columns.
+ * One legend per row, each a heading, its key and a caption, laid out for the full
+ * width: the editor beside its badges, the replay key in two columns.
  */
 .reading-grid {
   display: grid;
@@ -989,21 +989,20 @@
 }
 
 @media (min-width: 900px) {
-  .reading-grid .scene-editor,
-  .reading-grid .scene-graph {
+  .reading-grid .scene-editor {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 12px 32px;
     align-items: center;
   }
 
-  .reading-grid .scene-editor .legend,
-  .reading-grid .scene-graph figcaption {
+  .reading-grid .scene-editor .legend {
     margin: 0;
   }
 
   .reading-grid .scene-graph svg {
     max-width: 640px;
+    margin-inline: 0;
   }
 
   .reading-grid .scene-replay .replay-key {
@@ -1011,7 +1010,8 @@
     column-gap: 32px;
   }
 
-  .reading-grid .scene-replay .legend-head,
+  .reading-grid .legend-head,
+  .reading-grid .scene-editor figcaption,
   .reading-grid .scene-replay figcaption {
     grid-column: 1 / -1;
   }
@@ -1248,7 +1248,7 @@
   text-anchor: middle;
 }
 
-.scene-replay .legend-head {
+.reading-grid .legend-head {
   margin: 0;
   color: var(--text-muted);
   font: 700 11px var(--mono);
